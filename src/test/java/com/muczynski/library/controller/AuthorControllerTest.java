@@ -5,21 +5,27 @@ import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.service.AuthorService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Collections;
+import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthorController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 class AuthorControllerTest {
 
     @Autowired
@@ -34,20 +40,26 @@ class AuthorControllerTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void createAuthor() throws Exception {
-        AuthorDto authorDto = new AuthorDto();
-        when(authorService.createAuthor(authorDto)).thenReturn(authorDto);
+        AuthorDto inputDto = new AuthorDto();
+        inputDto.setName("Test Author");
+        AuthorDto returnedDto = new AuthorDto();
+        returnedDto.setId(1L);
+        returnedDto.setName("Test Author");
+        when(authorService.createAuthor(any(AuthorDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/authors")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(authorDto)))
+                        .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isCreated());
     }
 
     @Test
     @WithMockUser
     void getAllAuthors() throws Exception {
-        when(authorService.getAllAuthors()).thenReturn(Collections.singletonList(new AuthorDto()));
+        AuthorDto dto = new AuthorDto();
+        dto.setId(1L);
+        dto.setName("Test Author");
+        when(authorService.getAllAuthors()).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/authors"))
                 .andExpect(status().isOk());
@@ -57,6 +69,8 @@ class AuthorControllerTest {
     @WithMockUser
     void getAuthorById() throws Exception {
         AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Test Author");
         when(authorService.getAuthorById(1L)).thenReturn(authorDto);
 
         mockMvc.perform(get("/api/authors/1"))
@@ -66,10 +80,14 @@ class AuthorControllerTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void bulkImportAuthors() throws Exception {
+        AuthorDto dto = new AuthorDto();
+        dto.setName("Test Author Bulk");
+        List<AuthorDto> inputDtos = Collections.singletonList(dto);
+        doNothing().when(authorService).bulkImportAuthors(any());
+
         mockMvc.perform(post("/api/authors/bulk")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Collections.singletonList(new AuthorDto()))))
-                .andExpect(status().isCreated());
+                        .content(objectMapper.writeValueAsString(inputDtos)))
+                .andExpect(status().is2xxSuccessful());
     }
 }

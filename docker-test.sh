@@ -55,7 +55,7 @@ fi
 
 # Build the Spring Boot JAR
 echo "Building Spring Boot JAR..."
-./gradlew clean build -x test
+./gradlew clean build test
 
 # Build the Docker image with environment variables
 echo "Building Docker image..."

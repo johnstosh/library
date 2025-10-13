@@ -30,7 +30,10 @@ async function checkAuthentication() {
 function showLoginForm() {
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
-    document.getElementById('login-error').style.display = 'none'; // Assume an element for error
+    const errorEl = document.getElementById('login-error');
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
 }
 
 function showLoginError() {
@@ -47,7 +50,10 @@ function showLoginError() {
 function showMainContent(roles) {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
-    document.getElementById('login-error').style.display = 'none';
+    const errorEl = document.getElementById('login-error');
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
 
     if (roles.includes('LIBRARIAN')) {
         document.querySelectorAll('.librarian-only').forEach(el => {
@@ -302,19 +308,17 @@ async function login(event) {
         const response = await fetch('/login', {
             method: 'POST',
             body: formData,
-            credentials: 'include'
+            credentials: 'include',
+            redirect: 'manual'
         });
 
-        // Spring Security redirects on success/failure
-        if (response.redirected) {
-            const finalUrl = response.url;
-            if (finalUrl.includes('error')) {
+        if (response.status === 302 || response.status === 303) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('error')) {
                 showLoginError();
             } else {
-                // Success, re-check authentication to update UI
+                // Success
                 await checkAuthentication();
-                // Clear any URL params
-                window.history.replaceState({}, document.title, '/index.html');
             }
         } else {
             // Unexpected response
