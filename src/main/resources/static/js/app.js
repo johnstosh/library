@@ -1,5 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     checkAuthentication();
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', login);
+    }
+    // Check for login error in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('error')) {
+        showLoginError();
+        // Clear the error param from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 });
 
 async function checkAuthentication() {
@@ -19,11 +30,24 @@ async function checkAuthentication() {
 function showLoginForm() {
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
+    document.getElementById('login-error').style.display = 'none'; // Assume an element for error
+}
+
+function showLoginError() {
+    const errorEl = document.getElementById('login-error');
+    if (errorEl) {
+        errorEl.textContent = 'Invalid username or password. Please try again.';
+        errorEl.style.display = 'block';
+    } else {
+        alert('Login failed: Invalid username or password.');
+    }
+    showLoginForm();
 }
 
 function showMainContent(roles) {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
+    document.getElementById('login-error').style.display = 'none';
 
     if (roles.includes('LIBRARIAN')) {
         document.querySelectorAll('.librarian-only').forEach(el => {
@@ -255,8 +279,49 @@ async function populateLoanDropdowns() {
     });
 }
 
-async function login() {
-    // This is a placeholder for a real login implementation
-    // For now, we'll just assume the user is a librarian
-    showMainContent(['LIBRARIAN']);
+async function login(event) {
+    event.preventDefault();
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    if (!usernameInput || !passwordInput) {
+        alert('Username and password fields are required.');
+        return;
+    }
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+    if (!username || !password) {
+        alert('Please enter both username and password.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+
+        // Spring Security redirects on success/failure
+        if (response.redirected) {
+            const finalUrl = response.url;
+            if (finalUrl.includes('error')) {
+                showLoginError();
+            } else {
+                // Success, re-check authentication to update UI
+                await checkAuthentication();
+                // Clear any URL params
+                window.history.replaceState({}, document.title, '/index.html');
+            }
+        } else {
+            // Unexpected response
+            showLoginError();
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginError();
+    }
 }

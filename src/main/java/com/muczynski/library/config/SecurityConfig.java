@@ -28,8 +28,10 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
-                        .loginPage("/login")
+                        .loginPage("/")
+                        .loginProcessingUrl("/login")
                         .defaultSuccessUrl("/index.html", true)
+                        .failureUrl("/?error=true")
                         .permitAll()
                 )
                 .logout(logout -> logout.permitAll());
