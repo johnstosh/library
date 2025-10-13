@@ -1,0 +1,40 @@
+body {
+    font-family: sans-serif;
+    margin: 2em;
+}
+
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2em;
+}
+
+.section {
+    border: 1px solid #ccc;
+    padding: 1em;
+    border-radius: 5px;
+    min-width: 300px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    margin-bottom: 0.5em;
+}
+
+input, select, button, textarea {
+    margin-top: 0.5em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+button {
+    cursor: pointer;
+}
+
+.librarian-only {
+    display: none;
+}

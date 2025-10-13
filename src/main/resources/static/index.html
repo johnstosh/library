@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Library</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>Library Management</h1>
+
+<div id="login-form">
+    <h2>Login</h2>
+    <form action="/login" method="post">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+</div>
+
+<div id="main-content" style="display: none;">
+    <div class="container">
+        <div class="section">
+            <h2>Libraries</h2>
+            <ul id="library-list"></ul>
+            <div class="librarian-only">
+                <input type="text" id="new-library-name" placeholder="New library name">
+                <input type="text" id="new-library-hostname" placeholder="Hostname">
+                <button onclick="addLibrary()">Add Library</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Authors</h2>
+            <ul id="author-list"></ul>
+            <div class="librarian-only">
+                <input type="text" id="new-author-name" placeholder="New author name">
+                <input type="date" id="new-author-dob" placeholder="Date of Birth">
+                <input type="date" id="new-author-dod" placeholder="Date of Death">
+                <input type="text" id="new-author-religion" placeholder="Religious Affiliation">
+                <input type="text" id="new-author-country" placeholder="Birth Country">
+                <input type="text" id="new-author-nationality" placeholder="Nationality">
+                <textarea id="new-author-bio" placeholder="Brief Biography"></textarea>
+                <button onclick="addAuthor()">Add Author</button>
+                <h3>Bulk Import Authors</h3>
+                <textarea id="bulk-authors" placeholder='[{"name": "Author 1", ...}]'></textarea>
+                <button onclick="bulkImportAuthors()">Bulk Import</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Books</h2>
+            <ul id="book-list"></ul>
+            <div class="librarian-only">
+                <div>
+                    <input type="text" id="new-book-title" placeholder="New book title">
+                    <input type="number" id="new-book-year" placeholder="Publication Year">
+                    <input type="text" id="new-book-publisher" placeholder="Publisher">
+                    <textarea id="new-book-summary" placeholder="Plot Summary"></textarea>
+                    <input type="text" id="new-book-related" placeholder="Related Works">
+                    <textarea id="new-book-description" placeholder="Detailed Description"></textarea>
+                    <input type="date" id="new-book-added" placeholder="Date Added">
+                    <select id="new-book-status">
+                        <option value="ACTIVE">Active</option>
+                        <option value="LOST">Lost</option>
+                        <option value="WITHDRAWN">Withdrawn</option>
+                    </select>
+                    <select id="book-author"></select>
+                    <select id="book-library"></select>
+                    <button onclick="addBook()">Add Book</button>
+                </div>
+                <h3>Bulk Import Books</h3>
+                <textarea id="bulk-books" placeholder='[{"title": "Book 1", ...}]'></textarea>
+                <button onclick="bulkImportBooks()">Bulk Import</button>
+            </div>
+        </div>
+
+        <div class="section librarian-only">
+            <h2>Users</h2>
+            <ul id="user-list"></ul>
+        </div>
+
+        <div class="section librarian-only">
+            <h2>Loans</h2>
+            <ul id="loan-list"></ul>
+            <div>
+                <select id="loan-book"></select>
+                <select id="loan-user"></select>
+                <button onclick="checkoutBook()">Checkout Book</button>
+            </div>
+        </div>
+    </div>
+    <form action="/logout" method="post">
+        <button type="submit">Logout</button>
+    </form>
+</div>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
