@@ -9,3 +9,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+.vscode
+*.log
+*.txt
+bin
+
