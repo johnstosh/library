@@ -61,7 +61,7 @@ echo "Building Spring Boot JAR..."
 echo "Building Docker image..."
 docker build \
   --build-arg DB_PASSWORD="$DB_PASSWORD" \
-\  -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest .
+  -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest .
 
 # Run the Docker image locally with environment variables
 echo "Running Docker image on http://localhost:8080..."
