@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
 
@@ -14,11 +16,11 @@
     <form action="/login" method="post">
         <div>
             <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
+            <input type="text" id="username" name="username" autocomplete="username" required>
         </div>
         <div>
             <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
         </div>
         <div>
             <button type="submit">Login</button>
@@ -28,8 +30,16 @@
 </div>
 
 <div id="main-content" style="display: none;">
+    <nav id="section-menu" style="display: none;">
+        <button onclick="showSection('libraries')">Libraries</button>
+        <button onclick="showSection('authors')">Authors</button>
+        <button onclick="showSection('books')">Books</button>
+        <button class="librarian-only" onclick="showSection('users')">Users</button>
+        <button class="librarian-only" onclick="showSection('loans')">Loans</button>
+        <button onclick="logout()">Logout</button>
+    </nav>
     <div class="container">
-        <div class="section">
+        <div id="libraries-section" class="section">
             <h2>Libraries</h2>
             <ul id="library-list"></ul>
             <div class="librarian-only">
@@ -39,7 +49,7 @@
             </div>
         </div>
 
-        <div class="section">
+        <div id="authors-section" class="section">
             <h2>Authors</h2>
             <ul id="author-list"></ul>
             <div class="librarian-only">
@@ -57,7 +67,7 @@
             </div>
         </div>
 
-        <div class="section">
+        <div id="books-section" class="section">
             <h2>Books</h2>
             <ul id="book-list"></ul>
             <div class="librarian-only">
@@ -84,12 +94,21 @@
             </div>
         </div>
 
-        <div class="section librarian-only">
+        <div id="users-section" class="section librarian-only">
             <h2>Users</h2>
             <ul id="user-list"></ul>
+            <form>
+                <input type="text" id="new-user-username" placeholder="Username" autocomplete="username">
+                <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password">
+                <select id="new-user-role">
+                    <option value="LIBRARIAN">Librarian</option>
+                    <option value="PATRON">Patron</option>
+                </select>
+                <button type="button" onclick="addUser()">Add User</button>
+            </form>
         </div>
 
-        <div class="section librarian-only">
+        <div id="loans-section" class="section librarian-only">
             <h2>Loans</h2>
             <ul id="loan-list"></ul>
             <div>
@@ -99,9 +118,6 @@
             </div>
         </div>
     </div>
-    <form action="/logout" method="post">
-        <button type="submit">Logout</button>
-    </form>
 </div>
 
 <script src="js/app.js"></script>

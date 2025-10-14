@@ -1,6 +1,33 @@
 body {
     font-family: sans-serif;
-    margin: 2em;
+    margin: 1em;
+}
+
+#section-menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-bottom: 1em;
+    padding: 0.5em;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+#section-menu button {
+    padding: 0.5em 1em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#section-menu button:hover {
+    background-color: #0056b3;
+}
+
+#section-menu button.active {
+    background-color: #28a745;
 }
 
 .container {
@@ -14,6 +41,7 @@ body {
     padding: 1em;
     border-radius: 5px;
     min-width: 300px;
+    display: block; /* Initially visible */
 }
 
 ul {
@@ -37,4 +65,50 @@ button {
 
 .librarian-only {
     display: none;
+}
+
+.section.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    body {
+        margin: 0.5em;
+    }
+
+    #section-menu {
+        flex-direction: column;
+        gap: 0.25em;
+    }
+
+    .container {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .section {
+        min-width: auto;
+        padding: 0.5em;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    h2 {
+        font-size: 1.2em;
+    }
+
+    h3 {
+        font-size: 1em;
+    }
+
+    input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .librarian-only div {
+        display: flex;
+        flex-direction: column;
+    }
 }

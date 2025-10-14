@@ -1,12 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuthentication();
-    const loginForm = document.getElementById('login-form');
+    // Add submit event listener to login form for debugging
+    const loginForm = document.getElementById('login-form').querySelector('form');
     if (loginForm) {
-        loginForm.addEventListener('submit', login);
+        loginForm.addEventListener('submit', (e) => {
+            console.log('Login form submitted with username:', document.getElementById('username').value);
+        });
     }
+
+    checkAuthentication();
     // Check for login error in URL params
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('error')) {
+        console.log('Login error detected in URL params');
         showLoginError();
         // Clear the error param from URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -14,15 +19,22 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function checkAuthentication() {
+    console.log('Checking authentication...');
     try {
         const response = await fetch('/api/users/me');
-        if (response.ok) {
+        console.log('Authentication check response status:', response.status);
+        const contentType = response.headers.get('content-type');
+        console.log('Response content-type:', contentType);
+        if (response.ok && contentType && contentType.includes('application/json')) {
             const user = await response.json();
+            console.log('User authenticated:', user);
             showMainContent(user.roles);
         } else {
+            console.log('Authentication failed or non-JSON response, showing login form');
             showLoginForm();
         }
     } catch (error) {
+        console.error('Error during authentication check:', error);
         showLoginForm();
     }
 }
@@ -37,6 +49,7 @@ function showLoginForm() {
 }
 
 function showLoginError() {
+    console.log('Showing login error');
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
         errorEl.textContent = 'Invalid username or password. Please try again.';
@@ -48,6 +61,7 @@ function showLoginError() {
 }
 
 function showMainContent(roles) {
+    console.log('Showing main content for roles:', roles);
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
     const errorEl = document.getElementById('login-error');
@@ -55,10 +69,15 @@ function showMainContent(roles) {
         errorEl.style.display = 'none';
     }
 
+    document.getElementById('section-menu').style.display = 'flex';
+
     if (roles.includes('LIBRARIAN')) {
         document.querySelectorAll('.librarian-only').forEach(el => {
             el.style.display = 'block';
         });
+        showSection('loans');
+    } else {
+        showSection('books');
     }
 
     loadLibraries();
@@ -70,6 +89,34 @@ function showMainContent(roles) {
         populateBookDropdowns();
         populateLoanDropdowns();
     }
+}
+
+function showSection(sectionId, event) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.add('hidden');
+    });
+    // Show the selected section if it exists and is visible
+    const targetSection = document.getElementById(sectionId + '-section');
+    if (targetSection && targetSection.style.display !== 'none') {
+        targetSection.classList.remove('hidden');
+    }
+    // Update active button only if event is provided (from button click)
+    if (event) {
+        document.querySelectorAll('#section-menu button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const clickedButton = event.target.closest('button[onclick*="showSection"]');
+        if (clickedButton) {
+            clickedButton.classList.add('active');
+        }
+    }
+}
+
+function logout() {
+    fetch('/logout', { method: 'POST' }).then(() => {
+        window.location.href = '/';
+    });
 }
 
 async function fetchData(url) {
@@ -202,9 +249,30 @@ async function loadUsers() {
     list.innerHTML = '';
     users.forEach(user => {
         const li = document.createElement('li');
-        li.textContent = user.username;
+        const rolesText = user.roles ? Array.from(user.roles).join(', ') : '';
+        li.textContent = `${user.username} (${rolesText})`;
         list.appendChild(li);
     });
+}
+
+async function addUser() {
+    const username = document.getElementById('new-user-username').value;
+    const password = document.getElementById('new-user-password').value;
+    const role = document.getElementById('new-user-role').value;
+    if (!username || !password || !role) {
+        alert('Please fill in all fields.');
+        return;
+    }
+    try {
+        await postData('/api/users', { username, password, role });
+        document.getElementById('new-user-username').value = '';
+        document.getElementById('new-user-password').value = '';
+        document.getElementById('new-user-role').value = 'LIBRARIAN';
+        loadUsers();
+        populateLoanDropdowns();
+    } catch (error) {
+        alert('Failed to add user. Please check the backend implementation.');
+    }
 }
 
 async function loadLoans() {
@@ -283,49 +351,4 @@ async function populateLoanDropdowns() {
         option.textContent = user.username;
         userSelect.appendChild(option);
     });
-}
-
-async function login(event) {
-    event.preventDefault();
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    if (!usernameInput || !passwordInput) {
-        alert('Username and password fields are required.');
-        return;
-    }
-    const username = usernameInput.value;
-    const password = passwordInput.value;
-    if (!username || !password) {
-        alert('Please enter both username and password.');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-
-    try {
-        const response = await fetch('/login', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include',
-            redirect: 'manual'
-        });
-
-        if (response.status === 302 || response.status === 303) {
-            const location = response.headers.get('Location');
-            if (location && location.includes('error')) {
-                showLoginError();
-            } else {
-                // Success
-                await checkAuthentication();
-            }
-        } else {
-            // Unexpected response
-            showLoginError();
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        showLoginError();
-    }
 }
