@@ -1,0 +1,157 @@
+body {
+    font-family: sans-serif;
+    margin: 1em;
+}
+
+#section-menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-bottom: 1em;
+    padding: 0.5em;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+#section-menu button {
+    padding: 0.5em 1em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#section-menu button:hover {
+    background-color: #0056b3;
+}
+
+#section-menu button.active {
+    background-color: #28a745;
+}
+
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2em;
+}
+
+.section {
+    border: 1px solid #ccc;
+    padding: 1em;
+    border-radius: 5px;
+    min-width: 300px;
+    display: block; /* Initially visible */
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+li span {
+    flex: 1;
+}
+
+li button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.2em;
+    font-size: 1.2em;
+    border-radius: 2px;
+}
+
+li button:hover {
+    background-color: #f0f0f0;
+}
+
+.return-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 0.3em 0.6em;
+    border-radius: 3px;
+    margin-left: auto;
+}
+
+input, select, button, textarea {
+    margin-top: 0.5em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+button {
+    cursor: pointer;
+}
+
+.librarian-only {
+    display: none;
+}
+
+.user-is-librarian .librarian-only {
+    display: block;
+}
+
+.section.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    body {
+        margin: 0.5em;
+    }
+
+    #section-menu {
+        flex-direction: column;
+        gap: 0.25em;
+    }
+
+    .container {
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    .section {
+        min-width: auto;
+        padding: 0.5em;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    h2 {
+        font-size: 1.2em;
+    }
+
+    h3 {
+        font-size: 1em;
+    }
+
+    input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .librarian-only div {
+        display: flex;
+        flex-direction: column;
+    }
+
+    li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2em;
+    }
+
+    li button {
+        align-self: flex-end;
+        font-size: 1em;
+    }
+}
