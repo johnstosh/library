@@ -3,5 +3,6 @@ package com.muczynski.library.domain;
 public enum BookStatus {
     ACTIVE,
     LOST,
-    WITHDRAWN
+    WITHDRAWN,
+    ON_ORDER
 }

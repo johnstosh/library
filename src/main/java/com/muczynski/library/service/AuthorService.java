@@ -4,6 +4,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.repository.AuthorRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,13 +15,11 @@ import java.util.stream.Collectors;
 @Transactional
 public class AuthorService {
 
-    private final AuthorRepository authorRepository;
-    private final AuthorMapper authorMapper;
+    @Autowired
+    private AuthorRepository authorRepository;
 
-    public AuthorService(AuthorRepository authorRepository, AuthorMapper authorMapper) {
-        this.authorRepository = authorRepository;
-        this.authorMapper = authorMapper;
-    }
+    @Autowired
+    private AuthorMapper authorMapper;
 
     public AuthorDto createAuthor(AuthorDto authorDto) {
         Author author = authorMapper.toEntity(authorDto);
@@ -38,6 +37,21 @@ public class AuthorService {
         return authorRepository.findById(id)
                 .map(authorMapper::toDto)
                 .orElse(null);
+    }
+
+    public AuthorDto updateAuthor(Long id, AuthorDto authorDto) {
+        Author author = authorRepository.findById(id).orElseThrow(() -> new RuntimeException("Author not found: " + id));
+        Author updatedAuthor = authorMapper.toEntity(authorDto);
+        updatedAuthor.setId(id);
+        Author savedAuthor = authorRepository.save(updatedAuthor);
+        return authorMapper.toDto(savedAuthor);
+    }
+
+    public void deleteAuthor(Long id) {
+        if (!authorRepository.existsById(id)) {
+            throw new RuntimeException("Author not found: " + id);
+        }
+        authorRepository.deleteById(id);
     }
 
     public void bulkImportAuthors(List<AuthorDto> authorDtos) {

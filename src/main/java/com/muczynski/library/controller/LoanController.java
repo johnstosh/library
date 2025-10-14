@@ -2,6 +2,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.service.LoanService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,37 +14,48 @@ import java.util.List;
 @RequestMapping("/api/loans")
 public class LoanController {
 
-    private final LoanService loanService;
-
-    public LoanController(LoanService loanService) {
-        this.loanService = loanService;
-    }
+    @Autowired
+    private LoanService loanService;
 
     @PostMapping("/checkout")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<LoanDto> checkoutBook(@RequestBody LoanDto loanDto) {
-        LoanDto createdLoan = loanService.checkoutBook(loanDto);
-        return new ResponseEntity<>(createdLoan, HttpStatus.CREATED);
+        LoanDto created = loanService.checkoutBook(loanDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/return/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<LoanDto> returnBook(@PathVariable Long id) {
-        LoanDto returnedLoan = loanService.returnBook(id);
-        return returnedLoan != null ? new ResponseEntity<>(returnedLoan, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        LoanDto updated = loanService.returnBook(id);
+        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<List<LoanDto>> getAllLoans() {
         List<LoanDto> loans = loanService.getAllLoans();
-        return new ResponseEntity<>(loans, HttpStatus.OK);
+        return ResponseEntity.ok(loans);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<LoanDto> getLoanById(@PathVariable Long id) {
         LoanDto loan = loanService.getLoanById(id);
-        return loan != null ? new ResponseEntity<>(loan, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<LoanDto> updateLoan(@PathVariable Long id, @RequestBody LoanDto loanDto) {
+        LoanDto updated = loanService.updateLoan(id, loanDto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
+        loanService.deleteLoan(id);
+        return ResponseEntity.noContent().build();
     }
 }

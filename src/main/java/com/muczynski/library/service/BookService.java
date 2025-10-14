@@ -1,9 +1,15 @@
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.mapper.BookMapper;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.LibraryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,16 +20,22 @@ import java.util.stream.Collectors;
 @Transactional
 public class BookService {
 
-    private final BookRepository bookRepository;
-    private final BookMapper bookMapper;
+    @Autowired
+    private BookRepository bookRepository;
 
-    public BookService(BookRepository bookRepository, BookMapper bookMapper) {
-        this.bookRepository = bookRepository;
-        this.bookMapper = bookMapper;
-    }
+    @Autowired
+    private BookMapper bookMapper;
+
+    @Autowired
+    private AuthorRepository authorRepository;
+
+    @Autowired
+    private LibraryRepository libraryRepository;
 
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
+        book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
+        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -40,9 +52,46 @@ public class BookService {
                 .orElse(null);
     }
 
+    public BookDto updateBook(Long id, BookDto bookDto) {
+        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found: " + id));
+        book.setTitle(bookDto.getTitle());
+        book.setPublicationYear(bookDto.getPublicationYear());
+        book.setPublisher(bookDto.getPublisher());
+        book.setPlotSummary(bookDto.getPlotSummary());
+        book.setRelatedWorks(bookDto.getRelatedWorks());
+        book.setDetailedDescription(bookDto.getDetailedDescription());
+        book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        if (bookDto.getStatus() != null) {
+            book.setStatus(bookDto.getStatus());
+        }
+        if (bookDto.getAuthorId() != null) {
+            book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
+        }
+        if (bookDto.getLibraryId() != null) {
+            book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
+        }
+        Book savedBook = bookRepository.save(book);
+        return bookMapper.toDto(savedBook);
+    }
+
+    public void deleteBook(Long id) {
+        if (!bookRepository.existsById(id)) {
+            throw new RuntimeException("Book not found: " + id);
+        }
+        bookRepository.deleteById(id);
+    }
+
     public void bulkImportBooks(List<BookDto> bookDtos) {
         List<Book> books = bookDtos.stream()
-                .map(bookMapper::toEntity)
+                .map(bookDto -> {
+                    Book book = bookMapper.toEntity(bookDto);
+                    book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
+                    book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
+                    if (bookDto.getStatus() != null) {
+                        book.setStatus(bookDto.getStatus());
+                    }
+                    return book;
+                })
                 .collect(Collectors.toList());
         bookRepository.saveAll(books);
     }

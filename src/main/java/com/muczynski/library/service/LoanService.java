@@ -1,9 +1,14 @@
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.mapper.LoanMapper;
+import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,17 +20,26 @@ import java.util.stream.Collectors;
 @Transactional
 public class LoanService {
 
-    private final LoanRepository loanRepository;
-    private final LoanMapper loanMapper;
+    @Autowired
+    private LoanRepository loanRepository;
 
-    public LoanService(LoanRepository loanRepository, LoanMapper loanMapper) {
-        this.loanRepository = loanRepository;
-        this.loanMapper = loanMapper;
-    }
+    @Autowired
+    private LoanMapper loanMapper;
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public LoanDto checkoutBook(LoanDto loanDto) {
-        Loan loan = loanMapper.toEntity(loanDto);
+        Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new RuntimeException("Book not found: " + loanDto.getBookId()));
+        User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new RuntimeException("User not found: " + loanDto.getUserId()));
+        Loan loan = new Loan();
+        loan.setBook(book);
+        loan.setUser(user);
         loan.setLoanDate(LocalDate.now());
+        loan.setReturnDate(null);
         Loan savedLoan = loanRepository.save(loan);
         return loanMapper.toDto(savedLoan);
     }
@@ -50,5 +64,30 @@ public class LoanService {
         return loanRepository.findById(id)
                 .map(loanMapper::toDto)
                 .orElse(null);
+    }
+
+    public LoanDto updateLoan(Long id, LoanDto loanDto) {
+        Loan loan = loanRepository.findById(id).orElseThrow(() -> new RuntimeException("Loan not found: " + id));
+        if (loanDto.getLoanDate() != null) {
+            loan.setLoanDate(loanDto.getLoanDate());
+        }
+        if (loanDto.getReturnDate() != null) {
+            loan.setReturnDate(loanDto.getReturnDate());
+        }
+        if (loanDto.getBookId() != null) {
+            loan.setBook(bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new RuntimeException("Book not found: " + loanDto.getBookId())));
+        }
+        if (loanDto.getUserId() != null) {
+            loan.setUser(userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new RuntimeException("User not found: " + loanDto.getUserId())));
+        }
+        Loan savedLoan = loanRepository.save(loan);
+        return loanMapper.toDto(savedLoan);
+    }
+
+    public void deleteLoan(Long id) {
+        if (!loanRepository.existsById(id)) {
+            throw new RuntimeException("Loan not found: " + id);
+        }
+        loanRepository.deleteById(id);
     }
 }

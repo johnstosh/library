@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<h1>Library Management</h1>
+<h1 id="page-title">Library Management</h1>
 
 <div id="login-form">
     <h2>Login</h2>
@@ -45,7 +45,7 @@
             <div class="librarian-only">
                 <input type="text" id="new-library-name" placeholder="New library name">
                 <input type="text" id="new-library-hostname" placeholder="Hostname">
-                <button onclick="addLibrary()">Add Library</button>
+                <button id="add-library-btn" onclick="addLibrary()">Add Library</button>
             </div>
         </div>
 
@@ -53,14 +53,35 @@
             <h2>Authors</h2>
             <ul id="author-list"></ul>
             <div class="librarian-only">
-                <input type="text" id="new-author-name" placeholder="New author name">
-                <input type="date" id="new-author-dob" placeholder="Date of Birth">
-                <input type="date" id="new-author-dod" placeholder="Date of Death">
-                <input type="text" id="new-author-religion" placeholder="Religious Affiliation">
-                <input type="text" id="new-author-country" placeholder="Birth Country">
-                <input type="text" id="new-author-nationality" placeholder="Nationality">
-                <textarea id="new-author-bio" placeholder="Brief Biography"></textarea>
-                <button onclick="addAuthor()">Add Author</button>
+                <div>
+                    <label for="new-author-name">Author Name:</label>
+                    <input type="text" id="new-author-name" placeholder="New author name">
+                </div>
+                <div>
+                    <label for="new-author-dob">Date of Birth:</label>
+                    <input type="date" id="new-author-dob">
+                </div>
+                <div>
+                    <label for="new-author-dod">Date of Death:</label>
+                    <input type="date" id="new-author-dod">
+                </div>
+                <div>
+                    <label for="new-author-religion">Religious Affiliation:</label>
+                    <input type="text" id="new-author-religion" placeholder="Religious Affiliation">
+                </div>
+                <div>
+                    <label for="new-author-country">Birth Country:</label>
+                    <input type="text" id="new-author-country" placeholder="Birth Country">
+                </div>
+                <div>
+                    <label for="new-author-nationality">Nationality:</label>
+                    <input type="text" id="new-author-nationality" placeholder="Nationality">
+                </div>
+                <div>
+                    <label for="new-author-bio">Brief Biography:</label>
+                    <textarea id="new-author-bio" placeholder="Brief Biography"></textarea>
+                </div>
+                <button id="add-author-btn" onclick="addAuthor()">Add Author</button>
                 <h3>Bulk Import Authors</h3>
                 <textarea id="bulk-authors" placeholder='[{"name": "Author 1", ...}]'></textarea>
                 <button onclick="bulkImportAuthors()">Bulk Import</button>
@@ -72,21 +93,51 @@
             <ul id="book-list"></ul>
             <div class="librarian-only">
                 <div>
-                    <input type="text" id="new-book-title" placeholder="New book title">
-                    <input type="number" id="new-book-year" placeholder="Publication Year">
-                    <input type="text" id="new-book-publisher" placeholder="Publisher">
-                    <textarea id="new-book-summary" placeholder="Plot Summary"></textarea>
-                    <input type="text" id="new-book-related" placeholder="Related Works">
-                    <textarea id="new-book-description" placeholder="Detailed Description"></textarea>
-                    <input type="date" id="new-book-added" placeholder="Date Added">
-                    <select id="new-book-status">
-                        <option value="ACTIVE">Active</option>
-                        <option value="LOST">Lost</option>
-                        <option value="WITHDRAWN">Withdrawn</option>
-                    </select>
-                    <select id="book-author"></select>
-                    <select id="book-library"></select>
-                    <button onclick="addBook()">Add Book</button>
+                    <div>
+                        <label for="new-book-title">Book Title:</label>
+                        <input type="text" id="new-book-title" placeholder="New book title">
+                    </div>
+                    <div>
+                        <label for="new-book-year">Publication Year:</label>
+                        <input type="number" id="new-book-year" placeholder="Publication Year">
+                    </div>
+                    <div>
+                        <label for="new-book-publisher">Publisher:</label>
+                        <input type="text" id="new-book-publisher" placeholder="Publisher">
+                    </div>
+                    <div>
+                        <label for="new-book-summary">Plot Summary:</label>
+                        <textarea id="new-book-summary" placeholder="Plot Summary"></textarea>
+                    </div>
+                    <div>
+                        <label for="new-book-related">Related Works:</label>
+                        <input type="text" id="new-book-related" placeholder="Related Works">
+                    </div>
+                    <div>
+                        <label for="new-book-description">Detailed Description:</label>
+                        <textarea id="new-book-description" placeholder="Detailed Description"></textarea>
+                    </div>
+                    <div>
+                        <label for="new-book-added">Date Added to Library:</label>
+                        <input type="date" id="new-book-added">
+                    </div>
+                    <div>
+                        <label for="new-book-status">Status:</label>
+                        <select id="new-book-status">
+                            <option value="ACTIVE">Active</option>
+                            <option value="LOST">Lost</option>
+                            <option value="WITHDRAWN">Withdrawn</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="book-author">Author:</label>
+                        <select id="book-author"></select>
+                    </div>
+                    <div>
+                        <label for="book-library">Library:</label>
+                        <select id="book-library"></select>
+                    </div>
+                    <button id="add-book-btn" onclick="addBook()">Add Book</button>
                 </div>
                 <h3>Bulk Import Books</h3>
                 <textarea id="bulk-books" placeholder='[{"title": "Book 1", ...}]'></textarea>
@@ -98,13 +149,22 @@
             <h2>Users</h2>
             <ul id="user-list"></ul>
             <form>
-                <input type="text" id="new-user-username" placeholder="Username" autocomplete="username">
-                <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password">
-                <select id="new-user-role">
-                    <option value="LIBRARIAN">Librarian</option>
-                    <option value="PATRON">Patron</option>
-                </select>
-                <button type="button" onclick="addUser()">Add User</button>
+                <div>
+                    <label for="new-user-username">Username:</label>
+                    <input type="text" id="new-user-username" placeholder="Username" autocomplete="username">
+                </div>
+                <div>
+                    <label for="new-user-password">Password:</label>
+                    <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password">
+                </div>
+                <div>
+                    <label for="new-user-role">Role:</label>
+                    <select id="new-user-role">
+                        <option value="LIBRARIAN">Librarian</option>
+                        <option value="PATRON">Patron</option>
+                    </select>
+                </div>
+                <button id="add-user-btn" type="button" onclick="addUser()">Add User</button>
             </form>
         </div>
 
@@ -112,9 +172,23 @@
             <h2>Loans</h2>
             <ul id="loan-list"></ul>
             <div>
-                <select id="loan-book"></select>
-                <select id="loan-user"></select>
-                <button onclick="checkoutBook()">Checkout Book</button>
+                <div>
+                    <label for="loan-book">Book:</label>
+                    <select id="loan-book"></select>
+                </div>
+                <div>
+                    <label for="loan-user">User:</label>
+                    <select id="loan-user"></select>
+                </div>
+                <div>
+                    <label for="loan-date">Loan Date:</label>
+                    <input type="date" id="loan-date">
+                </div>
+                <div>
+                    <label for="return-date">Return Date:</label>
+                    <input type="date" id="return-date">
+                </div>
+                <button id="checkout-btn" onclick="checkoutBook()">Checkout Book</button>
             </div>
         </div>
     </div>

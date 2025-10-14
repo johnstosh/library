@@ -50,7 +50,35 @@ ul {
 }
 
 li {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
     margin-bottom: 0.5em;
+}
+
+li span {
+    flex: 1;
+}
+
+li button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.2em;
+    font-size: 1.2em;
+    border-radius: 2px;
+}
+
+li button:hover {
+    background-color: #f0f0f0;
+}
+
+.return-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 0.3em 0.6em;
+    border-radius: 3px;
+    margin-left: auto;
 }
 
 input, select, button, textarea {
@@ -114,5 +142,16 @@ button {
     .librarian-only div {
         display: flex;
         flex-direction: column;
+    }
+
+    li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2em;
+    }
+
+    li button {
+        align-self: flex-end;
+        font-size: 1em;
     }
 }
