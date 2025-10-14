@@ -67,6 +67,10 @@ button {
     display: none;
 }
 
+.user-is-librarian .librarian-only {
+    display: block;
+}
+
 .section.hidden {
     display: none;
 }

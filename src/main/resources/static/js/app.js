@@ -72,11 +72,10 @@ function showMainContent(roles) {
     document.getElementById('section-menu').style.display = 'flex';
 
     if (roles.includes('LIBRARIAN')) {
-        document.querySelectorAll('.librarian-only').forEach(el => {
-            el.style.display = 'block';
-        });
+        document.body.classList.add('user-is-librarian');
         showSection('loans');
     } else {
+        document.body.classList.remove('user-is-librarian');
         showSection('books');
     }
 
@@ -114,6 +113,7 @@ function showSection(sectionId, event) {
 }
 
 function logout() {
+    document.body.classList.remove('user-is-librarian');
     fetch('/logout', { method: 'POST' }).then(() => {
         window.location.href = '/';
     });
