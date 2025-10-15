@@ -20,9 +20,11 @@ public class LoanMapper {
         loanDto.setReturnDate(loan.getReturnDate());
         if (loan.getBook() != null) {
             loanDto.setBookId(loan.getBook().getId());
+            loanDto.setBookTitle(loan.getBook().getTitle());
         }
         if (loan.getUser() != null) {
             loanDto.setUserId(loan.getUser().getId());
+            loanDto.setUserName(loan.getUser().getUsername());
         }
 
         return loanDto;

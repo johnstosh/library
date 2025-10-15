@@ -38,8 +38,8 @@ public class LoanService {
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);
-        loan.setLoanDate(LocalDate.now());
-        loan.setReturnDate(null);
+        loan.setLoanDate(loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now());
+        loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
         return loanMapper.toDto(savedLoan);
     }

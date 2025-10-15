@@ -20,6 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 async function checkAuthentication() {
     console.log('Checking authentication...');
     try {
@@ -131,11 +146,16 @@ async function fetchData(url) {
 }
 
 async function postData(url, data) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (token) {
+        headers['X-XSRF-TOKEN'] = token;
+    }
     const response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(data)
     });
     if (!response.ok) {
@@ -145,11 +165,16 @@ async function postData(url, data) {
 }
 
 async function putData(url, data) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (token) {
+        headers['X-XSRF-TOKEN'] = token;
+    }
     const response = await fetch(url, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(data)
     });
     if (!response.ok) {
@@ -159,8 +184,14 @@ async function putData(url, data) {
 }
 
 async function deleteData(url) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {};
+    if (token) {
+        headers['X-XSRF-TOKEN'] = token;
+    }
     const response = await fetch(url, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
     });
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -174,23 +205,28 @@ async function loadLibraries() {
     list.innerHTML = '';
     libraries.forEach(library => {
         const li = document.createElement('li');
+        li.setAttribute('data-test', 'library-item');
         const span = document.createElement('span');
+        span.setAttribute('data-test', 'library-name');
         span.textContent = `${library.name} (${library.hostname})`;
         li.appendChild(span);
         if (isLibrarian) {
             const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-library-btn');
             viewBtn.textContent = '🔍';
             viewBtn.title = 'View details';
             viewBtn.onclick = () => viewLibrary(library.id);
             li.appendChild(viewBtn);
 
             const editBtn = document.createElement('button');
+            editBtn.setAttribute('data-test', 'edit-library-btn');
             editBtn.textContent = '✏️';
             editBtn.title = 'Edit';
             editBtn.onclick = () => editLibrary(library.id);
             li.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
+            delBtn.setAttribute('data-test', 'delete-library-btn');
             delBtn.textContent = '🗑️';
             delBtn.title = 'Delete';
             delBtn.onclick = () => deleteLibrary(library.id);
@@ -257,23 +293,28 @@ async function loadAuthors() {
     list.innerHTML = '';
     authors.forEach(author => {
         const li = document.createElement('li');
+        li.setAttribute('data-test', 'author-item');
         const span = document.createElement('span');
+        span.setAttribute('data-test', 'author-name');
         span.textContent = author.name;
         li.appendChild(span);
         if (isLibrarian) {
             const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-author-btn');
             viewBtn.textContent = '🔍';
             viewBtn.title = 'View details';
             viewBtn.onclick = () => viewAuthor(author.id);
             li.appendChild(viewBtn);
 
             const editBtn = document.createElement('button');
+            editBtn.setAttribute('data-test', 'edit-author-btn');
             editBtn.textContent = '✏️';
             editBtn.title = 'Edit';
             editBtn.onclick = () => editAuthor(author.id);
             li.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
+            delBtn.setAttribute('data-test', 'delete-author-btn');
             delBtn.textContent = '🗑️';
             delBtn.title = 'Delete';
             delBtn.onclick = () => deleteAuthor(author.id);
@@ -372,23 +413,28 @@ async function loadBooks() {
     list.innerHTML = '';
     books.forEach(book => {
         const li = document.createElement('li');
+        li.setAttribute('data-test', 'book-item');
         const span = document.createElement('span');
+        span.setAttribute('data-test', 'book-title');
         span.textContent = book.title;
         li.appendChild(span);
         if (isLibrarian) {
             const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-book-btn');
             viewBtn.textContent = '🔍';
             viewBtn.title = 'View details';
             viewBtn.onclick = () => viewBook(book.id);
             li.appendChild(viewBtn);
 
             const editBtn = document.createElement('button');
+            editBtn.setAttribute('data-test', 'edit-book-btn');
             editBtn.textContent = '✏️';
             editBtn.title = 'Edit';
             editBtn.onclick = () => editBook(book.id);
             li.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
+            delBtn.setAttribute('data-test', 'delete-book-btn');
             delBtn.textContent = '🗑️';
             delBtn.title = 'Delete';
             delBtn.onclick = () => deleteBook(book.id);
@@ -502,24 +548,29 @@ async function loadUsers() {
     list.innerHTML = '';
     users.forEach(user => {
         const li = document.createElement('li');
+        li.setAttribute('data-test', 'user-item');
         const span = document.createElement('span');
+        span.setAttribute('data-test', 'user-name');
         const rolesText = user.roles ? Array.from(user.roles).join(', ') : '';
         span.textContent = `${user.username} (${rolesText})`;
         li.appendChild(span);
 
         const viewBtn = document.createElement('button');
+        viewBtn.setAttribute('data-test', 'view-user-btn');
         viewBtn.textContent = '🔍';
         viewBtn.title = 'View details';
         viewBtn.onclick = () => viewUser(user.id);
         li.appendChild(viewBtn);
 
         const editBtn = document.createElement('button');
+        editBtn.setAttribute('data-test', 'edit-user-btn');
         editBtn.textContent = '✏️';
         editBtn.title = 'Edit';
         editBtn.onclick = () => editUser(user.id);
         li.appendChild(editBtn);
 
         const delBtn = document.createElement('button');
+        delBtn.setAttribute('data-test', 'delete-user-btn');
         delBtn.textContent = '🗑️';
         delBtn.title = 'Delete';
         delBtn.onclick = () => deleteUser(user.id);
@@ -604,13 +655,16 @@ async function loadLoans() {
     list.innerHTML = '';
     for (const loan of loans) {
         const li = document.createElement('li');
+        li.setAttribute('data-test', 'loan-item');
         const span = document.createElement('span');
+        span.setAttribute('data-test', 'loan-details');
         span.textContent = `${loan.bookTitle} loaned to ${loan.userName} on ${loan.loanDate}`;
         li.appendChild(span);
         if (loan.returnDate) {
             span.textContent += ` (returned on ${loan.returnDate})`;
         } else {
             const returnButton = document.createElement('button');
+            returnButton.setAttribute('data-test', 'return-book-btn');
             returnButton.textContent = 'Return';
             returnButton.className = 'return-btn';
             returnButton.onclick = () => returnBook(loan.id);
@@ -618,18 +672,21 @@ async function loadLoans() {
         }
 
         const viewBtn = document.createElement('button');
+        viewBtn.setAttribute('data-test', 'view-loan-btn');
         viewBtn.textContent = '🔍';
         viewBtn.title = 'View details';
         viewBtn.onclick = () => viewLoan(loan.id);
         li.appendChild(viewBtn);
 
         const editBtn = document.createElement('button');
+        editBtn.setAttribute('data-test', 'edit-loan-btn');
         editBtn.textContent = '✏️';
         editBtn.title = 'Edit';
         editBtn.onclick = () => editLoan(loan.id);
         li.appendChild(editBtn);
 
         const delBtn = document.createElement('button');
+        delBtn.setAttribute('data-test', 'delete-loan-btn');
         delBtn.textContent = '🗑️';
         delBtn.title = 'Delete';
         delBtn.onclick = () => deleteLoan(loan.id);
