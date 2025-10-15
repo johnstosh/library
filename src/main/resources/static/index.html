@@ -9,121 +9,121 @@
 </head>
 <body>
 
-<h1 id="page-title">Library Management</h1>
+<h1 id="page-title" data-test="page-title">Library Management</h1>
 
-<div id="login-form">
-    <h2>Login</h2>
+<div id="login-form" data-test="login-form">
+    <h2 data-test="login-header">Login</h2>
     <form action="/login" method="post">
         <div>
             <label for="username">Username:</label>
-            <input type="text" id="username" name="username" autocomplete="username" required>
+            <input type="text" id="username" name="username" autocomplete="username" required data-test="login-username">
         </div>
         <div>
             <label for="password">Password:</label>
-            <input type="password" id="password" name="password" autocomplete="current-password" required>
+            <input type="password" id="password" name="password" autocomplete="current-password" required data-test="login-password">
         </div>
         <div>
-            <button type="submit">Login</button>
+            <button type="submit" data-test="login-submit">Login</button>
         </div>
     </form>
-    <div id="login-error" style="display: none; color: red;"></div>
+    <div id="login-error" style="display: none; color: red;" data-test="login-error"></div>
 </div>
 
-<div id="main-content" style="display: none;">
-    <nav id="section-menu" style="display: none;">
-        <button onclick="showSection('libraries')">Libraries</button>
-        <button onclick="showSection('authors')">Authors</button>
-        <button onclick="showSection('books')">Books</button>
-        <button class="librarian-only" onclick="showSection('users')">Users</button>
-        <button class="librarian-only" onclick="showSection('loans')">Loans</button>
-        <button onclick="logout()">Logout</button>
+<div id="main-content" style="display: none;" data-test="main-content">
+    <nav id="section-menu" style="display: none;" data-test="section-menu">
+        <button onclick="showSection('libraries')" data-test="menu-libraries">Libraries</button>
+        <button onclick="showSection('authors')" data-test="menu-authors">Authors</button>
+        <button onclick="showSection('books')" data-test="menu-books">Books</button>
+        <button class="librarian-only" onclick="showSection('users')" data-test="menu-users">Users</button>
+        <button class="librarian-only" onclick="showSection('loans')" data-test="menu-loans">Loans</button>
+        <button onclick="logout()" data-test="menu-logout">Logout</button>
     </nav>
-    <div class="container">
-        <div id="libraries-section" class="section">
-            <h2>Libraries</h2>
-            <ul id="library-list"></ul>
-            <div class="librarian-only">
-                <input type="text" id="new-library-name" placeholder="New library name">
-                <input type="text" id="new-library-hostname" placeholder="Hostname">
-                <button id="add-library-btn" onclick="addLibrary()">Add Library</button>
+    <div class="container" data-test="container">
+        <div id="libraries-section" class="section" data-test="libraries-section">
+            <h2 data-test="libraries-header">Libraries</h2>
+            <ul id="library-list" data-test="library-list"></ul>
+            <div class="librarian-only" data-test="libraries-form">
+                <input type="text" id="new-library-name" placeholder="New library name" data-test="new-library-name">
+                <input type="text" id="new-library-hostname" placeholder="Hostname" data-test="new-library-hostname">
+                <button id="add-library-btn" onclick="addLibrary()" data-test="add-library-btn">Add Library</button>
             </div>
         </div>
 
-        <div id="authors-section" class="section">
-            <h2>Authors</h2>
-            <ul id="author-list"></ul>
-            <div class="librarian-only">
+        <div id="authors-section" class="section" data-test="authors-section">
+            <h2 data-test="authors-header">Authors</h2>
+            <ul id="author-list" data-test="author-list"></ul>
+            <div class="librarian-only" data-test="authors-form">
                 <div>
                     <label for="new-author-name">Author Name:</label>
-                    <input type="text" id="new-author-name" placeholder="New author name">
+                    <input type="text" id="new-author-name" placeholder="New author name" data-test="new-author-name">
                 </div>
                 <div>
                     <label for="new-author-dob">Date of Birth:</label>
-                    <input type="date" id="new-author-dob">
+                    <input type="date" id="new-author-dob" data-test="new-author-dob">
                 </div>
                 <div>
                     <label for="new-author-dod">Date of Death:</label>
-                    <input type="date" id="new-author-dod">
+                    <input type="date" id="new-author-dod" data-test="new-author-dod">
                 </div>
                 <div>
                     <label for="new-author-religion">Religious Affiliation:</label>
-                    <input type="text" id="new-author-religion" placeholder="Religious Affiliation">
+                    <input type="text" id="new-author-religion" placeholder="Religious Affiliation" data-test="new-author-religion">
                 </div>
                 <div>
                     <label for="new-author-country">Birth Country:</label>
-                    <input type="text" id="new-author-country" placeholder="Birth Country">
+                    <input type="text" id="new-author-country" placeholder="Birth Country" data-test="new-author-country">
                 </div>
                 <div>
                     <label for="new-author-nationality">Nationality:</label>
-                    <input type="text" id="new-author-nationality" placeholder="Nationality">
+                    <input type="text" id="new-author-nationality" placeholder="Nationality" data-test="new-author-nationality">
                 </div>
                 <div>
                     <label for="new-author-bio">Brief Biography:</label>
-                    <textarea id="new-author-bio" placeholder="Brief Biography"></textarea>
+                    <textarea id="new-author-bio" placeholder="Brief Biography" data-test="new-author-bio"></textarea>
                 </div>
-                <button id="add-author-btn" onclick="addAuthor()">Add Author</button>
-                <h3>Bulk Import Authors</h3>
-                <textarea id="bulk-authors" placeholder='[{"name": "Author 1", ...}]'></textarea>
-                <button onclick="bulkImportAuthors()">Bulk Import</button>
+                <button id="add-author-btn" onclick="addAuthor()" data-test="add-author-btn">Add Author</button>
+                <h3 data-test="bulk-authors-header">Bulk Import Authors</h3>
+                <textarea id="bulk-authors" placeholder='[{"name": "Author 1", ...}]' data-test="bulk-authors"></textarea>
+                <button onclick="bulkImportAuthors()" data-test="bulk-import-authors-btn">Bulk Import</button>
             </div>
         </div>
 
-        <div id="books-section" class="section">
-            <h2>Books</h2>
-            <ul id="book-list"></ul>
-            <div class="librarian-only">
+        <div id="books-section" class="section" data-test="books-section">
+            <h2 data-test="books-header">Books</h2>
+            <ul id="book-list" data-test="book-list"></ul>
+            <div class="librarian-only" data-test="books-form">
                 <div>
                     <div>
                         <label for="new-book-title">Book Title:</label>
-                        <input type="text" id="new-book-title" placeholder="New book title">
+                        <input type="text" id="new-book-title" placeholder="New book title" data-test="new-book-title">
                     </div>
                     <div>
                         <label for="new-book-year">Publication Year:</label>
-                        <input type="number" id="new-book-year" placeholder="Publication Year">
+                        <input type="number" id="new-book-year" placeholder="Publication Year" data-test="new-book-year">
                     </div>
                     <div>
                         <label for="new-book-publisher">Publisher:</label>
-                        <input type="text" id="new-book-publisher" placeholder="Publisher">
+                        <input type="text" id="new-book-publisher" placeholder="Publisher" data-test="new-book-publisher">
                     </div>
                     <div>
                         <label for="new-book-summary">Plot Summary:</label>
-                        <textarea id="new-book-summary" placeholder="Plot Summary"></textarea>
+                        <textarea id="new-book-summary" placeholder="Plot Summary" data-test="new-book-summary"></textarea>
                     </div>
                     <div>
                         <label for="new-book-related">Related Works:</label>
-                        <input type="text" id="new-book-related" placeholder="Related Works">
+                        <input type="text" id="new-book-related" placeholder="Related Works" data-test="new-book-related">
                     </div>
                     <div>
                         <label for="new-book-description">Detailed Description:</label>
-                        <textarea id="new-book-description" placeholder="Detailed Description"></textarea>
+                        <textarea id="new-book-description" placeholder="Detailed Description" data-test="new-book-description"></textarea>
                     </div>
                     <div>
                         <label for="new-book-added">Date Added to Library:</label>
-                        <input type="date" id="new-book-added">
+                        <input type="date" id="new-book-added" data-test="new-book-added">
                     </div>
                     <div>
                         <label for="new-book-status">Status:</label>
-                        <select id="new-book-status">
+                        <select id="new-book-status" data-test="new-book-status">
                             <option value="ACTIVE">Active</option>
                             <option value="LOST">Lost</option>
                             <option value="WITHDRAWN">Withdrawn</option>
@@ -131,64 +131,64 @@
                     </div>
                     <div>
                         <label for="book-author">Author:</label>
-                        <select id="book-author"></select>
+                        <select id="book-author" data-test="book-author"></select>
                     </div>
                     <div>
                         <label for="book-library">Library:</label>
-                        <select id="book-library"></select>
+                        <select id="book-library" data-test="book-library"></select>
                     </div>
-                    <button id="add-book-btn" onclick="addBook()">Add Book</button>
+                    <button id="add-book-btn" onclick="addBook()" data-test="add-book-btn">Add Book</button>
                 </div>
-                <h3>Bulk Import Books</h3>
-                <textarea id="bulk-books" placeholder='[{"title": "Book 1", ...}]'></textarea>
-                <button onclick="bulkImportBooks()">Bulk Import</button>
+                <h3 data-test="bulk-books-header">Bulk Import Books</h3>
+                <textarea id="bulk-books" placeholder='[{"title": "Book 1", ...}]' data-test="bulk-books"></textarea>
+                <button onclick="bulkImportBooks()" data-test="bulk-import-books-btn">Bulk Import</button>
             </div>
         </div>
 
-        <div id="users-section" class="section librarian-only">
-            <h2>Users</h2>
-            <ul id="user-list"></ul>
-            <form>
+        <div id="users-section" class="section librarian-only" data-test="users-section">
+            <h2 data-test="users-header">Users</h2>
+            <ul id="user-list" data-test="user-list"></ul>
+            <form data-test="users-form">
                 <div>
                     <label for="new-user-username">Username:</label>
-                    <input type="text" id="new-user-username" placeholder="Username" autocomplete="username">
+                    <input type="text" id="new-user-username" placeholder="Username" autocomplete="username" data-test="new-user-username">
                 </div>
                 <div>
                     <label for="new-user-password">Password:</label>
-                    <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password">
+                    <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password" data-test="new-user-password">
                 </div>
                 <div>
                     <label for="new-user-role">Role:</label>
-                    <select id="new-user-role">
+                    <select id="new-user-role" data-test="new-user-role">
                         <option value="LIBRARIAN">Librarian</option>
-                        <option value="PATRON">Patron</option>
+                        <option value="USER">User</option>
                     </select>
                 </div>
-                <button id="add-user-btn" type="button" onclick="addUser()">Add User</button>
+                <button id="add-user-btn" type="button" onclick="addUser()" data-test="add-user-btn">Add User</button>
             </form>
         </div>
 
-        <div id="loans-section" class="section librarian-only">
-            <h2>Loans</h2>
-            <ul id="loan-list"></ul>
-            <div>
+        <div id="loans-section" class="section librarian-only" data-test="loans-section">
+            <h2 data-test="loans-header">Loans</h2>
+            <ul id="loan-list" data-test="loan-list"></ul>
+            <div data-test="loans-form">
                 <div>
                     <label for="loan-book">Book:</label>
-                    <select id="loan-book"></select>
+                    <select id="loan-book" data-test="loan-book"></select>
                 </div>
                 <div>
                     <label for="loan-user">User:</label>
-                    <select id="loan-user"></select>
+                    <select id="loan-user" data-test="loan-user"></select>
                 </div>
                 <div>
                     <label for="loan-date">Loan Date:</label>
-                    <input type="date" id="loan-date">
+                    <input type="date" id="loan-date" data-test="loan-date">
                 </div>
                 <div>
                     <label for="return-date">Return Date:</label>
-                    <input type="date" id="return-date">
+                    <input type="date" id="return-date" data-test="return-date">
                 </div>
-                <button id="checkout-btn" onclick="checkoutBook()">Checkout Book</button>
+                <button id="checkout-btn" onclick="checkoutBook()" data-test="checkout-btn">Checkout Book</button>
             </div>
         </div>
     </div>
