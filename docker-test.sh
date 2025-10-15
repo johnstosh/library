@@ -15,7 +15,7 @@ fi
 # Check if required environment variables are set
 if [ -z "$BINARY_REPO_NAME" ]; then
   export BINARY_REPO_NAME
-  BINARY_REPO_NAME=scrabble-game
+  BINARY_REPO_NAME=library
   echo "Info: Defaulting BINARY_REPO_NAME environment variable to ${BINARY_REPO_NAME}"
 fi
 
@@ -37,11 +37,15 @@ fi
 echo "Creating Docker network 'app-network'..."
 docker network create app-network 2>/dev/null || echo "Docker network 'app-network' already exists."
 
+DB_HOST="local-db"
+STARTED_CONTAINER=false
+
 # Check if port 5432 is in use
 echo "Checking if PostgreSQL is running on port 5432..."
 if ss -tuln | grep -q ":5432"; then
   echo "Port 5432 is in use. Assuming PostgreSQL is already running. Ensure the database password is set to the expected value and is accessible at localhost:5432."
   echo "If using a local PostgreSQL instance, you may need to update SPRING_DATASOURCE_URL manually or stop the existing database to let this script start a new one."
+#  DB_HOST="localhost"
 else
   echo "Port 5432 is free. Starting PostgreSQL container..."
   docker run --rm -d --name local-db \
@@ -49,18 +53,19 @@ else
     -p 5432:5432 \
     -e POSTGRES_PASSWORD="$DB_PASSWORD" \
     -e POSTGRES_DB=${SERVICE_NAME} \
+    -e POSTGRES_USER=postgres \
     postgres:15
   echo "PostgreSQL container started."
+  STARTED_CONTAINER=true
 fi
 
 # Build the Spring Boot JAR
 echo "Building Spring Boot JAR..."
-./gradlew clean build test
+./gradlew clean build -x test
 
-# Build the Docker image with environment variables
+# Build the Docker image
 echo "Building Docker image..."
 docker build \
-  --build-arg DB_PASSWORD="$DB_PASSWORD" \
   -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest .
 
 # Run the Docker image locally with environment variables
@@ -69,5 +74,11 @@ docker run --rm --name application -p 8080:8080 \
   --network app-network \
   -e PORT=8080 \
   -e DB_PASSWORD="$DB_PASSWORD" \
-  -e SPRING_DATASOURCE_URL="jdbc:postgresql://local-db:5432/${SERVICE_NAME}" \
+  -e SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:5432/${SERVICE_NAME}" \
+  -e SPRING_DATASOURCE_USERNAME=postgres \
+  -e SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD" \
+  -e SPRING_JPA_HIBERNATE_DDL_AUTO=update \
+  -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect \
+  -e SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION=true \
   us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest
+

@@ -199,57 +199,111 @@ async function deleteData(url) {
     return response;
 }
 
-async function loadLibraries() {
-    const libraries = await fetchData('/api/libraries');
-    const list = document.getElementById('library-list');
-    list.innerHTML = '';
-    libraries.forEach(library => {
-        const li = document.createElement('li');
-        li.setAttribute('data-test', 'library-item');
-        const span = document.createElement('span');
-        span.setAttribute('data-test', 'library-name');
-        span.textContent = `${library.name} (${library.hostname})`;
-        li.appendChild(span);
-        if (isLibrarian) {
-            const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-library-btn');
-            viewBtn.textContent = '🔍';
-            viewBtn.title = 'View details';
-            viewBtn.onclick = () => viewLibrary(library.id);
-            li.appendChild(viewBtn);
-
-            const editBtn = document.createElement('button');
-            editBtn.setAttribute('data-test', 'edit-library-btn');
-            editBtn.textContent = '✏️';
-            editBtn.title = 'Edit';
-            editBtn.onclick = () => editLibrary(library.id);
-            li.appendChild(editBtn);
-
-            const delBtn = document.createElement('button');
-            delBtn.setAttribute('data-test', 'delete-library-btn');
-            delBtn.textContent = '🗑️';
-            delBtn.title = 'Delete';
-            delBtn.onclick = () => deleteLibrary(library.id);
-            li.appendChild(delBtn);
+function showError(sectionId, message) {
+    let errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.setAttribute('data-test', 'form-error');
+        errorDiv.style.color = 'red';
+        errorDiv.style.display = 'block';
+        const section = document.getElementById(`${sectionId}-section`);
+        if (section) {
+            section.insertBefore(errorDiv, section.firstChild.nextSibling); // After h2
         }
-        list.appendChild(li);
-    });
-    if (libraries.length > 0) {
-        document.getElementById('page-title').textContent = libraries[0].name;
-    } else {
-        document.getElementById('page-title').textContent = 'Library Management';
+    }
+    errorDiv.textContent = message;
+}
+
+function clearError(sectionId) {
+    const errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+function showBulkSuccess(textareaId) {
+    let successDiv = document.querySelector(`#${textareaId} + [data-test="bulk-import-success"]`);
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.setAttribute('data-test', 'bulk-import-success');
+        successDiv.style.color = 'green';
+        successDiv.textContent = 'Bulk import successful!';
+        successDiv.style.display = 'block';
+    }
+    const textarea = document.getElementById(textareaId);
+    if (textarea) {
+        textarea.insertAdjacentElement('afterend', successDiv);
+    }
+    setTimeout(() => {
+        if (successDiv) successDiv.remove();
+    }, 3000);
+}
+
+async function loadLibraries() {
+    try {
+        const libraries = await fetchData('/api/libraries');
+        const list = document.getElementById('library-list');
+        list.innerHTML = '';
+        libraries.forEach(library => {
+            const li = document.createElement('li');
+            li.setAttribute('data-test', 'library-item');
+            li.setAttribute('data-entity-id', library.id);
+            const span = document.createElement('span');
+            span.setAttribute('data-test', 'library-name');
+            span.textContent = `${library.name} (${library.hostname})`;
+            li.appendChild(span);
+            if (isLibrarian) {
+                const viewBtn = document.createElement('button');
+                viewBtn.setAttribute('data-test', 'view-library-btn');
+                viewBtn.textContent = '🔍';
+                viewBtn.title = 'View details';
+                viewBtn.onclick = () => viewLibrary(library.id);
+                li.appendChild(viewBtn);
+
+                const editBtn = document.createElement('button');
+                editBtn.setAttribute('data-test', 'edit-library-btn');
+                editBtn.textContent = '✏️';
+                editBtn.title = 'Edit';
+                editBtn.onclick = () => editLibrary(library.id);
+                li.appendChild(editBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.setAttribute('data-test', 'delete-library-btn');
+                delBtn.textContent = '🗑️';
+                delBtn.title = 'Delete';
+                delBtn.onclick = () => deleteLibrary(library.id);
+                li.appendChild(delBtn);
+            }
+            list.appendChild(li);
+        });
+        if (libraries.length > 0) {
+            document.getElementById('page-title').textContent = libraries[0].name;
+        } else {
+            document.getElementById('page-title').textContent = 'Library Management';
+        }
+        clearError('libraries');
+    } catch (error) {
+        showError('libraries', 'Failed to load libraries: ' + error.message);
     }
 }
 
 async function addLibrary() {
     const name = document.getElementById('new-library-name').value;
     const hostname = document.getElementById('new-library-hostname').value;
-    if (!name || !hostname) return;
-    await postData('/api/libraries', { name, hostname });
-    document.getElementById('new-library-name').value = '';
-    document.getElementById('new-library-hostname').value = '';
-    loadLibraries();
-    populateBookDropdowns();
+    if (!name || !hostname) {
+        showError('libraries', 'Name and hostname are required.');
+        return;
+    }
+    try {
+        await postData('/api/libraries', { name, hostname });
+        document.getElementById('new-library-name').value = '';
+        document.getElementById('new-library-hostname').value = '';
+        loadLibraries();
+        populateBookDropdowns();
+        clearError('libraries');
+    } catch (error) {
+        showError('libraries', 'Failed to add library: ' + error.message);
+    }
 }
 
 async function editLibrary(id) {
@@ -264,22 +318,35 @@ async function editLibrary(id) {
 async function updateLibrary(id) {
     const name = document.getElementById('new-library-name').value;
     const hostname = document.getElementById('new-library-hostname').value;
-    if (!name || !hostname) return;
-    await putData(`/api/libraries/${id}`, { name, hostname });
-    document.getElementById('new-library-name').value = '';
-    document.getElementById('new-library-hostname').value = '';
-    loadLibraries();
-    populateBookDropdowns();
-    const btn = document.getElementById('add-library-btn');
-    btn.textContent = 'Add Library';
-    btn.onclick = addLibrary;
+    if (!name || !hostname) {
+        showError('libraries', 'Name and hostname are required.');
+        return;
+    }
+    try {
+        await putData(`/api/libraries/${id}`, { name, hostname });
+        document.getElementById('new-library-name').value = '';
+        document.getElementById('new-library-hostname').value = '';
+        loadLibraries();
+        populateBookDropdowns();
+        const btn = document.getElementById('add-library-btn');
+        btn.textContent = 'Add Library';
+        btn.onclick = addLibrary;
+        clearError('libraries');
+    } catch (error) {
+        showError('libraries', 'Failed to update library: ' + error.message);
+    }
 }
 
 async function deleteLibrary(id) {
     if (!confirm('Are you sure you want to delete this library?')) return;
-    await deleteData(`/api/libraries/${id}`);
-    loadLibraries();
-    populateBookDropdowns();
+    try {
+        await deleteData(`/api/libraries/${id}`);
+        loadLibraries();
+        populateBookDropdowns();
+        clearError('libraries');
+    } catch (error) {
+        showError('libraries', 'Failed to delete library: ' + error.message);
+    }
 }
 
 async function viewLibrary(id) {
@@ -288,40 +355,46 @@ async function viewLibrary(id) {
 }
 
 async function loadAuthors() {
-    const authors = await fetchData('/api/authors');
-    const list = document.getElementById('author-list');
-    list.innerHTML = '';
-    authors.forEach(author => {
-        const li = document.createElement('li');
-        li.setAttribute('data-test', 'author-item');
-        const span = document.createElement('span');
-        span.setAttribute('data-test', 'author-name');
-        span.textContent = author.name;
-        li.appendChild(span);
-        if (isLibrarian) {
-            const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-author-btn');
-            viewBtn.textContent = '🔍';
-            viewBtn.title = 'View details';
-            viewBtn.onclick = () => viewAuthor(author.id);
-            li.appendChild(viewBtn);
+    try {
+        const authors = await fetchData('/api/authors');
+        const list = document.getElementById('author-list');
+        list.innerHTML = '';
+        authors.forEach(author => {
+            const li = document.createElement('li');
+            li.setAttribute('data-test', 'author-item');
+            li.setAttribute('data-entity-id', author.id);
+            const span = document.createElement('span');
+            span.setAttribute('data-test', 'author-name');
+            span.textContent = author.name;
+            li.appendChild(span);
+            if (isLibrarian) {
+                const viewBtn = document.createElement('button');
+                viewBtn.setAttribute('data-test', 'view-author-btn');
+                viewBtn.textContent = '🔍';
+                viewBtn.title = 'View details';
+                viewBtn.onclick = () => viewAuthor(author.id);
+                li.appendChild(viewBtn);
 
-            const editBtn = document.createElement('button');
-            editBtn.setAttribute('data-test', 'edit-author-btn');
-            editBtn.textContent = '✏️';
-            editBtn.title = 'Edit';
-            editBtn.onclick = () => editAuthor(author.id);
-            li.appendChild(editBtn);
+                const editBtn = document.createElement('button');
+                editBtn.setAttribute('data-test', 'edit-author-btn');
+                editBtn.textContent = '✏️';
+                editBtn.title = 'Edit';
+                editBtn.onclick = () => editAuthor(author.id);
+                li.appendChild(editBtn);
 
-            const delBtn = document.createElement('button');
-            delBtn.setAttribute('data-test', 'delete-author-btn');
-            delBtn.textContent = '🗑️';
-            delBtn.title = 'Delete';
-            delBtn.onclick = () => deleteAuthor(author.id);
-            li.appendChild(delBtn);
-        }
-        list.appendChild(li);
-    });
+                const delBtn = document.createElement('button');
+                delBtn.setAttribute('data-test', 'delete-author-btn');
+                delBtn.textContent = '🗑️';
+                delBtn.title = 'Delete';
+                delBtn.onclick = () => deleteAuthor(author.id);
+                li.appendChild(delBtn);
+            }
+            list.appendChild(li);
+        });
+        clearError('authors');
+    } catch (error) {
+        showError('authors', 'Failed to load authors: ' + error.message);
+    }
 }
 
 async function addAuthor() {
@@ -332,17 +405,25 @@ async function addAuthor() {
     const birthCountry = document.getElementById('new-author-country').value;
     const nationality = document.getElementById('new-author-nationality').value;
     const briefBiography = document.getElementById('new-author-bio').value;
-    if (!name) return;
-    await postData('/api/authors', { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
-    document.getElementById('new-author-name').value = '';
-    document.getElementById('new-author-dob').value = '';
-    document.getElementById('new-author-dod').value = '';
-    document.getElementById('new-author-religion').value = '';
-    document.getElementById('new-author-country').value = '';
-    document.getElementById('new-author-nationality').value = '';
-    document.getElementById('new-author-bio').value = '';
-    loadAuthors();
-    populateBookDropdowns();
+    if (!name) {
+        showError('authors', 'Author name is required.');
+        return;
+    }
+    try {
+        await postData('/api/authors', { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
+        document.getElementById('new-author-name').value = '';
+        document.getElementById('new-author-dob').value = '';
+        document.getElementById('new-author-dod').value = '';
+        document.getElementById('new-author-religion').value = '';
+        document.getElementById('new-author-country').value = '';
+        document.getElementById('new-author-nationality').value = '';
+        document.getElementById('new-author-bio').value = '';
+        loadAuthors();
+        populateBookDropdowns();
+        clearError('authors');
+    } catch (error) {
+        showError('authors', 'Failed to add author: ' + error.message);
+    }
 }
 
 async function editAuthor(id) {
@@ -367,27 +448,40 @@ async function updateAuthor(id) {
     const birthCountry = document.getElementById('new-author-country').value;
     const nationality = document.getElementById('new-author-nationality').value;
     const briefBiography = document.getElementById('new-author-bio').value;
-    if (!name) return;
-    await putData(`/api/authors/${id}`, { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
-    document.getElementById('new-author-name').value = '';
-    document.getElementById('new-author-dob').value = '';
-    document.getElementById('new-author-dod').value = '';
-    document.getElementById('new-author-religion').value = '';
-    document.getElementById('new-author-country').value = '';
-    document.getElementById('new-author-nationality').value = '';
-    document.getElementById('new-author-bio').value = '';
-    loadAuthors();
-    populateBookDropdowns();
-    const btn = document.getElementById('add-author-btn');
-    btn.textContent = 'Add Author';
-    btn.onclick = addAuthor;
+    if (!name) {
+        showError('authors', 'Author name is required.');
+        return;
+    }
+    try {
+        await putData(`/api/authors/${id}`, { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
+        document.getElementById('new-author-name').value = '';
+        document.getElementById('new-author-dob').value = '';
+        document.getElementById('new-author-dod').value = '';
+        document.getElementById('new-author-religion').value = '';
+        document.getElementById('new-author-country').value = '';
+        document.getElementById('new-author-nationality').value = '';
+        document.getElementById('new-author-bio').value = '';
+        loadAuthors();
+        populateBookDropdowns();
+        const btn = document.getElementById('add-author-btn');
+        btn.textContent = 'Add Author';
+        btn.onclick = addAuthor;
+        clearError('authors');
+    } catch (error) {
+        showError('authors', 'Failed to update author: ' + error.message);
+    }
 }
 
 async function deleteAuthor(id) {
     if (!confirm('Are you sure you want to delete this author?')) return;
-    await deleteData(`/api/authors/${id}`);
-    loadAuthors();
-    populateBookDropdowns();
+    try {
+        await deleteData(`/api/authors/${id}`);
+        loadAuthors();
+        populateBookDropdowns();
+        clearError('authors');
+    } catch (error) {
+        showError('authors', 'Failed to delete author: ' + error.message);
+    }
 }
 
 async function viewAuthor(id) {
@@ -397,51 +491,63 @@ async function viewAuthor(id) {
 
 async function bulkImportAuthors() {
     const authorsJson = document.getElementById('bulk-authors').value;
-    if (!authorsJson) return;
+    if (!authorsJson) {
+        showError('authors', 'Please provide JSON for bulk import.');
+        return;
+    }
     try {
         const authors = JSON.parse(authorsJson);
         await postData('/api/authors/bulk', authors);
         loadAuthors();
+        showBulkSuccess('bulk-authors');
+        document.getElementById('bulk-authors').value = '';
+        clearError('authors');
     } catch (error) {
-        alert('Invalid JSON for bulk import of authors.');
+        showError('authors', 'Invalid JSON or failed bulk import: ' + error.message);
     }
 }
 
 async function loadBooks() {
-    const books = await fetchData('/api/books');
-    const list = document.getElementById('book-list');
-    list.innerHTML = '';
-    books.forEach(book => {
-        const li = document.createElement('li');
-        li.setAttribute('data-test', 'book-item');
-        const span = document.createElement('span');
-        span.setAttribute('data-test', 'book-title');
-        span.textContent = book.title;
-        li.appendChild(span);
-        if (isLibrarian) {
-            const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-book-btn');
-            viewBtn.textContent = '🔍';
-            viewBtn.title = 'View details';
-            viewBtn.onclick = () => viewBook(book.id);
-            li.appendChild(viewBtn);
+    try {
+        const books = await fetchData('/api/books');
+        const list = document.getElementById('book-list');
+        list.innerHTML = '';
+        books.forEach(book => {
+            const li = document.createElement('li');
+            li.setAttribute('data-test', 'book-item');
+            li.setAttribute('data-entity-id', book.id);
+            const span = document.createElement('span');
+            span.setAttribute('data-test', 'book-title');
+            span.textContent = book.title;
+            li.appendChild(span);
+            if (isLibrarian) {
+                const viewBtn = document.createElement('button');
+                viewBtn.setAttribute('data-test', 'view-book-btn');
+                viewBtn.textContent = '🔍';
+                viewBtn.title = 'View details';
+                viewBtn.onclick = () => viewBook(book.id);
+                li.appendChild(viewBtn);
 
-            const editBtn = document.createElement('button');
-            editBtn.setAttribute('data-test', 'edit-book-btn');
-            editBtn.textContent = '✏️';
-            editBtn.title = 'Edit';
-            editBtn.onclick = () => editBook(book.id);
-            li.appendChild(editBtn);
+                const editBtn = document.createElement('button');
+                editBtn.setAttribute('data-test', 'edit-book-btn');
+                editBtn.textContent = '✏️';
+                editBtn.title = 'Edit';
+                editBtn.onclick = () => editBook(book.id);
+                li.appendChild(editBtn);
 
-            const delBtn = document.createElement('button');
-            delBtn.setAttribute('data-test', 'delete-book-btn');
-            delBtn.textContent = '🗑️';
-            delBtn.title = 'Delete';
-            delBtn.onclick = () => deleteBook(book.id);
-            li.appendChild(delBtn);
-        }
-        list.appendChild(li);
-    });
+                const delBtn = document.createElement('button');
+                delBtn.setAttribute('data-test', 'delete-book-btn');
+                delBtn.textContent = '🗑️';
+                delBtn.title = 'Delete';
+                delBtn.onclick = () => deleteBook(book.id);
+                li.appendChild(delBtn);
+            }
+            list.appendChild(li);
+        });
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to load books: ' + error.message);
+    }
 }
 
 async function addBook() {
@@ -455,20 +561,28 @@ async function addBook() {
     const status = document.getElementById('new-book-status').value;
     const authorId = document.getElementById('book-author').value;
     const libraryId = document.getElementById('book-library').value;
-    if (!title || !authorId || !libraryId) return;
-    await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
-    document.getElementById('new-book-title').value = '';
-    document.getElementById('new-book-year').value = '';
-    document.getElementById('new-book-publisher').value = '';
-    document.getElementById('new-book-summary').value = '';
-    document.getElementById('new-book-related').value = '';
-    document.getElementById('new-book-description').value = '';
-    document.getElementById('new-book-added').value = '';
-    document.getElementById('new-book-status').value = 'ACTIVE';
-    document.getElementById('book-author').selectedIndex = 0;
-    document.getElementById('book-library').selectedIndex = 0;
-    loadBooks();
-    populateLoanDropdowns();
+    if (!title || !authorId || !libraryId) {
+        showError('books', 'Title, author, and library are required.');
+        return;
+    }
+    try {
+        await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
+        document.getElementById('new-book-title').value = '';
+        document.getElementById('new-book-year').value = '';
+        document.getElementById('new-book-publisher').value = '';
+        document.getElementById('new-book-summary').value = '';
+        document.getElementById('new-book-related').value = '';
+        document.getElementById('new-book-description').value = '';
+        document.getElementById('new-book-added').value = '';
+        document.getElementById('new-book-status').value = 'ACTIVE';
+        document.getElementById('book-author').selectedIndex = 0;
+        document.getElementById('book-library').selectedIndex = 0;
+        loadBooks();
+        populateLoanDropdowns();
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to add book: ' + error.message);
+    }
 }
 
 async function editBook(id) {
@@ -499,30 +613,43 @@ async function updateBook(id) {
     const status = document.getElementById('new-book-status').value;
     const authorId = document.getElementById('book-author').value;
     const libraryId = document.getElementById('book-library').value;
-    if (!title || !authorId || !libraryId) return;
-    await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
-    document.getElementById('new-book-title').value = '';
-    document.getElementById('new-book-year').value = '';
-    document.getElementById('new-book-publisher').value = '';
-    document.getElementById('new-book-summary').value = '';
-    document.getElementById('new-book-related').value = '';
-    document.getElementById('new-book-description').value = '';
-    document.getElementById('new-book-added').value = '';
-    document.getElementById('new-book-status').value = 'ACTIVE';
-    document.getElementById('book-author').selectedIndex = 0;
-    document.getElementById('book-library').selectedIndex = 0;
-    loadBooks();
-    populateLoanDropdowns();
-    const btn = document.getElementById('add-book-btn');
-    btn.textContent = 'Add Book';
-    btn.onclick = addBook;
+    if (!title || !authorId || !libraryId) {
+        showError('books', 'Title, author, and library are required.');
+        return;
+    }
+    try {
+        await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
+        document.getElementById('new-book-title').value = '';
+        document.getElementById('new-book-year').value = '';
+        document.getElementById('new-book-publisher').value = '';
+        document.getElementById('new-book-summary').value = '';
+        document.getElementById('new-book-related').value = '';
+        document.getElementById('new-book-description').value = '';
+        document.getElementById('new-book-added').value = '';
+        document.getElementById('new-book-status').value = 'ACTIVE';
+        document.getElementById('book-author').selectedIndex = 0;
+        document.getElementById('book-library').selectedIndex = 0;
+        loadBooks();
+        populateLoanDropdowns();
+        const btn = document.getElementById('add-book-btn');
+        btn.textContent = 'Add Book';
+        btn.onclick = addBook;
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to update book: ' + error.message);
+    }
 }
 
 async function deleteBook(id) {
     if (!confirm('Are you sure you want to delete this book?')) return;
-    await deleteData(`/api/books/${id}`);
-    loadBooks();
-    populateLoanDropdowns();
+    try {
+        await deleteData(`/api/books/${id}`);
+        loadBooks();
+        populateLoanDropdowns();
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to delete book: ' + error.message);
+    }
 }
 
 async function viewBook(id) {
@@ -532,51 +659,63 @@ async function viewBook(id) {
 
 async function bulkImportBooks() {
     const booksJson = document.getElementById('bulk-books').value;
-    if (!booksJson) return;
+    if (!booksJson) {
+        showError('books', 'Please provide JSON for bulk import.');
+        return;
+    }
     try {
         const books = JSON.parse(booksJson);
         await postData('/api/books/bulk', books);
         loadBooks();
+        showBulkSuccess('bulk-books');
+        document.getElementById('bulk-books').value = '';
+        clearError('books');
     } catch (error) {
-        alert('Invalid JSON for bulk import of books.');
+        showError('books', 'Invalid JSON or failed bulk import: ' + error.message);
     }
 }
 
 async function loadUsers() {
-    const users = await fetchData('/api/users');
-    const list = document.getElementById('user-list');
-    list.innerHTML = '';
-    users.forEach(user => {
-        const li = document.createElement('li');
-        li.setAttribute('data-test', 'user-item');
-        const span = document.createElement('span');
-        span.setAttribute('data-test', 'user-name');
-        const rolesText = user.roles ? Array.from(user.roles).join(', ') : '';
-        span.textContent = `${user.username} (${rolesText})`;
-        li.appendChild(span);
+    try {
+        const users = await fetchData('/api/users');
+        const list = document.getElementById('user-list');
+        list.innerHTML = '';
+        users.forEach(user => {
+            const li = document.createElement('li');
+            li.setAttribute('data-test', 'user-item');
+            li.setAttribute('data-entity-id', user.id);
+            const span = document.createElement('span');
+            span.setAttribute('data-test', 'user-name');
+            const rolesText = user.roles ? Array.from(user.roles).join(', ') : '';
+            span.textContent = `${user.username} (${rolesText})`;
+            li.appendChild(span);
 
-        const viewBtn = document.createElement('button');
-        viewBtn.setAttribute('data-test', 'view-user-btn');
-        viewBtn.textContent = '🔍';
-        viewBtn.title = 'View details';
-        viewBtn.onclick = () => viewUser(user.id);
-        li.appendChild(viewBtn);
+            const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-user-btn');
+            viewBtn.textContent = '🔍';
+            viewBtn.title = 'View details';
+            viewBtn.onclick = () => viewUser(user.id);
+            li.appendChild(viewBtn);
 
-        const editBtn = document.createElement('button');
-        editBtn.setAttribute('data-test', 'edit-user-btn');
-        editBtn.textContent = '✏️';
-        editBtn.title = 'Edit';
-        editBtn.onclick = () => editUser(user.id);
-        li.appendChild(editBtn);
+            const editBtn = document.createElement('button');
+            editBtn.setAttribute('data-test', 'edit-user-btn');
+            editBtn.textContent = '✏️';
+            editBtn.title = 'Edit';
+            editBtn.onclick = () => editUser(user.id);
+            li.appendChild(editBtn);
 
-        const delBtn = document.createElement('button');
-        delBtn.setAttribute('data-test', 'delete-user-btn');
-        delBtn.textContent = '🗑️';
-        delBtn.title = 'Delete';
-        delBtn.onclick = () => deleteUser(user.id);
-        li.appendChild(delBtn);
-        list.appendChild(li);
-    });
+            const delBtn = document.createElement('button');
+            delBtn.setAttribute('data-test', 'delete-user-btn');
+            delBtn.textContent = '🗑️';
+            delBtn.title = 'Delete';
+            delBtn.onclick = () => deleteUser(user.id);
+            li.appendChild(delBtn);
+            list.appendChild(li);
+        });
+        clearError('users');
+    } catch (error) {
+        showError('users', 'Failed to load users: ' + error.message);
+    }
 }
 
 async function addUser() {
@@ -584,7 +723,7 @@ async function addUser() {
     const password = document.getElementById('new-user-password').value;
     const role = document.getElementById('new-user-role').value;
     if (!username || !password || !role) {
-        alert('Please fill in all fields.');
+        showError('users', 'Please fill in all fields.');
         return;
     }
     try {
@@ -594,8 +733,9 @@ async function addUser() {
         document.getElementById('new-user-role').value = 'USER';
         loadUsers();
         populateLoanDropdowns();
+        clearError('users');
     } catch (error) {
-        alert('Failed to add user. Please check the backend implementation.');
+        showError('users', 'Failed to add user: ' + error.message);
     }
 }
 
@@ -618,7 +758,7 @@ async function updateUser(id) {
     const password = document.getElementById('new-user-password').value;
     const role = document.getElementById('new-user-role').value;
     if (!username || !role) {
-        alert('Please fill in username and role.');
+        showError('users', 'Please fill in username and role.');
         return;
     }
     try {
@@ -628,19 +768,25 @@ async function updateUser(id) {
         document.getElementById('new-user-role').value = 'USER';
         loadUsers();
         populateLoanDropdowns();
+        const btn = document.getElementById('add-user-btn');
+        btn.textContent = 'Add User';
+        btn.onclick = addUser;
+        clearError('users');
     } catch (error) {
-        alert('Failed to update user. Please check the backend implementation.');
+        showError('users', 'Failed to update user: ' + error.message);
     }
-    const btn = document.getElementById('add-user-btn');
-    btn.textContent = 'Add User';
-    btn.onclick = addUser;
 }
 
 async function deleteUser(id) {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    await deleteData(`/api/users/${id}`);
-    loadUsers();
-    populateLoanDropdowns();
+    try {
+        await deleteData(`/api/users/${id}`);
+        loadUsers();
+        populateLoanDropdowns();
+        clearError('users');
+    } catch (error) {
+        showError('users', 'Failed to delete user: ' + error.message);
+    }
 }
 
 async function viewUser(id) {
@@ -650,48 +796,55 @@ async function viewUser(id) {
 }
 
 async function loadLoans() {
-    const loans = await fetchData('/api/loans');
-    const list = document.getElementById('loan-list');
-    list.innerHTML = '';
-    for (const loan of loans) {
-        const li = document.createElement('li');
-        li.setAttribute('data-test', 'loan-item');
-        const span = document.createElement('span');
-        span.setAttribute('data-test', 'loan-details');
-        span.textContent = `${loan.bookTitle} loaned to ${loan.userName} on ${loan.loanDate}`;
-        li.appendChild(span);
-        if (loan.returnDate) {
-            span.textContent += ` (returned on ${loan.returnDate})`;
-        } else {
-            const returnButton = document.createElement('button');
-            returnButton.setAttribute('data-test', 'return-book-btn');
-            returnButton.textContent = 'Return';
-            returnButton.className = 'return-btn';
-            returnButton.onclick = () => returnBook(loan.id);
-            li.appendChild(returnButton);
+    try {
+        const loans = await fetchData('/api/loans');
+        const list = document.getElementById('loan-list');
+        list.innerHTML = '';
+        for (const loan of loans) {
+            const li = document.createElement('li');
+            li.setAttribute('data-test', 'loan-item');
+            li.setAttribute('data-entity-id', loan.id);
+            const span = document.createElement('span');
+            span.setAttribute('data-test', 'loan-details');
+            span.textContent = `${loan.bookTitle} loaned to ${loan.userName} on ${loan.loanDate}`;
+            li.appendChild(span);
+            if (loan.returnDate) {
+                span.textContent += ` (returned on ${loan.returnDate})`;
+            } else {
+                const returnButton = document.createElement('button');
+                returnButton.setAttribute('data-test', 'return-book-btn');
+                returnButton.setAttribute('data-loan-id', loan.id);
+                returnButton.textContent = 'Return';
+                returnButton.className = 'return-btn';
+                returnButton.onclick = () => returnBook(loan.id);
+                li.appendChild(returnButton);
+            }
+
+            const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-loan-btn');
+            viewBtn.textContent = '🔍';
+            viewBtn.title = 'View details';
+            viewBtn.onclick = () => viewLoan(loan.id);
+            li.appendChild(viewBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.setAttribute('data-test', 'edit-loan-btn');
+            editBtn.textContent = '✏️';
+            editBtn.title = 'Edit';
+            editBtn.onclick = () => editLoan(loan.id);
+            li.appendChild(editBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.setAttribute('data-test', 'delete-loan-btn');
+            delBtn.textContent = '🗑️';
+            delBtn.title = 'Delete';
+            delBtn.onclick = () => deleteLoan(loan.id);
+            li.appendChild(delBtn);
+            list.appendChild(li);
         }
-
-        const viewBtn = document.createElement('button');
-        viewBtn.setAttribute('data-test', 'view-loan-btn');
-        viewBtn.textContent = '🔍';
-        viewBtn.title = 'View details';
-        viewBtn.onclick = () => viewLoan(loan.id);
-        li.appendChild(viewBtn);
-
-        const editBtn = document.createElement('button');
-        editBtn.setAttribute('data-test', 'edit-loan-btn');
-        editBtn.textContent = '✏️';
-        editBtn.title = 'Edit';
-        editBtn.onclick = () => editLoan(loan.id);
-        li.appendChild(editBtn);
-
-        const delBtn = document.createElement('button');
-        delBtn.setAttribute('data-test', 'delete-loan-btn');
-        delBtn.textContent = '🗑️';
-        delBtn.title = 'Delete';
-        delBtn.onclick = () => deleteLoan(loan.id);
-        li.appendChild(delBtn);
-        list.appendChild(li);
+        clearError('loans');
+    } catch (error) {
+        showError('loans', 'Failed to load loans: ' + error.message);
     }
 }
 
@@ -700,13 +853,21 @@ async function checkoutBook() {
     const userId = document.getElementById('loan-user').value;
     const loanDate = document.getElementById('loan-date').value;
     const returnDate = document.getElementById('return-date').value;
-    if (!bookId || !userId) return;
-    await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
-    document.getElementById('loan-book').selectedIndex = 0;
-    document.getElementById('loan-user').selectedIndex = 0;
-    document.getElementById('loan-date').value = '';
-    document.getElementById('return-date').value = '';
-    loadLoans();
+    if (!bookId || !userId) {
+        showError('loans', 'Book and user are required.');
+        return;
+    }
+    try {
+        await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
+        document.getElementById('loan-book').selectedIndex = 0;
+        document.getElementById('loan-user').selectedIndex = 0;
+        document.getElementById('loan-date').value = '';
+        document.getElementById('return-date').value = '';
+        loadLoans();
+        clearError('loans');
+    } catch (error) {
+        showError('loans', 'Failed to checkout book: ' + error.message);
+    }
 }
 
 async function editLoan(id) {
@@ -725,22 +886,35 @@ async function updateLoan(id) {
     const userId = document.getElementById('loan-user').value;
     const loanDate = document.getElementById('loan-date').value;
     const returnDate = document.getElementById('return-date').value;
-    if (!bookId || !userId) return;
-    await putData(`/api/loans/${id}`, { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
-    document.getElementById('loan-book').selectedIndex = 0;
-    document.getElementById('loan-user').selectedIndex = 0;
-    document.getElementById('loan-date').value = '';
-    document.getElementById('return-date').value = '';
-    loadLoans();
-    const btn = document.getElementById('checkout-btn');
-    btn.textContent = 'Checkout Book';
-    btn.onclick = checkoutBook;
+    if (!bookId || !userId) {
+        showError('loans', 'Book and user are required.');
+        return;
+    }
+    try {
+        await putData(`/api/loans/${id}`, { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
+        document.getElementById('loan-book').selectedIndex = 0;
+        document.getElementById('loan-user').selectedIndex = 0;
+        document.getElementById('loan-date').value = '';
+        document.getElementById('return-date').value = '';
+        loadLoans();
+        const btn = document.getElementById('checkout-btn');
+        btn.textContent = 'Checkout Book';
+        btn.onclick = checkoutBook;
+        clearError('loans');
+    } catch (error) {
+        showError('loans', 'Failed to update loan: ' + error.message);
+    }
 }
 
 async function deleteLoan(id) {
     if (!confirm('Are you sure you want to delete this loan?')) return;
-    await deleteData(`/api/loans/${id}`);
-    loadLoans();
+    try {
+        await deleteData(`/api/loans/${id}`);
+        loadLoans();
+        clearError('loans');
+    } catch (error) {
+        showError('loans', 'Failed to delete loan: ' + error.message);
+    }
 }
 
 async function viewLoan(id) {
@@ -750,50 +924,63 @@ async function viewLoan(id) {
 }
 
 async function returnBook(loanId) {
-    await putData(`/api/loans/return/${loanId}`);
-    loadLoans();
+    try {
+        await putData(`/api/loans/return/${loanId}`);
+        loadLoans();
+        clearError('loans');
+    } catch (error) {
+        showError('loans', 'Failed to return book: ' + error.message);
+    }
 }
 
 async function populateBookDropdowns() {
-    const authors = await fetchData('/api/authors');
-    const authorSelect = document.getElementById('book-author');
-    authorSelect.innerHTML = '';
-    authors.forEach(author => {
-        const option = document.createElement('option');
-        option.value = author.id;
-        option.textContent = author.name;
-        authorSelect.appendChild(option);
-    });
+    try {
+        const authors = await fetchData('/api/authors');
+        const authorSelect = document.getElementById('book-author');
+        authorSelect.innerHTML = '';
+        authors.forEach(author => {
+            const option = document.createElement('option');
+            option.value = author.id;
+            option.textContent = author.name;
+            authorSelect.appendChild(option);
+        });
 
-    const libraries = await fetchData('/api/libraries');
-    const librarySelect = document.getElementById('book-library');
-    librarySelect.innerHTML = '';
-    libraries.forEach(library => {
-        const option = document.createElement('option');
-        option.value = library.id;
-        option.textContent = library.name;
-        librarySelect.appendChild(option);
-    });
+        const libraries = await fetchData('/api/libraries');
+        const librarySelect = document.getElementById('book-library');
+        librarySelect.innerHTML = '';
+        libraries.forEach(library => {
+            const option = document.createElement('option');
+            option.value = library.id;
+            option.textContent = library.name;
+            librarySelect.appendChild(option);
+        });
+    } catch (error) {
+        showError('books', 'Failed to populate dropdowns: ' + error.message);
+    }
 }
 
 async function populateLoanDropdowns() {
-    const books = await fetchData('/api/books');
-    const bookSelect = document.getElementById('loan-book');
-    bookSelect.innerHTML = '';
-    books.forEach(book => {
-        const option = document.createElement('option');
-        option.value = book.id;
-        option.textContent = book.title;
-        bookSelect.appendChild(option);
-    });
+    try {
+        const books = await fetchData('/api/books');
+        const bookSelect = document.getElementById('loan-book');
+        bookSelect.innerHTML = '';
+        books.forEach(book => {
+            const option = document.createElement('option');
+            option.value = book.id;
+            option.textContent = book.title;
+            bookSelect.appendChild(option);
+        });
 
-    const users = await fetchData('/api/users');
-    const userSelect = document.getElementById('loan-user');
-    userSelect.innerHTML = '';
-    users.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.id;
-        option.textContent = user.username;
-        userSelect.appendChild(option);
-    });
+        const users = await fetchData('/api/users');
+        const userSelect = document.getElementById('loan-user');
+        userSelect.innerHTML = '';
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.username;
+            userSelect.appendChild(option);
+        });
+    } catch (error) {
+        showError('loans', 'Failed to populate dropdowns: ' + error.message);
+    }
 }

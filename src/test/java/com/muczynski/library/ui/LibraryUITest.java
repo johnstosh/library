@@ -54,6 +54,7 @@ public class LibraryUITest {
         page.waitForSelector("[data-test='login-submit']");
         page.click("[data-test='login-submit']");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        page.waitForSelector("[data-test='author-list'] li", new Page.WaitForSelectorOptions().setTimeout(10000));
     }
 
     @Test
@@ -75,7 +76,6 @@ public class LibraryUITest {
         assertThat(authorItem).hasCount(1);
 
         // Update
-        page.onDialog(dialog -> dialog.accept());
         authorItem.locator("[data-test='edit-author-btn']").click();
         page.waitForSelector("[data-test='new-author-name']");
         page.fill("[data-test='new-author-name']", "Updated Test Author");
@@ -87,7 +87,6 @@ public class LibraryUITest {
         // Delete
         page.onDialog(dialog -> dialog.accept());
         updatedAuthorItem.locator("[data-test='delete-author-btn']").click();
-        updatedAuthorItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED));
         assertThat(updatedAuthorItem).isHidden();
     }
 
@@ -100,6 +99,8 @@ public class LibraryUITest {
 
         // Create
         page.waitForSelector("[data-test='book-author']");
+        page.waitForSelector("#book-author option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
+        page.waitForSelector("#book-library option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
         page.selectOption("[data-test='book-author']", "1");
         page.selectOption("[data-test='book-library']", "1");
         page.fill("[data-test='new-book-title']", "Test Book");
@@ -113,7 +114,6 @@ public class LibraryUITest {
         assertThat(bookItem).hasCount(1);
 
         // Update
-        page.onDialog(dialog -> dialog.accept());
         bookItem.locator("[data-test='edit-book-btn']").click();
         page.waitForSelector("[data-test='new-book-title']");
         page.fill("[data-test='new-book-title']", "Updated Test Book");
@@ -125,7 +125,6 @@ public class LibraryUITest {
         // Delete
         page.onDialog(dialog -> dialog.accept());
         updatedBookItem.locator("[data-test='delete-book-btn']").click();
-        updatedBookItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED));
         assertThat(updatedBookItem).isHidden();
     }
 
@@ -138,6 +137,8 @@ public class LibraryUITest {
 
         // Create
         page.waitForSelector("[data-test='loan-book']");
+        page.waitForSelector("#loan-book option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
+        page.waitForSelector("#loan-user option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
         page.selectOption("[data-test='loan-book']", "1");
         page.selectOption("[data-test='loan-user']", "1");
         page.click("[data-test='checkout-btn']");
@@ -149,7 +150,6 @@ public class LibraryUITest {
         assertThat(loanItem).hasCount(1);
 
         // Update
-        page.onDialog(dialog -> dialog.accept());
         loanItem.locator("[data-test='edit-loan-btn']").click();
         page.waitForSelector("[data-test='loan-user']");
         page.selectOption("[data-test='loan-user']", "2");
@@ -161,7 +161,6 @@ public class LibraryUITest {
         // Delete
         page.onDialog(dialog -> dialog.accept());
         updatedLoanItem.locator("[data-test='delete-loan-btn']").click();
-        updatedLoanItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED));
         assertThat(updatedLoanItem).isHidden();
     }
 }
