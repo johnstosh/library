@@ -54,7 +54,7 @@ public class LibraryUITest {
         page.waitForSelector("[data-test='login-submit']");
         page.click("[data-test='login-submit']");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        page.waitForSelector("[data-test='author-list'] li", new Page.WaitForSelectorOptions().setTimeout(10000));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
     }
 
     @Test
@@ -65,6 +65,7 @@ public class LibraryUITest {
         page.click("[data-test='menu-authors']");
 
         // Create
+        page.waitForSelector("[data-test='author-list']").isVisible();
         page.waitForSelector("[data-test='new-author-name']");
         page.fill("[data-test='new-author-name']", "Test Author");
         page.click("[data-test='add-author-btn']");
@@ -98,6 +99,7 @@ public class LibraryUITest {
         page.click("[data-test='menu-books']");
 
         // Create
+        page.waitForSelector("[data-test='book-list']").isVisible();
         page.waitForSelector("[data-test='book-author']");
         page.waitForSelector("#book-author option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
         page.waitForSelector("#book-library option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
@@ -136,6 +138,7 @@ public class LibraryUITest {
         page.click("[data-test='menu-loans']");
 
         // Create
+        page.waitForSelector("[data-test='loan-list']").isVisible();
         page.waitForSelector("[data-test='loan-book']");
         page.waitForSelector("#loan-book option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
         page.waitForSelector("#loan-user option[value='1']", new Page.WaitForSelectorOptions().setTimeout(5000));
