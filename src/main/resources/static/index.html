@@ -13,7 +13,7 @@
 
 <div id="login-form" data-test="login-form">
     <h2 data-test="login-header">Login</h2>
-    <form action="/login" method="post">
+    <form id="login" action="/login" method="post">
         <div>
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" autocomplete="username" required data-test="login-username">
@@ -148,18 +148,18 @@
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
             <ul id="user-list" data-test="user-list"></ul>
-            <form data-test="users-form">
+            <form id="add-user-form" data-test="users-form" method="post">
                 <div>
                     <label for="new-user-username">Username:</label>
-                    <input type="text" id="new-user-username" placeholder="Username" autocomplete="username" data-test="new-user-username">
+                    <input type="text" id="new-user-username" name="new-user-username" placeholder="Username" autocomplete="username" data-test="new-user-username">
                 </div>
                 <div>
                     <label for="new-user-password">Password:</label>
-                    <input type="password" id="new-user-password" placeholder="Password" autocomplete="new-password" data-test="new-user-password">
+                    <input type="password" id="new-user-password" name="new-user-password" placeholder="Password" autocomplete="new-password" data-test="new-user-password">
                 </div>
                 <div>
                     <label for="new-user-role">Role:</label>
-                    <select id="new-user-role" data-test="new-user-role">
+                    <select id="new-user-role" name="new-user-role" data-test="new-user-role">
                         <option value="LIBRARIAN">Librarian</option>
                         <option value="USER">User</option>
                     </select>
