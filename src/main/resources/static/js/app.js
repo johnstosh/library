@@ -595,8 +595,8 @@ async function editBook(id) {
     document.getElementById('new-book-description').value = data.detailedDescription || '';
     document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
-    document.getElementById('book-author').value = data.author ? data.author.id : '';
-    document.getElementById('book-library').value = data.library ? data.library.id : '';
+    document.getElementById('book-author').value = data.authorId || '';
+    document.getElementById('book-library').value = data.libraryId || '';
     const btn = document.getElementById('add-book-btn');
     btn.textContent = 'Update Book';
     btn.onclick = () => updateBook(id);
