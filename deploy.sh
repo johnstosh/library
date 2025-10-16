@@ -91,7 +91,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory 512Mi \
   --cpu 1 \
-  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_PASSWORD=$DB_PASSWORD \
+  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
   --quiet
 cd
