@@ -20,7 +20,7 @@ public class Loan {
     @ManyToOne
     private User user;
 
-    private LocalDate loanDate;
+    private LocalDate loanDate = LocalDate.now();
 
-    private LocalDate returnDate;
+    private LocalDate returnDate = LocalDate.now().plusWeeks(2);
 }
