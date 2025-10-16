@@ -13,26 +13,26 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Library Management</a>
+        <a class="navbar-brand" href="#" id="page-title">Library Management</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="section-menu" style="display: none;" data-test="section-menu">
                 <li class="nav-item">
-                    <button class="nav-link" onclick="showSection('libraries')" data-test="menu-libraries">Libraries</button>
+                    <button class="nav-link" onclick="showSection('libraries', event)" data-test="menu-libraries">Libraries</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" onclick="showSection('authors')" data-test="menu-authors">Authors</button>
+                    <button class="nav-link" onclick="showSection('authors', event)" data-test="menu-authors">Authors</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" onclick="showSection('books')" data-test="menu-books">Books</button>
+                    <button class="nav-link" onclick="showSection('books', event)" data-test="menu-books">Books</button>
                 </li>
                 <li class="nav-item librarian-only">
-                    <button class="nav-link" onclick="showSection('users')" data-test="menu-users">Users</button>
+                    <button class="nav-link" onclick="showSection('users', event)" data-test="menu-users">Users</button>
                 </li>
                 <li class="nav-item librarian-only">
-                    <button class="nav-link" onclick="showSection('loans')" data-test="menu-loans">Loans</button>
+                    <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
             </ul>
             <ul class="navbar-nav">

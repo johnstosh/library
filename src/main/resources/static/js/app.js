@@ -111,21 +111,27 @@ function showMainContent(roles) {
 function showSection(sectionId, event) {
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
-        section.classList.add('hidden');
+        section.style.display = 'none';
     });
-    // Show the selected section if it exists and is visible
+    // Show the selected section
     const targetSection = document.getElementById(sectionId + '-section');
-    if (targetSection && targetSection.style.display !== 'none') {
-        targetSection.classList.remove('hidden');
+    if (targetSection) {
+        targetSection.style.display = 'block';
     }
-    // Update active button only if event is provided (from button click)
+    // Update active button
+    document.querySelectorAll('#section-menu button').forEach(btn => {
+        btn.classList.remove('active');
+    });
     if (event) {
-        document.querySelectorAll('#section-menu button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const clickedButton = event.target.closest('button[onclick*="showSection"]');
+        const clickedButton = event.target.closest('button');
         if (clickedButton) {
             clickedButton.classList.add('active');
+        }
+    } else {
+        // If no event, activate the button corresponding to the sectionId
+        const activeButton = document.querySelector(`#section-menu button[onclick*="'${sectionId}'"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
         }
     }
 }
@@ -276,10 +282,11 @@ async function loadLibraries() {
             }
             list.appendChild(li);
         });
+        const pageTitle = document.getElementById('page-title');
         if (libraries.length > 0) {
-            document.getElementById('page-title').textContent = libraries[0].name;
+            pageTitle.innerHTML = `The ${libraries[0].name} Branch<br><small>of the Sacred Heart Library System</small>`;
         } else {
-            document.getElementById('page-title').textContent = 'Library Management';
+            pageTitle.textContent = 'Library Management';
         }
         clearError('libraries');
     } catch (error) {

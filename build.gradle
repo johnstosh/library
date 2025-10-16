@@ -30,11 +30,12 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2' // for jules
     implementation 'com.google.cloud.sql:postgres-socket-factory:1.13.+'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'com.h2database:h2'
+    testImplementation 'com.h2database:h2' // for JUnit testing
     testImplementation 'com.microsoft.playwright:playwright:1.40.0'
 
     testCompileOnly 'org.projectlombok:lombok'
