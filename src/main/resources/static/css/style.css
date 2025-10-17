@@ -47,3 +47,7 @@ body {
     font-weight: bold;
     color: var(--bs-navbar-active-color);
 }
+
+.navbar.navbar-dark.bg-primary {
+    background-color: #2E7D32 !important;
+}
