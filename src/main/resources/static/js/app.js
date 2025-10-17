@@ -109,14 +109,14 @@ function showMainContent(roles) {
 }
 
 function showSection(sectionId, event) {
-    // Hide all sections
+    // Hide all sections forcefully
     document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
+        section.style.setProperty('display', 'none', 'important');
     });
-    // Show the selected section
+    // Show the selected section forcefully
     const targetSection = document.getElementById(sectionId + '-section');
     if (targetSection) {
-        targetSection.style.display = 'block';
+        targetSection.style.setProperty('display', 'block', 'important');
     }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
@@ -245,6 +245,15 @@ function showBulkSuccess(textareaId) {
     }, 3000);
 }
 
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
+
 async function loadLibraries() {
     try {
         const libraries = await fetchData('/api/libraries');
@@ -305,8 +314,8 @@ async function addLibrary() {
         await postData('/api/libraries', { name, hostname });
         document.getElementById('new-library-name').value = '';
         document.getElementById('new-library-hostname').value = '';
-        loadLibraries();
-        populateBookDropdowns();
+        await loadLibraries();
+        await populateBookDropdowns();
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to add library: ' + error.message);
@@ -333,8 +342,8 @@ async function updateLibrary(id) {
         await putData(`/api/libraries/${id}`, { name, hostname });
         document.getElementById('new-library-name').value = '';
         document.getElementById('new-library-hostname').value = '';
-        loadLibraries();
-        populateBookDropdowns();
+        await loadLibraries();
+        await populateBookDropdowns();
         const btn = document.getElementById('add-library-btn');
         btn.textContent = 'Add Library';
         btn.onclick = addLibrary;
@@ -348,8 +357,8 @@ async function deleteLibrary(id) {
     if (!confirm('Are you sure you want to delete this library?')) return;
     try {
         await deleteData(`/api/libraries/${id}`);
-        loadLibraries();
-        populateBookDropdowns();
+        await loadLibraries();
+        await populateBookDropdowns();
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to delete library: ' + error.message);
@@ -425,8 +434,8 @@ async function addAuthor() {
         document.getElementById('new-author-country').value = '';
         document.getElementById('new-author-nationality').value = '';
         document.getElementById('new-author-bio').value = '';
-        loadAuthors();
-        populateBookDropdowns();
+        await loadAuthors();
+        await populateBookDropdowns();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to add author: ' + error.message);
@@ -468,8 +477,8 @@ async function updateAuthor(id) {
         document.getElementById('new-author-country').value = '';
         document.getElementById('new-author-nationality').value = '';
         document.getElementById('new-author-bio').value = '';
-        loadAuthors();
-        populateBookDropdowns();
+        await loadAuthors();
+        await populateBookDropdowns();
         const btn = document.getElementById('add-author-btn');
         btn.textContent = 'Add Author';
         btn.onclick = addAuthor;
@@ -483,8 +492,8 @@ async function deleteAuthor(id) {
     if (!confirm('Are you sure you want to delete this author?')) return;
     try {
         await deleteData(`/api/authors/${id}`);
-        loadAuthors();
-        populateBookDropdowns();
+        await loadAuthors();
+        await populateBookDropdowns();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to delete author: ' + error.message);
@@ -505,7 +514,7 @@ async function bulkImportAuthors() {
     try {
         const authors = JSON.parse(authorsJson);
         await postData('/api/authors/bulk', authors);
-        loadAuthors();
+        await loadAuthors();
         showBulkSuccess('bulk-authors');
         document.getElementById('bulk-authors').value = '';
         clearError('authors');
@@ -584,8 +593,8 @@ async function addBook() {
         document.getElementById('new-book-status').value = 'ACTIVE';
         document.getElementById('book-author').selectedIndex = 0;
         document.getElementById('book-library').selectedIndex = 0;
-        loadBooks();
-        populateLoanDropdowns();
+        await loadBooks();
+        await populateLoanDropdowns();
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add book: ' + error.message);
@@ -636,8 +645,9 @@ async function updateBook(id) {
         document.getElementById('new-book-status').value = 'ACTIVE';
         document.getElementById('book-author').selectedIndex = 0;
         document.getElementById('book-library').selectedIndex = 0;
-        loadBooks();
-        populateLoanDropdowns();
+        await loadBooks();
+        await loadLoans();
+        await populateLoanDropdowns();
         const btn = document.getElementById('add-book-btn');
         btn.textContent = 'Add Book';
         btn.onclick = addBook;
@@ -651,8 +661,9 @@ async function deleteBook(id) {
     if (!confirm('Are you sure you want to delete this book?')) return;
     try {
         await deleteData(`/api/books/${id}`);
-        loadBooks();
-        populateLoanDropdowns();
+        await loadBooks();
+        await loadLoans();
+        await populateLoanDropdowns();
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to delete book: ' + error.message);
@@ -673,7 +684,7 @@ async function bulkImportBooks() {
     try {
         const books = JSON.parse(booksJson);
         await postData('/api/books/bulk', books);
-        loadBooks();
+        await loadBooks();
         showBulkSuccess('bulk-books');
         document.getElementById('bulk-books').value = '';
         clearError('books');
@@ -738,8 +749,8 @@ async function addUser() {
         document.getElementById('new-user-username').value = '';
         document.getElementById('new-user-password').value = '';
         document.getElementById('new-user-role').value = 'USER';
-        loadUsers();
-        populateLoanDropdowns();
+        await loadUsers();
+        await populateLoanDropdowns();
         clearError('users');
     } catch (error) {
         showError('users', 'Failed to add user: ' + error.message);
@@ -773,8 +784,8 @@ async function updateUser(id) {
         document.getElementById('new-user-username').value = '';
         document.getElementById('new-user-password').value = '';
         document.getElementById('new-user-role').value = 'USER';
-        loadUsers();
-        populateLoanDropdowns();
+        await loadUsers();
+        await populateLoanDropdowns();
         const btn = document.getElementById('add-user-btn');
         btn.textContent = 'Add User';
         btn.onclick = addUser;
@@ -788,8 +799,8 @@ async function deleteUser(id) {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
         await deleteData(`/api/users/${id}`);
-        loadUsers();
-        populateLoanDropdowns();
+        await loadUsers();
+        await populateLoanDropdowns();
         clearError('users');
     } catch (error) {
         showError('users', 'Failed to delete user: ' + error.message);
@@ -807,16 +818,25 @@ async function loadLoans() {
         const loans = await fetchData('/api/loans');
         const list = document.getElementById('loan-list');
         list.innerHTML = '';
+
+        // Fetch all books and users once for efficiency
+        const books = await fetchData('/api/books');
+        const bookMap = new Map(books.map(book => [book.id, book.title]));
+        const users = await fetchData('/api/users');
+        const userMap = new Map(users.map(user => [user.id, user.username]));
+
         for (const loan of loans) {
             const li = document.createElement('li');
             li.setAttribute('data-test', 'loan-item');
             li.setAttribute('data-entity-id', loan.id);
             const span = document.createElement('span');
             span.setAttribute('data-test', 'loan-details');
-            span.textContent = `${loan.bookTitle} loaned to ${loan.userName} on ${loan.loanDate}`;
+            const bookTitle = bookMap.get(loan.bookId) || 'Unknown Book';
+            const userName = userMap.get(loan.userId) || 'Unknown User';
+            span.textContent = `${bookTitle} loaned to ${userName} on ${formatDate(loan.loanDate)}`;
             li.appendChild(span);
             if (loan.returnDate) {
-                span.textContent += ` (returned on ${loan.returnDate})`;
+                span.textContent += ` (returned on ${formatDate(loan.returnDate)})`;
             } else {
                 const returnButton = document.createElement('button');
                 returnButton.setAttribute('data-test', 'return-book-btn');
@@ -870,7 +890,7 @@ async function checkoutBook() {
         document.getElementById('loan-user').selectedIndex = 0;
         document.getElementById('loan-date').value = '';
         document.getElementById('return-date').value = '';
-        loadLoans();
+        await loadLoans();
         clearError('loans');
     } catch (error) {
         showError('loans', 'Failed to checkout book: ' + error.message);
@@ -903,7 +923,7 @@ async function updateLoan(id) {
         document.getElementById('loan-user').selectedIndex = 0;
         document.getElementById('loan-date').value = '';
         document.getElementById('return-date').value = '';
-        loadLoans();
+        await loadLoans();
         const btn = document.getElementById('checkout-btn');
         btn.textContent = 'Checkout Book';
         btn.onclick = checkoutBook;
@@ -917,7 +937,7 @@ async function deleteLoan(id) {
     if (!confirm('Are you sure you want to delete this loan?')) return;
     try {
         await deleteData(`/api/loans/${id}`);
-        loadLoans();
+        await loadLoans();
         clearError('loans');
     } catch (error) {
         showError('loans', 'Failed to delete loan: ' + error.message);
@@ -926,14 +946,14 @@ async function deleteLoan(id) {
 
 async function viewLoan(id) {
     const loan = await fetchData(`/api/loans/${id}`);
-    const returnStatus = loan.returnDate ? `Returned on ${loan.returnDate}` : 'Not returned';
-    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nUser: ${loan.userName}\nLoan Date: ${loan.loanDate}\n${returnStatus}`);
+    const returnStatus = loan.returnDate ? `Returned on ${formatDate(loan.returnDate)}` : 'Not returned';
+    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nUser: ${loan.userName}\nLoan Date: ${formatDate(loan.loanDate)}\n${returnStatus}`);
 }
 
 async function returnBook(loanId) {
     try {
         await putData(`/api/loans/return/${loanId}`);
-        loadLoans();
+        await loadLoans();
         clearError('loans');
     } catch (error) {
         showError('loans', 'Failed to return book: ' + error.message);

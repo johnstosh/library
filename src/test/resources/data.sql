@@ -13,3 +13,5 @@ INSERT INTO library (name, hostname) VALUES ('Test Library', 'test.local');
 INSERT INTO author (name) VALUES ('Initial Author');
 
 INSERT INTO book (title, publication_year, author_id, library_id, status) VALUES ('Initial Book', 2023, 1, 1, 'ACTIVE');
+
+INSERT INTO loan (loan_date, return_date, book_id, user_id) VALUES (CURRENT_DATE, NULL, 1, 2);
