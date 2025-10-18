@@ -1,29 +1,20 @@
 async function generateTestData() {
-    const numBooks = document.getElementById('num-books').value;
-    if (!numBooks || numBooks <= 0) {
-        alert('Please enter a valid number of books to generate.');
+    const numBooksInput = document.getElementById('num-books').value;
+    const numBooks = parseInt(numBooksInput);
+    if (!numBooksInput || numBooks <= 0) {
+        showError('test-data', 'Please enter a valid number of books to generate.');
         return;
     }
 
     try {
-        const response = await fetch('/api/test-data/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ numBooks: numBooks })
-        });
+        await postData('/api/test-data/generate', { numBooks: numBooks });
 
-        if (response.ok) {
-            alert('Test data generated successfully!');
-        } else {
-            const error = await response.text();
-            alert(`Error generating test data: ${error}`);
-        }
+        document.getElementById('num-books').value = '';
+        await loadBooks();
+        await loadAuthors();
+        clearError('test-data');
     } catch (error) {
-        console.error('Error generating test data:', error);
-        alert('An error occurred while generating test data.');
+        showError('test-data', 'Failed to generate test data: ' + error.message);
     }
 }
 
@@ -33,22 +24,15 @@ async function deleteAllTestData() {
     }
 
     try {
-        const response = await fetch('/api/test-data/delete-all', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
+        // Read an existing protected endpoint first to validate session/CSRF
+        await fetchData('/api/libraries');
 
-        if (response.ok) {
-            alert('Test data deleted successfully!');
-        } else {
-            const error = await response.text();
-            alert(`Error deleting test data: ${error}`);
-        }
+        await deleteData('/api/test-data/delete-all');
+
+        await loadBooks();
+        await loadAuthors();
+        clearError('test-data');
     } catch (error) {
-        console.error('Error deleting test data:', error);
-        alert('An error occurred while deleting test data.');
+        showError('test-data', 'Failed to delete test data: ' + error.message);
     }
 }
