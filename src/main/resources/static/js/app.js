@@ -1,6 +1,9 @@
+console.log('app.js loaded');
+
 let isLibrarian = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded');
     // Add submit event listener to login form for debugging
     const loginForm = document.getElementById('login-form').querySelector('form');
     if (loginForm) {

@@ -1,14 +1,16 @@
 :root {
-  --bs-primary: #2E7D32 !important; /* Forest Green for buttons, navbar */
-  --bs-secondary: #A5D6A7 !important; /* Light Green for secondary elements */
-  --bs-body-bg: #F5F5F5 !important; /* Off-White background */
-  --bs-body-color: #333333 !important; /* Dark Gray text */
-  --bs-warning: #FFCA28 !important; /* Soft Orange for accents */
-  --bs-danger: #D32F2F !important; /* Muted Red for errors */
+  --bs-primary: #2E7D32; /* Forest Green for buttons, navbar */
+  --bs-secondary: #A5D6A7; /* Light Green for secondary elements */
+  --bs-body-bg: #F5F5F5; /* Off-White background */
+  --bs-body-color: #333333; /* Dark Gray text */
+  --bs-warning: #FFCA28; /* Soft Orange for accents */
+  --bs-danger: #D32F2F; /* Muted Red for errors */
 }
 
 body {
     font-family: 'Century Schoolbook', serif;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
 }
 
 .section {
@@ -49,5 +51,30 @@ body {
 }
 
 .navbar.navbar-dark.bg-primary {
-    background-color: #2E7D32 !important;
+    background-color: var(--bs-primary) !important;
+}
+
+/* Force theme colors on key components for reliability */
+.btn-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--bs-primary-rgb, #1b5e20) !important;
+    border-color: var(--bs-primary-rgb, #1b5e20) !important;
+    color: #fff !important;
+}
+
+.btn-secondary {
+    background-color: var(--bs-secondary) !important;
+    border-color: var(--bs-secondary) !important;
+    color: #000 !important;
+}
+
+.alert-danger {
+    background-color: var(--bs-danger) !important;
+    border-color: var(--bs-danger) !important;
+    color: #fff !important;
 }
