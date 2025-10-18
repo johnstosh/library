@@ -42,6 +42,7 @@ async function loadAuthors() {
 }
 
 async function addAuthor() {
+    window.scrollTo(0, 0);
     const name = document.getElementById('new-author-name').value;
     const dateOfBirth = document.getElementById('new-author-dob').value;
     const dateOfDeath = document.getElementById('new-author-dod').value;
