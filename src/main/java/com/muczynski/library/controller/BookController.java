@@ -1,7 +1,9 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.PhotoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,9 @@ public class BookController {
 
     @Autowired
     private BookService bookService;
+
+    @Autowired
+    private PhotoService photoService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
@@ -55,5 +60,12 @@ public class BookController {
     public ResponseEntity<Void> bulkImportBooks(@RequestBody List<BookDto> bookDtos) {
         bookService.bulkImportBooks(bookDtos);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/photos")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long id, @RequestBody PhotoDto photoDto) {
+        PhotoDto created = photoService.addPhoto(id, photoDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }
