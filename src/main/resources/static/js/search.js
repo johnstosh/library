@@ -1,4 +1,7 @@
-async function performSearch() {
+let currentPage = 0;
+const pageSize = 20;
+
+async function performSearch(page = 0) {
     const query = document.getElementById('search-input').value.trim();
     if (!query) {
         const resultsDiv = document.getElementById('search-results');
@@ -6,18 +9,16 @@ async function performSearch() {
         return;
     }
     try {
-        const books = await fetchData('/api/books');
-        const authors = await fetchData('/api/authors');
-        const filteredBooks = books.filter(book => book.title.toLowerCase().includes(query.toLowerCase()));
-        const filteredAuthors = authors.filter(author => author.name.toLowerCase().includes(query.toLowerCase()));
-        displaySearchResults(filteredBooks, filteredAuthors, query);
+        currentPage = page;
+        const data = await fetchData(`/api/search?query=${query}&page=${currentPage}&size=${pageSize}`);
+        displaySearchResults(data.books, data.authors, query, data.bookPage, data.authorPage);
         clearError('search');
     } catch (error) {
         showError('search', 'Failed to search: ' + error.message);
     }
 }
 
-function displaySearchResults(books, authors, query) {
+function displaySearchResults(books, authors, query, bookPage, authorPage) {
     const resultsDiv = document.getElementById('search-results');
     resultsDiv.innerHTML = `<h3>Search results for "${query}"</h3>`;
 
@@ -77,4 +78,23 @@ function displaySearchResults(books, authors, query) {
         });
         resultsDiv.appendChild(authorsList);
     }
+
+    const paginationControls = document.createElement('div');
+    paginationControls.className = 'd-flex justify-content-center mt-3';
+
+    const prevButton = document.createElement('button');
+    prevButton.className = 'btn btn-secondary me-2';
+    prevButton.textContent = 'Previous';
+    prevButton.disabled = currentPage === 0;
+    prevButton.onclick = () => performSearch(currentPage - 1);
+    paginationControls.appendChild(prevButton);
+
+    const nextButton = document.createElement('button');
+    nextButton.className = 'btn btn-secondary';
+    nextButton.textContent = 'Next';
+    nextButton.disabled = bookPage.last && authorPage.last;
+    nextButton.onclick = () => performSearch(currentPage + 1);
+    paginationControls.appendChild(nextButton);
+
+    resultsDiv.appendChild(paginationControls);
 }
