@@ -90,6 +90,7 @@ function showLoginError() {
 function showMainContent(roles) {
     console.log('Showing main content for roles:', roles);
     isLibrarian = roles.includes('LIBRARIAN');
+    document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
     const errorEl = document.getElementById('login-error');
