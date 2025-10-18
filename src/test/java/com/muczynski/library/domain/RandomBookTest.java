@@ -1,18 +1,45 @@
 package com.muczynski.library.domain;
 
+import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.LibraryRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@Transactional
 class RandomBookTest {
 
+    @Autowired
+    private RandomBook randomBook;
+
+    @Autowired
+    private AuthorRepository authorRepository;
+
+    @Autowired
+    private LibraryRepository libraryRepository;
+
     @Test
-    void testRandomBookTitleGeneration() {
-        RandomBook randomBook = new RandomBook();
-        String title = randomBook.getTitle();
-        assertNotNull(title);
-        assertFalse(title.isEmpty());
-        assertTrue(title.startsWith("The "));
-        String[] titleParts = title.split(" ");
-        assertEquals(4, titleParts.length);
+    void testRandomBookCreation() {
+        Library library = new Library();
+        library.setName("Test Library");
+        libraryRepository.save(library);
+
+        Author author = new Author();
+        author.setName("Test Author");
+        authorRepository.save(author);
+
+        Book book = randomBook.create(author);
+
+        assertNotNull(book);
+        assertNotNull(book.getTitle());
+        assertFalse(book.getTitle().isEmpty());
+        assertNotNull(book.getAuthor());
+        assertEquals("Test Author", book.getAuthor().getName());
+        assertNotNull(book.getLibrary());
+        assertEquals("Test Library", book.getLibrary().getName());
     }
 }

@@ -22,10 +22,10 @@ public class RandomAuthor {
 
     private static final Random RANDOM = new Random();
 
-    private final String name;
-
-    public RandomAuthor() {
-        this.name = generateRandomName();
+    public Author create() {
+        Author author = new Author();
+        author.setName(generateRandomName());
+        return author;
     }
 
     private String generateRandomName() {
@@ -33,9 +33,5 @@ public class RandomAuthor {
         String middleName = MIDDLE_NAMES.get(RANDOM.nextInt(MIDDLE_NAMES.size()));
         String lastName = LAST_NAMES.get(RANDOM.nextInt(LAST_NAMES.size()));
         return firstName + " " + middleName + " " + lastName;
-    }
-
-    public String getName() {
-        return name;
     }
 }

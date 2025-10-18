@@ -1,9 +1,17 @@
 package com.muczynski.library.domain;
 
+import com.muczynski.library.repository.LibraryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Random;
 
+@Component
 public class RandomBook {
+
+    @Autowired
+    private LibraryRepository libraryRepository;
 
     private static final List<String> COLORS = List.of(
             "Red", "Green", "Blue", "Yellow", "Black",
@@ -22,10 +30,12 @@ public class RandomBook {
 
     private static final Random RANDOM = new Random();
 
-    private final String title;
-
-    public RandomBook() {
-        this.title = generateRandomTitle();
+    public Book create(Author author) {
+        Book book = new Book();
+        book.setTitle(generateRandomTitle());
+        book.setAuthor(author);
+        book.setLibrary(libraryRepository.findAll().get(0));
+        return book;
     }
 
     private String generateRandomTitle() {
@@ -33,9 +43,5 @@ public class RandomBook {
         String noun = NOUNS.get(RANDOM.nextInt(NOUNS.size()));
         String verb = VERBS.get(RANDOM.nextInt(VERBS.size()));
         return "The " + color + " " + noun + " " + verb;
-    }
-
-    public String getTitle() {
-        return title;
     }
 }
