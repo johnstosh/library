@@ -134,9 +134,11 @@ public class AuthorsUITest {
 
             // Update
             authorItem.first().locator("[data-test='edit-author-btn']").click();
+            assertThat(page.locator("[data-test='add-author-btn']")).hasText("Update Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
             String updatedName = uniqueName + " Updated";
             page.fill("[data-test='new-author-name']", updatedName);
             page.click("[data-test='add-author-btn']");
+            assertThat(page.locator("[data-test='add-author-btn']")).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
             Locator updatedAuthorItem = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
             updatedAuthorItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
