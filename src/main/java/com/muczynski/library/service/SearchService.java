@@ -49,8 +49,21 @@ public class SearchService {
         Map<String, Object> results = new HashMap<>();
         results.put("books", books);
         results.put("authors", authors);
-        results.put("bookPage", bookPage);
-        results.put("authorPage", authorPage);
+
+        Map<String, Object> bookPageInfo = new HashMap<>();
+        bookPageInfo.put("totalPages", bookPage.getTotalPages());
+        bookPageInfo.put("totalElements", bookPage.getTotalElements());
+        bookPageInfo.put("currentPage", bookPage.getNumber());
+        bookPageInfo.put("pageSize", bookPage.getSize());
+        results.put("bookPage", bookPageInfo);
+
+        Map<String, Object> authorPageInfo = new HashMap<>();
+        authorPageInfo.put("totalPages", authorPage.getTotalPages());
+        authorPageInfo.put("totalElements", authorPage.getTotalElements());
+        authorPageInfo.put("currentPage", authorPage.getNumber());
+        authorPageInfo.put("pageSize", authorPage.getSize());
+        results.put("authorPage", authorPageInfo);
+
         return results;
     }
 }
