@@ -47,16 +47,23 @@ async function checkAuthentication() {
             console.log('User authenticated:', user);
             showMainContent(user.roles);
         } else {
-            console.log('Authentication failed or non-JSON response, showing login form');
-            showLoginForm();
+            console.log('Authentication failed or non-JSON response, showing welcome screen');
+            showWelcomeScreen();
         }
     } catch (error) {
         console.error('Error during authentication check:', error);
-        showLoginForm();
+        showWelcomeScreen();
     }
 }
 
+function showWelcomeScreen() {
+    document.getElementById('welcome-screen').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+}
+
 function showLoginForm() {
+    document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
     const errorEl = document.getElementById('login-error');
