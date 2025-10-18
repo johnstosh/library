@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .userDetailsService(userDetailsService)
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/test-data/generate").hasRole("LIBRARIAN")
                         .requestMatchers("/api/auth/**", "/login", "/css/**", "/js/**", "/", "/index.html", "/favicon.ico").permitAll()
                         .anyRequest().authenticated()
                 )
