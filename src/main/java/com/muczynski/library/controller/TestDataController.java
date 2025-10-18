@@ -1,5 +1,7 @@
 package com.muczynski.library.controller;
 
+import com.muczynski.library.service.TestDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,9 +14,13 @@ import java.util.Map;
 @RequestMapping("/api/test-data")
 public class TestDataController {
 
+    @Autowired
+    private TestDataService testDataService;
+
     @PostMapping("/generate")
     public ResponseEntity<Void> generateTestData(@RequestBody Map<String, Integer> payload) {
-        // Later, we will implement the logic to generate test data.
+        int count = payload.getOrDefault("count", 0);
+        testDataService.generateTestData(count);
         return ResponseEntity.ok().build();
     }
 }
