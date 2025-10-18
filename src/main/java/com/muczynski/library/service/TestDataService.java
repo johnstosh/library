@@ -35,4 +35,9 @@ public class TestDataService {
             bookRepository.save(book);
         }
     }
+
+    public void deleteTestData() {
+        bookRepository.deleteByPublisher("test-data");
+        authorRepository.deleteByReligiousAffiliation("test-data");
+    }
 }
