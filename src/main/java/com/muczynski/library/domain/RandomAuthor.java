@@ -23,6 +23,7 @@ public class RandomAuthor {
     private static final Random RANDOM = new Random();
 
     private final String name;
+    private final String religion = "test-data";
 
     public RandomAuthor() {
         this.name = generateRandomName();
@@ -37,5 +38,9 @@ public class RandomAuthor {
 
     public String getName() {
         return name;
+    }
+
+    public String getReligion() {
+        return religion;
     }
 }

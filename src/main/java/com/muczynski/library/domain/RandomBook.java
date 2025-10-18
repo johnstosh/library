@@ -23,6 +23,7 @@ public class RandomBook {
     private static final Random RANDOM = new Random();
 
     private final String title;
+    private final String publisher = "test-data";
 
     public RandomBook() {
         this.title = generateRandomTitle();
@@ -37,5 +38,9 @@ public class RandomBook {
 
     public String getTitle() {
         return title;
+    }
+
+    public String getPublisher() {
+        return publisher;
     }
 }
