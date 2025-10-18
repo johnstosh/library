@@ -23,6 +23,7 @@ public class RandomAuthor {
     public Author create() {
         Author author = new Author();
         author.setName(generateRandomName());
+        author.setReligiousAffiliation("test-data");
         return author;
     }
 

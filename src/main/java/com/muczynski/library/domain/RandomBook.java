@@ -35,6 +35,7 @@ public class RandomBook {
         book.setTitle(generateRandomTitle());
         book.setAuthor(author);
         book.setLibrary(libraryRepository.findAll().get(0));
+        book.setPublisher("test-data");
         return book;
     }
 
