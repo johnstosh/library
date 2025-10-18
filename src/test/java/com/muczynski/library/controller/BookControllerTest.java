@@ -2,7 +2,9 @@ package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -33,6 +35,9 @@ class BookControllerTest {
 
     @MockitoBean
     private BookService bookService;
+
+    @MockitoBean
+    private PhotoService photoService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -118,5 +123,21 @@ class BookControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDtos)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void addPhotoToBook() throws Exception {
+        PhotoDto inputDto = new PhotoDto();
+        inputDto.setUrl("http://example.com/photo.jpg");
+        PhotoDto returnedDto = new PhotoDto();
+        returnedDto.setId(1L);
+        returnedDto.setUrl("http://example.com/photo.jpg");
+        when(photoService.addPhoto(eq(1L), any(PhotoDto.class))).thenReturn(returnedDto);
+
+        mockMvc.perform(post("/api/books/1/photos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isCreated());
     }
 }

@@ -32,4 +32,7 @@ public class Book {
 
     @ManyToOne
     private Library library;
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<Photo> photos;
 }
