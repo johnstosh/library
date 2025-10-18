@@ -106,7 +106,7 @@ public class LibrariesUITest {
     }
 
     private void ensurePrerequisites() {
-        // Data is inserted via data.sql in test profile, so no additional setup needed
+        // Data is inserted via data-libraries.sql in test profile, so no additional setup needed
     }
 
     @Test
@@ -138,13 +138,21 @@ public class LibrariesUITest {
 
             // Update
             libraryItem.first().locator("[data-test='edit-library-btn']").click();
-            String updatedName = uniqueName + " Updated";
+            String updatedName = "Updated Library " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-library-name']", updatedName);
             page.click("[data-test='add-library-btn']");
 
+            // Wait for button to reset to "Add Library", confirming the update operation completed successfully
+            Locator addButton = page.locator("[data-test='add-library-btn']");
+            assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+
+            // Wait for the updated item to appear (confirms reload)
             Locator updatedLibraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
             updatedLibraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedLibraryItem.first()).isVisible();
+
+            // Assert old item is gone (confirms successful reload)
+            assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
             Locator toDelete = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));

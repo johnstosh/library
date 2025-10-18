@@ -106,7 +106,7 @@ public class BooksUITest {
     }
 
     private void ensurePrerequisites() {
-        // Data is inserted via data.sql in test profile, so no additional setup needed
+        // Data is inserted via data-books.sql in test profile, so no additional setup needed
     }
 
     @Test
@@ -141,7 +141,7 @@ public class BooksUITest {
             // Update
             bookItem.first().locator("[data-test='edit-book-btn']").click();
             assertThat(page.locator("[data-test='add-book-btn']")).hasText("Update Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
-            String updatedTitle = uniqueTitle + " Updated";
+            String updatedTitle = "Updated Book " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-book-title']", updatedTitle);
             page.click("[data-test='add-book-btn']");
             assertThat(page.locator("[data-test='add-book-btn']")).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
@@ -153,6 +153,9 @@ public class BooksUITest {
             Locator updatedBookItem = bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle));
             updatedBookItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedBookItem.first()).isVisible();
+
+            // Assert old item is gone (confirms successful reload)
+            assertThat(bookList.filter(new Locator.FilterOptions().setHasText(uniqueTitle))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
             Locator toDeleteBook = bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle));

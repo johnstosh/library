@@ -105,7 +105,7 @@ public class LoansUITest {
     }
 
     private void ensurePrerequisites() {
-        // Data is inserted via data.sql in test profile, so no additional setup needed
+        // Data is inserted via data-loans.sql in test profile, so no additional setup needed
     }
 
     @Test
@@ -152,9 +152,13 @@ public class LoansUITest {
             page.click("[data-test='checkout-btn']");
             assertThat(page.locator("[data-test='checkout-btn']")).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
+            // Wait for the updated item to appear (confirms reload)
             Locator updatedLoanItem = loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on 01/01/2023"));
             updatedLoanItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedLoanItem.first()).isVisible();
+
+            // Assert old item is gone (confirms successful reload)
+            assertThat(loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on"))).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000)); // Only the updated one remains
 
             // Delete
             Locator toDeleteLoan = loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on 01/01/2023"));

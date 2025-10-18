@@ -106,7 +106,7 @@ public class AuthorsUITest {
     }
 
     private void ensurePrerequisites() {
-        // Data is inserted via data.sql in test profile, so no additional setup needed
+        // Data is inserted via data-authors.sql in test profile, so no additional setup needed
     }
 
     @Test
@@ -137,14 +137,18 @@ public class AuthorsUITest {
             // Update
             authorItem.first().locator("[data-test='edit-author-btn']").click();
             assertThat(page.locator("[data-test='add-author-btn']")).hasText("Update Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
-            String updatedName = uniqueName + " Updated";
+            String updatedName = "Updated Author " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-author-name']", updatedName);
             page.click("[data-test='add-author-btn']");
             assertThat(page.locator("[data-test='add-author-btn']")).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
+            // Wait for the updated item to appear (confirms reload)
             Locator updatedAuthorItem = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
             updatedAuthorItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedAuthorItem.first()).isVisible();
+
+            // Assert old item is gone (confirms successful reload)
+            assertThat(authorList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
             Locator toDelete = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));

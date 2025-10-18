@@ -106,7 +106,7 @@ public class UsersUITest {
     }
 
     private void ensurePrerequisites() {
-        // Data is inserted via data.sql in test profile, so no additional setup needed
+        // Data is inserted via data-users.sql in test profile, so no additional setup needed
     }
 
     @Test
@@ -138,16 +138,23 @@ public class UsersUITest {
 
             // Update
             userItem.first().locator("[data-test='edit-user-btn']").click();
-            String updatedUsername = uniqueUsername + " Updated";
+            String updatedUsername = "updateduser" + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-user-username']", updatedUsername);
             page.fill("[data-test='new-user-password']", "newpassword123");
+            page.selectOption("[data-test='new-user-role']", "USER");
             page.click("[data-test='add-user-btn']");
 
-            assertThat(page.locator("[data-test='add-user-btn']")).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
-            page.waitForTimeout(1000); // Add a 1-second delay
+            // Wait for button to reset to "Add User", confirming the update operation completed successfully
+            Locator addButton = page.locator("[data-test='add-user-btn']");
+            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+
+            // Wait for the updated item to appear (confirms reload)
             Locator updatedUserItem = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
             updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedUserItem.first()).isVisible();
+
+            // Assert old item is gone (confirms successful reload without detach wait)
+            assertThat(userList.filter(new Locator.FilterOptions().setHasText(uniqueUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
             Locator toDelete = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));

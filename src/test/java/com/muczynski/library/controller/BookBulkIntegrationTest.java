@@ -39,14 +39,14 @@ class BookBulkIntegrationTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void createAndDelete100RandomBooks() throws Exception {
-        // Step 0: Get initial book count (should be 1 from data.sql)
+        // Step 0: Get initial book count 
         MvcResult initialResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/books"))
                 .andExpect(status().isOk())
                 .andReturn();
         List<BookDto> initialBooks = objectMapper.readValue(initialResult.getResponse().getContentAsString(),
                 objectMapper.getTypeFactory().constructCollectionType(List.class, BookDto.class));
         int initialCount = initialBooks.size();
-        assertEquals(1, initialCount, "Expected 1 initial book from data.sql");
+        assertEquals(1, initialCount, "Expected 1 initial book");
 
         // Step 1: Create 100 random books via bulk import
         List<BookDto> bookDtos = new ArrayList<>();
@@ -62,8 +62,8 @@ class BookBulkIntegrationTest {
             dto.setRelatedWorks("Related work " + i);
             dto.setDetailedDescription("Detailed random description " + i);
             dto.setStatus(BookStatus.values()[random.nextInt(BookStatus.values().length)]);
-            dto.setAuthorId(1L); // Use existing author from data.sql
-            dto.setLibraryId(1L); // Use existing library from data.sql
+            dto.setAuthorId(1L); // Use existing author
+            dto.setLibraryId(1L); // Use existing library
             bookDtos.add(dto);
         }
 
