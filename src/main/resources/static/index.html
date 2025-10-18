@@ -33,6 +33,9 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
+                <li class="nav-item librarian-only" data-test="menu-test-data-item">
+                    <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
+                </li>
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item">
@@ -235,6 +238,15 @@
                 <button id="checkout-btn" class="btn btn-primary" onclick="checkoutBook()" data-test="checkout-btn">Checkout Book</button>
             </div>
         </div>
+
+        <div id="test-data-section" class="section librarian-only" data-test="test-data-section">
+            <h2 data-test="test-data-header">Generate Test Data</h2>
+            <div class="mb-3">
+                <label for="num-books" class="form-label">Number of Books to Add:</label>
+                <input type="number" id="num-books" class="form-control" placeholder="Number of books" data-test="num-books">
+            </div>
+            <button id="generate-test-data-btn" class="btn btn-primary" onclick="generateTestData()" data-test="generate-test-data-btn">Generate</button>
+        </div>
     </div>
 </div>
 
@@ -245,6 +257,7 @@
 <script src="js/users.js"></script>
 <script src="js/loans.js"></script>
 <script src="js/search.js"></script>
+<script src="js/test-data.js"></script>
 <script src="js/app.js"></script>
 
 </body>
