@@ -42,6 +42,7 @@ async function loadBooks() {
 }
 
 async function addBook() {
+    window.scrollTo(0, 0);
     const title = document.getElementById('new-book-title').value;
     const publicationYear = document.getElementById('new-book-year').value;
     const publisher = document.getElementById('new-book-publisher').value;
