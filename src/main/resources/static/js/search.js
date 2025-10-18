@@ -92,7 +92,7 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
     const nextButton = document.createElement('button');
     nextButton.className = 'btn btn-secondary';
     nextButton.textContent = 'Next';
-    nextButton.disabled = bookPage.last && authorPage.last;
+    nextButton.disabled = (currentPage + 1) >= bookPage.totalPages && (currentPage + 1) >= authorPage.totalPages;
     nextButton.onclick = () => performSearch(currentPage + 1);
     paginationControls.appendChild(nextButton);
 

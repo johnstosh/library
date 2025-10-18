@@ -79,9 +79,9 @@ public class UsersUITest {
         assertThat(targetSection).isVisible();
 
         // Assert all non-target sections are hidden to test exclusivity
-        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users");
+        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
         List<String> hiddenSections = allSections.stream()
-                .filter(s -> !s.equals(section))
+                .filter(s -> !s.equals(section) && !s.equals("search"))
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
@@ -141,6 +141,8 @@ public class UsersUITest {
             page.fill("[data-test='new-user-password']", "newpassword123");
             page.click("[data-test='add-user-btn']");
 
+            assertThat(page.locator("[data-test='add-user-btn']")).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            page.waitForTimeout(1000); // Add a 1-second delay
             Locator updatedUserItem = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
             updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedUserItem.first()).isVisible();

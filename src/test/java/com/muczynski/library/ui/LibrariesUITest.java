@@ -79,9 +79,9 @@ public class LibrariesUITest {
         assertThat(targetSection).isVisible();
 
         // Assert all non-target sections are hidden to test exclusivity
-        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users");
+        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
         List<String> hiddenSections = allSections.stream()
-                .filter(s -> !s.equals(section))
+                .filter(s -> !s.equals(section) && !s.equals("search"))
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
