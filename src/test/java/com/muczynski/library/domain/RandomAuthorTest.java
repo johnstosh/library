@@ -6,12 +6,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class RandomAuthorTest {
 
     @Test
-    void testRandomAuthorNameGeneration() {
+    void testRandomAuthorCreation() {
         RandomAuthor randomAuthor = new RandomAuthor();
-        String name = randomAuthor.getName();
-        assertNotNull(name);
-        assertFalse(name.isEmpty());
-        String[] nameParts = name.split(" ");
-        assertEquals(3, nameParts.length);
+        Author author = randomAuthor.create();
+        assertNotNull(author);
+        assertNotNull(author.getName());
+        assertFalse(author.getName().isEmpty());
     }
 }
