@@ -33,6 +33,9 @@
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item">
+                    <button class="nav-link" onclick="showLoginForm()" data-test="menu-login">Login</button>
+                </li>
+                <li class="nav-item">
                     <button class="nav-link" onclick="logout()" data-test="menu-logout">Logout</button>
                 </li>
             </ul>
@@ -41,7 +44,12 @@
 </nav>
 
 <div class="container mt-4">
-    <div id="login-form" data-test="login-form" class="col-md-6 offset-md-3">
+    <div id="welcome-screen" data-test="welcome-screen" class="col-md-6 offset-md-3 text-center">
+        <h2 data-test="welcome-header">Welcome to the Library</h2>
+        <p>Please log in to manage the library.</p>
+    </div>
+
+    <div id="login-form" data-test="login-form" class="col-md-6 offset-md-3" style="display: none;">
         <h2 data-test="login-header">Login</h2>
         <form id="login" name="login" action="/login" method="post">
             <div class="mb-3">
