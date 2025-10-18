@@ -24,6 +24,9 @@
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('books', event)" data-test="menu-books">Books</button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
+                </li>
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('users', event)" data-test="menu-users">Users</button>
                 </li>
@@ -177,6 +180,15 @@
             </div>
         </div>
 
+        <div id="search-section" class="section" data-test="search-section">
+            <h2 data-test="search-header">Search</h2>
+            <div class="input-group mb-3" data-test="search-form">
+                <input type="text" id="search-input" class="form-control" placeholder="Search books and authors..." data-test="search-input">
+                <button class="btn btn-primary" onclick="performSearch()" data-test="search-btn">Search</button>
+            </div>
+            <div id="search-results" data-test="search-results"></div>
+        </div>
+
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
             <ul id="user-list" class="list-group mb-3" data-test="user-list"></ul>
@@ -232,6 +244,7 @@
 <script src="js/books.js"></script>
 <script src="js/users.js"></script>
 <script src="js/loans.js"></script>
+<script src="js/search.js"></script>
 <script src="js/app.js"></script>
 
 </body>
