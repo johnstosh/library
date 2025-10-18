@@ -63,12 +63,20 @@ function showWelcomeScreen() {
     document.getElementById('welcome-screen').style.display = 'block';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'none';
+    document.getElementById('section-menu').style.display = 'none';
+    document.getElementById('login-menu-btn').style.display = 'block';
+    document.getElementById('logout-menu-btn').style.display = 'none';
+    const pageTitle = document.getElementById('page-title');
+    pageTitle.innerHTML = 'The St. Martin de Porres Branch<br>of the Sacred Heart Library System';
 }
 
 function showLoginForm() {
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
+    document.getElementById('section-menu').style.display = 'none';
+    document.getElementById('login-menu-btn').style.display = 'block';
+    document.getElementById('logout-menu-btn').style.display = 'none';
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
         errorEl.style.display = 'none';
@@ -93,12 +101,13 @@ function showMainContent(roles) {
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
+    document.getElementById('section-menu').style.display = 'flex';
+    document.getElementById('login-menu-btn').style.display = 'none';
+    document.getElementById('logout-menu-btn').style.display = 'block';
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
         errorEl.style.display = 'none';
     }
-
-    document.getElementById('section-menu').style.display = 'flex';
 
     if (isLibrarian) {
         document.body.classList.add('user-is-librarian');
@@ -150,6 +159,7 @@ function showSection(sectionId, event) {
 function logout() {
     document.body.classList.remove('user-is-librarian');
     fetch('/logout', { method: 'POST' }).then(() => {
+        showWelcomeScreen();
         window.location.href = '/';
     });
 }
