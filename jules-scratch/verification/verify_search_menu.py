@@ -1,25 +1,22 @@
 from playwright.sync_api import sync_playwright
-import time
 
 def run(playwright):
     browser = playwright.chromium.launch(headless=True)
     context = browser.new_context()
     page = context.new_page()
 
-    # Give the server time to start
-    time.sleep(30)
-
+    # Go to the index page
     page.goto("http://localhost:8080")
 
-    # Login
-    page.fill("[data-test='login-username']", "librarian")
-    page.fill("[data-test='login-password']", "password")
-    page.click("[data-test='login-submit']")
+    # The search menu item should be visible
+    search_menu_item = page.locator('[data-test=menu-search]')
+    assert search_menu_item.is_visible()
 
-    # Wait for main content to load
-    page.wait_for_selector("[data-test='main-content']")
+    # The other menu items should not be visible
+    libraries_menu_item = page.locator('[data-test=menu-libraries]')
+    assert not libraries_menu_item.is_visible()
 
-    # Take screenshot
+    # Take a screenshot
     page.screenshot(path="jules-scratch/verification/verification.png")
 
     browser.close()
