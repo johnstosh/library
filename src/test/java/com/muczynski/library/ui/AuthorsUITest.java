@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -160,6 +161,37 @@ public class AuthorsUITest {
         } catch (Exception e) {
             // Screenshot on failure for debugging
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-authors-crud.png")));
+            throw e;
+        }
+    }
+
+    @Test
+    @Sql(value = "classpath:data-authors-sorting.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void testAuthorsAreSortedBySurname() {
+        try {
+            page.navigate("http://localhost:" + port);
+            login();
+            ensurePrerequisites();
+
+            navigateToSection("authors");
+
+            page.waitForSelector("[data-test='author-item']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+
+            List<String> authorNames = page.locator("[data-test='author-name']").allTextContents();
+
+            List<String> expectedOrder = Arrays.asList(
+                    "Jane Austen",
+                    "Charlotte Brontë",
+                    "Emily Brontë",
+                    "Charles Dickens",
+                    "George Eliot",
+                    "Mary Shelley"
+            );
+
+            assertEquals(expectedOrder, authorNames);
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-authors-sorting.png")));
             throw e;
         }
     }
