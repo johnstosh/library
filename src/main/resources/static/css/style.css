@@ -78,3 +78,32 @@ body {
     border-color: var(--bs-danger) !important;
     color: #fff !important;
 }
+
+.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+.dark-mode .navbar {
+    background-color: #1f1f1f !important;
+}
+
+.dark-mode .form-control {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-color: #454545;
+}
+
+.dark-mode .form-check-label {
+    color: #ffffff;
+}
+
+.dark-mode .list-group-item {
+    background-color: #2d2d2d;
+    border-color: #454545;
+}
+
+.dark-mode .btn-primary {
+    background-color: #375a7f;
+    border-color: #375a7f;
+}
