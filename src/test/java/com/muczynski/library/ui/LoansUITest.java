@@ -121,10 +121,16 @@ public class LoansUITest {
             // Navigate to loans section and assert visibility
             navigateToSection("loans");
 
+            // Assert that the table is visible
+            assertThat(page.locator("[data-test='loan-table']")).isVisible();
+
             // Delete any existing loans to ensure clean state
             Locator loanList = page.locator("[data-test='loan-item']");
-            if (loanList.count() > 0) {
-                loanList.first().locator("[data-test='delete-loan-btn']").click();
+            int initialCount = loanList.count();
+            if (initialCount > 0) {
+                for (int i = 0; i < initialCount; i++) {
+                    loanList.first().locator("[data-test='delete-loan-btn']").click();
+                }
                 assertThat(loanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
             }
 
@@ -143,6 +149,9 @@ public class LoansUITest {
             loanItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(loanItem.first()).isVisible();
             assertThat(loanItem).hasCount(1);
+
+            // Assert due date is present
+            assertThat(loanItem.locator("[data-test='loan-due-date']")).containsText("/");
 
             // Update: Change loan date instead of user (backend doesn't support user update)
             loanItem.first().locator("[data-test='edit-loan-btn']").click();

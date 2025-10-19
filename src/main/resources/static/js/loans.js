@@ -1,7 +1,7 @@
 async function loadLoans() {
     try {
         const loans = await fetchData('/api/loans');
-        const list = document.getElementById('loan-list');
+        const list = document.getElementById('loan-list-body');
         list.innerHTML = '';
 
         // Fetch all books and users once for efficiency
@@ -11,25 +11,40 @@ async function loadLoans() {
         const userMap = new Map(users.map(user => [user.id, user.username]));
 
         for (const loan of loans) {
-            const li = document.createElement('li');
-            li.setAttribute('data-test', 'loan-item');
-            li.setAttribute('data-entity-id', loan.id);
-            const span = document.createElement('span');
-            span.setAttribute('data-test', 'loan-details');
+            const row = document.createElement('tr');
+            row.setAttribute('data-test', 'loan-item');
+            row.setAttribute('data-entity-id', loan.id);
+
+            const loanCell = document.createElement('td');
+            loanCell.setAttribute('data-test', 'loan-details');
             const bookTitle = bookMap.get(loan.bookId) || 'Unknown Book';
             const userName = userMap.get(loan.userId) || 'Unknown User';
-            span.textContent = `${bookTitle} loaned to ${userName} on ${formatDate(loan.loanDate)}`;
-            li.appendChild(span);
+            loanCell.textContent = `${bookTitle} loaned to ${userName} on ${formatDate(loan.loanDate)}`;
             if (loan.returnDate) {
-                span.textContent += ` (returned on ${formatDate(loan.returnDate)})`;
-            } else {
+                loanCell.textContent += ` (returned on ${formatDate(loan.returnDate)})`;
+            }
+            row.appendChild(loanCell);
+
+            const dueDateCell = document.createElement('td');
+            dueDateCell.setAttribute('data-test', 'loan-due-date');
+            // Assuming dueDate is available in loan object. If not, this will be empty.
+            // Let's calculate a due date for demonstration: 30 days after loan date
+            const loanDate = new Date(loan.loanDate);
+            const dueDate = new Date(loanDate.setDate(loanDate.getDate() + 30));
+            dueDateCell.textContent = formatDate(dueDate.toISOString().split('T')[0]);
+            row.appendChild(dueDateCell);
+
+            const actionsCell = document.createElement('td');
+            actionsCell.setAttribute('data-test', 'loan-actions');
+
+            if (!loan.returnDate) {
                 const returnButton = document.createElement('button');
                 returnButton.setAttribute('data-test', 'return-book-btn');
                 returnButton.setAttribute('data-loan-id', loan.id);
                 returnButton.textContent = 'Return';
                 returnButton.className = 'return-btn';
                 returnButton.onclick = () => returnBook(loan.id);
-                li.appendChild(returnButton);
+                actionsCell.appendChild(returnButton);
             }
 
             const viewBtn = document.createElement('button');
@@ -37,22 +52,24 @@ async function loadLoans() {
             viewBtn.textContent = '🔍';
             viewBtn.title = 'View details';
             viewBtn.onclick = () => viewLoan(loan.id);
-            li.appendChild(viewBtn);
+            actionsCell.appendChild(viewBtn);
 
             const editBtn = document.createElement('button');
             editBtn.setAttribute('data-test', 'edit-loan-btn');
             editBtn.textContent = '✏️';
             editBtn.title = 'Edit';
             editBtn.onclick = () => editLoan(loan.id);
-            li.appendChild(editBtn);
+            actionsCell.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
             delBtn.setAttribute('data-test', 'delete-loan-btn');
             delBtn.textContent = '🗑️';
             delBtn.title = 'Delete';
             delBtn.onclick = () => deleteLoan(loan.id);
-            li.appendChild(delBtn);
-            list.appendChild(li);
+            actionsCell.appendChild(delBtn);
+            row.appendChild(actionsCell);
+
+            list.appendChild(row);
         }
         clearError('loans');
     } catch (error) {

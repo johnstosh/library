@@ -224,7 +224,17 @@
 
         <div id="loans-section" class="section librarian-only" data-test="loans-section">
             <h2 data-test="loans-header">Loans</h2>
-            <ul id="loan-list" class="list-group mb-3" data-test="loan-list"></ul>
+            <table class="table" data-test="loan-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Loan</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="loan-list-body" data-test="loan-list-body">
+                </tbody>
+            </table>
             <div data-test="loans-form">
                 <div class="mb-3">
                     <label for="loan-book" class="form-label">Book:</label>
