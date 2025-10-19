@@ -28,19 +28,21 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
     }
 
     if (books.length > 0) {
+        const startBook = currentPage * pageSize + 1;
+        const endBook = currentPage * pageSize + books.length;
         const booksHeader = document.createElement('h4');
-        booksHeader.textContent = 'Books';
+        booksHeader.textContent = `Books ${startBook} - ${endBook}`;
         resultsDiv.appendChild(booksHeader);
 
         const booksList = document.createElement('ul');
         booksList.className = 'list-group mb-3';
         booksList.setAttribute('data-test', 'search-books-list');
-        books.forEach(book => {
+        books.forEach((book, index) => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.setAttribute('data-test', 'search-book-item');
             const span = document.createElement('span');
-            span.textContent = book.title;
+            span.textContent = `${startBook + index}. ${book.title}`;
             li.appendChild(span);
             const viewBtn = document.createElement('button');
             viewBtn.className = 'btn btn-sm btn-outline-primary ms-2';
