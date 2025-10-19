@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -89,19 +90,6 @@ public class LoansUITest {
                 assertThat(page.locator("#" + hiddenSection + "-section")).isHidden();
             }
         }
-
-        // Additional JS poll for display style to confirm non-target sections are hidden
-        String jsExpression = "(function() { " +
-                "document.querySelectorAll('.section').forEach(s => { " +
-                "  if (s.id !== '" + section + "-section' && s.id.endsWith('-section')) { " +
-                "    if (window.getComputedStyle(s).display !== 'none') { " +
-                "      throw new Error('Non-target section is visible'); " +
-                "    } " +
-                "  } " +
-                "}); " +
-                "return true; " +
-                "})()";
-        page.waitForFunction(jsExpression);
     }
 
     private void ensurePrerequisites() {
@@ -126,13 +114,13 @@ public class LoansUITest {
 
             // Delete any existing loans to ensure clean state
             Locator loanList = page.locator("[data-test='loan-item']");
-            int initialCount = loanList.count();
-            if (initialCount > 0) {
-                for (int i = 0; i < initialCount; i++) {
-                    loanList.first().locator("[data-test='delete-loan-btn']").click();
-                }
-                assertThat(loanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            while (loanList.count() > 0) {
+                int currentCount = loanList.count();
+                loanList.first().locator("[data-test='delete-loan-btn']").click();
+                page.waitForFunction("count => document.querySelectorAll('[data-test=\"loan-item\"]').length < count", currentCount);
+                loanList = page.locator("[data-test='loan-item']");
             }
+            assertThat(loanList).hasCount(0);
 
             // Wait for loan section and dropdown options
             page.waitForSelector("[data-test='loan-book']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
@@ -143,37 +131,48 @@ public class LoansUITest {
             // Create
             page.click("[data-test='checkout-btn']");
 
-            // Read: Match on text content flexibly - adjust for actual username
+            // Wait for new loan item to appear by count
+            page.waitForFunction("() => document.querySelectorAll('[data-test=\"loan-item\"]').length === 1");
+
             loanList = page.locator("[data-test='loan-item']");
-            Locator loanItem = loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser"));
-            loanItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(loanItem.first()).isVisible();
-            assertThat(loanItem).hasCount(1);
+            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
-            // Assert due date is present
-            assertThat(loanItem.locator("[data-test='loan-due-date']")).containsText("/");
+            // Assert details text
+            String detailsText = loanList.first().locator("[data-test='loan-details']").innerText();
+            assertTrue(detailsText.contains("Initial Book"));
+            assertTrue(detailsText.contains("loaned to testuser"));
 
-            // Update: Change loan date instead of user (backend doesn't support user update)
-            loanItem.first().locator("[data-test='edit-loan-btn']").click();
+            // Assert due date is present and formatted
+            String dueText = loanList.first().locator("[data-test='loan-due-date']").innerText();
+            assertFalse(dueText.isEmpty());
+            assertTrue(dueText.contains("/"));
+
+            // Update: Change loan date
+            loanList.first().locator("[data-test='edit-loan-btn']").click();
             page.selectOption("[data-test='loan-book']", "1");
             page.selectOption("[data-test='loan-user']", "2");
             page.fill("[data-test='loan-date']", "2023-01-01");
             page.click("[data-test='checkout-btn']");
+            page.waitForTimeout(500); // Allow JS to settle
+
+            // Wait for button to reset to "Checkout Book"
             assertThat(page.locator("[data-test='checkout-btn']")).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
-            // Wait for the updated item to appear (confirms reload)
-            Locator updatedLoanItem = loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on 01/01/2023"));
-            updatedLoanItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(updatedLoanItem.first()).isVisible();
+            // Wait for list to update (still 1 item)
+            loanList = page.locator("[data-test='loan-item']");
+            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
-            // Assert old item is gone (confirms successful reload)
-            assertThat(loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on"))).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000)); // Only the updated one remains
+            // Assert updated details text
+            String updatedDetails = loanList.first().locator("[data-test='loan-details']").innerText();
+            assertTrue(updatedDetails.contains("on 01/01/2023"));
 
             // Delete
-            Locator toDeleteLoan = loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on 01/01/2023"));
-            toDeleteLoan.first().locator("[data-test='delete-loan-btn']").click();
-            toDeleteLoan.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
-            assertThat(loanList.filter(new Locator.FilterOptions().setHasText("loaned to testuser on 01/01/2023"))).hasCount(0);
+            loanList.first().locator("[data-test='delete-loan-btn']").click();
+
+            // Wait for item to detach
+            loanList.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
+            loanList = page.locator("[data-test='loan-item']");
+            assertThat(loanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-loans-crud.png")));

@@ -22,5 +22,7 @@ public class Loan {
 
     private LocalDate loanDate = LocalDate.now();
 
-    private LocalDate returnDate = LocalDate.now().plusWeeks(2);
+    private LocalDate dueDate = LocalDate.now().plusWeeks(2);
+
+    private LocalDate returnDate;
 }

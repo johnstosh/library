@@ -27,11 +27,7 @@ async function loadLoans() {
 
             const dueDateCell = document.createElement('td');
             dueDateCell.setAttribute('data-test', 'loan-due-date');
-            // Assuming dueDate is available in loan object. If not, this will be empty.
-            // Let's calculate a due date for demonstration: 30 days after loan date
-            const loanDate = new Date(loan.loanDate);
-            const dueDate = new Date(loanDate.setDate(loanDate.getDate() + 30));
-            dueDateCell.textContent = formatDate(dueDate.toISOString().split('T')[0]);
+            dueDateCell.textContent = formatDate(loan.dueDate);
             row.appendChild(dueDateCell);
 
             const actionsCell = document.createElement('td');
@@ -149,7 +145,7 @@ async function deleteLoan(id) {
 async function viewLoan(id) {
     const loan = await fetchData(`/api/loans/${id}`);
     const returnStatus = loan.returnDate ? `Returned on ${formatDate(loan.returnDate)}` : 'Not returned';
-    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nUser: ${loan.userName}\nLoan Date: ${formatDate(loan.loanDate)}\n${returnStatus}`);
+    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nUser: ${loan.userName}\nLoan Date: ${formatDate(loan.loanDate)}\nDue Date: ${formatDate(loan.dueDate)}\n${returnStatus}`);
 }
 
 async function returnBook(loanId) {
@@ -187,3 +183,5 @@ async function populateLoanDropdowns() {
         showError('loans', 'Failed to populate dropdowns: ' + error.message);
     }
 }
+
+populateLoanDropdowns();

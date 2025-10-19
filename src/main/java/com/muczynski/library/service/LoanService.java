@@ -39,6 +39,7 @@ public class LoanService {
         loan.setBook(book);
         loan.setUser(user);
         loan.setLoanDate(loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now());
+        loan.setDueDate(loanDto.getDueDate() != null ? loanDto.getDueDate() : loan.getLoanDate().plusWeeks(2));
         loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
         return loanMapper.toDto(savedLoan);
@@ -70,6 +71,9 @@ public class LoanService {
         Loan loan = loanRepository.findById(id).orElseThrow(() -> new RuntimeException("Loan not found: " + id));
         if (loanDto.getLoanDate() != null) {
             loan.setLoanDate(loanDto.getLoanDate());
+        }
+        if (loanDto.getDueDate() != null) {
+            loan.setDueDate(loanDto.getDueDate());
         }
         if (loanDto.getReturnDate() != null) {
             loan.setReturnDate(loanDto.getReturnDate());

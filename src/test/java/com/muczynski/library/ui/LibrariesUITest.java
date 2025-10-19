@@ -90,19 +90,6 @@ public class LibrariesUITest {
                 assertThat(page.locator("#" + hiddenSection + "-section")).isHidden();
             }
         }
-
-        // Additional JS poll for display style to confirm non-target sections are hidden
-        String jsExpression = "(function() { " +
-                "document.querySelectorAll('.section').forEach(s => { " +
-                "  if (s.id !== '" + section + "-section' && s.id.endsWith('-section')) { " +
-                "    if (window.getComputedStyle(s).display !== 'none') { " +
-                "      throw new Error('Non-target section is visible'); " +
-                "    } " +
-                "  } " +
-                "}); " +
-                "return true; " +
-                "})()";
-        page.waitForFunction(jsExpression);
     }
 
     private void ensurePrerequisites() {

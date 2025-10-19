@@ -12,5 +12,6 @@ public class LoanDto {
     private Long userId;
     private String userName;
     private LocalDate loanDate;
+    private LocalDate dueDate;
     private LocalDate returnDate;
 }

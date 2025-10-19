@@ -17,6 +17,7 @@ public class LoanMapper {
         LoanDto loanDto = new LoanDto();
         loanDto.setId(loan.getId());
         loanDto.setLoanDate(loan.getLoanDate());
+        loanDto.setDueDate(loan.getDueDate());
         loanDto.setReturnDate(loan.getReturnDate());
         if (loan.getBook() != null) {
             loanDto.setBookId(loan.getBook().getId());
@@ -38,6 +39,7 @@ public class LoanMapper {
         Loan loan = new Loan();
         loan.setId(loanDto.getId());
         loan.setLoanDate(loanDto.getLoanDate());
+        loan.setDueDate(loanDto.getDueDate());
         loan.setReturnDate(loanDto.getReturnDate());
 
         if (loanDto.getBookId() != null) {
