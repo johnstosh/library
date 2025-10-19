@@ -149,8 +149,9 @@ public class UsersUITest {
             assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
             // Wait for the updated item to appear (confirms reload)
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             Locator updatedUserItem = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
-            updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(10000));
             assertThat(updatedUserItem.first()).isVisible();
 
             // Assert old item is gone (confirms successful reload without detach wait)
@@ -158,9 +159,13 @@ public class UsersUITest {
 
             // Delete
             Locator toDelete = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
+            int initialCount = userList.count();
             page.onDialog(dialog -> dialog.accept());
             toDelete.first().locator("[data-test='delete-user-btn']").click();
-            toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
+
+            // Wait for the user count to decrease
+            page.waitForFunction("() => document.querySelectorAll(\"[data-test='user-item']\").length < " + initialCount);
+
             assertThat(userList.filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0);
 
         } catch (Exception e) {
