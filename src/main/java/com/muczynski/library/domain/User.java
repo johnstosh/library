@@ -18,6 +18,8 @@ public class User {
     private String username;
     private String password;
 
+    private String xaiApiKey = "";
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
