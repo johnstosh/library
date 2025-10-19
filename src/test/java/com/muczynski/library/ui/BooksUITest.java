@@ -169,4 +169,35 @@ public class BooksUITest {
             throw e;
         }
     }
+
+    @Test
+    void testBookListIsSortedAlphabetically() {
+        try {
+            page.navigate("http://localhost:" + port);
+            login();
+            navigateToSection("books");
+
+            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000));
+
+            List<String> titles = page.locator("[data-test='book-item'] [data-test='book-title']").allTextContents();
+
+            List<String> sortedTitles = titles.stream().sorted((s1, s2) -> {
+                String t1 = s1.toLowerCase();
+                if (t1.startsWith("the ")) {
+                    t1 = t1.substring(4);
+                }
+                String t2 = s2.toLowerCase();
+                if (t2.startsWith("the ")) {
+                    t2 = t2.substring(4);
+                }
+                return t1.compareTo(t2);
+            }).collect(Collectors.toList());
+
+            Assertions.assertEquals(sortedTitles, titles, "Books are not sorted correctly.");
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-books-sorting.png")));
+            throw e;
+        }
+    }
 }
