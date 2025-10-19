@@ -12,7 +12,9 @@ public class Photo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String url;
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String base64;
 
     @ManyToOne
     @JoinColumn(name = "book_id")
