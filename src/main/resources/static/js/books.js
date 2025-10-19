@@ -71,6 +71,7 @@ async function addBook() {
         document.getElementById('book-library').selectedIndex = 0;
         await loadBooks();
         await populateLoanDropdowns();
+        document.getElementById('book-photos-container').style.display = 'none';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add book: ' + error.message);
@@ -92,6 +93,9 @@ async function editBook(id) {
     const btn = document.getElementById('add-book-btn');
     btn.textContent = 'Update Book';
     btn.onclick = () => updateBook(id);
+
+    const photos = await fetchData(`/api/books/${id}/photos`);
+    displayBookPhotos(photos, id);
 }
 
 async function updateBook(id) {
@@ -127,6 +131,7 @@ async function updateBook(id) {
         const btn = document.getElementById('add-book-btn');
         btn.textContent = 'Add Book';
         btn.onclick = addBook;
+        document.getElementById('book-photos-container').style.display = 'none';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
@@ -166,6 +171,57 @@ async function bulkImportBooks() {
         clearError('books');
     } catch (error) {
         showError('books', 'Invalid JSON or failed bulk import: ' + error.message);
+    }
+}
+
+function displayBookPhotos(photos, bookId) {
+    const photosContainer = document.getElementById('book-photos-container');
+    const photosDiv = document.getElementById('book-photos');
+    photosDiv.innerHTML = '';
+
+    if (photos && photos.length > 0) {
+        photosContainer.style.display = 'block';
+        photos.forEach(photo => {
+            const photoWrapper = document.createElement('div');
+            photoWrapper.className = 'book-photo-wrapper';
+            photoWrapper.setAttribute('data-photo-id', photo.id);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.setAttribute('data-test', 'delete-photo-btn');
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.title = 'Delete Photo';
+            deleteBtn.className = 'delete-photo-icon';
+            deleteBtn.onclick = () => deleteBookPhoto(bookId, photo.id);
+
+            const img = document.createElement('img');
+            img.src = photo.url;
+            img.style.width = '60%';
+            img.setAttribute('data-test', 'book-photo');
+
+            photoWrapper.appendChild(deleteBtn);
+            photoWrapper.appendChild(img);
+            photosDiv.appendChild(photoWrapper);
+        });
+    } else {
+        photosContainer.style.display = 'none';
+    }
+}
+
+async function deleteBookPhoto(bookId, photoId) {
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+    try {
+        await deleteData(`/api/books/${bookId}/photos/${photoId}`);
+        const photoWrapper = document.querySelector(`.book-photo-wrapper[data-photo-id='${photoId}']`);
+        if (photoWrapper) {
+            photoWrapper.remove();
+        }
+        const photosDiv = document.getElementById('book-photos');
+        if (photosDiv.childElementCount === 0) {
+            document.getElementById('book-photos-container').style.display = 'none';
+        }
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to delete photo: ' + error.message);
     }
 }
 
