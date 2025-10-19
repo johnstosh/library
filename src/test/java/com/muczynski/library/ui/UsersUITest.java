@@ -130,8 +130,8 @@ public class UsersUITest {
             page.click("[data-test='add-user-btn']");
 
             // Read: Use filter for flexible matching
-            Locator userList = page.locator("[data-test='user-item']");
-            Locator userItem = userList.filter(new Locator.FilterOptions().setHasText(uniqueUsername));
+            Locator userTable = page.locator("[data-test='user-table']");
+            Locator userItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername));
             userItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(userItem.first()).isVisible();
             assertThat(userItem).hasCount(1);
@@ -150,23 +150,23 @@ public class UsersUITest {
 
             // Wait for the updated item to appear (confirms reload)
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-            Locator updatedUserItem = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
+            Locator updatedUserItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
             updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(10000));
             assertThat(updatedUserItem.first()).isVisible();
 
             // Assert old item is gone (confirms successful reload without detach wait)
-            assertThat(userList.filter(new Locator.FilterOptions().setHasText(uniqueUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
-            Locator toDelete = userList.filter(new Locator.FilterOptions().setHasText(updatedUsername));
-            int initialCount = userList.count();
+            Locator toDelete = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
+            int initialCount = userTable.locator("[data-test='user-item']").count();
             page.onDialog(dialog -> dialog.accept());
             toDelete.first().locator("[data-test='delete-user-btn']").click();
 
             // Wait for the user count to decrease
             page.waitForFunction("() => document.querySelectorAll(\"[data-test='user-item']\").length < " + initialCount);
 
-            assertThat(userList.filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0);
+            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0);
 
         } catch (Exception e) {
             // Screenshot on failure for debugging

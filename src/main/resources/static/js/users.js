@@ -1,39 +1,45 @@
 async function loadUsers() {
     try {
         const users = await fetchData('/api/users');
-        const list = document.getElementById('user-list');
-        list.innerHTML = '';
+        const tableBody = document.getElementById('user-list-body');
+        tableBody.innerHTML = '';
         users.forEach(user => {
-            const li = document.createElement('li');
-            li.setAttribute('data-test', 'user-item');
-            li.setAttribute('data-entity-id', user.id);
+            const row = document.createElement('tr');
+            row.setAttribute('data-test', 'user-item');
+            row.setAttribute('data-entity-id', user.id);
+
+            const userCell = document.createElement('td');
             const span = document.createElement('span');
             span.setAttribute('data-test', 'user-name');
             const rolesText = user.roles ? Array.from(user.roles).join(', ') : '';
             span.textContent = `${user.username} (${rolesText})`;
-            li.appendChild(span);
+            userCell.appendChild(span);
+            row.appendChild(userCell);
+
+            const actionsCell = document.createElement('td');
 
             const viewBtn = document.createElement('button');
             viewBtn.setAttribute('data-test', 'view-user-btn');
             viewBtn.textContent = '🔍';
             viewBtn.title = 'View details';
             viewBtn.onclick = () => viewUser(user.id);
-            li.appendChild(viewBtn);
+            actionsCell.appendChild(viewBtn);
 
             const editBtn = document.createElement('button');
             editBtn.setAttribute('data-test', 'edit-user-btn');
             editBtn.textContent = '✏️';
             editBtn.title = 'Edit';
             editBtn.onclick = () => editUser(user.id);
-            li.appendChild(editBtn);
+            actionsCell.appendChild(editBtn);
 
             const delBtn = document.createElement('button');
             delBtn.setAttribute('data-test', 'delete-user-btn');
             delBtn.textContent = '🗑️';
             delBtn.title = 'Delete';
             delBtn.onclick = () => deleteUser(user.id);
-            li.appendChild(delBtn);
-            list.appendChild(li);
+            actionsCell.appendChild(delBtn);
+            row.appendChild(actionsCell);
+            tableBody.appendChild(row);
         });
         clearError('users');
     } catch (error) {

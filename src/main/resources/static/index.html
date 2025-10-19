@@ -201,7 +201,16 @@
 
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
-            <ul id="user-list" class="list-group mb-3" data-test="user-list"></ul>
+            <table class="table" data-test="user-table">
+                <thead>
+                    <tr>
+                        <th scope="col">User</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list-body" data-test="user-list-body">
+                </tbody>
+            </table>
             <form data-test="users-form">
                 <div class="mb-3">
                     <label for="new-user-username" class="form-label">Username:</label>
