@@ -56,19 +56,21 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
     }
 
     if (authors.length > 0) {
+        const startAuthor = authorPage.pageable.offset + 1;
+        const endAuthor = authorPage.pageable.offset + authors.length;
         const authorsHeader = document.createElement('h4');
-        authorsHeader.textContent = 'Authors';
+        authorsHeader.textContent = `Authors ${startAuthor} - ${endAuthor}`;
         resultsDiv.appendChild(authorsHeader);
 
         const authorsList = document.createElement('ul');
         authorsList.className = 'list-group mb-3';
         authorsList.setAttribute('data-test', 'search-authors-list');
-        authors.forEach(author => {
+        authors.forEach((author, index) => {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.setAttribute('data-test', 'search-author-item');
             const span = document.createElement('span');
-            span.textContent = author.name;
+            span.textContent = `${startAuthor + index}. ${author.name}`;
             li.appendChild(span);
             const viewBtn = document.createElement('button');
             viewBtn.className = 'btn btn-sm btn-outline-primary ms-2';
