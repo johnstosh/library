@@ -51,8 +51,15 @@ public class BookController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
-        bookService.deleteBook(id);
-        return ResponseEntity.noContent().build();
+        try {
+            bookService.deleteBook(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("associated loans")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            }
+            throw e;
+        }
     }
 
     @PostMapping("/bulk")

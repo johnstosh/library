@@ -9,6 +9,7 @@ import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.LoanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,9 @@ public class BookService {
 
     @Autowired
     private LibraryRepository libraryRepository;
+
+    @Autowired
+    private LoanRepository loanRepository;
 
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
@@ -77,6 +81,10 @@ public class BookService {
     public void deleteBook(Long id) {
         if (!bookRepository.existsById(id)) {
             throw new RuntimeException("Book not found: " + id);
+        }
+        long loanCount = loanRepository.countByBookId(id);
+        if (loanCount > 0) {
+            throw new RuntimeException("Cannot delete book because it has " + loanCount + " associated loans.");
         }
         bookRepository.deleteById(id);
     }

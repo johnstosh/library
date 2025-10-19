@@ -4,6 +4,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,9 @@ public class AuthorService {
 
     @Autowired
     private AuthorMapper authorMapper;
+
+    @Autowired
+    private BookRepository bookRepository;
 
     public AuthorDto createAuthor(AuthorDto authorDto) {
         Author author = authorMapper.toEntity(authorDto);
@@ -50,6 +54,10 @@ public class AuthorService {
     public void deleteAuthor(Long id) {
         if (!authorRepository.existsById(id)) {
             throw new RuntimeException("Author not found: " + id);
+        }
+        long bookCount = bookRepository.countByAuthorId(id);
+        if (bookCount > 0) {
+            throw new RuntimeException("Cannot delete author because it has " + bookCount + " associated books.");
         }
         authorRepository.deleteById(id);
     }
