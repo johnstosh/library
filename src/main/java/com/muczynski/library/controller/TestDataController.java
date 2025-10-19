@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -15,10 +16,13 @@ public class TestDataController {
     private TestDataService testDataService;
 
     @PostMapping("/generate")
-    public ResponseEntity<Void> generateTestData(@RequestBody Map<String, Integer> payload) {
-        int count = payload.getOrDefault("count", 0);
+    public ResponseEntity<Map<String, Object>> generateTestData(@RequestBody Map<String, Integer> payload) {
+        int count = payload.getOrDefault("numBooks", 0);
         testDataService.generateTestData(count);
-        return ResponseEntity.ok().build();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Test data generated successfully for " + count + " books");
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/delete-all")
