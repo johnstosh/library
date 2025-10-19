@@ -62,10 +62,30 @@ public class BookController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{id}/photos")
+    @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long id, @RequestBody PhotoDto photoDto) {
-        PhotoDto created = photoService.addPhoto(id, photoDto);
+    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long bookId, @RequestBody PhotoDto photoDto) {
+        PhotoDto created = photoService.addPhoto(bookId, photoDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{bookId}/photos")
+    public ResponseEntity<List<PhotoDto>> getPhotosByBook(@PathVariable Long bookId) {
+        List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
+        return ResponseEntity.ok(photos);
+    }
+
+    @PutMapping("/{bookId}/photos/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<PhotoDto> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
+        PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{bookId}/photos/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
+        photoService.deletePhoto(photoId);
+        return ResponseEntity.noContent().build();
     }
 }

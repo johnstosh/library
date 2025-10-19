@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class PhotoService {
@@ -24,5 +27,26 @@ public class PhotoService {
         Photo photo = photoMapper.toEntity(photoDto);
         photo.setBook(book);
         return photoMapper.toDto(photoRepository.save(photo));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PhotoDto> getPhotosByBookId(Long bookId) {
+        List<Photo> photos = photoRepository.findByBookId(bookId);
+        return photos.stream()
+                .map(photoMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public PhotoDto updatePhoto(Long photoId, PhotoDto photoDto) {
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new RuntimeException("Photo not found"));
+        photo.setUrl(photoDto.getUrl());
+        return photoMapper.toDto(photoRepository.save(photo));
+    }
+
+    @Transactional
+    public void deletePhoto(Long photoId) {
+        photoRepository.deleteById(photoId);
     }
 }
