@@ -12,6 +12,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const searchInput = document.querySelector('[data-test="search-input"]');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+
     checkAuthentication();
     // Check for login error in URL params
     const urlParams = new URLSearchParams(window.location.search);
