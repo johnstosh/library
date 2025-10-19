@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,10 @@ public class AuthorService {
     public List<AuthorDto> getAllAuthors() {
         return authorRepository.findAll().stream()
                 .map(authorMapper::toDto)
+                .sorted(Comparator.comparing(author -> {
+                    String[] nameParts = author.getName().split(" ");
+                    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : author.getName();
+                }))
                 .collect(Collectors.toList());
     }
 
