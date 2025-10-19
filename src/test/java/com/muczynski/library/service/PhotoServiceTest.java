@@ -38,18 +38,18 @@ public class PhotoServiceTest {
         // Given
         Long bookId = 1L;
         PhotoDto photoDto = new PhotoDto();
-        photoDto.setUrl("http://example.com/photo.jpg");
+        photoDto.setBase64("dGVzdFBob3Rv");
 
         Book book = new Book();
         book.setId(bookId);
 
         Photo photo = new Photo();
-        photo.setUrl(photoDto.getUrl());
+        photo.setBase64(photoDto.getBase64());
         photo.setBook(book);
 
         PhotoDto expectedPhotoDto = new PhotoDto();
         expectedPhotoDto.setId(1L);
-        expectedPhotoDto.setUrl(photoDto.getUrl());
+        expectedPhotoDto.setBase64(photoDto.getBase64());
 
         when(bookRepository.findById(bookId)).thenReturn(Optional.of(book));
         when(photoMapper.toEntity(any(PhotoDto.class))).thenReturn(photo);
@@ -60,6 +60,6 @@ public class PhotoServiceTest {
         PhotoDto result = photoService.addPhoto(bookId, photoDto);
 
         // Then
-        assertEquals(expectedPhotoDto.getUrl(), result.getUrl());
+        assertEquals(expectedPhotoDto.getBase64(), result.getBase64());
     }
 }

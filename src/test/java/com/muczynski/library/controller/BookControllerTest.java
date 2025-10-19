@@ -129,10 +129,10 @@ class BookControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void addPhotoToBook() throws Exception {
         PhotoDto inputDto = new PhotoDto();
-        inputDto.setUrl("http://example.com/photo.jpg");
+        inputDto.setBase64("dGVzdFBob3Rv");
         PhotoDto returnedDto = new PhotoDto();
         returnedDto.setId(1L);
-        returnedDto.setUrl("http://example.com/photo.jpg");
+        returnedDto.setBase64("dGVzdFBob3Rv");
         when(photoService.addPhoto(eq(1L), any(PhotoDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/books/1/photos")
