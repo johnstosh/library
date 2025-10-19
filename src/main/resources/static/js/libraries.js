@@ -3,38 +3,57 @@ async function loadLibraries() {
         const libraries = await fetchData('/api/libraries');
         const list = document.getElementById('library-list');
         list.innerHTML = '';
+        const table = document.createElement('table');
+        table.setAttribute('data-test', 'library-table');
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        const libraryHeader = document.createElement('th');
+        libraryHeader.textContent = 'Library';
+        const actionsHeader = document.createElement('th');
+        actionsHeader.textContent = 'Actions';
+        headRow.appendChild(libraryHeader);
+        headRow.appendChild(actionsHeader);
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
         libraries.forEach(library => {
-            const li = document.createElement('li');
-            li.setAttribute('data-test', 'library-item');
-            li.setAttribute('data-entity-id', library.id);
+            const row = document.createElement('tr');
+            row.setAttribute('data-test', 'library-item');
+            row.setAttribute('data-entity-id', library.id);
+            const nameCell = document.createElement('td');
             const span = document.createElement('span');
             span.setAttribute('data-test', 'library-name');
             span.textContent = `${library.name} (${library.hostname})`;
-            li.appendChild(span);
+            nameCell.appendChild(span);
+            row.appendChild(nameCell);
+            const actionsCell = document.createElement('td');
             if (isLibrarian) {
                 const viewBtn = document.createElement('button');
                 viewBtn.setAttribute('data-test', 'view-library-btn');
                 viewBtn.textContent = '🔍';
                 viewBtn.title = 'View details';
                 viewBtn.onclick = () => viewLibrary(library.id);
-                li.appendChild(viewBtn);
+                actionsCell.appendChild(viewBtn);
 
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-library-btn');
                 editBtn.textContent = '✏️';
                 editBtn.title = 'Edit';
                 editBtn.onclick = () => editLibrary(library.id);
-                li.appendChild(editBtn);
+                actionsCell.appendChild(editBtn);
 
                 const delBtn = document.createElement('button');
                 delBtn.setAttribute('data-test', 'delete-library-btn');
                 delBtn.textContent = '🗑️';
                 delBtn.title = 'Delete';
                 delBtn.onclick = () => deleteLibrary(library.id);
-                li.appendChild(delBtn);
+                actionsCell.appendChild(delBtn);
             }
-            list.appendChild(li);
+            row.appendChild(actionsCell);
+            tbody.appendChild(row);
         });
+        table.appendChild(tbody);
+        list.appendChild(table);
         const pageTitle = document.getElementById('page-title');
         if (libraries.length > 0) {
             pageTitle.innerHTML = `The ${libraries[0].name} Branch<br><small>of the Sacred Heart Library System</small>`;

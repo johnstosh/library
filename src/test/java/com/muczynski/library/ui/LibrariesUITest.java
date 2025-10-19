@@ -119,6 +119,10 @@ public class LibrariesUITest {
             // Navigate to libraries section and assert visibility
             navigateToSection("libraries");
 
+            // Assert the table structure is present
+            Locator table = page.locator("[data-test='library-table']");
+            assertThat(table).isVisible();
+
             // Wait for library section to be interactable, focusing on form
             page.waitForSelector("[data-test='new-library-name']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
 
@@ -129,12 +133,14 @@ public class LibrariesUITest {
             page.fill("[data-test='new-library-hostname']", uniqueHostname);
             page.click("[data-test='add-library-btn']");
 
-            // Read: Use filter for flexible matching
+            // Read: Use filter for flexible matching and assert name in specific cell
             Locator libraryList = page.locator("[data-test='library-item']");
             Locator libraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName));
             libraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(libraryItem.first()).isVisible();
             assertThat(libraryItem).hasCount(1);
+            // Assert the name is in the library-name span
+            assertThat(libraryItem.first().locator("[data-test='library-name']")).hasText(uniqueName + " (" + uniqueHostname + ")");
 
             // Update
             libraryItem.first().locator("[data-test='edit-library-btn']").click();
@@ -150,6 +156,8 @@ public class LibrariesUITest {
             Locator updatedLibraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
             updatedLibraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedLibraryItem.first()).isVisible();
+            // Assert the updated name is in the library-name span
+            assertThat(updatedLibraryItem.first().locator("[data-test='library-name']")).hasText(updatedName + " (" + uniqueHostname + ")");
 
             // Assert old item is gone (confirms successful reload)
             assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
