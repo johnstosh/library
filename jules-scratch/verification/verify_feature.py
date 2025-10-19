@@ -1,27 +1,49 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
+import time
 
-with sync_playwright() as p:
-    p.selectors.set_test_id_attribute("data-test")
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
-    page.goto("http://localhost:8080")
+def run(playwright):
+    browser = playwright.chromium.launch(headless=True)
+    try:
+        context = browser.new_context()
+        page = context.new_page()
 
-    # Wait for the login button to be visible
-    page.wait_for_selector('[data-test="menu-login"]')
+        # Give the server a moment to start up
+        time.sleep(10)
 
-    # Login
-    page.get_by_test_id("menu-login").click()
-    page.get_by_test_id("login-username").fill("librarian")
-    page.get_by_test_id("login-password").fill("librarian")
-    page.get_by_test_id("login-submit").click()
+        page.goto("http://localhost:8080")
 
-    # Wait for the user-is-librarian class to be added to the body
-    page.wait_for_selector('body.user-is-librarian')
+        # Login
+        page.click("[data-test='menu-login']")
+        page.wait_for_selector("[data-test='login-form']", state='visible')
+        page.fill("[data-test='login-username']", "librarian")
+        page.fill("[data-test='login-password']", "password")
+        page.click("[data-test='login-submit']")
 
-    # Navigate to Test Data section
-    page.get_by_test_id("menu-test-data").click()
+        # Check for login error
+        try:
+            error_message = page.locator("[data-test='login-error']")
+            expect(error_message).to_be_hidden()
+        except Exception as e:
+            print(f"Login failed with error: {e}")
+            page.screenshot(path="jules-scratch/verification/login-error.png")
+            raise
 
-    # Take screenshot
-    page.screenshot(path="jules-scratch/verification/verification.png")
+        page.wait_for_selector("[data-test='main-content']", state='visible')
 
-    browser.close()
+        # Navigate to books section
+        page.click("[data-test='menu-books']")
+        page.wait_for_selector("#books-section", state='visible')
+
+        # Click edit on the first book
+        page.locator("[data-test='edit-book-btn']").first.click()
+
+        # Wait for photos to be visible
+        page.wait_for_selector("[data-test='book-photos-container']", state='visible')
+
+        # Take a screenshot
+        page.screenshot(path="jules-scratch/verification/verification.png")
+    finally:
+        browser.close()
+
+with sync_playwright() as playwright:
+    run(playwright)
