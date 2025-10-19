@@ -41,7 +41,7 @@ public class PhotoService {
     public PhotoDto updatePhoto(Long photoId, PhotoDto photoDto) {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        photo.setUrl(photoDto.getUrl());
+        photo.setBase64(photoDto.getBase64());
         return photoMapper.toDto(photoRepository.save(photo));
     }
 
