@@ -93,7 +93,16 @@
 
         <div id="authors-section" class="section" data-test="authors-section">
             <h2 data-test="authors-header">Authors</h2>
-            <ul id="author-list" class="list-group mb-3" data-test="author-list"></ul>
+            <table class="table" data-test="author-table">
+                <thead>
+                <tr>
+                    <th scope="col">Author</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="author-list-body" data-test="author-list-body">
+                </tbody>
+            </table>
             <div class="librarian-only" data-test="authors-form">
                 <div class="mb-3">
                     <label for="new-author-name" class="form-label">Author Name:</label>

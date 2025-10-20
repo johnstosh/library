@@ -1,39 +1,43 @@
 async function loadAuthors() {
     try {
         const authors = await fetchData('/api/authors');
-        const list = document.getElementById('author-list');
-        list.innerHTML = '';
+        const listBody = document.getElementById('author-list-body');
+        listBody.innerHTML = '';
         authors.forEach(author => {
-            const li = document.createElement('li');
-            li.setAttribute('data-test', 'author-item');
-            li.setAttribute('data-entity-id', author.id);
-            const span = document.createElement('span');
-            span.setAttribute('data-test', 'author-name');
-            span.textContent = author.name;
-            li.appendChild(span);
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-test', 'author-item');
+            tr.setAttribute('data-entity-id', author.id);
+
+            const tdName = document.createElement('td');
+            tdName.setAttribute('data-test', 'author-name');
+            tdName.textContent = author.name;
+            tr.appendChild(tdName);
+
+            const tdActions = document.createElement('td');
             if (isLibrarian) {
                 const viewBtn = document.createElement('button');
                 viewBtn.setAttribute('data-test', 'view-author-btn');
                 viewBtn.textContent = '🔍';
                 viewBtn.title = 'View details';
                 viewBtn.onclick = () => viewAuthor(author.id);
-                li.appendChild(viewBtn);
+                tdActions.appendChild(viewBtn);
 
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-author-btn');
                 editBtn.textContent = '✏️';
                 editBtn.title = 'Edit';
                 editBtn.onclick = () => editAuthor(author.id);
-                li.appendChild(editBtn);
+                tdActions.appendChild(editBtn);
 
                 const delBtn = document.createElement('button');
                 delBtn.setAttribute('data-test', 'delete-author-btn');
                 delBtn.textContent = '🗑️';
                 delBtn.title = 'Delete';
                 delBtn.onclick = () => deleteAuthor(author.id);
-                li.appendChild(delBtn);
+                tdActions.appendChild(delBtn);
             }
-            list.appendChild(li);
+            tr.appendChild(tdActions);
+            listBody.appendChild(tr);
         });
         clearError('authors');
     } catch (error) {
