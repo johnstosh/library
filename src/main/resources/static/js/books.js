@@ -225,6 +225,41 @@ async function deleteBookPhoto(bookId, photoId) {
     }
 }
 
+async function addPhoto() {
+    const bookId = document.getElementById('add-book-btn').textContent === 'Update Book'
+        ? document.querySelector('#book-list .active')?.getAttribute('data-entity-id')
+        : null;
+
+    if (!bookId) {
+        await addBook();
+        const newBookId = document.querySelector('#book-list li:last-child')?.getAttribute('data-entity-id');
+        if (newBookId) {
+            await editBook(newBookId);
+            document.getElementById('photo-upload').click();
+        }
+    } else {
+        document.getElementById('photo-upload').click();
+    }
+}
+
+document.getElementById('photo-upload').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const bookId = document.querySelector('#book-list .active').getAttribute('data-entity-id');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        await postData(`/api/books/${bookId}/photos`, formData, true);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to add photo: ' + error.message);
+    }
+});
+
 async function populateBookDropdowns() {
     try {
         const authors = await fetchData('/api/authors');

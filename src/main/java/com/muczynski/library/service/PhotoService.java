@@ -9,6 +9,7 @@ import com.muczynski.library.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,13 +20,16 @@ public class PhotoService {
     private final PhotoRepository photoRepository;
     private final BookRepository bookRepository;
     private final PhotoMapper photoMapper;
+    private final StorageService storageService;
 
     @Transactional
-    public PhotoDto addPhoto(Long bookId, PhotoDto photoDto) {
+    public PhotoDto addPhoto(Long bookId, MultipartFile file) {
+        String filename = storageService.store(file);
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("Book not found"));
-        Photo photo = photoMapper.toEntity(photoDto);
+        Photo photo = new Photo();
         photo.setBook(book);
+        photo.setUrl("/uploads/" + filename);
         return photoMapper.toDto(photoRepository.save(photo));
     }
 
@@ -41,7 +45,7 @@ public class PhotoService {
     public PhotoDto updatePhoto(Long photoId, PhotoDto photoDto) {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        photo.setBase64(photoDto.getBase64());
+        photo.setUrl(photoDto.getUrl());
         return photoMapper.toDto(photoRepository.save(photo));
     }
 

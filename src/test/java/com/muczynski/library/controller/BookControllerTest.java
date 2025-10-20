@@ -10,10 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.List;
@@ -128,16 +130,14 @@ class BookControllerTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void addPhotoToBook() throws Exception {
-        PhotoDto inputDto = new PhotoDto();
-        inputDto.setBase64("dGVzdFBob3Rv");
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test image".getBytes());
         PhotoDto returnedDto = new PhotoDto();
         returnedDto.setId(1L);
-        returnedDto.setBase64("dGVzdFBob3Rv");
-        when(photoService.addPhoto(eq(1L), any(PhotoDto.class))).thenReturn(returnedDto);
+        returnedDto.setUrl("/uploads/test.jpg");
+        when(photoService.addPhoto(eq(1L), any(MultipartFile.class))).thenReturn(returnedDto);
 
-        mockMvc.perform(post("/api/books/1/photos")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inputDto)))
+        mockMvc.perform(multipart("/api/books/1/photos")
+                        .file(file))
                 .andExpect(status().isCreated());
     }
 }
