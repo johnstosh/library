@@ -15,24 +15,30 @@ async function loadLoans() {
             row.setAttribute('data-test', 'loan-item');
             row.setAttribute('data-entity-id', loan.id);
 
-            const loanCell = document.createElement('td');
-            loanCell.setAttribute('data-test', 'loan-details');
-            const bookTitle = bookMap.get(loan.bookId) || 'Unknown Book';
-            const userName = userMap.get(loan.userId) || 'Unknown User';
-            loanCell.textContent = `${bookTitle} loaned to ${userName} on ${formatDate(loan.loanDate)}`;
-            if (loan.returnDate) {
-                loanCell.textContent += ` (returned on ${formatDate(loan.returnDate)})`;
-            }
-            row.appendChild(loanCell);
+            const titleCell = document.createElement('td');
+            titleCell.setAttribute('data-test', 'loan-book-title');
+            titleCell.textContent = bookMap.get(loan.bookId) || 'Unknown Book';
+            row.appendChild(titleCell);
+
+            const userCell = document.createElement('td');
+            userCell.setAttribute('data-test', 'loan-user');
+            userCell.textContent = userMap.get(loan.userId) || 'Unknown User';
+            row.appendChild(userCell);
+
+            const loanDateCell = document.createElement('td');
+            loanDateCell.setAttribute('data-test', 'loan-date');
+            loanDateCell.textContent = formatDate(loan.loanDate);
+            row.appendChild(loanDateCell);
 
             const dueDateCell = document.createElement('td');
             dueDateCell.setAttribute('data-test', 'loan-due-date');
-            if (loan.returnDate) {
-                dueDateCell.textContent = '';
-            } else {
-                dueDateCell.textContent = formatDate(loan.dueDate);
-            }
+            dueDateCell.textContent = formatDate(loan.dueDate);
             row.appendChild(dueDateCell);
+
+            const returnDateCell = document.createElement('td');
+            returnDateCell.setAttribute('data-test', 'loan-return-date');
+            returnDateCell.textContent = loan.returnDate ? formatDate(loan.returnDate) : 'Not returned';
+            row.appendChild(returnDateCell);
 
             const actionsCell = document.createElement('td');
             actionsCell.setAttribute('data-test', 'loan-actions');

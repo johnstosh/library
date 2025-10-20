@@ -128,21 +128,23 @@ public class LoansUITest {
             Locator initialLoanList = page.locator("[data-test='loan-item']");
             initialLoanList.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(initialLoanList).hasCount(1);
-            String initialDetails = initialLoanList.first().locator("[data-test='loan-details']").innerText();
-            assertTrue(initialDetails.contains("Initial Book") && initialDetails.contains("testuser"));
+            String initialBookTitle = initialLoanList.first().locator("[data-test='loan-book-title']").innerText();
+            assertTrue(initialBookTitle.contains("Initial Book"));
+            String initialUser = initialLoanList.first().locator("[data-test='loan-user']").innerText();
+            assertTrue(initialUser.contains("testuser"));
             String initialDueDate = initialLoanList.first().locator("[data-test='loan-due-date']").innerText();
             assertFalse(initialDueDate.isEmpty());
-            assertTrue(initialDueDate.contains("/"));
+            String initialReturnDate = initialLoanList.first().locator("[data-test='loan-return-date']").innerText();
+            assertEquals("Not returned", initialReturnDate);
 
-            // Return the initial loan to test due date hiding
+
+            // Return the initial loan
             initialLoanList.first().locator("[data-test='return-book-btn']").click();
-            // Wait for return button to disappear
             page.waitForSelector("[data-test='return-book-btn']", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.DETACHED));
             initialLoanList = page.locator("[data-test='loan-item']");
-            String returnedDueDate = initialLoanList.first().locator("[data-test='loan-due-date']").innerText();
-            assertTrue(returnedDueDate.isEmpty());
-            String returnedDetails = initialLoanList.first().locator("[data-test='loan-details']").innerText();
-            assertTrue(returnedDetails.contains("returned"));
+            String returnedDate = initialLoanList.first().locator("[data-test='loan-return-date']").innerText();
+            assertFalse(returnedDate.isEmpty());
+            assertNotEquals("Not returned", returnedDate);
 
             // Delete the returned loan for clean state
             initialLoanList.first().locator("[data-test='delete-loan-btn']").click();
@@ -160,8 +162,12 @@ public class LoansUITest {
             Locator loanList = page.locator("[data-test='loan-item']");
             loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(loanList).hasCount(1);
-            String detailsText = loanList.first().locator("[data-test='loan-details']").innerText();
-            assertTrue(detailsText.contains("Initial Book") && detailsText.contains("loaned to testuser on 01/01/2023"));
+            String bookTitle = loanList.first().locator("[data-test='loan-book-title']").innerText();
+            assertTrue(bookTitle.contains("Initial Book"));
+            String user = loanList.first().locator("[data-test='loan-user']").innerText();
+            assertTrue(user.contains("testuser"));
+            String loanDate = loanList.first().locator("[data-test='loan-date']").innerText();
+            assertEquals("01/01/2023", loanDate);
             String dueDateText = loanList.first().locator("[data-test='loan-due-date']").innerText();
             assertEquals("01/15/2023", dueDateText);
 
