@@ -133,37 +133,36 @@ public class BooksUITest {
             page.click("[data-test='add-book-btn']");
 
             // Read
-            Locator bookList = page.locator("[data-test='book-item']");
-            Locator bookItem = bookList.filter(new Locator.FilterOptions().setHasText(uniqueTitle));
-            bookItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(bookItem.first()).isVisible();
-            assertThat(bookItem).hasCount(1);
+            Locator bookRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(uniqueTitle));
+            bookRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            assertThat(bookRow.first()).isVisible();
+            assertThat(bookRow).hasCount(1);
 
             // Update
-            bookItem.first().locator("[data-test='edit-book-btn']").click();
+            bookRow.first().locator("[data-test='edit-book-btn']").click();
             assertThat(page.locator("[data-test='add-book-btn']")).hasText("Update Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
             String updatedTitle = "Updated Book " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-book-title']", updatedTitle);
             page.click("[data-test='add-book-btn']");
             assertThat(page.locator("[data-test='add-book-btn']")).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
-            // Wait for list refresh by checking total count (initial 1 + test 1 = 2, after update back to 2 but old gone)
-            Locator allBooks = page.locator("[data-test='book-item']");
-            assertThat(allBooks).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            // Wait for list refresh by checking total count
+            Locator allBookRows = page.locator("[data-test='book-item']");
+            assertThat(allBookRows).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
-            Locator updatedBookItem = bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle));
-            updatedBookItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(updatedBookItem.first()).isVisible();
+            Locator updatedBookRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle));
+            updatedBookRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            assertThat(updatedBookRow.first()).isVisible();
 
-            // Assert old item is gone (confirms successful reload)
-            assertThat(bookList.filter(new Locator.FilterOptions().setHasText(uniqueTitle))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            // Assert old item is gone
+            assertThat(page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(uniqueTitle))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
-            Locator toDeleteBook = bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle));
+            Locator toDeleteRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle));
             page.onDialog(dialog -> dialog.accept());
-            toDeleteBook.first().locator("[data-test='delete-book-btn']").click();
-            toDeleteBook.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
-            assertThat(bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle))).hasCount(0);
+            toDeleteRow.first().locator("[data-test='delete-book-btn']").click();
+            toDeleteRow.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
+            assertThat(page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle))).hasCount(0);
             assertThat(page.locator("[data-test='book-item']")).hasCount(1);
 
         } catch (Exception e) {
@@ -183,7 +182,7 @@ public class BooksUITest {
 
             page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000));
 
-            List<String> titles = page.locator("[data-test='book-item'] [data-test='book-title']").allTextContents();
+            List<String> titles = page.locator("tbody#book-list-body tr[data-test='book-item'] td:first-child span[data-test='book-title']").allTextContents();
 
             List<String> expectedTitles = Arrays.asList(
                     "Animal Farm",

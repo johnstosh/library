@@ -1,39 +1,45 @@
 async function loadBooks() {
     try {
         const books = await fetchData('/api/books');
-        const list = document.getElementById('book-list');
-        list.innerHTML = '';
+        const tableBody = document.getElementById('book-list-body');
+        tableBody.innerHTML = '';
         books.forEach(book => {
-            const li = document.createElement('li');
-            li.setAttribute('data-test', 'book-item');
-            li.setAttribute('data-entity-id', book.id);
-            const span = document.createElement('span');
-            span.setAttribute('data-test', 'book-title');
-            span.textContent = book.title;
-            li.appendChild(span);
+            const row = document.createElement('tr');
+            row.setAttribute('data-test', 'book-item');
+            row.setAttribute('data-entity-id', book.id);
+
+            const titleCell = document.createElement('td');
+            const titleSpan = document.createElement('span');
+            titleSpan.setAttribute('data-test', 'book-title');
+            titleSpan.textContent = book.title;
+            titleCell.appendChild(titleSpan);
+            row.appendChild(titleCell);
+
+            const actionsCell = document.createElement('td');
             if (isLibrarian) {
                 const viewBtn = document.createElement('button');
                 viewBtn.setAttribute('data-test', 'view-book-btn');
                 viewBtn.textContent = '🔍';
                 viewBtn.title = 'View details';
                 viewBtn.onclick = () => viewBook(book.id);
-                li.appendChild(viewBtn);
+                actionsCell.appendChild(viewBtn);
 
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-book-btn');
                 editBtn.textContent = '✏️';
                 editBtn.title = 'Edit';
                 editBtn.onclick = () => editBook(book.id);
-                li.appendChild(editBtn);
+                actionsCell.appendChild(editBtn);
 
                 const delBtn = document.createElement('button');
                 delBtn.setAttribute('data-test', 'delete-book-btn');
                 delBtn.textContent = '🗑️';
                 delBtn.title = 'Delete';
                 delBtn.onclick = () => deleteBook(book.id);
-                li.appendChild(delBtn);
+                actionsCell.appendChild(delBtn);
             }
-            list.appendChild(li);
+            row.appendChild(actionsCell);
+            tableBody.appendChild(row);
         });
         clearError('books');
     } catch (error) {
