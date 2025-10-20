@@ -105,7 +105,15 @@ async function updateLibrary(id) {
         await putData(`/api/libraries/${id}`, { name, hostname });
         document.getElementById('new-library-name').value = '';
         document.getElementById('new-library-hostname').value = '';
-        await loadLibraries();
+
+        const rowToUpdate = document.querySelector(`[data-entity-id='${id}']`);
+        if (rowToUpdate) {
+            const nameSpan = rowToUpdate.querySelector('[data-test="library-name"]');
+            if (nameSpan) {
+                nameSpan.textContent = `${name} (${hostname})`;
+            }
+        }
+
         await populateBookDropdowns();
         const btn = document.getElementById('add-library-btn');
         btn.textContent = 'Add Library';

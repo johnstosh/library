@@ -2,6 +2,8 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
+import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,12 +30,7 @@ public class UserController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        UserDto userDto = new UserDto();
-        userDto.setUsername(userDetails.getUsername());
-        Set<String> roles = userDetails.getAuthorities().stream()
-                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
-                .collect(Collectors.toSet());
-        userDto.setRoles(roles);
+        UserDto userDto = userService.getUserByUsername(userDetails.getUsername());
         return ResponseEntity.ok(userDto);
     }
 
@@ -70,5 +67,14 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<UserDto> updateUserSettings(@AuthenticationPrincipal UserDetails userDetails, @RequestBody UserSettingsDto userSettingsDto) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        UserDto updatedUser = userService.updateUserSettings(userDetails.getUsername(), userSettingsDto);
+        return ResponseEntity.ok(updatedUser);
     }
 }

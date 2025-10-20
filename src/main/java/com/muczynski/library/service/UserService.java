@@ -4,6 +4,8 @@ import com.muczynski.library.domain.Role;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
+import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.RoleRepository;
 import com.muczynski.library.repository.UserRepository;
@@ -93,5 +95,35 @@ public class UserService {
             throw new RuntimeException("User not found: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    public UserDto getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(userMapper::toDto)
+                .orElse(null);
+    }
+
+    @Transactional
+    public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (userSettingsDto.getUsername() != null && !userSettingsDto.getUsername().isEmpty() && !userSettingsDto.getUsername().equals(user.getUsername())) {
+            if (userRepository.findByUsername(userSettingsDto.getUsername()).isPresent()) {
+                throw new RuntimeException("Username already exists");
+            }
+            user.setUsername(userSettingsDto.getUsername());
+        }
+
+        if (userSettingsDto.getPassword() != null && !userSettingsDto.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
+        }
+
+        if (userSettingsDto.getXaiApiKey() != null) {
+            user.setXaiApiKey(userSettingsDto.getXaiApiKey());
+        }
+
+        User updatedUser = userRepository.save(user);
+        return userMapper.toDto(updatedUser);
     }
 }

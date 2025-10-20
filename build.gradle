@@ -61,6 +61,6 @@ test {
         showCauses true
         showStackTraces true
         // Optionally include standard streams (e.g., System.out) for failed tests
-        showStandardStreams false
+        showStandardStreams true
     }
 }

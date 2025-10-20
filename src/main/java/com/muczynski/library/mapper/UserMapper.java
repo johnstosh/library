@@ -15,6 +15,7 @@ public class UserMapper {
         userDto.setId(user.getId());
         userDto.setUsername(user.getUsername());
         userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+        userDto.setXaiApiKey(user.getXaiApiKey());
         return userDto;
     }
 }

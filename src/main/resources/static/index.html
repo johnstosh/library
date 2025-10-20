@@ -40,7 +40,7 @@
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" onclick="showSection('settings', event)" data-test="menu-settings">Settings</button>
+                    <button class="nav-link" onclick="showSettings(event)" data-test="menu-settings">Settings</button>
                 </li>
             </ul>
             <ul class="navbar-nav">
@@ -285,6 +285,21 @@
 
         <div id="settings-section" class="section" data-test="settings-section">
             <h2 data-test="settings-header">Settings</h2>
+            <form id="settings-form" data-test="settings-form">
+                <div class="mb-3">
+                    <label for="settings-username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="settings-username" data-test="settings-username">
+                </div>
+                <div class="mb-3">
+                    <label for="settings-password" class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="settings-password" data-test="settings-password">
+                </div>
+                <div class="mb-3">
+                    <label for="settings-xai-api-key" class="form-label">XAI API Key</label>
+                    <input type="text" class="form-control" id="settings-xai-api-key" data-test="settings-xai-api-key">
+                </div>
+                <button type="submit" class="btn btn-primary" data-test="settings-submit">Save Settings</button>
+            </form>
         </div>
     </div>
 </div>
