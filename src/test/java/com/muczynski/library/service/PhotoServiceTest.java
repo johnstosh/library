@@ -2,6 +2,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.mapper.PhotoMapper;
 import com.muczynski.library.repository.BookRepository;
@@ -11,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -30,6 +34,9 @@ public class PhotoServiceTest {
     @Mock
     private PhotoMapper photoMapper;
 
+    @Mock
+    private StorageService storageService;
+
     @InjectMocks
     private PhotoService photoService;
 
@@ -37,29 +44,28 @@ public class PhotoServiceTest {
     public void testAddPhoto() {
         // Given
         Long bookId = 1L;
-        PhotoDto photoDto = new PhotoDto();
-        photoDto.setBase64("dGVzdFBob3Rv");
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test data".getBytes());
 
         Book book = new Book();
         book.setId(bookId);
 
         Photo photo = new Photo();
-        photo.setBase64(photoDto.getBase64());
         photo.setBook(book);
+        photo.setUrl("/uploads/test.jpg");
 
         PhotoDto expectedPhotoDto = new PhotoDto();
         expectedPhotoDto.setId(1L);
-        expectedPhotoDto.setBase64(photoDto.getBase64());
+        expectedPhotoDto.setUrl("/uploads/test.jpg");
 
         when(bookRepository.findById(bookId)).thenReturn(Optional.of(book));
-        when(photoMapper.toEntity(any(PhotoDto.class))).thenReturn(photo);
+        when(storageService.store(any(MultipartFile.class))).thenReturn("test.jpg");
         when(photoRepository.save(any(Photo.class))).thenReturn(photo);
         when(photoMapper.toDto(any(Photo.class))).thenReturn(expectedPhotoDto);
 
         // When
-        PhotoDto result = photoService.addPhoto(bookId, photoDto);
+        PhotoDto result = photoService.addPhoto(bookId, file);
 
         // Then
-        assertEquals(expectedPhotoDto.getBase64(), result.getBase64());
+        assertEquals(expectedPhotoDto.getUrl(), result.getUrl());
     }
 }

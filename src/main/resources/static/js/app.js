@@ -21,7 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    checkAuthentication();
+    try {
+        checkAuthentication();
+    } catch (error) {
+        console.error('Error in initial auth check, showing welcome screen.', error);
+        showWelcomeScreen();
+    }
     // Check for login error in URL params
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('error')) {
@@ -226,18 +231,25 @@ async function fetchData(url) {
     return response.json();
 }
 
-async function postData(url, data) {
+async function postData(url, data, isFormData = false) {
     const token = getCookie('XSRF-TOKEN');
-    const headers = {
-        'Content-Type': 'application/json'
-    };
+    const headers = {};
     if (token) {
         headers['X-XSRF-TOKEN'] = token;
     }
+
+    let body;
+    if (isFormData) {
+        body = data;
+    } else {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(data);
+    }
+
     const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(data)
+        body: body
     });
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
