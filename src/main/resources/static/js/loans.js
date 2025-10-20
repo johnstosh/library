@@ -27,7 +27,11 @@ async function loadLoans() {
 
             const dueDateCell = document.createElement('td');
             dueDateCell.setAttribute('data-test', 'loan-due-date');
-            dueDateCell.textContent = formatDate(loan.dueDate);
+            if (loan.returnDate) {
+                dueDateCell.textContent = '';
+            } else {
+                dueDateCell.textContent = formatDate(loan.dueDate);
+            }
             row.appendChild(dueDateCell);
 
             const actionsCell = document.createElement('td');
@@ -77,16 +81,18 @@ async function checkoutBook() {
     const bookId = document.getElementById('loan-book').value;
     const userId = document.getElementById('loan-user').value;
     const loanDate = document.getElementById('loan-date').value;
+    const dueDate = document.getElementById('due-date').value;
     const returnDate = document.getElementById('return-date').value;
     if (!bookId || !userId) {
         showError('loans', 'Book and user are required.');
         return;
     }
     try {
-        await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
+        await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, dueDate: dueDate || null, returnDate: returnDate || null });
         document.getElementById('loan-book').selectedIndex = 0;
         document.getElementById('loan-user').selectedIndex = 0;
         document.getElementById('loan-date').value = '';
+        document.getElementById('due-date').value = '';
         document.getElementById('return-date').value = '';
         await loadLoans();
         clearError('loans');
@@ -100,6 +106,7 @@ async function editLoan(id) {
     document.getElementById('loan-book').value = data.bookId || '';
     document.getElementById('loan-user').value = data.userId || '';
     document.getElementById('loan-date').value = data.loanDate || '';
+    document.getElementById('due-date').value = data.dueDate || '';
     document.getElementById('return-date').value = data.returnDate || '';
     const btn = document.getElementById('checkout-btn');
     btn.textContent = 'Update Loan';
@@ -110,16 +117,18 @@ async function updateLoan(id) {
     const bookId = document.getElementById('loan-book').value;
     const userId = document.getElementById('loan-user').value;
     const loanDate = document.getElementById('loan-date').value;
+    const dueDate = document.getElementById('due-date').value;
     const returnDate = document.getElementById('return-date').value;
     if (!bookId || !userId) {
         showError('loans', 'Book and user are required.');
         return;
     }
     try {
-        await putData(`/api/loans/${id}`, { bookId, userId, loanDate: loanDate || null, returnDate: returnDate || null });
+        await putData(`/api/loans/${id}`, { bookId, userId, loanDate: loanDate || null, dueDate: dueDate || null, returnDate: returnDate || null });
         document.getElementById('loan-book').selectedIndex = 0;
         document.getElementById('loan-user').selectedIndex = 0;
         document.getElementById('loan-date').value = '';
+        document.getElementById('due-date').value = '';
         document.getElementById('return-date').value = '';
         await loadLoans();
         const btn = document.getElementById('checkout-btn');
