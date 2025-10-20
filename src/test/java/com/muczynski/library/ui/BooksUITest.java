@@ -13,12 +13,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -163,14 +164,17 @@ public class BooksUITest {
             toDeleteBook.first().locator("[data-test='delete-book-btn']").click();
             toDeleteBook.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
             assertThat(bookList.filter(new Locator.FilterOptions().setHasText(updatedTitle))).hasCount(0);
+            assertThat(page.locator("[data-test='book-item']")).hasCount(1);
 
         } catch (Exception e) {
+            // Screenshot on failure for debugging
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-books-crud.png")));
             throw e;
         }
     }
 
     @Test
+    @Sql(value = "classpath:data-books-sorting.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void testBookListIsSortedAlphabetically() {
         try {
             page.navigate("http://localhost:" + port);
@@ -181,19 +185,14 @@ public class BooksUITest {
 
             List<String> titles = page.locator("[data-test='book-item'] [data-test='book-title']").allTextContents();
 
-            List<String> sortedTitles = titles.stream().sorted((s1, s2) -> {
-                String t1 = s1.toLowerCase();
-                if (t1.startsWith("the ")) {
-                    t1 = t1.substring(4);
-                }
-                String t2 = s2.toLowerCase();
-                if (t2.startsWith("the ")) {
-                    t2 = t2.substring(4);
-                }
-                return t1.compareTo(t2);
-            }).collect(Collectors.toList());
+            List<String> expectedTitles = Arrays.asList(
+                    "Animal Farm",
+                    "Brave New World",
+                    "The Color Purple",
+                    "The Great Gatsby"
+            );
 
-            Assertions.assertEquals(sortedTitles, titles, "Books are not sorted correctly.");
+            assertEquals(expectedTitles, titles, "Books are not sorted correctly.");
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-books-sorting.png")));

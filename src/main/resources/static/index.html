@@ -24,6 +24,9 @@
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('books', event)" data-test="menu-books">Books</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="createBookByPhoto()" data-test="menu-book-by-photo">Book-by-Photo</button>
+                </li>
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
@@ -182,6 +185,7 @@
                     <select id="book-library" class="form-select" data-test="book-library"></select>
                 </div>
                 <button id="add-book-btn" class="btn btn-primary mb-3" onclick="addBook()" data-test="add-book-btn">Add Book</button>
+                <button id="add-photo-btn" class="btn btn-secondary mb-3" data-test="add-photo-btn">Add Photo</button>
                 <h3 data-test="bulk-books-header">Bulk Import Books</h3>
                 <div class="input-group mb-3">
                     <textarea id="bulk-books" class="form-control" placeholder='[{"title": "Book 1", ...}]' data-test="bulk-books"></textarea>
