@@ -33,8 +33,8 @@ public class LoanController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<LoanDto>> getAllLoans() {
-        List<LoanDto> loans = loanService.getAllLoans();
+    public ResponseEntity<List<LoanDto>> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll) {
+        List<LoanDto> loans = loanService.getAllLoans(showAll);
         return ResponseEntity.ok(loans);
     }
 

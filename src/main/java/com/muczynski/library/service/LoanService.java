@@ -55,8 +55,14 @@ public class LoanService {
         return null;
     }
 
-    public List<LoanDto> getAllLoans() {
-        return loanRepository.findAllByOrderByDueDateAsc().stream()
+    public List<LoanDto> getAllLoans(boolean showAll) {
+        List<Loan> loans;
+        if (showAll) {
+            loans = loanRepository.findAllByOrderByDueDateAsc();
+        } else {
+            loans = loanRepository.findAllByReturnDateIsNullOrderByDueDateAsc();
+        }
+        return loans.stream()
                 .map(loanMapper::toDto)
                 .collect(Collectors.toList());
     }

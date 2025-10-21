@@ -142,6 +142,10 @@ public class LoansUITest {
             // Return the initial loan
             initialLoanList.first().locator("[data-test='return-book-btn']").click();
             page.waitForSelector("[data-test='return-book-btn']", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.DETACHED));
+
+            // Show returned loans to verify the change
+            page.check("[data-test='show-returned-loans-checkbox']");
+
             initialLoanList = page.locator("[data-test='loan-item']");
             String returnedDate = initialLoanList.first().locator("[data-test='loan-return-date']").innerText();
             assertFalse(returnedDate.isEmpty());
