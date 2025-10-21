@@ -72,9 +72,14 @@ class LoanControllerTest {
         LoanDto dto = new LoanDto();
         dto.setId(1L);
         dto.setBookId(1L);
-        when(loanService.getAllLoans()).thenReturn(Collections.singletonList(dto));
+        when(loanService.getAllLoans(false)).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/loans"))
+                .andExpect(status().isOk());
+
+        when(loanService.getAllLoans(true)).thenReturn(Collections.singletonList(dto));
+
+        mockMvc.perform(get("/api/loans?showAll=true"))
                 .andExpect(status().isOk());
     }
 

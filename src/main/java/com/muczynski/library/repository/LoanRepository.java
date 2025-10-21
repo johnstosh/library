@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
     void deleteByLoanDate(LocalDate loanDate);
+    List<Loan> findAllByReturnDateIsNullOrderByDueDateAsc();
     List<Loan> findAllByOrderByDueDateAsc();
     long countByBookId(Long bookId);
 }

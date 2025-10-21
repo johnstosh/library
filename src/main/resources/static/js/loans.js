@@ -1,6 +1,7 @@
 async function loadLoans() {
     try {
-        const loans = await fetchData('/api/loans');
+        const showAll = document.getElementById('show-returned-loans').checked;
+        const loans = await fetchData(`/api/loans?showAll=${showAll}`);
         const list = document.getElementById('loan-list-body');
         list.innerHTML = '';
 

@@ -276,6 +276,12 @@
 
         <div id="loans-section" class="section librarian-only" data-test="loans-section">
             <h2 data-test="loans-header">Loans</h2>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" value="" id="show-returned-loans" onchange="loadLoans()" data-test="show-returned-loans-checkbox">
+                <label class="form-check-label" for="show-returned-loans">
+                    Show returned loans
+                </label>
+            </div>
             <table class="table" data-test="loan-table">
                 <thead>
                     <tr>
