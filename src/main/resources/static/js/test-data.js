@@ -1,3 +1,17 @@
+async function loadTestDataStats() {
+    try {
+        const stats = await fetchData('/api/test-data/stats');
+        const statsDiv = document.getElementById('test-data-stats');
+        statsDiv.innerHTML = `
+            <p><strong>Books:</strong> ${stats.books}</p>
+            <p><strong>Authors:</strong> ${stats.authors}</p>
+            <p><strong>Loans:</strong> ${stats.loans}</p>
+        `;
+    } catch (error) {
+        showError('test-data', 'Failed to load test data stats: ' + error.message);
+    }
+}
+
 async function generateTestData() {
     const numBooksInput = document.getElementById('num-books').value;
     const numBooks = parseInt(numBooksInput);
@@ -12,6 +26,7 @@ async function generateTestData() {
         document.getElementById('num-books').value = '';
         await loadBooks();
         await loadAuthors();
+        await loadTestDataStats();
         clearError('test-data');
     } catch (error) {
         showError('test-data', 'Failed to generate test data: ' + error.message);
