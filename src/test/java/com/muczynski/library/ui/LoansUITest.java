@@ -199,4 +199,28 @@ public class LoansUITest {
             throw e;
         }
     }
+
+    @Test
+    void testDefaultLoanDates() {
+        try {
+            page.navigate("http://localhost:" + port);
+            login();
+            navigateToSection("loans");
+
+            page.waitForSelector("[data-test='loan-date']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+
+            String loanDateValue = page.locator("[data-test='loans-form'] [data-test='loan-date']").inputValue();
+            String dueDateValue = page.locator("[data-test='loans-form'] [data-test='due-date']").inputValue();
+
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate twoWeeksFromNow = today.plusDays(14);
+
+            assertEquals(today.toString(), loanDateValue);
+            assertEquals(twoWeeksFromNow.toString(), dueDateValue);
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-default-dates.png")));
+            throw e;
+        }
+    }
 }

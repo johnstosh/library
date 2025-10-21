@@ -194,6 +194,17 @@ async function populateLoanDropdowns() {
             option.textContent = user.username;
             userSelect.appendChild(option);
         });
+
+        const loanDateInput = document.getElementById('loan-date');
+        const dueDateInput = document.getElementById('due-date');
+
+        const today = new Date();
+        loanDateInput.value = today.toISOString().split('T')[0];
+
+        const twoWeeksFromNow = new Date(today);
+        twoWeeksFromNow.setDate(today.getDate() + 14);
+        dueDateInput.value = twoWeeksFromNow.toISOString().split('T')[0];
+
     } catch (error) {
         showError('loans', 'Failed to populate dropdowns: ' + error.message);
     }
