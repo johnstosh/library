@@ -183,6 +183,10 @@ function showSection(sectionId, event) {
     if (targetSection) {
         targetSection.style.setProperty('display', 'block', 'important');
     }
+
+    if (sectionId === 'test-data') {
+        loadTestDataStats();
+    }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
         btn.classList.remove('active');

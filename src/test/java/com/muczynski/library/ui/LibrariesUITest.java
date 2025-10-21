@@ -99,6 +99,7 @@ public class LibrariesUITest {
     @Test
     void testLibrariesCRUD() {
         try {
+            System.out.println("Starting testLibrariesCRUD");
             page.navigate("http://localhost:" + port);
             login();
             ensurePrerequisites();
@@ -116,6 +117,7 @@ public class LibrariesUITest {
             // Create with unique name to avoid conflict
             String uniqueName = "Test Library " + UUID.randomUUID().toString().substring(0, 8);
             String uniqueHostname = "test-" + UUID.randomUUID().toString().substring(0, 8) + ".local";
+            System.out.println("Creating library: " + uniqueName);
             page.fill("[data-test='new-library-name']", uniqueName);
             page.fill("[data-test='new-library-hostname']", uniqueHostname);
             page.click("[data-test='add-library-btn']");
@@ -128,16 +130,19 @@ public class LibrariesUITest {
             assertThat(libraryItem).hasCount(1);
             // Assert the name is in the library-name span
             assertThat(libraryItem.first().locator("[data-test='library-name']")).hasText(uniqueName + " (" + uniqueHostname + ")");
+            System.out.println("Library created successfully");
 
             // Update
             libraryItem.first().locator("[data-test='edit-library-btn']").click();
             String updatedName = "Updated Library " + UUID.randomUUID().toString().substring(0, 8);
+            System.out.println("Updating library to: " + updatedName);
             page.fill("[data-test='new-library-name']", updatedName);
             page.click("[data-test='add-library-btn']");
 
             // Wait for button to reset to "Add Library", confirming the update operation completed successfully
             Locator addButton = page.locator("[data-test='add-library-btn']");
             assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            System.out.println("Update button reset to 'Add Library'");
 
             // Wait for the updated item to appear (confirms reload)
             Locator updatedLibraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
@@ -145,9 +150,11 @@ public class LibrariesUITest {
             assertThat(updatedLibraryItem.first()).isVisible();
             // Assert the updated name is in the library-name span
             assertThat(updatedLibraryItem.first().locator("[data-test='library-name']")).hasText(updatedName + " (" + uniqueHostname + ")");
+            System.out.println("Library updated successfully");
 
             // Assert old item is gone (confirms successful reload)
             assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            System.out.println("Old library item is gone");
 
             // Delete
             Locator toDelete = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
@@ -155,6 +162,7 @@ public class LibrariesUITest {
             toDelete.first().locator("[data-test='delete-library-btn']").click();
             toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
             assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(updatedName))).hasCount(0);
+            System.out.println("Library deleted successfully");
 
         } catch (Exception e) {
             // Screenshot on failure for debugging

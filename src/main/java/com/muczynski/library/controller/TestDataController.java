@@ -1,5 +1,8 @@
 package com.muczynski.library.controller;
 
+import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.service.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +18,15 @@ public class TestDataController {
     @Autowired
     private TestDataService testDataService;
 
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private AuthorRepository authorRepository;
+
+    @Autowired
+    private LoanRepository loanRepository;
+
     @PostMapping("/generate")
     public ResponseEntity<Map<String, Object>> generateTestData(@RequestBody Map<String, Integer> payload) {
         int count = payload.getOrDefault("numBooks", 0);
@@ -29,5 +41,14 @@ public class TestDataController {
     public ResponseEntity<Void> deleteAll() {
         testDataService.deleteTestData();
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Long>> getStats() {
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("books", bookRepository.count());
+        stats.put("authors", authorRepository.count());
+        stats.put("loans", loanRepository.count());
+        return ResponseEntity.ok(stats);
     }
 }
