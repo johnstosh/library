@@ -10,5 +10,5 @@ import java.util.List;
 public interface LoanRepository extends JpaRepository<Loan, Long> {
     long countByBookId(Long bookId);
 
-    List<Loan> findAllByOrderByReturnDateAsc();
+    List<Loan> findAllByOrderByDueDateAsc();
 }

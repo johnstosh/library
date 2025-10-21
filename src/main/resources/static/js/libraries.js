@@ -55,8 +55,13 @@ async function loadLibraries() {
         table.appendChild(tbody);
         list.appendChild(table);
         const pageTitle = document.getElementById('page-title');
+        pageTitle.innerHTML = ''; // Clear existing content
         if (libraries.length > 0) {
-            pageTitle.innerHTML = `The ${libraries[0].name} Branch<br><small>of the Sacred Heart Library System</small>`;
+            pageTitle.appendChild(document.createTextNode(`The ${libraries[0].name} Branch`));
+            pageTitle.appendChild(document.createElement('br'));
+            const small = document.createElement('small');
+            small.textContent = 'of the Sacred Heart Library System';
+            pageTitle.appendChild(small);
         } else {
             pageTitle.textContent = 'Library Management';
         }
