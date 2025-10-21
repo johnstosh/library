@@ -37,6 +37,16 @@ public class TestDataController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/generate-loans")
+    public ResponseEntity<Map<String, Object>> generateLoanData(@RequestBody Map<String, Integer> payload) {
+        int count = payload.getOrDefault("numLoans", 0);
+        testDataService.generateLoanData(count);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Test data generated successfully for " + count + " loans");
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/delete-all")
     public ResponseEntity<Void> deleteAll() {
         testDataService.deleteTestData();

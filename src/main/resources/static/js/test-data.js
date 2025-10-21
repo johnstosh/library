@@ -33,6 +33,25 @@ async function generateTestData() {
     }
 }
 
+async function generateTestLoans() {
+    const numLoansInput = document.getElementById('num-books').value;
+    const numLoans = parseInt(numLoansInput);
+    if (!numLoansInput || numLoans <= 0) {
+        showError('test-data', 'Please enter a valid number of loans to generate.');
+        return;
+    }
+
+    try {
+        await postData('/api/test-data/generate-loans', { numLoans: numLoans });
+
+        document.getElementById('num-books').value = '';
+        await loadTestDataStats();
+        clearError('test-data');
+    } catch (error) {
+        showError('test-data', 'Failed to generate test loans: ' + error.message);
+    }
+}
+
 async function deleteAllTestData() {
     if (!confirm('Are you sure you want to delete all test data? This action cannot be undone.')) {
         return;

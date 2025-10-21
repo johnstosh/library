@@ -28,11 +28,7 @@ public class RandomLoan {
         loan.setBook(books.get(RANDOM.nextInt(books.size())));
         loan.setUser(users.get(RANDOM.nextInt(users.size())));
         loan.setLoanDate(LocalDate.of(2099, 1, 1));
-
-        LocalDate today = LocalDate.now();
-        LocalDate twoWeeksFromToday = today.plusWeeks(2);
-        int randomDays = RANDOM.nextInt(15) - 7; // -7 to +7
-        loan.setDueDate(twoWeeksFromToday.plusDays(randomDays));
+        loan.setDueDate(LocalDate.of(2099, 1, 15));
 
         return loan;
     }
