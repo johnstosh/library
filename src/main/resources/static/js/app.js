@@ -345,3 +345,47 @@ function formatDate(dateString) {
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
 }
+
+async function applyForCard() {
+    const username = document.getElementById('new-applicant-name').value.trim();
+    const password = document.getElementById('new-applicant-password').value;
+    if (!username || !password) {
+        showApplyError('Please fill in all fields.');
+        return;
+    }
+    try {
+        await postData('/api/public/register', { username, password, role: 'USER' });
+        document.getElementById('new-applicant-name').value = '';
+        document.getElementById('new-applicant-password').value = '';
+        showApplySuccess('Library card application successful! You can now log in with your name as username.');
+        clearApplyError();
+    } catch (error) {
+        showApplyError('Failed to apply for library card: ' + error.message);
+    }
+}
+
+function showApplyError(message) {
+    const errorEl = document.getElementById('apply-error');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+    }
+}
+
+function clearApplyError() {
+    const errorEl = document.getElementById('apply-error');
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
+}
+
+function showApplySuccess(message) {
+    const successEl = document.getElementById('apply-success');
+    if (successEl) {
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+        setTimeout(() => {
+            successEl.style.display = 'none';
+        }, 5000);
+    }
+}

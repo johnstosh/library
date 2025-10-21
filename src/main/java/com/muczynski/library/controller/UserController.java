@@ -64,6 +64,15 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
+    @PostMapping("/public/register")
+    public ResponseEntity<UserDto> registerUser(@RequestBody CreateUserDto createUserDto) {
+        if (!"USER".equals(createUserDto.getRole())) {
+            return ResponseEntity.badRequest().build();
+        }
+        UserDto createdUser = userService.createUser(createUserDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody CreateUserDto createUserDto) {
