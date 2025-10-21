@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -41,9 +42,21 @@ class UserControllerTest {
 
     @Test
     void getCurrentUser() throws Exception {
+        // Mock the full user by username
+        UserDto fullUserDto = new UserDto();
+        fullUserDto.setId(1L);
+        fullUserDto.setUsername("testuser");
+        fullUserDto.setRoles(Collections.singleton("USER"));
+        fullUserDto.setXaiApiKey("test-key");
+        when(userService.getUserByUsername("testuser")).thenReturn(fullUserDto);
+
         mockMvc.perform(get("/api/users/me")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
-                .andExpect(status().isOk());
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.roles").value("USER"))
+                .andExpect(jsonPath("$.xaiApiKey").value("test-key"));
     }
 
     @Test

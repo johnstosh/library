@@ -62,6 +62,7 @@ public class LoansUITest {
     private void login() {
         page.navigate("http://localhost:" + port);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
         page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");

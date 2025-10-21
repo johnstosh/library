@@ -304,6 +304,13 @@
 
         <div id="settings-section" class="section" data-test="settings-section">
             <h2 data-test="settings-header">Settings</h2>
+            <div class="mb-3">
+                <label for="xai-api-key" class="form-label">XAI API Key (for AI features):</label>
+                <input type="password" id="xai-api-key" class="form-control" placeholder="Enter your xAI API key" data-test="xai-api-key">
+                <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()" data-test="save-settings-btn">Save Settings</button>
+            <div id="settings-error" data-test="settings-error" style="display: none;"></div>
         </div>
     </div>
 </div>

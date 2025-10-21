@@ -158,6 +158,7 @@ function showMainContent(roles) {
     loadLibraries();
     loadAuthors();
     loadBooks();
+    loadSettings();
     if (isLibrarian) {
         loadUsers();
         loadLoans();

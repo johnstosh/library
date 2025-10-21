@@ -34,6 +34,12 @@ public class UserController {
                 .map(auth -> auth.getAuthority().replace("ROLE_", ""))
                 .collect(Collectors.toSet());
         userDto.setRoles(roles);
+        // Load full user details including ID and API key by username
+        UserDto fullUser = userService.getUserByUsername(userDetails.getUsername());
+        if (fullUser != null) {
+            userDto.setId(fullUser.getId());
+            userDto.setXaiApiKey(fullUser.getXaiApiKey());
+        }
         return ResponseEntity.ok(userDto);
     }
 
@@ -62,6 +68,14 @@ public class UserController {
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody CreateUserDto createUserDto) {
         UserDto updatedUser = userService.updateUser(id, createUserDto);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/{id}/apikey")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<UserDto> updateApiKey(@PathVariable Long id, @RequestBody UserDto userDto) {
+        userService.updateApiKey(id, userDto.getXaiApiKey());
+        UserDto updatedUser = userService.getUserById(id);
         return ResponseEntity.ok(updatedUser);
     }
 

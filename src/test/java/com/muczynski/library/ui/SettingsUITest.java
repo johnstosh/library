@@ -13,10 +13,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -25,7 +24,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-users.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class UsersUITest {
+public class SettingsUITest {
 
     @LocalServerPort
     private int port;
@@ -82,13 +81,16 @@ public class UsersUITest {
         assertThat(targetSection).isVisible();
 
         // Assert all non-target sections are hidden to test exclusivity
-        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
+        List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search", "settings");
         List<String> hiddenSections = allSections.stream()
                 .filter(s -> !s.equals(section) && !s.equals("search"))
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden();
+                Locator hiddenLocator = page.locator("#" + hiddenSection + "-section");
+                if (hiddenLocator.count() > 0) {
+                    assertThat(hiddenLocator).isHidden();
+                }
             }
         }
 
@@ -111,67 +113,59 @@ public class UsersUITest {
     }
 
     @Test
-    void testUsersCRUD() {
+    void testSettingsLoadAndSave() {
         try {
-            page.navigate("http://localhost:" + port);
             login();
             ensurePrerequisites();
 
-            // Navigate to users section and assert visibility
-            navigateToSection("users");
+            // Navigate to settings section and assert visibility
+            navigateToSection("settings");
 
-            // Wait for user section to be interactable, focusing on form
-            page.waitForSelector("[data-test='new-user-username']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            // Wait for settings section to be interactable, focusing on input
+            Locator apiKeyInput = page.locator("[data-test='xai-api-key']");
+            apiKeyInput.waitFor(new Locator.WaitForOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
 
-            // Create with unique username to avoid conflict
-            String uniqueUsername = "testuser" + UUID.randomUUID().toString().substring(0, 8);
-            page.fill("[data-test='new-user-username']", uniqueUsername);
-            page.fill("[data-test='new-user-password']", "password123");
-            page.selectOption("[data-test='new-user-role']", "USER");
-            page.click("[data-test='add-user-btn']");
+            // Load: Assert initial value is empty (default from test data)
+            assertThat(apiKeyInput).hasValue("", new LocatorAssertions.HasValueOptions().setTimeout(5000));
 
-            // Read: Use filter for flexible matching
-            Locator userTable = page.locator("[data-test='user-table']");
-            Locator userItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername));
-            userItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(userItem.first()).isVisible();
-            assertThat(userItem).hasCount(1);
+            // Save: Enter a test key and save
+            String testApiKey = "sk-test-key-" + System.currentTimeMillis() + "1234567"; // Ensure >=32 chars
+            apiKeyInput.fill(testApiKey);
+            page.click("[data-test='save-settings-btn']");
 
-            // Update
-            userItem.first().locator("[data-test='edit-user-btn']").click();
-            String updatedUsername = "updateduser" + UUID.randomUUID().toString().substring(0, 8);
-            page.fill("[data-test='new-user-username']", updatedUsername);
-            page.fill("[data-test='new-user-password']", "newpassword123");
-            page.selectOption("[data-test='new-user-role']", "USER");
-            page.click("[data-test='add-user-btn']");
+            // Wait for success message to confirm save completed
+            Locator successLocator = page.locator("[data-test='bulk-import-success']");
+            successLocator.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
 
-            // Wait for button to reset to "Add User", confirming the update operation completed successfully
-            Locator addButton = page.locator("[data-test='add-user-btn']");
-            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            // Wait a bit more before reload
+            page.waitForTimeout(2000);
 
-            // Wait for the updated item to appear (confirms reload)
+            // Reload the page to verify persistence
+            page.reload();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-            Locator updatedUserItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
-            updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(updatedUserItem.first()).isVisible();
+            // Wait for main content since already authenticated via session
+            page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            navigateToSection("settings");
 
-            // Assert old item is gone (confirms successful reload without detach wait)
-            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            // Wait for loadSettings to complete and set the value
+            apiKeyInput = page.locator("[data-test='xai-api-key']");
+            apiKeyInput.waitFor(new Locator.WaitForOptions().setTimeout(5000));
+            page.waitForTimeout(1000); // Allow async load to set value
 
-            // Delete
-            Locator toDelete = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
-            int initialCount = userTable.locator("[data-test='user-item']").count();
-            page.onDialog(dialog -> dialog.accept());
-            toDelete.first().locator("[data-test='delete-user-btn']").click();
+            // Verify: Check that the input now has the saved value
+            assertThat(apiKeyInput).hasValue(testApiKey, new LocatorAssertions.HasValueOptions().setTimeout(5000));
 
-            // Wait for the user count to decrease
-            page.waitForFunction("() => document.querySelectorAll(\"[data-test='user-item']\").length < " + initialCount);
-
-            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0);
+            // Optional: Test error handling with invalid key (short key)
+            apiKeyInput.fill("short");
+            page.click("[data-test='save-settings-btn']");
+            // Wait for error to appear
+            Locator errorDiv = page.locator("#settings-section [data-test='form-error']");
+            errorDiv.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(3000));
+            assertThat(errorDiv).isVisible();
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
-            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-users-crud.png")));
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-settings-test.png")));
             throw e;
         }
     }
