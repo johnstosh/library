@@ -40,7 +40,7 @@
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" onclick="showSection('settings', event)" data-test="menu-settings">Settings</button>
+                    <button class="nav-link" onclick="showSection('apply-for-card', event)" data-test="menu-apply-for-card">Apply for Library Card</button>
                 </li>
             </ul>
             <ul class="navbar-nav">
@@ -302,8 +302,19 @@
             <button id="delete-all-test-data-btn" class="btn btn-danger" onclick="deleteAllTestData()" data-test="delete-all-test-data-btn">Delete All Test Data</button>
         </div>
 
-        <div id="settings-section" class="section" data-test="settings-section">
-            <h2 data-test="settings-header">Settings</h2>
+        <div id="apply-for-card-section" class="section" data-test="apply-for-card-section">
+            <h2 data-test="apply-for-card-header">Apply for a Library Card</h2>
+            <form data-test="apply-for-card-form">
+                <div class="mb-3">
+                    <label for="new-applicant-name" class="form-label">Name:</label>
+                    <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="name" data-test="new-applicant-name">
+                </div>
+                <div class="mb-3">
+                    <label for="new-applicant-password" class="form-label">Password:</label>
+                    <input type="password" id="new-applicant-password" class="form-control" placeholder="Password" autocomplete="new-password" data-test="new-applicant-password">
+                </div>
+                <button id="apply-for-card-btn" type="button" class="btn btn-primary" onclick="applyForCard()" data-test="apply-for-card-btn">Apply</button>
+            </form>
         </div>
     </div>
 </div>
