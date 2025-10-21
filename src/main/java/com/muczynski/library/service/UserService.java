@@ -44,6 +44,12 @@ public class UserService {
                 .orElse(null);
     }
 
+    public UserDto getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(userMapper::toDto)
+                .orElse(null);
+    }
+
     public UserDto createUser(CreateUserDto dto) {
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
@@ -86,6 +92,19 @@ public class UserService {
         }
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
+    }
+
+    public void updateApiKey(Long id, String xaiApiKey) {
+        if (xaiApiKey == null || xaiApiKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("XAI API key cannot be empty");
+        }
+        // Basic validation
+        if (xaiApiKey.length() < 32) {
+            throw new IllegalArgumentException("XAI API key must be at least 32 characters");
+        }
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found: " + id));
+        user.setXaiApiKey(xaiApiKey);
+        userRepository.save(user);
     }
 
     public void deleteUser(Long id) {
