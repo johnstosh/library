@@ -329,7 +329,7 @@ function showBulkSuccess(textareaId) {
         successDiv = document.createElement('div');
         successDiv.setAttribute('data-test', 'bulk-import-success');
         successDiv.style.color = 'green';
-        successDiv.textContent = 'Bulk import successful!';
+        successDiv.textContent = 'Bulk import successful.';
         successDiv.style.display = 'block';
     }
     const textarea = document.getElementById(textareaId);
@@ -361,7 +361,7 @@ async function applyForCard() {
         await postData('/api/public/register', { username, password }, false, false);
         document.getElementById('new-applicant-name').value = '';
         document.getElementById('new-applicant-password').value = '';
-        showApplySuccess('Library card application successful! You can now log in with your name as username.');
+        showApplySuccess('Library card application successful!.');
         clearApplyError();
     } catch (error) {
         showApplyError('Failed to apply for library card: ' + error.message);
