@@ -96,4 +96,24 @@ public class SearchUITest {
         // Assert that the search results are not empty
         assertThat(page.locator("[data-test='search-results']")).not().isEmpty();
     }
+
+    @Test
+    void testSearchForShortQuery() {
+        login();
+        page.click("[data-test='menu-search']");
+        page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+
+        page.fill("[data-test='search-input']", "in");
+        page.press("[data-test='search-input']", "Enter");
+
+        // Wait for the search results to be visible
+        page.waitForSelector("[data-test='search-results']", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+
+        // Assert that the search results are not empty
+        assertThat(page.locator("[data-test='search-results']")).not().isEmpty();
+
+        // Assert that the search results contain the expected book and author
+        assertThat(page.locator("[data-test='search-book-item']")).hasText("1. Initial BookView");
+        assertThat(page.locator("[data-test='search-author-item']")).hasText("1. Initial AuthorView");
+    }
 }
