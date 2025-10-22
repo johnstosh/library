@@ -167,6 +167,11 @@ function showMainContent(roles) {
 }
 
 function showSection(sectionId, event) {
+    const currentActiveButton = document.querySelector('#section-menu button.active');
+    if (currentActiveButton && currentActiveButton.textContent === 'Books' && sectionId !== 'books') {
+        resetBookForm();
+    }
+
     // If not logged in and showing a section, hide welcome/login and show main content
     if (!isLibrarian && (document.getElementById('welcome-screen').style.display === 'block' || document.getElementById('login-form').style.display === 'block')) {
         document.getElementById('welcome-screen').style.display = 'none';
