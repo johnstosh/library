@@ -186,6 +186,9 @@ function showSection(sectionId, event) {
     if (sectionId === 'test-data') {
         loadTestDataStats();
     }
+    if (sectionId === 'settings') {
+        loadUsers();
+    }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
         btn.classList.remove('active');
