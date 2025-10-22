@@ -3,9 +3,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const librarianSection = document.getElementById('librarian-section');
 
     fetch('/api/users/me')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return Promise.reject('Not logged in');
+            }
+            return response.json();
+        })
         .then(user => {
-            if (user.roles.includes('LIBRARIAN')) {
+            if (user.roles.some(role => role.name === 'LIBRARIAN')) {
                 librarianSection.style.display = 'block';
                 fetch('/apply/api')
                     .then(response => response.json())
@@ -31,6 +36,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
                     });
             }
+        })
+        .catch(error => {
+            console.log('User is not a librarian or not logged in.');
         });
 
     applicationsTable.addEventListener('change', function (event) {
