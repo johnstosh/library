@@ -56,8 +56,8 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
     }
 
     if (authors.length > 0) {
-        const startAuthor = authorPage.pageable.offset + 1;
-        const endAuthor = authorPage.pageable.offset + authors.length;
+        const startAuthor = authorPage.currentPage * authorPage.pageSize + 1;
+        const endAuthor = authorPage.currentPage * authorPage.pageSize + authors.length;
         const authorsHeader = document.createElement('h4');
         authorsHeader.textContent = `Authors ${startAuthor} - ${endAuthor}`;
         resultsDiv.appendChild(authorsHeader);
