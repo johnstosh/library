@@ -1,14 +1,25 @@
 package com.muczynski.library.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "applied")
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Applied {
+
+    public enum ApplicationStatus {
+        PENDING,
+        APPROVED,
+        NOT_APPROVED,
+        QUESTION
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -16,5 +27,7 @@ public class Applied {
     private String name;
     private String password;
 
-    private String status = "pending";
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255) default 'PENDING'")
+    private ApplicationStatus status = ApplicationStatus.PENDING;
 }
