@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/test-data/generate").hasAuthority("LIBRARIAN")
                         .requestMatchers("/apply/api/**").hasAuthority("LIBRARIAN")
                         .requestMatchers("/api/search/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/auth/**", "/login", "/css/**", "/js/**", "/", "/index.html", "/favicon.ico", "/apply-for-card.html", "/apply").permitAll()
                         .anyRequest().authenticated()
                 )

@@ -5,33 +5,37 @@ import com.muczynski.library.service.AppliedService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.muczynski.library.controller.payload.RegistrationRequest;
+import com.muczynski.library.domain.Applied;
+import com.muczynski.library.service.AppliedService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+
 
 import java.util.List;
 
 @Controller
-@RequestMapping("/apply")
+@RequestMapping("/api")
 public class AppliedController {
 
     @Autowired
     private AppliedService appliedService;
 
-    @GetMapping("/apply-for-card.html")
-    public String applyForCard(Model model) {
-        model.addAttribute("applied", new Applied());
-        return "apply-for-card";
-    }
-
-    @PostMapping
-    public String applyForCard(@ModelAttribute Applied applied) {
+    @PostMapping("/public/register")
+    public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
+        Applied applied = new Applied();
+        applied.setName(registrationRequest.getUsername());
+        applied.setPassword(registrationRequest.getPassword());
         appliedService.createApplied(applied);
-        return "redirect:/";
+        return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/api")
+    @GetMapping("/apply/api")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @ResponseBody
     public ResponseEntity<List<Applied>> getAllApplied() {
