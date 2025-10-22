@@ -16,7 +16,7 @@ async function generateTestData() {
     const numBooksInput = document.getElementById('num-books').value;
     const numBooks = parseInt(numBooksInput);
     if (!numBooksInput || numBooks <= 0) {
-        showError('test-data', 'Please enter a valid number of books to generate.');
+        showError('test-data', 'Please enter a valid number of items to generate.');
         return;
     }
 
