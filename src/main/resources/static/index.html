@@ -40,6 +40,9 @@
                     <button class="nav-link" onclick="showSection('users', event)" data-test="menu-users">Users</button>
                 </li>
                 <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('applied', event)" data-test="menu-applied">Applications</button>
+                </li>
+                <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
                 <li class="nav-item librarian-only" data-test="menu-test-data-item">
@@ -245,6 +248,28 @@
             <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
         </div>
 
+        <div id="applied-section" class="section librarian-only" data-test="applied-section">
+            <h2 data-test="applied-header">Applications</h2>
+            <table class="table" data-test="applied-table">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="applied-list-body" data-test="applied-list-body">
+                </tbody>
+            </table>
+            <div data-test="applied-form">
+                <div class="mb-3">
+                    <label for="new-applied-name" class="form-label">Name:</label>
+                    <input type="text" id="new-applied-name" class="form-control" placeholder="Name" autocomplete="name" data-test="new-applied-name">
+                </div>
+                <button id="add-applied-btn" type="button" class="btn btn-primary" onclick="addApplied()" data-test="add-applied-btn">Add Application</button>
+            </div>
+        </div>
+
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
             <table class="table" data-test="user-table">
@@ -355,6 +380,7 @@
 <script src="js/books.js"></script>
 <script src="js/users.js"></script>
 <script src="js/loans.js"></script>
+<script src="js/applied.js"></script>
 <script src="js/search.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/test-data.js"></script>
