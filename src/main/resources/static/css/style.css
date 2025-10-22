@@ -78,3 +78,36 @@ body {
     border-color: var(--bs-danger) !important;
     color: #fff !important;
 }
+
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        width: 100%;
+    }
+    .navbar-nav {
+        background-color: var(--bs-primary);
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
+    }
+
+    #section-menu .nav-link {
+        color: rgba(255, 255, 255, 0.75);
+        padding: 0.5rem 0;
+    }
+
+    #section-menu .nav-link:hover,
+    #section-menu .nav-link.active {
+        color: #fff;
+    }
+
+    .col-md-6.offset-md-3 {
+        width: 100%;
+        margin-left: 0;
+    }
+}
