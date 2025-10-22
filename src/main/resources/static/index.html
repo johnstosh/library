@@ -208,8 +208,9 @@
                     <label for="book-library" class="form-label">Library:</label>
                     <select id="book-library" class="form-select" data-test="book-library"></select>
                 </div>
+                <input type="hidden" id="current-book-id">
                 <button id="add-book-btn" class="btn btn-primary mb-3" onclick="addBook()" data-test="add-book-btn">Add Book</button>
-                <button id="add-photo-btn" class="btn btn-secondary mb-3" onclick="addPhoto()" data-test="add-photo-btn">Add Photo</button>
+                <button id="add-photo-btn" class="btn btn-secondary mb-3" onclick="addPhoto()" data-test="add-photo-btn" style="display: none;">Add Photo</button>
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
                 <h3 data-test="bulk-books-header">Bulk Import Books</h3>
                 <div class="input-group mb-3">

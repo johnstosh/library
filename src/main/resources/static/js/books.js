@@ -47,6 +47,27 @@ async function loadBooks() {
     }
 }
 
+function resetBookForm() {
+    document.getElementById('new-book-title').value = '';
+    document.getElementById('new-book-year').value = '';
+    document.getElementById('new-book-publisher').value = '';
+    document.getElementById('new-book-summary').value = '';
+    document.getElementById('new-book-related').value = '';
+    document.getElementById('new-book-description').value = '';
+    document.getElementById('new-book-added').value = '';
+    document.getElementById('new-book-status').value = 'ACTIVE';
+    document.getElementById('book-author').selectedIndex = 0;
+    document.getElementById('book-library').selectedIndex = 0;
+    document.getElementById('current-book-id').value = '';
+
+    const btn = document.getElementById('add-book-btn');
+    btn.textContent = 'Add Book';
+    btn.onclick = addBook;
+
+    document.getElementById('add-photo-btn').style.display = 'none';
+    document.getElementById('book-photos-container').style.display = 'none';
+}
+
 async function addBook() {
     window.scrollTo(0, 0);
     const title = document.getElementById('new-book-title').value;
@@ -65,19 +86,9 @@ async function addBook() {
     }
     try {
         await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
-        document.getElementById('new-book-title').value = '';
-        document.getElementById('new-book-year').value = '';
-        document.getElementById('new-book-publisher').value = '';
-        document.getElementById('new-book-summary').value = '';
-        document.getElementById('new-book-related').value = '';
-        document.getElementById('new-book-description').value = '';
-        document.getElementById('new-book-added').value = '';
-        document.getElementById('new-book-status').value = 'ACTIVE';
-        document.getElementById('book-author').selectedIndex = 0;
-        document.getElementById('book-library').selectedIndex = 0;
+        resetBookForm();
         await loadBooks();
         await populateLoanDropdowns();
-        document.getElementById('book-photos-container').style.display = 'none';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add book: ' + error.message);
@@ -96,9 +107,11 @@ async function editBook(id) {
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('book-author').value = data.authorId || '';
     document.getElementById('book-library').value = data.libraryId || '';
+    document.getElementById('current-book-id').value = id;
     const btn = document.getElementById('add-book-btn');
     btn.textContent = 'Update Book';
     btn.onclick = () => updateBook(id);
+    document.getElementById('add-photo-btn').style.display = 'inline-block';
 
     const photos = await fetchData(`/api/books/${id}/photos`);
     displayBookPhotos(photos, id);
@@ -121,23 +134,10 @@ async function updateBook(id) {
     }
     try {
         await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
-        document.getElementById('new-book-title').value = '';
-        document.getElementById('new-book-year').value = '';
-        document.getElementById('new-book-publisher').value = '';
-        document.getElementById('new-book-summary').value = '';
-        document.getElementById('new-book-related').value = '';
-        document.getElementById('new-book-description').value = '';
-        document.getElementById('new-book-added').value = '';
-        document.getElementById('new-book-status').value = 'ACTIVE';
-        document.getElementById('book-author').selectedIndex = 0;
-        document.getElementById('book-library').selectedIndex = 0;
+        resetBookForm();
         await loadBooks();
         await loadLoans();
         await populateLoanDropdowns();
-        const btn = document.getElementById('add-book-btn');
-        btn.textContent = 'Add Book';
-        btn.onclick = addBook;
-        document.getElementById('book-photos-container').style.display = 'none';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
@@ -232,27 +232,18 @@ async function deleteBookPhoto(bookId, photoId) {
 }
 
 async function addPhoto() {
-    const bookId = document.getElementById('add-book-btn').textContent === 'Update Book'
-        ? document.querySelector('#book-list .active')?.getAttribute('data-entity-id')
-        : null;
-
-    if (!bookId) {
-        await addBook();
-        const newBookId = document.querySelector('#book-list li:last-child')?.getAttribute('data-entity-id');
-        if (newBookId) {
-            await editBook(newBookId);
-            document.getElementById('photo-upload').click();
-        }
-    } else {
-        document.getElementById('photo-upload').click();
-    }
+    document.getElementById('photo-upload').click();
 }
 
 document.getElementById('photo-upload').addEventListener('change', async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const bookId = document.querySelector('#book-list .active').getAttribute('data-entity-id');
+    const bookId = document.getElementById('current-book-id').value;
+    if (!bookId) {
+        showError('books', 'No book selected for photo upload.');
+        return;
+    }
     const formData = new FormData();
     formData.append('file', file);
 
