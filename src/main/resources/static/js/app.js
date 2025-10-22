@@ -136,12 +136,9 @@ function showMainContent(roles) {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
     document.getElementById('section-menu').style.display = 'flex';
-    // Ensure all menu items are visible for logged-in users
-    document.querySelectorAll('#section-menu li').forEach(item => {
-        item.style.display = 'list-item';
-    });
     document.getElementById('login-menu-btn').style.display = 'none';
     document.getElementById('logout-menu-btn').style.display = 'block';
+
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
         errorEl.style.display = 'none';
@@ -150,21 +147,22 @@ function showMainContent(roles) {
     if (isLibrarian) {
         document.body.classList.add('user-is-librarian');
         showSection('loans');
-    } else {
-        document.body.classList.remove('user-is-librarian');
-        showSection('books');
-    }
-
-    loadLibraries();
-    loadAuthors();
-    loadBooks();
-    loadSettings();
-    if (isLibrarian) {
+        loadLibraries();
+        loadAuthors();
+        loadBooks();
         loadUsers();
         loadLoans();
         populateBookDropdowns();
         populateLoanDropdowns();
+    } else {
+        document.body.classList.remove('user-is-librarian');
+        // Hide librarian-only sections and menu items
+        document.querySelectorAll('.librarian-only').forEach(item => {
+            item.style.display = 'none';
+        });
+        showSection('search');
     }
+    loadSettings();
 }
 
 function showSection(sectionId, event) {
