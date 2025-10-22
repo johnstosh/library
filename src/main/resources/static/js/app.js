@@ -152,6 +152,7 @@ function showMainContent(roles) {
         loadBooks();
         loadUsers();
         loadLoans();
+        loadApplied();
         populateBookDropdowns();
         populateLoanDropdowns();
     } else {
@@ -185,6 +186,9 @@ function showSection(sectionId, event) {
 
     if (sectionId === 'test-data') {
         loadTestDataStats();
+    }
+    if (sectionId === 'applied') {
+        loadApplied();
     }
     if (sectionId === 'settings') {
         loadUsers();

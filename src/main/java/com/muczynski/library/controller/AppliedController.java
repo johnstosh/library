@@ -19,7 +19,7 @@ import org.springframework.ui.Model;
 
 import java.util.List;
 
-@Controller
+@RestController
 @RequestMapping("/api")
 public class AppliedController {
 
@@ -35,33 +35,29 @@ public class AppliedController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/apply/api")
+    @GetMapping("/applied")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @ResponseBody
     public ResponseEntity<List<Applied>> getAllApplied() {
         List<Applied> applied = appliedService.getAllApplied();
         return ResponseEntity.ok(applied);
     }
 
-    @PostMapping("/api")
+    @PostMapping("/applied")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @ResponseBody
     public ResponseEntity<Applied> createApplied(@RequestBody Applied applied) {
         Applied createdApplied = appliedService.createApplied(applied);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdApplied);
     }
 
-    @PutMapping("/api/{id}")
+    @PutMapping("/applied/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @ResponseBody
     public ResponseEntity<Applied> updateApplied(@PathVariable Long id, @RequestBody Applied applied) {
         Applied updatedApplied = appliedService.updateApplied(id, applied);
         return ResponseEntity.ok(updatedApplied);
     }
 
-    @DeleteMapping("/api/{id}")
+    @DeleteMapping("/applied/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @ResponseBody
     public ResponseEntity<Void> deleteApplied(@PathVariable Long id) {
         appliedService.deleteApplied(id);
         return ResponseEntity.noContent().build();
