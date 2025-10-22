@@ -31,7 +31,7 @@ public class LibraryApplication {
 
                 User librarianUser = new User();
                 librarianUser.setUsername("librarian");
-                librarianUser.setPassword(passwordEncoder.encode("librarian"));
+                librarianUser.setPassword(passwordEncoder.encode("divinemercy"));
                 librarianUser.setRoles(Set.of(librarianRole));
                 userRepository.save(librarianUser);
             }
