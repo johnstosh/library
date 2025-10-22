@@ -237,7 +237,7 @@ async function fetchData(url) {
     return response.json();
 }
 
-async function postData(url, data, isFormData = false) {
+async function postData(url, data, isFormData = false, expectJson = true) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {};
     if (token) {
@@ -260,7 +260,10 @@ async function postData(url, data, isFormData = false) {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    if (expectJson) {
+        return response.json();
+    }
+    return response;
 }
 
 async function putData(url, data) {
@@ -355,7 +358,7 @@ async function applyForCard() {
         return;
     }
     try {
-        await postData('/api/public/register', { username, password, role: 'USER' });
+        await postData('/api/public/register', { username, password }, false, false);
         document.getElementById('new-applicant-name').value = '';
         document.getElementById('new-applicant-password').value = '';
         showApplySuccess('Library card application successful! You can now log in with your name as username.');
