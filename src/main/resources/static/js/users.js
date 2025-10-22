@@ -74,8 +74,8 @@ async function editUser(id) {
     document.getElementById('new-user-password').value = '';
     const roleSelect = document.getElementById('new-user-role');
     const roles = data.roles;
-    if (roles && roles.size > 0) {
-        roleSelect.value = Array.from(roles)[0];
+    if (roles && roles.length > 0) {
+        roleSelect.value = roles[0].name;
     }
     const btn = document.getElementById('add-user-btn');
     btn.textContent = 'Update User';
