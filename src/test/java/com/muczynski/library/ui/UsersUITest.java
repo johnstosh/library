@@ -139,6 +139,11 @@ public class UsersUITest {
 
             // Update
             userItem.first().locator("[data-test='edit-user-btn']").click();
+
+            // Wait for the form to be in update mode
+            Locator addButton = page.locator("[data-test='add-user-btn']");
+            assertThat(addButton).hasText("Update User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+
             String updatedUsername = "updateduser" + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-user-username']", updatedUsername);
             page.fill("[data-test='new-user-password']", "newpassword123");
@@ -146,7 +151,6 @@ public class UsersUITest {
             page.click("[data-test='add-user-btn']");
 
             // Wait for button to reset to "Add User", confirming the update operation completed successfully
-            Locator addButton = page.locator("[data-test='add-user-btn']");
             assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
             // Wait for the updated item to appear (confirms reload)

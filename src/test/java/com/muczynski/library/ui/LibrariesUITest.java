@@ -135,13 +135,17 @@ public class LibrariesUITest {
 
             // Update
             libraryItem.first().locator("[data-test='edit-library-btn']").click();
+
+            // Wait for the form to be in update mode
+            Locator addButton = page.locator("[data-test='add-library-btn']");
+            assertThat(addButton).hasText("Update Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+
             String updatedName = "Updated Library " + UUID.randomUUID().toString().substring(0, 8);
             System.out.println("Updating library to: " + updatedName);
             page.fill("[data-test='new-library-name']", updatedName);
             page.click("[data-test='add-library-btn']");
 
             // Wait for button to reset to "Add Library", confirming the update operation completed successfully
-            Locator addButton = page.locator("[data-test='add-library-btn']");
             assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
             System.out.println("Update button reset to 'Add Library'");
 
