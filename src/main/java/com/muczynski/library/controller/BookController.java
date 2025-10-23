@@ -63,13 +63,6 @@ public class BookController {
         }
     }
 
-    @PostMapping("/bulk")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> bulkImportBooks(@RequestBody List<BookDto> bookDtos) {
-        bookService.bulkImportBooks(bookDtos);
-        return ResponseEntity.ok().build();
-    }
-
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {

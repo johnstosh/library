@@ -57,10 +57,4 @@ public class AuthorController {
         }
     }
 
-    @PostMapping("/bulk")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> bulkImportAuthors(@RequestBody List<AuthorDto> authorDtos) {
-        authorService.bulkImportAuthors(authorDtos);
-        return ResponseEntity.ok().build();
-    }
 }

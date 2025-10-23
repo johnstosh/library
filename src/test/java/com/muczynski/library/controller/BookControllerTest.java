@@ -113,22 +113,6 @@ class BookControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void bulkImportBooks() throws Exception {
-        BookDto dto = new BookDto();
-        dto.setTitle("Test Book Bulk");
-        dto.setAuthorId(1L);
-        dto.setLibraryId(1L);
-        List<BookDto> inputDtos = Collections.singletonList(dto);
-        doNothing().when(bookService).bulkImportBooks(any());
-
-        mockMvc.perform(post("/api/books/bulk")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inputDtos)))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(authorities = "LIBRARIAN")
     void addPhotoToBook() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test image".getBytes());
         PhotoDto returnedDto = new PhotoDto();

@@ -62,9 +62,4 @@ class AuthorServiceTest {
         assertEquals(authorDto, authorService.getAuthorById(1L));
     }
 
-    @Test
-    void bulkImportAuthors() {
-        authorService.bulkImportAuthors(Collections.singletonList(new AuthorDto()));
-        verify(authorRepository).saveAll(any());
-    }
 }
