@@ -25,7 +25,7 @@ async function loadApplied() {
         });
     } catch (error) {
         console.error('Failed to load applications:', error);
-        showError('applied', 'Failed to load applications.');
+        showError('library-card', 'Failed to load applications.');
     }
 }
 
@@ -38,7 +38,7 @@ async function approveApplication(id) {
         loadApplied();
     } catch (error) {
         console.error(`Failed to approve application ${id}:`, error);
-        showError('applied', `Failed to approve application ${id}.`);
+        showError('library-card', `Failed to approve application ${id}.`);
     }
 }
 
@@ -48,7 +48,7 @@ async function updateAppliedStatus(id, status) {
         loadApplied();
     } catch (error) {
         console.error(`Failed to update application ${id}:`, error);
-        showError('applied', `Failed to update application ${id}.`);
+        showError('library-card', `Failed to update application ${id}.`);
     }
 }
 
@@ -61,6 +61,6 @@ async function deleteApplied(id) {
         loadApplied();
     } catch (error) {
         console.error(`Failed to delete application ${id}:`, error);
-        showError('applied', `Failed to delete application ${id}.`);
+        showError('library-card', `Failed to delete application ${id}.`);
     }
 }

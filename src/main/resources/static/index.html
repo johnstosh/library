@@ -33,14 +33,11 @@
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
-                <li class="nav-item public-item">
-                    <button class="nav-link" onclick="showSection('apply-for-card', event)" data-test="menu-apply-for-card">Apply for Library Card</button>
+                <li class="nav-item public-item" data-test="menu-library-card-item">
+                    <button class="nav-link" onclick="showSection('library-card', event)" data-test="menu-library-card">Library Card</button>
                 </li>
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('users', event)" data-test="menu-users">Users</button>
-                </li>
-                <li class="nav-item librarian-only">
-                    <button class="nav-link" onclick="showSection('applied', event)" data-test="menu-applied">Applications</button>
                 </li>
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
@@ -219,36 +216,38 @@
             <div id="search-results" data-test="search-results"></div>
         </div>
 
-        <div id="apply-for-card-section" class="section" data-test="apply-for-card-section">
-            <h2 data-test="apply-for-card-header">Apply for a Library Card</h2>
-            <form data-test="apply-for-card-form">
-                <div class="mb-3">
-                    <label for="new-applicant-name" class="form-label">Name:</label>
-                    <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="name" data-test="new-applicant-name">
-                </div>
-                <div class="mb-3">
-                    <label for="new-applicant-password" class="form-label">Password:</label>
-                    <input type="password" id="new-applicant-password" class="form-control" placeholder="Password" autocomplete="new-password" data-test="new-applicant-password">
-                </div>
-                <button id="apply-for-card-btn" type="button" class="btn btn-primary" onclick="applyForCard()" data-test="apply-for-card-btn">Apply</button>
-            </form>
-            <div id="apply-error" class="alert alert-danger mt-3" style="display: none;" data-test="apply-error"></div>
-            <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
-        </div>
+        <div id="library-card-section" class="section" data-test="library-card-section">
+            <div id="apply-for-card-section" data-test="apply-for-card-section">
+                <h2 data-test="apply-for-card-header">Apply for a Library Card</h2>
+                <form data-test="apply-for-card-form">
+                    <div class="mb-3">
+                        <label for="new-applicant-name" class="form-label">Name:</label>
+                        <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="name" data-test="new-applicant-name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new-applicant-password" class="form-label">Password:</label>
+                        <input type="password" id="new-applicant-password" class="form-control" placeholder="Password" autocomplete="new-password" data-test="new-applicant-password">
+                    </div>
+                    <button id="apply-for-card-btn" type="button" class="btn btn-primary" onclick="applyForCard()" data-test="apply-for-card-btn">Apply</button>
+                </form>
+                <div id="apply-error" class="alert alert-danger mt-3" style="display: none;" data-test="apply-error"></div>
+                <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
+            </div>
 
-        <div id="applied-section" class="section librarian-only" data-test="applied-section">
-            <h2 data-test="applied-header">Applications</h2>
-            <table class="table" data-test="applied-table">
-                <thead>
-                <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="applied-list-body" data-test="applied-list-body">
-                </tbody>
-            </table>
+            <div id="applied-section" class="librarian-only mt-5" data-test="applied-section">
+                <h2 data-test="applied-header">Applications</h2>
+                <table class="table" data-test="applied-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="applied-list-body" data-test="applied-list-body">
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="users-section" class="section librarian-only" data-test="users-section">
