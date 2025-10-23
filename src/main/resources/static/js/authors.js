@@ -137,21 +137,3 @@ async function viewAuthor(id) {
     const data = await fetchData(`/api/authors/${id}`);
     alert(`Author Details:\nID: ${data.id}\nName: ${data.name}\nDate of Birth: ${data.dateOfBirth || 'N/A'}\nDate of Death: ${data.dateOfDeath || 'N/A'}\nReligious Affiliation: ${data.religiousAffiliation || 'N/A'}\nBirth Country: ${data.birthCountry || 'N/A'}\nNationality: ${data.nationality || 'N/A'}\nBrief Biography: ${data.briefBiography || 'N/A'}`);
 }
-
-async function bulkImportAuthors() {
-    const authorsJson = document.getElementById('bulk-authors').value;
-    if (!authorsJson) {
-        showError('authors', 'Please provide JSON for bulk import.');
-        return;
-    }
-    try {
-        const authors = JSON.parse(authorsJson);
-        await postData('/api/authors/bulk', authors);
-        await loadAuthors();
-        showBulkSuccess('bulk-authors');
-        document.getElementById('bulk-authors').value = '';
-        clearError('authors');
-    } catch (error) {
-        showError('authors', 'Invalid JSON or failed bulk import: ' + error.message);
-    }
-}

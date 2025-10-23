@@ -97,18 +97,4 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
-    public void bulkImportBooks(List<BookDto> bookDtos) {
-        List<Book> books = bookDtos.stream()
-                .map(bookDto -> {
-                    Book book = bookMapper.toEntity(bookDto);
-                    book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
-                    book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
-                    if (bookDto.getStatus() != null) {
-                        book.setStatus(bookDto.getStatus());
-                    }
-                    return book;
-                })
-                .collect(Collectors.toList());
-        bookRepository.saveAll(books);
-    }
 }

@@ -67,10 +67,4 @@ public class AuthorService {
         authorRepository.deleteById(id);
     }
 
-    public void bulkImportAuthors(List<AuthorDto> authorDtos) {
-        List<Author> authors = authorDtos.stream()
-                .map(authorMapper::toEntity)
-                .collect(Collectors.toList());
-        authorRepository.saveAll(authors);
-    }
 }

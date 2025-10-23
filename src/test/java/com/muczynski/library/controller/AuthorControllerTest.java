@@ -77,17 +77,4 @@ class AuthorControllerTest {
                 .andExpect(status().isOk());
     }
 
-    @Test
-    @WithMockUser(authorities = "LIBRARIAN")
-    void bulkImportAuthors() throws Exception {
-        AuthorDto dto = new AuthorDto();
-        dto.setName("Test Author Bulk");
-        List<AuthorDto> inputDtos = Collections.singletonList(dto);
-        doNothing().when(authorService).bulkImportAuthors(any());
-
-        mockMvc.perform(post("/api/authors/bulk")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inputDtos)))
-                .andExpect(status().is2xxSuccessful());
-    }
 }
