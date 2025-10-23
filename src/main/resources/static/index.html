@@ -107,31 +107,31 @@
             <div class="librarian-only" data-test="authors-form">
                 <div class="mb-3">
                     <label for="new-author-name" class="form-label">Author Name:</label>
-                    <input type="text" id="new-author-name" class="form-control" placeholder="New author name" data-test="new-author-name">
+                    <input type="text" id="new-author-name" class="form-control" placeholder="New author name" autocomplete="off" data-test="new-author-name">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-dob" class="form-label">Date of Birth:</label>
-                    <input type="date" id="new-author-dob" class="form-control" data-test="new-author-dob">
+                    <input type="date" id="new-author-dob" class="form-control" autocomplete="off" data-test="new-author-dob">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-dod" class="form-label">Date of Death:</label>
-                    <input type="date" id="new-author-dod" class="form-control" data-test="new-author-dod">
+                    <input type="date" id="new-author-dod" class="form-control" autocomplete="off" data-test="new-author-dod">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-religion" class="form-label">Religious Affiliation:</label>
-                    <input type="text" id="new-author-religion" class="form-control" placeholder="Religious Affiliation" data-test="new-author-religion">
+                    <input type="text" id="new-author-religion" class="form-control" placeholder="Religious Affiliation" autocomplete="off" data-test="new-author-religion">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-country" class="form-label">Birth Country:</label>
-                    <input type="text" id="new-author-country" class="form-control" placeholder="Birth Country" data-test="new-author-country">
+                    <input type="text" id="new-author-country" class="form-control" placeholder="Birth Country" autocomplete="off" data-test="new-author-country">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-nationality" class="form-label">Nationality:</label>
-                    <input type="text" id="new-author-nationality" class="form-control" placeholder="Nationality" data-test="new-author-nationality">
+                    <input type="text" id="new-author-nationality" class="form-control" placeholder="Nationality" autocomplete="off" data-test="new-author-nationality">
                 </div>
                 <div class="mb-3">
                     <label for="new-author-bio" class="form-label">Brief Biography:</label>
-                    <textarea id="new-author-bio" class="form-control" placeholder="Brief Biography" data-test="new-author-bio"></textarea>
+                    <textarea id="new-author-bio" class="form-control" placeholder="Brief Biography" autocomplete="off" data-test="new-author-bio"></textarea>
                 </div>
                 <button id="add-author-btn" class="btn btn-primary mb-3" onclick="addAuthor()" data-test="add-author-btn">Add Author</button>
                 <button id="cancel-author-btn" class="btn btn-secondary mb-3" onclick="resetAuthorForm()" data-test="cancel-author-btn" style="display: none;">Cancel</button>
@@ -157,31 +157,31 @@
             <div class="librarian-only" data-test="books-form">
                 <div class="mb-3">
                     <label for="new-book-title" class="form-label">Book Title:</label>
-                    <input type="text" id="new-book-title" class="form-control" placeholder="New book title" data-test="new-book-title">
+                    <input type="text" id="new-book-title" class="form-control" placeholder="New book title" autocomplete="off" data-test="new-book-title">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-year" class="form-label">Publication Year:</label>
-                    <input type="number" id="new-book-year" class="form-control" placeholder="Publication Year" data-test="new-book-year">
+                    <input type="number" id="new-book-year" class="form-control" placeholder="Publication Year" autocomplete="off" data-test="new-book-year">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-publisher" class="form-label">Publisher:</label>
-                    <input type="text" id="new-book-publisher" class="form-control" placeholder="Publisher" data-test="new-book-publisher">
+                    <input type="text" id="new-book-publisher" class="form-control" placeholder="Publisher" autocomplete="off" data-test="new-book-publisher">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-summary" class="form-label">Plot Summary:</label>
-                    <textarea id="new-book-summary" class="form-control" placeholder="Plot Summary" data-test="new-book-summary"></textarea>
+                    <textarea id="new-book-summary" class="form-control" placeholder="Plot Summary" autocomplete="off" data-test="new-book-summary"></textarea>
                 </div>
                 <div class="mb-3">
                     <label for="new-book-related" class="form-label">Related Works:</label>
-                    <input type="text" id="new-book-related" class="form-control" placeholder="Related Works" data-test="new-book-related">
+                    <input type="text" id="new-book-related" class="form-control" placeholder="Related Works" autocomplete="off" data-test="new-book-related">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-description" class="form-label">Detailed Description:</label>
-                    <textarea id="new-book-description" class="form-control" placeholder="Detailed Description" data-test="new-book-description"></textarea>
+                    <textarea id="new-book-description" class="form-control" placeholder="Detailed Description" autocomplete="off" data-test="new-book-description"></textarea>
                 </div>
                 <div class="mb-3">
                     <label for="new-book-added" class="form-label">Date Added to Library:</label>
-                    <input type="date" id="new-book-added" class="form-control" data-test="new-book-added">
+                    <input type="date" id="new-book-added" class="form-control" autocomplete="off" data-test="new-book-added">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-status" class="form-label">Status:</label>
@@ -210,7 +210,7 @@
         <div id="search-section" class="section" data-test="search-section">
             <h2 data-test="search-header">Search</h2>
             <div class="input-group mb-3" data-test="search-form">
-                <input type="text" id="search-input" class="form-control" placeholder="Search books and authors..." data-test="search-input">
+                <input type="text" id="search-input" class="form-control" placeholder="Search books and authors..." autocomplete="off" data-test="search-input">
                 <button class="btn btn-primary" onclick="performSearch()" data-test="search-btn">Search</button>
             </div>
             <div id="search-results" data-test="search-results"></div>
@@ -222,7 +222,7 @@
                 <form data-test="apply-for-card-form">
                     <div class="mb-3">
                         <label for="new-applicant-name" class="form-label">Name:</label>
-                        <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="name" data-test="new-applicant-name">
+                        <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="off" data-test="new-applicant-name">
                     </div>
                     <div class="mb-3">
                         <label for="new-applicant-password" class="form-label">Password:</label>
@@ -266,7 +266,7 @@
             <form data-test="users-form">
                 <div class="mb-3">
                     <label for="new-user-username" class="form-label">Name:</label>
-                    <input type="text" id="new-user-username" class="form-control" placeholder="Name" autocomplete="name" data-test="new-user-username">
+                    <input type="text" id="new-user-username" class="form-control" placeholder="Name" autocomplete="off" data-test="new-user-username">
                 </div>
                 <div class="mb-3">
                     <label for="new-user-password" class="form-label">Password:</label>
