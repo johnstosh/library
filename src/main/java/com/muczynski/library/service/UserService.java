@@ -5,6 +5,7 @@ import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.mapper.UserMapper;
+import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.RoleRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,23 +31,38 @@ public class UserService {
     private RoleRepository roleRepository;
 
     @Autowired
+    private LoanRepository loanRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public List<UserDto> getAllUsers() {
-        return userRepository.findAll().stream()
+        List<UserDto> userDtos = userRepository.findAll().stream()
                 .map(userMapper::toDto)
                 .collect(Collectors.toList());
+        for (UserDto dto : userDtos) {
+            dto.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(dto.getId()));
+        }
+        return userDtos;
     }
 
     public UserDto getUserById(Long id) {
         return userRepository.findById(id)
-                .map(userMapper::toDto)
+                .map(user -> {
+                    UserDto dto = userMapper.toDto(user);
+                    dto.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(id));
+                    return dto;
+                })
                 .orElse(null);
     }
 
     public UserDto getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .map(userMapper::toDto)
+                .map(user -> {
+                    UserDto dto = userMapper.toDto(user);
+                    dto.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(user.getId()));
+                    return dto;
+                })
                 .orElse(null);
     }
 
@@ -67,7 +83,9 @@ public class UserService {
         user.setRoles(Collections.singleton(role));
 
         User savedUser = userRepository.save(user);
-        return userMapper.toDto(savedUser);
+        UserDto dtoResponse = userMapper.toDto(savedUser);
+        dtoResponse.setActiveLoansCount(0); // New user has no loans
+        return dtoResponse;
     }
 
     public UserDto updateUser(Long id, CreateUserDto dto) {
@@ -91,7 +109,9 @@ public class UserService {
             user.getRoles().add(role);
         }
         User savedUser = userRepository.save(user);
-        return userMapper.toDto(savedUser);
+        UserDto dtoResponse = userMapper.toDto(savedUser);
+        dtoResponse.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(id));
+        return dtoResponse;
     }
 
     public void updateApiKey(Long id, String xaiApiKey) {

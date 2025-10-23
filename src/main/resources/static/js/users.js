@@ -16,6 +16,11 @@ async function loadUsers() {
             userCell.appendChild(span);
             row.appendChild(userCell);
 
+            const loansCell = document.createElement('td');
+            loansCell.setAttribute('data-test', 'user-loans-count');
+            loansCell.textContent = user.activeLoansCount || 0;
+            row.appendChild(loansCell);
+
             const actionsCell = document.createElement('td');
 
             const editBtn = document.createElement('button');

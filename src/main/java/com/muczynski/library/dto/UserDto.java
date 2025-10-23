@@ -11,4 +11,5 @@ public class UserDto {
     private String password;
     private Set<String> roles;
     private String xaiApiKey;
+    private int activeLoansCount;
 }
