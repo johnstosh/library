@@ -17,8 +17,8 @@ async function loadApplied() {
                     </select>
                 </td>
                 <td>
-                    <button class="btn btn-success btn-sm" onclick="approveApplication(${app.id})">Approve</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteApplied(${app.id})">Delete</button>
+                    <button class="btn btn-success btn-sm" onclick="approveApplication(${app.id})">✔️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteApplied(${app.id})">🗑️</button>
                 </td>
             `;
             appliedListBody.appendChild(row);
