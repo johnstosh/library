@@ -207,6 +207,7 @@ function showSection(sectionId, event) {
     }
     if (sectionId === 'authors') {
         loadAuthors();
+        resetAuthorForm();
     }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
