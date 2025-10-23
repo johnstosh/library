@@ -205,6 +205,7 @@ function showSection(sectionId, event) {
         loadLoans();
     }
     if (sectionId === 'books') {
+        resetBookForm();
         loadBooks();
     }
     if (sectionId === 'authors') {

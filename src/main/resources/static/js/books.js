@@ -40,6 +40,11 @@ async function loadBooks() {
     }
 }
 
+function showBookList(show) {
+    document.querySelector('[data-test="book-table"]').style.display = show ? 'table' : 'none';
+    document.querySelector('[data-test="books-form"]').style.display = show ? 'none' : 'block';
+}
+
 function resetBookForm() {
     document.getElementById('new-book-title').value = '';
     document.getElementById('new-book-year').value = '';
@@ -58,7 +63,9 @@ function resetBookForm() {
     btn.onclick = addBook;
 
     document.getElementById('add-photo-btn').style.display = 'none';
+    document.getElementById('cancel-book-btn').style.display = 'none';
     document.getElementById('book-photos-container').style.display = 'none';
+    showBookList(true);
 }
 
 async function addBook() {
@@ -89,6 +96,7 @@ async function addBook() {
 }
 
 async function editBook(id) {
+    showBookList(false);
     const data = await fetchData(`/api/books/${id}`);
     document.getElementById('new-book-title').value = data.title || '';
     document.getElementById('new-book-year').value = data.publicationYear || '';
@@ -105,6 +113,7 @@ async function editBook(id) {
     btn.textContent = 'Update Book';
     btn.onclick = () => updateBook(id);
     document.getElementById('add-photo-btn').style.display = 'inline-block';
+    document.getElementById('cancel-book-btn').style.display = 'inline-block';
 
     const photos = await fetchData(`/api/books/${id}/photos`);
     displayBookPhotos(photos, id);
@@ -132,6 +141,7 @@ async function updateBook(id) {
         await loadLoans();
         await populateLoanDropdowns();
         clearError('books');
+        showBookList(true);
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
     }
