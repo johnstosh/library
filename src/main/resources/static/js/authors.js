@@ -15,13 +15,6 @@ async function loadAuthors() {
 
             const tdActions = document.createElement('td');
             if (isLibrarian) {
-                const viewBtn = document.createElement('button');
-                viewBtn.setAttribute('data-test', 'view-author-btn');
-                viewBtn.textContent = '🔍';
-                viewBtn.title = 'View details';
-                viewBtn.onclick = () => viewAuthor(author.id);
-                tdActions.appendChild(viewBtn);
-
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-author-btn');
                 editBtn.textContent = '✏️';
@@ -131,9 +124,4 @@ async function deleteAuthor(id) {
     } catch (error) {
         showError('authors', 'Failed to delete author: ' + error.message);
     }
-}
-
-async function viewAuthor(id) {
-    const data = await fetchData(`/api/authors/${id}`);
-    alert(`Author Details:\nID: ${data.id}\nName: ${data.name}\nDate of Birth: ${data.dateOfBirth || 'N/A'}\nDate of Death: ${data.dateOfDeath || 'N/A'}\nReligious Affiliation: ${data.religiousAffiliation || 'N/A'}\nBirth Country: ${data.birthCountry || 'N/A'}\nNationality: ${data.nationality || 'N/A'}\nBrief Biography: ${data.briefBiography || 'N/A'}`);
 }
