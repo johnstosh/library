@@ -1,38 +1,65 @@
 async function loadSettings() {
     try {
-        const user = await fetchData('/api/users/me');
-        const apiKeyInput = document.getElementById('xai-api-key');
-        apiKeyInput.value = user.xaiApiKey || '';
-        clearError('settings');
+        const user = await fetchData('/api/user-settings');
+        document.getElementById('user-name').value = user.username || '';
+        document.getElementById('xai-api-key').value = user.xaiApiKey || '';
+        clearSettingsMessages();
     } catch (error) {
-        showError('settings', 'Failed to load settings: ' + error.message);
+        showSettingsError('Failed to load settings: ' + error.message);
     }
 }
 
-async function saveSettings() {
-    const apiKey = document.getElementById('xai-api-key').value.trim();
-    if (!apiKey) {
-        showError('settings', 'XAI API key is required.');
+async function saveSettings(event) {
+    event.preventDefault();
+    clearSettingsMessages();
+
+    const username = document.getElementById('user-name').value.trim();
+    const password = document.getElementById('user-password').value;
+    const xaiApiKey = document.getElementById('xai-api-key').value.trim();
+
+    if (!username) {
+        showSettingsError('Name is required.');
         return;
     }
-    // Basic validation: xAI keys are typically 32+ chars, base64-like
-    if (apiKey.length < 32 || !/^[A-Za-z0-9_-]+$/.test(apiKey)) {
-        showError('settings', 'Invalid XAI API key format.');
-        return;
+
+    const payload = {
+        username,
+        xaiApiKey
+    };
+
+    if (password) {
+        payload.password = password;
     }
+
     try {
-        const user = await fetchData('/api/users/me');
-        await putData(`/api/users/${user.id}/apikey`, { xaiApiKey: apiKey });
-        showBulkSuccess('xai-api-key'); // Reuse success style
-        clearError('settings');
+        await putData('/api/user-settings', payload);
+        showSettingsSuccess('Settings saved successfully!');
+        document.getElementById('user-password').value = ''; // Clear password field after save
     } catch (error) {
-        showError('settings', 'Failed to save settings: ' + error.message);
+        showSettingsError('Failed to save settings: ' + error.message);
     }
 }
 
-// Initialize on load
+function showSettingsError(message) {
+    const errorEl = document.getElementById('settings-error');
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+}
+
+function showSettingsSuccess(message) {
+    const successEl = document.getElementById('settings-success');
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+}
+
+function clearSettingsMessages() {
+    document.getElementById('settings-error').style.display = 'none';
+    document.getElementById('settings-success').style.display = 'none';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('settings-section')) {
-        loadSettings();
+    const settingsForm = document.getElementById('settings-form');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', saveSettings);
     }
 });

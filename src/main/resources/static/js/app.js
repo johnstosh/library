@@ -196,7 +196,7 @@ function showSection(sectionId, event) {
         loadApplied();
     }
     if (sectionId === 'settings') {
-        loadUsers();
+        loadSettings();
     }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
@@ -243,7 +243,11 @@ async function fetchData(url) {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return response.json();
+    }
+    return; // No content
 }
 
 async function postData(url, data, isFormData = false, expectJson = true) {
