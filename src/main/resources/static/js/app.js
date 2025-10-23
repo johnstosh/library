@@ -183,7 +183,7 @@ function showSection(sectionId, event) {
     if (sectionId === 'test-data') {
         loadTestDataStats();
     }
-    if (sectionId === 'applied') {
+    if (sectionId === 'library-card') {
         loadApplied();
     }
     if (sectionId === 'settings') {
@@ -202,9 +202,6 @@ function showSection(sectionId, event) {
     if (sectionId === 'authors') {
         loadAuthors();
         resetAuthorForm();
-    }
-    if (sectionId === 'applied') {
-        loadApplied();
     }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
