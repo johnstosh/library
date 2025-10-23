@@ -50,7 +50,7 @@ async function addUser() {
     const password = document.getElementById('new-user-password').value;
     const role = document.getElementById('new-user-role').value;
     if (!username || !password || !role) {
-        showError('users', 'Please fill in all fields.');
+        showError('users', 'Name, password, and role are required.');
         return;
     }
     try {
@@ -85,7 +85,7 @@ async function updateUser(id) {
     const password = document.getElementById('new-user-password').value;
     const role = document.getElementById('new-user-role').value;
     if (!username || !role) {
-        showError('users', 'Please fill in username and role.');
+        showError('users', 'Name and role are required.');
         return;
     }
     try {

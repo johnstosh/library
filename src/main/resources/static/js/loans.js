@@ -23,7 +23,7 @@ async function loadLoans() {
 
             const userCell = document.createElement('td');
             userCell.setAttribute('data-test', 'loan-user');
-            userCell.textContent = userMap.get(loan.userId) || 'Unknown User';
+            userCell.textContent = userMap.get(loan.userId) || 'Unknown';
             row.appendChild(userCell);
 
             const loanDateCell = document.createElement('td');
@@ -84,7 +84,7 @@ async function checkoutBook() {
     const dueDate = document.getElementById('due-date').value;
     const returnDate = document.getElementById('return-date').value;
     if (!bookId || !userId) {
-        showError('loans', 'Book and user are required.');
+        showError('loans', 'Book and name are required.');
         return;
     }
     try {
@@ -120,7 +120,7 @@ async function updateLoan(id) {
     const dueDate = document.getElementById('due-date').value;
     const returnDate = document.getElementById('return-date').value;
     if (!bookId || !userId) {
-        showError('loans', 'Book and user are required.');
+        showError('loans', 'Book and name are required.');
         return;
     }
     try {
@@ -154,7 +154,7 @@ async function deleteLoan(id) {
 async function viewLoan(id) {
     const loan = await fetchData(`/api/loans/${id}`);
     const returnStatus = loan.returnDate ? `Returned on ${formatDate(loan.returnDate)}` : 'Not returned';
-    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nUser: ${loan.userName}\nLoan Date: ${formatDate(loan.loanDate)}\nDue Date: ${formatDate(loan.dueDate)}\n${returnStatus}`);
+    alert(`Loan Details:\nID: ${loan.id}\nBook: ${loan.bookTitle}\nName: ${loan.userName}\nLoan Date: ${formatDate(loan.loanDate)}\nDue Date: ${formatDate(loan.dueDate)}\n${returnStatus}`);
 }
 
 async function returnBook(loanId) {
