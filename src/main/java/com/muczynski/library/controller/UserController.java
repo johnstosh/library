@@ -90,8 +90,12 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

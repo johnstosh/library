@@ -131,6 +131,11 @@ public class UserService {
         if (!userRepository.existsById(id)) {
             throw new RuntimeException("User not found: " + id);
         }
+        long activeCount = loanRepository.countByUserIdAndReturnDateIsNull(id);
+        if (activeCount > 0) {
+            throw new RuntimeException("Cannot delete user because they have " + activeCount + " active loan(s). Please return all books before deleting the user.");
+        }
+        loanRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
 }
