@@ -62,4 +62,11 @@ public class AppliedController {
         appliedService.deleteApplied(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/applied/{id}/approve")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> approveApplication(@PathVariable Long id) {
+        appliedService.approveApplication(id);
+        return ResponseEntity.ok().build();
+    }
 }
