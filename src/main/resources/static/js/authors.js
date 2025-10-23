@@ -80,6 +80,13 @@ async function editAuthor(id) {
     const btn = document.getElementById('add-author-btn');
     btn.textContent = 'Update Author';
     btn.onclick = () => updateAuthor(id);
+
+    document.getElementById('cancel-author-btn').style.display = 'inline-block';
+
+    const authorTable = document.querySelector('[data-test="author-table"]');
+    if (authorTable) {
+        authorTable.style.display = 'none';
+    }
 }
 
 async function updateAuthor(id) {
@@ -96,18 +103,9 @@ async function updateAuthor(id) {
     }
     try {
         await putData(`/api/authors/${id}`, { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
-        document.getElementById('new-author-name').value = '';
-        document.getElementById('new-author-dob').value = '';
-        document.getElementById('new-author-dod').value = '';
-        document.getElementById('new-author-religion').value = '';
-        document.getElementById('new-author-country').value = '';
-        document.getElementById('new-author-nationality').value = '';
-        document.getElementById('new-author-bio').value = '';
         await loadAuthors();
         await populateBookDropdowns();
-        const btn = document.getElementById('add-author-btn');
-        btn.textContent = 'Add Author';
-        btn.onclick = addAuthor;
+        resetAuthorForm();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to update author: ' + error.message);
@@ -124,4 +122,26 @@ async function deleteAuthor(id) {
     } catch (error) {
         showError('authors', 'Failed to delete author: ' + error.message);
     }
+}
+
+function resetAuthorForm() {
+    document.getElementById('new-author-name').value = '';
+    document.getElementById('new-author-dob').value = '';
+    document.getElementById('new-author-dod').value = '';
+    document.getElementById('new-author-religion').value = '';
+    document.getElementById('new-author-country').value = '';
+    document.getElementById('new-author-nationality').value = '';
+    document.getElementById('new-author-bio').value = '';
+
+    const btn = document.getElementById('add-author-btn');
+    btn.textContent = 'Add Author';
+    btn.onclick = addAuthor;
+
+    document.getElementById('cancel-author-btn').style.display = 'none';
+
+    const authorTable = document.querySelector('[data-test="author-table"]');
+    if (authorTable) {
+        authorTable.style.display = 'table';
+    }
+    clearError('authors');
 }
