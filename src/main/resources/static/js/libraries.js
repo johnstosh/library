@@ -28,13 +28,6 @@ async function loadLibraries() {
             row.appendChild(nameCell);
             const actionsCell = document.createElement('td');
             if (isLibrarian) {
-                const viewBtn = document.createElement('button');
-                viewBtn.setAttribute('data-test', 'view-library-btn');
-                viewBtn.textContent = '🔍';
-                viewBtn.title = 'View details';
-                viewBtn.onclick = () => viewLibrary(library.id);
-                actionsCell.appendChild(viewBtn);
-
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-library-btn');
                 editBtn.textContent = '✏️';
@@ -131,9 +124,4 @@ async function deleteLibrary(id) {
     } catch (error) {
         showError('libraries', 'Failed to delete library: ' + error.message);
     }
-}
-
-async function viewLibrary(id) {
-    const data = await fetchData(`/api/libraries/${id}`);
-    alert(`Library Details:\nID: ${data.id}\nName: ${data.name}\nHostname: ${data.hostname}`);
 }
