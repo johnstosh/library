@@ -54,13 +54,6 @@ async function loadLoans() {
                 actionsCell.appendChild(returnButton);
             }
 
-            const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-loan-btn');
-            viewBtn.textContent = '🔍';
-            viewBtn.title = 'View details';
-            viewBtn.onclick = () => viewLoan(loan.id);
-            actionsCell.appendChild(viewBtn);
-
             const editBtn = document.createElement('button');
             editBtn.setAttribute('data-test', 'edit-loan-btn');
             editBtn.textContent = '✏️';
