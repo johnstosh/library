@@ -33,7 +33,13 @@ async function approveApplication(id) {
     if (!confirm('Are you sure you want to approve this application?')) {
         return;
     }
-    await updateAppliedStatus(id, 'APPROVED');
+    try {
+        await postData(`/api/applied/${id}/approve`, {}, false, false);
+        loadApplied();
+    } catch (error) {
+        console.error(`Failed to approve application ${id}:`, error);
+        showError('applied', `Failed to approve application ${id}.`);
+    }
 }
 
 async function updateAppliedStatus(id, status) {
