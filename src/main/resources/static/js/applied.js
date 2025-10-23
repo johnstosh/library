@@ -17,7 +17,8 @@ async function loadApplied() {
                     </select>
                 </td>
                 <td>
-                    <button class="btn btn-danger btn-sm" onclick="deleteApplied(${app.id})">Delete</button>
+                    <button class="btn btn-success btn-sm" onclick="approveApplication(${app.id})">✔️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteApplied(${app.id})">🗑️</button>
                 </td>
             `;
             appliedListBody.appendChild(row);
@@ -28,21 +29,11 @@ async function loadApplied() {
     }
 }
 
-async function addApplied() {
-    const name = document.getElementById('new-applied-name').value.trim();
-    if (!name) {
-        showError('applied', 'Please enter a name.');
+async function approveApplication(id) {
+    if (!confirm('Are you sure you want to approve this application?')) {
         return;
     }
-    try {
-        await postData('/api/applied', { name });
-        document.getElementById('new-applied-name').value = '';
-        clearError('applied');
-        loadApplied();
-    } catch (error) {
-        console.error('Failed to add application:', error);
-        showError('applied', 'Failed to add application.');
-    }
+    await updateAppliedStatus(id, 'APPROVED');
 }
 
 async function updateAppliedStatus(id, status) {
