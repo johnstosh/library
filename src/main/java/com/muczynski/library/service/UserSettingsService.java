@@ -30,7 +30,7 @@ public class UserSettingsService {
         return userMapper.toDto(user);
     }
 
-    public void updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
+    public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
         User user = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -49,7 +49,8 @@ public class UserSettingsService {
             user.setXaiApiKey(userSettingsDto.getXaiApiKey());
         }
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        return userMapper.toDto(savedUser);
     }
 
     public void deleteUser(String currentUsername) {

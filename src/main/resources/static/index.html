@@ -347,13 +347,25 @@
 
         <div id="settings-section" class="section" data-test="settings-section">
             <h2 data-test="settings-header">Settings</h2>
-            <div class="mb-3">
-                <label for="xai-api-key" class="form-label">XAI API Key (for AI features):</label>
-                <input type="password" id="xai-api-key" class="form-control" placeholder="Enter your xAI API key" data-test="xai-api-key">
-                <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
-            </div>
-            <button class="btn btn-primary" onclick="saveSettings()" data-test="save-settings-btn">Save Settings</button>
-            <div id="settings-error" data-test="settings-error" style="display: none;"></div>
+            <form id="settings-form" onsubmit="saveSettings(event)">
+                <div class="mb-3">
+                    <label for="user-name" class="form-label">Name</label>
+                    <input type="text" id="user-name" class="form-control" data-test="user-name">
+                </div>
+                <div class="mb-3">
+                    <label for="user-password" class="form-label">New Password</label>
+                    <input type="password" id="user-password" class="form-control" data-test="user-password">
+                    <div class="form-text">Leave blank to keep your current password.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="xai-api-key" class="form-label">XAI API Key (for AI features)</label>
+                    <input type="password" id="xai-api-key" class="form-control" placeholder="Enter your xAI API key" data-test="xai-api-key">
+                    <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
+                </div>
+                <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save Settings</button>
+            </form>
+            <div id="settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="settings-error"></div>
+            <div id="settings-success" class="alert alert-success mt-3" style="display: none;" data-test="settings-success"></div>
         </div>
     </div>
 </div>
