@@ -23,9 +23,9 @@ public class UserSettingsController {
     }
 
     @PutMapping
-    public ResponseEntity<Void> updateUserSettings(@AuthenticationPrincipal UserDetails userDetails, @RequestBody UserSettingsDto userSettingsDto) {
-        userSettingsService.updateUserSettings(userDetails.getUsername(), userSettingsDto);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<UserDto> updateUserSettings(@AuthenticationPrincipal UserDetails userDetails, @RequestBody UserSettingsDto userSettingsDto) {
+        UserDto updatedUser = userSettingsService.updateUserSettings(userDetails.getUsername(), userSettingsDto);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping
