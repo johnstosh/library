@@ -92,7 +92,7 @@ public class BookService {
         }
         long loanCount = loanRepository.countByBookId(id);
         if (loanCount > 0) {
-            throw new RuntimeException("Cannot delete book because it has " + loanCount + " associated loans.");
+            throw new RuntimeException("Cannot delete book because it is currently checked out with " + loanCount + " loan(s).");
         }
         bookRepository.deleteById(id);
     }

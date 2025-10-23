@@ -254,7 +254,16 @@ function logout() {
 async function fetchData(url) {
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) {
+            // Ignore, use generic message
+        }
+        throw new Error(errorMsg);
     }
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -284,7 +293,16 @@ async function postData(url, data, isFormData = false, expectJson = true) {
         body: body
     });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) {
+            // Ignore, use generic message
+        }
+        throw new Error(errorMsg);
     }
     if (expectJson) {
         return response.json();
@@ -306,7 +324,16 @@ async function putData(url, data) {
         body: JSON.stringify(data)
     });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) {
+            // Ignore, use generic message
+        }
+        throw new Error(errorMsg);
     }
     return response.json();
 }
@@ -322,7 +349,16 @@ async function deleteData(url) {
         headers
     });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) {
+            // Ignore, use generic message
+        }
+        throw new Error(errorMsg);
     }
     return response;
 }
