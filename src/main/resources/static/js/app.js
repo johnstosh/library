@@ -376,6 +376,9 @@ function showError(sectionId, message) {
         }
     }
     errorDiv.textContent = message;
+    if (['authors', 'books', 'users'].includes(sectionId)) {
+        window.scrollTo(0, 0);
+    }
 }
 
 function clearError(sectionId) {
