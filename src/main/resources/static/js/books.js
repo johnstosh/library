@@ -162,24 +162,6 @@ async function viewBook(id) {
     alert(`Book Details:\nID: ${data.id}\nTitle: ${data.title}\nPublication Year: ${data.publicationYear || 'N/A'}\nPublisher: ${data.publisher || 'N/A'}\nPlot Summary: ${data.plotSummary || 'N/A'}\nRelated Works: ${data.relatedWorks || 'N/A'}\nDetailed Description: ${data.detailedDescription || 'N/A'}\nDate Added: ${data.dateAddedToLibrary || 'N/A'}\nStatus: ${data.status || 'N/A'}\nAuthor: ${data.author ? data.author.name : 'N/A'}\nLibrary: ${data.library ? data.library.name : 'N/A'}`);
 }
 
-async function bulkImportBooks() {
-    const booksJson = document.getElementById('bulk-books').value;
-    if (!booksJson) {
-        showError('books', 'Please provide JSON for bulk import.');
-        return;
-    }
-    try {
-        const books = JSON.parse(booksJson);
-        await postData('/api/books/bulk', books);
-        await loadBooks();
-        showBulkSuccess('bulk-books');
-        document.getElementById('bulk-books').value = '';
-        clearError('books');
-    } catch (error) {
-        showError('books', 'Invalid JSON or failed bulk import: ' + error.message);
-    }
-}
-
 function displayBookPhotos(photos, bookId) {
     const photosContainer = document.getElementById('book-photos-container');
     const photosDiv = document.getElementById('book-photos');
@@ -251,9 +233,11 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
         displayBookPhotos(photos, bookId);
+        event.target.value = '';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
+        event.target.value = '';
     }
 });
 

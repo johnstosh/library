@@ -214,6 +214,15 @@ function showSection(sectionId, event) {
             activeButton.classList.add('active');
         }
     }
+
+    // Hide the navbar on mobile after a menu item is clicked
+    const navbarCollapse = document.getElementById('navbarNav');
+    if (navbarCollapse.classList.contains('show')) {
+        const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
+            toggle: false
+        });
+        bsCollapse.hide();
+    }
 }
 
 function createBookByPhoto() {
