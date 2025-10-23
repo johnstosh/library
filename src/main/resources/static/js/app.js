@@ -146,11 +146,6 @@ function showMainContent(roles) {
         document.body.classList.add('user-is-librarian');
         showSection('loans');
         loadLibraries();
-        loadAuthors();
-        loadBooks();
-        loadUsers();
-        loadLoans();
-        loadApplied();
         populateBookDropdowns();
         populateLoanDropdowns();
     } else {
@@ -161,7 +156,6 @@ function showMainContent(roles) {
         });
         showSection('search');
     }
-    loadSettings();
 }
 
 function showSection(sectionId, event) {
@@ -196,7 +190,7 @@ function showSection(sectionId, event) {
         loadSettings();
     }
     if (sectionId === 'users') {
-        loadSettings();
+        loadUsers();
     }
     if (sectionId === 'loans') {
         loadLoans();
@@ -208,6 +202,9 @@ function showSection(sectionId, event) {
     if (sectionId === 'authors') {
         loadAuthors();
         resetAuthorForm();
+    }
+    if (sectionId === 'applied') {
+        loadApplied();
     }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
