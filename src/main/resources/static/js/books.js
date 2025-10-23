@@ -233,9 +233,11 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
         displayBookPhotos(photos, bookId);
+        event.target.value = '';
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
+        event.target.value = '';
     }
 });
 
