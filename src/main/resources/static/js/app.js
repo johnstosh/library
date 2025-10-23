@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         checkAuthentication();
     } catch (error) {
-        console.error('Error in initial auth check, showing welcome screen.', error);
-        showWelcomeScreen();
+        console.error('Error in initial auth check, showing search page.', error);
+        showPublicSearchPage();
     }
     // Check for login error in URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -64,19 +64,19 @@ async function checkAuthentication() {
             console.log('User authenticated:', user);
             showMainContent(user.roles);
         } else {
-            console.log('Authentication failed or non-JSON response, showing welcome screen');
-            showWelcomeScreen();
+            console.log('Authentication failed or non-JSON response, showing search page');
+            showPublicSearchPage();
         }
     } catch (error) {
         console.error('Error during authentication check:', error);
-        showWelcomeScreen();
+        showPublicSearchPage();
     }
 }
 
-function showWelcomeScreen() {
-    document.getElementById('welcome-screen').style.display = 'block';
+function showPublicSearchPage() {
     document.getElementById('login-form').style.display = 'none';
-    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    showSection('search');
     document.getElementById('login-menu-btn').style.display = 'block';
     document.getElementById('logout-menu-btn').style.display = 'none';
     const pageTitle = document.getElementById('page-title');
@@ -95,7 +95,6 @@ function showWelcomeScreen() {
 }
 
 function showLoginForm() {
-    document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
     document.getElementById('login-menu-btn').style.display = 'block';
@@ -132,7 +131,6 @@ function showLoginError() {
 function showMainContent(roles) {
     console.log('Showing main content for roles:', roles);
     isLibrarian = roles.includes('LIBRARIAN');
-    document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
     document.getElementById('section-menu').style.display = 'flex';
@@ -172,9 +170,8 @@ function showSection(sectionId, event) {
         resetBookForm();
     }
 
-    // If not logged in and showing a section, hide welcome/login and show main content
-    if (!isLibrarian && (document.getElementById('welcome-screen').style.display === 'block' || document.getElementById('login-form').style.display === 'block')) {
-        document.getElementById('welcome-screen').style.display = 'none';
+    // If not logged in and showing a section, hide login and show main content
+    if (!isLibrarian && (document.getElementById('login-form').style.display === 'block')) {
         document.getElementById('login-form').style.display = 'none';
         document.getElementById('main-content').style.display = 'block';
     }
@@ -255,7 +252,6 @@ function createBookByPhoto() {
 function logout() {
     document.body.classList.remove('user-is-librarian');
     fetch('/logout', { method: 'POST' }).then(() => {
-        showWelcomeScreen();
         window.location.href = '/';
     });
 }
