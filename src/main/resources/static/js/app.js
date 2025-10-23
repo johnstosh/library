@@ -254,14 +254,19 @@ function logout() {
 async function fetchData(url) {
     const response = await fetch(url);
     if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                errorMsg = errorData.message;
+        let errorMsg;
+        if (response.status === 401) {
+            errorMsg = "Your login session has timed out. Please log in again.";
+        } else {
+            errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    errorMsg = errorData.message;
+                }
+            } catch (e) {
+                // Ignore, use generic message
             }
-        } catch (e) {
-            // Ignore, use generic message
         }
         throw new Error(errorMsg);
     }
@@ -293,14 +298,19 @@ async function postData(url, data, isFormData = false, expectJson = true) {
         body: body
     });
     if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                errorMsg = errorData.message;
+        let errorMsg;
+        if (response.status === 401) {
+            errorMsg = "Your login session has timed out. Please log in again.";
+        } else {
+            errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    errorMsg = errorData.message;
+                }
+            } catch (e) {
+                // Ignore, use generic message
             }
-        } catch (e) {
-            // Ignore, use generic message
         }
         throw new Error(errorMsg);
     }
@@ -324,14 +334,19 @@ async function putData(url, data) {
         body: JSON.stringify(data)
     });
     if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                errorMsg = errorData.message;
+        let errorMsg;
+        if (response.status === 401) {
+            errorMsg = "Your login session has timed out. Please log in again.";
+        } else {
+            errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    errorMsg = errorData.message;
+                }
+            } catch (e) {
+                // Ignore, use generic message
             }
-        } catch (e) {
-            // Ignore, use generic message
         }
         throw new Error(errorMsg);
     }
@@ -349,14 +364,19 @@ async function deleteData(url) {
         headers
     });
     if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                errorMsg = errorData.message;
+        let errorMsg;
+        if (response.status === 401) {
+            errorMsg = "Your login session has timed out. Please log in again.";
+        } else {
+            errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    errorMsg = errorData.message;
+                }
+            } catch (e) {
+                // Ignore, use generic message
             }
-        } catch (e) {
-            // Ignore, use generic message
         }
         throw new Error(errorMsg);
     }
