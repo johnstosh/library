@@ -198,6 +198,18 @@ function showSection(sectionId, event) {
     if (sectionId === 'settings') {
         loadSettings();
     }
+    if (sectionId === 'users') {
+        loadSettings();
+    }
+    if (sectionId === 'loans') {
+        loadLoans();
+    }
+    if (sectionId === 'books') {
+        loadBooks();
+    }
+    if (sectionId === 'authors') {
+        loadAuthors();
+    }
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
         btn.classList.remove('active');

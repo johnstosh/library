@@ -18,13 +18,6 @@ async function loadUsers() {
 
             const actionsCell = document.createElement('td');
 
-            const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-user-btn');
-            viewBtn.textContent = '🔍';
-            viewBtn.title = 'View details';
-            viewBtn.onclick = () => viewUser(user.id);
-            actionsCell.appendChild(viewBtn);
-
             const editBtn = document.createElement('button');
             editBtn.setAttribute('data-test', 'edit-user-btn');
             editBtn.textContent = '✏️';
@@ -116,10 +109,4 @@ async function deleteUser(id) {
     } catch (error) {
         showError('users', 'Failed to delete user: ' + error.message);
     }
-}
-
-async function viewUser(id) {
-    const data = await fetchData(`/api/users/${id}`);
-    const rolesText = data.roles ? Array.from(data.roles).join(', ') : '';
-    alert(`User Details:\nID: ${data.id}\nUsername: ${data.username}\nRoles: ${rolesText}`);
 }

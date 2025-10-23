@@ -17,13 +17,6 @@ async function loadBooks() {
 
             const actionsCell = document.createElement('td');
             if (isLibrarian) {
-                const viewBtn = document.createElement('button');
-                viewBtn.setAttribute('data-test', 'view-book-btn');
-                viewBtn.textContent = '🔍';
-                viewBtn.title = 'View details';
-                viewBtn.onclick = () => viewBook(book.id);
-                actionsCell.appendChild(viewBtn);
-
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-book-btn');
                 editBtn.textContent = '✏️';
@@ -155,11 +148,6 @@ async function deleteBook(id) {
     } catch (error) {
         showError('books', 'Failed to delete book: ' + error.message);
     }
-}
-
-async function viewBook(id) {
-    const data = await fetchData(`/api/books/${id}`);
-    alert(`Book Details:\nID: ${data.id}\nTitle: ${data.title}\nPublication Year: ${data.publicationYear || 'N/A'}\nPublisher: ${data.publisher || 'N/A'}\nPlot Summary: ${data.plotSummary || 'N/A'}\nRelated Works: ${data.relatedWorks || 'N/A'}\nDetailed Description: ${data.detailedDescription || 'N/A'}\nDate Added: ${data.dateAddedToLibrary || 'N/A'}\nStatus: ${data.status || 'N/A'}\nAuthor: ${data.author ? data.author.name : 'N/A'}\nLibrary: ${data.library ? data.library.name : 'N/A'}`);
 }
 
 function displayBookPhotos(photos, bookId) {
