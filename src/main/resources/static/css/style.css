@@ -147,7 +147,17 @@ html, body {
 
 .edit-btn {
     bottom: 5px;
+    left: 40px;
+}
+
+.move-left-btn {
+    bottom: 5px;
     left: 5px;
+}
+
+.move-right-btn {
+    bottom: 5px;
+    right: 5px;
 }
 
 /* Responsive adjustments for thumbnails */

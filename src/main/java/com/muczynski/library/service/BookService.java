@@ -173,7 +173,7 @@ public class BookService {
             throw new RuntimeException("Book not found: " + id);
         }
 
-        List<Photo> photos = photoRepository.findByBookId(id);
+        List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
         if (!photos.isEmpty()) {
             Photo photo = photos.get(0);
             String question = """

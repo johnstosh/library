@@ -29,4 +29,6 @@ public class Photo {
     @ManyToOne
     @JoinColumn(name = "author_id")
     private Author author;
+
+    private Integer photoOrder;
 }

@@ -14,5 +14,6 @@ public interface PhotoMapper {
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "book", ignore = true)
     @Mapping(target = "author", ignore = true)
+    @Mapping(target = "photoOrder", ignore = true)
     Photo toEntity(PhotoDto photoDto);
 }

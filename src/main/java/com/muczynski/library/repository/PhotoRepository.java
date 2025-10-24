@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
-    List<Photo> findByBookId(Long bookId);
+    List<Photo> findByBookIdOrderByPhotoOrder(Long bookId);
     List<Photo> findByAuthorId(Long authorId);
 }
