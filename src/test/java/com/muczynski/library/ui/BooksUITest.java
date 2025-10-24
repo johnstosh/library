@@ -12,6 +12,9 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -197,6 +200,51 @@ public class BooksUITest {
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-books-sorting.png")));
             throw e;
+        }
+    }
+
+    @Test
+    void testBookByPhotoWithNoXaiKey() {
+        Path tempFile = null;
+        try {
+            // Create a dummy file to upload
+            tempFile = Files.createTempFile("test-photo", ".jpg");
+            Files.write(tempFile, "dummy content".getBytes());
+
+            page.navigate("http://localhost:" + port);
+            login();
+            navigateToSection("books");
+
+            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000));
+            page.locator("[data-test='edit-book-btn']").first().click();
+
+            // Upload the file
+            page.setInputFiles("input#photo-upload", tempFile);
+
+            // Wait for the button to become visible
+            Locator bookByPhotoButton = page.locator("[data-test='book-by-photo-btn']");
+            bookByPhotoButton.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+
+            bookByPhotoButton.click();
+
+            // Wait for the error div to appear
+            Locator errorDiv = page.locator("#books-section [data-test='form-error']");
+            errorDiv.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+
+            // Assert the error message
+            assertThat(errorDiv).containsText("Failed to generate book metadata: xAI API key is required to generate book metadata from photo. Please set it in your user settings.");
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-book-by-photo.png")));
+            throw new RuntimeException(e);
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException e) {
+                    // Suppress
+                }
+            }
         }
     }
 }
