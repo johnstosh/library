@@ -389,52 +389,6 @@ async function movePhotoRight(bookId, photoId) {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to move photo right: ' + error.message);
-async function prepareNewBookForPhoto(title) {
-    document.getElementById('new-book-title').value = title;
-
-    // Fetch authors and select the first one
-    const authors = await fetchData('/api/authors');
-    if (!authors || authors.length === 0) {
-        showError('books', 'No authors found. Please add an author first.');
-        return;
-    }
-    document.getElementById('book-author').value = authors[0].id;
-
-    // Fetch libraries and select the first one
-    const libraries = await fetchData('/api/libraries');
-    if (!libraries || libraries.length === 0) {
-        showError('books', 'No libraries found. Please add a library first.');
-        return;
-    }
-    document.getElementById('book-library').value = libraries[0].id;
-
-    window.scrollTo(0, document.body.scrollHeight);
-
-    await saveInitialBookState();
-}
-
-async function saveInitialBookState() {
-    const title = document.getElementById('new-book-title').value;
-    const authorId = document.getElementById('book-author').value;
-    const libraryId = document.getElementById('book-library').value;
-
-    if (!title || !authorId || !libraryId) {
-        showError('books', 'Title, author, and library are required.');
-        return;
-    }
-
-    const newBook = {
-        title: title,
-        authorId: authorId,
-        libraryId: libraryId,
-        status: 'ACTIVE'
-    };
-
-    try {
-        const savedBook = await postData('/api/books', newBook);
-        await editBook(savedBook.id);
-    } catch (error) {
-        showError('books', 'Failed to save initial book state: ' + error.message);
     }
 }
 
