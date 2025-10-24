@@ -65,7 +65,7 @@ echo "Setting database password..."
 gcloud sql users set-password postgres \
   --instance=$CLOUD_SQL_INSTANCE_NAME \
   --password="$DB_PASSWORD" \
-  --quiet
+  --quiet || echo "Don't need to set the password today."
 
 # Configure Docker to use GCP Artifact Registry
 echo "Configuring Docker for Artifact Registry..."

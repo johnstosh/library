@@ -210,10 +210,31 @@ function showMainContent(roles) {
     }
 }
 
+const sectionConfig = {
+    'libraries': { load: loadLibraries, reset: null },
+    'authors': { load: loadAuthors, reset: resetAuthorForm },
+    'books': { load: loadBooks, reset: resetBookForm },
+    'search': { load: null, reset: null },
+    'library-card': { load: loadApplied, reset: null },
+    'users': 'users',
+    'loans': { load: loadLoans, reset: null },
+    'test-data': { load: loadTestDataStats, reset: null },
+    'settings': { load: loadSettings, reset: null }
+};
+
 function showSection(sectionId, event) {
     const currentActiveButton = document.querySelector('#section-menu button.active');
-    if (currentActiveButton && currentActiveButton.textContent === 'Books' && sectionId !== 'books') {
-        resetBookForm();
+    const newActiveButton = event ? event.target.closest('button') : document.querySelector(`#section-menu button[onclick*="'${sectionId}'"]`);
+
+    // Reset forms when navigating away
+    if (currentActiveButton) {
+        const currentSectionId = currentActiveButton.getAttribute('onclick').match(/'([^']+)'/)[1];
+        if (currentSectionId !== sectionId) {
+            const config = sectionConfig[currentSectionId];
+            if (config && config.reset) {
+                config.reset();
+            }
+        }
     }
 
     // If not logged in and showing a section, hide login and show main content
@@ -222,54 +243,33 @@ function showSection(sectionId, event) {
         document.getElementById('main-content').style.display = 'block';
     }
 
-    // Hide all sections forcefully
+    // Hide all sections and show the target one
     document.querySelectorAll('.section').forEach(section => {
         section.style.setProperty('display', 'none', 'important');
     });
-    // Show the selected section forcefully
     const targetSection = document.getElementById(sectionId + '-section');
     if (targetSection) {
         targetSection.style.setProperty('display', 'block', 'important');
     }
 
-    if (sectionId === 'test-data') {
-        loadTestDataStats();
+    // Load data and reset form for the section
+    const config = sectionConfig[sectionId];
+    if (config) {
+        if (currentActiveButton === newActiveButton && config.reset) {
+            config.reset();
+        }
+        if (config.load) {
+            config.load();
+        }
     }
-    if (sectionId === 'library-card') {
-        loadApplied();
-    }
-    if (sectionId === 'settings') {
-        loadSettings();
-    }
-    if (sectionId === 'users') {
-        loadUsers();
-    }
-    if (sectionId === 'loans') {
-        loadLoans();
-    }
-    if (sectionId === 'books') {
-        resetBookForm();
-        loadBooks();
-    }
-    if (sectionId === 'authors') {
-        loadAuthors();
-        resetAuthorForm();
-    }
+
+
     // Update active button
     document.querySelectorAll('#section-menu button').forEach(btn => {
         btn.classList.remove('active');
     });
-    if (event) {
-        const clickedButton = event.target.closest('button');
-        if (clickedButton) {
-            clickedButton.classList.add('active');
-        }
-    } else {
-        // If no event, activate the button corresponding to the sectionId
-        const activeButton = document.querySelector(`#section-menu button[onclick*="'${sectionId}'"]`);
-        if (activeButton) {
-            activeButton.classList.add('active');
-        }
+    if (newActiveButton) {
+        newActiveButton.classList.add('active');
     }
 
     // Hide the navbar on mobile after a menu item is clicked

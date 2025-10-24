@@ -8,6 +8,16 @@ async function loadBooks() {
             row.setAttribute('data-test', 'book-item');
             row.setAttribute('data-entity-id', book.id);
 
+            const photoCell = document.createElement('td');
+            if (book.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${book.firstPhotoId}/image`;
+                img.style.width = '50px';
+                img.setAttribute('data-test', 'book-thumbnail');
+                photoCell.appendChild(img);
+            }
+            row.appendChild(photoCell);
+
             const titleCell = document.createElement('td');
             const titleSpan = document.createElement('span');
             titleSpan.setAttribute('data-test', 'book-title');
@@ -345,6 +355,8 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
     const formData = new FormData();
     formData.append('file', file);
 
+    document.body.style.cursor = 'wait';
+
     try {
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
@@ -358,9 +370,12 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
         }
         event.target.value = '';
         clearError('books');
+        document.getElementById('book-photos-container').scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
         event.target.value = '';
+    } finally {
+        document.body.style.cursor = 'default';
     }
 });
 
