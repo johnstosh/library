@@ -167,26 +167,53 @@ function displayBookPhotos(photos, bookId) {
 
     if (photos && photos.length > 0) {
         photosContainer.style.display = 'block';
+        photosDiv.className = 'book-photo-thumbnails';
         photos.forEach(photo => {
-            const photoWrapper = document.createElement('div');
-            photoWrapper.className = 'book-photo-wrapper';
-            photoWrapper.setAttribute('data-photo-id', photo.id);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.setAttribute('data-test', 'delete-photo-btn');
-            deleteBtn.textContent = '🗑️';
-            deleteBtn.title = 'Delete Photo';
-            deleteBtn.className = 'delete-photo-icon';
-            deleteBtn.onclick = () => deleteBookPhoto(bookId, photo.id);
+            const thumbnail = document.createElement('div');
+            thumbnail.className = 'book-photo-thumbnail';
+            thumbnail.setAttribute('data-photo-id', photo.id);
 
             const img = document.createElement('img');
             img.src = photo.url;
-            img.style.width = '60%';
             img.setAttribute('data-test', 'book-photo');
+            if (photo.rotation && photo.rotation !== 0) {
+                img.style.transform = `rotate(${photo.rotation}deg)`;
+            }
+            thumbnail.appendChild(img);
 
-            photoWrapper.appendChild(deleteBtn);
-            photoWrapper.appendChild(img);
-            photosDiv.appendChild(photoWrapper);
+            // Rotate CCW button (upper left) - arrow circle pointing left
+            const rotateCcwBtn = document.createElement('button');
+            rotateCcwBtn.className = 'photo-overlay-btn rotate-ccw-btn';
+            rotateCcwBtn.innerHTML = '↺';
+            rotateCcwBtn.title = 'Rotate counterclockwise 90 degrees';
+            rotateCcwBtn.onclick = () => rotatePhotoCCW(bookId, photo.id);
+            thumbnail.appendChild(rotateCcwBtn);
+
+            // Rotate CW button (upper right) - arrow circle pointing right
+            const rotateCwBtn = document.createElement('button');
+            rotateCwBtn.className = 'photo-overlay-btn rotate-cw-btn';
+            rotateCwBtn.innerHTML = '↻';
+            rotateCwBtn.title = 'Rotate clockwise 90 degrees';
+            rotateCwBtn.onclick = () => rotatePhotoCW(bookId, photo.id);
+            thumbnail.appendChild(rotateCwBtn);
+
+            // Delete button (top center, between rotates)
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'photo-overlay-btn delete-btn';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = 'Delete Photo';
+            deleteBtn.onclick = () => deleteBookPhoto(bookId, photo.id);
+            thumbnail.appendChild(deleteBtn);
+
+            // Edit button (lower left)
+            const editBtn = document.createElement('button');
+            editBtn.className = 'photo-overlay-btn edit-btn';
+            editBtn.innerHTML = '✏️';
+            editBtn.title = 'Edit Photo';
+            editBtn.onclick = () => editPhoto(bookId, photo.id);
+            thumbnail.appendChild(editBtn);
+
+            photosDiv.appendChild(thumbnail);
         });
     } else {
         photosContainer.style.display = 'none';
@@ -197,9 +224,9 @@ async function deleteBookPhoto(bookId, photoId) {
     if (!confirm('Are you sure you want to delete this photo?')) return;
     try {
         await deleteData(`/api/books/${bookId}/photos/${photoId}`);
-        const photoWrapper = document.querySelector(`.book-photo-wrapper[data-photo-id='${photoId}']`);
-        if (photoWrapper) {
-            photoWrapper.remove();
+        const thumbnail = document.querySelector(`.book-photo-thumbnail[data-photo-id='${photoId}']`);
+        if (thumbnail) {
+            thumbnail.remove();
         }
         const photosDiv = document.getElementById('book-photos');
         if (photosDiv.childElementCount === 0) {
@@ -208,6 +235,45 @@ async function deleteBookPhoto(bookId, photoId) {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to delete photo: ' + error.message);
+    }
+}
+
+async function rotatePhotoCCW(bookId, photoId) {
+    try {
+        await putData(`/api/books/${bookId}/photos/${photoId}/rotate-ccw`, {}, false);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to rotate photo counterclockwise: ' + error.message);
+    }
+}
+
+async function rotatePhotoCW(bookId, photoId) {
+    try {
+        await putData(`/api/books/${bookId}/photos/${photoId}/rotate-cw`, {}, false);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to rotate photo clockwise: ' + error.message);
+    }
+}
+
+async function editPhoto(bookId, photoId) {
+    // For now, since PhotoDto fields are not specified in UI, prompt for a potential field like caption
+    // Assuming PhotoDto has a 'caption' field; adjust as needed
+    const caption = prompt('Enter new caption for the photo (or leave blank):');
+    if (caption === null) return; // Cancelled
+
+    try {
+        const photoDto = { caption: caption || null };
+        await putData(`/api/books/${bookId}/photos/${photoId}`, photoDto);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to update photo: ' + error.message);
     }
 }
 

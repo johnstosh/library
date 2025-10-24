@@ -124,4 +124,22 @@ class BookControllerTest {
                         .file(file))
                 .andExpect(status().isCreated());
     }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void rotatePhotoCW() throws Exception {
+        doNothing().when(photoService).rotatePhoto(eq(1L), eq(true));
+
+        mockMvc.perform(put("/api/books/1/photos/1/rotate-cw"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void rotatePhotoCCW() throws Exception {
+        doNothing().when(photoService).rotatePhoto(eq(1L), eq(false));
+
+        mockMvc.perform(put("/api/books/1/photos/1/rotate-ccw"))
+                .andExpect(status().isOk());
+    }
 }

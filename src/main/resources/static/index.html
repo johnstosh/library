@@ -150,10 +150,6 @@
                 <tbody id="book-list-body" data-test="book-list-body">
                 </tbody>
             </table>
-            <div id="book-photos-container" class="mb-3" style="display: none;" data-test="book-photos-container">
-                <h3 data-test="book-photos-header">Book Photos</h3>
-                <div id="book-photos" data-test="book-photos"></div>
-            </div>
             <div class="librarian-only" data-test="books-form">
                 <div class="mb-3">
                     <label for="new-book-title" class="form-label">Book Title:</label>
@@ -204,6 +200,10 @@
                 <button id="cancel-book-btn" class="btn btn-secondary mb-3" onclick="resetBookForm()" data-test="cancel-book-btn" style="display: none;">Cancel</button>
                 <button id="add-photo-btn" class="btn btn-secondary mb-3" onclick="addPhoto()" data-test="add-photo-btn" style="display: none;">Add Photo</button>
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
+                <div id="book-photos-container" class="mb-3" style="display: none;" data-test="book-photos-container">
+                    <h3 data-test="book-photos-header">Book Photos</h3>
+                    <div id="book-photos" data-test="book-photos"></div>
+                </div>
             </div>
         </div>
 

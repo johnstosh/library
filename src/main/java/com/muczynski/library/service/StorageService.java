@@ -34,4 +34,13 @@ public class StorageService {
             throw new RuntimeException("Failed to store file.", e);
         }
     }
+
+    public void delete(String filename) {
+        try {
+            Path filePath = rootLocation.resolve(filename);
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete file.", e);
+        }
+    }
 }

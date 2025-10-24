@@ -13,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/books")
@@ -91,5 +90,19 @@ public class BookController {
     public ResponseEntity<Void> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
         photoService.deletePhoto(photoId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{bookId}/photos/{photoId}/rotate-cw")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+        photoService.rotatePhoto(photoId, true);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{bookId}/photos/{photoId}/rotate-ccw")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+        photoService.rotatePhoto(photoId, false);
+        return ResponseEntity.ok().build();
     }
 }

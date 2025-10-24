@@ -320,7 +320,7 @@ async function postData(url, data, isFormData = false, expectJson = true) {
     return response;
 }
 
-async function putData(url, data) {
+async function putData(url, data, expectJson = true) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {
         'Content-Type': 'application/json'
@@ -350,7 +350,10 @@ async function putData(url, data) {
         }
         throw new Error(errorMsg);
     }
-    return response.json();
+    if (expectJson) {
+        return response.json();
+    }
+    return response;
 }
 
 async function deleteData(url) {

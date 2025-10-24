@@ -30,6 +30,8 @@ public class PhotoService {
         Photo photo = new Photo();
         photo.setBook(book);
         photo.setUrl("/uploads/" + filename);
+        photo.setCaption("");
+        photo.setRotation(0);
         return photoMapper.toDto(photoRepository.save(photo));
     }
 
@@ -45,12 +47,29 @@ public class PhotoService {
     public PhotoDto updatePhoto(Long photoId, PhotoDto photoDto) {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        photo.setUrl(photoDto.getUrl());
+        if (photoDto.getCaption() != null) {
+            photo.setCaption(photoDto.getCaption());
+        }
         return photoMapper.toDto(photoRepository.save(photo));
     }
 
     @Transactional
     public void deletePhoto(Long photoId) {
-        photoRepository.deleteById(photoId);
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new RuntimeException("Photo not found"));
+        String filename = photo.getUrl().replace("/uploads/", "");
+        storageService.delete(filename);
+        photoRepository.delete(photo);
+    }
+
+    @Transactional
+    public void rotatePhoto(Long photoId, boolean clockwise) {
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new RuntimeException("Photo not found"));
+        int delta = clockwise ? 90 : -90;
+        int currentRotation = photo.getRotation();
+        int newRotation = ((currentRotation + delta) % 360 + 360) % 360;
+        photo.setRotation(newRotation);
+        photoRepository.save(photo);
     }
 }

@@ -14,6 +14,10 @@ public class Photo {
 
     private String url;
 
+    private String caption;
+
+    private int rotation;
+
     @ManyToOne
     @JoinColumn(name = "book_id")
     private Book book;
