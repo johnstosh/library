@@ -216,6 +216,9 @@ public class BookService {
                 dto.setAuthorId(authorId);
             } catch (Exception e) {
                 logger.warn("Failed to generate book metadata from AI: {}", e.getMessage());
+                if (e.getMessage().contains("xAI API key not configured")) {
+                    throw new RuntimeException("xAI API key is required to generate book metadata from photo. Please set it in your user settings.");
+                }
                 handleRandomAuthor(dto);
             }
         } else {

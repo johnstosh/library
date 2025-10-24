@@ -312,12 +312,18 @@ async function fetchData(url) {
         } else {
             errorMsg = `HTTP error! status: ${response.status}`;
             try {
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    errorMsg = errorData.message;
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                    if (errorData && typeof errorData === 'object' && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (parseErr) {
+                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
                 }
-            } catch (e) {
-                // Ignore, use generic message
+            } catch (textErr) {
+                // Use generic if text fails
             }
         }
         throw new Error(errorMsg);
@@ -356,18 +362,28 @@ async function postData(url, data, isFormData = false, expectJson = true) {
         } else {
             errorMsg = `HTTP error! status: ${response.status}`;
             try {
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    errorMsg = errorData.message;
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                    if (errorData && typeof errorData === 'object' && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (parseErr) {
+                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
                 }
-            } catch (e) {
-                // Ignore, use generic message
+            } catch (textErr) {
+                // Use generic if text fails
             }
         }
         throw new Error(errorMsg);
     }
     if (expectJson) {
-        return response.json();
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        }
+        return {}; // Empty object if not JSON
     }
     return response;
 }
@@ -392,18 +408,28 @@ async function putData(url, data, expectJson = true) {
         } else {
             errorMsg = `HTTP error! status: ${response.status}`;
             try {
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    errorMsg = errorData.message;
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                    if (errorData && typeof errorData === 'object' && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (parseErr) {
+                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
                 }
-            } catch (e) {
-                // Ignore, use generic message
+            } catch (textErr) {
+                // Use generic if text fails
             }
         }
         throw new Error(errorMsg);
     }
     if (expectJson) {
-        return response.json();
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        }
+        return {}; // Empty object if not JSON
     }
     return response;
 }
@@ -425,12 +451,18 @@ async function deleteData(url) {
         } else {
             errorMsg = `HTTP error! status: ${response.status}`;
             try {
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    errorMsg = errorData.message;
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                    if (errorData && typeof errorData === 'object' && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (parseErr) {
+                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
                 }
-            } catch (e) {
-                // Ignore, use generic message
+            } catch (textErr) {
+                // Use generic if text fails
             }
         }
         throw new Error(errorMsg);

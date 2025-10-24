@@ -151,7 +151,7 @@ async function editBook(id) {
 
 async function generateBookByPhoto(bookId) {
     try {
-        const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, false);
+        const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
         await populateBookDropdowns();
         document.getElementById('new-book-title').value = updatedBook.title || '';
         document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
@@ -163,7 +163,7 @@ async function generateBookByPhoto(bookId) {
         document.getElementById('new-book-status').value = updatedBook.status || 'ACTIVE';
         document.getElementById('book-author').value = updatedBook.authorId || '';
         document.getElementById('book-library').value = updatedBook.libraryId || '';
-        showSuccess('books', 'Book metadata generated successfully using AI!');
+        showSuccess('books', 'Book metadata generated successfully using AI');
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
