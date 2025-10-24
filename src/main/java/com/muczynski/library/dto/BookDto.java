@@ -18,4 +18,5 @@ public class BookDto {
     private BookStatus status;
     private Long authorId;
     private Long libraryId;
+    private Long firstPhotoId;
 }

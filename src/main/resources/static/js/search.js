@@ -34,25 +34,53 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
         booksHeader.textContent = `Books ${startBook} - ${endBook}`;
         resultsDiv.appendChild(booksHeader);
 
-        const booksList = document.createElement('ul');
-        booksList.className = 'list-group mb-3';
-        booksList.setAttribute('data-test', 'search-books-list');
-        books.forEach((book, index) => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.setAttribute('data-test', 'search-book-item');
-            const span = document.createElement('span');
-            span.textContent = `${startBook + index}. ${book.title}`;
-            li.appendChild(span);
+        const table = document.createElement('table');
+        table.className = 'table';
+        table.setAttribute('data-test', 'search-book-table');
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th scope="col">Photo</th>
+                <th scope="col">Book</th>
+                <th scope="col">Actions</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        const tableBody = document.createElement('tbody');
+        tableBody.setAttribute('data-test', 'search-book-list-body');
+        books.forEach(book => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-test', 'search-book-item');
+
+            const photoCell = document.createElement('td');
+            if (book.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
+                img.style.width = '50px';
+                img.setAttribute('data-test', 'book-thumbnail');
+                photoCell.appendChild(img);
+            }
+            row.appendChild(photoCell);
+
+            const titleCell = document.createElement('td');
+            titleCell.textContent = book.title;
+            row.appendChild(titleCell);
+
+            const actionsCell = document.createElement('td');
             const viewBtn = document.createElement('button');
-            viewBtn.className = 'btn btn-sm btn-outline-primary ms-2';
+            viewBtn.className = 'btn btn-sm btn-outline-primary';
             viewBtn.textContent = 'View';
             viewBtn.setAttribute('data-test', 'view-search-book-btn');
             viewBtn.onclick = () => viewBook(book.id);
-            li.appendChild(viewBtn);
-            booksList.appendChild(li);
+            actionsCell.appendChild(viewBtn);
+            row.appendChild(actionsCell);
+
+            tableBody.appendChild(row);
         });
-        resultsDiv.appendChild(booksList);
+        table.appendChild(tableBody);
+        resultsDiv.appendChild(table);
     }
 
     if (authors.length > 0) {

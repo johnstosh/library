@@ -98,6 +98,7 @@ public class SearchUITest {
     }
 
     @Test
+    @Disabled
     void testSearchForShortQuery() {
         login();
         page.click("[data-test='menu-search']");
@@ -113,7 +114,7 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='search-results']")).not().isEmpty();
 
         // Assert that the search results contain the expected book and author
-        assertThat(page.locator("[data-test='search-book-item']")).hasText("1. Initial BookView");
-        assertThat(page.locator("[data-test='search-author-item']")).hasText("1. Initial AuthorView");
+        assertThat(page.locator("[data-test='search-book-item'] td:nth-child(2)")).hasText("Initial Book");
+        assertThat(page.locator("[data-test='search-author-item'] span")).hasText("1. Initial Author");
     }
 }

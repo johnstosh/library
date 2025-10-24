@@ -9,8 +9,14 @@ import com.muczynski.library.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.util.Pair;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -84,5 +90,37 @@ public class PhotoService {
     @Transactional(readOnly = true)
     public Photo getPhotoById(Long id) {
         return photoRepository.findById(id).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new RuntimeException("Photo not found"));
+
+        try {
+            BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
+            if (originalImage == null) {
+                return null;
+            }
+
+            int originalWidth = originalImage.getWidth();
+            int originalHeight = originalImage.getHeight();
+            int newHeight = (int) Math.round((double) originalHeight / originalWidth * width);
+
+            Image scaledImage = originalImage.getScaledInstance(width, newHeight, Image.SCALE_SMOOTH);
+            BufferedImage bufferedScaledImage = new BufferedImage(width, newHeight, originalImage.getType());
+
+            Graphics2D g2d = bufferedScaledImage.createGraphics();
+            g2d.drawImage(scaledImage, 0, 0, null);
+            g2d.dispose();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
+            ImageIO.write(bufferedScaledImage, formatName, baos);
+            return Pair.of(baos.toByteArray(), photo.getContentType());
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create thumbnail", e);
+        }
     }
 }

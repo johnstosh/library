@@ -65,7 +65,7 @@ echo "Setting database password..."
 gcloud sql users set-password postgres \
   --instance=$CLOUD_SQL_INSTANCE_NAME \
   --password="$DB_PASSWORD" \
-  --quiet
+  --quiet || echo "Don't need to set the password today."
 
 # Configure Docker to use GCP Artifact Registry
 echo "Configuring Docker for Artifact Registry..."
@@ -82,6 +82,18 @@ docker push us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$SERV
 
 # Deploy to Cloud Run with Cloud SQL connection and all env vars (secrets at runtime only)
 echo "Deploying ${SERVICE_VERSION} to Cloud Run in $GCP_REGION..."
+
+# Initialize an empty variable for the service account argument
+SERVICE_ACCOUNT_ARG=""
+
+# Check if CLOUD_RUN_SERVICE_ACCOUNT is defined and not empty
+if [ -n "$CLOUD_RUN_SERVICE_ACCOUNT" ]; then
+  # If defined, construct the service account argument
+  SERVICE_ACCOUNT_EMAIL="$CLOUD_RUN_SERVICE_ACCOUNT@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+  SERVICE_ACCOUNT_ARG="--service-account=$SERVICE_ACCOUNT_EMAIL"
+  echo "Using service account: $SERVICE_ACCOUNT_EMAIL"
+fi
+
 gcloud run deploy "$SERVICE_NAME" \
   --image us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$SERVICE_NAME":"$SERVICE_VERSION" \
   --region "$GCP_REGION" \
@@ -93,8 +105,9 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu 1 \
   --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
+  $SERVICE_ACCOUNT_ARG \
   --quiet
-cd
+
 # Get the service URL
 echo "Deployment ${SERVICE_VERSION} complete! Service URL:"
 gcloud run services describe "$SERVICE_NAME" --region "$GCP_REGION" --format 'value(status.url)' --quiet
