@@ -11,7 +11,7 @@ async function loadBooks() {
             const photoCell = document.createElement('td');
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${book.firstPhotoId}/image`;
+                img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
                 img.style.width = '50px';
                 img.setAttribute('data-test', 'book-thumbnail');
                 photoCell.appendChild(img);
