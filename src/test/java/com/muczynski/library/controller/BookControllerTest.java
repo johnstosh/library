@@ -117,7 +117,6 @@ class BookControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test image".getBytes());
         PhotoDto returnedDto = new PhotoDto();
         returnedDto.setId(1L);
-        returnedDto.setUrl("/uploads/test.jpg");
         when(photoService.addPhoto(eq(1L), any(MultipartFile.class))).thenReturn(returnedDto);
 
         mockMvc.perform(multipart("/api/books/1/photos")

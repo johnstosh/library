@@ -2,8 +2,6 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
-import com.muczynski.library.domain.Book;
-import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.mapper.PhotoMapper;
 import com.muczynski.library.repository.BookRepository;
@@ -34,14 +32,11 @@ public class PhotoServiceTest {
     @Mock
     private PhotoMapper photoMapper;
 
-    @Mock
-    private StorageService storageService;
-
     @InjectMocks
     private PhotoService photoService;
 
     @Test
-    public void testAddPhoto() {
+    public void testAddPhoto() throws Exception {
         // Given
         Long bookId = 1L;
         MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test data".getBytes());
@@ -51,14 +46,14 @@ public class PhotoServiceTest {
 
         Photo photo = new Photo();
         photo.setBook(book);
-        photo.setUrl("/uploads/test.jpg");
+        photo.setContentType("image/jpeg");
+        photo.setImage(file.getBytes());
 
         PhotoDto expectedPhotoDto = new PhotoDto();
         expectedPhotoDto.setId(1L);
-        expectedPhotoDto.setUrl("/uploads/test.jpg");
+        expectedPhotoDto.setContentType("image/jpeg");
 
         when(bookRepository.findById(bookId)).thenReturn(Optional.of(book));
-        when(storageService.store(any(MultipartFile.class))).thenReturn("test.jpg");
         when(photoRepository.save(any(Photo.class))).thenReturn(photo);
         when(photoMapper.toDto(any(Photo.class))).thenReturn(expectedPhotoDto);
 
@@ -66,6 +61,6 @@ public class PhotoServiceTest {
         PhotoDto result = photoService.addPhoto(bookId, file);
 
         // Then
-        assertEquals(expectedPhotoDto.getUrl(), result.getUrl());
+        assertEquals(expectedPhotoDto.getContentType(), result.getContentType());
     }
 }

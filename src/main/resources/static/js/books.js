@@ -64,6 +64,8 @@ function resetBookForm() {
 
     document.getElementById('add-photo-btn').style.display = 'none';
     document.getElementById('cancel-book-btn').style.display = 'none';
+    document.getElementById('book-by-photo-btn').style.display = 'none';
+    document.getElementById('book-by-photo-btn').onclick = createBookByPhoto;
     document.getElementById('book-photos-container').style.display = 'none';
     showBookList(true);
 }
@@ -117,6 +119,30 @@ async function editBook(id) {
 
     const photos = await fetchData(`/api/books/${id}/photos`);
     displayBookPhotos(photos, id);
+    if (photos && photos.length > 0) {
+        document.getElementById('book-by-photo-btn').style.display = 'inline-block';
+        document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(id);
+    }
+}
+
+async function generateBookByPhoto(bookId) {
+    try {
+        const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
+        document.getElementById('new-book-title').value = updatedBook.title || '';
+        document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
+        document.getElementById('new-book-publisher').value = updatedBook.publisher || '';
+        document.getElementById('new-book-summary').value = updatedBook.plotSummary || '';
+        document.getElementById('new-book-related').value = updatedBook.relatedWorks || '';
+        document.getElementById('new-book-description').value = updatedBook.detailedDescription || '';
+        document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary || '';
+        document.getElementById('new-book-status').value = updatedBook.status || 'ACTIVE';
+        document.getElementById('book-author').value = updatedBook.authorId || '';
+        document.getElementById('book-library').value = updatedBook.libraryId || '';
+        showBulkSuccess('Book metadata generated successfully using AI!');
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to generate book metadata: ' + error.message);
+    }
 }
 
 async function updateBook(id) {
@@ -174,8 +200,8 @@ function displayBookPhotos(photos, bookId) {
             thumbnail.setAttribute('data-photo-id', photo.id);
 
             const img = document.createElement('img');
-            img.src = photo.url;
             img.setAttribute('data-test', 'book-photo');
+            img.src = `/api/photos/${photo.id}/image`;
             if (photo.rotation && photo.rotation !== 0) {
                 img.style.transform = `rotate(${photo.rotation}deg)`;
             }
@@ -231,6 +257,7 @@ async function deleteBookPhoto(bookId, photoId) {
         const photosDiv = document.getElementById('book-photos');
         if (photosDiv.childElementCount === 0) {
             document.getElementById('book-photos-container').style.display = 'none';
+            document.getElementById('book-by-photo-btn').style.display = 'none';
         }
         clearError('books');
     } catch (error) {
@@ -297,6 +324,13 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
         displayBookPhotos(photos, bookId);
+        if (photos && photos.length > 0) {
+            document.getElementById('book-by-photo-btn').style.display = 'inline-block';
+            const currentId = document.getElementById('current-book-id').value;
+            if (currentId) {
+                document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(currentId);
+            }
+        }
         event.target.value = '';
         clearError('books');
     } catch (error) {

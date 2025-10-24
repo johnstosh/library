@@ -199,6 +199,7 @@
                 <button id="add-book-btn" class="btn btn-primary mb-3" onclick="addBook()" data-test="add-book-btn">Add Book</button>
                 <button id="cancel-book-btn" class="btn btn-secondary mb-3" onclick="resetBookForm()" data-test="cancel-book-btn" style="display: none;">Cancel</button>
                 <button id="add-photo-btn" class="btn btn-secondary mb-3" onclick="addPhoto()" data-test="add-photo-btn" style="display: none;">Add Photo</button>
+                <button id="book-by-photo-btn" class="btn btn-secondary mb-3" onclick="createBookByPhoto()" data-test="book-by-photo-btn" style="display: none;">Book-by-Photo</button>
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
                 <div id="book-photos-container" class="mb-3" style="display: none;" data-test="book-photos-container">
                     <h3 data-test="book-photos-header">Book Photos</h3>
@@ -347,16 +348,16 @@
             <form id="settings-form" onsubmit="saveSettings(event)">
                 <div class="mb-3">
                     <label for="user-name" class="form-label">Name</label>
-                    <input type="text" id="user-name" class="form-control" data-test="user-name">
+                    <input type="text" id="user-name" class="form-control" autocomplete="name" data-test="user-name">
                 </div>
                 <div class="mb-3">
                     <label for="user-password" class="form-label">New Password</label>
-                    <input type="password" id="user-password" class="form-control" data-test="user-password">
+                    <input type="password" id="user-password" class="form-control" autocomplete="new-password" data-test="user-password">
                     <div class="form-text">Leave blank to keep your current password.</div>
                 </div>
                 <div class="mb-3">
                     <label for="xai-api-key" class="form-label">XAI API Key (for AI features)</label>
-                    <input type="password" id="xai-api-key" class="form-control" placeholder="Enter your xAI API key" data-test="xai-api-key">
+                    <input type="password" id="xai-api-key" class="form-control" autocomplete="new-password" placeholder="Enter your xAI API key" data-test="xai-api-key">
                     <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
                 </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save Settings</button>

@@ -2,6 +2,73 @@ console.log('app.js loaded');
 
 let isLibrarian = false;
 
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showError(sectionId, message) {
+    let errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.setAttribute('data-test', 'form-error');
+        errorDiv.style.color = 'red';
+        errorDiv.style.display = 'block';
+        const section = document.getElementById(`${sectionId}-section`);
+        if (section) {
+            section.insertBefore(errorDiv, section.firstChild.nextSibling); // After h2
+        }
+    }
+    errorDiv.textContent = message;
+    if (['authors', 'books', 'users'].includes(sectionId)) {
+        window.scrollTo(0, 0);
+    }
+}
+
+function clearError(sectionId) {
+    const errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+function showBulkSuccess(textareaId) {
+    let successDiv = document.querySelector(`#${textareaId} + [data-test="bulk-import-success"]`);
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.setAttribute('data-test', 'bulk-import-success');
+        successDiv.style.color = 'green';
+        successDiv.textContent = 'Bulk import successful.';
+        successDiv.style.display = 'block';
+    }
+    const textarea = document.getElementById(textareaId);
+    if (textarea) {
+        textarea.insertAdjacentElement('afterend', successDiv);
+    }
+    setTimeout(() => {
+        if (successDiv) successDiv.remove();
+    }, 3000);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded');
     // Add submit event listener to login form for debugging
@@ -36,21 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 });
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
 
 async function checkAuthentication() {
     console.log('Checking authentication...');
@@ -384,58 +436,6 @@ async function deleteData(url) {
         throw new Error(errorMsg);
     }
     return response;
-}
-
-function showError(sectionId, message) {
-    let errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
-    if (!errorDiv) {
-        errorDiv = document.createElement('div');
-        errorDiv.setAttribute('data-test', 'form-error');
-        errorDiv.style.color = 'red';
-        errorDiv.style.display = 'block';
-        const section = document.getElementById(`${sectionId}-section`);
-        if (section) {
-            section.insertBefore(errorDiv, section.firstChild.nextSibling); // After h2
-        }
-    }
-    errorDiv.textContent = message;
-    if (['authors', 'books', 'users'].includes(sectionId)) {
-        window.scrollTo(0, 0);
-    }
-}
-
-function clearError(sectionId) {
-    const errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
-    if (errorDiv) {
-        errorDiv.remove();
-    }
-}
-
-function showBulkSuccess(textareaId) {
-    let successDiv = document.querySelector(`#${textareaId} + [data-test="bulk-import-success"]`);
-    if (!successDiv) {
-        successDiv = document.createElement('div');
-        successDiv.setAttribute('data-test', 'bulk-import-success');
-        successDiv.style.color = 'green';
-        successDiv.textContent = 'Bulk import successful.';
-        successDiv.style.display = 'block';
-    }
-    const textarea = document.getElementById(textareaId);
-    if (textarea) {
-        textarea.insertAdjacentElement('afterend', successDiv);
-    }
-    setTimeout(() => {
-        if (successDiv) successDiv.remove();
-    }, 3000);
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
 }
 
 async function applyForCard() {

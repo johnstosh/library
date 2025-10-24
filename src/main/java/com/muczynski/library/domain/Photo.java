@@ -12,7 +12,11 @@ public class Photo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String url;
+    @Lob
+    @Column(length = Integer.MAX_VALUE)
+    private byte[] image;
+
+    private String contentType;
 
     private String caption;
 

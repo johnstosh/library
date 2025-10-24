@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,19 +21,22 @@ public class PhotoService {
     private final PhotoRepository photoRepository;
     private final BookRepository bookRepository;
     private final PhotoMapper photoMapper;
-    private final StorageService storageService;
 
     @Transactional
     public PhotoDto addPhoto(Long bookId, MultipartFile file) {
-        String filename = storageService.store(file);
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
-        Photo photo = new Photo();
-        photo.setBook(book);
-        photo.setUrl("/uploads/" + filename);
-        photo.setCaption("");
-        photo.setRotation(0);
-        return photoMapper.toDto(photoRepository.save(photo));
+        try {
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+            Photo photo = new Photo();
+            photo.setBook(book);
+            photo.setImage(file.getBytes());
+            photo.setContentType(file.getContentType());
+            photo.setCaption("");
+            photo.setRotation(0);
+            return photoMapper.toDto(photoRepository.save(photo));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store photo data", e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -57,8 +61,6 @@ public class PhotoService {
     public void deletePhoto(Long photoId) {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        String filename = photo.getUrl().replace("/uploads/", "");
-        storageService.delete(filename);
         photoRepository.delete(photo);
     }
 
@@ -71,5 +73,16 @@ public class PhotoService {
         int newRotation = ((currentRotation + delta) % 360 + 360) % 360;
         photo.setRotation(newRotation);
         photoRepository.save(photo);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] getImage(Long photoId) {
+        Photo photo = photoRepository.findById(photoId).orElse(null);
+        return photo != null ? photo.getImage() : null;
+    }
+
+    @Transactional(readOnly = true)
+    public Photo getPhotoById(Long id) {
+        return photoRepository.findById(id).orElse(null);
     }
 }

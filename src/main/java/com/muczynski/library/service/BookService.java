@@ -4,6 +4,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -11,6 +12,9 @@ import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.LoanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +40,9 @@ public class BookService {
 
     @Autowired
     private LoanRepository loanRepository;
+
+    @Autowired
+    private RandomAuthor randomAuthor;
 
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
@@ -95,6 +102,38 @@ public class BookService {
             throw new RuntimeException("Cannot delete book because it is currently checked out with " + loanCount + " loan(s).");
         }
         bookRepository.deleteById(id);
+    }
+
+    public BookDto generateTempBook(Long id) {
+        BookDto dto = getBookById(id);
+        if (dto == null) {
+            throw new RuntimeException("Book not found: " + id);
+        }
+        dto.setTitle("temporary title");
+
+        Author randomAuthorEntity = randomAuthor.create();
+
+        Pageable singlePage = PageRequest.of(0, 1);
+        Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(randomAuthorEntity.getName(), singlePage);
+
+        Long selectedAuthorId;
+        if (!existingAuthors.isEmpty()) {
+            selectedAuthorId = existingAuthors.getContent().get(0).getId();
+        } else {
+            Author savedAuthor = authorRepository.save(randomAuthorEntity);
+            selectedAuthorId = savedAuthor.getId();
+        }
+
+        dto.setAuthorId(selectedAuthorId);
+
+        if (dto.getLibraryId() == null) {
+            List<Library> libraries = libraryRepository.findAll();
+            if (!libraries.isEmpty()) {
+                dto.setLibraryId(libraries.get(0).getId());
+            }
+        }
+
+        return updateBook(id, dto);
     }
 
 }

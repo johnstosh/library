@@ -105,4 +105,11 @@ public class BookController {
         photoService.rotatePhoto(photoId, false);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/{id}/book-by-photo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<BookDto> generateBookByPhoto(@PathVariable Long id) {
+        BookDto updated = bookService.generateTempBook(id);
+        return ResponseEntity.ok(updated);
+    }
 }

@@ -203,5 +203,3 @@ async function populateLoanDropdowns() {
         showError('loans', 'Failed to populate dropdowns: ' + error.message);
     }
 }
-
-populateLoanDropdowns();
