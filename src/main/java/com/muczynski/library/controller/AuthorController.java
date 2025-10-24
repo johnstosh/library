@@ -1,12 +1,15 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.PhotoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -16,6 +19,9 @@ public class AuthorController {
 
     @Autowired
     private AuthorService authorService;
+
+    @Autowired
+    private PhotoService photoService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
@@ -57,4 +63,10 @@ public class AuthorController {
         }
     }
 
+    @PostMapping("/{id}/photos")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<PhotoDto> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
+    }
 }

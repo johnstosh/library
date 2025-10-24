@@ -1,9 +1,11 @@
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.mapper.PhotoMapper;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class PhotoService {
     private final PhotoRepository photoRepository;
     private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
     private final PhotoMapper photoMapper;
 
     @Transactional
@@ -48,6 +51,31 @@ public class PhotoService {
     @Transactional(readOnly = true)
     public List<PhotoDto> getPhotosByBookId(Long bookId) {
         List<Photo> photos = photoRepository.findByBookId(bookId);
+        return photos.stream()
+                .map(photoMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public PhotoDto addPhotoToAuthor(Long authorId, MultipartFile file) {
+        try {
+            Author author = authorRepository.findById(authorId)
+                    .orElseThrow(() -> new RuntimeException("Author not found"));
+            Photo photo = new Photo();
+            photo.setAuthor(author);
+            photo.setImage(file.getBytes());
+            photo.setContentType(file.getContentType());
+            photo.setCaption("");
+            photo.setRotation(0);
+            return photoMapper.toDto(photoRepository.save(photo));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store photo data", e);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PhotoDto> getPhotosByAuthorId(Long authorId) {
+        List<Photo> photos = photoRepository.findByAuthorId(authorId);
         return photos.stream()
                 .map(photoMapper::toDto)
                 .collect(Collectors.toList());
