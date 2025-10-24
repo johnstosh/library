@@ -163,17 +163,25 @@ async function generateBookByPhoto(bookId) {
     document.body.style.cursor = 'wait';
     try {
         const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
+
+        // Intelligently update form fields
+        if (updatedBook.title && updatedBook.title.trim() !== '') document.getElementById('new-book-title').value = updatedBook.title;
+        if (updatedBook.publicationYear) document.getElementById('new-book-year').value = updatedBook.publicationYear;
+        if (updatedBook.publisher && updatedBook.publisher.trim() !== '') document.getElementById('new-book-publisher').value = updatedBook.publisher;
+        if (updatedBook.plotSummary && updatedBook.plotSummary.trim() !== '') document.getElementById('new-book-summary').value = updatedBook.plotSummary;
+        if (updatedBook.relatedWorks && updatedBook.relatedWorks.trim() !== '') document.getElementById('new-book-related').value = updatedBook.relatedWorks;
+        if (updatedBook.detailedDescription && updatedBook.detailedDescription.trim() !== '') document.getElementById('new-book-description').value = updatedBook.detailedDescription;
+        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary;
+        if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
+        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
+        if (updatedBook.libraryId) document.getElementById('book-library').value = updatedBook.libraryId;
+
+        // Repopulate dropdowns to include any new authors
         await populateBookDropdowns();
-        document.getElementById('new-book-title').value = updatedBook.title || '';
-        document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
-        document.getElementById('new-book-publisher').value = updatedBook.publisher || '';
-        document.getElementById('new-book-summary').value = updatedBook.plotSummary || '';
-        document.getElementById('new-book-related').value = updatedBook.relatedWorks || '';
-        document.getElementById('new-book-description').value = updatedBook.detailedDescription || '';
-        document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary || '';
-        document.getElementById('new-book-status').value = updatedBook.status || 'ACTIVE';
-        document.getElementById('book-author').value = updatedBook.authorId || '';
-        document.getElementById('book-library').value = updatedBook.libraryId || '';
+        // Reselect the author, in case the dropdown was repopulated
+        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
+
+
         showSuccess('books', 'Book metadata generated successfully using AI');
         clearError('books');
     } catch (error) {
@@ -381,6 +389,52 @@ async function movePhotoRight(bookId, photoId) {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to move photo right: ' + error.message);
+async function prepareNewBookForPhoto(title) {
+    document.getElementById('new-book-title').value = title;
+
+    // Fetch authors and select the first one
+    const authors = await fetchData('/api/authors');
+    if (!authors || authors.length === 0) {
+        showError('books', 'No authors found. Please add an author first.');
+        return;
+    }
+    document.getElementById('book-author').value = authors[0].id;
+
+    // Fetch libraries and select the first one
+    const libraries = await fetchData('/api/libraries');
+    if (!libraries || libraries.length === 0) {
+        showError('books', 'No libraries found. Please add a library first.');
+        return;
+    }
+    document.getElementById('book-library').value = libraries[0].id;
+
+    window.scrollTo(0, document.body.scrollHeight);
+
+    await saveInitialBookState();
+}
+
+async function saveInitialBookState() {
+    const title = document.getElementById('new-book-title').value;
+    const authorId = document.getElementById('book-author').value;
+    const libraryId = document.getElementById('book-library').value;
+
+    if (!title || !authorId || !libraryId) {
+        showError('books', 'Title, author, and library are required.');
+        return;
+    }
+
+    const newBook = {
+        title: title,
+        authorId: authorId,
+        libraryId: libraryId,
+        status: 'ACTIVE'
+    };
+
+    try {
+        const savedBook = await postData('/api/books', newBook);
+        await editBook(savedBook.id);
+    } catch (error) {
+        showError('books', 'Failed to save initial book state: ' + error.message);
     }
 }
 
@@ -388,7 +442,7 @@ async function addPhoto() {
     document.getElementById('photo-upload').click();
 }
 
-document.getElementById('photo-upload').addEventListener('change', async (event) => {
+async function handlePhotoUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -413,16 +467,21 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
                 document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(currentId);
             }
         }
-        event.target.value = '';
+        event.target.value = ''; // Reset file input
         clearError('books');
-        document.getElementById('book-photos-container').scrollIntoView({ behavior: 'smooth' });
+        // On success, scroll to the bottom to show the new photo
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
-        event.target.value = '';
+        // On error, scroll to the top to show the error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        event.target.value = ''; // Reset file input
     } finally {
         document.body.style.cursor = 'default';
     }
-});
+}
+
+document.getElementById('photo-upload').addEventListener('change', handlePhotoUpload);
 
 async function populateBookDropdowns() {
     try {
