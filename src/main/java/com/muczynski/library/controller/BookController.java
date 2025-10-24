@@ -117,4 +117,18 @@ public class BookController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @PutMapping("/{bookId}/photos/{photoId}/move-left")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
+        photoService.movePhotoLeft(bookId, photoId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{bookId}/photos/{photoId}/move-right")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
+        photoService.movePhotoRight(bookId, photoId);
+        return ResponseEntity.ok().build();
+    }
 }
