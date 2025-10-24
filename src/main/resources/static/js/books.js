@@ -8,6 +8,16 @@ async function loadBooks() {
             row.setAttribute('data-test', 'book-item');
             row.setAttribute('data-entity-id', book.id);
 
+            const photoCell = document.createElement('td');
+            if (book.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${book.firstPhotoId}/image`;
+                img.style.width = '50px';
+                img.setAttribute('data-test', 'book-thumbnail');
+                photoCell.appendChild(img);
+            }
+            row.appendChild(photoCell);
+
             const titleCell = document.createElement('td');
             const titleSpan = document.createElement('span');
             titleSpan.setAttribute('data-test', 'book-title');
