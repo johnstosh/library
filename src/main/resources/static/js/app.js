@@ -445,27 +445,8 @@ async function deleteData(url) {
         headers
     });
     if (!response.ok) {
-        let errorMsg;
-        if (response.status === 401) {
-            errorMsg = "Your login session has timed out. Please log in again.";
-        } else {
-            errorMsg = `HTTP error! status: ${response.status}`;
-            try {
-                const errorText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                    if (errorData && typeof errorData === 'object' && errorData.message) {
-                        errorMsg = errorData.message;
-                    }
-                } catch (parseErr) {
-                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
-                }
-            } catch (textErr) {
-                // Use generic if text fails
-            }
-        }
-        throw new Error(errorMsg);
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP error! status: ${response.status}`);
     }
     return response;
 }

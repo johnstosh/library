@@ -71,3 +71,21 @@ async function deleteAllTestData() {
         showError('test-data', 'Failed to delete test data: ' + error.message);
     }
 }
+
+async function totalPurge() {
+    if (!confirm('Are you sure you want to totally purge the database? This action cannot be undone and will require a server restart.')) {
+        return;
+    }
+
+    try {
+        // Read an existing protected endpoint first to validate session/CSRF
+        await fetchData('/api/libraries');
+
+        await deleteData('/api/test-data/total-purge');
+
+        clearError('test-data');
+        alert('Total purge successful. Please restart the server.');
+    } catch (error) {
+        showError('test-data', 'Failed to purge database: ' + error.message);
+    }
+}

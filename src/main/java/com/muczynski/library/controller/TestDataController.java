@@ -5,6 +5,7 @@ import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.service.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,6 +52,17 @@ public class TestDataController {
     public ResponseEntity<Void> deleteAll() {
         testDataService.deleteTestData();
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/total-purge")
+    public ResponseEntity<String> totalPurge() {
+        try {
+            testDataService.totalPurge();
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Failed to purge database: " + e.getMessage());
+        }
     }
 
     @GetMapping("/stats")
