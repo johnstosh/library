@@ -7,9 +7,12 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface PhotoMapper {
+    @Mapping(source = "book.id", target = "bookId")
+    @Mapping(source = "author.id", target = "authorId")
     PhotoDto toDto(Photo photo);
 
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "book", ignore = true)
+    @Mapping(target = "author", ignore = true)
     Photo toEntity(PhotoDto photoDto);
 }

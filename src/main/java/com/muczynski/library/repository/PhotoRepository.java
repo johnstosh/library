@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByBookId(Long bookId);
+    List<Photo> findByAuthorId(Long authorId);
 }
