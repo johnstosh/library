@@ -236,7 +236,7 @@ function displayBookPhotos(photos, bookId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'book-photo');
-            img.src = `/api/photos/${photo.id}/image`;
+            img.src = `/api/photos/${photo.id}/thumbnail?width=300`;
             if (photo.rotation && photo.rotation !== 0) {
                 img.style.transform = `rotate(${photo.rotation}deg)`;
             }
