@@ -1,6 +1,10 @@
 package com.muczynski.library.service;
 
+import com.muczynski.library.dto.UserDto;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -9,19 +13,36 @@ import java.util.*;
 @Service
 public class AskGrok {
 
+    @Autowired
+    private UserSettingsService userSettingsService;
+
     private final RestTemplate restTemplate;
 
     public AskGrok() {
         this.restTemplate = new RestTemplate();
     }
 
-    public String askAboutPhoto(String photoUrl, String question, String apiKey) {
+    public String askAboutPhoto(byte[] imageBytes, String contentType, String question) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        UserDto userDto = userSettingsService.getUserSettings(username);
+        String apiKey = userDto.getXaiApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new RuntimeException("xAI API key not configured for user: " + username);
+        }
+
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
         textPart.put("text", question);
 
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
+        String base64Image = encoder.encodeToString(imageBytes);
+
         Map<String, Object> imageUrlPart = new HashMap<>();
-        imageUrlPart.put("url", photoUrl);
+        imageUrlPart.put("url", "data:" + contentType + ";base64," + base64Image);
 
         Map<String, Object> imagePart = new HashMap<>();
         imagePart.put("type", "image_url");

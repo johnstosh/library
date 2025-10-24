@@ -87,7 +87,7 @@ function resetBookForm() {
     document.getElementById('add-photo-btn').style.display = 'none';
     document.getElementById('cancel-book-btn').style.display = 'none';
     document.getElementById('book-by-photo-btn').style.display = 'none';
-    document.getElementById('book-by-photo-btn').onclick = createBookByPhoto;
+    document.getElementById('book-by-photo-btn').onclick = null;
     document.getElementById('book-photos-container').style.display = 'none';
     showBookList(true);
 
@@ -151,7 +151,7 @@ async function editBook(id) {
 
 async function generateBookByPhoto(bookId) {
     try {
-        const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
+        const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, false);
         await populateBookDropdowns();
         document.getElementById('new-book-title').value = updatedBook.title || '';
         document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
