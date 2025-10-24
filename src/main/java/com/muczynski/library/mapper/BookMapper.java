@@ -30,6 +30,9 @@ public class BookMapper {
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
         }
+        if (book.getPhotos() != null && !book.getPhotos().isEmpty()) {
+            bookDto.setFirstPhotoId(book.getPhotos().get(0).getId());
+        }
 
         return bookDto;
     }
