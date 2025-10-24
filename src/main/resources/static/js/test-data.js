@@ -65,6 +65,7 @@ async function deleteAllTestData() {
 
         await loadBooks();
         await loadAuthors();
+        await loadTestDataStats();
         clearError('test-data');
     } catch (error) {
         showError('test-data', 'Failed to delete test data: ' + error.message);

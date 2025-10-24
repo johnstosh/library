@@ -45,6 +45,28 @@ function showBookList(show) {
     document.querySelector('[data-test="books-form"]').style.display = show ? 'none' : 'block';
 }
 
+function showSuccess(sectionId, message) {
+    let successDiv = document.querySelector(`#${sectionId}-section [data-test="form-success"]`);
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.setAttribute('data-test', 'form-success');
+        successDiv.style.color = 'green';
+        successDiv.style.display = 'block';
+        const section = document.getElementById(`${sectionId}-section`);
+        if (section) {
+            section.insertBefore(successDiv, section.firstChild.nextSibling);
+        }
+    }
+    successDiv.textContent = message;
+}
+
+function clearSuccess(sectionId) {
+    const successDiv = document.querySelector(`#${sectionId}-section [data-test="form-success"]`);
+    if (successDiv) {
+        successDiv.remove();
+    }
+}
+
 function resetBookForm() {
     document.getElementById('new-book-title').value = '';
     document.getElementById('new-book-year').value = '';
@@ -68,6 +90,8 @@ function resetBookForm() {
     document.getElementById('book-by-photo-btn').onclick = createBookByPhoto;
     document.getElementById('book-photos-container').style.display = 'none';
     showBookList(true);
+
+    clearSuccess('books');
 }
 
 async function addBook() {
@@ -128,6 +152,7 @@ async function editBook(id) {
 async function generateBookByPhoto(bookId) {
     try {
         const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
+        await populateBookDropdowns();
         document.getElementById('new-book-title').value = updatedBook.title || '';
         document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
         document.getElementById('new-book-publisher').value = updatedBook.publisher || '';
@@ -138,7 +163,7 @@ async function generateBookByPhoto(bookId) {
         document.getElementById('new-book-status').value = updatedBook.status || 'ACTIVE';
         document.getElementById('book-author').value = updatedBook.authorId || '';
         document.getElementById('book-library').value = updatedBook.libraryId || '';
-        showBulkSuccess('Book metadata generated successfully using AI!');
+        showSuccess('books', 'Book metadata generated successfully using AI!');
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
