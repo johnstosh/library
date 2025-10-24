@@ -98,18 +98,15 @@ public class TestDataService {
     }
 
     private void purgePostgres() {
-        try {
-            jdbcTemplate.execute("SET session_replication_role = 'replica'");
-            List<String> tableNames = jdbcTemplate.queryForList(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
-                String.class
-            );
-            for (String tableName : tableNames) {
-                jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName + " CASCADE");
-            }
-        } finally {
-            jdbcTemplate.execute("SET session_replication_role = 'origin'");
-        }
+        jdbcTemplate.execute("DROP TABLE IF EXISTS users_roles CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS loan CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS photo CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS book CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS users CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS role CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS author CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS library CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS applied CASCADE");
     }
 
     private void purgeH2() {
