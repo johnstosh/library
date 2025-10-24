@@ -160,6 +160,7 @@ async function editBook(id) {
 }
 
 async function generateBookByPhoto(bookId) {
+    document.body.style.cursor = 'wait';
     try {
         const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
         await populateBookDropdowns();
@@ -177,6 +178,8 @@ async function generateBookByPhoto(bookId) {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
     }
 }
 
