@@ -55,7 +55,7 @@ public class AskGrok {
         message.put("content", content);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", "grok-vision-beta");
+        request.put("model", "grok-4"); // use grok-4 for vision
         request.put("messages", Arrays.asList(message));
         request.put("max_tokens", 300);
         request.put("temperature", 0.7);

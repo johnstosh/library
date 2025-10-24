@@ -3,7 +3,6 @@ package com.muczynski.library.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
-import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
@@ -218,8 +217,9 @@ public class BookService {
                 logger.warn("Failed to generate book metadata from AI: {}", e.getMessage());
                 if (e.getMessage().contains("xAI API key not configured")) {
                     throw new RuntimeException("xAI API key is required to generate book metadata from photo. Please set it in your user settings.");
+                } else {
+                    throw new RuntimeException("Failed to generate book metadata from AI: " + e.getMessage());
                 }
-                handleRandomAuthor(dto);
             }
         } else {
             handleRandomAuthor(dto);

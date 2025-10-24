@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/books")
@@ -108,8 +109,12 @@ public class BookController {
 
     @PutMapping("/{id}/book-by-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<BookDto> generateBookByPhoto(@PathVariable Long id) {
-        BookDto updated = bookService.generateTempBook(id);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> generateBookByPhoto(@PathVariable Long id) {
+        try {
+            BookDto updated = bookService.generateTempBook(id);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }
