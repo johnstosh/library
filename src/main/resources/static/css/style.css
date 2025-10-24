@@ -95,8 +95,8 @@ html, body {
 
 .book-photo-thumbnail {
     position: relative;
-    width: 150px;
-    height: 150px;
+    width: 300px;
+    height: 300px;
     border: 1px solid #ddd;
     border-radius: 5px;
     overflow: hidden;
@@ -158,8 +158,8 @@ html, body {
     }
 
     .book-photo-thumbnail {
-        width: 200px;
-        height: 200px;
+        width: 400px;
+        height: 400px;
     }
 }
 
