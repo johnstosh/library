@@ -53,6 +53,12 @@ public class TestDataController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/total-purge")
+    public ResponseEntity<Void> totalPurge() {
+        testDataService.totalPurge();
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getStats() {
         Map<String, Long> stats = new HashMap<>();
