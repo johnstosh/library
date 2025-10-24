@@ -1,0 +1,32 @@
+name: Weekly Cloud Run Deployment
+
+on:
+  schedule:
+    # Runs every Sunday at 00:00 UTC (adjust cron as needed: minute hour day-of-month month day-of-week)
+    - cron: '0 0 * * 0'
+  # Optional: Also allow manual triggers via the GitHub UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}  # Your GCP project ID as a secret
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}  # JSON key as a secret
+
+      - name: Run deployment script
+        run: |
+          export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          chmod +x deploy.sh  # Make script executable if needed
+          ./deploy.sh

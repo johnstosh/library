@@ -3,12 +3,10 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.service.PhotoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/photos")
@@ -28,5 +26,16 @@ public class PhotoController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(image);
+    }
+
+    @GetMapping("/{id}/thumbnail")
+    public ResponseEntity<byte[]> getThumbnail(@PathVariable Long id, @RequestParam Integer width) {
+        Pair<byte[], String> thumbnailData = photoService.getThumbnail(id, width);
+        if (thumbnailData == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(thumbnailData.getSecond()))
+                .body(thumbnailData.getFirst());
     }
 }
