@@ -345,6 +345,8 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
     const formData = new FormData();
     formData.append('file', file);
 
+    document.body.style.cursor = 'wait';
+
     try {
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
@@ -358,9 +360,12 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
         }
         event.target.value = '';
         clearError('books');
+        document.getElementById('book-photos-container').scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
         event.target.value = '';
+    } finally {
+        document.body.style.cursor = 'default';
     }
 });
 
