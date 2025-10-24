@@ -36,12 +36,19 @@ public class PhotoService {
         try {
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new RuntimeException("Book not found"));
+            List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
             Photo photo = new Photo();
             photo.setBook(book);
             photo.setImage(file.getBytes());
             photo.setContentType(file.getContentType());
             photo.setCaption("");
             photo.setRotation(0);
+            photo.setPhotoOrder(maxOrder + 1);
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             throw new RuntimeException("Failed to store photo data", e);
@@ -50,10 +57,46 @@ public class PhotoService {
 
     @Transactional(readOnly = true)
     public List<PhotoDto> getPhotosByBookId(Long bookId) {
-        List<Photo> photos = photoRepository.findByBookId(bookId);
+        List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
         return photos.stream()
                 .map(photoMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void movePhotoLeft(Long bookId, Long photoId) {
+        List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+        int index = -1;
+        for (int i = 0; i < photos.size(); i++) {
+            if (photos.get(i).getId().equals(photoId)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index > 0) {
+            Photo photoToMove = photos.remove(index);
+            photos.add(index - 1, photoToMove);
+            reorderPhotos(photos);
+        }
+    }
+
+    @Transactional
+    public void movePhotoRight(Long bookId, Long photoId) {
+        List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+        int index = -1;
+        for (int i = 0; i < photos.size(); i++) {
+            if (photos.get(i).getId().equals(photoId)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index != -1 && index < photos.size() - 1) {
+            Photo photoToMove = photos.remove(index);
+            photos.add(index + 1, photoToMove);
+            reorderPhotos(photos);
+        }
     }
 
     @Transactional
@@ -93,9 +136,23 @@ public class PhotoService {
 
     @Transactional
     public void deletePhoto(Long photoId) {
-        Photo photo = photoRepository.findById(photoId)
+        Photo photoToDelete = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));
-        photoRepository.delete(photo);
+
+        Book book = photoToDelete.getBook();
+        if (book != null) {
+            photoRepository.delete(photoToDelete);
+            reorderPhotos(photoRepository.findByBookIdOrderByPhotoOrder(book.getId()));
+        } else {
+            photoRepository.delete(photoToDelete);
+        }
+    }
+
+    private void reorderPhotos(List<Photo> photos) {
+        for (int i = 0; i < photos.size(); i++) {
+            photos.get(i).setPhotoOrder(i);
+        }
+        photoRepository.saveAll(photos);
     }
 
     @Transactional
