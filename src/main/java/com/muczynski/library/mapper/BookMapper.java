@@ -4,10 +4,15 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BookDto;
+import org.mapstruct.factory.Mappers;
 import org.springframework.stereotype.Service;
+
+import java.util.stream.Collectors;
 
 @Service
 public class BookMapper {
+
+    private final PhotoMapper photoMapper = Mappers.getMapper(PhotoMapper.class);
 
     public BookDto toDto(Book book) {
         if (book == null) {
@@ -30,6 +35,10 @@ public class BookMapper {
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
         }
+        if (book.getPhotos() != null) {
+            bookDto.setPhotos(book.getPhotos().stream().map(photoMapper::toDto).collect(Collectors.toList()));
+        }
+
 
         return bookDto;
     }

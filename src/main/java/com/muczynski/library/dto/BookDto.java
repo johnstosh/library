@@ -4,6 +4,7 @@ import com.muczynski.library.domain.BookStatus;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class BookDto {
@@ -18,4 +19,5 @@ public class BookDto {
     private BookStatus status;
     private Long authorId;
     private Long libraryId;
+    private List<PhotoDto> photos;
 }

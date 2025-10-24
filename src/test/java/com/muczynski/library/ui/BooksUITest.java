@@ -186,7 +186,7 @@ public class BooksUITest {
 
             page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000));
 
-            List<String> titles = page.locator("tbody#book-list-body tr[data-test='book-item'] td:first-child span[data-test='book-title']").allTextContents();
+            List<String> titles = page.locator("tbody#book-list-body tr[data-test='book-item'] td:nth-child(2) span[data-test='book-title']").allTextContents();
 
             List<String> expectedTitles = Arrays.asList(
                     "Animal Farm",
