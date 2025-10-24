@@ -296,11 +296,20 @@ function createBookByPhoto() {
     document.getElementById('add-book-btn').scrollIntoView({ behavior: 'smooth' });
 }
 
-function logout() {
+async function logout() {
     document.body.classList.remove('user-is-librarian');
-    fetch('/logout', { method: 'POST' }).then(() => {
-        window.location.href = '/';
-    });
+    try {
+        const response = await fetch('/logout', { method: 'POST' });
+        if (response.ok) {
+            window.location.href = '/';
+        } else {
+            console.error('Logout failed with status:', response.status);
+            alert('Logout failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('An error occurred during logout:', error);
+        alert('An error occurred during logout. Please check your connection and try again.');
+    }
 }
 
 async function fetchData(url) {
