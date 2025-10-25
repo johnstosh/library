@@ -3,10 +3,12 @@ package com.muczynski.library.ui;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.muczynski.library.LibraryApplication;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -21,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-menucolor.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MenuColorUITest {
@@ -46,8 +49,10 @@ public class MenuColorUITest {
 
     @BeforeEach
     void createContextAndPage() {
-        BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
+        BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(1280, 720));
         page = context.newPage();
+        page.setDefaultTimeout(5000L);
     }
 
     @AfterEach
@@ -59,14 +64,15 @@ public class MenuColorUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     @Test
@@ -75,10 +81,12 @@ public class MenuColorUITest {
             login();
 
             // Wait for the menu to be visible
-            page.waitForSelector("#section-menu", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            Locator menuLocator = page.locator("#section-menu");
+            menuLocator.waitFor(new Locator.WaitForOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            assertThat(menuLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
 
-            // Wait a bit for the page to fully load
-            page.waitForTimeout(1000);
+            // Wait for the page to fully load using a function instead of timeout
+            page.waitForLoadState(LoadState.LOAD, new Page.WaitForLoadStateOptions().setTimeout(5000L));
 
             // Scroll to the top of the page before capturing
             page.evaluate("window.scrollTo(0, 0);");

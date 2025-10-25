@@ -23,4 +23,4 @@ INSERT INTO author (id, name) VALUES (1, 'Initial Author');
 
 INSERT INTO book (id, title, publication_year, author_id, library_id, status) VALUES (1, 'Initial Book', 2023, 1, 1, 'ACTIVE');
 
-INSERT INTO loan (id, loan_date, return_date, book_id, user_id) VALUES (1, CURRENT_DATE, NULL, 1, 2);
+INSERT INTO loan (id, loan_date, due_date, return_date, book_id, user_id) VALUES (1, CURRENT_DATE, CURRENT_DATE + 14, NULL, 1, 2);

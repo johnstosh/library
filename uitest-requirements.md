@@ -19,7 +19,7 @@ The tests must follow consistent patterns reflecting best practices in Playwrigh
    - Custom helper methods like `login()` and `navigateToSection()` for reusable flows.
 
 3. **Assertions and Selectors**:
-   - Use `PlaywrightAssertions.assertThat()` for visibility (`isVisible()`), text content (`hasText()`), value (`hasValue()`), and count (`hasCount()`). Include timeouts (e.g., `setTimeout(5000)`) to handle async rendering.
+   - Use `PlaywrightAssertions.assertThat()` for visibility (`isVisible()`), text content (`hasText()`), value (`hasValue()`), and count (`hasCount()`). Include timeouts (e.g., `setTimeout(5000L)`) to handle async rendering.
    - Selectors prioritize stable, test-friendly attributes like `[data-test='element-id']`. Use `filter(new Locator.FilterOptions().setHasText(...))` for dynamic lists.
    - Error handling: Screenshots on failure (`page.screenshot()`) and exception throwing for debugging.
 
@@ -57,3 +57,32 @@ UI testing a Spring Boot + Playwright app like this library system requires bala
 6. **Error Handling and Debugging**:
    - Include screenshots/videos on failure (extend to `page.video()` for recordings). Handle network errors (e.g., 401 redirects to login). In CI, use artifacts for failure outputs. Target <5% flakiness with retry mechanisms.
 
+## Appendix: Avoiding Playwright Java Serialization Errors with waitForFunction
+
+In Playwright Java, using `page.waitForFunction(jsExpression, new Page.WaitForFunctionOptions().setTimeout(5000))` can lead to a `PlaywrightException: Unsupported type of argument: com.microsoft.playwright.Page$WaitForFunctionOptions@...` error. This occurs because the `WaitForFunctionOptions` object cannot be properly serialized for transmission to the browser during the wait operation.
+
+### How to Avoid This Error
+1. **Omit Options from waitForFunction**: Do not pass `WaitForFunctionOptions` to `waitForFunction`. Rely on the default timeout (typically 30 seconds, but you can set a global timeout via `page.setDefaultTimeout(5000L)` after creating the page in `@BeforeEach` to enforce the 5-second limit across all waits). Example:
+   ```
+   page.waitForFunction(jsExpression);
+   ```
+   Ensure your JavaScript expression throws an error if the condition is not met, so the wait fails explicitly rather than timing out indefinitely.
+
+2. **Use Alternative Waiting Methods**: Replace `waitForFunction` with more reliable alternatives that support options without serialization issues:
+   - `page.waitForSelector(selector, new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE))` for element visibility.
+   - `locator.waitFor(new Locator.WaitForOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE))` for locators.
+   - For complex JS polling, use `page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L))` or chain multiple simple waits.
+
+3. **Set Global Timeouts**: In your test setup (`@BeforeEach`), after creating the page, configure the page's default timeout to cap all operations at 5 seconds:
+   ```
+   page = context.newPage();
+   page.setDefaultTimeout(5000L);  // Applies to all waits and actions on this page
+   ```
+   This ensures compliance with the 5-second timeout rule without per-call options. The `setDefaultTimeout` method sets the default timeout for actions, navigation, and waits on the page.
+
+4. **Debugging Tip**: If the error persists, verify your Playwright Java version (use the latest stable, e.g., 1.47.0+). Test the JS expression in the browser console first to ensure it evaluates correctly. For serialization issues, simplify the expression to avoid complex objects.
+
+### Additional Note on Context Timeouts
+When setting timeouts on `Browser.NewContextOptions`, use `long` values (e.g., `5000L`) to match the API signature, which expects milliseconds as a `long`. Using `int` (e.g., `5000`) will cause a compilation error: "cannot find symbol setTimeout(int)". Always append `L` for long literals in timeout configurations to ensure compatibility. This applies to all timeout options in Playwright Java APIs, such as `WaitForSelectorOptions`, `WaitForLoadStateOptions`, and `Locator.WaitForOptions`, to prevent similar compilation issues. Instead of setting timeouts on `NewContextOptions` (which may not be supported in all versions), use `page.setDefaultTimeout(5000L)` after creating the page to enforce the 5-second limit across test interactions.
+
+By following these guidelines, tests remain reliable and adhere to the project's timeout constraints while avoiding Playwright's Java-specific serialization pitfalls.

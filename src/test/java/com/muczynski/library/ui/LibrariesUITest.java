@@ -48,8 +48,10 @@ public class LibrariesUITest {
 
     @BeforeEach
     void createContextAndPage() {
-        BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
+        BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(1280, 720));
         page = context.newPage();
+        page.setDefaultTimeout(5000L);
     }
 
     @AfterEach
@@ -61,14 +63,15 @@ public class LibrariesUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToSection(String section) {
@@ -78,8 +81,8 @@ public class LibrariesUITest {
         // Wait for target section to be visible and assert it
         String targetSelector = "#" + section + "-section";
         Locator targetSection = page.locator(targetSelector);
-        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
-        assertThat(targetSection).isVisible();
+        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
 
         // Assert all non-target sections are hidden to test exclusivity
         List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
@@ -88,9 +91,22 @@ public class LibrariesUITest {
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden();
+                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
             }
         }
+
+        // Additional JS poll for display style to confirm non-target sections are hidden
+        String jsExpression = "(function() { " +
+                "document.querySelectorAll('.section').forEach(s => { " +
+                "  if (s.id !== '" + section + "-section' && s.id.endsWith('-section')) { " +
+                "    if (window.getComputedStyle(s).display !== 'none') { " +
+                "      throw new Error('Non-target section is visible'); " +
+                "    } " +
+                "  } " +
+                "}); " +
+                "return true; " +
+                "})()";
+        page.waitForFunction(jsExpression);
     }
 
     private void ensurePrerequisites() {
@@ -100,7 +116,6 @@ public class LibrariesUITest {
     @Test
     void testLibrariesCRUD() {
         try {
-            System.out.println("Starting testLibrariesCRUD");
             page.navigate("http://localhost:" + port);
             login();
             ensurePrerequisites();
@@ -110,64 +125,80 @@ public class LibrariesUITest {
 
             // Assert the table structure is present
             Locator table = page.locator("[data-test='library-table']");
-            assertThat(table).isVisible();
+            table.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(table).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
 
             // Wait for library section to be interactable, focusing on form
-            page.waitForSelector("[data-test='new-library-name']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='new-library-name']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
 
             // Create with unique name to avoid conflict
             String uniqueName = "Test Library " + UUID.randomUUID().toString().substring(0, 8);
             String uniqueHostname = "test-" + UUID.randomUUID().toString().substring(0, 8) + ".local";
-            System.out.println("Creating library: " + uniqueName);
             page.fill("[data-test='new-library-name']", uniqueName);
             page.fill("[data-test='new-library-hostname']", uniqueHostname);
             page.click("[data-test='add-library-btn']");
 
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
+            // Wait for button to reset to "Add Library" after creation
+            Locator addButton = page.locator("[data-test='add-library-btn']");
+            assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+
             // Read: Use filter for flexible matching and assert name in specific cell
             Locator libraryList = page.locator("[data-test='library-item']");
             Locator libraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName));
-            libraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(libraryItem.first()).isVisible();
-            assertThat(libraryItem).hasCount(1);
+            libraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(libraryItem.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+            assertThat(libraryItem).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Only new
+            assertThat(libraryList).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Initial + new
             // Assert the name is in the library-name span
-            assertThat(libraryItem.first().locator("[data-test='library-name']")).hasText(uniqueName + " (" + uniqueHostname + ")");
-            System.out.println("Library created successfully");
+            assertThat(libraryItem.first().locator("[data-test='library-name']")).hasText(uniqueName + " (" + uniqueHostname + ")", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             // Update
             libraryItem.first().locator("[data-test='edit-library-btn']").click();
 
             // Wait for the form to be in update mode
-            Locator addButton = page.locator("[data-test='add-library-btn']");
-            assertThat(addButton).hasText("Update Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Update Library", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             String updatedName = "Updated Library " + UUID.randomUUID().toString().substring(0, 8);
-            System.out.println("Updating library to: " + updatedName);
             page.fill("[data-test='new-library-name']", updatedName);
             page.click("[data-test='add-library-btn']");
 
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
             // Wait for button to reset to "Add Library", confirming the update operation completed successfully
-            assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000));
-            System.out.println("Update button reset to 'Add Library'");
+            assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Add Library", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             // Wait for the updated item to appear (confirms reload)
             Locator updatedLibraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
-            updatedLibraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(updatedLibraryItem.first()).isVisible();
+            updatedLibraryItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(updatedLibraryItem.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
             // Assert the updated name is in the library-name span
-            assertThat(updatedLibraryItem.first().locator("[data-test='library-name']")).hasText(updatedName + " (" + uniqueHostname + ")");
-            System.out.println("Library updated successfully");
+            assertThat(updatedLibraryItem.first().locator("[data-test='library-name']")).hasText(updatedName + " (" + uniqueHostname + ")", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             // Assert old item is gone (confirms successful reload)
-            assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
-            System.out.println("Old library item is gone");
+            Locator oldLibraryItem = libraryList.filter(new Locator.FilterOptions().setHasText(uniqueName));
+            oldLibraryItem.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(oldLibraryItem).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Test item removed
 
             // Delete
             Locator toDelete = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
             page.onDialog(dialog -> dialog.accept());
             toDelete.first().locator("[data-test='delete-library-btn']").click();
-            toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
-            assertThat(libraryList.filter(new Locator.FilterOptions().setHasText(updatedName))).hasCount(0);
-            System.out.println("Library deleted successfully");
+
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
+            toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000L));
+            Locator deletedCheck = libraryList.filter(new Locator.FilterOptions().setHasText(updatedName));
+            deletedCheck.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(deletedCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            assertThat(libraryList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging

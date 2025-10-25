@@ -48,8 +48,10 @@ public class UsersUITest {
 
     @BeforeEach
     void createContextAndPage() {
-        BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
+        BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(1280, 720));
         page = context.newPage();
+        page.setDefaultTimeout(5000L);
     }
 
     @AfterEach
@@ -61,14 +63,15 @@ public class UsersUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToSection(String section) {
@@ -78,8 +81,8 @@ public class UsersUITest {
         // Wait for target section to be visible and assert it
         String targetSelector = "#" + section + "-section";
         Locator targetSection = page.locator(targetSelector);
-        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
-        assertThat(targetSection).isVisible();
+        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
 
         // Assert all non-target sections are hidden to test exclusivity
         List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
@@ -88,7 +91,7 @@ public class UsersUITest {
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden();
+                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
             }
         }
 
@@ -121,7 +124,7 @@ public class UsersUITest {
             navigateToSection("users");
 
             // Wait for user section to be interactable, focusing on form
-            page.waitForSelector("[data-test='new-user-username']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='new-user-username']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
 
             // Create with unique username to avoid conflict
             String uniqueUsername = "testuser" + UUID.randomUUID().toString().substring(0, 8);
@@ -130,19 +133,27 @@ public class UsersUITest {
             page.selectOption("[data-test='new-user-role']", "USER");
             page.click("[data-test='add-user-btn']");
 
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
+            // Wait for button to reset to "Add User" after creation
+            Locator addButton = page.locator("[data-test='add-user-btn']");
+            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+
             // Read: Use filter for flexible matching
             Locator userTable = page.locator("[data-test='user-table']");
             Locator userItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername));
-            userItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(userItem.first()).isVisible();
-            assertThat(userItem).hasCount(1);
+            userItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(userItem.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+            assertThat(userItem).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Only new
+            assertThat(userTable.locator("[data-test='user-item']")).hasCount(3, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Initial 2 + new
 
             // Update
             userItem.first().locator("[data-test='edit-user-btn']").click();
 
             // Wait for the form to be in update mode
-            Locator addButton = page.locator("[data-test='add-user-btn']");
-            assertThat(addButton).hasText("Update User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Update User", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             String updatedUsername = "updateduser" + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-user-username']", updatedUsername);
@@ -150,17 +161,23 @@ public class UsersUITest {
             page.selectOption("[data-test='new-user-role']", "USER");
             page.click("[data-test='add-user-btn']");
 
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
             // Wait for button to reset to "Add User", confirming the update operation completed successfully
-            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000));
+            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Add User", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
 
             // Wait for the updated item to appear (confirms reload)
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             Locator updatedUserItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
-            updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
-            assertThat(updatedUserItem.first()).isVisible();
+            updatedUserItem.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(updatedUserItem.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
 
-            // Assert old item is gone (confirms successful reload without detach wait)
-            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            // Assert old item is gone (confirms successful reload)
+            Locator oldUserItem = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(uniqueUsername));
+            oldUserItem.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
+            assertThat(oldUserItem).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Test item removed
 
             // Delete
             Locator toDelete = userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername));
@@ -168,10 +185,13 @@ public class UsersUITest {
             page.onDialog(dialog -> dialog.accept());
             toDelete.first().locator("[data-test='delete-user-btn']").click();
 
+            // Wait for the operation to complete
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+
             // Wait for the user count to decrease
             page.waitForFunction("() => document.querySelectorAll(\"[data-test='user-item']\").length < " + initialCount);
 
-            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0);
+            assertThat(userTable.locator("[data-test='user-item']").filter(new Locator.FilterOptions().setHasText(updatedUsername))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging

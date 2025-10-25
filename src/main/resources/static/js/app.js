@@ -17,6 +17,304 @@ function getCookie(name) {
     return cookieValue;
 }
 
+async function fetchData(url) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['X-CSRF-TOKEN'] = token;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (response.status === 401) {
+            console.log('401 Unauthorized - redirecting to login');
+            window.location.href = '/';
+            throw new Error('Unauthorized - redirecting to login');
+        } else if (response.status === 403) {
+            let errorMsg = 'Forbidden';
+            try {
+                const errorText = await response.text();
+                errorMsg = errorText || 'Access forbidden';
+            } catch (e) {
+                console.error('Could not read 403 error message', e);
+            }
+            // Create a new page for 403 error
+            const errorPage = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>403 Forbidden</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h1 class="text-danger">403 Forbidden</h1>
+                                        <p class="card-text">${errorMsg}</p>
+                                        <a href="/" class="btn btn-primary">Go to Login</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            const errorBlob = new Blob([errorPage], { type: 'text/html' });
+            const errorUrl = URL.createObjectURL(errorBlob);
+            window.location.href = errorUrl;
+            throw new Error('403 Forbidden - see error page');
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+}
+
+async function postData(url, data, isFormData = false, includeCsrf = true) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {};
+    if (!isFormData && includeCsrf && token) {
+        headers['X-CSRF-TOKEN'] = token;
+        headers['Content-Type'] = 'application/json';
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: isFormData ? data : JSON.stringify(data)
+        });
+
+        if (response.status === 401) {
+            console.log('401 Unauthorized - redirecting to login');
+            window.location.href = '/';
+            throw new Error('Unauthorized - redirecting to login');
+        } else if (response.status === 403) {
+            let errorMsg = 'Forbidden';
+            try {
+                const errorText = await response.text();
+                errorMsg = errorText || 'Access forbidden';
+            } catch (e) {
+                console.error('Could not read 403 error message', e);
+            }
+            // Create a new page for 403 error
+            const errorPage = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>403 Forbidden</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h1 class="text-danger">403 Forbidden</h1>
+                                        <p class="card-text">${errorMsg}</p>
+                                        <a href="/" class="btn btn-primary">Go to Login</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            const errorBlob = new Blob([errorPage], { type: 'text/html' });
+            const errorUrl = URL.createObjectURL(errorBlob);
+            window.location.href = errorUrl;
+            throw new Error('403 Forbidden - see error page');
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Post error:', error);
+        throw error;
+    }
+}
+
+async function putData(url, data, includeCsrf = true) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+    if (includeCsrf && token) {
+        headers['X-CSRF-TOKEN'] = token;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(data)
+        });
+
+        if (response.status === 401) {
+            console.log('401 Unauthorized - redirecting to login');
+            window.location.href = '/';
+            throw new Error('Unauthorized - redirecting to login');
+        } else if (response.status === 403) {
+            let errorMsg = 'Forbidden';
+            try {
+                const errorText = await response.text();
+                errorMsg = errorText || 'Access forbidden';
+            } catch (e) {
+                console.error('Could not read 403 error message', e);
+            }
+            // Create a new page for 403 error
+            const errorPage = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>403 Forbidden</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h1 class="text-danger">403 Forbidden</h1>
+                                        <p class="card-text">${errorMsg}</p>
+                                        <a href="/" class="btn btn-primary">Go to Login</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            const errorBlob = new Blob([errorPage], { type: 'text/html' });
+            const errorUrl = URL.createObjectURL(errorBlob);
+            window.location.href = errorUrl;
+            throw new Error('403 Forbidden - see error page');
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Put error:', error);
+        throw error;
+    }
+}
+
+async function deleteData(url) {
+    const token = getCookie('XSRF-TOKEN');
+    const headers = {};
+    if (token) {
+        headers['X-CSRF-TOKEN'] = token;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (response.status === 401) {
+            console.log('401 Unauthorized - redirecting to login');
+            window.location.href = '/';
+            throw new Error('Unauthorized - redirecting to login');
+        } else if (response.status === 403) {
+            let errorMsg = 'Forbidden';
+            try {
+                const errorText = await response.text();
+                errorMsg = errorText || 'Access forbidden';
+            } catch (e) {
+                console.error('Could not read 403 error message', e);
+            }
+            // Create a new page for 403 error
+            const errorPage = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>403 Forbidden</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h1 class="text-danger">403 Forbidden</h1>
+                                        <p class="card-text">${errorMsg}</p>
+                                        <a href="/" class="btn btn-primary">Go to Login</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            const errorBlob = new Blob([errorPage], { type: 'text/html' });
+            const errorUrl = URL.createObjectURL(errorBlob);
+            window.location.href = errorUrl;
+            throw new Error('403 Forbidden - see error page');
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return response.ok;
+    } catch (error) {
+        console.error('Delete error:', error);
+        throw error;
+    }
+}
+
 function showError(sectionId, message) {
     let errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
     if (!errorDiv) {
@@ -107,20 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function checkAuthentication() {
     console.log('Checking authentication...');
     try {
-        const response = await fetch('/api/users/me');
-        console.log('Authentication check response status:', response.status);
-        const contentType = response.headers.get('content-type');
-        console.log('Response content-type:', contentType);
-        if (response.ok && contentType && contentType.includes('application/json')) {
-            const user = await response.json();
-            console.log('User authenticated:', user);
-            showMainContent(user.roles);
-        } else {
-            console.log('Authentication failed or non-JSON response, showing search page');
-            showPublicSearchPage();
-        }
+        const response = await fetchData('/api/users/me');
+        console.log('User authenticated:', response);
+        showMainContent(response.roles);
     } catch (error) {
-        console.error('Error during authentication check:', error);
+        console.log('Authentication failed or non-JSON response, showing search page');
         showPublicSearchPage();
     }
 }
@@ -216,7 +505,7 @@ const sectionConfig = {
     'books': { load: loadBooks, reset: resetBookForm },
     'search': { load: null, reset: null },
     'library-card': { load: loadApplied, reset: null },
-    'users': 'users',
+    'users': { load: loadUsers, reset: null },
     'loans': { load: loadLoans, reset: null },
     'test-data': { load: loadTestDataStats, reset: null },
     'settings': { load: loadSettings, reset: null }
@@ -311,152 +600,4 @@ async function logout() {
         console.error('An error occurred during logout:', error);
         alert('An error occurred during logout. Please check your connection and try again.');
     }
-}
-
-async function fetchData(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        let errorMsg;
-        if (response.status === 401) {
-            errorMsg = "Your login session has timed out. Please log in again.";
-        } else {
-            errorMsg = `HTTP error! status: ${response.status}`;
-            try {
-                const errorText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                    if (errorData && typeof errorData === 'object' && errorData.message) {
-                        errorMsg = errorData.message;
-                    }
-                } catch (parseErr) {
-                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
-                }
-            } catch (textErr) {
-                // Use generic if text fails
-            }
-        }
-        throw new Error(errorMsg);
-    }
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        return response.json();
-    }
-    return; // No content
-}
-
-async function postData(url, data, isFormData = false, expectJson = true) {
-    const token = getCookie('XSRF-TOKEN');
-    const headers = {};
-    if (token) {
-        headers['X-XSRF-TOKEN'] = token;
-    }
-
-    let body;
-    if (isFormData) {
-        body = data;
-    } else {
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(data);
-    }
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: body
-    });
-    if (!response.ok) {
-        let errorMsg;
-        if (response.status === 401) {
-            errorMsg = "Your login session has timed out. Please log in again.";
-        } else {
-            errorMsg = `HTTP error! status: ${response.status}`;
-            try {
-                const errorText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                    if (errorData && typeof errorData === 'object' && errorData.message) {
-                        errorMsg = errorData.message;
-                    }
-                } catch (parseErr) {
-                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
-                }
-            } catch (textErr) {
-                // Use generic if text fails
-            }
-        }
-        throw new Error(errorMsg);
-    }
-    if (expectJson) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return response.json();
-        }
-        return {}; // Empty object if not JSON
-    }
-    return response;
-}
-
-async function putData(url, data, expectJson = true) {
-    const token = getCookie('XSRF-TOKEN');
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    if (token) {
-        headers['X-XSRF-TOKEN'] = token;
-    }
-    const response = await fetch(url, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(data)
-    });
-    if (!response.ok) {
-        let errorMsg;
-        if (response.status === 401) {
-            errorMsg = "Your login session has timed out. Please log in again.";
-        } else {
-            errorMsg = `HTTP error! status: ${response.status}`;
-            try {
-                const errorText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                    if (errorData && typeof errorData === 'object' && errorData.message) {
-                        errorMsg = errorData.message;
-                    }
-                } catch (parseErr) {
-                    errorMsg = `${errorMsg} - ${errorText.substring(0, 100)}...`;
-                }
-            } catch (textErr) {
-                // Use generic if text fails
-            }
-        }
-        throw new Error(errorMsg);
-    }
-    if (expectJson) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return response.json();
-        }
-        return {}; // Empty object if not JSON
-    }
-    return response;
-}
-
-async function deleteData(url) {
-    const token = getCookie('XSRF-TOKEN');
-    const headers = {};
-    if (token) {
-        headers['X-XSRF-TOKEN'] = token;
-    }
-    const response = await fetch(url, {
-        method: 'DELETE',
-        headers
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
-    }
-    return response;
 }
