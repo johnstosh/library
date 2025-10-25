@@ -405,11 +405,33 @@ document.addEventListener('DOMContentLoaded', () => {
 async function checkAuthentication() {
     console.log('Checking authentication...');
     try {
-        const response = await fetchData('/api/users/me');
-        console.log('User authenticated:', response);
-        showMainContent(response.roles);
+        const response = await fetch('/api/users/me', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.status === 401) {
+            console.log('Not authenticated');
+            showPublicSearchPage();
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+
+        const user = await response.json();
+        console.log('User authenticated:', user);
+        showMainContent(user.roles);
     } catch (error) {
-        console.log('Authentication failed or non-JSON response, showing search page');
+        console.log('Authentication check failed:', error);
         showPublicSearchPage();
     }
 }
