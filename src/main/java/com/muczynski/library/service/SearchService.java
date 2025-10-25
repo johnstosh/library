@@ -35,6 +35,9 @@ public class SearchService {
     private AuthorMapper authorMapper;
 
     public Map<String, Object> search(String query, int page, int size) {
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("Query cannot be empty");
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<Book> bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
         Page<Author> authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);

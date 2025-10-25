@@ -2,6 +2,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.service.SearchService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,8 +19,12 @@ public class SearchController {
     private SearchService searchService;
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> search(@RequestParam String query, @RequestParam int page, @RequestParam int size) {
-        Map<String, Object> results = searchService.search(query, page, size);
-        return ResponseEntity.ok(results);
+    public ResponseEntity<?> search(@RequestParam String query, @RequestParam int page, @RequestParam int size) {
+        try {
+            Map<String, Object> results = searchService.search(query, page, size);
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }
