@@ -104,6 +104,52 @@ function resetBookForm() {
     clearSuccess('books');
 }
 
+async function prepareNewBookForPhoto(title) {
+    // Enter edit mode for a new book
+    showBookList(false);
+
+    // Set title to timestamp
+    document.getElementById('new-book-title').value = title;
+
+    // Set author to the first one (id 1, assuming populated)
+    document.getElementById('book-author').value = '1';
+
+    // Set library to the first one (id 1)
+    document.getElementById('book-library').value = '1';
+
+    // Scroll to bottom
+    window.scrollTo(0, document.body.scrollHeight);
+
+    // Save initial data to backend (minimal, just title/author/library)
+    const initialData = {
+        title: title,
+        authorId: '1',
+        libraryId: '1',
+        publicationYear: '',
+        publisher: '',
+        plotSummary: '',
+        relatedWorks: '',
+        detailedDescription: '',
+        dateAddedToLibrary: '',
+        status: 'ACTIVE'
+    };
+    try {
+        const createdBook = await postData('/api/books', initialData);
+        document.getElementById('current-book-id').value = createdBook.id;
+        // After save, make buttons available
+        document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('cancel-book-btn').style.display = 'inline-block';
+        document.getElementById('book-by-photo-btn').style.display = 'none'; // Hidden until photo added
+        document.getElementById('book-by-photo-btn').onclick = null;
+
+        // Scroll stays at bottom
+        window.scrollTo(0, document.body.scrollHeight);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to prepare new book: ' + error.message);
+    }
+}
+
 async function addBook() {
     window.scrollTo(0, 0);
     const title = document.getElementById('new-book-title').value;
@@ -163,17 +209,25 @@ async function generateBookByPhoto(bookId) {
     document.body.style.cursor = 'wait';
     try {
         const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
+
+        // Intelligently update form fields
+        if (updatedBook.title && updatedBook.title.trim() !== '') document.getElementById('new-book-title').value = updatedBook.title;
+        if (updatedBook.publicationYear) document.getElementById('new-book-year').value = updatedBook.publicationYear;
+        if (updatedBook.publisher && updatedBook.publisher.trim() !== '') document.getElementById('new-book-publisher').value = updatedBook.publisher;
+        if (updatedBook.plotSummary && updatedBook.plotSummary.trim() !== '') document.getElementById('new-book-summary').value = updatedBook.plotSummary;
+        if (updatedBook.relatedWorks && updatedBook.relatedWorks.trim() !== '') document.getElementById('new-book-related').value = updatedBook.relatedWorks;
+        if (updatedBook.detailedDescription && updatedBook.detailedDescription.trim() !== '') document.getElementById('new-book-description').value = updatedBook.detailedDescription;
+        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary;
+        if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
+        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
+        if (updatedBook.libraryId) document.getElementById('book-library').value = updatedBook.libraryId;
+
+        // Repopulate dropdowns to include any new authors
         await populateBookDropdowns();
-        document.getElementById('new-book-title').value = updatedBook.title || '';
-        document.getElementById('new-book-year').value = updatedBook.publicationYear || '';
-        document.getElementById('new-book-publisher').value = updatedBook.publisher || '';
-        document.getElementById('new-book-summary').value = updatedBook.plotSummary || '';
-        document.getElementById('new-book-related').value = updatedBook.relatedWorks || '';
-        document.getElementById('new-book-description').value = updatedBook.detailedDescription || '';
-        document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary || '';
-        document.getElementById('new-book-status').value = updatedBook.status || 'ACTIVE';
-        document.getElementById('book-author').value = updatedBook.authorId || '';
-        document.getElementById('book-library').value = updatedBook.libraryId || '';
+        // Reselect the author, in case the dropdown was repopulated
+        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
+
+
         showSuccess('books', 'Book metadata generated successfully using AI');
         clearError('books');
     } catch (error) {
@@ -388,7 +442,7 @@ async function addPhoto() {
     document.getElementById('photo-upload').click();
 }
 
-document.getElementById('photo-upload').addEventListener('change', async (event) => {
+async function handlePhotoUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -413,16 +467,21 @@ document.getElementById('photo-upload').addEventListener('change', async (event)
                 document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(currentId);
             }
         }
-        event.target.value = '';
+        event.target.value = ''; // Reset file input
         clearError('books');
-        document.getElementById('book-photos-container').scrollIntoView({ behavior: 'smooth' });
+        // On success, scroll to the bottom to show the new photo
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (error) {
         showError('books', 'Failed to add photo: ' + error.message);
-        event.target.value = '';
+        // On error, scroll to the top to show the error message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        event.target.value = ''; // Reset file input
     } finally {
         document.body.style.cursor = 'default';
     }
-});
+}
+
+document.getElementById('photo-upload').addEventListener('change', handlePhotoUpload);
 
 async function populateBookDropdowns() {
     try {

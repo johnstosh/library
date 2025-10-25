@@ -282,7 +282,7 @@ function showSection(sectionId, event) {
     }
 }
 
-function createBookByPhoto() {
+async function createBookByPhoto() {
     showSection('books');
     const now = new Date();
     const year = now.getFullYear();
@@ -292,8 +292,9 @@ function createBookByPhoto() {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const title = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-    document.getElementById('new-book-title').value = title;
-    document.getElementById('add-book-btn').scrollIntoView({ behavior: 'smooth' });
+
+    // This function will be created in books.js
+    await prepareNewBookForPhoto(title);
 }
 
 async function logout() {
@@ -458,45 +459,4 @@ async function deleteData(url) {
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
     }
     return response;
-}
-
-async function applyForCard() {
-    const username = document.getElementById('new-applicant-name').value.trim();
-    const password = document.getElementById('new-applicant-password').value;
-    if (!username || !password) {
-        showApplyError('Please fill in all fields.');
-        return;
-    }
-    try {
-        await postData('/api/public/register', { username, password }, false, false);
-        document.getElementById('new-applicant-name').value = '';
-        document.getElementById('new-applicant-password').value = '';
-        showApplySuccess('Library card application successful.');
-        clearApplyError();
-    } catch (error) {
-        showApplyError('Failed to apply for library card: ' + error.message);
-    }
-}
-
-function showApplyError(message) {
-    const errorEl = document.getElementById('apply-error');
-    if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.style.display = 'block';
-    }
-}
-
-function clearApplyError() {
-    const errorEl = document.getElementById('apply-error');
-    if (errorEl) {
-        errorEl.style.display = 'none';
-    }
-}
-
-function showApplySuccess(message) {
-    const successEl = document.getElementById('apply-success');
-    if (successEl) {
-        successEl.textContent = message;
-        successEl.style.display = 'block';
-    }
 }
