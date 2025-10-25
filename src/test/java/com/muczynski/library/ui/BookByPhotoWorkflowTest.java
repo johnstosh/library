@@ -141,7 +141,7 @@ public class BookByPhotoWorkflowTest {
             bookByPhotoButton.click();
 
             // Wait for title to be updated from AI response
-            page.waitForFunction("() => document.getElementById('new-book-title').value === 'Mock AI Title'", new Page.WaitForFunctionOptions().setTimeout(5000));
+            assertThat(titleInput).hasValue("Mock AI Title", new LocatorAssertions.HasValueOptions().setTimeout(5000));
 
             // 17. The first photo is used to determine the title, author, ...
             // 18. The new book dto is returned from the backend and the fields are updated with non-blank data from the dto
