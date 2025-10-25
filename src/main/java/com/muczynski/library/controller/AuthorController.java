@@ -25,28 +25,44 @@ public class AuthorController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<AuthorDto> createAuthor(@RequestBody AuthorDto authorDto) {
-        AuthorDto created = authorService.createAuthor(authorDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<?> createAuthor(@RequestBody AuthorDto authorDto) {
+        try {
+            AuthorDto created = authorService.createAuthor(authorDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<AuthorDto>> getAllAuthors() {
-        List<AuthorDto> authors = authorService.getAllAuthors();
-        return ResponseEntity.ok(authors);
+    public ResponseEntity<?> getAllAuthors() {
+        try {
+            List<AuthorDto> authors = authorService.getAllAuthors();
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AuthorDto> getAuthorById(@PathVariable Long id) {
-        AuthorDto author = authorService.getAuthorById(id);
-        return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> getAuthorById(@PathVariable Long id) {
+        try {
+            AuthorDto author = authorService.getAuthorById(id);
+            return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<AuthorDto> updateAuthor(@PathVariable Long id, @RequestBody AuthorDto authorDto) {
-        AuthorDto updated = authorService.updateAuthor(id, authorDto);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> updateAuthor(@PathVariable Long id, @RequestBody AuthorDto authorDto) {
+        try {
+            AuthorDto updated = authorService.updateAuthor(id, authorDto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -65,8 +81,12 @@ public class AuthorController {
 
     @PostMapping("/{id}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoDto> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
+    public ResponseEntity<?> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }
