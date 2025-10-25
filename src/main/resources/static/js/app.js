@@ -282,7 +282,7 @@ function showSection(sectionId, event) {
     }
 }
 
-function createBookByPhoto() {
+async function createBookByPhoto() {
     showSection('books');
     const now = new Date();
     const year = now.getFullYear();
@@ -294,7 +294,7 @@ function createBookByPhoto() {
     const title = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
 
     // This function will be created in books.js
-    prepareNewBookForPhoto(title);
+    await prepareNewBookForPhoto(title);
 }
 
 async function logout() {

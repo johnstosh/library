@@ -104,7 +104,7 @@ function resetBookForm() {
     clearSuccess('books');
 }
 
-function prepareNewBookForPhoto(title) {
+async function prepareNewBookForPhoto(title) {
     // Enter edit mode for a new book
     showBookList(false);
 
@@ -133,7 +133,9 @@ function prepareNewBookForPhoto(title) {
         dateAddedToLibrary: '',
         status: 'ACTIVE'
     };
-    postData('/api/books', initialData).then(() => {
+    try {
+        const createdBook = await postData('/api/books', initialData);
+        document.getElementById('current-book-id').value = createdBook.id;
         // After save, make buttons available
         document.getElementById('add-photo-btn').style.display = 'inline-block';
         document.getElementById('cancel-book-btn').style.display = 'inline-block';
@@ -142,9 +144,10 @@ function prepareNewBookForPhoto(title) {
 
         // Scroll stays at bottom
         window.scrollTo(0, document.body.scrollHeight);
-    }).catch(error => {
+        clearError('books');
+    } catch (error) {
         showError('books', 'Failed to prepare new book: ' + error.message);
-    });
+    }
 }
 
 async function addBook() {

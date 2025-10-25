@@ -87,6 +87,9 @@ public class BookByPhotoWorkflowTest {
             login();
             page.click("[data-test='menu-book-by-photo']");
 
+            // Wait for initial book creation to complete (buttons become visible)
+            page.waitForSelector("[data-test='cancel-book-btn']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+
             // 2. Books page opens
             // 8. Books page goes to edit mode
             Locator booksForm = page.locator("[data-test='books-form']");
@@ -119,6 +122,9 @@ public class BookByPhotoWorkflowTest {
             Files.write(tempFile, "dummy photo content".getBytes());
             page.setInputFiles("input#photo-upload", tempFile);
 
+            // Wait for photo upload to complete and thumbnail to appear
+            page.waitForSelector("[data-test='book-photo']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+
             // 12. The photos show at the bottom of the page
             Locator photoThumbnail = page.locator("[data-test='book-photo']");
             assertThat(photoThumbnail).isVisible();
@@ -128,16 +134,21 @@ public class BookByPhotoWorkflowTest {
             assertThat(bookByPhotoButton).isVisible();
 
             // 16. The user clicks book-by-photo
-            // 16. The user clicks book-by-photo
             // Mock the AI response
             String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
             when(askGrok.askAboutPhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
 
             bookByPhotoButton.click();
 
+            // Wait for title to be updated from AI response
+            page.waitForFunction("() => document.getElementById('new-book-title').value === 'Mock AI Title'", new Page.WaitForFunctionOptions().setTimeout(5000));
+
             // 17. The first photo is used to determine the title, author, ...
             // 18. The new book dto is returned from the backend and the fields are updated with non-blank data from the dto
             assertThat(titleInput).hasValue("Mock AI Title");
+
+            // Wait for new author option to appear after repopulation
+            page.waitForSelector("[data-test='book-author'] option[value='2']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
 
             // 19. The authors need to be re-read from the backend to obtain the new author for the book
             Locator authorOption = page.locator("[data-test='book-author'] option[value='2']");
@@ -149,6 +160,9 @@ public class BookByPhotoWorkflowTest {
 
             // 21. When the user clicks Update Book, the fields are sent to the backend to save
             page.click("[data-test='add-book-btn']");
+
+            // Wait for update to complete and book table to become visible
+            page.waitForSelector("[data-test='book-table']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
 
             // 22. The Books page leaves edit mode (the book table at the top becomes visible)
             Locator bookTable = page.locator("[data-test='book-table']");
