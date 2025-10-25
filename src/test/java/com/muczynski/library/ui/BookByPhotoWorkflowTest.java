@@ -17,12 +17,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.muczynski.library.service.AskGrok;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -34,7 +35,7 @@ public class BookByPhotoWorkflowTest {
     @LocalServerPort
     private int port;
 
-    @MockBean
+    @MockitoBean
     private AskGrok askGrok;
 
     private Browser browser;
@@ -94,7 +95,7 @@ public class BookByPhotoWorkflowTest {
             // 3. Title is set to date/time stamp
             Locator titleInput = page.locator("[data-test='new-book-title']");
             String title = titleInput.inputValue();
-            assertThat(title).matches("^\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}-\\d{2}$");
+            assertTrue(title.matches("^\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}-\\d{2}$"));
 
             // 4. Author is set to the first author in the database
             Locator authorSelect = page.locator("[data-test='book-author']");

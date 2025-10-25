@@ -129,9 +129,12 @@ public class AuthorsUITest {
             page.fill("[data-test='new-author-name']", uniqueName);
             page.click("[data-test='add-author-btn']");
 
+            // Wait for the button to reset to "Add Author" after creation
+            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'", new Page.WaitForFunctionOptions().setTimeout(5000));
+
             // Read: Use filter for flexible matching
-            Locator authorList = page.locator("[data-test='author-list-body']");
-            Locator authorRow = authorList.locator("tr", new Locator.LocatorOptions().setHasText(uniqueName));
+            Locator authorList = page.locator("[data-test='author-item']");
+            Locator authorRow = authorList.filter(new Locator.FilterOptions().setHasText(uniqueName));
             authorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(authorRow.first()).isVisible();
             assertThat(authorRow).hasCount(1);
@@ -142,22 +145,25 @@ public class AuthorsUITest {
             String updatedName = "Updated Author " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-author-name']", updatedName);
             page.click("[data-test='add-author-btn']");
+
+            // Wait for the button to reset to "Add Author" after update
+            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'", new Page.WaitForFunctionOptions().setTimeout(5000));
             assertThat(page.locator("[data-test='add-author-btn']")).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
             // Wait for the updated item to appear (confirms reload)
-            Locator updatedAuthorRow = authorList.locator("tr", new Locator.LocatorOptions().setHasText(updatedName));
+            Locator updatedAuthorRow = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
             updatedAuthorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000));
             assertThat(updatedAuthorRow.first()).isVisible();
 
             // Assert old item is gone (confirms successful reload)
-            assertThat(authorList.locator("tr", new Locator.LocatorOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
+            assertThat(authorList.filter(new Locator.FilterOptions().setHasText(uniqueName))).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000));
 
             // Delete
-            Locator toDelete = authorList.locator("tr", new Locator.LocatorOptions().setHasText(updatedName));
+            Locator toDelete = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
             page.onDialog(dialog -> dialog.accept());
             toDelete.first().locator("[data-test='delete-author-btn']").click();
             toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000));
-            assertThat(authorList.locator("tr", new Locator.LocatorOptions().setHasText(updatedName))).hasCount(0);
+            assertThat(authorList.filter(new Locator.FilterOptions().setHasText(updatedName))).hasCount(0);
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
@@ -176,7 +182,8 @@ public class AuthorsUITest {
 
             navigateToSection("authors");
 
-            page.waitForSelector("[data-test='author-list-body'] tr", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
+            // Wait for author section to be interactable, focusing on list
+            page.waitForSelector("[data-test='author-item']", new Page.WaitForSelectorOptions().setTimeout(5000).setState(WaitForSelectorState.VISIBLE));
 
             List<String> authorNames = page.locator("[data-test='author-name']").allTextContents();
 
