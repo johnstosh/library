@@ -28,45 +28,69 @@ public class AppliedController {
 
     @PostMapping("/public/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
-        Applied applied = new Applied();
-        applied.setName(registrationRequest.getUsername());
-        applied.setPassword(registrationRequest.getPassword());
-        appliedService.createApplied(applied);
-        return ResponseEntity.ok().build();
+        try {
+            Applied applied = new Applied();
+            applied.setName(registrationRequest.getUsername());
+            applied.setPassword(registrationRequest.getPassword());
+            appliedService.createApplied(applied);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/applied")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<Applied>> getAllApplied() {
-        List<Applied> applied = appliedService.getAllApplied();
-        return ResponseEntity.ok(applied);
+    public ResponseEntity<?> getAllApplied() {
+        try {
+            List<Applied> applied = appliedService.getAllApplied();
+            return ResponseEntity.ok(applied);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PostMapping("/applied")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Applied> createApplied(@RequestBody Applied applied) {
-        Applied createdApplied = appliedService.createApplied(applied);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdApplied);
+    public ResponseEntity<?> createApplied(@RequestBody Applied applied) {
+        try {
+            Applied createdApplied = appliedService.createApplied(applied);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdApplied);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/applied/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Applied> updateApplied(@PathVariable Long id, @RequestBody Applied applied) {
-        Applied updatedApplied = appliedService.updateApplied(id, applied);
-        return ResponseEntity.ok(updatedApplied);
+    public ResponseEntity<?> updateApplied(@PathVariable Long id, @RequestBody Applied applied) {
+        try {
+            Applied updatedApplied = appliedService.updateApplied(id, applied);
+            return ResponseEntity.ok(updatedApplied);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/applied/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteApplied(@PathVariable Long id) {
-        appliedService.deleteApplied(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteApplied(@PathVariable Long id) {
+        try {
+            appliedService.deleteApplied(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PostMapping("/applied/{id}/approve")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> approveApplication(@PathVariable Long id) {
-        appliedService.approveApplication(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> approveApplication(@PathVariable Long id) {
+        try {
+            appliedService.approveApplication(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }

@@ -19,34 +19,54 @@ public class LibraryController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LibraryDto> createLibrary(@RequestBody LibraryDto libraryDto) {
-        LibraryDto created = libraryService.createLibrary(libraryDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<?> createLibrary(@RequestBody LibraryDto libraryDto) {
+        try {
+            LibraryDto created = libraryService.createLibrary(libraryDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<LibraryDto>> getAllLibraries() {
-        List<LibraryDto> libraries = libraryService.getAllLibraries();
-        return ResponseEntity.ok(libraries);
+    public ResponseEntity<?> getAllLibraries() {
+        try {
+            List<LibraryDto> libraries = libraryService.getAllLibraries();
+            return ResponseEntity.ok(libraries);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LibraryDto> getLibraryById(@PathVariable Long id) {
-        LibraryDto library = libraryService.getLibraryById(id);
-        return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> getLibraryById(@PathVariable Long id) {
+        try {
+            LibraryDto library = libraryService.getLibraryById(id);
+            return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LibraryDto> updateLibrary(@PathVariable Long id, @RequestBody LibraryDto libraryDto) {
-        LibraryDto updated = libraryService.updateLibrary(id, libraryDto);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> updateLibrary(@PathVariable Long id, @RequestBody LibraryDto libraryDto) {
+        try {
+            LibraryDto updated = libraryService.updateLibrary(id, libraryDto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteLibrary(@PathVariable Long id) {
-        libraryService.deleteLibrary(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteLibrary(@PathVariable Long id) {
+        try {
+            libraryService.deleteLibrary(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }

@@ -19,43 +19,67 @@ public class LoanController {
 
     @PostMapping("/checkout")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LoanDto> checkoutBook(@RequestBody LoanDto loanDto) {
-        LoanDto created = loanService.checkoutBook(loanDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<?> checkoutBook(@RequestBody LoanDto loanDto) {
+        try {
+            LoanDto created = loanService.checkoutBook(loanDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/return/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LoanDto> returnBook(@PathVariable Long id) {
-        LoanDto updated = loanService.returnBook(id);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> returnBook(@PathVariable Long id) {
+        try {
+            LoanDto updated = loanService.returnBook(id);
+            return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<LoanDto>> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll) {
-        List<LoanDto> loans = loanService.getAllLoans(showAll);
-        return ResponseEntity.ok(loans);
+    public ResponseEntity<?> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll) {
+        try {
+            List<LoanDto> loans = loanService.getAllLoans(showAll);
+            return ResponseEntity.ok(loans);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LoanDto> getLoanById(@PathVariable Long id) {
-        LoanDto loan = loanService.getLoanById(id);
-        return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> getLoanById(@PathVariable Long id) {
+        try {
+            LoanDto loan = loanService.getLoanById(id);
+            return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<LoanDto> updateLoan(@PathVariable Long id, @RequestBody LoanDto loanDto) {
-        LoanDto updated = loanService.updateLoan(id, loanDto);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> updateLoan(@PathVariable Long id, @RequestBody LoanDto loanDto) {
+        try {
+            LoanDto updated = loanService.updateLoan(id, loanDto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
-        loanService.deleteLoan(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteLoan(@PathVariable Long id) {
+        try {
+            loanService.deleteLoan(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }

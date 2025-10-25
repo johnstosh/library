@@ -78,7 +78,8 @@ async function fetchData(url) {
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP error status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
@@ -154,7 +155,8 @@ async function postData(url, data, isFormData = false, includeCsrf = true) {
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP error status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
@@ -231,7 +233,8 @@ async function putData(url, data, includeCsrf = true) {
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP error status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
@@ -305,7 +308,8 @@ async function deleteData(url) {
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP error status: ${response.status}`);
         }
 
         return response.ok;

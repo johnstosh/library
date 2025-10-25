@@ -27,28 +27,44 @@ public class BookController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<BookDto> createBook(@RequestBody BookDto bookDto) {
-        BookDto created = bookService.createBook(bookDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<?> createBook(@RequestBody BookDto bookDto) {
+        try {
+            BookDto created = bookService.createBook(bookDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<BookDto>> getAllBooks() {
-        List<BookDto> books = bookService.getAllBooks();
-        return ResponseEntity.ok(books);
+    public ResponseEntity<?> getAllBooks() {
+        try {
+            List<BookDto> books = bookService.getAllBooks();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookDto> getBookById(@PathVariable Long id) {
-        BookDto book = bookService.getBookById(id);
-        return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> getBookById(@PathVariable Long id) {
+        try {
+            BookDto book = bookService.getBookById(id);
+            return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<BookDto> updateBook(@PathVariable Long id, @RequestBody BookDto bookDto) {
-        BookDto updated = bookService.updateBook(id, bookDto);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> updateBook(@PathVariable Long id, @RequestBody BookDto bookDto) {
+        try {
+            BookDto updated = bookService.updateBook(id, bookDto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -68,43 +84,67 @@ public class BookController {
 
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
-        PhotoDto created = photoService.addPhoto(bookId, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<?> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
+        try {
+            PhotoDto created = photoService.addPhoto(bookId, file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{bookId}/photos")
-    public ResponseEntity<List<PhotoDto>> getPhotosByBook(@PathVariable Long bookId) {
-        List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
-        return ResponseEntity.ok(photos);
+    public ResponseEntity<?> getPhotosByBook(@PathVariable Long bookId) {
+        try {
+            List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
+            return ResponseEntity.ok(photos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoDto> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
-        PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<?> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
+        try {
+            PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
-        photoService.deletePhoto(photoId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
+        try {
+            photoService.deletePhoto(photoId);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-cw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
-        photoService.rotatePhoto(photoId, true);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+        try {
+            photoService.rotatePhoto(photoId, true);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-ccw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
-        photoService.rotatePhoto(photoId, false);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+        try {
+            photoService.rotatePhoto(photoId, false);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/book-by-photo")
@@ -113,22 +153,30 @@ public class BookController {
         try {
             BookDto updated = bookService.generateTempBook(id);
             return ResponseEntity.ok(updated);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-left")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
-        photoService.movePhotoLeft(bookId, photoId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
+        try {
+            photoService.movePhotoLeft(bookId, photoId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-right")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
-        photoService.movePhotoRight(bookId, photoId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
+        try {
+            photoService.movePhotoRight(bookId, photoId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 }

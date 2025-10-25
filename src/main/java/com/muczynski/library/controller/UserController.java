@@ -46,47 +46,71 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        List<UserDto> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<UserDto> users = userService.getAllUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
-        UserDto user = userService.getUserById(id);
-        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            UserDto user = userService.getUserById(id);
+            return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<UserDto> createUser(@RequestBody CreateUserDto createUserDto) {
-        UserDto createdUser = userService.createUser(createUserDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+    public ResponseEntity<?> createUser(@RequestBody CreateUserDto createUserDto) {
+        try {
+            UserDto createdUser = userService.createUser(createUserDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PostMapping("/public/register")
-    public ResponseEntity<UserDto> registerUser(@RequestBody CreateUserDto createUserDto) {
-        if (!"USER".equals(createUserDto.getRole())) {
-            return ResponseEntity.badRequest().build();
+    public ResponseEntity<?> registerUser(@RequestBody CreateUserDto createUserDto) {
+        try {
+            if (!"USER".equals(createUserDto.getRole())) {
+                return ResponseEntity.badRequest().build();
+            }
+            UserDto createdUser = userService.createUser(createUserDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
-        UserDto createdUser = userService.createUser(createUserDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody CreateUserDto createUserDto) {
-        UserDto updatedUser = userService.updateUser(id, createUserDto);
-        return ResponseEntity.ok(updatedUser);
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody CreateUserDto createUserDto) {
+        try {
+            UserDto updatedUser = userService.updateUser(id, createUserDto);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/apikey")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<UserDto> updateApiKey(@PathVariable Long id, @RequestBody UserDto userDto) {
-        userService.updateApiKey(id, userDto.getXaiApiKey());
-        UserDto updatedUser = userService.getUserById(id);
-        return ResponseEntity.ok(updatedUser);
+    public ResponseEntity<?> updateApiKey(@PathVariable Long id, @RequestBody UserDto userDto) {
+        try {
+            userService.updateApiKey(id, userDto.getXaiApiKey());
+            UserDto updatedUser = userService.getUserById(id);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
