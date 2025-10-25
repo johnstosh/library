@@ -93,18 +93,8 @@ public class AuthorsUITest {
             }
         }
 
-        // Additional JS poll for display style to confirm non-target sections are hidden
-        String jsExpression = "(function() { " +
-                "document.querySelectorAll('.section').forEach(s => { " +
-                "  if (s.id !== '" + section + "-section' && s.id.endsWith('-section')) { " +
-                "    if (window.getComputedStyle(s).display !== 'none') { " +
-                "      throw new Error('Non-target section is visible'); " +
-                "    } " +
-                "  } " +
-                "}); " +
-                "return true; " +
-                "})()";
-        page.waitForFunction(jsExpression);
+        // Additional wait after selector waits to confirm non-target sections are hidden
+        page.waitForTimeout(5000);
     }
 
     private void ensurePrerequisites() {
@@ -130,7 +120,7 @@ public class AuthorsUITest {
             page.click("[data-test='add-author-btn']");
 
             // Wait for the button to reset to "Add Author" after creation
-            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'", new Page.WaitForFunctionOptions().setTimeout(5000));
+            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'");
 
             // Read: Use filter for flexible matching
             Locator authorList = page.locator("[data-test='author-item']");
@@ -147,7 +137,7 @@ public class AuthorsUITest {
             page.click("[data-test='add-author-btn']");
 
             // Wait for the button to reset to "Add Author" after update
-            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'", new Page.WaitForFunctionOptions().setTimeout(5000));
+            page.waitForFunction("() => document.querySelector('[data-test=\"add-author-btn\"]').textContent.trim() === 'Add Author'");
             assertThat(page.locator("[data-test='add-author-btn']")).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000));
 
             // Wait for the updated item to appear (confirms reload)

@@ -104,6 +104,49 @@ function resetBookForm() {
     clearSuccess('books');
 }
 
+function prepareNewBookForPhoto(title) {
+    // Enter edit mode for a new book
+    showBookList(false);
+
+    // Set title to timestamp
+    document.getElementById('new-book-title').value = title;
+
+    // Set author to the first one (id 1, assuming populated)
+    document.getElementById('book-author').value = '1';
+
+    // Set library to the first one (id 1)
+    document.getElementById('book-library').value = '1';
+
+    // Scroll to bottom
+    window.scrollTo(0, document.body.scrollHeight);
+
+    // Save initial data to backend (minimal, just title/author/library)
+    const initialData = {
+        title: title,
+        authorId: '1',
+        libraryId: '1',
+        publicationYear: '',
+        publisher: '',
+        plotSummary: '',
+        relatedWorks: '',
+        detailedDescription: '',
+        dateAddedToLibrary: '',
+        status: 'ACTIVE'
+    };
+    postData('/api/books', initialData).then(() => {
+        // After save, make buttons available
+        document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('cancel-book-btn').style.display = 'inline-block';
+        document.getElementById('book-by-photo-btn').style.display = 'none'; // Hidden until photo added
+        document.getElementById('book-by-photo-btn').onclick = null;
+
+        // Scroll stays at bottom
+        window.scrollTo(0, document.body.scrollHeight);
+    }).catch(error => {
+        showError('books', 'Failed to prepare new book: ' + error.message);
+    });
+}
+
 async function addBook() {
     window.scrollTo(0, 0);
     const title = document.getElementById('new-book-title').value;

@@ -32,6 +32,8 @@ The tests must follow consistent patterns reflecting best practices in Playwrigh
    - Explicit waits (`waitForSelector()`, `waitForFunction()`) over sleeps to handle AJAX/SPA updates.
    - UUIDs for unique test data (e.g., `UUID.randomUUID()`) to avoid conflicts.
 
+6. Timeouts are never to exceed 5 seconds. It is likewise not allowed to remove timeouts so that a larger default timeout is used. 
+
 These patterns make the tests a robust foundation for full-stack UI testing.
 
 ## Requirements for UI Testing
