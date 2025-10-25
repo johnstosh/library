@@ -42,7 +42,7 @@ STARTED_CONTAINER=false
 
 # Check if port 5432 is in use
 echo "Checking if PostgreSQL is running on port 5432..."
-if ss -tuln | grep -q ":5432"; then
+if ss -tuln | grep -q ":5432 "; then
   echo "Port 5432 is in use. Assuming PostgreSQL is already running. Ensure the database password is set to the expected value and is accessible at localhost:5432."
   echo "If using a local PostgreSQL instance, you may need to update SPRING_DATASOURCE_URL manually or stop the existing database to let this script start a new one."
 else
