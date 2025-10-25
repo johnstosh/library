@@ -232,7 +232,7 @@ function displayBookPhotos(photos, bookId) {
     if (photos && photos.length > 0) {
         photosContainer.style.display = 'block';
         photosDiv.className = 'book-photo-thumbnails';
-        photos.forEach(photo => {
+        photos.forEach((photo, index) => {
             const thumbnail = document.createElement('div');
             thumbnail.className = 'book-photo-thumbnail';
             thumbnail.setAttribute('data-photo-id', photo.id);
@@ -245,7 +245,7 @@ function displayBookPhotos(photos, bookId) {
             }
             thumbnail.appendChild(img);
 
-            // Rotate CCW button (upper left) - arrow circle pointing left
+            // Rotate CCW button (upper left)
             const rotateCcwBtn = document.createElement('button');
             rotateCcwBtn.className = 'photo-overlay-btn rotate-ccw-btn';
             rotateCcwBtn.innerHTML = '↺';
@@ -253,7 +253,7 @@ function displayBookPhotos(photos, bookId) {
             rotateCcwBtn.onclick = () => rotatePhotoCCW(bookId, photo.id);
             thumbnail.appendChild(rotateCcwBtn);
 
-            // Rotate CW button (upper right) - arrow circle pointing right
+            // Rotate CW button (upper right)
             const rotateCwBtn = document.createElement('button');
             rotateCwBtn.className = 'photo-overlay-btn rotate-cw-btn';
             rotateCwBtn.innerHTML = '↻';
@@ -261,7 +261,7 @@ function displayBookPhotos(photos, bookId) {
             rotateCwBtn.onclick = () => rotatePhotoCW(bookId, photo.id);
             thumbnail.appendChild(rotateCwBtn);
 
-            // Delete button (top center, between rotates)
+            // Delete button (top center)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'photo-overlay-btn delete-btn';
             deleteBtn.innerHTML = '🗑️';
@@ -269,13 +269,33 @@ function displayBookPhotos(photos, bookId) {
             deleteBtn.onclick = () => deleteBookPhoto(bookId, photo.id);
             thumbnail.appendChild(deleteBtn);
 
-            // Edit button (lower left)
+            // Edit button (bottom left, near move-left)
             const editBtn = document.createElement('button');
             editBtn.className = 'photo-overlay-btn edit-btn';
             editBtn.innerHTML = '✏️';
             editBtn.title = 'Edit Photo';
             editBtn.onclick = () => editPhoto(bookId, photo.id);
             thumbnail.appendChild(editBtn);
+
+            // Move Left button (bottom left)
+            if (index > 0) {
+                const moveLeftBtn = document.createElement('button');
+                moveLeftBtn.className = 'photo-overlay-btn move-left-btn';
+                moveLeftBtn.innerHTML = '←';
+                moveLeftBtn.title = 'Move Photo Left';
+                moveLeftBtn.onclick = () => movePhotoLeft(bookId, photo.id);
+                thumbnail.appendChild(moveLeftBtn);
+            }
+
+            // Move Right button (bottom right)
+            if (index < photos.length - 1) {
+                const moveRightBtn = document.createElement('button');
+                moveRightBtn.className = 'photo-overlay-btn move-right-btn';
+                moveRightBtn.innerHTML = '→';
+                moveRightBtn.title = 'Move Photo Right';
+                moveRightBtn.onclick = () => movePhotoRight(bookId, photo.id);
+                thumbnail.appendChild(moveRightBtn);
+            }
 
             photosDiv.appendChild(thumbnail);
         });
@@ -339,6 +359,28 @@ async function editPhoto(bookId, photoId) {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to update photo: ' + error.message);
+    }
+}
+
+async function movePhotoLeft(bookId, photoId) {
+    try {
+        await putData(`/api/books/${bookId}/photos/${photoId}/move-left`, {}, false);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to move photo left: ' + error.message);
+    }
+}
+
+async function movePhotoRight(bookId, photoId) {
+    try {
+        await putData(`/api/books/${bookId}/photos/${photoId}/move-right`, {}, false);
+        const photos = await fetchData(`/api/books/${bookId}/photos`);
+        displayBookPhotos(photos, bookId);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to move photo right: ' + error.message);
     }
 }
 
