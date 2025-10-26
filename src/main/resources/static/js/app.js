@@ -97,9 +97,11 @@ async function fetchData(url) {
 async function postData(url, data, isFormData = false, includeCsrf = true) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {};
-    if (!isFormData && includeCsrf && token) {
-        headers['X-CSRF-TOKEN'] = token;
+    if (!isFormData) {
         headers['Content-Type'] = 'application/json';
+        if (includeCsrf && token) {
+            headers['X-CSRF-TOKEN'] = token;
+        }
     }
 
     try {
