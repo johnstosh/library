@@ -20,4 +20,5 @@ public class BookDto {
     private Long authorId;
     private Long libraryId;
     private Long firstPhotoId;
+    private Integer firstPhotoRotation;
 }

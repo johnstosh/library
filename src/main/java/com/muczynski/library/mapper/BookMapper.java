@@ -33,6 +33,7 @@ public class BookMapper {
         }
         if (book.getPhotos() != null && !book.getPhotos().isEmpty()) {
             bookDto.setFirstPhotoId(book.getPhotos().get(0).getId());
+            bookDto.setFirstPhotoRotation(book.getPhotos().get(0).getRotation());
         }
 
         return bookDto;

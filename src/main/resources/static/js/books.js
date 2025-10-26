@@ -14,6 +14,10 @@ async function loadBooks() {
                 const img = document.createElement('img');
                 img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
                 img.style.width = '50px';
+                img.style.height = 'auto';
+                if (book.firstPhotoRotation && book.firstPhotoRotation !== 0) {
+                    img.style.transform = `rotate(${book.firstPhotoRotation}deg)`;
+                }
                 img.setAttribute('data-test', 'book-thumbnail');
                 photoCell.appendChild(img);
             }
