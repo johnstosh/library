@@ -207,6 +207,16 @@ async function editBook(id) {
 }
 
 async function generateBookByPhoto(bookId) {
+    const addBookBtn = document.getElementById('add-book-btn');
+    const cancelBookBtn = document.getElementById('cancel-book-btn');
+    const addPhotoBtn = document.getElementById('add-photo-btn');
+    const bookByPhotoBtn = document.getElementById('book-by-photo-btn');
+
+    addBookBtn.disabled = true;
+    cancelBookBtn.disabled = true;
+    addPhotoBtn.disabled = true;
+    bookByPhotoBtn.disabled = true;
+
     document.body.style.cursor = 'wait';
     try {
         const updatedBook = await putData(`/api/books/${bookId}/book-by-photo`, {}, true);
@@ -234,6 +244,10 @@ async function generateBookByPhoto(bookId) {
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
     } finally {
+        addBookBtn.disabled = false;
+        cancelBookBtn.disabled = false;
+        addPhotoBtn.disabled = false;
+        bookByPhotoBtn.disabled = false;
         document.body.style.cursor = 'default';
     }
 }
