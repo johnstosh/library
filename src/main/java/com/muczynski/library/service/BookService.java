@@ -148,15 +148,40 @@ public class BookService {
     }
 
     private Map<String, Object> extractJsonFromResponse(String response) {
-        int startIndex = response.indexOf('{');
-        int endIndex = response.lastIndexOf('}');
-        if (startIndex == -1 || endIndex == -1 || startIndex >= endIndex) {
-            throw new RuntimeException("No valid JSON found in response");
+        // Trim whitespace from the entire response first
+        String trimmedResponse = response.trim();
+
+        // Find the start of the JSON
+        int startIndex = trimmedResponse.indexOf('{');
+        if (startIndex == -1) {
+            logger.debug("No opening brace found in AI response: {}", trimmedResponse);
+            throw new RuntimeException("No valid JSON found in response - no opening brace");
         }
 
-        String jsonSubstring = response.substring(startIndex, endIndex + 1);
-        String beforeJson = response.substring(0, startIndex).trim();
-        String afterJson = response.substring(endIndex + 1).trim();
+        // Find the end by balancing braces
+        int braceCount = 0;
+        int endIndex = -1;
+        for (int i = startIndex; i < trimmedResponse.length(); i++) {
+            char c = trimmedResponse.charAt(i);
+            if (c == '{') {
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+                if (braceCount == 0) {
+                    endIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (endIndex == -1) {
+            logger.debug("No closing brace found in AI response: {}", trimmedResponse);
+            throw new RuntimeException("No valid JSON found in response - unbalanced braces");
+        }
+
+        String jsonSubstring = trimmedResponse.substring(startIndex, endIndex + 1);
+        String beforeJson = trimmedResponse.substring(0, startIndex).trim();
+        String afterJson = trimmedResponse.substring(endIndex + 1).trim();
 
         if (!beforeJson.isEmpty() && !isAllWhitespace(beforeJson)) {
             logger.warn("Extraneous text before JSON: '{}'", beforeJson);
@@ -168,6 +193,7 @@ public class BookService {
         try {
             return objectMapper.readValue(jsonSubstring, Map.class);
         } catch (Exception e) {
+            logger.debug("Full AI response that failed to parse: {}", trimmedResponse, e);
             logger.debug("Failed to parse JSON from AI response substring: {}", jsonSubstring, e);
             throw new RuntimeException("Failed to parse JSON from response: " + e.getMessage(), e);
         }

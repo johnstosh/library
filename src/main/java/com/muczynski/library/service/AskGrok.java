@@ -21,6 +21,11 @@ public class AskGrok {
 
     public AskGrok() {
         this.restTemplate = new RestTemplate();
+        // Configure long timeout for xAI API calls (10 minutes)
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(600000); // 10 minutes
+        factory.setReadTimeout(600000); // 10 minutes
+        this.restTemplate.setRequestFactory(factory);
     }
 
     public String askAboutPhoto(byte[] imageBytes, String contentType, String question) {
