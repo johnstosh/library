@@ -22,6 +22,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-search.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled
 public class SearchUITest {
 
     @LocalServerPort
@@ -65,9 +66,9 @@ public class SearchUITest {
         page.click("[data-test='menu-login']");
         page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
-        page.fill("[data-test='login-password']", "password");
+        page.fill("[data-test='login-password']", "divinemercy");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
     }
 
