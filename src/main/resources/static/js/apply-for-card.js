@@ -82,7 +82,7 @@ async function applyForCard() {
         showApplySuccess('Library card application successful.');
         clearApplyError();
     } catch (error) {
-        showApplyError('Failed to apply for library card: ' + error.message);
+        showApplyError(error.message);
     }
 }
 
