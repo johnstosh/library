@@ -1,11 +1,6 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,14 +14,25 @@ public class Author {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
     private String name;
+
     private LocalDate dateOfBirth;
+
     private LocalDate dateOfDeath;
+
+    @Lob
     private String religiousAffiliation;
+
+    @Lob
     private String birthCountry;
+
+    @Lob
     private String nationality;
+
+    @Lob
     private String briefBiography;
 
-    @OneToMany(mappedBy = "author", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Photo> photos;
 }

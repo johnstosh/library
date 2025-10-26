@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -249,164 +248,182 @@ public class BookService {
                 "preferredContentType": "image/jpeg"}}
                 Do not include any other text before or after the JSON. Dig deep for helpful information.""";
 
-            try {
-                String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
-                Map<String, Object> jsonData = extractJsonFromResponse(response);
+            int maxRetries = 3;
+            RuntimeException lastException = null;
+            for (int retry = 0; retry < maxRetries; retry++) {
+                try {
+                    String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
+                    Map<String, Object> jsonData = extractJsonFromResponse(response);
 
-                Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
-                if (authorMap != null) {
-                    String authorName = (String) authorMap.get("name");
-                    if (authorName != null && !authorName.trim().isEmpty()) {
-                        authorName = authorName.trim();
+                    Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
+                    if (authorMap != null) {
+                        String authorName = (String) authorMap.get("name");
+                        if (authorName != null && !authorName.trim().isEmpty()) {
+                            authorName = authorName.trim();
 
-                        Pageable singlePage = PageRequest.of(0, 1);
-                        Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(authorName, singlePage);
+                            Pageable singlePage = PageRequest.of(0, 1);
+                            Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(authorName, singlePage);
 
-                        Author authorEntity;
-                        if (!existingAuthors.isEmpty()) {
-                            authorEntity = existingAuthors.getContent().get(0);
-                            // Update existing author with new details
-                            String dobStr = (String) authorMap.get("dateOfBirth");
-                            authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
+                            Author authorEntity;
+                            if (!existingAuthors.isEmpty()) {
+                                authorEntity = existingAuthors.getContent().get(0);
+                                // Update existing author with new details
+                                String dobStr = (String) authorMap.get("dateOfBirth");
+                                authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
 
-                            String dodStr = (String) authorMap.get("dateOfDeath");
-                            authorEntity.setDateOfDeath(dodStr != null && !dodStr.isEmpty() ? LocalDate.parse(dodStr) : null);
+                                String dodStr = (String) authorMap.get("dateOfDeath");
+                                authorEntity.setDateOfDeath(dodStr != null && !dodStr.isEmpty() ? LocalDate.parse(dodStr) : null);
 
-                            String religiousAffiliation = (String) authorMap.get("religiousAffiliation");
-                            authorEntity.setReligiousAffiliation(religiousAffiliation != null ? religiousAffiliation.trim() : "AI-generated");
+                                String religiousAffiliation = (String) authorMap.get("religiousAffiliation");
+                                authorEntity.setReligiousAffiliation(religiousAffiliation != null ? religiousAffiliation.trim() : "AI-generated");
 
-                            String birthCountry = (String) authorMap.get("birthCountry");
-                            authorEntity.setBirthCountry(birthCountry != null ? birthCountry.trim() : null);
+                                String birthCountry = (String) authorMap.get("birthCountry");
+                                authorEntity.setBirthCountry(birthCountry != null ? birthCountry.trim() : null);
 
-                            String nationality = (String) authorMap.get("nationality");
-                            authorEntity.setNationality(nationality != null ? nationality.trim() : null);
+                                String nationality = (String) authorMap.get("nationality");
+                                authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                            String briefBiography = (String) authorMap.get("briefBiography");
-                            authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = (String) authorMap.get("briefBiography");
+                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
 
-                            authorEntity = authorRepository.save(authorEntity);
-                        } else {
-                            authorEntity = new Author();
-                            authorEntity.setName(authorName);
-                            String dobStr = (String) authorMap.get("dateOfBirth");
-                            authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
+                                authorEntity = authorRepository.save(authorEntity);
+                            } else {
+                                authorEntity = new Author();
+                                authorEntity.setName(authorName);
+                                String dobStr = (String) authorMap.get("dateOfBirth");
+                                authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
 
-                            String dodStr = (String) authorMap.get("dateOfDeath");
-                            authorEntity.setDateOfDeath(dodStr != null && !dodStr.isEmpty() ? LocalDate.parse(dodStr) : null);
+                                String dodStr = (String) authorMap.get("dateOfDeath");
+                                authorEntity.setDateOfDeath(dodStr != null && !dodStr.isEmpty() ? LocalDate.parse(dodStr) : null);
 
-                            String religiousAffiliation = (String) authorMap.get("religiousAffiliation");
-                            authorEntity.setReligiousAffiliation(religiousAffiliation != null ? religiousAffiliation.trim() : "AI-generated");
+                                String religiousAffiliation = (String) authorMap.get("religiousAffiliation");
+                                authorEntity.setReligiousAffiliation(religiousAffiliation != null ? religiousAffiliation.trim() : "AI-generated");
 
-                            String birthCountry = (String) authorMap.get("birthCountry");
-                            authorEntity.setBirthCountry(birthCountry != null ? birthCountry.trim() : null);
+                                String birthCountry = (String) authorMap.get("birthCountry");
+                                authorEntity.setBirthCountry(birthCountry != null ? birthCountry.trim() : null);
 
-                            String nationality = (String) authorMap.get("nationality");
-                            authorEntity.setNationality(nationality != null ? nationality.trim() : null);
+                                String nationality = (String) authorMap.get("nationality");
+                                authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                            String briefBiography = (String) authorMap.get("briefBiography");
-                            authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = (String) authorMap.get("briefBiography");
+                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
 
-                            authorEntity = authorRepository.save(authorEntity);
+                                authorEntity = authorRepository.save(authorEntity);
+                            }
+
+                            Long authorId = authorEntity.getId();
+                            dto.setAuthorId(authorId);
+
+                            // Handle author image
+                            String authorImageUrl = (String) authorMap.get("imageUrl");
+                            if (authorImageUrl != null && !authorImageUrl.trim().isEmpty()) {
+                                try {
+                                    ResponseEntity<byte[]> imageResp = restTemplate.getForEntity(authorImageUrl, byte[].class);
+                                    if (imageResp.getStatusCode().is2xxSuccessful() && imageResp.getBody() != null && imageResp.getBody().length > 0) {
+                                        String ct = imageResp.getHeaders().getContentType() != null ?
+                                                imageResp.getHeaders().getContentType().toString() : MediaType.IMAGE_JPEG_VALUE;
+                                        Photo authorPhoto = new Photo();
+                                        authorPhoto.setAuthor(authorEntity);
+                                        authorPhoto.setImage(imageResp.getBody());
+                                        authorPhoto.setContentType(ct);
+
+                                        List<Photo> existingAuthorPhotos = photoRepository.findByAuthorId(authorId);
+                                        int maxOrder = existingAuthorPhotos.stream().mapToInt(Photo::getPhotoOrder).max().orElse(-1);
+                                        authorPhoto.setPhotoOrder(maxOrder + 1);
+                                        photoRepository.save(authorPhoto);
+
+                                        logger.debug("Added author image for author ID {}", authorId);
+                                    }
+                                } catch (Exception e) {
+                                    logger.debug("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
+                                }
+                            }
+                        }
+                    }
+
+                    Map<String, Object> bookMap = (Map<String, Object>) jsonData.get("book");
+                    if (bookMap != null) {
+                        String title = (String) bookMap.get("title");
+                        if (title != null && !title.trim().isEmpty()) {
+                            dto.setTitle(title.trim());
                         }
 
-                        Long authorId = authorEntity.getId();
-                        dto.setAuthorId(authorId);
+                        Number yearNum = (Number) bookMap.get("publicationYear");
+                        if (yearNum != null) {
+                            dto.setPublicationYear(yearNum.intValue());
+                        }
 
-                        // Handle author image
-                        String authorImageUrl = (String) authorMap.get("imageUrl");
-                        if (authorImageUrl != null && !authorImageUrl.trim().isEmpty()) {
+                        String publisher = (String) bookMap.get("publisher");
+                        if (publisher != null && !publisher.trim().isEmpty()) {
+                            dto.setPublisher(publisher.trim());
+                        }
+
+                        String plotSummary = (String) bookMap.get("plotSummary");
+                        if (plotSummary != null && !plotSummary.trim().isEmpty()) {
+                            dto.setPlotSummary(plotSummary.trim());
+                        }
+
+                        String relatedWorks = (String) bookMap.get("relatedWorks");
+                        if (relatedWorks != null && !relatedWorks.trim().isEmpty()) {
+                            dto.setRelatedWorks(relatedWorks.trim());
+                        }
+
+                        String detailedDescription = (String) bookMap.get("detailedDescription");
+                        if (detailedDescription != null && !detailedDescription.trim().isEmpty()) {
+                            dto.setDetailedDescription(detailedDescription.trim());
+                        }
+
+                        // Handle book cover image
+                        String coverImageUrl = (String) bookMap.get("coverImageUrl");
+                        if (coverImageUrl != null && !coverImageUrl.trim().isEmpty()) {
                             try {
-                                ResponseEntity<byte[]> imageResp = restTemplate.getForEntity(authorImageUrl, byte[].class);
+                                ResponseEntity<byte[]> imageResp = restTemplate.getForEntity(coverImageUrl, byte[].class);
                                 if (imageResp.getStatusCode().is2xxSuccessful() && imageResp.getBody() != null && imageResp.getBody().length > 0) {
                                     String ct = imageResp.getHeaders().getContentType() != null ?
                                             imageResp.getHeaders().getContentType().toString() : MediaType.IMAGE_JPEG_VALUE;
-                                    Photo authorPhoto = new Photo();
-                                    authorPhoto.setAuthor(authorEntity);
-                                    authorPhoto.setImage(imageResp.getBody());
-                                    authorPhoto.setContentType(ct);
+                                    Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found: " + id));
+                                    Photo coverPhoto = new Photo();
+                                    coverPhoto.setBook(book);
+                                    coverPhoto.setImage(imageResp.getBody());
+                                    coverPhoto.setContentType(ct);
 
-                                    List<Photo> existingAuthorPhotos = photoRepository.findByAuthorId(authorId);
-                                    int maxOrder = existingAuthorPhotos.stream().mapToInt(Photo::getPhotoOrder).max().orElse(-1);
-                                    authorPhoto.setPhotoOrder(maxOrder + 1);
-                                    photoRepository.save(authorPhoto);
+                                    List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(id);
+                                    for (int i = 0; i < existingPhotos.size(); i++) {
+                                        existingPhotos.get(i).setPhotoOrder(i + 1);
+                                    }
+                                    coverPhoto.setPhotoOrder(0);
+                                    existingPhotos.add(0, coverPhoto);
+                                    photoRepository.saveAll(existingPhotos);
 
-                                    logger.debug("Added author image for author ID {}", authorId);
+                                    logger.debug("Added book cover image for book ID {}", id);
                                 }
                             } catch (Exception e) {
-                                logger.debug("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
+                                logger.debug("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
                             }
                         }
                     }
-                }
-
-                Map<String, Object> bookMap = (Map<String, Object>) jsonData.get("book");
-                if (bookMap != null) {
-                    String title = (String) bookMap.get("title");
-                    if (title != null && !title.trim().isEmpty()) {
-                        dto.setTitle(title.trim());
-                    }
-
-                    Number yearNum = (Number) bookMap.get("publicationYear");
-                    if (yearNum != null) {
-                        dto.setPublicationYear(yearNum.intValue());
-                    }
-
-                    String publisher = (String) bookMap.get("publisher");
-                    if (publisher != null && !publisher.trim().isEmpty()) {
-                        dto.setPublisher(publisher.trim());
-                    }
-
-                    String plotSummary = (String) bookMap.get("plotSummary");
-                    if (plotSummary != null && !plotSummary.trim().isEmpty()) {
-                        dto.setPlotSummary(plotSummary.trim());
-                    }
-
-                    String relatedWorks = (String) bookMap.get("relatedWorks");
-                    if (relatedWorks != null && !relatedWorks.trim().isEmpty()) {
-                        dto.setRelatedWorks(relatedWorks.trim());
-                    }
-
-                    String detailedDescription = (String) bookMap.get("detailedDescription");
-                    if (detailedDescription != null && !detailedDescription.trim().isEmpty()) {
-                        dto.setDetailedDescription(detailedDescription.trim());
-                    }
-
-                    // Handle book cover image
-                    String coverImageUrl = (String) bookMap.get("coverImageUrl");
-                    if (coverImageUrl != null && !coverImageUrl.trim().isEmpty()) {
+                    // If we reach here, success
+                    break;
+                } catch (RuntimeException e) {
+                    lastException = e;
+                    if (e.getMessage().contains("unbalanced braces") && retry < maxRetries - 1) {
+                        logger.warn("Incomplete AI response detected (unbalanced braces), retrying {}/{} for book ID {} using photo ID {}", retry + 1, maxRetries, id, photo.getId());
+                        // Optional: add a small delay before retry
                         try {
-                            ResponseEntity<byte[]> imageResp = restTemplate.getForEntity(coverImageUrl, byte[].class);
-                            if (imageResp.getStatusCode().is2xxSuccessful() && imageResp.getBody() != null && imageResp.getBody().length > 0) {
-                                String ct = imageResp.getHeaders().getContentType() != null ?
-                                        imageResp.getHeaders().getContentType().toString() : MediaType.IMAGE_JPEG_VALUE;
-                                Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found: " + id));
-                                Photo coverPhoto = new Photo();
-                                coverPhoto.setBook(book);
-                                coverPhoto.setImage(imageResp.getBody());
-                                coverPhoto.setContentType(ct);
-
-                                List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(id);
-                                for (int i = 0; i < existingPhotos.size(); i++) {
-                                    existingPhotos.get(i).setPhotoOrder(i + 1);
-                                }
-                                coverPhoto.setPhotoOrder(0);
-                                existingPhotos.add(0, coverPhoto);
-                                photoRepository.saveAll(existingPhotos);
-
-                                logger.debug("Added book cover image for book ID {}", id);
-                            }
-                        } catch (Exception e) {
-                            logger.debug("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
+                            Thread.sleep(2000); // 2 seconds delay
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Retry interrupted", ie);
                         }
+                        continue;
+                    } else {
+                        throw e;
                     }
                 }
-            } catch (Exception e) {
-                logger.debug("Failed to generate book metadata from AI for book ID {} using photo ID {}: {}", id, photo.getId(), e.getMessage(), e);
-                if (e.getMessage().contains("xAI API key not configured")) {
-                    throw new RuntimeException("xAI API key is required to generate book metadata from photo. Please set it in your user settings.");
-                } else {
-                    throw new RuntimeException("Failed to generate book metadata from AI: " + e.getMessage());
-                }
+            }
+            if (lastException != null) {
+                // If all retries failed, rethrow the last exception
+                throw lastException;
             }
         } else {
             handleRandomAuthor(dto);

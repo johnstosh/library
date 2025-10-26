@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
 import com.muczynski.library.dto.UserDto;
@@ -63,8 +62,9 @@ public class AskGrok {
         Map<String, Object> request = new HashMap<>();
         request.put("model", "grok-4"); // use grok-4 for vision
         request.put("messages", Arrays.asList(message));
-        request.put("max_tokens", 300);
+        request.put("max_tokens", 2000);
         request.put("temperature", 0.7);
+        request.put("stream", false); // Disable streaming to avoid complexity; use long timeouts instead
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);

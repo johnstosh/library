@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.domain;
 
 import jakarta.persistence.*;
@@ -15,14 +14,23 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
     private String title;
+
     private Integer publicationYear;
+
+    @Lob
     private String publisher;
+
     @Lob
     private String plotSummary;
+
+    @Lob
     private String relatedWorks;
+
     @Lob
     private String detailedDescription;
+
     private LocalDate dateAddedToLibrary;
 
     @Enumerated(EnumType.STRING)
