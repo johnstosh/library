@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadAuthors() {
     try {
         const authors = await fetchData('/api/authors');

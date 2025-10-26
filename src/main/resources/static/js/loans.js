@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadLoans() {
     try {
         const showAll = document.getElementById('show-returned-loans').checked;

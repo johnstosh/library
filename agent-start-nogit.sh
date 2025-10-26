@@ -1,3 +1,4 @@
+# (c) Copyright 2025 by Muczynski
 #!/bin/bash
 
 if [ -z "$XAI_API_KEY" ]; then

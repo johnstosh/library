@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadLibraries() {
     try {
         const libraries = await fetchData('/api/libraries');

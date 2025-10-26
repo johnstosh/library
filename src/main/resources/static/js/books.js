@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadBooks() {
     try {
         const books = await fetchData('/api/books');

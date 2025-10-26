@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.config;
 
 import org.springframework.beans.factory.annotation.Autowired;

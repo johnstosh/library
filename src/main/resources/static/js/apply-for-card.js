@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 document.addEventListener('DOMContentLoaded', function () {
     const applicationsTable = document.getElementById('applications-table');
     const librarianSection = document.getElementById('librarian-section');

@@ -1,3 +1,4 @@
+# (c) Copyright 2025 by Muczynski
 #!/bin/bash
 
 # deploy.sh

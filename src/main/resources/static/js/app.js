@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 console.log('app.js loaded');
 
 let isLibrarian = false;

@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadApplied() {
     if (!isLibrarian) return;
     try {

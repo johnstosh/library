@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 let currentPage = 0;
 const pageSize = 20;
 

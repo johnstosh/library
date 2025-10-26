@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadSettings() {
     try {
         const user = await fetchData('/api/user-settings');

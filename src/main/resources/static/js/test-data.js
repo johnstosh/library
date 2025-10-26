@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadTestDataStats() {
     try {
         const stats = await fetchData('/api/test-data/stats');

@@ -1,3 +1,4 @@
+// (c) Copyright 2025 by Muczynski
 async function loadUsers() {
     try {
         const users = await fetchData('/api/users');
