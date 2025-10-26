@@ -83,11 +83,11 @@ async function fetchData(url) {
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        } else {
+            return null;
         }
-
-        return await response.json();
     } catch (error) {
         console.error('Fetch error:', error);
         throw error;
@@ -162,11 +162,11 @@ async function postData(url, data, isFormData = false, includeCsrf = true) {
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        } else {
+            return null;
         }
-
-        return await response.json();
     } catch (error) {
         console.error('Post error:', error);
         throw error;
@@ -240,11 +240,11 @@ async function putData(url, data, includeCsrf = true) {
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
+        if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+        } else {
+            return null;
         }
-
-        return await response.json();
     } catch (error) {
         console.error('Put error:', error);
         throw error;
@@ -429,13 +429,13 @@ async function checkAuthentication() {
         }
 
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
+        if (contentType && contentType.includes('application/json')) {
+            const user = await response.json();
+            console.log('User authenticated:', user);
+            showMainContent(user.roles);
+        } else {
             throw new Error('Response is not JSON');
         }
-
-        const user = await response.json();
-        console.log('User authenticated:', user);
-        showMainContent(user.roles);
     } catch (error) {
         console.log('Authentication check failed:', error);
         showPublicSearchPage();
