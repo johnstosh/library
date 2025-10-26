@@ -18,7 +18,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/test-data")
-@PreAuthorize("permitAll()")
 public class TestDataController {
 
     private static final Logger logger = LoggerFactory.getLogger(TestDataController.class);
@@ -36,6 +35,7 @@ public class TestDataController {
     private LoanRepository loanRepository;
 
     @PostMapping("/generate")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Map<String, Object>> generateTestData(@RequestBody Map<String, Integer> payload) {
         try {
             int count = payload.getOrDefault("numBooks", 0);
@@ -54,6 +54,7 @@ public class TestDataController {
     }
 
     @PostMapping("/generate-loans")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Map<String, Object>> generateLoanData(@RequestBody Map<String, Integer> payload) {
         try {
             int count = payload.getOrDefault("numLoans", 0);
@@ -72,6 +73,7 @@ public class TestDataController {
     }
 
     @DeleteMapping("/delete-all")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Void> deleteAll() {
         try {
             testDataService.deleteTestData();
@@ -83,6 +85,7 @@ public class TestDataController {
     }
 
     @DeleteMapping("/total-purge")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<String> totalPurge() {
         try {
             testDataService.totalPurge();
@@ -95,6 +98,7 @@ public class TestDataController {
     }
 
     @GetMapping("/stats")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<Map<String, Long>> getStats() {
         try {
             Map<String, Long> stats = new HashMap<>();

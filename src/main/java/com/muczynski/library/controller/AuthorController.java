@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.AuthorDto;
@@ -28,19 +27,8 @@ public class AuthorController {
     @Autowired
     private PhotoService photoService;
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createAuthor(@RequestBody AuthorDto authorDto) {
-        try {
-            AuthorDto created = authorService.createAuthor(authorDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (Exception e) {
-            logger.debug("Failed to create author with DTO {}: {}", authorDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllAuthors() {
         try {
             List<AuthorDto> authors = authorService.getAllAuthors();
@@ -52,12 +40,37 @@ public class AuthorController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorById(@PathVariable Long id) {
         try {
             AuthorDto author = authorService.getAuthorById(id);
             return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.debug("Failed to retrieve author by ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/photos")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
+        } catch (Exception e) {
+            logger.debug("Failed to add photo to author ID {} with file {}: {}", id, file.getOriginalFilename(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> createAuthor(@RequestBody AuthorDto authorDto) {
+        try {
+            AuthorDto created = authorService.createAuthor(authorDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            logger.debug("Failed to create author with DTO {}: {}", authorDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -86,18 +99,6 @@ public class AuthorController {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
             throw e;
-        }
-    }
-
-    @PostMapping("/{id}/photos")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        try {
-            PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
-            return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
-        } catch (Exception e) {
-            logger.debug("Failed to add photo to author ID {} with file {}: {}", id, file.getOriginalFilename(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 }

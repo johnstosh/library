@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LibraryDto;
@@ -22,19 +21,8 @@ public class LibraryController {
     @Autowired
     private LibraryService libraryService;
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createLibrary(@RequestBody LibraryDto libraryDto) {
-        try {
-            LibraryDto created = libraryService.createLibrary(libraryDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (Exception e) {
-            logger.debug("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllLibraries() {
         try {
             List<LibraryDto> libraries = libraryService.getAllLibraries();
@@ -46,12 +34,25 @@ public class LibraryController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getLibraryById(@PathVariable Long id) {
         try {
             LibraryDto library = libraryService.getLibraryById(id);
             return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.debug("Failed to retrieve library by ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> createLibrary(@RequestBody LibraryDto libraryDto) {
+        try {
+            LibraryDto created = libraryService.createLibrary(libraryDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            logger.debug("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -74,9 +75,9 @@ public class LibraryController {
         try {
             libraryService.deleteLibrary(id);
             return ResponseEntity.noContent().build();
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             logger.debug("Failed to delete library ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 }

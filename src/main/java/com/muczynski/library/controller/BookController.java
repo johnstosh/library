@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookDto;
@@ -30,19 +29,8 @@ public class BookController {
     @Autowired
     private PhotoService photoService;
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createBook(@RequestBody BookDto bookDto) {
-        try {
-            BookDto created = bookService.createBook(bookDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (Exception e) {
-            logger.debug("Failed to create book with DTO {}: {}", bookDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllBooks() {
         try {
             List<BookDto> books = bookService.getAllBooks();
@@ -54,12 +42,25 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBookById(@PathVariable Long id) {
         try {
             BookDto book = bookService.getBookById(id);
             return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.debug("Failed to retrieve book by ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> createBook(@RequestBody BookDto bookDto) {
+        try {
+            BookDto created = bookService.createBook(bookDto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            logger.debug("Failed to create book with DTO {}: {}", bookDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -105,6 +106,7 @@ public class BookController {
     }
 
     @GetMapping("/{bookId}/photos")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getPhotosByBook(@PathVariable Long bookId) {
         try {
             List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
