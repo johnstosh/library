@@ -147,7 +147,7 @@ public class PhotoService {
     @Transactional(readOnly = true)
     public List<PhotoDto> getPhotosByAuthorId(Long authorId) {
         try {
-            List<Photo> photos = photoRepository.findByAuthorId(authorId);
+            List<Photo> photos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
             return photos.stream()
                     .map(photoMapper::toDto)
                     .collect(Collectors.toList());

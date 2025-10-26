@@ -100,9 +100,9 @@ async function postData(url, data, isFormData = false, includeCsrf = true) {
     const headers = {};
     if (!isFormData) {
         headers['Content-Type'] = 'application/json';
-        if (includeCsrf && token) {
-            headers['X-CSRF-TOKEN'] = token;
-        }
+    }
+    if (includeCsrf && token) {
+        headers['X-CSRF-TOKEN'] = token;
     }
 
     try {

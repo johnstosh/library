@@ -39,6 +39,18 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/{id}/photos")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getPhotosByAuthorId(@PathVariable Long id) {
+        try {
+            List<PhotoDto> photos = photoService.getPhotosByAuthorId(id);
+            return ResponseEntity.ok(photos);
+        } catch (Exception e) {
+            logger.debug("Failed to retrieve photos for author ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorById(@PathVariable Long id) {
