@@ -14,12 +14,10 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
     private String title;
 
     private Integer publicationYear;
 
-    @Lob
     private String publisher;
 
     @Lob

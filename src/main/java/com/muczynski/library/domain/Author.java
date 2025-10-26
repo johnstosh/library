@@ -14,7 +14,6 @@ public class Author {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
     private String name;
 
     private LocalDate dateOfBirth;
