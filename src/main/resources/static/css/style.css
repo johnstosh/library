@@ -96,8 +96,7 @@ html, body {
 
 .book-photo-thumbnail {
     position: relative;
-    width: 300px;
-    height: 300px;
+    max-width: 300px;
     border: 1px solid #ddd;
     border-radius: 5px;
     overflow: hidden;
@@ -106,8 +105,8 @@ html, body {
 
 .book-photo-thumbnail img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    display: block;
 }
 
 .photo-overlay-btn {
@@ -169,8 +168,7 @@ html, body {
     }
 
     .book-photo-thumbnail {
-        width: 400px;
-        height: 400px;
+        max-width: 90%; /* Use percentage for better responsiveness */
     }
 }
 
