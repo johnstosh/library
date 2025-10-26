@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByBookIdOrderByPhotoOrder(Long bookId);
+    List<Photo> findByAuthorIdOrderByPhotoOrder(Long authorId);
     List<Photo> findByAuthorId(Long authorId);
 }
