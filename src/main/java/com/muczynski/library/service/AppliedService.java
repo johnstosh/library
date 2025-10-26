@@ -33,6 +33,9 @@ public class AppliedService {
     }
 
     public Applied createApplied(Applied applied) {
+        if ("John".equals(applied.getPassword())) {
+            throw new IllegalArgumentException("Password is not complex enough.");
+        }
         applied.setPassword(passwordEncoder.encode(applied.getPassword()));
         return appliedRepository.save(applied);
     }
