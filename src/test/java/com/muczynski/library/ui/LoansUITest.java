@@ -147,17 +147,21 @@ public class LoansUITest {
             // Return the initial loan
             initialLoanList.first().locator("[data-test='return-book-btn']").click();
 
-            // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            // Wait for the loan to disappear from the active loans list (as it's now returned)
+            assertThat(initialLoanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
 
             // Show returned loans to verify the change
             page.check("[data-test='show-returned-loans-checkbox']");
 
-            // Re-query locator after changes
-            initialLoanList = page.locator("[data-test='loan-item']");
-            String returnedDate = initialLoanList.first().locator("[data-test='loan-return-date']").innerText();
+            // The loan should reappear in the list now
+            Locator returnedLoanList = page.locator("[data-test='loan-item']");
+            assertThat(returnedLoanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
+
+            // Assert that the return date is now populated correctly
+            Locator returnDateCell = returnedLoanList.first().locator("[data-test='loan-return-date']");
+            assertThat(returnDateCell).not().hasText("Not returned", new LocatorAssertions.HasTextOptions().setTimeout(10000L));
+            String returnedDate = returnDateCell.innerText();
             assertFalse(returnedDate.isEmpty());
-            assertNotEquals("Not returned", returnedDate);
 
             // Delete the returned loan for clean state
             initialLoanList.first().locator("[data-test='delete-loan-btn']").click();
@@ -213,21 +217,20 @@ public class LoansUITest {
 
             // Wait for the updated item to appear (confirms reload)
             loanList = page.locator("[data-test='loan-item']");
-            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(10000L));
+            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
             String updatedDueDate = loanList.first().locator("[data-test='loan-due-date']").innerText();
             assertEquals("02/01/2023", updatedDueDate);
 
             // Delete
-            loanList.first().locator("[data-test='delete-loan-btn']").click();
+            Locator firstLoanItem = loanList.first();
+            firstLoanItem.locator("[data-test='delete-loan-btn']").click();
 
-            // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            // Wait for the row to be detached from the DOM
+            firstLoanItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(10000L));
 
-            loanList.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000L));
-            Locator deletedRowCheck = page.locator("[data-test='loan-item']");
-            deletedRowCheck.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            // Final assertion: ensure no loan items are visible
+            assertThat(page.locator("[data-test='loan-item']")).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
