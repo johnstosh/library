@@ -629,14 +629,12 @@ async function logout() {
     document.body.classList.remove('user-is-librarian');
     try {
         const response = await fetch('/logout', { method: 'POST' });
-        if (response.ok) {
-            window.location.href = '/';
-        } else {
+        if (!response.ok) {
             console.error('Logout failed with status:', response.status);
-            alert('Logout failed. Please try again.');
         }
     } catch (error) {
         console.error('An error occurred during logout:', error);
-        alert('An error occurred during logout. Please check your connection and try again.');
+    } finally {
+        window.location.href = '/';
     }
 }
