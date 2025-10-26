@@ -207,3 +207,7 @@ html, body {
         margin-left: 0;
     }
 }
+
+#new-book-summary, #new-book-description, #new-author-bio {
+    height: 10rem;
+}
