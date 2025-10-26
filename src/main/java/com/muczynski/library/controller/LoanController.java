@@ -2,6 +2,8 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.service.LoanService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,8 @@ import java.util.List;
 @RequestMapping("/api/loans")
 public class LoanController {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoanController.class);
+
     @Autowired
     private LoanService loanService;
 
@@ -24,6 +28,7 @@ public class LoanController {
             LoanDto created = loanService.checkoutBook(loanDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
+            logger.debug("Failed to checkout book with DTO {}: {}", loanDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -35,6 +40,7 @@ public class LoanController {
             LoanDto updated = loanService.returnBook(id);
             return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.debug("Failed to return loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -46,6 +52,7 @@ public class LoanController {
             List<LoanDto> loans = loanService.getAllLoans(showAll);
             return ResponseEntity.ok(loans);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve all loans (showAll: {}): {}", showAll, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -57,6 +64,7 @@ public class LoanController {
             LoanDto loan = loanService.getLoanById(id);
             return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.debug("Failed to retrieve loan by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -68,6 +76,7 @@ public class LoanController {
             LoanDto updated = loanService.updateLoan(id, loanDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to update loan ID {} with DTO {}: {}", id, loanDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -79,6 +88,7 @@ public class LoanController {
             loanService.deleteLoan(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
+            logger.debug("Failed to delete loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

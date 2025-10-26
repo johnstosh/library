@@ -159,6 +159,7 @@ public class BookService {
         try {
             return objectMapper.readValue(jsonSubstring, Map.class);
         } catch (Exception e) {
+            logger.debug("Failed to parse JSON from AI response substring: {}", jsonSubstring, e);
             throw new RuntimeException("Failed to parse JSON from response: " + e.getMessage(), e);
         }
     }
@@ -214,7 +215,7 @@ public class BookService {
                 }
                 dto.setAuthorId(authorId);
             } catch (Exception e) {
-                logger.warn("Failed to generate book metadata from AI: {}", e.getMessage());
+                logger.debug("Failed to generate book metadata from AI for book ID {} using photo ID {}: {}", id, photo.getId(), e.getMessage(), e);
                 if (e.getMessage().contains("xAI API key not configured")) {
                     throw new RuntimeException("xAI API key is required to generate book metadata from photo. Please set it in your user settings.");
                 } else {

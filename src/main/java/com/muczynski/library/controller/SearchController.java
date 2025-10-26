@@ -1,6 +1,8 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.service.SearchService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,8 @@ import java.util.Map;
 @RequestMapping("/api/search")
 public class SearchController {
 
+    private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
+
     @Autowired
     private SearchService searchService;
 
@@ -24,6 +28,7 @@ public class SearchController {
             Map<String, Object> results = searchService.search(query, page, size);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
+            logger.debug("Failed to perform search with query '{}', page {}, size {}: {}", query, page, size, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

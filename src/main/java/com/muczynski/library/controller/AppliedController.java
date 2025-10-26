@@ -2,6 +2,8 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.service.AppliedService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,8 @@ import java.util.List;
 @RequestMapping("/api")
 public class AppliedController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AppliedController.class);
+
     @Autowired
     private AppliedService appliedService;
 
@@ -35,6 +39,7 @@ public class AppliedController {
             appliedService.createApplied(applied);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to register application with request {}: {}", registrationRequest, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -46,6 +51,7 @@ public class AppliedController {
             List<Applied> applied = appliedService.getAllApplied();
             return ResponseEntity.ok(applied);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve all applied applications: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -57,6 +63,7 @@ public class AppliedController {
             Applied createdApplied = appliedService.createApplied(applied);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdApplied);
         } catch (Exception e) {
+            logger.debug("Failed to create applied with entity {}: {}", applied, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -68,6 +75,7 @@ public class AppliedController {
             Applied updatedApplied = appliedService.updateApplied(id, applied);
             return ResponseEntity.ok(updatedApplied);
         } catch (Exception e) {
+            logger.debug("Failed to update applied ID {} with entity {}: {}", id, applied, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -79,6 +87,7 @@ public class AppliedController {
             appliedService.deleteApplied(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
+            logger.debug("Failed to delete applied ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -90,6 +99,7 @@ public class AppliedController {
             appliedService.approveApplication(id);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to approve application ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

@@ -4,6 +4,8 @@ import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.PhotoService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/authors")
 public class AuthorController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthorController.class);
 
     @Autowired
     private AuthorService authorService;
@@ -30,6 +34,7 @@ public class AuthorController {
             AuthorDto created = authorService.createAuthor(authorDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
+            logger.debug("Failed to create author with DTO {}: {}", authorDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -40,6 +45,7 @@ public class AuthorController {
             List<AuthorDto> authors = authorService.getAllAuthors();
             return ResponseEntity.ok(authors);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve all authors: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -50,6 +56,7 @@ public class AuthorController {
             AuthorDto author = authorService.getAuthorById(id);
             return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.debug("Failed to retrieve author by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -61,6 +68,7 @@ public class AuthorController {
             AuthorDto updated = authorService.updateAuthor(id, authorDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to update author ID {} with DTO {}: {}", id, authorDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -72,6 +80,7 @@ public class AuthorController {
             authorService.deleteAuthor(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
+            logger.debug("Failed to delete author ID {}: {}", id, e.getMessage(), e);
             if (e.getMessage().contains("associated books")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
@@ -86,6 +95,7 @@ public class AuthorController {
             PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
         } catch (Exception e) {
+            logger.debug("Failed to add photo to author ID {} with file {}: {}", id, file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

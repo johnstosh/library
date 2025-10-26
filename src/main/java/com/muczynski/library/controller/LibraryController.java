@@ -2,6 +2,8 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LibraryDto;
 import com.muczynski.library.service.LibraryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,8 @@ import java.util.List;
 @RequestMapping("/api/libraries")
 public class LibraryController {
 
+    private static final Logger logger = LoggerFactory.getLogger(LibraryController.class);
+
     @Autowired
     private LibraryService libraryService;
 
@@ -24,6 +28,7 @@ public class LibraryController {
             LibraryDto created = libraryService.createLibrary(libraryDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
+            logger.debug("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -34,6 +39,7 @@ public class LibraryController {
             List<LibraryDto> libraries = libraryService.getAllLibraries();
             return ResponseEntity.ok(libraries);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve all libraries: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -44,6 +50,7 @@ public class LibraryController {
             LibraryDto library = libraryService.getLibraryById(id);
             return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.debug("Failed to retrieve library by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -55,6 +62,7 @@ public class LibraryController {
             LibraryDto updated = libraryService.updateLibrary(id, libraryDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to update library ID {} with DTO {}: {}", id, libraryDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -66,6 +74,7 @@ public class LibraryController {
             libraryService.deleteLibrary(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
+            logger.debug("Failed to delete library ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

@@ -4,6 +4,8 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.PhotoService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,8 @@ import java.util.Map;
 @RequestMapping("/api/books")
 public class BookController {
 
+    private static final Logger logger = LoggerFactory.getLogger(BookController.class);
+
     @Autowired
     private BookService bookService;
 
@@ -32,6 +36,7 @@ public class BookController {
             BookDto created = bookService.createBook(bookDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
+            logger.debug("Failed to create book with DTO {}: {}", bookDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -42,6 +47,7 @@ public class BookController {
             List<BookDto> books = bookService.getAllBooks();
             return ResponseEntity.ok(books);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve all books: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -52,6 +58,7 @@ public class BookController {
             BookDto book = bookService.getBookById(id);
             return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.debug("Failed to retrieve book by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -63,6 +70,7 @@ public class BookController {
             BookDto updated = bookService.updateBook(id, bookDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to update book ID {} with DTO {}: {}", id, bookDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -74,6 +82,7 @@ public class BookController {
             bookService.deleteBook(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
+            logger.debug("Failed to delete book ID {}: {}", id, e.getMessage(), e);
             if (e.getMessage().contains("checked out")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(Collections.singletonMap("message", e.getMessage()));
@@ -89,6 +98,7 @@ public class BookController {
             PhotoDto created = photoService.addPhoto(bookId, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
+            logger.debug("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -99,6 +109,7 @@ public class BookController {
             List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
+            logger.debug("Failed to retrieve photos for book ID {}: {}", bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -110,6 +121,7 @@ public class BookController {
             PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to update photo ID {} for book ID {} with DTO {}: {}", photoId, bookId, photoDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -121,6 +133,7 @@ public class BookController {
             photoService.deletePhoto(photoId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
+            logger.debug("Failed to delete photo ID {} for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -132,6 +145,7 @@ public class BookController {
             photoService.rotatePhoto(photoId, true);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to rotate photo ID {} clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -143,6 +157,7 @@ public class BookController {
             photoService.rotatePhoto(photoId, false);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to rotate photo ID {} counter-clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -154,6 +169,7 @@ public class BookController {
             BookDto updated = bookService.generateTempBook(id);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
+            logger.debug("Failed to generate book by photo for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -165,6 +181,7 @@ public class BookController {
             photoService.movePhotoLeft(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -176,6 +193,7 @@ public class BookController {
             photoService.movePhotoRight(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
