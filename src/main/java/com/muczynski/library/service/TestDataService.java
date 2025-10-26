@@ -11,6 +11,8 @@ import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.LoanRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import java.util.List;
 @Service
 @Transactional
 public class TestDataService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TestDataService.class);
 
     @Autowired
     private DataSource dataSource;
@@ -93,6 +97,7 @@ public class TestDataService {
                 purgeH2();
             }
         } catch (SQLException e) {
+            logger.debug("Failed to obtain database product name during total purge: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to obtain database product name", e);
         }
     }
