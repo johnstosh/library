@@ -203,7 +203,7 @@ async function editBook(id) {
     document.getElementById('cancel-book-btn').style.display = 'inline-block';
 
     const photos = await fetchData(`/api/books/${id}/photos`);
-    displayBookPhotos(photos, id);
+    await displayBookPhotos(photos, id);
     if (photos && photos.length > 0) {
         document.getElementById('book-by-photo-btn').style.display = 'inline-block';
         document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(id);
@@ -303,6 +303,7 @@ function displayBookPhotos(photos, bookId) {
     photosDiv.innerHTML = '';
 
     if (photos && photos.length > 0) {
+        const promises = [];
         photosContainer.style.display = 'block';
         photosDiv.className = 'book-photo-thumbnails';
         photos.forEach((photo, index) => {
@@ -312,6 +313,32 @@ function displayBookPhotos(photos, bookId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'book-photo');
+
+            const loadPromise = new Promise(resolve => {
+                img.onload = function() {
+                    if (photo.rotation === 90 || photo.rotation === 270) {
+                        const thumbnailContainer = this.parentElement;
+                        const ratio = this.naturalHeight / this.naturalWidth;
+                        const newWidth = thumbnailContainer.offsetHeight;
+                        const newHeight = newWidth * ratio;
+
+                        thumbnailContainer.style.width = `${newWidth}px`;
+                        thumbnailContainer.style.height = `${newHeight}px`;
+                        thumbnailContainer.style.maxWidth = `${newWidth}px`;
+
+                        this.style.width = `${newHeight}px`;
+                        this.style.height = `${newWidth}px`;
+
+                        this.style.transformOrigin = 'bottom left';
+                        if (photo.rotation === 270) {
+                             this.style.transform = `rotate(${photo.rotation}deg) translateY(100%)`;
+                        }
+                    }
+                    resolve();
+                };
+            });
+            promises.push(loadPromise);
+
             img.src = `/api/photos/${photo.id}/thumbnail?width=300`;
             if (photo.rotation && photo.rotation !== 0) {
                 img.style.transform = `rotate(${photo.rotation}deg)`;
@@ -372,8 +399,10 @@ function displayBookPhotos(photos, bookId) {
 
             photosDiv.appendChild(thumbnail);
         });
+        return Promise.all(promises);
     } else {
         photosContainer.style.display = 'none';
+        return Promise.resolve();
     }
 }
 
@@ -400,7 +429,7 @@ async function rotatePhotoCCW(bookId, photoId) {
     try {
         await putData(`/api/books/${bookId}/photos/${photoId}/rotate-ccw`, {}, false);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to rotate photo counterclockwise: ' + error.message);
@@ -411,7 +440,7 @@ async function rotatePhotoCW(bookId, photoId) {
     try {
         await putData(`/api/books/${bookId}/photos/${photoId}/rotate-cw`, {}, false);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to rotate photo clockwise: ' + error.message);
@@ -428,7 +457,7 @@ async function editPhoto(bookId, photoId) {
         const photoDto = { caption: caption || null };
         await putData(`/api/books/${bookId}/photos/${photoId}`, photoDto);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to update photo: ' + error.message);
@@ -439,7 +468,7 @@ async function movePhotoLeft(bookId, photoId) {
     try {
         await putData(`/api/books/${bookId}/photos/${photoId}/move-left`, {}, false);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to move photo left: ' + error.message);
@@ -450,7 +479,7 @@ async function movePhotoRight(bookId, photoId) {
     try {
         await putData(`/api/books/${bookId}/photos/${photoId}/move-right`, {}, false);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to move photo right: ' + error.message);
@@ -478,7 +507,7 @@ async function handlePhotoUpload(event) {
     try {
         await postData(`/api/books/${bookId}/photos`, formData, true);
         const photos = await fetchData(`/api/books/${bookId}/photos`);
-        displayBookPhotos(photos, bookId);
+        await displayBookPhotos(photos, bookId);
         if (photos && photos.length > 0) {
             document.getElementById('book-by-photo-btn').style.display = 'inline-block';
             const currentId = document.getElementById('current-book-id').value;
