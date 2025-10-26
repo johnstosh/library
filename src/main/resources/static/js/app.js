@@ -367,11 +367,21 @@ function showBulkSuccess(textareaId) {
 
 function formatDate(dateString) {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+
+    // The dateString from the backend is 'YYYY-MM-DD'.
+    // `new Date('YYYY-MM-DD')` creates a date at midnight UTC.
+    // In timezones behind UTC, this can result in the previous day.
+    // To fix this, we parse the string and create the date in the local timezone.
+    const parts = dateString.split('T')[0].split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
+
+    const displayMonth = String(date.getMonth() + 1).padStart(2, '0');
+    const displayDay = String(date.getDate()).padStart(2, '0');
+    const displayYear = date.getFullYear();
+    return `${displayMonth}/${displayDay}/${displayYear}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
