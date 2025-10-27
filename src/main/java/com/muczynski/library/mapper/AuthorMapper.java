@@ -15,6 +15,7 @@ import java.util.Comparator;
 public interface AuthorMapper {
 
     @Mapping(target = "firstPhotoId", ignore = true)
+    @Mapping(target = "firstPhotoRotation", ignore = true)
     AuthorDto toDto(Author author);
 
     @Mapping(target = "photos", ignore = true)
@@ -24,6 +25,9 @@ public interface AuthorMapper {
     default void afterToDto(Author author, @MappingTarget AuthorDto dto) {
         author.getPhotos().stream()
                 .min(Comparator.nullsLast(Comparator.comparing(Photo::getPhotoOrder, Comparator.nullsLast(Comparator.naturalOrder()))))
-                .ifPresent(photo -> dto.setFirstPhotoId(photo.getId()));
+                .ifPresent(photo -> {
+                    dto.setFirstPhotoId(photo.getId());
+                    dto.setFirstPhotoRotation(photo.getRotation());
+                });
     }
 }
