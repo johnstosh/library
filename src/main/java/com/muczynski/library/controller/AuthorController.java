@@ -114,6 +114,18 @@ public class AuthorController {
         }
     }
 
+    @DeleteMapping("/{authorId}/photos/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> deleteAuthorPhoto(@PathVariable Long authorId, @PathVariable Long photoId) {
+        try {
+            photoService.deleteAuthorPhoto(authorId, photoId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            logger.debug("Failed to delete photo ID {} for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PutMapping("/{authorId}/photos/{photoId}/rotate-cw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> rotatePhotoCW(@PathVariable Long authorId, @PathVariable Long photoId) {

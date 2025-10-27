@@ -4,6 +4,7 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,7 +20,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +37,9 @@ class AuthorControllerTest {
 
     @MockitoBean
     private AuthorService authorService;
+
+    @MockitoBean
+    private PhotoService photoService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -78,4 +84,21 @@ class AuthorControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void deleteAuthorPhoto_Success() throws Exception {
+        doNothing().when(photoService).deleteAuthorPhoto(1L, 1L);
+
+        mockMvc.perform(delete("/api/authors/1/photos/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void deleteAuthorPhoto_NotFound() throws Exception {
+        doThrow(new RuntimeException("Photo not found")).when(photoService).deleteAuthorPhoto(1L, 1L);
+
+        mockMvc.perform(delete("/api/authors/1/photos/1"))
+                .andExpect(status().isNotFound());
+    }
 }

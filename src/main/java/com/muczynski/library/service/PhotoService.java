@@ -65,6 +65,23 @@ public class PhotoService {
     }
 
     @Transactional
+    public void deleteAuthorPhoto(Long authorId, Long photoId) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+
+            if (photo.getAuthor() == null || !photo.getAuthor().getId().equals(authorId)) {
+                throw new RuntimeException("Photo does not belong to the specified author");
+            }
+
+            photoRepository.delete(photo);
+        } catch (Exception e) {
+            logger.debug("Failed to delete photo ID {} for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional
     public void rotateAuthorPhoto(Long authorId, Long photoId, boolean clockwise) {
         try {
             Photo photo = photoRepository.findById(photoId)
