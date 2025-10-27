@@ -37,10 +37,12 @@ public class AuthorService {
         return authorRepository.findAll().stream()
                 .map(authorMapper::toDto)
                 .sorted(Comparator.comparing(author -> {
-                    String name = author.getName() == null ? "" : author.getName();
-                    String[] nameParts = name.split(" ");
-                    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
-                }))
+                    if (author == null || author.getName() == null) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().split(" ");
+                    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : author.getName();
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .collect(Collectors.toList());
     }
 
