@@ -442,7 +442,6 @@ async function checkAuthentication() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const user = await response.json();
-            console.log('User authenticated:', user);
             showMainContent(user.roles);
         } else {
             throw new Error('Response is not JSON');
