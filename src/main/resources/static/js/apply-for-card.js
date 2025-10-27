@@ -42,30 +42,32 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('User is not a librarian or not logged in.');
         });
 
-    applicationsTable.addEventListener('change', function (event) {
-        if (event.target.classList.contains('status-select')) {
-            const id = event.target.dataset.id;
-            const status = event.target.value;
-            fetch(`/apply/api/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status })
-            });
-        }
-    });
+    if (applicationsTable) {
+        applicationsTable.addEventListener('change', function (event) {
+            if (event.target.classList.contains('status-select')) {
+                const id = event.target.dataset.id;
+                const status = event.target.value;
+                fetch(`/apply/api/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+            }
+        });
 
-    applicationsTable.addEventListener('click', function (event) {
-        if (event.target.classList.contains('delete-btn')) {
-            const id = event.target.dataset.id;
-            fetch(`/apply/api/${id}`, {
-                method: 'DELETE'
-            }).then(() => {
-                event.target.closest('tr').remove();
-            });
-        }
-    });
+        applicationsTable.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                const id = event.target.dataset.id;
+                fetch(`/apply/api/${id}`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    event.target.closest('tr').remove();
+                });
+            }
+        });
+    }
 });
 
 async function applyForCard() {
