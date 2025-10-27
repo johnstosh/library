@@ -1,4 +1,32 @@
 // (c) Copyright 2025 by Muczynski
+function loadApplications() {
+    const applicationsTableBody = document.getElementById('applications-table').querySelector('tbody');
+    fetch('/apply/api')
+        .then(response => response.json())
+        .then(data => {
+            applicationsTableBody.innerHTML = ''; // Clear existing data
+            data.forEach(application => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${application.id}</td>
+                    <td>${application.name}</td>
+                    <td>
+                        <select data-id="${application.id}" class="status-select">
+                            <option value="pending" ${application.status === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="approved" ${application.status === 'approved' ? 'selected' : ''}>Approved</option>
+                            <option value="not-approved" ${application.status === 'not-approved' ? 'selected' : ''}>Not Approved</option>
+                            <option value="question" ${application.status === 'question' ? 'selected' : ''}>Question</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button data-id="${application.id}" class="btn btn-danger delete-btn">Delete</button>
+                    </td>
+                `;
+                applicationsTableBody.appendChild(row);
+            });
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const applicationsTable = document.getElementById('applications-table');
     const librarianSection = document.getElementById('librarian-section');
@@ -13,29 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(user => {
             if (user.roles.some(role => role.name === 'LIBRARIAN')) {
                 librarianSection.style.display = 'block';
-                fetch('/apply/api')
-                    .then(response => response.json())
-                    .then(data => {
-                        data.forEach(application => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${application.id}</td>
-                                <td>${application.name}</td>
-                                <td>
-                                    <select data-id="${application.id}" class="status-select">
-                                        <option value="pending" ${application.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                        <option value="approved" ${application.status === 'approved' ? 'selected' : ''}>Approved</option>
-                                        <option value="not-approved" ${application.status === 'not-approved' ? 'selected' : ''}>Not Approved</option>
-                                        <option value="question" ${application.status === 'question' ? 'selected' : ''}>Question</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <button data-id="${application.id}" class="btn btn-danger delete-btn">Delete</button>
-                                </td>
-                            `;
-                            applicationsTable.appendChild(row);
-                        });
-                    });
+                loadApplications();
             }
         })
         .catch(error => {
@@ -83,6 +89,9 @@ async function applyForCard() {
         document.getElementById('new-applicant-password').value = '';
         showApplySuccess('Library card application successful.');
         clearApplyError();
+        if (document.getElementById('librarian-section').style.display === 'block') {
+            loadApplications();
+        }
     } catch (error) {
         showApplyError(error.message);
     }
