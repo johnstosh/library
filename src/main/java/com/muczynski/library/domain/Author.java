@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 
 @Entity
 @Getter
@@ -33,5 +34,5 @@ public class Author {
     private String briefBiography;
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<Photo> photos;
+    private java.util.List<Photo> photos = new ArrayList<>();
 }
