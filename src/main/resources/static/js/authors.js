@@ -9,6 +9,17 @@ async function loadAuthors() {
             tr.setAttribute('data-test', 'author-item');
             tr.setAttribute('data-entity-id', author.id);
 
+            const tdPhoto = document.createElement('td');
+            tdPhoto.setAttribute('data-test', 'author-photo-cell');
+            if (author.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${author.firstPhotoId}/thumbnail?width=50`;
+                img.alt = `Photo of ${author.name}`;
+                img.style.height = '50px';
+                tdPhoto.appendChild(img);
+            }
+            tr.appendChild(tdPhoto);
+
             const tdName = document.createElement('td');
             tdName.setAttribute('data-test', 'author-name');
             tdName.textContent = author.name;
