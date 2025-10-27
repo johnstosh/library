@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ public class SearchService {
     @Autowired
     private AuthorMapper authorMapper;
 
+    @Transactional(readOnly = true)
     public Map<String, Object> search(String query, int page, int size) {
         if (query == null || query.trim().isEmpty()) {
             throw new IllegalArgumentException("Query cannot be empty");
