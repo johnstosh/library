@@ -113,4 +113,28 @@ public class AuthorController {
             throw e;
         }
     }
+
+    @PutMapping("/{authorId}/photos/{photoId}/rotate-cw")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> rotatePhotoCW(@PathVariable Long authorId, @PathVariable Long photoId) {
+        try {
+            photoService.rotateAuthorPhoto(authorId, photoId, true);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.debug("Failed to rotate photo ID {} clockwise for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{authorId}/photos/{photoId}/rotate-ccw")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> rotatePhotoCCW(@PathVariable Long authorId, @PathVariable Long photoId) {
+        try {
+            photoService.rotateAuthorPhoto(authorId, photoId, false);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.debug("Failed to rotate photo ID {} counter-clockwise for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 }

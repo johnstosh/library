@@ -65,6 +65,27 @@ public class PhotoService {
     }
 
     @Transactional
+    public void rotateAuthorPhoto(Long authorId, Long photoId, boolean clockwise) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+
+            if (photo.getAuthor() == null || !photo.getAuthor().getId().equals(authorId)) {
+                throw new RuntimeException("Photo does not belong to the specified author");
+            }
+
+            int delta = clockwise ? 90 : -90;
+            int currentRotation = photo.getRotation();
+            int newRotation = ((currentRotation + delta) % 360 + 360) % 360;
+            photo.setRotation(newRotation);
+            photoRepository.save(photo);
+        } catch (Exception e) {
+            logger.debug("Failed to rotate photo ID {} for author ID {} (clockwise: {}): {}", photoId, authorId, clockwise, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional
     public PhotoDto addPhotoToAuthor(Long authorId, MultipartFile file) {
         try {
             Author author = authorRepository.findById(authorId)
