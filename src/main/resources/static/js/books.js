@@ -320,7 +320,7 @@ function displayBookPhotos(photos, bookId) {
                         const thumbnailContainer = this.parentElement;
                         const ratio = this.naturalHeight / this.naturalWidth;
                         const newWidth = thumbnailContainer.offsetHeight;
-                        const newHeight = newWidth * ratio;
+                        const newHeight = newWidth / ratio;
 
                         thumbnailContainer.style.width = `${newWidth}px`;
                         thumbnailContainer.style.height = `${newHeight}px`;
