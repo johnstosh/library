@@ -35,7 +35,7 @@ async function approveApplication(id) {
         return;
     }
     try {
-        await postData(`/api/applied/${id}/approve`, {}, false, false);
+        await postData(`/api/applied/${id}/approve`, {});
         loadApplied();
     } catch (error) {
         console.error(`Failed to approve application ${id}:`, error);
