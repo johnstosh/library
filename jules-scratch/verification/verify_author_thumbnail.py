@@ -26,8 +26,7 @@ with sync_playwright() as p:
     # Edit author and add photo
     page.locator('[data-test="edit-author-btn"]').first.click()
     page.wait_for_selector('[data-test="add-author-photo-btn"]')
-    page.locator('[data-test="add-author-photo-btn"]').click()
-    page.set_input_files('input[type="file"]', 'src/test/resources/test-images/test-image.jpg')
+    page.locator("#author-photo-upload").set_input_files('src/test/resources/test-images/test-image.jpg')
     page.wait_for_selector('[data-test="author-photo"]')
 
     # Rotate photo

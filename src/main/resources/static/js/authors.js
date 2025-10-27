@@ -12,14 +12,40 @@ async function loadAuthors() {
             const tdPhoto = document.createElement('td');
             tdPhoto.setAttribute('data-test', 'author-photo-cell');
             if (author.firstPhotoId) {
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'author-photo-thumbnail';
+
                 const img = document.createElement('img');
+                img.onload = function() {
+                    if (author.firstPhotoRotation === 90 || author.firstPhotoRotation === 270) {
+                        const thumbnailContainer = this.parentElement;
+                        const ratio = this.naturalHeight / this.naturalWidth;
+                        const newWidth = thumbnailContainer.offsetHeight;
+                        const newHeight = newWidth / ratio;
+
+                        thumbnailContainer.style.width = `${newWidth}px`;
+                        thumbnailContainer.style.height = `${newHeight}px`;
+                        thumbnailContainer.style.maxWidth = `${newWidth}px`;
+
+                        this.style.width = `${newHeight}px`;
+                        this.style.height = `${newWidth}px`;
+                        this.style.transformOrigin = 'bottom left';
+
+                        if (author.firstPhotoRotation === 90) {
+                            this.style.transform = 'rotate(90deg) translateX(-100%)';
+                        } else { // 270
+                            this.style.transform = 'rotate(270deg) translateY(100%)';
+                        }
+                    }
+                };
                 img.src = `/api/photos/${author.firstPhotoId}/thumbnail?width=50`;
                 img.alt = `Photo of ${author.name}`;
-                img.style.height = '50px';
-                if (author.firstPhotoRotation && author.firstPhotoRotation !== 0) {
+                img.style.height = '50px'; // Initial height, will be overwritten by onload if needed
+                if (author.firstPhotoRotation === 0 || author.firstPhotoRotation === 180) {
                     img.style.transform = `rotate(${author.firstPhotoRotation}deg)`;
                 }
-                tdPhoto.appendChild(img);
+                thumbnail.appendChild(img);
+                tdPhoto.appendChild(thumbnail);
             }
             tr.appendChild(tdPhoto);
 
