@@ -30,6 +30,15 @@ async function loadBooks() {
             titleCell.appendChild(titleSpan);
             row.appendChild(titleCell);
 
+            const loansCell = document.createElement('td');
+            loansCell.className = 'librarian-only';
+            if (book.status === 'WITHDRAWN' || book.status === 'LOST') {
+                loansCell.textContent = book.status.toLowerCase();
+            } else if (book.loanCount > 0) {
+                loansCell.textContent = book.loanCount;
+            }
+            row.appendChild(loansCell);
+
             const actionsCell = document.createElement('td');
             if (isLibrarian) {
                 const editBtn = document.createElement('button');

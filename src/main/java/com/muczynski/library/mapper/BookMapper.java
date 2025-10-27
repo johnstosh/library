@@ -6,9 +6,14 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BookDto;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.muczynski.library.repository.LoanRepository;
 
 @Service
 public class BookMapper {
+
+    @Autowired
+    private LoanRepository loanRepository;
 
     public BookDto toDto(Book book) {
         if (book == null) {
@@ -35,6 +40,8 @@ public class BookMapper {
             bookDto.setFirstPhotoId(book.getPhotos().get(0).getId());
             bookDto.setFirstPhotoRotation(book.getPhotos().get(0).getRotation());
         }
+
+        bookDto.setLoanCount(loanRepository.countByBookIdAndReturnDateIsNull(book.getId()));
 
         return bookDto;
     }
