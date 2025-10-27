@@ -29,5 +29,7 @@ public interface AuthorMapper {
                     dto.setFirstPhotoId(photo.getId());
                     dto.setFirstPhotoRotation(photo.getRotation());
                 });
+                .min(Comparator.nullsLast(Comparator.comparing(Photo::getPhotoOrder, Comparator.nullsLast(Comparator.naturalOrder()))))
+                .ifPresent(photo -> dto.setFirstPhotoId(photo.getId()));
     }
 }

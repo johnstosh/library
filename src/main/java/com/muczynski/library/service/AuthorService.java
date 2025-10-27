@@ -37,8 +37,9 @@ public class AuthorService {
         return authorRepository.findAll().stream()
                 .map(authorMapper::toDto)
                 .sorted(Comparator.comparing(author -> {
-                    String[] nameParts = author.getName().split(" ");
-                    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : author.getName();
+                    String name = author.getName() == null ? "" : author.getName();
+                    String[] nameParts = name.split(" ");
+                    return nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
                 }))
                 .collect(Collectors.toList());
     }

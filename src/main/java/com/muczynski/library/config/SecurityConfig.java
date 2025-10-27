@@ -33,7 +33,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/test-data/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/books", "/api/authors", "/api/libraries").permitAll()
+                        .requestMatchers("/api/books/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/authors", "/api/libraries").permitAll()
                         .requestMatchers("/apply/api/**").hasAuthority("LIBRARIAN")
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
