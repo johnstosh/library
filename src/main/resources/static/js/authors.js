@@ -9,6 +9,20 @@ async function loadAuthors() {
             tr.setAttribute('data-test', 'author-item');
             tr.setAttribute('data-entity-id', author.id);
 
+            const tdPhoto = document.createElement('td');
+            tdPhoto.setAttribute('data-test', 'author-photo-cell');
+            if (author.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${author.firstPhotoId}/thumbnail?width=50`;
+                img.style.width = '50px';
+                img.style.height = 'auto';
+                if (author.firstPhotoRotation && author.firstPhotoRotation !== 0) {
+                    img.style.transform = `rotate(${author.firstPhotoRotation}deg)`;
+                }
+                tdPhoto.appendChild(img);
+            }
+            tr.appendChild(tdPhoto);
+
             const tdName = document.createElement('td');
             tdName.setAttribute('data-test', 'author-name');
             tdName.textContent = author.name;
