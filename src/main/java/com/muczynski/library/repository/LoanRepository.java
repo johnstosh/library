@@ -14,6 +14,7 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     List<Loan> findAllByReturnDateIsNullOrderByDueDateAsc();
     List<Loan> findAllByOrderByDueDateAsc();
     long countByBookId(Long bookId);
+    long countByBookIdAndReturnDateIsNull(Long bookId);
     long countByUserIdAndReturnDateIsNull(Long userId);
     void deleteByUserId(Long userId);
 }
