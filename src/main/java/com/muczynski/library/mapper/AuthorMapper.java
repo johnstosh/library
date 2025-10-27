@@ -23,7 +23,7 @@ public interface AuthorMapper {
     @AfterMapping
     default void afterToDto(Author author, @MappingTarget AuthorDto dto) {
         author.getPhotos().stream()
-                .min(Comparator.comparing(Photo::getPhotoOrder))
+                .min(Comparator.nullsLast(Comparator.comparing(Photo::getPhotoOrder, Comparator.nullsLast(Comparator.naturalOrder()))))
                 .ifPresent(photo -> dto.setFirstPhotoId(photo.getId()));
     }
 }
