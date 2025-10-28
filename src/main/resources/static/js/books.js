@@ -13,8 +13,8 @@ async function loadBooks() {
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
                 img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
-                img.style.width = '50px';
-                img.style.height = 'auto';
+                img.style.height = '50px';
+                img.style.width = 'auto';
                 if (book.firstPhotoRotation && book.firstPhotoRotation !== 0) {
                     img.style.transform = `rotate(${book.firstPhotoRotation}deg)`;
                 }
