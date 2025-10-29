@@ -58,8 +58,9 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             const photoCell = document.createElement('td');
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
+                img.src = `/api/photos/${book.firstPhotoId}/image`;
                 img.style.width = '50px';
+                img.style.height = 'auto';
                 img.setAttribute('data-test', 'book-thumbnail');
                 photoCell.appendChild(img);
             }
@@ -96,17 +97,31 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
         authorsList.setAttribute('data-test', 'search-authors-list');
         authors.forEach((author, index) => {
             const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.className = 'list-group-item d-flex align-items-center';
             li.setAttribute('data-test', 'search-author-item');
+
+            // Add thumbnail if available
+            if (author.firstPhotoId) {
+                const img = document.createElement('img');
+                img.src = `/api/photos/${author.firstPhotoId}/image`;
+                img.style.width = '50px';
+                img.style.height = 'auto';
+                img.style.marginRight = '10px';
+                img.setAttribute('data-test', 'author-thumbnail');
+                li.appendChild(img);
+            }
+
             const span = document.createElement('span');
             span.textContent = `${startAuthor + index}. ${author.name}`;
             li.appendChild(span);
+
             const viewBtn = document.createElement('button');
             viewBtn.className = 'btn btn-sm btn-outline-primary ms-2';
             viewBtn.textContent = 'View';
             viewBtn.setAttribute('data-test', 'view-search-author-btn');
             viewBtn.onclick = () => viewAuthor(author.id);
             li.appendChild(viewBtn);
+
             authorsList.appendChild(li);
         });
         resultsDiv.appendChild(authorsList);

@@ -387,11 +387,14 @@ function formatDate(dateString) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded');
     // Add submit event listener to login form for debugging
-    const loginForm = document.getElementById('login-form').querySelector('form');
+    const loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            console.log('Login form submitted with username:', document.getElementById('username').value);
-        });
+        const form = loginForm.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                console.log('Login form submitted with username:', document.getElementById('username')?.value);
+            });
+        }
     }
 
     const searchInput = document.querySelector('[data-test="search-input"]');
@@ -453,31 +456,43 @@ async function checkAuthentication() {
 }
 
 function showPublicSearchPage() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.style.display = 'none';
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.style.display = 'block';
     showSection('search');
-    document.getElementById('login-menu-btn').style.display = 'block';
-    document.getElementById('logout-menu-btn').style.display = 'none';
+    const loginMenuBtn = document.getElementById('login-menu-btn');
+    if (loginMenuBtn) loginMenuBtn.style.display = 'block';
+    const logoutMenuBtn = document.getElementById('logout-menu-btn');
+    if (logoutMenuBtn) logoutMenuBtn.style.display = 'none';
     const pageTitle = document.getElementById('page-title');
-    pageTitle.innerHTML = 'The St. Martin de Porres Branch<br>of the Sacred Heart Library System';
+    if (pageTitle) {
+        pageTitle.innerHTML = 'The St. Martin de Porres Branch<br>of the Sacred Heart Library System';
+    }
 
     // Show section menu but hide non-public items
     const sectionMenu = document.getElementById('section-menu');
-    sectionMenu.style.display = 'flex';
-    sectionMenu.querySelectorAll('li').forEach(item => {
-        if (!item.classList.contains('public-item')) {
-            item.style.display = 'none';
-        } else {
-            item.style.display = 'list-item';
-        }
-    });
+    if (sectionMenu) {
+        sectionMenu.style.display = 'flex';
+        sectionMenu.querySelectorAll('li').forEach(item => {
+            if (!item.classList.contains('public-item')) {
+                item.style.display = 'none';
+            } else {
+                item.style.display = 'list-item';
+            }
+        });
+    }
 }
 
 function showLoginForm() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('main-content').style.display = 'none';
-    document.getElementById('login-menu-btn').style.display = 'block';
-    document.getElementById('logout-menu-btn').style.display = 'none';
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.style.display = 'block';
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.style.display = 'none';
+    const loginMenuBtn = document.getElementById('login-menu-btn');
+    if (loginMenuBtn) loginMenuBtn.style.display = 'block';
+    const logoutMenuBtn = document.getElementById('logout-menu-btn');
+    if (logoutMenuBtn) logoutMenuBtn.style.display = 'none';
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
         errorEl.style.display = 'none';
@@ -485,14 +500,16 @@ function showLoginForm() {
 
     // Show section menu but hide non-public items
     const sectionMenu = document.getElementById('section-menu');
-    sectionMenu.style.display = 'flex';
-    sectionMenu.querySelectorAll('li').forEach(item => {
-        if (!item.classList.contains('public-item')) {
-            item.style.display = 'none';
-        } else {
-            item.style.display = 'list-item';
-        }
-    });
+    if (sectionMenu) {
+        sectionMenu.style.display = 'flex';
+        sectionMenu.querySelectorAll('li').forEach(item => {
+            if (!item.classList.contains('public-item')) {
+                item.style.display = 'none';
+            } else {
+                item.style.display = 'list-item';
+            }
+        });
+    }
 }
 
 function showLoginError() {
@@ -510,11 +527,16 @@ function showLoginError() {
 function showMainContent(roles) {
     console.log('Showing main content for roles:', roles);
     isLibrarian = roles.includes('LIBRARIAN');
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-    document.getElementById('section-menu').style.display = 'flex';
-    document.getElementById('login-menu-btn').style.display = 'none';
-    document.getElementById('logout-menu-btn').style.display = 'block';
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.style.display = 'none';
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.style.display = 'block';
+    const sectionMenu = document.getElementById('section-menu');
+    if (sectionMenu) sectionMenu.style.display = 'flex';
+    const loginMenuBtn = document.getElementById('login-menu-btn');
+    if (loginMenuBtn) loginMenuBtn.style.display = 'none';
+    const logoutMenuBtn = document.getElementById('logout-menu-btn');
+    if (logoutMenuBtn) logoutMenuBtn.style.display = 'block';
 
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
@@ -565,9 +587,11 @@ function showSection(sectionId, event) {
     }
 
     // If not logged in and showing a section, hide login and show main content
-    if (!isLibrarian && (document.getElementById('login-form').style.display === 'block')) {
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
+    if (!isLibrarian && (document.getElementById('login-form')?.style.display === 'block')) {
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) loginForm.style.display = 'none';
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) mainContent.style.display = 'block';
     }
 
     // Hide all sections and show the target one
@@ -601,7 +625,7 @@ function showSection(sectionId, event) {
 
     // Hide the navbar on mobile after a menu item is clicked
     const navbarCollapse = document.getElementById('navbarNav');
-    if (navbarCollapse.classList.contains('show')) {
+    if (navbarCollapse && navbarCollapse.classList.contains('show')) {
         const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
             toggle: false
         });

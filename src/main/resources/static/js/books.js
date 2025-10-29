@@ -152,6 +152,11 @@ async function prepareNewBookForPhoto(title) {
         document.getElementById('book-by-photo-btn').style.display = 'none'; // Hidden until photo added
         document.getElementById('book-by-photo-btn').onclick = null;
 
+        // Change button to Update Book since the book is now created
+        const btn = document.getElementById('add-book-btn');
+        btn.textContent = 'Update Book';
+        btn.onclick = () => updateBook(createdBook.id);
+
         // Scroll stays at bottom
         window.scrollTo(0, document.body.scrollHeight);
         clearError('books');

@@ -1,9 +1,9 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.RandomBook;
@@ -12,6 +12,7 @@ import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.PhotoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -45,6 +47,9 @@ public class TestDataService {
 
     @Autowired
     private LibraryRepository libraryRepository;
+
+    @Autowired
+    private PhotoRepository photoRepository;
 
     @Autowired
     private RandomAuthor randomAuthor;
@@ -83,9 +88,25 @@ public class TestDataService {
     }
 
     public void deleteTestData() {
-        bookRepository.deleteByPublisher("test-data");
-        authorRepository.deleteByReligiousAffiliation("test-data");
         loanRepository.deleteByLoanDate(java.time.LocalDate.of(2099, 1, 1));
+        bookRepository.deleteByPublisher("test-data");
+
+        // Explicitly handle deletion of test authors, including their photos
+        List<Author> allAuthors = authorRepository.findAll();
+        List<Author> testAuthors = allAuthors.stream()
+                .filter(author -> "test-data".equals(author.getReligiousAffiliation()))
+                .collect(Collectors.toList());
+
+        for (Author testAuthor : testAuthors) {
+            List<Photo> authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
+            if (!authorPhotos.isEmpty()) {
+                photoRepository.deleteAll(authorPhotos);
+            }
+        }
+
+        if (!testAuthors.isEmpty()) {
+            authorRepository.deleteAll(testAuthors);
+        }
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
