@@ -12,9 +12,9 @@ async function loadBooks() {
             const photoCell = document.createElement('td');
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
-                img.style.height = '50px';
-                img.style.width = 'auto';
+                img.src = `/api/photos/${book.firstPhotoId}/image`;
+                img.style.width = '50px';
+                img.style.height = 'auto';
                 img.setAttribute('data-test', 'book-thumbnail');
                 photoCell.appendChild(img);
             }
@@ -317,7 +317,9 @@ function displayBookPhotos(photos, bookId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'book-photo');
-            img.src = `/api/photos/${photo.id}/thumbnail?width=300`;
+            img.src = `/api/photos/${photo.id}/image`;
+            img.style.width = '300px';
+            img.style.height = 'auto';
             thumbnail.appendChild(img);
 
             // Rotate CCW button (upper left)

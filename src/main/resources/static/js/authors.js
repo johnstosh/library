@@ -16,9 +16,10 @@ async function loadAuthors() {
                 thumbnail.className = 'author-photo-thumbnail';
 
                 const img = document.createElement('img');
-                img.src = `/api/photos/${author.firstPhotoId}/thumbnail?width=50`;
+                img.src = `/api/photos/${author.firstPhotoId}/image`;
                 img.alt = `Photo of ${author.name}`;
-                img.style.height = '50px';
+                img.style.width = '50px';
+                img.style.height = 'auto';
                 thumbnail.appendChild(img);
                 tdPhoto.appendChild(thumbnail);
             }
@@ -186,7 +187,7 @@ function displayAuthorPhotos(photos, authorId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'author-photo');
-            img.src = `/api/photos/${photo.id}/thumbnail?width=300`;
+            img.src = `/api/photos/${photo.id}/image`;
             thumbnail.appendChild(img);
 
             const rotateCcwBtn = document.createElement('button');
