@@ -248,6 +248,9 @@ async function deleteAuthorPhoto(authorId, photoId) {
         if (photosDiv.childElementCount === 0) {
             document.getElementById('author-photos-container').style.display = 'none';
         }
+        const photos = await fetchData(`/api/authors/${authorId}/photos`);
+        displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to delete photo: ' + error.message);
@@ -259,6 +262,7 @@ async function rotateAuthorPhotoCCW(authorId, photoId) {
         await putData(`/api/authors/${authorId}/photos/${photoId}/rotate-ccw`, {}, false);
         const photos = await fetchData(`/api/authors/${authorId}/photos`);
         displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to rotate photo counterclockwise: ' + error.message);
@@ -270,6 +274,7 @@ async function rotateAuthorPhotoCW(authorId, photoId) {
         await putData(`/api/authors/${authorId}/photos/${photoId}/rotate-cw`, {}, false);
         const photos = await fetchData(`/api/authors/${authorId}/photos`);
         displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to rotate photo clockwise: ' + error.message);
@@ -281,6 +286,7 @@ async function moveAuthorPhotoLeft(authorId, photoId) {
         await putData(`/api/authors/${authorId}/photos/${photoId}/move-left`, {}, false);
         const photos = await fetchData(`/api/authors/${authorId}/photos`);
         displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to move photo left: ' + error.message);
@@ -292,6 +298,7 @@ async function moveAuthorPhotoRight(authorId, photoId) {
         await putData(`/api/authors/${authorId}/photos/${photoId}/move-right`, {}, false);
         const photos = await fetchData(`/api/authors/${authorId}/photos`);
         displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to move photo right: ' + error.message);
@@ -320,6 +327,7 @@ async function handleAuthorPhotoUpload(event) {
         await postData(`/api/authors/${authorId}/photos`, formData, true);
         const photos = await fetchData(`/api/authors/${authorId}/photos`);
         displayAuthorPhotos(photos, authorId);
+        await loadAuthors();
         event.target.value = ''; // Reset file input
         clearError('authors');
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
