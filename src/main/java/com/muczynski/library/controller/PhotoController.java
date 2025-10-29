@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class PhotoController {
     @Autowired
     private PhotoService photoService;
 
+    @PreAuthorize("permitAll()")
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
         try {
@@ -38,6 +40,7 @@ public class PhotoController {
         }
     }
 
+    @PreAuthorize("permitAll()")
     @GetMapping("/{id}/thumbnail")
     public ResponseEntity<byte[]> getThumbnail(@PathVariable Long id, @RequestParam Integer width) {
         try {
