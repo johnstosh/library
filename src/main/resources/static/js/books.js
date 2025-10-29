@@ -15,9 +15,6 @@ async function loadBooks() {
                 img.src = `/api/photos/${book.firstPhotoId}/thumbnail?width=50`;
                 img.style.height = '50px';
                 img.style.width = 'auto';
-                if (book.firstPhotoRotation && book.firstPhotoRotation !== 0) {
-                    img.style.transform = `rotate(${book.firstPhotoRotation}deg)`;
-                }
                 img.setAttribute('data-test', 'book-thumbnail');
                 photoCell.appendChild(img);
             }
@@ -311,7 +308,6 @@ function displayBookPhotos(photos, bookId) {
     photosDiv.innerHTML = '';
 
     if (photos && photos.length > 0) {
-        const promises = [];
         photosContainer.style.display = 'block';
         photosDiv.className = 'book-photo-thumbnails';
         photos.forEach((photo, index) => {
@@ -321,36 +317,7 @@ function displayBookPhotos(photos, bookId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'book-photo');
-
-            const loadPromise = new Promise(resolve => {
-                img.onload = function() {
-                    if (photo.rotation === 90 || photo.rotation === 270) {
-                        const thumbnailContainer = this.parentElement;
-                        const ratio = this.naturalHeight / this.naturalWidth;
-                        const newWidth = thumbnailContainer.offsetHeight;
-                        const newHeight = newWidth / ratio;
-
-                        thumbnailContainer.style.width = `${newWidth}px`;
-                        thumbnailContainer.style.height = `${newHeight}px`;
-                        thumbnailContainer.style.maxWidth = `${newWidth}px`;
-
-                        this.style.width = `${newHeight}px`;
-                        this.style.height = `${newWidth}px`;
-
-                        this.style.transformOrigin = 'bottom left';
-                        if (photo.rotation === 270) {
-                             this.style.transform = `rotate(${photo.rotation}deg) translateY(100%)`;
-                        }
-                    }
-                    resolve();
-                };
-            });
-            promises.push(loadPromise);
-
             img.src = `/api/photos/${photo.id}/thumbnail?width=300`;
-            if (photo.rotation && photo.rotation !== 0) {
-                img.style.transform = `rotate(${photo.rotation}deg)`;
-            }
             thumbnail.appendChild(img);
 
             // Rotate CCW button (upper left)
@@ -407,7 +374,7 @@ function displayBookPhotos(photos, bookId) {
 
             photosDiv.appendChild(thumbnail);
         });
-        return Promise.all(promises);
+        return Promise.resolve();
     } else {
         photosContainer.style.display = 'none';
         return Promise.resolve();

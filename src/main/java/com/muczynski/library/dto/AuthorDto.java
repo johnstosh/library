@@ -16,5 +16,4 @@ public class AuthorDto {
     private String nationality;
     private String briefBiography;
     private Long firstPhotoId;
-    private Integer firstPhotoRotation;
 }

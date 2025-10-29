@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
@@ -38,7 +37,6 @@ public class BookMapper {
         }
         if (book.getPhotos() != null && !book.getPhotos().isEmpty()) {
             bookDto.setFirstPhotoId(book.getPhotos().get(0).getId());
-            bookDto.setFirstPhotoRotation(book.getPhotos().get(0).getRotation());
         }
 
         bookDto.setLoanCount(loanRepository.countByBookIdAndReturnDateIsNull(book.getId()));

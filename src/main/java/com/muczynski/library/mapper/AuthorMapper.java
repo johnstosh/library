@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
@@ -15,7 +14,6 @@ import java.util.Comparator;
 public interface AuthorMapper {
 
     @Mapping(target = "firstPhotoId", ignore = true)
-    @Mapping(target = "firstPhotoRotation", ignore = true)
     AuthorDto toDto(Author author);
 
     @Mapping(target = "photos", ignore = true)
@@ -27,7 +25,6 @@ public interface AuthorMapper {
                 .min(Comparator.nullsLast(Comparator.comparing(Photo::getPhotoOrder, Comparator.nullsLast(Comparator.naturalOrder()))))
                 .ifPresent(photo -> {
                     dto.setFirstPhotoId(photo.getId());
-                    dto.setFirstPhotoRotation(photo.getRotation());
                 });
     }
 }

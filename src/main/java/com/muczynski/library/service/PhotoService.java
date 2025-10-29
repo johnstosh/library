@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,7 +54,6 @@ public class PhotoService {
             photo.setImage(file.getBytes());
             photo.setContentType(file.getContentType());
             photo.setCaption("");
-            photo.setRotation(0);
             photo.setPhotoOrder(maxOrder + 1);
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
@@ -67,14 +68,15 @@ public class PhotoService {
     @Transactional
     public void deleteAuthorPhoto(Long authorId, Long photoId) {
         try {
-            Photo photo = photoRepository.findById(photoId)
+            Photo photoToDelete = photoRepository.findById(photoId)
                     .orElseThrow(() -> new RuntimeException("Photo not found"));
 
-            if (photo.getAuthor() == null || !photo.getAuthor().getId().equals(authorId)) {
+            if (photoToDelete.getAuthor() == null || !photoToDelete.getAuthor().getId().equals(authorId)) {
                 throw new RuntimeException("Photo does not belong to the specified author");
             }
 
-            photoRepository.delete(photo);
+            photoRepository.delete(photoToDelete);
+            reorderAuthorPhotos(authorId);
         } catch (Exception e) {
             logger.debug("Failed to delete photo ID {} for author ID {}: {}", photoId, authorId, e.getMessage(), e);
             throw e;
@@ -91,10 +93,7 @@ public class PhotoService {
                 throw new RuntimeException("Photo does not belong to the specified author");
             }
 
-            int delta = clockwise ? 90 : -90;
-            int currentRotation = photo.getRotation();
-            int newRotation = ((currentRotation + delta) % 360 + 360) % 360;
-            photo.setRotation(newRotation);
+            rotateImage(photo, clockwise ? 90 : -90);
             photoRepository.save(photo);
         } catch (Exception e) {
             logger.debug("Failed to rotate photo ID {} for author ID {} (clockwise: {}): {}", photoId, authorId, clockwise, e.getMessage(), e);
@@ -103,16 +102,102 @@ public class PhotoService {
     }
 
     @Transactional
+    public void moveAuthorPhotoLeft(Long authorId, Long photoId) {
+        try {
+            List<Photo> photos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int index = -1;
+            for (int i = 0; i < photos.size(); i++) {
+                if (photos.get(i).getId().equals(photoId)) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index > 0) {
+                Photo photoToMove = photos.remove(index);
+                photos.add(index - 1, photoToMove);
+                reorderAuthorPhotos(photos);
+            }
+        } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void moveAuthorPhotoRight(Long authorId, Long photoId) {
+        try {
+            List<Photo> photos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int index = -1;
+            for (int i = 0; i < photos.size(); i++) {
+                if (photos.get(i).getId().equals(photoId)) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index != -1 && index < photos.size() - 1) {
+                Photo photoToMove = photos.remove(index);
+                photos.add(index + 1, photoToMove);
+                reorderAuthorPhotos(photos);
+            }
+        } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private void rotateImage(Photo photo, int degrees) {
+        try {
+            BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
+            if (originalImage == null) {
+                throw new RuntimeException("Invalid image data");
+            }
+
+            int width = originalImage.getWidth();
+            int height = originalImage.getHeight();
+            double radians = Math.toRadians(degrees);
+            double sin = Math.abs(Math.sin(radians));
+            double cos = Math.abs(Math.cos(radians));
+            int newWidth = (int) Math.floor(width * cos + height * sin);
+            int newHeight = (int) Math.floor(height * cos + width * sin);
+
+            BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
+            Graphics2D g2d = rotatedImage.createGraphics();
+            AffineTransform at = new AffineTransform();
+            at.setToRotation(radians, newWidth / 2.0, newHeight / 2.0);
+            at.translate((newWidth - width) / 2.0, (newHeight - height) / 2.0);
+            g2d.setTransform(at);
+            g2d.drawImage(originalImage, 0, 0, null);
+            g2d.dispose();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
+            ImageIO.write(rotatedImage, formatName, baos);
+            photo.setImage(baos.toByteArray());
+        } catch (IOException e) {
+            logger.debug("IO error rotating image: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to rotate image", e);
+        }
+    }
+
+    @Transactional
     public PhotoDto addPhotoToAuthor(Long authorId, MultipartFile file) {
         try {
             Author author = authorRepository.findById(authorId)
                     .orElseThrow(() -> new RuntimeException("Author not found"));
+            List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
             Photo photo = new Photo();
             photo.setAuthor(author);
             photo.setImage(file.getBytes());
             photo.setContentType(file.getContentType());
             photo.setCaption("");
-            photo.setRotation(0);
+            photo.setPhotoOrder(maxOrder + 1);
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.debug("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
@@ -241,15 +326,34 @@ public class PhotoService {
         }
     }
 
+    private void reorderAuthorPhotos(Long authorId) {
+        try {
+            List<Photo> photos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            reorderPhotos(photos);
+        } catch (Exception e) {
+            logger.debug("Failed to reorder author photos for author ID {}: {}", authorId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private void reorderAuthorPhotos(List<Photo> photos) {
+        try {
+            for (int i = 0; i < photos.size(); i++) {
+                photos.get(i).setPhotoOrder(i);
+            }
+            photoRepository.saveAll(photos);
+        } catch (Exception e) {
+            logger.debug("Failed to reorder author photos: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
     @Transactional
     public void rotatePhoto(Long photoId, boolean clockwise) {
         try {
             Photo photo = photoRepository.findById(photoId)
                     .orElseThrow(() -> new RuntimeException("Photo not found"));
-            int delta = clockwise ? 90 : -90;
-            int currentRotation = photo.getRotation();
-            int newRotation = ((currentRotation + delta) % 360 + 360) % 360;
-            photo.setRotation(newRotation);
+            rotateImage(photo, clockwise ? 90 : -90);
             photoRepository.save(photo);
         } catch (Exception e) {
             logger.debug("Failed to rotate photo ID {} (clockwise: {}): {}", photoId, clockwise, e.getMessage(), e);

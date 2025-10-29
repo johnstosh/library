@@ -149,4 +149,28 @@ public class AuthorController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
+
+    @PutMapping("/{authorId}/photos/{photoId}/move-left")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> moveAuthorPhotoLeft(@PathVariable Long authorId, @PathVariable Long photoId) {
+        try {
+            photoService.moveAuthorPhotoLeft(authorId, photoId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{authorId}/photos/{photoId}/move-right")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> moveAuthorPhotoRight(@PathVariable Long authorId, @PathVariable Long photoId) {
+        try {
+            photoService.moveAuthorPhotoRight(authorId, photoId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.debug("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
 }
