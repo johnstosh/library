@@ -17,7 +17,7 @@ INSERT INTO users_roles (user_id, role_id) VALUES (1, 1);
 INSERT INTO users_roles (user_id, role_id) VALUES (1, 2);
 INSERT INTO users_roles (user_id, role_id) VALUES (2, 1);
 
-INSERT INTO library (id, name, hostname) VALUES (1, 'Test Library', 'test.local');
+INSERT INTO library (id, name, hostname) VALUES (1, 'St. Martin de Porres', 'library.muczynskifamily.com');
 
 INSERT INTO author (id, name) VALUES (1, 'Test Author');
 

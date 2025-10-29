@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.domain;
 
 import com.muczynski.library.repository.AuthorRepository;
@@ -26,7 +25,7 @@ class RandomBookTest {
     @Test
     void testRandomBookCreation() {
         Library library = new Library();
-        library.setName("Test Library");
+        library.setName("St. Martin de Porres");
         libraryRepository.save(library);
 
         Author author = new Author();
@@ -41,6 +40,6 @@ class RandomBookTest {
         assertNotNull(book.getAuthor());
         assertEquals("Test Author", book.getAuthor().getName());
         assertNotNull(book.getLibrary());
-        assertEquals("Test Library", book.getLibrary().getName());
+        assertEquals("St. Martin de Porres", book.getLibrary().getName());
     }
 }

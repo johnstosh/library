@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,12 +41,12 @@ class LibraryControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void createLibrary() throws Exception {
         LibraryDto inputDto = new LibraryDto();
-        inputDto.setName("Test Library");
-        inputDto.setHostname("test.example.com");
+        inputDto.setName("St. Martin de Porres");
+        inputDto.setHostname("library.muczynskifamily.com");
         LibraryDto returnedDto = new LibraryDto();
         returnedDto.setId(1L);
-        returnedDto.setName("Test Library");
-        returnedDto.setHostname("test.example.com");
+        returnedDto.setName("St. Martin de Porres");
+        returnedDto.setHostname("library.muczynskifamily.com");
         when(libraryService.createLibrary(any(LibraryDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/libraries")
@@ -61,7 +60,7 @@ class LibraryControllerTest {
     void getAllLibraries() throws Exception {
         LibraryDto dto = new LibraryDto();
         dto.setId(1L);
-        dto.setName("Test Library");
+        dto.setName("St. Martin de Porres");
         when(libraryService.getAllLibraries()).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/libraries"))
@@ -73,7 +72,7 @@ class LibraryControllerTest {
     void getLibraryById() throws Exception {
         LibraryDto libraryDto = new LibraryDto();
         libraryDto.setId(1L);
-        libraryDto.setName("Test Library");
+        libraryDto.setName("St. Martin de Porres");
         when(libraryService.getLibraryById(1L)).thenReturn(libraryDto);
 
         mockMvc.perform(get("/api/libraries/1"))

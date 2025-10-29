@@ -66,8 +66,8 @@ public class TestDataService {
     public void generateTestData(int count) {
         if (libraryRepository.findAll().isEmpty()) {
             Library library = new Library();
-            library.setName("Test Library");
-            library.setHostname("test.local");
+            library.setName("St. Martin de Porres");
+            library.setHostname("library.muczynskifamily.com");
             libraryRepository.save(library);
         }
 

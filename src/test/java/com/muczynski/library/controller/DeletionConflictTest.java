@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
 import org.junit.jupiter.api.Test;
@@ -31,8 +30,8 @@ class DeletionConflictTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "Test Library",
-                                    "hostname": "test.local"
+                                    "name": "St. Martin de Porres",
+                                    "hostname": "library.muczynskifamily.com"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -76,8 +75,8 @@ class DeletionConflictTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "Test Library",
-                                    "hostname": "test.local"
+                                    "name": "St. Martin de Porres",
+                                    "hostname": "library.muczynskifamily.com"
                                 }
                                 """))
                 .andExpect(status().isCreated())

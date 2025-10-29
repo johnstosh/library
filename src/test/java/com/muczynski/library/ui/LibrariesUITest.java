@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.ui;
 
 import com.microsoft.playwright.*;
@@ -133,8 +132,8 @@ public class LibrariesUITest {
             page.waitForSelector("[data-test='new-library-name']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
 
             // Create with unique name to avoid conflict
-            String uniqueName = "Test Library " + UUID.randomUUID().toString().substring(0, 8);
-            String uniqueHostname = "test-" + UUID.randomUUID().toString().substring(0, 8) + ".local";
+            String uniqueName = "St. Martin de Porres " + UUID.randomUUID().toString().substring(0, 8);
+            String uniqueHostname = "library-" + UUID.randomUUID().toString().substring(0, 8) + ".muczynskifamily.com";
             page.fill("[data-test='new-library-name']", uniqueName);
             page.fill("[data-test='new-library-hostname']", uniqueHostname);
             page.click("[data-test='add-library-btn']");
