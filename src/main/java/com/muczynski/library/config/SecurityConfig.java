@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/test-data/**").permitAll()
                         .requestMatchers("/api/books/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/photos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/authors", "/api/libraries").permitAll()
                         .requestMatchers("/apply/api/**").hasAuthority("LIBRARIAN")
                         .requestMatchers("/api/user-settings").authenticated()
