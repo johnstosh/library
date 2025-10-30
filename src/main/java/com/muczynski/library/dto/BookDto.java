@@ -23,4 +23,6 @@ public class BookDto {
     private Long libraryId;
     private Long firstPhotoId;
     private Long loanCount;
+    private String locNumber;
+    private String statusReason;
 }

@@ -32,6 +32,8 @@ public class BookMapper {
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bookDto.setStatus(book.getStatus());
+        bookDto.setLocNumber(book.getLocNumber());
+        bookDto.setStatusReason(book.getStatusReason());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
         }
@@ -62,6 +64,8 @@ public class BookMapper {
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
         book.setStatus(bookDto.getStatus());
+        book.setLocNumber(bookDto.getLocNumber());
+        book.setStatusReason(bookDto.getStatusReason());
 
         if (bookDto.getAuthorId() != null) {
             Author author = new Author();

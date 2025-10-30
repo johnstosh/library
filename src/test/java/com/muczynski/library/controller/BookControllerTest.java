@@ -54,9 +54,13 @@ class BookControllerTest {
         inputDto.setTitle("Test Book");
         inputDto.setAuthorId(1L);
         inputDto.setLibraryId(1L);
+        inputDto.setLocNumber(null);
+        inputDto.setStatusReason(null);
         BookDto returnedDto = new BookDto();
         returnedDto.setId(1L);
         returnedDto.setTitle("Test Book");
+        returnedDto.setLocNumber(null);
+        returnedDto.setStatusReason(null);
         when(bookService.createBook(any(BookDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/books")
@@ -71,6 +75,8 @@ class BookControllerTest {
         BookDto dto = new BookDto();
         dto.setId(1L);
         dto.setTitle("Test Book");
+        dto.setLocNumber(null);
+        dto.setStatusReason(null);
         when(bookService.getAllBooks()).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/books"))
@@ -83,6 +89,8 @@ class BookControllerTest {
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
         bookDto.setTitle("Test Book");
+        bookDto.setLocNumber(null);
+        bookDto.setStatusReason(null);
         when(bookService.getBookById(1L)).thenReturn(bookDto);
 
         mockMvc.perform(get("/api/books/1"))
@@ -94,9 +102,13 @@ class BookControllerTest {
     void updateBook() throws Exception {
         BookDto inputDto = new BookDto();
         inputDto.setTitle("Updated Book");
+        inputDto.setLocNumber("Test LOC");
+        inputDto.setStatusReason("Test reason");
         BookDto returnedDto = new BookDto();
         returnedDto.setId(1L);
         returnedDto.setTitle("Updated Book");
+        returnedDto.setLocNumber("Test LOC");
+        returnedDto.setStatusReason("Test reason");
         when(bookService.updateBook(eq(1L), any(BookDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(put("/api/books/1")

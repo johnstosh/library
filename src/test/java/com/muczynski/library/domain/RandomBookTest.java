@@ -44,5 +44,7 @@ class RandomBookTest {
         assertEquals("Test Author", book.getAuthor().getName());
         assertNotNull(book.getLibrary());
         assertEquals("St. Martin de Porres", book.getLibrary().getName());
+        assertNull(book.getLocNumber());
+        assertNull(book.getStatusReason());
     }
 }

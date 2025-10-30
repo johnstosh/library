@@ -110,6 +110,8 @@ public class BookService {
         if (bookDto.getStatus() != null) {
             book.setStatus(bookDto.getStatus());
         }
+        book.setLocNumber(bookDto.getLocNumber());
+        book.setStatusReason(bookDto.getStatusReason());
         if (bookDto.getAuthorId() != null) {
             book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
         }
@@ -235,6 +237,7 @@ public class BookService {
                 - title: title of the book. If there's ambiguity, explain in plotSummary.
                 - publicationYear: publication year, if known. If there's any uncertainty, leave null.
                 - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave  null.
+                - locNumber: Library of Congress card catalog number, if known. If unknown or uncertain, leave null.
                 - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank.
                 - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
                 - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank.
@@ -246,7 +249,7 @@ public class BookService {
                 {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]", 
                 "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]", 
                 "briefBiography": "[biography text]", "imageUrl": "[url]", "preferredContentType": "image/jpeg"}, 
-                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]", 
+                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "locNumber": "[LOC or null]", "plotSummary": "[summary]", 
                 "relatedWorks": "[related]", "detailedDescription": "[description]", "coverImageUrl": "[url]", 
                 "preferredContentType": "image/jpeg"}}
                 Do not include any other text before or after the JSON. Dig deep for helpful information.""";
@@ -359,6 +362,11 @@ public class BookService {
                         String publisher = (String) bookMap.get("publisher");
                         if (publisher != null && !publisher.trim().isEmpty()) {
                             dto.setPublisher(publisher.trim());
+                        }
+
+                        String locNumber = (String) bookMap.get("locNumber");
+                        if (locNumber != null && !locNumber.trim().isEmpty()) {
+                            dto.setLocNumber(locNumber.trim());
                         }
 
                         String plotSummary = (String) bookMap.get("plotSummary");

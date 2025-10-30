@@ -140,6 +140,8 @@ public class BooksUITest {
             String uniqueTitle = "Test Book " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-book-title']", uniqueTitle);
             page.fill("[data-test='new-book-year']", "2023");
+            page.fill("[data-test='new-book-loc']", "Test LOC");
+            page.fill("[data-test='new-book-status-reason']", "Test reason");
             page.click("[data-test='add-book-btn']");
 
             // Wait for the operation to complete
@@ -163,6 +165,8 @@ public class BooksUITest {
             assertThat(addBookBtn).hasText("Update Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
             String updatedTitle = "Updated Book " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-book-title']", updatedTitle);
+            page.fill("[data-test='new-book-loc']", "Updated LOC");
+            page.fill("[data-test='new-book-status-reason']", "Updated reason");
             page.click("[data-test='add-book-btn']");
 
             // Wait for the operation to complete

@@ -37,6 +37,10 @@ public class Book {
     @Enumerated(EnumType.STRING)
     private BookStatus status;
 
+    private String locNumber;
+
+    private String statusReason;
+
     @ManyToOne
     private Author author;
 

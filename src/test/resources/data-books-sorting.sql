@@ -21,8 +21,8 @@ INSERT INTO library (id, name, hostname) VALUES (1, 'St. Martin de Porres', 'lib
 
 INSERT INTO author (id, name) VALUES (1, 'Test Author');
 
-INSERT INTO book (id, title, publication_year, author_id, library_id, status) VALUES
-(1, 'Animal Farm', 1945, 1, 1, 'ACTIVE'),
-(2, 'Brave New World', 1932, 1, 1, 'ACTIVE'),
-(3, 'The Color Purple', 1982, 1, 1, 'ACTIVE'),
-(4, 'The Great Gatsby', 1925, 1, 1, 'ACTIVE');
+INSERT INTO book (id, title, publication_year, author_id, library_id, status, loc_number, status_reason) VALUES
+(1, 'Animal Farm', 1945, 1, 1, 'ACTIVE', NULL, NULL),
+(2, 'Brave New World', 1932, 1, 1, 'ACTIVE', NULL, NULL),
+(3, 'The Color Purple', 1982, 1, 1, 'ACTIVE', NULL, NULL),
+(4, 'The Great Gatsby', 1925, 1, 1, 'ACTIVE', NULL, NULL);

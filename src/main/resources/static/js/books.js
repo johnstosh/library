@@ -96,6 +96,8 @@ function resetBookForm() {
     document.getElementById('new-book-description').value = '';
     document.getElementById('new-book-added').value = '';
     document.getElementById('new-book-status').value = 'ACTIVE';
+    document.getElementById('new-book-loc').value = '';
+    document.getElementById('new-book-status-reason').value = '';
     document.getElementById('book-author').selectedIndex = 0;
     document.getElementById('book-library').selectedIndex = 0;
     document.getElementById('current-book-id').value = '';
@@ -141,7 +143,9 @@ async function prepareNewBookForPhoto(title) {
         relatedWorks: '',
         detailedDescription: '',
         dateAddedToLibrary: '',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        locNumber: '',
+        statusReason: ''
     };
     try {
         const createdBook = await postData('/api/books', initialData);
@@ -175,6 +179,8 @@ async function addBook() {
     const detailedDescription = document.getElementById('new-book-description').value;
     const dateAddedToLibrary = document.getElementById('new-book-added').value;
     const status = document.getElementById('new-book-status').value;
+    const locNumber = document.getElementById('new-book-loc').value;
+    const statusReason = document.getElementById('new-book-status-reason').value;
     const authorId = document.getElementById('book-author').value;
     const libraryId = document.getElementById('book-library').value;
     if (!title || !authorId || !libraryId) {
@@ -182,7 +188,7 @@ async function addBook() {
         return;
     }
     try {
-        await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
+        await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, locNumber, statusReason, authorId, libraryId });
         resetBookForm();
         await loadBooks();
         await populateLoanDropdowns();
@@ -203,6 +209,8 @@ async function editBook(id) {
     document.getElementById('new-book-description').value = data.detailedDescription || '';
     document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
+    document.getElementById('new-book-loc').value = data.locNumber || '';
+    document.getElementById('new-book-status-reason').value = data.statusReason || '';
     document.getElementById('book-author').value = data.authorId || '';
     document.getElementById('book-library').value = data.libraryId || '';
     document.getElementById('current-book-id').value = id;
@@ -244,6 +252,8 @@ async function generateBookByPhoto(bookId) {
         if (updatedBook.detailedDescription && updatedBook.detailedDescription.trim() !== '') document.getElementById('new-book-description').value = updatedBook.detailedDescription;
         if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary;
         if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
+        if (updatedBook.locNumber && updatedBook.locNumber.trim() !== '') document.getElementById('new-book-loc').value = updatedBook.locNumber;
+        if (updatedBook.statusReason && updatedBook.statusReason.trim() !== '') document.getElementById('new-book-status-reason').value = updatedBook.statusReason;
         if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
         if (updatedBook.libraryId) document.getElementById('book-library').value = updatedBook.libraryId;
 
@@ -275,6 +285,8 @@ async function updateBook(id) {
     const detailedDescription = document.getElementById('new-book-description').value;
     const dateAddedToLibrary = document.getElementById('new-book-added').value;
     const status = document.getElementById('new-book-status').value;
+    const locNumber = document.getElementById('new-book-loc').value;
+    const statusReason = document.getElementById('new-book-status-reason').value;
     const authorId = document.getElementById('book-author').value;
     const libraryId = document.getElementById('book-library').value;
     if (!title || !authorId || !libraryId) {
@@ -282,7 +294,7 @@ async function updateBook(id) {
         return;
     }
     try {
-        await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, authorId, libraryId });
+        await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, locNumber, statusReason, authorId, libraryId });
         resetBookForm();
         await loadBooks();
         await loadLoans();
