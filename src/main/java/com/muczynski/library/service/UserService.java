@@ -1,6 +1,6 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Applied;
 import com.muczynski.library.domain.Role;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
@@ -79,6 +79,28 @@ public class UserService {
         Role role = roleRepository.findByName(dto.getRole()).orElseGet(() -> {
             Role newRole = new Role();
             newRole.setName(dto.getRole());
+            return roleRepository.save(newRole);
+        });
+        user.setRoles(Collections.singleton(role));
+
+        User savedUser = userRepository.save(user);
+        UserDto dtoResponse = userMapper.toDto(savedUser);
+        dtoResponse.setActiveLoansCount(0); // New user has no loans
+        return dtoResponse;
+    }
+
+    public UserDto createUserFromApplied(Applied applied) {
+        if (userRepository.findByUsername(applied.getName()).isPresent()) {
+            throw new RuntimeException("Username already exists");
+        }
+
+        User user = new User();
+        user.setUsername(applied.getName());
+        user.setPassword(applied.getPassword()); // Already encoded from Applied creation
+
+        Role role = roleRepository.findByName("USER").orElseGet(() -> {
+            Role newRole = new Role();
+            newRole.setName("USER");
             return roleRepository.save(newRole);
         });
         user.setRoles(Collections.singleton(role));

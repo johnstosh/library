@@ -416,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('error')) {
         console.log('Login error detected in URL params');
+        console.log('Error param value:', urlParams.get('error'));
         showLoginError();
         // Clear the error param from URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -515,10 +516,14 @@ function showLoginForm() {
 function showLoginError() {
     console.log('Showing login error');
     const errorEl = document.getElementById('login-error');
+    console.log('Login error element found:', !!errorEl);
+    const message = 'Invalid username or password. Please try again.';
+    console.log('Login error message to display:', message);
     if (errorEl) {
-        errorEl.textContent = 'Invalid username or password. Please try again.';
+        errorEl.textContent = message;
         errorEl.style.display = 'block';
     } else {
+        console.log('Login error element not found, falling back to alert');
         alert('Login failed: Invalid username or password.');
     }
     showLoginForm();
@@ -631,21 +636,6 @@ function showSection(sectionId, event) {
         });
         bsCollapse.hide();
     }
-}
-
-async function createBookByPhoto() {
-    showSection('books');
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const title = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-
-    // This function will be created in books.js
-    await prepareNewBookForPhoto(title);
 }
 
 async function logout() {

@@ -1,4 +1,3 @@
-// (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Applied;
@@ -59,11 +58,7 @@ public class AppliedService {
         Applied applied = appliedRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Application not found: " + id));
 
-        CreateUserDto createUserDto = new CreateUserDto();
-        createUserDto.setUsername(applied.getName());
-        createUserDto.setPassword(applied.getPassword());
-        createUserDto.setRole("USER");
-        userService.createUser(createUserDto);
+        userService.createUserFromApplied(applied);
 
         applied.setStatus(Applied.ApplicationStatus.APPROVED);
         appliedRepository.save(applied);
