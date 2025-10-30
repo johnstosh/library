@@ -222,7 +222,9 @@ public class BookService {
         if (!photos.isEmpty()) {
             Photo photo = photos.get(0);
             String question = """
-                Based on this book cover image, infer the book and author details from a strictly Catholic perspective. Be frank in your assessments, without providing balanced or secular views. Emphasize Catholic teachings, saints, and doctrine where applicable. If the content aligns with Catholic faith, praise it; if not, critique it harshly as contrary to the faith.
+                Based on this book cover image, infer the book and author details from a strictly Catholic perspective. Be frank in your assessments, 
+                without providing a balanced view. Emphasize Catholic teachings, saints, and doctrine where applicable. If the content aligns with 
+                Catholic faith, praise it; if not, critique it with wisdom.
 
                 Provide details for the author:
                 - name: the full name of the author. First name first and last name last.
@@ -231,16 +233,18 @@ public class BookService {
                 - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
                 - birthCountry: the author's country of birth
                 - nationality: the author's nationality, or nationalities
-                - briefBiography: a frank Catholic biography, highlighting virtues, sins, conversion, or damnable errors
+                - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion. If a grokipedia.com article is available, 
+                  then summarize the summary of that article and end with a URL to the article for more details.
 
                 For the book:
                 - title: title of the book. If there's ambiguity, explain in plotSummary.
                 - publicationYear: publication year, if known. If there's any uncertainty, leave null.
                 - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave  null.
                 - locNumber: Library of Congress card catalog number, if known. If unknown or uncertain, leave null.
-                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank.
+                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite. If a grokipedia.com article is available, 
+                  then summarize the summary of that article and end with a URL to the article for more details.
                 - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
-                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank.
+                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite.
 
                 Suggest a public domain URL for a book cover image that represents the book, preferring image/jpeg content type.
                 Suggest a public domain URL for an author portrait image, preferring image/jpeg content type.
