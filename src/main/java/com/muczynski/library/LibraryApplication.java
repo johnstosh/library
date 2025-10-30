@@ -1,4 +1,6 @@
-// (c) Copyright 2025 by Muczynski
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library;
 
 import com.muczynski.library.domain.Role;

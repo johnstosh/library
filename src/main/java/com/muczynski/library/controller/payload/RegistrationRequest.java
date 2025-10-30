@@ -1,4 +1,6 @@
-// (c) Copyright 2025 by Muczynski
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.controller.payload;
 
 public class RegistrationRequest {

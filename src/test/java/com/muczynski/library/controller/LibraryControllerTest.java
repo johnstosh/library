@@ -1,3 +1,6 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,6 @@
-// (c) Copyright 2025 by Muczynski
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.domain;
 
 import jakarta.persistence.*;
