@@ -195,7 +195,5 @@ function setupImportUI() {
 
 // Call setupImportUI after loadLibraries or on page load
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.includes('libraries')) {
-        loadLibraries().then(() => setupImportUI());
-    }
+    loadLibraries().then(() => setupImportUI());
 });
