@@ -5,7 +5,7 @@ import com.muczynski.library.dto.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
