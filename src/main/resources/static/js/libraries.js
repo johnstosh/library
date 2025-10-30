@@ -126,3 +126,76 @@ async function deleteLibrary(id) {
         showError('libraries', 'Failed to delete library: ' + error.message);
     }
 }
+
+async function importJson() {
+    const jsonText = document.getElementById('import-json-textarea').value.trim();
+    if (!jsonText) {
+        showError('libraries', 'Please enter JSON data to import.');
+        return;
+    }
+    let importData;
+    try {
+        importData = JSON.parse(jsonText);
+    } catch (error) {
+        showError('libraries', 'Invalid JSON format: ' + error.message);
+        return;
+    }
+    try {
+        await postData('/api/import/json', importData);
+        document.getElementById('import-json-textarea').value = '';
+        await loadLibraries();
+        await populateBookDropdowns();
+        clearError('libraries');
+        alert('Import completed successfully!');
+    } catch (error) {
+        showError('libraries', 'Failed to import data: ' + error.message);
+    }
+}
+
+async function exportJson() {
+    try {
+        const data = await fetchData('/api/import/json');
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'library-data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        clearError('libraries');
+        alert('Export completed successfully! File downloaded as library-data.json');
+    } catch (error) {
+        showError('libraries', 'Failed to export data: ' + error.message);
+    }
+}
+
+function setupImportUI() {
+    if (!isLibrarian) return;
+
+    const list = document.getElementById('library-list');
+    const importSection = document.createElement('div');
+    importSection.setAttribute('data-test', 'import-section');
+    importSection.innerHTML = `
+        <h3>Import JSON Data</h3>
+        <p>Import libraries, authors, books, loans, and users from JSON. Photos must be embedded as base64 in authors and books.</p>
+        <textarea id="import-json-textarea" rows="10" cols="80" placeholder='{"libraries": [...], "authors": [...], ...}'></textarea>
+        <br><br>
+        <button id="import-json-btn" data-test="import-json-btn" onclick="importJson()">Import JSON</button>
+        <br><br>
+        <h4>Export JSON Data</h4>
+        <p>Export all data (libraries, authors, books, loans, users) in the same JSON format. Photos are included as base64.</p>
+        <br>
+        <button id="export-json-btn" data-test="export-json-btn" onclick="exportJson()">Export JSON</button>
+    `;
+    list.parentNode.insertBefore(importSection, list.nextSibling);
+}
+
+// Call setupImportUI after loadLibraries or on page load
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname.includes('libraries')) {
+        loadLibraries().then(() => setupImportUI());
+    }
+});
