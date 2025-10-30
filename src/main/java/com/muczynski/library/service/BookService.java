@@ -240,14 +240,14 @@ public class BookService {
                 - title: title of the book. If there's ambiguity, explain in plotSummary.
                 - publicationYear: publication year, if known. If there's any uncertainty, leave null.
                 - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave  null.
-                - locNumber: Library of Congress card catalog number, if known. If unknown or uncertain, leave null.
+                - locNumber: Library of Congress LC call number, if known. If unknown or uncertain, leave null.
                 - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite. If a grokipedia.com article is available, 
                   then summarize the summary of that article and end with a URL to the article for more details.
                 - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
                 - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite.
 
-                Suggest a public domain URL for a book cover image that represents the book, preferring image/jpeg content type.
-                Suggest a public domain URL for an author portrait image, preferring image/jpeg content type.
+                URL for a book cover image - leave null.
+                URL for an author portrait image - leave null.
 
                 Respond only with a JSON object in this exact format:
                 {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]", 
