@@ -1,6 +1,3 @@
-/*
- * (c) Copyright 2025 by Muczynski
- */
 package com.muczynski.library.exception;
 
 import org.slf4j.Logger;

@@ -81,8 +81,22 @@ export async function fetchData(url, options = {}) {
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error status: ${response.status}`);
+            let errorMsg = `HTTP error status: ${response.status}`;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorJson = await response.json();
+                    errorMsg = errorJson.error || errorMsg;
+                } catch (e) {
+                    console.error('Could not parse JSON error response', e);
+                    const errorText = await response.text();
+                    errorMsg = errorText || errorMsg;
+                }
+            } else {
+                const errorText = await response.text();
+                errorMsg = errorText || errorMsg;
+            }
+            throw new Error(errorMsg);
         }
 
         const contentType = response.headers.get('content-type');
@@ -160,8 +174,22 @@ export async function postData(url, data, isFormData = false, includeCsrf = true
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error status: ${response.status}`);
+            let errorMsg = `HTTP error status: ${response.status}`;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorJson = await response.json();
+                    errorMsg = errorJson.error || errorMsg;
+                } catch (e) {
+                    console.error('Could not parse JSON error response', e);
+                    const errorText = await response.text();
+                    errorMsg = errorText || errorMsg;
+                }
+            } else {
+                const errorText = await response.text();
+                errorMsg = errorText || errorMsg;
+            }
+            throw new Error(errorMsg);
         }
 
         const contentType = response.headers.get('content-type');
@@ -238,8 +266,22 @@ export async function putData(url, data, includeCsrf = true) {
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error status: ${response.status}`);
+            let errorMsg = `HTTP error status: ${response.status}`;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorJson = await response.json();
+                    errorMsg = errorJson.error || errorMsg;
+                } catch (e) {
+                    console.error('Could not parse JSON error response', e);
+                    const errorText = await response.text();
+                    errorMsg = errorText || errorMsg;
+                }
+            } else {
+                const errorText = await response.text();
+                errorMsg = errorText || errorMsg;
+            }
+            throw new Error(errorMsg);
         }
 
         const contentType = response.headers.get('content-type');
@@ -313,8 +355,22 @@ export async function deleteData(url) {
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP error status: ${response.status}`);
+            let errorMsg = `HTTP error status: ${response.status}`;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorJson = await response.json();
+                    errorMsg = errorJson.error || errorMsg;
+                } catch (e) {
+                    console.error('Could not parse JSON error response', e);
+                    const errorText = await response.text();
+                    errorMsg = errorText || errorMsg;
+                }
+            } else {
+                const errorText = await response.text();
+                errorMsg = errorText || errorMsg;
+            }
+            throw new Error(errorMsg);
         }
 
         return response.ok;

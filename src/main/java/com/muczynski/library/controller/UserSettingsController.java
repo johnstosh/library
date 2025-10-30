@@ -1,6 +1,3 @@
-/*
- * (c) Copyright 2025 by Muczynski
- */
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.UserDto;
@@ -25,34 +22,19 @@ public class UserSettingsController {
 
     @GetMapping
     public ResponseEntity<UserDto> getUserSettings(@AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            UserDto userDto = userSettingsService.getUserSettings(userDetails.getUsername());
-            return ResponseEntity.ok(userDto);
-        } catch (Exception e) {
-            logger.debug("Failed to get user settings for {}: {}", userDetails.getUsername(), e.getMessage(), e);
-            return ResponseEntity.status(500).build();
-        }
+        UserDto userDto = userSettingsService.getUserSettings(userDetails.getUsername());
+        return ResponseEntity.ok(userDto);
     }
 
     @PutMapping
     public ResponseEntity<UserDto> updateUserSettings(@AuthenticationPrincipal UserDetails userDetails, @RequestBody UserSettingsDto userSettingsDto) {
-        try {
-            UserDto updatedUser = userSettingsService.updateUserSettings(userDetails.getUsername(), userSettingsDto);
-            return ResponseEntity.ok(updatedUser);
-        } catch (Exception e) {
-            logger.debug("Failed to update user settings for {} with DTO {}: {}", userDetails.getUsername(), userSettingsDto, e.getMessage(), e);
-            return ResponseEntity.status(500).build();
-        }
+        UserDto updatedUser = userSettingsService.updateUserSettings(userDetails.getUsername(), userSettingsDto);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping
     public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            userSettingsService.deleteUser(userDetails.getUsername());
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            logger.debug("Failed to delete user {}: {}", userDetails.getUsername(), e.getMessage(), e);
-            return ResponseEntity.status(500).build();
-        }
+        userSettingsService.deleteUser(userDetails.getUsername());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,6 +1,3 @@
-/*
- * (c) Copyright 2025 by Muczynski
- */
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.User;
@@ -28,17 +25,17 @@ public class UserSettingsService {
     private UserMapper userMapper;
 
     public UserDto getUserSettings(String currentUsername) {
-        User user = userRepository.findByUsername(currentUsername)
+        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return userMapper.toDto(user);
     }
 
     public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
-        User user = userRepository.findByUsername(currentUsername)
+        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equals(user.getUsername())) {
-            if (userRepository.findByUsername(userSettingsDto.getUsername()).isPresent()) {
+        if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
+            if (userRepository.findByUsernameIgnoreCase(userSettingsDto.getUsername()).isPresent()) {
                 throw new RuntimeException("Username already taken");
             }
             user.setUsername(userSettingsDto.getUsername());
@@ -57,7 +54,7 @@ public class UserSettingsService {
     }
 
     public void deleteUser(String currentUsername) {
-        User user = userRepository.findByUsername(currentUsername)
+        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         userRepository.delete(user);
     }
