@@ -384,6 +384,10 @@ function formatDate(dateString) {
     return `${displayMonth}/${displayDay}/${displayYear}`;
 }
 
+function shouldResetForSection(sectionId) {
+    return sectionId !== 'books' && sectionId !== 'authors' || isLibrarian;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded');
     // Add submit event listener to login form for debugging
@@ -585,7 +589,7 @@ function showSection(sectionId, event) {
         const currentSectionId = currentActiveButton.getAttribute('onclick').match(/'([^']+)'/)[1];
         if (currentSectionId !== sectionId) {
             const config = sectionConfig[currentSectionId];
-            if (config && config.reset) {
+            if (config && config.reset && shouldResetForSection(currentSectionId)) {
                 config.reset();
             }
         }
@@ -611,7 +615,7 @@ function showSection(sectionId, event) {
     // Load data and reset form for the section
     const config = sectionConfig[sectionId];
     if (config) {
-        if (currentActiveButton === newActiveButton && config.reset) {
+        if (currentActiveButton === newActiveButton && config.reset && shouldResetForSection(sectionId)) {
             config.reset();
         }
         if (config.load) {
