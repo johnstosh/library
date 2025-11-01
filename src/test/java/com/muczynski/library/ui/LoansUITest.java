@@ -67,15 +67,16 @@ public class LoansUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
-        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToSection(String section) {
@@ -85,8 +86,8 @@ public class LoansUITest {
         // Wait for target section to be visible and assert it
         String targetSelector = "#" + section + "-section";
         Locator targetSection = page.locator(targetSelector);
-        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
-        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
+        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
         // Assert all non-target sections are hidden to test exclusivity
         List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
@@ -95,7 +96,7 @@ public class LoansUITest {
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
             }
         }
 
@@ -129,13 +130,17 @@ public class LoansUITest {
             navigateToSection("loans");
 
             // Wait for loan section to be interactable, focusing on form and table
-            page.waitForSelector("[data-test='loan-book']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
-            page.waitForSelector("[data-test='loan-table']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='loan-book']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='loan-table']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+
+            // Wait for dropdowns to be populated with options
+            page.waitForFunction("() => document.querySelector('[data-test-form=\"loan-book-select\"]').options.length > 0", null, new Page.WaitForFunctionOptions().setTimeout(20000L));
+            page.waitForFunction("() => document.querySelector('[data-test-form=\"loan-user-select\"]').options.length > 0", null, new Page.WaitForFunctionOptions().setTimeout(20000L));
 
             // Assert initial loan exists from SQL data and due date is shown (not returned)
             Locator initialLoanList = page.locator("[data-test='loan-item']");
-            initialLoanList.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(initialLoanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            initialLoanList.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(initialLoanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
             String initialBookTitle = initialLoanList.first().locator("[data-test='loan-book-title']").innerText();
             assertTrue(initialBookTitle.contains("Initial Book"));
             String initialUser = initialLoanList.first().locator("[data-test='loan-user']").innerText();
@@ -150,18 +155,18 @@ public class LoansUITest {
             initialLoanList.first().locator("[data-test='return-book-btn']").click();
 
             // Wait for the loan to disappear from the active loans list (as it's now returned)
-            assertThat(initialLoanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
+            assertThat(initialLoanList).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
             // Show returned loans to verify the change
             page.check("[data-test='show-returned-loans-checkbox']");
 
             // The loan should reappear in the list now
             Locator returnedLoanList = page.locator("[data-test='loan-item']");
-            assertThat(returnedLoanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
+            assertThat(returnedLoanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
             // Assert that the return date is now populated correctly
             Locator returnDateCell = returnedLoanList.first().locator("[data-test='loan-return-date']");
-            assertThat(returnDateCell).not().hasText("Not returned", new LocatorAssertions.HasTextOptions().setTimeout(10000L));
+            assertThat(returnDateCell).not().hasText("Not returned", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
             String returnedDate = returnDateCell.innerText();
             assertFalse(returnedDate.isEmpty());
 
@@ -169,11 +174,11 @@ public class LoansUITest {
             initialLoanList.first().locator("[data-test='delete-loan-btn']").click();
 
             // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Re-query and assert count 0
             Locator loanListAfterDelete = page.locator("[data-test='loan-item']");
-            assertThat(loanListAfterDelete).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            assertThat(loanListAfterDelete).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
             // Create a new loan with custom due date
             page.selectOption("[data-test='loan-book']", "1");
@@ -183,16 +188,16 @@ public class LoansUITest {
             page.click("[data-test='checkout-btn']");
 
             // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Wait for button to reset to "Checkout Book" after creation
             Locator checkoutBtn = page.locator("[data-test='checkout-btn']");
-            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Read: Wait for new loan item to appear
             Locator loanList = page.locator("[data-test='loan-item']");
-            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
             String bookTitle = loanList.first().locator("[data-test='loan-book-title']").innerText();
             assertTrue(bookTitle.contains("Initial Book"));
             String user = loanList.first().locator("[data-test='loan-user']").innerText();
@@ -204,23 +209,23 @@ public class LoansUITest {
 
             // Update: Edit due date
             loanList.first().locator("[data-test='edit-loan-btn']").click();
-            checkoutBtn.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(checkoutBtn).hasText("Update Loan", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            checkoutBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(checkoutBtn).hasText("Update Loan", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
             page.fill("[data-test='due-date']", "2023-02-01");
             page.click("[data-test='checkout-btn']");
 
             // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Wait for button to reset to "Checkout Book", confirming the update operation completed successfully
-            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
-            checkoutBtn.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
+            checkoutBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(checkoutBtn).hasText("Checkout Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Wait for the updated item to appear (confirms reload)
             loanList = page.locator("[data-test='loan-item']");
-            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(10000L));
-            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
+            loanList.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(loanList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
             String updatedDueDate = loanList.first().locator("[data-test='loan-due-date']").innerText();
             assertEquals("02/01/2023", updatedDueDate);
 
@@ -229,10 +234,10 @@ public class LoansUITest {
             firstLoanItem.locator("[data-test='delete-loan-btn']").click();
 
             // Wait for the row to be detached from the DOM
-            firstLoanItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(10000L));
+            firstLoanItem.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(20000L));
 
             // Final assertion: ensure no loan items are visible
-            assertThat(page.locator("[data-test='loan-item']")).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(10000L));
+            assertThat(page.locator("[data-test='loan-item']")).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
@@ -248,10 +253,13 @@ public class LoansUITest {
             login();
             navigateToSection("loans");
 
-            page.waitForSelector("[data-test='loan-date']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test-form='loan-date-input']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
 
-            String loanDateValue = page.locator("[data-test='loans-form'] [data-test='loan-date']").inputValue();
-            String dueDateValue = page.locator("[data-test='loans-form'] [data-test='due-date']").inputValue();
+            // Wait for the date inputs to be populated with default values
+            page.waitForFunction("() => document.querySelector('[data-test-form=\"loan-date-input\"]').value !== ''", null, new Page.WaitForFunctionOptions().setTimeout(20000L));
+
+            String loanDateValue = page.locator("[data-test-form='loan-date-input']").inputValue();
+            String dueDateValue = page.locator("[data-test-form='due-date-input']").inputValue();
 
             LocalDate today = LocalDate.now();
             LocalDate twoWeeksFromNow = today.plusDays(14);

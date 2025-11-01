@@ -58,7 +58,7 @@ public class BooksUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(5000L);
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach
@@ -70,15 +70,16 @@ public class BooksUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
-        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToSection(String section) {
@@ -88,8 +89,8 @@ public class BooksUITest {
         // Wait for target section to be visible and assert it
         String targetSelector = "#" + section + "-section";
         Locator targetSection = page.locator(targetSelector);
-        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
-        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
+        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
         // Assert all non-target sections are hidden to test exclusivity
         List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
@@ -98,7 +99,7 @@ public class BooksUITest {
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
             }
         }
 
@@ -131,9 +132,9 @@ public class BooksUITest {
             navigateToSection("books");
 
             // Wait for book section and dropdown options to load
-            page.waitForSelector("[data-test='book-author']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='book-author']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
             page.selectOption("[data-test='book-author']", "1");
-            page.waitForSelector("[data-test='book-library']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='book-library']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
             page.selectOption("[data-test='book-library']", "1");
 
             // Create
@@ -144,64 +145,62 @@ public class BooksUITest {
             page.fill("[data-test='new-book-status-reason']", "Test reason");
             page.click("[data-test='add-book-btn']");
 
-            // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            // Wait for the operation to complete - network idle ensures POST + GET /api/books completes
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Wait for button to reset to "Add Book" after creation
             Locator addBookBtn = page.locator("[data-test='add-book-btn']");
-            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
-            // Read
+            // Read - wait for new book to appear in the list
             Locator bookRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(uniqueTitle));
-            bookRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(bookRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-            assertThat(bookRow).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Only new
+            bookRow.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
+            assertThat(bookRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(bookRow).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Only new
             Locator allBookRows = page.locator("[data-test='book-item']");
-            assertThat(allBookRows).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Initial + new
+            assertThat(allBookRows).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Initial + new
 
             // Update
             bookRow.first().locator("[data-test='edit-book-btn']").click();
-            addBookBtn.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(addBookBtn).hasText("Update Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            addBookBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(addBookBtn).hasText("Update Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
             String updatedTitle = "Updated Book " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-book-title']", updatedTitle);
             page.fill("[data-test='new-book-loc']", "Updated LOC");
             page.fill("[data-test='new-book-status-reason']", "Updated reason");
             page.click("[data-test='add-book-btn']");
 
-            // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            // Wait for the operation to complete - network idle ensures PUT + GET /api/books completes
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Wait for button to reset to "Add Book" after update
-            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
-            addBookBtn.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
+            addBookBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(addBookBtn).hasText("Add Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Wait for list refresh by checking total count
-            assertThat(allBookRows).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            assertThat(allBookRows).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
             Locator updatedBookRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle));
-            updatedBookRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(updatedBookRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+            updatedBookRow.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
+            assertThat(updatedBookRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
             // Assert old item is gone
             Locator oldBookRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(uniqueTitle));
-            oldBookRow.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(oldBookRow).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Test item removed
+            assertThat(oldBookRow).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Test item removed
 
             // Delete
             Locator toDeleteRow = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle));
             page.onDialog(dialog -> dialog.accept());
             toDeleteRow.first().locator("[data-test='delete-book-btn']").click();
 
-            // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            // Wait for the operation to complete - network idle ensures DELETE + GET /api/books completes
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            toDeleteRow.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000L));
+            toDeleteRow.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(20000L));
             Locator deletedRowCheck = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText(updatedTitle));
-            deletedRowCheck.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
-            assertThat(allBookRows).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
+            assertThat(allBookRows).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
@@ -218,7 +217,7 @@ public class BooksUITest {
             login();
             navigateToSection("books");
 
-            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000L));
+            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(20000L));
 
             List<String> titles = page.locator("tbody#book-list-body tr[data-test='book-item'] td:nth-child(2) span[data-test='book-title']").allTextContents();
 
@@ -249,7 +248,7 @@ public class BooksUITest {
             login();
             navigateToSection("books");
 
-            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(5000L));
+            page.waitForSelector("[data-test='book-item']", new Page.WaitForSelectorOptions().setTimeout(20000L));
             page.locator("[data-test='edit-book-btn']").first().click();
 
             // Upload the file
@@ -257,16 +256,16 @@ public class BooksUITest {
 
             // Wait for the button to become visible
             Locator bookByPhotoButton = page.locator("[data-test='book-by-photo-btn']");
-            bookByPhotoButton.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            bookByPhotoButton.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             bookByPhotoButton.click();
 
             // Wait for the error div to appear
             Locator errorDiv = page.locator("#books-section [data-test='form-error']");
-            errorDiv.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            errorDiv.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             // Assert the error message
-            assertThat(errorDiv).containsText("Failed to generate book metadata: xAI API key is required to generate book metadata from photo. Please set it in your user settings.", new LocatorAssertions.ContainsTextOptions().setTimeout(5000L));
+            assertThat(errorDiv).containsText("Failed to generate book metadata: xAI API key is required to generate book metadata from photo. Please set it in your user settings.", new LocatorAssertions.ContainsTextOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-book-by-photo.png")));

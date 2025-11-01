@@ -9,12 +9,13 @@ export const sectionConfig = {
     'search': { load: null, reset: null },
     'library-card': { load: loadApplied, reset: null },
     'users': { load: loadUsers, reset: null },
-    'loans': { load: loadLoans, reset: null },
+    'loans': { load: loadLoansSection, reset: null },
     'test-data': { load: loadTestDataStats, reset: null },
     'settings': { load: loadSettings, reset: null }
 };
 
 export function showSection(sectionId, event) {
+    console.log(`[Sections] Showing section: ${sectionId}`);
     const currentActiveButton = document.querySelector('#section-menu button.active');
     const newActiveButton = event ? event.target.closest('button') : document.querySelector(`#section-menu button[onclick*="'${sectionId}'"]`);
 
@@ -50,11 +51,15 @@ export function showSection(sectionId, event) {
     const config = sectionConfig[sectionId];
     if (config) {
         if (currentActiveButton === newActiveButton && config.reset && shouldResetForSection(sectionId)) {
+            console.log(`[Sections] Resetting form for section: ${sectionId}`);
             config.reset();
         }
         if (config.load) {
+            console.log(`[Sections] Loading data for section: ${sectionId}`);
             config.load();
         }
+    } else {
+        console.warn(`[Sections] No config found for section: ${sectionId}`);
     }
 
 

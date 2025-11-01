@@ -328,23 +328,23 @@
             <div data-test="loans-form">
                 <div class="mb-3">
                     <label for="loan-book" class="form-label">Book:</label>
-                    <select id="loan-book" class="form-select" data-test="loan-book"></select>
+                    <select id="loan-book" class="form-select" data-test="loan-book" data-test-form="loan-book-select"></select>
                 </div>
                 <div class="mb-3">
                     <label for="loan-user" class="form-label">Name:</label>
-                    <select id="loan-user" class="form-select" data-test="loan-user"></select>
+                    <select id="loan-user" class="form-select" data-test="loan-user" data-test-form="loan-user-select"></select>
                 </div>
                 <div class="mb-3">
                     <label for="loan-date" class="form-label">Loan Date:</label>
-                    <input type="date" id="loan-date" class="form-control" data-test="loan-date">
+                    <input type="date" id="loan-date" class="form-control" data-test="loan-date" data-test-form="loan-date-input">
                 </div>
                 <div class="mb-3">
                     <label for="due-date" class="form-label">Due Date:</label>
-                    <input type="date" id="due-date" class="form-control" data-test="due-date">
+                    <input type="date" id="due-date" class="form-control" data-test="due-date" data-test-form="due-date-input">
                 </div>
                 <div class="mb-3">
                     <label for="return-date" class="form-label">Return Date:</label>
-                    <input type="date" id="return-date" class="form-control" data-test="return-date">
+                    <input type="date" id="return-date" class="form-control" data-test="return-date" data-test-form="return-date-input">
                 </div>
                 <button id="checkout-btn" class="btn btn-primary" onclick="checkoutBook()" data-test="checkout-btn">Checkout Book</button>
             </div>

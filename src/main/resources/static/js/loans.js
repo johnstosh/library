@@ -1,5 +1,14 @@
 // (c) Copyright 2025 by Muczynski
+
+async function loadLoansSection() {
+    console.log('[Loans] Loading loans section - calling loadLoans() and populateLoanDropdowns()');
+    await loadLoans();
+    await populateLoanDropdowns();
+    console.log('[Loans] Loans section fully loaded');
+}
+
 async function loadLoans() {
+    console.log('[Loans] loadLoans() called');
     try {
         const showAll = document.getElementById('show-returned-loans').checked;
         const loans = await fetchData(`/api/loans?showAll=${showAll}`);
@@ -169,9 +178,15 @@ async function returnBook(loanId) {
 }
 
 async function populateLoanDropdowns() {
+    console.log('[Loans] populateLoanDropdowns() called');
     try {
         const books = await fetchData('/api/books');
+        console.log(`[Loans] Fetched ${books.length} books`);
         const bookSelect = document.getElementById('loan-book');
+        if (!bookSelect) {
+            console.error('[Loans] loan-book select not found in DOM!');
+            return;
+        }
         bookSelect.innerHTML = '';
         books.forEach(book => {
             const option = document.createElement('option');
@@ -179,9 +194,15 @@ async function populateLoanDropdowns() {
             option.textContent = book.title;
             bookSelect.appendChild(option);
         });
+        console.log(`[Loans] Populated loan-book dropdown with ${books.length} options`);
 
         const users = await fetchData('/api/users');
+        console.log(`[Loans] Fetched ${users.length} users`);
         const userSelect = document.getElementById('loan-user');
+        if (!userSelect) {
+            console.error('[Loans] loan-user select not found in DOM!');
+            return;
+        }
         userSelect.innerHTML = '';
         users.forEach(user => {
             const option = document.createElement('option');
@@ -189,9 +210,14 @@ async function populateLoanDropdowns() {
             option.textContent = user.username;
             userSelect.appendChild(option);
         });
+        console.log(`[Loans] Populated loan-user dropdown with ${users.length} options`);
 
         const loanDateInput = document.getElementById('loan-date');
         const dueDateInput = document.getElementById('due-date');
+        if (!loanDateInput || !dueDateInput) {
+            console.error('[Loans] Date inputs not found in DOM!');
+            return;
+        }
 
         const today = new Date();
         loanDateInput.value = today.toISOString().split('T')[0];
@@ -200,7 +226,10 @@ async function populateLoanDropdowns() {
         twoWeeksFromNow.setDate(today.getDate() + 14);
         dueDateInput.value = twoWeeksFromNow.toISOString().split('T')[0];
 
+        console.log(`[Loans] Set loan-date to: ${loanDateInput.value}, due-date to: ${dueDateInput.value}`);
+        console.log('[Loans] populateLoanDropdowns() completed successfully');
     } catch (error) {
+        console.error('[Loans] Error in populateLoanDropdowns():', error);
         showError('loans', 'Failed to populate dropdowns: ' + error.message);
     }
 }
