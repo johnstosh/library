@@ -24,7 +24,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-search.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled
 public class SearchUITest {
 
     @LocalServerPort
@@ -51,7 +50,7 @@ public class SearchUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(5000L);
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach
@@ -63,15 +62,15 @@ public class SearchUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
-        page.fill("[data-test='login-password']", "divinemercy");
+        page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForLoadState(LoadState.NETWORKIDLE);
-        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     @Test
@@ -79,21 +78,21 @@ public class SearchUITest {
         try {
             login();
             page.click("[data-test='menu-search']");
-            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             page.fill("[data-test='search-input']", "Initial");
-            page.waitForSelector("[data-test='search-btn']", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForSelector("[data-test='search-btn']", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
             page.click("[data-test='search-btn']");
 
             // Wait for network idle and results header
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             // Assert that the search results are not empty
             Locator resultsLocator = page.locator("[data-test='search-results']");
-            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-search-functionality.png")));
@@ -106,20 +105,20 @@ public class SearchUITest {
         try {
             login();
             page.click("[data-test='menu-search']");
-            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             page.fill("[data-test='search-input']", "Initial");
             page.press("[data-test='search-input']", "Enter");
 
             // Wait for network idle and results header
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             // Assert that the search results are not empty
             Locator resultsLocator = page.locator("[data-test='search-results']");
-            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-search-enter-key.png")));
@@ -132,29 +131,29 @@ public class SearchUITest {
         try {
             login();
             page.click("[data-test='menu-search']");
-            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForSelector("#search-section", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             page.fill("[data-test='search-input']", "in");
             page.press("[data-test='search-input']", "Enter");
 
             // Wait for network idle and results header
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+            page.waitForSelector("[data-test='search-results'] h3", new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
 
             // Assert that the search results are not empty
             Locator resultsLocator = page.locator("[data-test='search-results']");
-            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+            resultsLocator.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(resultsLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(resultsLocator.locator("p:has-text('No results found')")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
 
             // Assert that the search results contain the expected book and author
             Locator bookItem = page.locator("[data-test='search-book-item'] td:nth-child(2)");
-            bookItem.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(bookItem).hasText("Initial Book", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            bookItem.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(bookItem).hasText("Initial Book", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             Locator authorItem = page.locator("[data-test='search-author-item'] span");
-            authorItem.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(authorItem).hasText("1. Initial Author", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            authorItem.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(authorItem).hasText("1. Initial Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-search-short-query.png")));

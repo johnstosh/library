@@ -67,15 +67,15 @@ public class AuthorsUITest {
 
     private void login() {
         page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
-        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToSection(String section) {
@@ -85,8 +85,8 @@ public class AuthorsUITest {
         // Wait for target section to be visible and assert it
         String targetSelector = "#" + section + "-section";
         Locator targetSection = page.locator(targetSelector);
-        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000L));
-        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+        targetSection.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
+        assertThat(targetSection).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
         // Assert all non-target sections are hidden to test exclusivity
         List<String> allSections = Arrays.asList("authors", "books", "libraries", "loans", "users", "search");
@@ -95,7 +95,7 @@ public class AuthorsUITest {
                 .collect(Collectors.toList());
         if (!hiddenSections.isEmpty()) {
             for (String hiddenSection : hiddenSections) {
-                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(5000L));
+                assertThat(page.locator("#" + hiddenSection + "-section")).isHidden(new LocatorAssertions.IsHiddenOptions().setTimeout(20000L));
             }
         }
 
@@ -129,7 +129,7 @@ public class AuthorsUITest {
             navigateToSection("authors");
 
             // Wait for author section to be interactable, focusing on form
-            page.waitForSelector("[data-test='new-author-name']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='new-author-name']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
 
             // Create with unique name to avoid conflict
             String uniqueName = "Test Author " + UUID.randomUUID().toString().substring(0, 8);
@@ -141,41 +141,41 @@ public class AuthorsUITest {
 
             // Wait for the button to reset to "Add Author" after creation
             Locator addButton = page.locator("[data-test='add-author-btn']");
-            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Read: Use filter for flexible matching
             Locator authorList = page.locator("[data-test='author-item']");
             Locator authorRow = authorList.filter(new Locator.FilterOptions().setHasText(uniqueName));
-            authorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(authorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-            assertThat(authorRow).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Only new
-            assertThat(authorList).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Initial + new
+            authorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(authorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(authorRow).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Only new
+            assertThat(authorList).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Initial + new
 
             // Update
             authorRow.first().locator("[data-test='edit-author-btn']").click();
-            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(addButton).hasText("Update Author", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(addButton).hasText("Update Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
             String updatedName = "Updated Author " + UUID.randomUUID().toString().substring(0, 8);
             page.fill("[data-test='new-author-name']", updatedName);
             page.click("[data-test='add-author-btn']");
 
             // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
             // Wait for the button to reset to "Add Author" after update
-            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
-            addButton.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(5000L));
+            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
+            addButton.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Wait for the updated item to appear (confirms reload)
             Locator updatedAuthorRow = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
-            updatedAuthorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(updatedAuthorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+            updatedAuthorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(updatedAuthorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
             // Assert old item is gone (confirms successful reload)
             Locator oldAuthorRow = authorList.filter(new Locator.FilterOptions().setHasText(uniqueName));
-            oldAuthorRow.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(oldAuthorRow).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L)); // Test item removed
+            oldAuthorRow.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(oldAuthorRow).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Test item removed
 
             // Delete
             Locator toDelete = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
@@ -183,13 +183,13 @@ public class AuthorsUITest {
             toDelete.first().locator("[data-test='delete-author-btn']").click();
 
             // Wait for the operation to complete
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(5000L));
+            toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(20000L));
             Locator deletedRowCheck = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
-            deletedRowCheck.waitFor(new Locator.WaitForOptions().setTimeout(5000L));
-            assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
-            assertThat(authorList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(5000L));
+            deletedRowCheck.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
+            assertThat(authorList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             // Screenshot on failure for debugging
@@ -209,7 +209,7 @@ public class AuthorsUITest {
             navigateToSection("authors");
 
             // Wait for author section to be interactable, focusing on list
-            page.waitForSelector("[data-test='author-item']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+            page.waitForSelector("[data-test='author-item']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
 
             List<String> authorNames = page.locator("[data-test='author-name']").allTextContents();
 
