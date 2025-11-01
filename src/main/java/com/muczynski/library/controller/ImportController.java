@@ -1,6 +1,6 @@
 package com.muczynski.library.controller;
 
-import com.muczynski.library.dto.ImportRequestDto;
+import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.service.ImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

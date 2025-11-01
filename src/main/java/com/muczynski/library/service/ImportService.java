@@ -1,7 +1,8 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.*;
-import com.muczynski.library.dto.*;
+import com.muczynski.library.dto.LibraryDto;
+import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.Base64;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,7 +26,6 @@ public class ImportService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
-    private final PhotoRepository photoRepository;
     private final RoleRepository roleRepository;
     private final LibraryMapper libraryMapper;
     private final PasswordEncoder passwordEncoder;
@@ -43,7 +42,7 @@ public class ImportService {
 
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
-            for (AuthorImportDto aDto : dto.getAuthors()) {
+            for (ImportAuthorDto aDto : dto.getAuthors()) {
                 Author auth = new Author();
                 auth.setName(aDto.getName());
                 auth.setDateOfBirth(aDto.getDateOfBirth());
@@ -54,32 +53,12 @@ public class ImportService {
                 auth.setBriefBiography(aDto.getBriefBiography());
                 auth = authorRepository.save(auth);
                 authMap.put(aDto.getName(), auth);
-
-                List<Photo> photos = new ArrayList<>();
-                if (aDto.getPhotos() != null) {
-                    for (int i = 0; i < aDto.getPhotos().size(); i++) {
-                        PhotoImportDto pDto = aDto.getPhotos().get(i);
-                        if (pDto.getImageBase64() != null && !pDto.getImageBase64().isEmpty()) {
-                            Photo photo = new Photo();
-                            photo.setImage(Base64.getDecoder().decode(pDto.getImageBase64()));
-                            photo.setContentType(pDto.getContentType());
-                            photo.setCaption(pDto.getCaption());
-                            photo.setPhotoOrder(i);
-                            photo.setAuthor(auth);
-                            photos.add(photo);
-                        }
-                    }
-                    if (!photos.isEmpty()) {
-                        photoRepository.saveAll(photos);
-                        auth.setPhotos(photos);
-                    }
-                }
             }
         }
 
         Map<String, User> userMap = new HashMap<>();
         if (dto.getUsers() != null) {
-            for (UserImportDto uDto : dto.getUsers()) {
+            for (ImportUserDto uDto : dto.getUsers()) {
                 User user = new User();
                 user.setUsername(uDto.getUsername());
                 String password = uDto.getPassword();
@@ -107,14 +86,17 @@ public class ImportService {
 
         Map<String, Book> bookMap = new HashMap<>();
         if (dto.getBooks() != null) {
-            for (BookImportDto bDto : dto.getBooks()) {
-                Author author = authMap.get(bDto.getAuthorName());
-                if (author == null) {
-                    throw new RuntimeException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthorName());
+            for (ImportBookDto bDto : dto.getBooks()) {
+                Author author = null;
+                if (bDto.getAuthor() != null) {
+                    author = authMap.get(bDto.getAuthor().getName());
+                    if (author == null) {
+                        throw new RuntimeException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
+                    }
                 }
                 Library library = libMap.get(bDto.getLibraryName());
                 if (library == null) {
-                    throw new RuntimeException("Book not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
+                    throw new RuntimeException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
                 }
 
                 Book book = new Book();
@@ -132,41 +114,28 @@ public class ImportService {
                 book.setLibrary(library);
                 book = bookRepository.save(book);
 
-                String key = bDto.getTitle() + "|" + bDto.getAuthorName();
+                String key = bDto.getTitle() + "|" + (bDto.getAuthor() != null ? bDto.getAuthor().getName() : "");
                 bookMap.put(key, book);
-
-                List<Photo> photos = new ArrayList<>();
-                if (bDto.getPhotos() != null) {
-                    for (int i = 0; i < bDto.getPhotos().size(); i++) {
-                        PhotoImportDto pDto = bDto.getPhotos().get(i);
-                        if (pDto.getImageBase64() != null && !pDto.getImageBase64().isEmpty()) {
-                            Photo photo = new Photo();
-                            photo.setImage(Base64.getDecoder().decode(pDto.getImageBase64()));
-                            photo.setContentType(pDto.getContentType());
-                            photo.setCaption(pDto.getCaption());
-                            photo.setPhotoOrder(i);
-                            photo.setBook(book);
-                            photos.add(photo);
-                        }
-                    }
-                    if (!photos.isEmpty()) {
-                        photoRepository.saveAll(photos);
-                        book.setPhotos(photos);
-                    }
-                }
             }
         }
 
         if (dto.getLoans() != null) {
-            for (LoanImportDto lDto : dto.getLoans()) {
-                String key = lDto.getBookTitle() + "|" + lDto.getAuthorName();
-                Book book = bookMap.get(key);
-                if (book == null) {
-                    throw new RuntimeException("Book not found for loan: " + lDto.getBookTitle() + " by " + lDto.getAuthorName());
+            for (ImportLoanDto lDto : dto.getLoans()) {
+                Book book = null;
+                if (lDto.getBook() != null) {
+                    String authorName = lDto.getBook().getAuthor() != null ? lDto.getBook().getAuthor().getName() : "";
+                    String key = lDto.getBook().getTitle() + "|" + authorName;
+                    book = bookMap.get(key);
+                    if (book == null) {
+                        throw new RuntimeException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
+                    }
                 }
-                User user = userMap.get(lDto.getUserUsername());
-                if (user == null) {
-                    throw new RuntimeException("User not found for loan: " + lDto.getUserUsername());
+                User user = null;
+                if (lDto.getUser() != null) {
+                    user = userMap.get(lDto.getUser().getUsername());
+                    if (user == null) {
+                        throw new RuntimeException("User not found for loan: " + lDto.getUser().getUsername());
+                    }
                 }
 
                 Loan loan = new Loan();
@@ -190,9 +159,9 @@ public class ImportService {
         dto.setLibraries(libDtos);
 
         // Export authors
-        List<AuthorImportDto> authDtos = new ArrayList<>();
+        List<ImportAuthorDto> authDtos = new ArrayList<>();
         for (Author author : authorRepository.findAll()) {
-            AuthorImportDto aDto = new AuthorImportDto();
+            ImportAuthorDto aDto = new ImportAuthorDto();
             aDto.setName(author.getName());
             aDto.setDateOfBirth(author.getDateOfBirth());
             aDto.setDateOfDeath(author.getDateOfDeath());
@@ -200,29 +169,14 @@ public class ImportService {
             aDto.setBirthCountry(author.getBirthCountry());
             aDto.setNationality(author.getNationality());
             aDto.setBriefBiography(author.getBriefBiography());
-
-            List<PhotoImportDto> photoDtos = new ArrayList<>();
-            if (author.getPhotos() != null) {
-                for (int i = 0; i < author.getPhotos().size(); i++) {
-                    Photo photo = author.getPhotos().get(i);
-                    if (photo.getImage() != null && photo.getImage().length > 0) {
-                        PhotoImportDto pDto = new PhotoImportDto();
-                        pDto.setContentType(photo.getContentType());
-                        pDto.setImageBase64(Base64.getEncoder().encodeToString(photo.getImage()));
-                        pDto.setCaption(photo.getCaption());
-                        photoDtos.add(pDto);
-                    }
-                }
-            }
-            aDto.setPhotos(photoDtos);
             authDtos.add(aDto);
         }
         dto.setAuthors(authDtos);
 
         // Export users (password set to empty for security)
-        List<UserImportDto> userDtos = new ArrayList<>();
+        List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
-            UserImportDto uDto = new UserImportDto();
+            ImportUserDto uDto = new ImportUserDto();
             uDto.setUsername(user.getUsername());
             uDto.setPassword(""); // Do not export actual password
             uDto.setXaiApiKey(user.getXaiApiKey());
@@ -237,9 +191,9 @@ public class ImportService {
         dto.setUsers(userDtos);
 
         // Export books
-        List<BookImportDto> bookDtos = new ArrayList<>();
+        List<ImportBookDto> bookDtos = new ArrayList<>();
         for (Book book : bookRepository.findAll()) {
-            BookImportDto bDto = new BookImportDto();
+            ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
             bDto.setPublisher(book.getPublisher());
@@ -251,42 +205,67 @@ public class ImportService {
             bDto.setLocNumber(book.getLocNumber());
             bDto.setStatusReason(book.getStatusReason());
             if (book.getAuthor() != null) {
-                bDto.setAuthorName(book.getAuthor().getName());
+                ImportAuthorDto authorDto = new ImportAuthorDto();
+                authorDto.setName(book.getAuthor().getName());
+                authorDto.setDateOfBirth(book.getAuthor().getDateOfBirth());
+                authorDto.setDateOfDeath(book.getAuthor().getDateOfDeath());
+                authorDto.setReligiousAffiliation(book.getAuthor().getReligiousAffiliation());
+                authorDto.setBirthCountry(book.getAuthor().getBirthCountry());
+                authorDto.setNationality(book.getAuthor().getNationality());
+                authorDto.setBriefBiography(book.getAuthor().getBriefBiography());
+                bDto.setAuthor(authorDto);
             }
             if (book.getLibrary() != null) {
                 bDto.setLibraryName(book.getLibrary().getName());
             }
-
-            List<PhotoImportDto> photoDtos = new ArrayList<>();
-            if (book.getPhotos() != null) {
-                for (int i = 0; i < book.getPhotos().size(); i++) {
-                    Photo photo = book.getPhotos().get(i);
-                    if (photo.getImage() != null && photo.getImage().length > 0) {
-                        PhotoImportDto pDto = new PhotoImportDto();
-                        pDto.setContentType(photo.getContentType());
-                        pDto.setImageBase64(Base64.getEncoder().encodeToString(photo.getImage()));
-                        pDto.setCaption(photo.getCaption());
-                        photoDtos.add(pDto);
-                    }
-                }
-            }
-            bDto.setPhotos(photoDtos);
             bookDtos.add(bDto);
         }
         dto.setBooks(bookDtos);
 
         // Export loans
-        List<LoanImportDto> loanDtos = new ArrayList<>();
+        List<ImportLoanDto> loanDtos = new ArrayList<>();
         for (Loan loan : loanRepository.findAll()) {
-            LoanImportDto lDto = new LoanImportDto();
+            ImportLoanDto lDto = new ImportLoanDto();
             if (loan.getBook() != null) {
-                lDto.setBookTitle(loan.getBook().getTitle());
+                ImportBookDto bookDto = new ImportBookDto();
+                bookDto.setTitle(loan.getBook().getTitle());
+                bookDto.setPublicationYear(loan.getBook().getPublicationYear());
+                bookDto.setPublisher(loan.getBook().getPublisher());
+                bookDto.setPlotSummary(loan.getBook().getPlotSummary());
+                bookDto.setRelatedWorks(loan.getBook().getRelatedWorks());
+                bookDto.setDetailedDescription(loan.getBook().getDetailedDescription());
+                bookDto.setDateAddedToLibrary(loan.getBook().getDateAddedToLibrary());
+                bookDto.setStatus(loan.getBook().getStatus());
+                bookDto.setLocNumber(loan.getBook().getLocNumber());
+                bookDto.setStatusReason(loan.getBook().getStatusReason());
                 if (loan.getBook().getAuthor() != null) {
-                    lDto.setAuthorName(loan.getBook().getAuthor().getName());
+                    ImportAuthorDto authorDto = new ImportAuthorDto();
+                    authorDto.setName(loan.getBook().getAuthor().getName());
+                    authorDto.setDateOfBirth(loan.getBook().getAuthor().getDateOfBirth());
+                    authorDto.setDateOfDeath(loan.getBook().getAuthor().getDateOfDeath());
+                    authorDto.setReligiousAffiliation(loan.getBook().getAuthor().getReligiousAffiliation());
+                    authorDto.setBirthCountry(loan.getBook().getAuthor().getBirthCountry());
+                    authorDto.setNationality(loan.getBook().getAuthor().getNationality());
+                    authorDto.setBriefBiography(loan.getBook().getAuthor().getBriefBiography());
+                    bookDto.setAuthor(authorDto);
                 }
+                if (loan.getBook().getLibrary() != null) {
+                    bookDto.setLibraryName(loan.getBook().getLibrary().getName());
+                }
+                lDto.setBook(bookDto);
             }
             if (loan.getUser() != null) {
-                lDto.setUserUsername(loan.getUser().getUsername());
+                ImportUserDto userDto = new ImportUserDto();
+                userDto.setUsername(loan.getUser().getUsername());
+                userDto.setPassword(""); // Do not export actual password
+                userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
+                if (loan.getUser().getRoles() != null) {
+                    List<String> roles = loan.getUser().getRoles().stream()
+                            .map(Role::getName)
+                            .collect(Collectors.toList());
+                    userDto.setRoles(roles);
+                }
+                lDto.setUser(userDto);
             }
             lDto.setLoanDate(loan.getLoanDate());
             lDto.setDueDate(loan.getDueDate());
