@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.atLeastOnce;
 
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -48,6 +50,10 @@ public class BookByPhotoWorkflowTest {
     void launchBrowser() {
         Playwright playwright = Playwright.create();
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+
+        // Set up the mock at class level
+        String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
+        when(askGrok.askAboutPhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
     }
 
     @AfterAll
@@ -62,10 +68,6 @@ public class BookByPhotoWorkflowTest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
         page = context.newPage();
         page.setDefaultTimeout(20000L);
-
-        // Set up the mock BEFORE the test runs
-        String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
-        when(askGrok.askAboutPhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
     }
 
     @AfterEach
@@ -90,7 +92,7 @@ public class BookByPhotoWorkflowTest {
     }
 
     @Test
-    @Disabled("MockitoBean not properly intercepting askGrok.askAboutPhoto() calls - needs investigation")
+    @Disabled("MockitoBean not properly intercepting askGrok.askAboutPhoto() calls - Spring Boot 3.4+ bean override configuration issue")
     void testFullBookByPhotoWorkflow() {
         Path tempFile = null;
         try {

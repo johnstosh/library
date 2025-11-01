@@ -24,7 +24,6 @@ async function addAuthor() {
         await loadAuthors();
         await populateBookDropdowns();
         clearError('authors');
-        await editAuthor(newAuthor.id);
     } catch (error) {
         showError('authors', 'Failed to add author: ' + error.message);
     }

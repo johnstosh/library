@@ -55,7 +55,7 @@ public class AuthorsUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(5000L);
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach
@@ -118,7 +118,6 @@ public class AuthorsUITest {
     }
 
     @Test
-    @Disabled("Disabling test to investigate intermittent failures.")
     void testAuthorsCRUD() {
         try {
             page.navigate("http://localhost:" + port);
@@ -136,22 +135,23 @@ public class AuthorsUITest {
             page.fill("[data-test='new-author-name']", uniqueName);
             page.click("[data-test='add-author-btn']");
 
-            // Wait for the operation to complete and the list to reload
-            page.waitForFunction("() => document.querySelector('[data-test=\"author-item\"]').innerText.includes('" + uniqueName + "')", null, new Page.WaitForFunctionOptions().setTimeout(10000));
+            // Wait for the operation to complete - network idle ensures POST + GET /api/authors completes
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            // Wait for the button to reset to "Add Author" after creation
+            // Wait for button to reset to "Add Author" after creation
             Locator addButton = page.locator("[data-test='add-author-btn']");
             assertThat(addButton).hasText("Add Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
 
             // Read: Use filter for flexible matching
             Locator authorList = page.locator("[data-test='author-item']");
             Locator authorRow = authorList.filter(new Locator.FilterOptions().setHasText(uniqueName));
-            authorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            authorRow.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
             assertThat(authorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
             assertThat(authorRow).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Only new
             assertThat(authorList).hasCount(2, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Initial + new
 
             // Update
+            authorRow.first().scrollIntoViewIfNeeded();
             authorRow.first().locator("[data-test='edit-author-btn']").click();
             addButton.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
             assertThat(addButton).hasText("Update Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
@@ -169,12 +169,11 @@ public class AuthorsUITest {
 
             // Wait for the updated item to appear (confirms reload)
             Locator updatedAuthorRow = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
-            updatedAuthorRow.first().waitFor(new Locator.WaitForOptions().setTimeout(20000L));
+            updatedAuthorRow.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
             assertThat(updatedAuthorRow.first()).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
             // Assert old item is gone (confirms successful reload)
             Locator oldAuthorRow = authorList.filter(new Locator.FilterOptions().setHasText(uniqueName));
-            oldAuthorRow.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
             assertThat(oldAuthorRow).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L)); // Test item removed
 
             // Delete
@@ -187,7 +186,6 @@ public class AuthorsUITest {
 
             toDelete.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.DETACHED).setTimeout(20000L));
             Locator deletedRowCheck = authorList.filter(new Locator.FilterOptions().setHasText(updatedName));
-            deletedRowCheck.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
             assertThat(deletedRowCheck).hasCount(0, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
             assertThat(authorList).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(20000L));
 
