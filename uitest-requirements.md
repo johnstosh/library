@@ -42,7 +42,19 @@ The tests must follow consistent patterns reflecting best practices in Playwrigh
    - For CRUD operations involving network calls and DOM updates, use `LoadState.NETWORKIDLE` waits with 20-second timeouts.
    - For simple element visibility checks, 20-second timeouts are still required due to potential database transaction delays and DOM rendering time.
    - When waiting for elements to appear after state changes, always specify the expected state: `.setState(WaitForSelectorState.VISIBLE)`.
-   - When waiting for elements to disappear, use `hasCount(0)` assertions with timeouts rather than `waitFor()` with DETACHED state. 
+   - When waiting for elements to disappear, use `hasCount(0)` assertions with timeouts rather than `waitFor()` with DETACHED state.
+
+7. **Element Visibility and Interaction**:
+   - **Always wait for VISIBLE state**, not just element attachment: Use `.setState(WaitForSelectorState.VISIBLE)` on all `waitFor()` calls.
+   - **Scroll elements into view** before interacting with them: Call `locator.scrollIntoViewIfNeeded()` before clicking elements that might be off-screen.
+   - **Avoid brittle `waitForFunction()` patterns**: Replace JavaScript polling with structured waits like `waitForLoadState(NETWORKIDLE)`.
+   - **Check screenshots on failure**: They reveal visibility issues, scroll position, and unexpected UI states.
+
+8. **Production Code Testability Requirements**:
+   - **No auto-edit mode after create**: After creating an item, don't automatically call `editItem()`. Let the form reset to "add" state.
+   - **Consistent form behavior**: Forms should maintain the same state (add vs edit mode) predictably based on user actions only.
+   - **Proper list visibility**: Don't hide lists after create operations; keep them visible for verification.
+   - **Scroll behavior**: If production code scrolls the page (e.g., `window.scrollTo()`), ensure critical elements remain accessible. 
 
 These patterns make the tests a robust foundation for full-stack UI testing.
 
@@ -160,6 +172,91 @@ By following these guidelines, tests remain reliable and adhere to the project's
 2. Always specify the expected state: `.setState(WaitForSelectorState.VISIBLE)`
 3. For disappearing elements, use `hasCount(0)` assertions instead of `waitFor(DETACHED)`
 
+### Issue 5: Element Exists in DOM But Not Visible (Fails to Click)
+**Symptom:** Test finds an element (e.g., edit button in a table row) but fails when trying to click it with error: `element is not visible`.
+
+**Root Cause:**
+- Element is scrolled out of viewport due to page layout or scrolling behavior
+- Production code may scroll the page (e.g., `window.scrollTo(0, 0)`) leaving elements off-screen
+- Table rows may be rendered but not in the visible viewport
+
+**Solution:**
+1. Before clicking elements that might be off-screen, scroll them into view:
+   ```java
+   locator.first().scrollIntoViewIfNeeded();
+   locator.first().locator("[data-test='edit-btn']").click();
+   ```
+2. Always wait for elements to be VISIBLE, not just attached:
+   ```java
+   locator.first().waitFor(new Locator.WaitForOptions()
+       .setState(WaitForSelectorState.VISIBLE)
+       .setTimeout(20000L));
+   ```
+3. Avoid relying on `waitFor()` without specifying state - it only waits for element to be attached to DOM
+
+### Issue 6: Production Code Auto-Triggers Edit Mode After Create
+**Symptom:** After creating an item, test expects button text to be "Add Item" but finds "Update Item" instead. List of items may be hidden.
+
+**Root Cause:** Production code automatically calls `editItem(newItem.id)` after creating an item, which:
+- Changes the form button from "Add" to "Update"
+- May hide the item list (e.g., `showItemList(false)`)
+- Puts the UI in an unexpected state for testing
+
+**Solution:**
+1. **Production Code Fix:** Remove automatic edit mode triggering after create operations
+2. After creating an item, the form should:
+   - Reset to blank state
+   - Keep the item list visible
+   - Keep button text as "Add Item"
+3. Only enter edit mode when user explicitly clicks an edit button
+
+**Example Production Code Bug:**
+```javascript
+// BAD - automatically enters edit mode after create
+async function addAuthor() {
+    const newAuthor = await postData('/api/authors', {...});
+    await loadAuthors();
+    await editAuthor(newAuthor.id);  // ← Remove this line
+}
+
+// GOOD - stays in create mode
+async function addAuthor() {
+    const newAuthor = await postData('/api/authors', {...});
+    await loadAuthors();
+    // Form remains in "add" state, list stays visible
+}
+```
+
+### Issue 7: Spring Boot 3.4+ MockitoBean Not Intercepting Calls
+**Symptom:** Test uses `@MockitoBean` to mock a service, sets up `when().thenReturn()` stubbing, but the real service is called instead of the mock.
+
+**Root Cause:** Spring Boot 3.4+ changed bean override behavior and requires explicit configuration to allow test beans to override production beans.
+
+**Solution:**
+1. Add to `src/test/resources/application-test.properties`:
+   ```properties
+   spring.test.context.bean.override.enabled=true
+   ```
+2. Use the correct import for `@MockitoBean`:
+   ```java
+   import org.springframework.test.context.bean.override.mockito.MockitoBean;
+   ```
+3. Set up mocking in `@BeforeAll` (for `PER_CLASS` lifecycle) or `@BeforeEach`:
+   ```java
+   @MockitoBean
+   private MyService myService;
+
+   @BeforeAll
+   void setupMocks() {
+       when(myService.method(any())).thenReturn("mocked result");
+   }
+   ```
+
+**Known Limitation:** As of Spring Boot 3.5+, `@MockitoBean` may still not properly intercept calls in some UI test scenarios with `@SpringBootTest(webEnvironment = RANDOM_PORT)`. This is a framework limitation, not a test or production code issue. Consider:
+- Using integration tests without UI for testing service-level mocking
+- Creating separate unit tests for complex service interactions
+- Documenting tests that require mocking as `@Disabled` with clear explanation
+
 ### Debugging Checklist
 When a UI test fails:
 1. ✅ Check browser console logs (look for `[Sections]`, `[Loans]`, etc. prefixes)
@@ -169,3 +266,5 @@ When a UI test fails:
 5. ✅ Check if the production code calls initialization functions when loading the section
 6. ✅ Verify form elements are populated with data, not just visible
 7. ✅ Ensure timeouts are set to 20 seconds for all operations
+8. ✅ Check for scrolling issues - use `scrollIntoViewIfNeeded()` before clicking off-screen elements
+9. ✅ Verify production code doesn't auto-trigger edit mode after create operations
