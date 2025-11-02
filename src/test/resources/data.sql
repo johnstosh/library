@@ -1,8 +1,8 @@
 INSERT INTO role (name) VALUES ('USER');
 INSERT INTO role (name) VALUES ('LIBRARIAN');
 
-INSERT INTO users (username, password) VALUES ('librarian', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
-INSERT INTO users (username, password) VALUES ('testuser', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+INSERT INTO users (username, password, xai_api_key, google_photos_api_key, google_photos_refresh_token, google_photos_token_expiry, google_client_secret, last_photo_timestamp) VALUES ('librarian', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '', '', '', '', '', '');
+INSERT INTO users (username, password, xai_api_key, google_photos_api_key, google_photos_refresh_token, google_photos_token_expiry, google_client_secret, last_photo_timestamp) VALUES ('testuser', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '', '', '', '', '', '');
 
 INSERT INTO users_roles (user_id, role_id) VALUES (1, 1);
 INSERT INTO users_roles (user_id, role_id) VALUES (1, 2);

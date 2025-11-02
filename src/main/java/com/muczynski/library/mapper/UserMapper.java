@@ -18,6 +18,9 @@ public class UserMapper {
         userDto.setId(user.getId());
         userDto.setUsername(user.getUsername());
         userDto.setXaiApiKey(user.getXaiApiKey());
+        userDto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
+        userDto.setGoogleClientSecret(user.getGoogleClientSecret());
+        userDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
         userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
         return userDto;
     }

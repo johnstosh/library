@@ -22,6 +22,11 @@ public class User {
     private String password;
 
     private String xaiApiKey = "";
+    private String googlePhotosApiKey = ""; // OAuth access token
+    private String googlePhotosRefreshToken = ""; // OAuth refresh token
+    private String googlePhotosTokenExpiry = ""; // ISO 8601 timestamp
+    private String googleClientSecret = ""; // Google OAuth client secret
+    private String lastPhotoTimestamp = "";
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

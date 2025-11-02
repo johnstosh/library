@@ -31,6 +31,9 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="createBookByPhoto()" data-test="menu-book-by-photo">Book-by-Photo</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('books-from-feed', event)" data-test="menu-books-from-feed">Books-from-Feed</button>
+                </li>
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
@@ -227,6 +230,26 @@
             </div>
         </div>
 
+        <div id="books-from-feed-section" class="section" data-test="books-from-feed-section">
+            <h2 data-test="books-from-feed-header">Books from Google Photos Feed</h2>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <p>This feature processes photos from your Google Photos account to automatically detect and create book entries.</p>
+                    <p><strong>How it works:</strong></p>
+                    <ol>
+                        <li>Scans photos from your Google Photos starting from the last processed timestamp (or yesterday if first time)</li>
+                        <li>Uses AI to determine which photos are of books</li>
+                        <li>Extracts book title and author information from book photos</li>
+                        <li>Creates book entries in your library</li>
+                        <li>Marks processed photos by adding title and author to the photo description in Google Photos</li>
+                    </ol>
+                    <p><strong>Note:</strong> Make sure you have configured your Google Photos API key in Settings.</p>
+                    <button id="process-photos-btn" class="btn btn-primary" onclick="processPhotosFromFeed()" data-test="process-photos-btn">Process Photos from Feed</button>
+                </div>
+            </div>
+            <div id="processing-results" data-test="processing-results"></div>
+        </div>
+
         <div id="search-section" class="section" data-test="search-section">
             <h2 data-test="search-header">Search</h2>
             <div class="input-group mb-3" data-test="search-form">
@@ -380,6 +403,26 @@
                     <input type="text" id="xai-api-key" class="form-control" autocomplete="off" placeholder="Enter your xAI API key" data-test="xai-api-key">
                     <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
                 </div>
+                <div class="mb-3 librarian-only">
+                    <label for="google-client-secret" class="form-label">Google OAuth Client Secret</label>
+                    <input type="password" id="google-client-secret" class="form-control" autocomplete="off" placeholder="Enter your Google OAuth Client Secret" data-test="google-client-secret">
+                    <div class="form-text">Required for Google Photos OAuth. Get this from Google Cloud Console.</div>
+                </div>
+                <div class="mb-3 librarian-only">
+                    <label class="form-label">Google Photos Access (for Books-from-Feed)</label>
+                    <div id="google-photos-status" class="mb-2">
+                        <span id="google-photos-authorized" class="badge bg-success" style="display: none;">Authorized</span>
+                        <span id="google-photos-not-authorized" class="badge bg-warning">Not Authorized</span>
+                    </div>
+                    <button type="button" id="authorize-google-photos-btn" class="btn btn-primary btn-sm" onclick="authorizeGooglePhotos()">
+                        Authorize Google Photos
+                    </button>
+                    <button type="button" id="revoke-google-photos-btn" class="btn btn-danger btn-sm" onclick="revokeGooglePhotos()" style="display: none;">
+                        Revoke Access
+                    </button>
+                    <div class="form-text">Authorize access to your Google Photos for the Books-from-Feed feature.</div>
+                    <input type="hidden" id="google-photos-api-key" data-test="google-photos-api-key">
+                </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save Settings</button>
             </form>
             <div id="settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="settings-error"></div>
@@ -392,6 +435,7 @@
 <script src="js/books-table.js"></script>
 <script src="js/books-edit.js"></script>
 <script src="js/books-photo.js"></script>
+<script src="js/books-from-feed.js"></script>
 <script src="js/libraries.js"></script>
 <script src="js/authors-table.js"></script>
 <script src="js/authors-edit.js"></script>

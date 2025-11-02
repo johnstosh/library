@@ -12,4 +12,7 @@ public class UserSettingsDto {
     private String username;
     private String password;
     private String xaiApiKey;
+    private String googlePhotosApiKey;
+    private String googleClientSecret;
+    private String lastPhotoTimestamp;
 }

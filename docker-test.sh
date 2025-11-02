@@ -7,6 +7,29 @@
 # Exit on any error
 set -e
 
+# Parse command line arguments
+QUIET=false
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -quiet|--quiet)
+      QUIET=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [-quiet]"
+      exit 1
+      ;;
+  esac
+done
+
+# Helper function for echo that respects quiet mode
+log() {
+  if [ "$QUIET" = false ]; then
+    echo "$@"
+  fi
+}
+
 # Check if required environment variables are set
 if [ -z "$GCP_PROJECT_ID" ]; then
   echo "Error: Missing GCP_PROJECT_ID environment variable."
@@ -17,7 +40,7 @@ fi
 if [ -z "$BINARY_REPO_NAME" ]; then
   export BINARY_REPO_NAME
   BINARY_REPO_NAME=scrabble-game
-  echo "Info: Defaulting BINARY_REPO_NAME environment variable to ${BINARY_REPO_NAME}"
+  log "Info: Defaulting BINARY_REPO_NAME environment variable to ${BINARY_REPO_NAME}"
 fi
 
 
@@ -35,19 +58,19 @@ if [ -z "$DB_PASSWORD" ]; then
 fi
 
 # Create a Docker network for the application and database
-echo "Creating Docker network 'app-network'..."
-docker network create app-network 2>/dev/null || echo "Docker network 'app-network' already exists."
+log "Creating Docker network 'app-network'..."
+docker network create app-network 2>/dev/null || log "Docker network 'app-network' already exists."
 
 DB_HOST="local-db"
 STARTED_CONTAINER=false
 
 # Check if port 5432 is in use
-echo "Checking if PostgreSQL is running on port 5432..."
+log "Checking if PostgreSQL is running on port 5432..."
 if ss -tuln | grep -q ":5432 "; then
-  echo "Port 5432 is in use. Assuming PostgreSQL is already running. Ensure the database password is set to the expected value and is accessible at localhost:5432."
-  echo "If using a local PostgreSQL instance, you may need to update SPRING_DATASOURCE_URL manually or stop the existing database to let this script start a new one."
+  log "Port 5432 is in use. Assuming PostgreSQL is already running. Ensure the database password is set to the expected value and is accessible at localhost:5432."
+  log "If using a local PostgreSQL instance, you may need to update SPRING_DATASOURCE_URL manually or stop the existing database to let this script start a new one."
 else
-  echo "Port 5432 is free. Starting PostgreSQL container..."
+  log "Port 5432 is free. Starting PostgreSQL container..."
   docker run --rm -d --name local-db \
     --network app-network \
     -p 5432:5432 \
@@ -55,21 +78,21 @@ else
     -e POSTGRES_DB=${SERVICE_NAME} \
     -e POSTGRES_USER=postgres \
     postgres:15
-  echo "PostgreSQL container started."
+  log "PostgreSQL container started."
   STARTED_CONTAINER=true
 fi
 
 # Build the Spring Boot JAR
-echo "Building Spring Boot JAR..."
+log "Building Spring Boot JAR..."
 ./gradlew clean build -x test
 
 # Build the Docker image
-echo "Building Docker image..."
+log "Building Docker image..."
 docker build \
   -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest .
 
 # Run the Docker image locally with environment variables
-echo "Running Docker image on http://localhost:8080..."
+log "Running Docker image on http://localhost:8080..."
 docker run --rm --name application -p 8080:8080 \
   --network app-network \
   -e PORT=8080 \

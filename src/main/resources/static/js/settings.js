@@ -4,9 +4,81 @@ async function loadSettings() {
         const user = await fetchData('/api/user-settings');
         document.getElementById('user-name').value = user.username || '';
         document.getElementById('xai-api-key').value = user.xaiApiKey || '';
+        document.getElementById('google-client-secret').value = user.googleClientSecret || '';
+
+        // Update Google Photos OAuth status
+        const hasGooglePhotosAuth = user.googlePhotosApiKey && user.googlePhotosApiKey.trim() !== '';
+        updateGooglePhotosStatus(hasGooglePhotosAuth);
+
+        // Store in hidden input for reference
+        const googlePhotosInput = document.getElementById('google-photos-api-key');
+        if (googlePhotosInput) {
+            googlePhotosInput.value = user.googlePhotosApiKey || '';
+        }
+
         clearSettingsMessages();
+
+        // Check for OAuth callback messages
+        checkOAuthMessages();
     } catch (error) {
         showSettingsError('Failed to load settings: ' + error.message);
+    }
+}
+
+function updateGooglePhotosStatus(isAuthorized) {
+    const authorizedBadge = document.getElementById('google-photos-authorized');
+    const notAuthorizedBadge = document.getElementById('google-photos-not-authorized');
+    const authorizeBtn = document.getElementById('authorize-google-photos-btn');
+    const revokeBtn = document.getElementById('revoke-google-photos-btn');
+
+    if (isAuthorized) {
+        authorizedBadge.style.display = 'inline';
+        notAuthorizedBadge.style.display = 'none';
+        authorizeBtn.style.display = 'none';
+        revokeBtn.style.display = 'inline';
+    } else {
+        authorizedBadge.style.display = 'none';
+        notAuthorizedBadge.style.display = 'inline';
+        authorizeBtn.style.display = 'inline';
+        revokeBtn.style.display = 'none';
+    }
+}
+
+function authorizeGooglePhotos() {
+    // Redirect to OAuth authorization endpoint with current origin
+    const origin = window.location.origin;
+    window.location.href = '/api/oauth/google/authorize?origin=' + encodeURIComponent(origin);
+}
+
+async function revokeGooglePhotos() {
+    if (!confirm('Are you sure you want to revoke Google Photos access?')) {
+        return;
+    }
+
+    try {
+        await postData('/api/oauth/google/revoke', {});
+        showSettingsSuccess('Google Photos access revoked');
+        updateGooglePhotosStatus(false);
+    } catch (error) {
+        showSettingsError('Failed to revoke access: ' + error.message);
+    }
+}
+
+function checkOAuthMessages() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthSuccess = urlParams.get('oauth_success');
+    const oauthError = urlParams.get('oauth_error');
+
+    if (oauthSuccess) {
+        showSettingsSuccess('Google Photos authorized successfully!');
+        // Reload settings to update status
+        setTimeout(() => loadSettings(), 500);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname + '#settings');
+    } else if (oauthError) {
+        showSettingsError('OAuth error: ' + oauthError);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname + '#settings');
     }
 }
 
@@ -17,6 +89,9 @@ async function saveSettings(event) {
     const username = document.getElementById('user-name').value.trim();
     const password = document.getElementById('user-password').value;
     const xaiApiKey = document.getElementById('xai-api-key').value.trim();
+    const googlePhotosInput = document.getElementById('google-photos-api-key');
+    const googlePhotosApiKey = googlePhotosInput ? googlePhotosInput.value.trim() : '';
+    const googleClientSecret = document.getElementById('google-client-secret').value.trim();
 
     if (!username) {
         showSettingsError('Name is required.');
@@ -25,7 +100,9 @@ async function saveSettings(event) {
 
     const payload = {
         username,
-        xaiApiKey
+        xaiApiKey,
+        googlePhotosApiKey,
+        googleClientSecret
     };
 
     if (password) {

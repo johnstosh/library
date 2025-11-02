@@ -45,8 +45,21 @@ public class UserSettingsService {
             user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
         }
 
-        if (StringUtils.hasText(userSettingsDto.getXaiApiKey())) {
+        // Always update API keys, even if empty (to allow clearing)
+        if (userSettingsDto.getXaiApiKey() != null) {
             user.setXaiApiKey(userSettingsDto.getXaiApiKey());
+        }
+
+        if (userSettingsDto.getGooglePhotosApiKey() != null) {
+            user.setGooglePhotosApiKey(userSettingsDto.getGooglePhotosApiKey());
+        }
+
+        if (userSettingsDto.getGoogleClientSecret() != null) {
+            user.setGoogleClientSecret(userSettingsDto.getGoogleClientSecret());
+        }
+
+        if (StringUtils.hasText(userSettingsDto.getLastPhotoTimestamp())) {
+            user.setLastPhotoTimestamp(userSettingsDto.getLastPhotoTimestamp());
         }
 
         User savedUser = userRepository.save(user);
