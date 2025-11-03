@@ -1,11 +1,11 @@
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.+'
-    id 'io.spring.dependency-management' version '1.1.4'
+    id 'io.spring.dependency-management' version '1.1.+'
 }
 
 group = 'com.muczynski'
-version = '0.0.2'
+version = '1.0.0'
 
 java {
     sourceCompatibility = '17'
@@ -36,9 +36,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.h2database:h2' // for JUnit testing
-    testImplementation 'com.microsoft.playwright:playwright:1.55.+'
-    testImplementation 'io.rest-assured:rest-assured:5.5.0'
-    testImplementation 'io.rest-assured:spring-mock-mvc:5.5.0'
+    testImplementation 'com.microsoft.playwright:playwright:1.+'
+    testImplementation 'io.rest-assured:rest-assured:5.+'
+    testImplementation 'io.rest-assured:spring-mock-mvc:5.+'
 
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
