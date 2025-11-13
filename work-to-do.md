@@ -292,6 +292,39 @@
   - Success and error message display
 - **Notes:** All tests follow uitest-requirements.md patterns (20-second timeouts, NETWORKIDLE waits, data-test selectors)
 
+#### Task 17: Create API Integration Tests for Global Settings
+- [✓] **Status:** COMPLETED
+- **Description:** Create API integration tests that test endpoints in the sequence the UI uses them
+- **Completed:**
+  - ✓ Created GlobalSettingsControllerTest.java with comprehensive API tests
+  - ✓ Tests follow backend-development-requirements.md patterns (success, unauthorized, forbidden)
+  - ✓ Tests simulate actual UI workflow sequence (GET → PUT → GET)
+- **Test Structure:**
+  - **GET /api/global-settings Tests:**
+    1. testGetGlobalSettings_Success_AsLibrarian - verify librarian can GET
+    2. testGetGlobalSettings_Success_AsRegularUser - verify regular user can GET (read-only)
+    3. testGetGlobalSettings_NotConfigured - verify display when secret not configured
+    4. testGetGlobalSettings_Unauthorized - verify 401 without authentication
+  - **PUT /api/global-settings Tests:**
+    5. testUpdateGlobalSettings_Success_AsLibrarian - verify librarian can update
+    6. testUpdateGlobalSettings_WithFormatWarning - verify format validation warnings
+    7. testUpdateGlobalSettings_Forbidden_AsRegularUser - verify 403 for regular users
+    8. testUpdateGlobalSettings_Unauthorized - verify 401 without authentication
+  - **UI Workflow Sequence Tests:**
+    9. testUIWorkflowSequence_LoadUpdateAndVerify - simulates GET → PUT → GET sequence
+    10. testUIWorkflowSequence_RegularUserCanViewButNotUpdate - verify regular user restrictions
+    11. testSecretNeverReturnedInResponse - verify full secret never exposed in responses
+- **Files Created:**
+  - `src/test/java/com/muczynski/library/controller/GlobalSettingsControllerTest.java` ✓
+- **Test Coverage:**
+  - GET endpoint (authenticated users, both roles)
+  - PUT endpoint (librarian-only, 403 for regular users)
+  - Authorization checks (401 unauthorized, 403 forbidden)
+  - UI workflow sequence (load → update → verify)
+  - Security (full secret never returned)
+  - Validation warnings (format checks)
+- **Notes:** Uses @MockitoBean for GlobalSettingsService, follows same pattern as UserSettingsControllerTest
+
 ---
 
 ## Quick Reference Answers
