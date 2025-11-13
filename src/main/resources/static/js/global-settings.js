@@ -100,11 +100,6 @@ async function saveGlobalSettings(event) {
         return;
     }
 
-    // Confirm before saving
-    if (!confirm('Are you sure you want to update the global Client Secret? This will affect all users.')) {
-        return;
-    }
-
     try {
         const response = await fetch('/api/global-settings', {
             method: 'PUT',
