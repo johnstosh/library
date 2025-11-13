@@ -371,13 +371,26 @@ public class GooglePhotosService {
                 logger.info("  - Audience (client_id): {}", tokenInfo.get("aud"));
 
                 String scopes = (String) tokenInfo.get("scope");
-                if (scopes != null && scopes.contains("photoslibrary.readonly")) {
-                    logger.info("  ✓ Token HAS the required 'photoslibrary.readonly' scope");
+
+                // Check for all requested scopes
+                boolean hasPhotoslibrary = scopes != null && scopes.contains("auth/photoslibrary ");
+                boolean hasReadonly = scopes != null && scopes.contains("photoslibrary.readonly ");
+                boolean hasOriginals = scopes != null && scopes.contains("photoslibrary.readonly.originals");
+                boolean hasEditAppData = scopes != null && scopes.contains("photoslibrary.edit.appcreateddata");
+                boolean hasReadAppData = scopes != null && scopes.contains("photoslibrary.readonly.appcreateddata");
+
+                logger.info("  Scope check:");
+                logger.info("    - photoslibrary (full access): {}", hasPhotoslibrary ? "✓" : "✗");
+                logger.info("    - photoslibrary.readonly: {}", hasReadonly ? "✓" : "✗");
+                logger.info("    - photoslibrary.readonly.originals: {}", hasOriginals ? "✓" : "✗");
+                logger.info("    - photoslibrary.edit.appcreateddata: {}", hasEditAppData ? "✓" : "✗");
+                logger.info("    - photoslibrary.readonly.appcreateddata: {}", hasReadAppData ? "✓" : "✗");
+
+                if (hasPhotoslibrary || (hasReadonly && hasOriginals)) {
+                    logger.info("  ✓ Token has sufficient scopes for Google Photos API");
                 } else {
-                    logger.error("  ✗ Token MISSING the required 'photoslibrary.readonly' scope!");
-                    logger.error("  Current scopes: {}", scopes);
-                    logger.error("  Required scope: https://www.googleapis.com/auth/photoslibrary.readonly");
-                    logger.error("  ACTION REQUIRED: User must revoke and re-authorize Google Photos in Settings");
+                    logger.error("  ✗ Token may be missing required scopes!");
+                    logger.error("  If you get 403 errors, revoke and re-authorize Google Photos in Settings");
                 }
             } else {
                 logger.warn("Failed to verify token scopes. Status: {}", response.getStatusCode());
