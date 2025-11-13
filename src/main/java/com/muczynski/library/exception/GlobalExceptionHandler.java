@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -74,6 +76,30 @@ public class GlobalExceptionHandler {
         logger.debug("Insufficient permissions on path {}: {}", request.getDescription(false), ex.getMessage());
 
         ErrorResponse response = new ErrorResponse("INSUFFICIENT_PERMISSIONS", ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle Spring Security authorization denied exceptions (Spring Security 6+)
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
+            AuthorizationDeniedException ex, WebRequest request) {
+        logger.debug("Authorization denied on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("ACCESS_DENIED", "You do not have permission to access this resource");
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle Spring Security access denied exceptions
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex, WebRequest request) {
+        logger.debug("Access denied on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("ACCESS_DENIED", "You do not have permission to access this resource");
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
