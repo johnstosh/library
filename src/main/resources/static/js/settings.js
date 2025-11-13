@@ -4,7 +4,6 @@ async function loadSettings() {
         const user = await fetchData('/api/user-settings');
         document.getElementById('user-name').value = user.username || '';
         document.getElementById('xai-api-key').value = user.xaiApiKey || '';
-        document.getElementById('google-client-secret').value = user.googleClientSecret || '';
 
         // Update Google Photos OAuth status
         const hasGooglePhotosAuth = user.googlePhotosApiKey && user.googlePhotosApiKey.trim() !== '';
@@ -91,7 +90,6 @@ async function saveSettings(event) {
     const xaiApiKey = document.getElementById('xai-api-key').value.trim();
     const googlePhotosInput = document.getElementById('google-photos-api-key');
     const googlePhotosApiKey = googlePhotosInput ? googlePhotosInput.value.trim() : '';
-    const googleClientSecret = document.getElementById('google-client-secret').value.trim();
 
     if (!username) {
         showSettingsError('Name is required.');
@@ -101,8 +99,7 @@ async function saveSettings(event) {
     const payload = {
         username,
         xaiApiKey,
-        googlePhotosApiKey,
-        googleClientSecret
+        googlePhotosApiKey
     };
 
     if (password) {
