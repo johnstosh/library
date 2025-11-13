@@ -6,6 +6,8 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -23,6 +25,8 @@ import java.util.*;
 
 @Service
 public class GooglePhotosService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GooglePhotosService.class);
 
     @Autowired
     private UserSettingsService userSettingsService;
@@ -51,11 +55,16 @@ public class GooglePhotosService {
      * @return List of photo metadata including URL, description, and timestamp
      */
     public List<Map<String, Object>> fetchPhotos(String startTimestamp) {
+        logger.info("Fetching photos from Google Photos with start timestamp: {}", startTimestamp);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to fetch photos without authentication");
             throw new RuntimeException("No authenticated user found");
         }
         String username = authentication.getName();
+
+        logger.debug("Fetching photos for user: {}", username);
 
         // Get valid access token (will auto-refresh if needed)
         String apiKey = getValidAccessToken(username);
@@ -67,6 +76,9 @@ public class GooglePhotosService {
         // Parse the startTimestamp and create date filter
         if (startTimestamp != null && !startTimestamp.trim().isEmpty()) {
             dateFilter.put("startDate", parseTimestamp(startTimestamp));
+            logger.info("Using date filter: {}", dateFilter.get("startDate"));
+        } else {
+            logger.info("No start timestamp provided, fetching recent photos");
         }
 
         if (!dateFilter.isEmpty()) {
@@ -77,6 +89,8 @@ public class GooglePhotosService {
         request.put("pageSize", 100); // Fetch up to 100 photos
         request.put("filters", filters);
 
+        logger.debug("Google Photos API request: pageSize=100, filters={}", filters);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -84,22 +98,47 @@ public class GooglePhotosService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
         try {
+            logger.info("Sending request to Google Photos API...");
+
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     "https://photoslibrary.googleapis.com/v1/mediaItems:search",
                     entity,
                     Map.class
             );
 
+            logger.info("Google Photos API response status: {}", response.getStatusCode());
+
             if (response.getStatusCode().is2xxSuccessful()) {
                 Map<String, Object> body = response.getBody();
                 if (body != null && body.containsKey("mediaItems")) {
-                    return (List<Map<String, Object>>) body.get("mediaItems");
+                    List<Map<String, Object>> mediaItems = (List<Map<String, Object>>) body.get("mediaItems");
+                    logger.info("Successfully fetched {} photos from Google Photos", mediaItems.size());
+                    return mediaItems;
                 }
+                logger.info("Google Photos API returned no media items");
                 return new ArrayList<>();
             } else {
+                logger.error("Google Photos API call failed with status: {}", response.getStatusCode());
                 throw new RuntimeException("Google Photos API call failed: " + response.getStatusCode());
             }
         } catch (Exception e) {
+            logger.error("Failed to fetch photos from Google Photos for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
+
+            // Check for specific error types
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("401") || e.getMessage().contains("Unauthorized")) {
+                    logger.error("Unauthorized (401). Access token may be expired or invalid. Try re-authorizing Google Photos.");
+                } else if (e.getMessage().contains("403") || e.getMessage().contains("Forbidden")) {
+                    logger.error("Forbidden (403). This may mean:");
+                    logger.error("  1. Photos Library API is not enabled in Google Cloud Console");
+                    logger.error("  2. OAuth scope doesn't include photoslibrary.readonly");
+                    logger.error("  3. User revoked access from their Google account");
+                } else if (e.getMessage().contains("404")) {
+                    logger.error("Not Found (404). The Google Photos API endpoint may be incorrect.");
+                }
+            }
+
             throw new RuntimeException("Failed to fetch photos from Google Photos: " + e.getMessage(), e);
         }
     }
@@ -110,8 +149,11 @@ public class GooglePhotosService {
      * @return The photo bytes
      */
     public byte[] downloadPhoto(String baseUrl) {
+        logger.debug("Downloading photo from base URL: {}", baseUrl);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to download photo without authentication");
             throw new RuntimeException("No authenticated user found");
         }
         String username = authentication.getName();
@@ -122,12 +164,16 @@ public class GooglePhotosService {
         // Add parameters to download full resolution photo
         String downloadUrl = baseUrl + "=d";
 
+        logger.debug("Download URL: {}", downloadUrl);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         try {
+            logger.debug("Downloading photo for user: {}", username);
+
             ResponseEntity<byte[]> response = restTemplate.exchange(
                     downloadUrl,
                     HttpMethod.GET,
@@ -135,12 +181,24 @@ public class GooglePhotosService {
                     byte[].class
             );
 
+            logger.debug("Photo download response status: {}", response.getStatusCode());
+
             if (response.getStatusCode().is2xxSuccessful()) {
-                return response.getBody();
+                byte[] photoBytes = response.getBody();
+                if (photoBytes != null) {
+                    logger.info("Successfully downloaded photo ({} bytes)", photoBytes.length);
+                    return photoBytes;
+                } else {
+                    logger.error("Photo download succeeded but response body is null");
+                    throw new RuntimeException("Photo download returned null");
+                }
             } else {
+                logger.error("Failed to download photo with status: {}", response.getStatusCode());
                 throw new RuntimeException("Failed to download photo: " + response.getStatusCode());
             }
         } catch (Exception e) {
+            logger.error("Failed to download photo from Google Photos for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
             throw new RuntimeException("Failed to download photo from Google Photos: " + e.getMessage(), e);
         }
     }
@@ -151,8 +209,12 @@ public class GooglePhotosService {
      * @param description The new description
      */
     public void updatePhotoDescription(String photoId, String description) {
+        logger.info("Updating photo description for photo ID: {}", photoId);
+        logger.debug("New description: {}", description);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to update photo description without authentication");
             throw new RuntimeException("No authenticated user found");
         }
         String username = authentication.getName();
@@ -171,13 +233,21 @@ public class GooglePhotosService {
 
         try {
             String url = "https://photoslibrary.googleapis.com/v1/mediaItems/" + photoId + "?updateMask=description";
-            restTemplate.exchange(
+            logger.debug("Update photo description URL: {}", url);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
                     url,
                     HttpMethod.PATCH,
                     entity,
                     Map.class
             );
+
+            logger.info("Successfully updated photo description for photo ID: {}. Response status: {}",
+                    photoId, response.getStatusCode());
+
         } catch (Exception e) {
+            logger.error("Failed to update photo description for photo ID: {} (user: {})", photoId, username, e);
+            logger.error("Error message: {}", e.getMessage());
             throw new RuntimeException("Failed to update photo description: " + e.getMessage(), e);
         }
     }
@@ -208,6 +278,8 @@ public class GooglePhotosService {
      * Get valid access token, refreshing if necessary
      */
     private String getValidAccessToken(String username) {
+        logger.debug("Getting valid access token for user: {}", username);
+
         User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -215,21 +287,40 @@ public class GooglePhotosService {
         String tokenExpiry = user.getGooglePhotosTokenExpiry();
 
         if (accessToken == null || accessToken.trim().isEmpty()) {
+            logger.error("User {} has not authorized Google Photos. Access token is empty.", username);
             throw new RuntimeException("Google Photos not authorized. Please authorize in Settings.");
         }
+
+        logger.debug("Access token found for user: {} (length: {} chars)", username, accessToken.length());
 
         // Check if token is expired or will expire soon (within 5 minutes)
         if (tokenExpiry != null && !tokenExpiry.trim().isEmpty()) {
             try {
                 Instant expiry = Instant.parse(tokenExpiry);
-                if (Instant.now().plusSeconds(300).isAfter(expiry)) {
+                Instant now = Instant.now();
+                long secondsUntilExpiry = expiry.getEpochSecond() - now.getEpochSecond();
+
+                logger.debug("Token expiry: {}. Seconds until expiry: {}", expiry, secondsUntilExpiry);
+
+                if (now.plusSeconds(300).isAfter(expiry)) {
                     // Token is expired or will expire soon, refresh it
+                    if (now.isAfter(expiry)) {
+                        logger.info("Access token for user {} has expired. Refreshing...", username);
+                    } else {
+                        logger.info("Access token for user {} will expire in {} seconds. Refreshing proactively...",
+                                username, secondsUntilExpiry);
+                    }
                     return refreshAccessToken(user);
+                } else {
+                    logger.debug("Access token is valid for user: {} (expires in {} seconds)", username, secondsUntilExpiry);
                 }
             } catch (Exception e) {
                 // If we can't parse expiry, try to refresh
+                logger.warn("Failed to parse token expiry '{}' for user: {}. Attempting to refresh token.", tokenExpiry, username);
                 return refreshAccessToken(user);
             }
+        } else {
+            logger.warn("No token expiry timestamp for user: {}. Token validity unknown.", username);
         }
 
         return accessToken;
@@ -239,11 +330,17 @@ public class GooglePhotosService {
      * Refresh the access token using the refresh token
      */
     private String refreshAccessToken(User user) {
+        String username = user.getUsername();
+        logger.info("Refreshing access token for user: {}", username);
+
         String refreshToken = user.getGooglePhotosRefreshToken();
 
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            logger.error("No refresh token available for user: {}. User must re-authorize.", username);
             throw new RuntimeException("No refresh token available. Please re-authorize Google Photos in Settings.");
         }
+
+        logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());
 
         String userClientSecret = user.getGoogleClientSecret();
 
@@ -253,8 +350,12 @@ public class GooglePhotosService {
                 : clientSecret;
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
+            logger.error("Client Secret not configured for user: {}. Cannot refresh token.", username);
             throw new RuntimeException("Google Client Secret not configured. Please set it in Settings or contact administrator.");
         }
+
+        logger.debug("Using Client Secret from: {}", userClientSecret != null && !userClientSecret.trim().isEmpty()
+                ? "user settings" : "environment variable");
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -266,6 +367,8 @@ public class GooglePhotosService {
             body.add("refresh_token", refreshToken);
             body.add("grant_type", "refresh_token");
 
+            logger.debug("Sending token refresh request to: {}", tokenUri);
+
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
@@ -274,17 +377,26 @@ public class GooglePhotosService {
                     Map.class
             );
 
+            logger.info("Token refresh response status: {}", response.getStatusCode());
+
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                logger.error("Token refresh failed with status: {}", response.getStatusCode());
                 throw new RuntimeException("Failed to refresh access token");
             }
 
             Map<String, Object> tokenResponse = response.getBody();
+            logger.debug("Token refresh response contains keys: {}", tokenResponse.keySet());
+
             String newAccessToken = (String) tokenResponse.get("access_token");
             Integer expiresIn = (Integer) tokenResponse.get("expires_in");
 
             if (newAccessToken == null) {
+                logger.error("Token refresh succeeded but no access_token in response");
                 throw new RuntimeException("No access token in refresh response");
             }
+
+            logger.info("Successfully refreshed access token for user: {}. New token expires in: {} seconds",
+                    username, expiresIn);
 
             // Update user with new token
             user.setGooglePhotosApiKey(newAccessToken);
@@ -292,9 +404,30 @@ public class GooglePhotosService {
             user.setGooglePhotosTokenExpiry(expiry.toString());
             userRepository.save(user);
 
+            logger.debug("Saved new access token for user: {}. New expiry: {}", username, expiry);
+
             return newAccessToken;
 
         } catch (Exception e) {
+            logger.error("Failed to refresh access token for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
+
+            // Provide helpful diagnostics
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("invalid_grant")) {
+                    logger.error("Invalid grant error. This usually means:");
+                    logger.error("  1. Refresh token has expired or been revoked");
+                    logger.error("  2. User revoked access from their Google account");
+                    logger.error("  3. User needs to re-authorize in Settings");
+                } else if (e.getMessage().contains("invalid_client")) {
+                    logger.error("Invalid client error. This usually means:");
+                    logger.error("  1. Client Secret is incorrect");
+                    logger.error("  2. Client ID doesn't match the Client Secret");
+                } else if (e.getMessage().contains("401") || e.getMessage().contains("Unauthorized")) {
+                    logger.error("Unauthorized (401). Client credentials are likely incorrect.");
+                }
+            }
+
             throw new RuntimeException("Failed to refresh access token: " + e.getMessage(), e);
         }
     }
