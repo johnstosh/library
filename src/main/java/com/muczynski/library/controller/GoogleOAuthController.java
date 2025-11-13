@@ -18,6 +18,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.Map;
@@ -84,19 +85,22 @@ public class GoogleOAuthController {
 
         logger.info("Constructed redirect URI: {}", redirectUri);
         logger.debug("Using Client ID: {}...", clientId.substring(0, Math.min(20, clientId.length())));
+        logger.debug("Using scope: {}", scope);
 
-        // Build authorization URL
-        String authUrl = authUri + "?" +
-                "client_id=" + clientId +
-                "&redirect_uri=" + redirectUri +
-                "&response_type=code" +
-                "&scope=" + scope +
-                "&state=" + state +
-                "&access_type=offline" + // Request refresh token
-                "&prompt=consent"; // Force consent to get refresh token
+        // Build authorization URL with proper URL encoding
+        String authUrl = UriComponentsBuilder.fromHttpUrl(authUri)
+                .queryParam("client_id", clientId)
+                .queryParam("redirect_uri", redirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("scope", scope)
+                .queryParam("state", state)
+                .queryParam("access_type", "offline") // Request refresh token
+                .queryParam("prompt", "consent") // Force consent to get refresh token
+                .build()
+                .toUriString();
 
         logger.info("Redirecting user to Google consent screen");
-        logger.debug("Authorization URL (without client_id): {}...", authUrl.substring(0, Math.min(100, authUrl.length())));
+        logger.debug("Authorization URL (first 150 chars): {}...", authUrl.substring(0, Math.min(150, authUrl.length())));
 
         return new RedirectView(authUrl);
     }
