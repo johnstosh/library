@@ -34,11 +34,11 @@ public class GooglePhotosService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private GlobalSettingsService globalSettingsService;
+
     @Value("${google.oauth.client-id}")
     private String clientId;
-
-    @Value("${GOOGLE_CLIENT_SECRET:}")
-    private String clientSecret;
 
     @Value("${google.oauth.token-uri}")
     private String tokenUri;
@@ -342,20 +342,15 @@ public class GooglePhotosService {
 
         logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());
 
-        String userClientSecret = user.getGoogleClientSecret();
-
-        // Fall back to environment variable if user hasn't set their own
-        String effectiveClientSecret = (userClientSecret != null && !userClientSecret.trim().isEmpty())
-                ? userClientSecret
-                : clientSecret;
+        // Get Client Secret from global settings (application-wide)
+        String effectiveClientSecret = globalSettingsService.getEffectiveClientSecret();
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
-            logger.error("Client Secret not configured for user: {}. Cannot refresh token.", username);
-            throw new RuntimeException("Google Client Secret not configured. Please set it in Settings or contact administrator.");
+            logger.error("Client Secret not configured. Cannot refresh token for user: {}.", username);
+            throw new RuntimeException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
-        logger.debug("Using Client Secret from: {}", userClientSecret != null && !userClientSecret.trim().isEmpty()
-                ? "user settings" : "environment variable");
+        logger.debug("Using Client Secret from global settings");
 
         try {
             HttpHeaders headers = new HttpHeaders();

@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.service.GlobalSettingsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ public class GoogleOAuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private GlobalSettingsService globalSettingsService;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -231,36 +235,30 @@ public class GoogleOAuthController {
     private Map<String, Object> exchangeCodeForTokens(String code, String username, String origin) {
         logger.debug("Exchanging authorization code for tokens (user: {}, origin: {})", username, origin);
 
-        User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        String userClientSecret = user.getGoogleClientSecret();
-
-        // Fall back to environment variable if user hasn't set their own
-        String effectiveClientSecret = (userClientSecret != null && !userClientSecret.trim().isEmpty())
-                ? userClientSecret
-                : clientSecret;
+        // Get Client Secret from global settings (application-wide)
+        String effectiveClientSecret = globalSettingsService.getEffectiveClientSecret();
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
-            logger.error("Client Secret not configured for user: {}. " +
-                    "User must set Client Secret in Settings or admin must set GOOGLE_CLIENT_SECRET environment variable.", username);
-            throw new RuntimeException("Google Client Secret not configured. Please set it in Settings or contact administrator.");
+            logger.error("Client Secret not configured. " +
+                    "Librarian must set Client Secret in Global Settings or admin must set GOOGLE_CLIENT_SECRET environment variable.");
+            throw new RuntimeException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
         // Validate Client Secret format
         if (effectiveClientSecret.length() < 20) {
-            logger.warn("Client Secret for user {} is suspiciously short ({} characters). Expected 30+ characters.",
-                    username, effectiveClientSecret.length());
+            logger.warn("Client Secret is suspiciously short ({} characters). Expected 30+ characters.",
+                    effectiveClientSecret.length());
         }
 
         if (!effectiveClientSecret.startsWith("GOCSPX-")) {
-            logger.warn("Client Secret for user {} does not start with 'GOCSPX-'. " +
-                    "This may not be a valid Google OAuth client secret.", username);
+            logger.warn("Client Secret does not start with 'GOCSPX-'. " +
+                    "This may not be a valid Google OAuth client secret.");
         }
 
-        logger.debug("Using Client Secret from: {}", userClientSecret != null && !userClientSecret.trim().isEmpty()
-                ? "user settings" : "environment variable");
-        logger.debug("Client Secret first 6 chars: {}...", effectiveClientSecret.substring(0, Math.min(6, effectiveClientSecret.length())));
+        logger.debug("Using Client Secret from global settings");
+        if (effectiveClientSecret.length() >= 4) {
+            logger.debug("Client Secret last 4 chars: ...{}", effectiveClientSecret.substring(effectiveClientSecret.length() - 4));
+        }
 
         // Build redirect URI from origin (must match what was sent to Google)
         String redirectUri = origin + "/api/oauth/google/callback";

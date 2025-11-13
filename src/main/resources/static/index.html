@@ -386,8 +386,54 @@
             <button id="total-purge-btn" class="btn btn-dark" onclick="totalPurge()" data-test="total-purge-btn">Total Purge</button>
         </div>
 
+        <!-- Global Settings Section (Librarian-only) -->
+        <div id="global-settings-section" class="section librarian-only" data-test="global-settings-section">
+            <h2 data-test="global-settings-header">Global Settings</h2>
+            <p class="text-muted">These settings apply to all users and can only be changed by librarians.</p>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Google OAuth Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>Client ID:</strong></div>
+                        <div class="col-md-9"><code id="global-client-id">(loading...)</code></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>Redirect URI:</strong></div>
+                        <div class="col-md-9"><code id="global-redirect-uri">(loading...)</code></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>Client Secret:</strong></div>
+                        <div class="col-md-9">
+                            <span id="global-secret-partial">(loading...)</span>
+                            <span id="global-secret-configured"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>Secret Validation:</strong></div>
+                        <div class="col-md-9"><span id="global-secret-validation"></span></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3"><strong>Last Updated:</strong></div>
+                        <div class="col-md-9"><span id="global-secret-updated-at">(loading...)</span></div>
+                    </div>
+
+                    <form id="global-settings-form" onsubmit="saveGlobalSettings(event)">
+                        <div class="mb-3">
+                            <label for="global-client-secret" class="form-label">Update Client Secret</label>
+                            <input type="password" id="global-client-secret" class="form-control" autocomplete="off" placeholder="Enter new Google OAuth Client Secret">
+                            <div class="form-text">Enter a new Client Secret to update. This will affect all users. Get this from Google Cloud Console.</div>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Update Global Client Secret</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div id="settings-section" class="section" data-test="settings-section">
-            <h2 data-test="settings-header">Settings</h2>
+            <h2 data-test="settings-header">User Settings</h2>
             <form id="settings-form" onsubmit="saveSettings(event)">
                 <div class="mb-3">
                     <label for="user-name" class="form-label">Name</label>
@@ -404,11 +450,6 @@
                     <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
                 </div>
                 <div class="mb-3 librarian-only">
-                    <label for="google-client-secret" class="form-label">Google OAuth Client Secret</label>
-                    <input type="password" id="google-client-secret" class="form-control" autocomplete="off" placeholder="Enter your Google OAuth Client Secret" data-test="google-client-secret">
-                    <div class="form-text">Required for Google Photos OAuth. Get this from Google Cloud Console.</div>
-                </div>
-                <div class="mb-3 librarian-only">
                     <label class="form-label">Google Photos Access (for Books-from-Feed)</label>
                     <div id="google-photos-status" class="mb-2">
                         <span id="google-photos-authorized" class="badge bg-success" style="display: none;">Authorized</span>
@@ -423,7 +464,7 @@
                     <div class="form-text">Authorize access to your Google Photos for the Books-from-Feed feature.</div>
                     <input type="hidden" id="google-photos-api-key" data-test="google-photos-api-key">
                 </div>
-                <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save Settings</button>
+                <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save User Settings</button>
             </form>
             <div id="settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="settings-error"></div>
             <div id="settings-success" class="alert alert-success mt-3" style="display: none;" data-test="settings-success"></div>
@@ -445,6 +486,7 @@
 <script src="js/librarycard.js"></script>
 <script src="js/search.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/global-settings.js"></script>
 <script src="js/test-data.js"></script>
 <script src="js/utils.js" type="module"></script>
 <script src="js/auth.js" type="module"></script>

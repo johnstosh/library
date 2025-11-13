@@ -1,0 +1,162 @@
+/**
+ * Global Settings Management (Librarian-only)
+ */
+
+// Load global settings on page load
+async function loadGlobalSettings() {
+    try {
+        const response = await fetch('/api/global-settings', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const settings = await response.json();
+            displayGlobalSettings(settings);
+        } else {
+            console.error('Failed to load global settings:', response.status);
+        }
+    } catch (error) {
+        console.error('Error loading global settings:', error);
+    }
+}
+
+// Display global settings in the UI
+function displayGlobalSettings(settings) {
+    // Display Client ID (read-only)
+    const clientIdElement = document.getElementById('global-client-id');
+    if (clientIdElement) {
+        clientIdElement.textContent = settings.googleClientId || '(not configured)';
+    }
+
+    // Display Redirect URI (read-only)
+    const redirectUriElement = document.getElementById('global-redirect-uri');
+    if (redirectUriElement) {
+        const redirectUri = settings.redirectUri || window.location.origin + '/api/oauth/google/callback';
+        redirectUriElement.textContent = redirectUri;
+    }
+
+    // Display partial Client Secret
+    const secretPartialElement = document.getElementById('global-secret-partial');
+    if (secretPartialElement) {
+        secretPartialElement.textContent = settings.googleClientSecretPartial || '(not configured)';
+    }
+
+    // Display Client Secret validation
+    const secretValidationElement = document.getElementById('global-secret-validation');
+    if (secretValidationElement) {
+        secretValidationElement.textContent = settings.googleClientSecretValidation || '';
+
+        // Color code the validation message
+        if (settings.googleClientSecretValidation === 'Valid') {
+            secretValidationElement.className = 'text-success';
+        } else if (settings.googleClientSecretValidation && settings.googleClientSecretValidation.startsWith('Warning')) {
+            secretValidationElement.className = 'text-warning';
+        } else {
+            secretValidationElement.className = 'text-danger';
+        }
+    }
+
+    // Display last updated timestamp
+    const lastUpdatedElement = document.getElementById('global-secret-updated-at');
+    if (lastUpdatedElement) {
+        if (settings.googleClientSecretUpdatedAt) {
+            const date = new Date(settings.googleClientSecretUpdatedAt);
+            lastUpdatedElement.textContent = formatRelativeTime(date);
+            lastUpdatedElement.title = date.toLocaleString();
+        } else {
+            lastUpdatedElement.textContent = '(never)';
+        }
+    }
+
+    // Display configured status
+    const configuredElement = document.getElementById('global-secret-configured');
+    if (configuredElement) {
+        if (settings.googleClientSecretConfigured) {
+            configuredElement.innerHTML = '<span class="badge bg-success">Configured</span>';
+        } else {
+            configuredElement.innerHTML = '<span class="badge bg-warning">Not Configured</span>';
+        }
+    }
+}
+
+// Save global settings (librarian-only)
+async function saveGlobalSettings(event) {
+    event.preventDefault();
+
+    const newSecret = document.getElementById('global-client-secret').value.trim();
+
+    if (!newSecret) {
+        alert('Please enter a Client Secret');
+        return;
+    }
+
+    // Confirm before saving
+    if (!confirm('Are you sure you want to update the global Client Secret? This will affect all users.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/global-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                googleClientSecret: newSecret
+            })
+        });
+
+        if (response.ok) {
+            const updatedSettings = await response.json();
+            displayGlobalSettings(updatedSettings);
+
+            // Clear the input field
+            document.getElementById('global-client-secret').value = '';
+
+            // Show success message
+            alert('Global Client Secret updated successfully!');
+        } else if (response.status === 403) {
+            alert('Permission denied. Only librarians can update global settings.');
+        } else {
+            alert('Failed to update global settings. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error saving global settings:', error);
+        alert('Error saving global settings. Please try again.');
+    }
+}
+
+// Format relative time (e.g., "5 minutes ago", "2 hours ago")
+function formatRelativeTime(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) {
+        return 'just now';
+    } else if (diffMin < 60) {
+        return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    } else if (diffHour < 24) {
+        return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    } else if (diffDay < 30) {
+        return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+// Initialize global settings on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Only load if we're on a page with global settings section
+    if (document.getElementById('global-settings-section')) {
+        loadGlobalSettings();
+    }
+});

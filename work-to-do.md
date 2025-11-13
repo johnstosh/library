@@ -130,74 +130,132 @@
 - **Deliverable:** Validation logic added to `GoogleOAuthController.java` (lines 250-259)
 
 #### Task 11: Show Partial Client Secret for Verification
-- [ ] **Status:** PENDING
-- **Description:** Display first 4-6 characters of Client Secret in settings UI
-- **Analysis:**
-  - **Recommendation:** YES, showing first 6-8 characters (e.g., `GOCSPX-`) is beneficial and common practice
-  - **Security:** Low risk - the prefix `GOCSPX-` is predictable anyway, showing a few more chars helps verification
-  - **Industry practice:** AWS, Stripe, GitHub all show partial keys/secrets for verification
-  - **Benefit:** Helps users verify they copied the right secret without showing the sensitive part
-  - **Alternative considered:** Last 4 characters - less useful since users can't match with source
-- **Implementation:** Show first 8 characters (includes full prefix plus 1-2 random chars)
-- **Files:** `index.html`, `settings.js`, `UserSettingsController.java`
-- **Decision:** YES, implement this feature
+- [✓] **Status:** COMPLETED (changed to last 4 chars to match Google's pattern)
+- **Description:** Display partial Client Secret in settings UI
+- **Implementation:**
+  - Shows **last 4 characters** (e.g., "...uXnb") matching Google Cloud Console's display
+  - Includes creation/updated timestamp
+  - Displays as read-only in Global Settings UI
+- **Files:** ✓ `GlobalSettingsService.java`, `GlobalSettingsDto.java`, `index.html`, `global-settings.js`
+- **Security:** Low risk - showing last 4 chars is standard industry practice
 
 #### Task 12: Add "Last Updated" Timestamp for Client Secret
-- [ ] **Status:** PENDING
+- [✓] **Status:** COMPLETED
 - **Description:** Display when Client Secret was last updated
-- **Analysis:**
-  - **Recommendation:** YES, very helpful for troubleshooting
-  - **Use cases:**
-    - User can verify they just updated the secret
-    - Helps troubleshoot "why is my old secret not working" issues
-    - Useful audit trail
-  - **Implementation:**
-    - Add `googleClientSecretUpdatedAt` field to User entity (Instant or LocalDateTime)
-    - Update timestamp whenever secret is saved (even if same value)
-    - Display in settings UI as relative time ("Updated 5 minutes ago") or absolute time
-- **Files:** `User.java`, `UserSettingsDto.java`, `index.html`, `settings.js`, `UserSettingsService.java`
-- **Benefit:** Significant - helps users confirm they're using the latest secret
-- **Decision:** YES, implement this feature
+- **Implementation:**
+  - Added `googleClientSecretUpdatedAt` field to GlobalSettings entity
+  - Timestamp automatically updates when secret is saved
+  - Displayed in UI with relative time ("5 minutes ago") and absolute time on hover
+- **Files:** ✓ `GlobalSettings.java`, `GlobalSettingsDto.java`, `GlobalSettingsService.java`, `index.html`, `global-settings.js`
+- **Benefit:** Helps users confirm they're using the latest secret
 
 #### Task 13: Improve Settings UI Feedback
-- [ ] **Status:** PENDING
-- **Description:** Add more configuration status and validation feedback
-- **Improvements:**
-  - Show Client ID in settings (read-only, since it's in application.properties)
-  - Show configured redirect URI
-  - Add "Test Connection" button
-  - Show last successful OAuth time
-  - Display token expiration time
-- **Files:** `index.html`, `settings.js`, `UserSettingsController.java`
+- [✓] **Status:** COMPLETED (via Global Settings)
+- **Description:** Add comprehensive configuration visibility and status
+- **Implemented:**
+  - ✓ Show Client ID (read-only from application.properties)
+  - ✓ Show configured redirect URI (read-only, dynamically constructed)
+  - ✓ Display partial Client Secret (last 4 chars)
+  - ✓ Show Client Secret validation status (Valid/Warning/Error)
+  - ✓ Display last updated timestamp with relative time
+  - ✓ Configuration status badge (Configured/Not Configured)
+  - ✓ Librarian-only update form
+- **Files:** ✓ `index.html`, `global-settings.js`, `GlobalSettingsController.java`, `GlobalSettingsService.java`
+- **Notes:** All implemented in new Global Settings section
 
 ---
 
-### Phase 4: Architecture Review
+### Phase 4: Architecture Changes (MAJOR UPDATE)
 
-#### Task 14: Review Client Secret Storage Architecture
-- [BLOCKED] **Status:** BLOCKED - Need decision on architecture
-- **Description:** Determine if Client Secret should be per-user or application-wide
-- **Current State:** Stored per-user in database (unusual pattern)
-- **Standard Pattern:** Client Secret is application-wide, same for all users
-- **Decision Needed:**
-  - Keep per-user (allows different Google projects per user)?
-  - Change to application-wide (standard OAuth pattern)?
-  - Document rationale either way
-- **Blocker:** Need user decision before implementing changes
+#### Task 14: Migrate to Application-Wide Client Secret Architecture
+- [✓] **Status:** COMPLETED
+- **Description:** Changed Client Secret from per-user to application-wide (global) setting
+- **Decision:** Implemented standard OAuth pattern - Client Secret is now global, only librarians can change it
+- **Changes Made:**
 
-#### Task 15: Review Settings Requirements
-- [ ] **Status:** PENDING
-- **Description:** Answer: Do we need more settings items?
-- **Current Settings:**
-  - Google OAuth Client Secret (per-user)
-  - Authorize/Revoke buttons
-- **Potential Additions:**
-  - Show Client ID (read-only)
-  - Show redirect URI (read-only)
-  - Processing options (e.g., auto-process interval)
-  - AI confidence threshold
-  - Photo date range limits
-- **Decision:** Determine what's actually needed
+**Backend Changes:**
+1. **Created GlobalSettings entity** (`GlobalSettings.java`)
+   - Stores application-wide settings
+   - Fields: `googleClientSecret`, `googleClientSecretUpdatedAt`, `googleClientId`, `redirectUri`
+   - Singleton pattern (only one row in table)
+
+2. **Created GlobalSettingsRepository** (`GlobalSettingsRepository.java`)
+   - JPA repository for global settings
+   - Method: `findFirstByOrderByIdAsc()` for singleton access
+
+3. **Created GlobalSettingsDto** (`GlobalSettingsDto.java`)
+   - Includes partial secret display (last 4 chars)
+   - Validation message
+   - Configured status
+   - Timestamps
+
+4. **Created GlobalSettingsService** (`GlobalSettingsService.java`)
+   - Manages global settings singleton
+   - `getEffectiveClientSecret()` - returns DB value or falls back to env var
+   - `validateClientSecretFormat()` - checks GOCSPX- prefix and length
+   - `updateGlobalSettings()` - librarian-only update
+   - Partial secret display logic (last 4 chars)
+
+5. **Created GlobalSettingsController** (`GlobalSettingsController.java`)
+   - `GET /api/global-settings` - Anyone can view (read-only)
+   - `PUT /api/global-settings` - Librarian-only update (@PreAuthorize)
+
+6. **Updated GoogleOAuthController** (`GoogleOAuthController.java`)
+   - Removed per-user Client Secret logic
+   - Now uses `globalSettingsService.getEffectiveClientSecret()`
+   - Updated error messages to reference librarians/global settings
+
+7. **Updated GooglePhotosService** (`GooglePhotosService.java`)
+   - Removed per-user Client Secret logic from `refreshAccessToken()`
+   - Now uses global settings service
+   - Updated error messages
+
+**Frontend Changes:**
+8. **Created global-settings.js** (`/static/js/global-settings.js`)
+   - `loadGlobalSettings()` - Fetches and displays global settings
+   - `saveGlobalSettings()` - Updates Client Secret (librarian-only)
+   - `formatRelativeTime()` - Displays "5 minutes ago" style timestamps
+   - Auto-loads on page load if section exists
+
+9. **Updated index.html** (`index.html`)
+   - Added new "Global Settings" section (librarian-only)
+   - Displays: Client ID, Redirect URI, Partial Secret, Validation, Last Updated
+   - Update form for Client Secret (librarian-only)
+   - Removed old per-user Client Secret field from user settings
+   - Added script tag for global-settings.js
+
+**Migration Notes:**
+- Old per-user `googleClientSecret` field in User entity is deprecated but not removed (backward compatibility)
+- System falls back to environment variable if DB value not set
+- All users now share same Client Secret (standard OAuth pattern)
+- Only librarians can update the secret
+
+**Benefits:**
+- Standard OAuth architecture
+- Centralized management
+- Easier troubleshooting
+- Consistent configuration
+- Matches industry best practices
+- Clear visibility of configuration status
+
+#### Task 15: Enhanced Global Settings UI
+- [✓] **Status:** COMPLETED
+- **Description:** Comprehensive global settings interface
+- **Implemented Features:**
+  - Client ID display (from application.properties)
+  - Redirect URI display (dynamically constructed)
+  - Partial Client Secret display (last 4 chars, matching Google's pattern)
+  - Validation status with color coding (Valid/Warning/Error)
+  - Last updated timestamp with relative time
+  - Configuration status badge
+  - Librarian-only update form with confirmation dialog
+  - Responsive card-based layout
+  - Auto-loading on page load
+- **Security:**
+  - Full secret never sent to frontend (write-only)
+  - Only last 4 characters displayed (read-only)
+  - Librarian role required for updates (@PreAuthorize)
+  - Confirmation dialog before updating
 
 ---
 
