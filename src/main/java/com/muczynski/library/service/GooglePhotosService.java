@@ -71,23 +71,35 @@ public class GooglePhotosService {
 
         // Build request to search for photos after the given timestamp
         Map<String, Object> filters = new HashMap<>();
-        Map<String, Object> dateFilter = new HashMap<>();
 
         // Parse the startTimestamp and create date filter
         if (startTimestamp != null && !startTimestamp.trim().isEmpty()) {
-            dateFilter.put("startDate", parseTimestamp(startTimestamp));
-            logger.info("Using date filter: {}", dateFilter.get("startDate"));
+            Map<String, Object> startDate = parseTimestamp(startTimestamp);
+
+            // Create date range with startDate (no endDate means up to now)
+            Map<String, Object> dateRange = new HashMap<>();
+            dateRange.put("startDate", startDate);
+
+            // Create ranges array
+            List<Map<String, Object>> ranges = new ArrayList<>();
+            ranges.add(dateRange);
+
+            // Create dateFilter with ranges
+            Map<String, Object> dateFilter = new HashMap<>();
+            dateFilter.put("ranges", ranges);
+
+            filters.put("dateFilter", dateFilter);
+            logger.info("Using date filter with range starting from: year={}, month={}, day={}",
+                    startDate.get("year"), startDate.get("month"), startDate.get("day"));
         } else {
             logger.info("No start timestamp provided, fetching recent photos");
         }
 
-        if (!dateFilter.isEmpty()) {
-            filters.put("dateFilter", dateFilter);
-        }
-
         Map<String, Object> request = new HashMap<>();
         request.put("pageSize", 100); // Fetch up to 100 photos
-        request.put("filters", filters);
+        if (!filters.isEmpty()) {
+            request.put("filters", filters);
+        }
 
         logger.debug("Google Photos API request: pageSize=100, filters={}", filters);
 
