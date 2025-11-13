@@ -69,6 +69,9 @@ public class GooglePhotosService {
         // Get valid access token (will auto-refresh if needed)
         String apiKey = getValidAccessToken(username);
 
+        // Diagnostic: Verify token scopes
+        verifyTokenScopes(apiKey);
+
         // Build request to search for photos after the given timestamp
         Map<String, Object> filters = new HashMap<>();
 
@@ -345,6 +348,45 @@ public class GooglePhotosService {
         }
 
         return accessToken;
+    }
+
+    /**
+     * Verify token scopes using Google's tokeninfo endpoint (diagnostic)
+     */
+    private void verifyTokenScopes(String accessToken) {
+        try {
+            logger.info("=== TOKEN DIAGNOSTIC START ===");
+            logger.info("Verifying access token scopes via Google tokeninfo endpoint...");
+
+            String tokeninfoUrl = "https://oauth2.googleapis.com/tokeninfo?access_token=" + accessToken;
+
+            ResponseEntity<Map> response = restTemplate.getForEntity(tokeninfoUrl, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> tokenInfo = response.getBody();
+
+                logger.info("Token info retrieved successfully:");
+                logger.info("  - Scopes: {}", tokenInfo.get("scope"));
+                logger.info("  - Expires in: {} seconds", tokenInfo.get("expires_in"));
+                logger.info("  - Audience (client_id): {}", tokenInfo.get("aud"));
+
+                String scopes = (String) tokenInfo.get("scope");
+                if (scopes != null && scopes.contains("photoslibrary.readonly")) {
+                    logger.info("  ✓ Token HAS the required 'photoslibrary.readonly' scope");
+                } else {
+                    logger.error("  ✗ Token MISSING the required 'photoslibrary.readonly' scope!");
+                    logger.error("  Current scopes: {}", scopes);
+                    logger.error("  Required scope: https://www.googleapis.com/auth/photoslibrary.readonly");
+                    logger.error("  ACTION REQUIRED: User must revoke and re-authorize Google Photos in Settings");
+                }
+            } else {
+                logger.warn("Failed to verify token scopes. Status: {}", response.getStatusCode());
+            }
+            logger.info("=== TOKEN DIAGNOSTIC END ===");
+        } catch (Exception e) {
+            logger.warn("Failed to verify token scopes (this is diagnostic only): {}", e.getMessage());
+            logger.debug("Token verification error details:", e);
+        }
     }
 
     /**
