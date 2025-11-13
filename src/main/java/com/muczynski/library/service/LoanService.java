@@ -71,10 +71,8 @@ public class LoanService {
     }
 
     public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
-        User user = userRepository.findByUsername(username);
-        if (user == null) {
-            throw new RuntimeException("User not found: " + username);
-        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByUserOrderByDueDateAsc(user);
