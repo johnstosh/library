@@ -22,10 +22,10 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('libraries', event)" data-test="menu-libraries">Libraries</button>
                 </li>
-                <li class="nav-item librarian-only">
+                <li class="nav-item">
                     <button class="nav-link" onclick="showSection('authors', event)" data-test="menu-authors">Authors</button>
                 </li>
-                <li class="nav-item public-item">
+                <li class="nav-item">
                     <button class="nav-link" onclick="showSection('books', event)" data-test="menu-books">Books</button>
                 </li>
                 <li class="nav-item librarian-only">
@@ -43,10 +43,10 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('users', event)" data-test="menu-users">Users</button>
                 </li>
-                <li class="nav-item librarian-only">
+                <li class="nav-item">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
-                <li class="nav-item public-item" data-test="menu-test-data-item">
+                <li class="nav-item librarian-only" data-test="menu-test-data-item">
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
                 <li class="nav-item librarian-only">
@@ -329,7 +329,7 @@
             </form>
         </div>
 
-        <div id="loans-section" class="section librarian-only" data-test="loans-section">
+        <div id="loans-section" class="section" data-test="loans-section">
             <h2 data-test="loans-header">Loans</h2>
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" value="" id="show-returned-loans" onchange="loadLoans()" data-test="show-returned-loans-checkbox">

@@ -70,6 +70,22 @@ public class LoanService {
                 .collect(Collectors.toList());
     }
 
+    public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new RuntimeException("User not found: " + username);
+        }
+        List<Loan> loans;
+        if (showAll) {
+            loans = loanRepository.findAllByUserOrderByDueDateAsc(user);
+        } else {
+            loans = loanRepository.findAllByUserAndReturnDateIsNullOrderByDueDateAsc(user);
+        }
+        return loans.stream()
+                .map(loanMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public LoanDto getLoanById(Long id) {
         return loanRepository.findById(id)
                 .map(loanMapper::toDto)

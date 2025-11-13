@@ -116,7 +116,8 @@ export function showMainContent(roles) {
         document.querySelectorAll('.librarian-only').forEach(item => {
             item.style.display = 'none';
         });
-        showSection('search');
+        // Regular users start with books section (they now have access to Authors, Books, and Loans)
+        showSection('books');
     }
 }
 

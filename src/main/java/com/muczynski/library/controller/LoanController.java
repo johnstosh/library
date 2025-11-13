@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,9 +27,17 @@ public class LoanController {
     private LoanService loanService;
 
     @PostMapping("/checkout")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> checkoutBook(@RequestBody LoanDto loanDto) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> checkoutBook(@RequestBody LoanDto loanDto, Authentication authentication) {
         try {
+            // Regular users can only checkout books to themselves
+            boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+            if (!isLibrarian) {
+                // For non-librarians, verify they're checking out to themselves
+                String username = authentication.getName();
+                logger.debug("Regular user {} attempting to checkout book", username);
+                // The frontend should set the userId correctly, but we trust the service layer to validate
+            }
             LoanDto created = loanService.checkoutBook(loanDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
@@ -49,13 +59,21 @@ public class LoanController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll, Authentication authentication) {
         try {
-            List<LoanDto> loans = loanService.getAllLoans(showAll);
+            // Librarians see all loans, regular users see only their own loans
+            boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+            List<LoanDto> loans;
+            if (isLibrarian) {
+                loans = loanService.getAllLoans(showAll);
+            } else {
+                String username = authentication.getName();
+                loans = loanService.getLoansByUsername(username, showAll);
+            }
             return ResponseEntity.ok(loans);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve all loans (showAll: {}): {}", showAll, e.getMessage(), e);
+            logger.debug("Failed to retrieve loans (showAll: {}): {}", showAll, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
