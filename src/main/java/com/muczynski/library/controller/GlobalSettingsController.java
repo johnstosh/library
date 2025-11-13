@@ -41,7 +41,7 @@ public class GlobalSettingsController {
      * Only librarians can update
      */
     @PutMapping
-    @PreAuthorize("hasRole('LIBRARIAN')")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<GlobalSettingsDto> updateGlobalSettings(@RequestBody GlobalSettingsDto dto) {
         logger.info("Update global settings requested (librarian-only)");
         GlobalSettingsDto updated = globalSettingsService.updateGlobalSettings(dto);
