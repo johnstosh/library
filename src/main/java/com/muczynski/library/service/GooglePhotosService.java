@@ -76,9 +76,17 @@ public class GooglePhotosService {
         if (startTimestamp != null && !startTimestamp.trim().isEmpty()) {
             Map<String, Object> startDate = parseTimestamp(startTimestamp);
 
-            // Create date range with startDate (no endDate means up to now)
+            // Create endDate as today
+            LocalDateTime today = LocalDateTime.now();
+            Map<String, Object> endDate = new HashMap<>();
+            endDate.put("year", today.getYear());
+            endDate.put("month", today.getMonthValue());
+            endDate.put("day", today.getDayOfMonth());
+
+            // Create date range with startDate and endDate
             Map<String, Object> dateRange = new HashMap<>();
             dateRange.put("startDate", startDate);
+            dateRange.put("endDate", endDate);
 
             // Create ranges array
             List<Map<String, Object>> ranges = new ArrayList<>();
@@ -89,8 +97,9 @@ public class GooglePhotosService {
             dateFilter.put("ranges", ranges);
 
             filters.put("dateFilter", dateFilter);
-            logger.info("Using date filter with range starting from: year={}, month={}, day={}",
-                    startDate.get("year"), startDate.get("month"), startDate.get("day"));
+            logger.info("Using date filter with range from: year={}, month={}, day={} to: year={}, month={}, day={}",
+                    startDate.get("year"), startDate.get("month"), startDate.get("day"),
+                    endDate.get("year"), endDate.get("month"), endDate.get("day"));
         } else {
             logger.info("No start timestamp provided, fetching recent photos");
         }
