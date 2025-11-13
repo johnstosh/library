@@ -290,56 +290,10 @@ public class SettingsUITest {
         }
     }
 
-    @Test
-    void testGoogleClientSecretPersistence() {
-        try {
-            login();
-            ensurePrerequisites();
-
-            // Navigate to settings section
-            navigateToSection("settings");
-
-            // Wait for Google Client Secret input to be visible (librarian-only field)
-            Locator googleClientSecretInput = page.locator("[data-test='google-client-secret']");
-            googleClientSecretInput.waitFor(new Locator.WaitForOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-
-            // Verify initial value is empty
-            assertThat(googleClientSecretInput).hasValue("", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
-
-            // Set a Google Client Secret
-            String testSecret = "test-client-secret-" + System.currentTimeMillis();
-            googleClientSecretInput.fill(testSecret);
-
-            // Save settings
-            page.click("[data-test='save-settings-btn']");
-
-            // Wait for NETWORKIDLE to ensure save completes
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
-
-            // Wait for success message
-            Locator successLocator = page.locator("[data-test='settings-success']");
-            successLocator.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(20000L));
-            assertThat(successLocator).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-
-            // Navigate away and back to verify persistence
-            navigateToSection("books");
-            navigateToSection("settings");
-
-            // Wait for Google Client Secret input to be visible again
-            googleClientSecretInput = page.locator("[data-test='google-client-secret']");
-            googleClientSecretInput.waitFor(new Locator.WaitForOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-
-            // Wait for NETWORKIDLE to ensure loadSettings() completes
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
-
-            // Verify the Google Client Secret persisted
-            assertThat(googleClientSecretInput).hasValue(testSecret, new LocatorAssertions.HasValueOptions().setTimeout(20000L));
-
-        } catch (Exception e) {
-            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-google-client-secret-test.png")));
-            throw e;
-        }
-    }
+    // REMOVED: testGoogleClientSecretPersistence
+    // This test was removed because Google Client Secret is now managed as a global application-wide setting
+    // accessible only to librarians through the Global Settings page (see GlobalSettingsUITest.java).
+    // The per-user Client Secret field no longer exists in the user Settings page.
 
     @Test
     void testSettingsValidationErrors() {

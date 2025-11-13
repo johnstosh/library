@@ -49,6 +49,9 @@
                 <li class="nav-item public-item" data-test="menu-test-data-item">
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('global-settings', event)" data-test="menu-global-settings">Global Settings</button>
+                </li>
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('settings', event)" data-test="menu-settings">Settings</button>
                 </li>
@@ -398,36 +401,38 @@
                 <div class="card-body">
                     <div class="row mb-2">
                         <div class="col-md-3"><strong>Client ID:</strong></div>
-                        <div class="col-md-9"><code id="global-client-id">(loading...)</code></div>
+                        <div class="col-md-9"><code id="global-client-id" data-test="global-client-id">(loading...)</code></div>
                     </div>
                     <div class="row mb-2">
                         <div class="col-md-3"><strong>Redirect URI:</strong></div>
-                        <div class="col-md-9"><code id="global-redirect-uri">(loading...)</code></div>
+                        <div class="col-md-9"><code id="global-redirect-uri" data-test="global-redirect-uri">(loading...)</code></div>
                     </div>
                     <div class="row mb-2">
                         <div class="col-md-3"><strong>Client Secret:</strong></div>
                         <div class="col-md-9">
-                            <span id="global-secret-partial">(loading...)</span>
-                            <span id="global-secret-configured"></span>
+                            <span id="global-secret-partial" data-test="global-secret-partial">(loading...)</span>
+                            <span id="global-secret-configured" data-test="global-secret-configured"></span>
                         </div>
                     </div>
                     <div class="row mb-2">
                         <div class="col-md-3"><strong>Secret Validation:</strong></div>
-                        <div class="col-md-9"><span id="global-secret-validation"></span></div>
+                        <div class="col-md-9"><span id="global-secret-validation" data-test="global-secret-validation"></span></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-3"><strong>Last Updated:</strong></div>
-                        <div class="col-md-9"><span id="global-secret-updated-at">(loading...)</span></div>
+                        <div class="col-md-9"><span id="global-secret-updated-at" data-test="global-secret-updated-at">(loading...)</span></div>
                     </div>
 
-                    <form id="global-settings-form" onsubmit="saveGlobalSettings(event)">
+                    <form id="global-settings-form" onsubmit="saveGlobalSettings(event)" data-test="global-settings-form">
                         <div class="mb-3">
                             <label for="global-client-secret" class="form-label">Update Client Secret</label>
-                            <input type="password" id="global-client-secret" class="form-control" autocomplete="off" placeholder="Enter new Google OAuth Client Secret">
+                            <input type="password" id="global-client-secret" class="form-control" autocomplete="off" placeholder="Enter new Google OAuth Client Secret" data-test="global-client-secret">
                             <div class="form-text">Enter a new Client Secret to update. This will affect all users. Get this from Google Cloud Console.</div>
                         </div>
-                        <button type="submit" class="btn btn-warning">Update Global Client Secret</button>
+                        <button type="submit" class="btn btn-warning" data-test="update-global-secret-btn">Update Global Client Secret</button>
                     </form>
+                    <div id="global-settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="global-settings-error"></div>
+                    <div id="global-settings-success" class="alert alert-success mt-3" style="display: none;" data-test="global-settings-success"></div>
                 </div>
             </div>
         </div>

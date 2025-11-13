@@ -87,10 +87,16 @@ function displayGlobalSettings(settings) {
 async function saveGlobalSettings(event) {
     event.preventDefault();
 
+    // Hide previous messages
+    const errorDiv = document.getElementById('global-settings-error');
+    const successDiv = document.getElementById('global-settings-success');
+    if (errorDiv) errorDiv.style.display = 'none';
+    if (successDiv) successDiv.style.display = 'none';
+
     const newSecret = document.getElementById('global-client-secret').value.trim();
 
     if (!newSecret) {
-        alert('Please enter a Client Secret');
+        showGlobalSettingsError('Please enter a Client Secret');
         return;
     }
 
@@ -119,15 +125,33 @@ async function saveGlobalSettings(event) {
             document.getElementById('global-client-secret').value = '';
 
             // Show success message
-            alert('Global Client Secret updated successfully!');
+            showGlobalSettingsSuccess('Global Client Secret updated successfully!');
         } else if (response.status === 403) {
-            alert('Permission denied. Only librarians can update global settings.');
+            showGlobalSettingsError('Permission denied. Only librarians can update global settings.');
         } else {
-            alert('Failed to update global settings. Please try again.');
+            showGlobalSettingsError('Failed to update global settings. Please try again.');
         }
     } catch (error) {
         console.error('Error saving global settings:', error);
-        alert('Error saving global settings. Please try again.');
+        showGlobalSettingsError('Error saving global settings. Please try again.');
+    }
+}
+
+// Show success message
+function showGlobalSettingsSuccess(message) {
+    const successDiv = document.getElementById('global-settings-success');
+    if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+    }
+}
+
+// Show error message
+function showGlobalSettingsError(message) {
+    const errorDiv = document.getElementById('global-settings-error');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
     }
 }
 

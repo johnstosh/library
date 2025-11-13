@@ -259,6 +259,41 @@
 
 ---
 
+### Phase 5: UI Testing
+
+#### Task 16: Create UI Tests for Global Settings
+- [✓] **Status:** COMPLETED
+- **Description:** Create comprehensive UI tests for new Global Settings page
+- **Completed:**
+  - ✓ Added data-test attributes to all Global Settings HTML elements
+  - ✓ Updated global-settings.js to use success/error divs (instead of alerts)
+  - ✓ Added menu item for Global Settings (librarian-only)
+  - ✓ Created GlobalSettingsUITest.java with 7 tests:
+    1. testGlobalSettingsSectionVisibilityForLibrarian - verify librarians can see section
+    2. testGlobalSettingsSectionNotVisibleForRegularUser - verify regular users cannot see section
+    3. testGlobalSettingsLoadAndDisplay - verify all settings load and display correctly
+    4. testUpdateGlobalClientSecret - verify updating Client Secret works
+    5. testUpdateGlobalClientSecretPersistence - verify updates persist across navigation
+    6. testEmptyClientSecretValidation - verify empty input shows error
+    7. testClientSecretFormatValidation - verify invalid format shows warning
+  - ✓ Updated SettingsUITest.java - removed obsolete testGoogleClientSecretPersistence test
+- **Files Created:**
+  - `src/test/java/com/muczynski/library/ui/GlobalSettingsUITest.java` ✓
+- **Files Modified:**
+  - `src/main/resources/static/index.html` ✓ (added data-test attributes and menu item)
+  - `src/main/resources/static/js/global-settings.js` ✓ (changed alerts to success/error divs)
+  - `src/test/java/com/muczynski/library/ui/SettingsUITest.java` ✓ (removed obsolete test)
+- **Test Coverage:**
+  - Visibility (librarian vs regular user)
+  - Loading and displaying settings
+  - Updating Client Secret
+  - Persistence across navigation
+  - Validation (empty input, format warnings)
+  - Success and error message display
+- **Notes:** All tests follow uitest-requirements.md patterns (20-second timeouts, NETWORKIDLE waits, data-test selectors)
+
+---
+
 ## Quick Reference Answers
 
 ### Q: What is the correct redirect URI?
