@@ -31,7 +31,9 @@ async function loadAuthors() {
             tr.appendChild(tdName);
 
             const tdActions = document.createElement('td');
-            if (isLibrarian) {
+            tdActions.setAttribute('data-test', 'author-actions');
+            // Only librarians can edit/delete authors
+            if (window.isLibrarian) {
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-author-btn');
                 editBtn.textContent = '✏️';

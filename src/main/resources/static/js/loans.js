@@ -54,29 +54,33 @@ async function loadLoans() {
             const actionsCell = document.createElement('td');
             actionsCell.setAttribute('data-test', 'loan-actions');
 
-            if (!loan.returnDate) {
-                const returnButton = document.createElement('button');
-                returnButton.setAttribute('data-test', 'return-book-btn');
-                returnButton.setAttribute('data-loan-id', loan.id);
-                returnButton.textContent = 'Return';
-                returnButton.className = 'return-btn';
-                returnButton.onclick = () => returnBook(loan.id);
-                actionsCell.appendChild(returnButton);
+            // Only librarians can perform actions (return, edit, delete)
+            if (window.isLibrarian) {
+                if (!loan.returnDate) {
+                    const returnButton = document.createElement('button');
+                    returnButton.setAttribute('data-test', 'return-book-btn');
+                    returnButton.setAttribute('data-loan-id', loan.id);
+                    returnButton.textContent = 'Return';
+                    returnButton.className = 'return-btn';
+                    returnButton.onclick = () => returnBook(loan.id);
+                    actionsCell.appendChild(returnButton);
+                }
+
+                const editBtn = document.createElement('button');
+                editBtn.setAttribute('data-test', 'edit-loan-btn');
+                editBtn.textContent = '✏️';
+                editBtn.title = 'Edit';
+                editBtn.onclick = () => editLoan(loan.id);
+                actionsCell.appendChild(editBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.setAttribute('data-test', 'delete-loan-btn');
+                delBtn.textContent = '🗑️';
+                delBtn.title = 'Delete';
+                delBtn.onclick = () => deleteLoan(loan.id);
+                actionsCell.appendChild(delBtn);
             }
 
-            const editBtn = document.createElement('button');
-            editBtn.setAttribute('data-test', 'edit-loan-btn');
-            editBtn.textContent = '✏️';
-            editBtn.title = 'Edit';
-            editBtn.onclick = () => editLoan(loan.id);
-            actionsCell.appendChild(editBtn);
-
-            const delBtn = document.createElement('button');
-            delBtn.setAttribute('data-test', 'delete-loan-btn');
-            delBtn.textContent = '🗑️';
-            delBtn.title = 'Delete';
-            delBtn.onclick = () => deleteLoan(loan.id);
-            actionsCell.appendChild(delBtn);
             row.appendChild(actionsCell);
 
             list.appendChild(row);
@@ -89,7 +93,18 @@ async function loadLoans() {
 
 async function checkoutBook() {
     const bookId = document.getElementById('loan-book').value;
-    const userId = document.getElementById('loan-user').value;
+    let userId;
+
+    // For regular users, get userId from the hidden field or data attribute
+    // For librarians, get it from the dropdown
+    if (window.isLibrarian) {
+        userId = document.getElementById('loan-user').value;
+    } else {
+        // Regular users: userId is stored in data attribute
+        const userSelect = document.getElementById('loan-user');
+        userId = userSelect.getAttribute('data-current-user-id');
+    }
+
     const loanDate = document.getElementById('loan-date').value;
     const dueDate = document.getElementById('due-date').value;
     const returnDate = document.getElementById('return-date').value;
@@ -100,7 +115,9 @@ async function checkoutBook() {
     try {
         await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, dueDate: dueDate || null, returnDate: returnDate || null });
         document.getElementById('loan-book').selectedIndex = 0;
-        document.getElementById('loan-user').selectedIndex = 0;
+        if (window.isLibrarian) {
+            document.getElementById('loan-user').selectedIndex = 0;
+        }
         document.getElementById('loan-date').value = '';
         document.getElementById('due-date').value = '';
         document.getElementById('return-date').value = '';
@@ -196,21 +213,50 @@ async function populateLoanDropdowns() {
         });
         console.log(`[Loans] Populated loan-book dropdown with ${books.length} options`);
 
-        const users = await fetchData('/api/users');
-        console.log(`[Loans] Fetched ${users.length} users`);
+        // User dropdown handling - different for librarians vs regular users
         const userSelect = document.getElementById('loan-user');
         if (!userSelect) {
             console.error('[Loans] loan-user select not found in DOM!');
             return;
         }
-        userSelect.innerHTML = '';
-        users.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = user.username;
-            userSelect.appendChild(option);
-        });
-        console.log(`[Loans] Populated loan-user dropdown with ${users.length} options`);
+
+        if (window.isLibrarian) {
+            // Librarians: Show dropdown with all users
+            userSelect.style.display = 'block';
+            const userLabel = document.querySelector('label[for="loan-user"]');
+            if (userLabel) {
+                userLabel.style.display = 'block';
+            }
+            const userFormGroup = userSelect.closest('.mb-3');
+            if (userFormGroup) {
+                userFormGroup.style.display = 'block';
+            }
+
+            const users = await fetchData('/api/users');
+            console.log(`[Loans] Fetched ${users.length} users`);
+            userSelect.innerHTML = '';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.username;
+                userSelect.appendChild(option);
+            });
+            console.log(`[Loans] Populated loan-user dropdown with ${users.length} options`);
+        } else {
+            // Regular users: Hide dropdown, get current user and store their ID
+            const currentUser = await fetchData('/api/users/me');
+            console.log(`[Loans] Current user:`, currentUser);
+
+            // Hide the user selection form group
+            const userFormGroup = userSelect.closest('.mb-3');
+            if (userFormGroup) {
+                userFormGroup.style.display = 'none';
+            }
+
+            // Store current user ID in data attribute for use when checking out
+            userSelect.setAttribute('data-current-user-id', currentUser.id);
+            console.log(`[Loans] Set data-current-user-id to: ${currentUser.id}`);
+        }
 
         const loanDateInput = document.getElementById('loan-date');
         const dueDateInput = document.getElementById('due-date');
