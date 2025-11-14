@@ -533,13 +533,14 @@ public class GooglePhotosService {
 
         try {
             do {
-                // Correct endpoint per REST API Reference: /v1/sessions/{sessionId}/mediaItems
-                String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId + "/mediaItems";
+                // Per official API docs: GET /v1/mediaItems?sessionId={sessionId}
+                // https://developers.google.com/photos/picker/reference/rest/v1/mediaItems/list
+                String url = "https://photospicker.googleapis.com/v1/mediaItems?sessionId=" + sessionId;
                 if (pageToken != null) {
-                    url += "?pageToken=" + pageToken;
+                    url += "&pageToken=" + pageToken;
                 }
 
-                logger.debug("Fetching media items from: {}", url);
+                logger.info("Fetching media items from: {}", url);
 
                 HttpHeaders headers = new HttpHeaders();
                 headers.setBearerAuth(apiKey);
