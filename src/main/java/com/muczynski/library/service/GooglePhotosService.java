@@ -509,4 +509,77 @@ public class GooglePhotosService {
             throw new RuntimeException("Failed to refresh access token: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Fetch media items from a Google Photos Picker session
+     * @param sessionId The session ID from the Picker API
+     * @return List of media items with pagination handling
+     */
+    public List<Map<String, Object>> fetchPickerMediaItems(String sessionId) {
+        logger.info("Fetching media items from Picker session: {}", sessionId);
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to fetch picker media items without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+
+        // Get valid access token (will auto-refresh if needed)
+        String apiKey = getValidAccessToken(username);
+
+        List<Map<String, Object>> allMediaItems = new ArrayList<>();
+        String pageToken = null;
+
+        try {
+            do {
+                String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId + "/mediaItems";
+                if (pageToken != null) {
+                    url += "?pageToken=" + pageToken;
+                }
+
+                logger.debug("Fetching media items from: {}", url);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(apiKey);
+
+                HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                ResponseEntity<Map> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        entity,
+                        Map.class
+                );
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> responseBody = response.getBody();
+
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> mediaItems = (List<Map<String, Object>>) responseBody.get("mediaItems");
+
+                    if (mediaItems != null && !mediaItems.isEmpty()) {
+                        allMediaItems.addAll(mediaItems);
+                        logger.debug("Fetched {} media items in this page", mediaItems.size());
+                    }
+
+                    pageToken = (String) responseBody.get("nextPageToken");
+                    logger.debug("Next page token: {}", pageToken != null ? pageToken : "none");
+
+                } else {
+                    logger.error("Failed to fetch media items with status: {}", response.getStatusCode());
+                    throw new RuntimeException("Failed to fetch media items: " + response.getStatusCode());
+                }
+
+            } while (pageToken != null);
+
+            logger.info("Successfully fetched {} total media items from Picker session", allMediaItems.size());
+            return allMediaItems;
+
+        } catch (Exception e) {
+            logger.error("Failed to fetch media items from Picker session for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
+            throw new RuntimeException("Failed to fetch media items from Picker: " + e.getMessage(), e);
+        }
+    }
 }

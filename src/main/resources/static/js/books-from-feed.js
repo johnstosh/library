@@ -187,37 +187,14 @@ async function handlePickerResults(sessionId) {
 }
 
 async function listMediaItems(sessionId) {
-    const mediaItems = [];
-    let pageToken = null;
+    // Fetch media items via backend to avoid CORS issues
+    const response = await fetchData(`/api/books-from-feed/picker-session/${sessionId}/media-items`);
 
-    do {
-        const url = new URL(`https://photospicker.googleapis.com/v1/sessions/${sessionId}/mediaItems`);
-        if (pageToken) {
-            url.searchParams.set('pageToken', pageToken);
-        }
+    if (response.error) {
+        throw new Error(response.error);
+    }
 
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to list media items: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.mediaItems) {
-            mediaItems.push(...data.mediaItems);
-        }
-
-        pageToken = data.nextPageToken;
-
-    } while (pageToken);
-
-    return mediaItems;
+    return response.mediaItems || [];
 }
 
 function displayProcessingResults(result) {

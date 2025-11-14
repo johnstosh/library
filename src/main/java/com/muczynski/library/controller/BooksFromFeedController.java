@@ -20,6 +20,9 @@ public class BooksFromFeedController {
     @Autowired
     private BooksFromFeedService booksFromFeedService;
 
+    @Autowired
+    private com.muczynski.library.service.GooglePhotosService googlePhotosService;
+
     /**
      * Process photos from Google Photos Library API (complex - has 403 scope issues)
      * @return Processing results
@@ -67,6 +70,27 @@ public class BooksFromFeedController {
                     "processedCount", 0,
                     "skippedCount", 0,
                     "totalPhotos", 0
+            ));
+        }
+    }
+
+    /**
+     * Fetch media items from a Google Photos Picker session (server-side to avoid CORS)
+     * @param sessionId The session ID from the Picker API
+     * @return Media items list
+     */
+    @GetMapping("/picker-session/{sessionId}/media-items")
+    public ResponseEntity<Map<String, Object>> getPickerMediaItems(@PathVariable String sessionId) {
+        try {
+            List<Map<String, Object>> mediaItems = googlePhotosService.fetchPickerMediaItems(sessionId);
+            return ResponseEntity.ok(Map.of(
+                    "mediaItems", mediaItems,
+                    "count", mediaItems.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage(),
+                    "mediaItems", List.of()
             ));
         }
     }
