@@ -67,13 +67,7 @@ async function createPickerSession() {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            // Allow multiple photo selection
-            'allowMultiple': true,
-
-            // Limit to 20 photos per session
-            'selectedItemLimit': 20,
-        }),
+        body: JSON.stringify({}),
     });
 
     if (!response.ok) {
