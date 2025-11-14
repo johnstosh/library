@@ -269,4 +269,175 @@ public class BooksFromFeedService {
         }
         return null;
     }
+
+    /**
+     * Process photos selected via Google Photos Picker API
+     * @param photos List of photo metadata from the Picker
+     * @return Map containing results of the processing
+     */
+    public Map<String, Object> processPhotosFromPicker(List<Map<String, Object>> photos) {
+        logger.info("===== Starting Books-from-Feed processing (Picker) =====");
+        logger.info("Processing {} photos selected from Picker", photos.size());
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to process photos without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        logger.info("Processing photos for user: {}", username);
+
+        List<Map<String, Object>> processedBooks = new ArrayList<>();
+        List<Map<String, Object>> skippedPhotos = new ArrayList<>();
+
+        int photoIndex = 0;
+        for (Map<String, Object> photo : photos) {
+            photoIndex++;
+            String photoId = (String) photo.get("id");
+            String photoName = (String) photo.get("name");
+            String photoUrl = (String) photo.get("url");
+
+            logger.info("Processing photo {}/{}: name={}, id={}", photoIndex, photos.size(), photoName, photoId);
+
+            try {
+                // Check if photo already has description with book metadata
+                String description = (String) photo.get("description");
+                if (description != null && (description.contains("Title:") || description.contains("Author:"))) {
+                    logger.info("Skipping photo {} - already processed (has book metadata in description)", photoName);
+                    skippedPhotos.add(Map.of(
+                            "id", photoId,
+                            "name", photoName,
+                            "reason", "Already processed (has book metadata in description)"
+                    ));
+                    continue;
+                }
+
+                // Download the photo from the URL provided by Picker
+                logger.debug("Downloading photo {} from URL: {}", photoName, photoUrl);
+                byte[] photoBytes = downloadPhotoFromUrl(photoUrl);
+                logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
+
+                // Determine if this is a book photo using AI
+                logger.info("Asking AI if photo {} is a book photo...", photoName);
+                String detectionQuestion = "Is this image a photo of a book or book cover? Respond with only 'YES' or 'NO'.";
+                String detectionResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", detectionQuestion);
+                logger.info("AI detection response for photo {}: {}", photoName, detectionResponse);
+
+                if (!detectionResponse.trim().toUpperCase().contains("YES")) {
+                    logger.info("Skipping photo {} - not a book photo (AI said: {})", photoName, detectionResponse);
+                    skippedPhotos.add(Map.of(
+                            "id", photoId,
+                            "name", photoName,
+                            "reason", "Not a book photo"
+                    ));
+                    continue;
+                }
+
+                // Extract book metadata using AI
+                logger.info("Extracting book metadata from photo {}...", photoName);
+                String metadataQuestion = "This is a photo of a book. Please extract the book information and respond ONLY with valid JSON in this exact format:\n" +
+                        "{\"title\": \"book title\", \"author\": \"author name\"}\n" +
+                        "Do not include any other text, explanation, or markdown formatting. Only the JSON object.";
+
+                String metadataResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", metadataQuestion);
+                logger.debug("AI metadata response for photo {}: {}", photoName, metadataResponse);
+
+                // Parse the JSON response
+                Map<String, Object> bookMetadata = parseBookMetadata(metadataResponse);
+
+                if (bookMetadata == null || !bookMetadata.containsKey("title")) {
+                    logger.warn("Failed to extract book metadata from photo {}. AI response: {}", photoName, metadataResponse);
+                    skippedPhotos.add(Map.of(
+                            "id", photoId,
+                            "name", photoName,
+                            "reason", "Could not extract book metadata"
+                    ));
+                    continue;
+                }
+
+                String title = (String) bookMetadata.get("title");
+                String authorName = (String) bookMetadata.get("author");
+                logger.info("Extracted metadata from photo {}: title='{}', author='{}'", photoName, title, authorName);
+
+                // Create book entry
+                logger.info("Creating book entry for: '{}'", title);
+                com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
+                tempBook.setTitle(title);
+                tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
+                tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
+
+                // Create the book
+                com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
+                Long bookId = savedBook.getId();
+                logger.info("Created book with ID: {} for title: '{}'", bookId, title);
+
+                processedBooks.add(Map.of(
+                        "photoId", photoId,
+                        "photoName", photoName,
+                        "title", title,
+                        "author", authorName,
+                        "bookId", bookId
+                ));
+
+                logger.info("Successfully processed photo {} as book: '{}' (ID: {})", photoName, title, bookId);
+
+            } catch (Exception e) {
+                logger.error("Error processing photo {}: {}", photoName, e.getMessage(), e);
+                skippedPhotos.add(Map.of(
+                        "id", photoId,
+                        "name", photoName,
+                        "reason", "Error: " + e.getMessage()
+                ));
+            }
+        }
+
+        logger.info("Completed processing {} photos. Processed: {}, Skipped: {}",
+                photos.size(), processedBooks.size(), skippedPhotos.size());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("processedCount", processedBooks.size());
+        result.put("skippedCount", skippedPhotos.size());
+        result.put("totalPhotos", photos.size());
+        result.put("processedBooks", processedBooks);
+        result.put("skippedPhotos", skippedPhotos);
+
+        logger.info("===== Books-from-Feed processing (Picker) complete =====");
+        logger.info("Summary: {} total photos, {} books created, {} photos skipped",
+                photos.size(), processedBooks.size(), skippedPhotos.size());
+
+        return result;
+    }
+
+    /**
+     * Download photo from a URL (from Google Photos Picker)
+     * Note: This may fail with 403 if the URL requires authentication
+     */
+    private byte[] downloadPhotoFromUrl(String url) {
+        logger.debug("Downloading photo from URL: {}", url);
+
+        try {
+            java.net.URL photoUrl = new java.net.URL(url);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) photoUrl.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+
+            int responseCode = connection.getResponseCode();
+            logger.debug("HTTP response code: {}", responseCode);
+
+            if (responseCode == 200) {
+                java.io.InputStream inputStream = connection.getInputStream();
+                byte[] photoBytes = inputStream.readAllBytes();
+                inputStream.close();
+                logger.debug("Successfully downloaded {} bytes", photoBytes.length);
+                return photoBytes;
+            } else {
+                logger.error("Failed to download photo. HTTP response code: {}", responseCode);
+                throw new RuntimeException("Failed to download photo: HTTP " + responseCode);
+            }
+        } catch (Exception e) {
+            logger.error("Error downloading photo from URL: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to download photo: " + e.getMessage(), e);
+        }
+    }
 }
