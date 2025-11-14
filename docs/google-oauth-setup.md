@@ -226,15 +226,17 @@ After setup, verify everything works:
 
 2. Go to the **Books from Feed** section
 3. Click **"Process Photos"**
-4. The **Google Photos Picker** should open (official Google UI)
-5. Select one or more photos of books from your library
-6. Click **"Select"** in the Picker
-7. The system will:
+4. The **Google Photos Picker** will open in a new window (official Google UI)
+5. Select one or more photos of books from your library (up to 20)
+6. Click **"Select"** in the Picker and close the window
+7. The app will poll for your selection and then:
    - Download the selected photos
    - Use AI to detect if they are book covers
    - Extract book title and author information
    - Create book entries in your library
 8. View the processing results displayed on the page
+
+**Note:** The app uses the **new Google Photos Picker API** (session-based REST flow) launched in September 2024, which replaces the deprecated legacy iframe-based Picker.
 
 ---
 

@@ -163,28 +163,40 @@ Add "Test Configuration" button that:
 - Faced persistent 403 "insufficient authentication scopes" errors
 - Used `mediaItems:search` endpoint with date filters
 
-**Current Implementation (Nov 2025):**
-- ✅ Uses Google Photos Picker API
+**Current Implementation (Nov 2025 - Migrated to New Picker API):**
+- ✅ Uses **new Google Photos Picker API** (REST-based session flow, Sept 2024)
+- ✅ Replaced deprecated legacy iframe-based Picker
 - ✅ User-driven photo selection (no automatic scanning)
-- ✅ Official Google UI for photo selection
-- ✅ No direct API calls to Photos Library
-- ✅ Eliminates authentication scope errors
+- ✅ Official Google UI for photo selection in popup window
+- ✅ Session-based polling for selection completion
+- ✅ Eliminates 403 authentication errors from legacy Picker
 
-**How It Works:**
+**How It Works (New Session-Based Flow):**
 1. User clicks "Process Photos" button
-2. Google Photos Picker opens (official Google UI)
-3. User selects photos of books
-4. Selected photos are downloaded from Picker URLs
-5. AI (Grok) analyzes each photo:
+2. Frontend creates a Picker session via `POST https://photospicker.googleapis.com/v1/sessions`
+3. Popup window opens with Google's official Photos Picker UI
+4. User selects photos of books (up to 20)
+5. Frontend polls session every 5 seconds to detect completion
+6. When `mediaItemsSet` is true, fetch selected items via `GET .../sessions/{id}/mediaItems`
+7. Selected photos are downloaded using Google Photos baseUrls
+8. AI (Grok) analyzes each photo:
    - Detects if it's a book cover
    - Extracts title and author
-6. Book entries created in library
-7. Results displayed to user
+9. Book entries created in library
+10. Results displayed to user
+
+**Technical Implementation:**
+- **No gapi.load('picker')** - Removed legacy Google API loader
+- **REST-only flow** - Pure fetch() calls to Picker API endpoints
+- **Polling mechanism** - 5-second intervals, 10-minute timeout
+- **Popup-based** - Opens in new window instead of iframe
+- **Backward compatible** - Backend endpoints unchanged
 
 **Benefits:**
-- No more 403 authentication errors
-- Simpler user experience
-- Uses official Google interface
+- No more 403 authentication errors from legacy Picker
+- Future-proof implementation (legacy Picker deprecated post-2025)
+- Simpler security model (no iframe restrictions)
+- Uses official Google Photos selection interface
 - User controls exactly which photos to process
 
 ### 6. Processing Configuration

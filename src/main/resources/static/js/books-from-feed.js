@@ -1,38 +1,17 @@
 // (c) Copyright 2025 by Muczynski
-// Books-from-Feed using Google Photos Picker API
+// Books-from-Feed using Google Photos Picker API (New Session-Based Flow)
 
-let pickerApiLoaded = false;
 let accessToken = null;
+let currentSessionId = null;
+let pollingInterval = null;
 
 async function loadBooksFromFeedSection() {
     console.log('[BooksFromFeed] Loading books-from-feed section');
     clearError('books-from-feed');
-
-    // Load Google Picker API
-    loadGooglePickerAPI();
-}
-
-function loadGooglePickerAPI() {
-    if (pickerApiLoaded) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = () => {
-        gapi.load('picker', () => {
-            console.log('[BooksFromFeed] Google Picker API loaded');
-            pickerApiLoaded = true;
-        });
-    };
-    document.head.appendChild(script);
 }
 
 async function processPhotosFromFeed() {
     clearError('books-from-feed');
-
-    if (!pickerApiLoaded) {
-        showError('books-from-feed', 'Google Picker API is still loading. Please wait and try again.');
-        return;
-    }
 
     // Get access token from current user
     try {
@@ -43,66 +22,208 @@ async function processPhotosFromFeed() {
         }
         accessToken = user.googlePhotosApiKey;
 
-        // Show the picker
-        showPhotoPicker();
+        // Show the new Photos Picker
+        await showPhotoPicker();
     } catch (error) {
         showError('books-from-feed', 'Failed to get authorization: ' + error.message);
     }
 }
 
-function showPhotoPicker() {
-    // Build and show the picker
-    const picker = new google.picker.PickerBuilder()
-        .addView(google.picker.ViewId.PHOTOS)
-        .setOAuthToken(accessToken)
-        .setCallback(pickerCallback)
-        .setTitle('Select Book Cover Photos')
-        .build();
+async function showPhotoPicker() {
+    try {
+        showInfo('books-from-feed', 'Opening Google Photos Picker...');
 
-    picker.setVisible(true);
+        // Create a new picker session
+        const session = await createPickerSession();
+        currentSessionId = session.id;
+
+        console.log('[BooksFromFeed] Picker session created:', currentSessionId);
+        console.log('[BooksFromFeed] Picker URI:', session.pickerUri);
+
+        // Open the picker in a new window
+        const pickerWindow = window.open(
+            session.pickerUri,
+            'Google Photos Picker',
+            'width=800,height=600,resizable=yes,scrollbars=yes'
+        );
+
+        if (!pickerWindow) {
+            throw new Error('Popup blocked. Please allow popups for this site.');
+        }
+
+        // Start polling for session completion
+        startPollingSession(session.id);
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Failed to show picker:', error);
+        showError('books-from-feed', 'Failed to open picker: ' + error.message);
+    }
 }
 
-async function pickerCallback(data) {
-    if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
-        const docs = data[google.picker.Response.DOCUMENTS];
-        console.log('[BooksFromFeed] User selected', docs.length, 'photos');
+async function createPickerSession() {
+    const response = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            // Allow multiple photo selection
+            'allowMultiple': true,
 
-        showInfo('books-from-feed', `Processing ${docs.length} selected photo(s)...`);
+            // Limit to 20 photos per session
+            'selectedItemLimit': 20,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[BooksFromFeed] Session creation failed:', response.status, errorText);
+        throw new Error(`Failed to create picker session: ${response.status} ${response.statusText}`);
+    }
+
+    const session = await response.json();
+    return session;
+}
+
+function startPollingSession(sessionId) {
+    // Clear any existing polling interval
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+
+    let pollCount = 0;
+    const maxPolls = 120; // Poll for up to 10 minutes (120 * 5 seconds)
+
+    showInfo('books-from-feed', 'Waiting for photo selection...');
+
+    pollingInterval = setInterval(async () => {
+        pollCount++;
+
+        if (pollCount >= maxPolls) {
+            clearInterval(pollingInterval);
+            showError('books-from-feed', 'Photo selection timed out. Please try again.');
+            return;
+        }
 
         try {
-            // Extract photo URLs and metadata
-            const photos = docs.map(doc => ({
-                id: doc[google.picker.Document.ID],
-                name: doc[google.picker.Document.NAME],
-                url: doc[google.picker.Document.URL],
-                thumbnailUrl: doc[google.picker.Document.THUMBNAILS] ?
-                    doc[google.picker.Document.THUMBNAILS][0].url : null,
-                description: doc[google.picker.Document.DESCRIPTION] || '',
-                mimeType: doc[google.picker.Document.MIME_TYPE],
-                lastEditedUtc: doc[google.picker.Document.LAST_EDITED_UTC]
-            }));
+            const sessionData = await getSession(sessionId);
+            console.log('[BooksFromFeed] Session state:', sessionData.mediaItemsSet ? 'COMPLETED' : 'PENDING');
 
-            // Send to backend for processing
-            const result = await postData('/api/books-from-feed/process-from-picker', { photos });
+            // Check if user has completed selection
+            if (sessionData.mediaItemsSet) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
 
-            displayProcessingResults(result);
-
-            if (result.processedCount > 0) {
-                showSuccess('books-from-feed', `Successfully processed ${result.processedCount} book(s) from ${result.totalPhotos} photo(s).`);
-
-                // Reload books list if on books section
-                if (window.loadBooks) {
-                    await loadBooks();
-                }
-            } else {
-                showInfo('books-from-feed', `No new books found in ${result.totalPhotos} photo(s).`);
+                // Process the selected photos
+                await handlePickerResults(sessionId);
             }
         } catch (error) {
-            showError('books-from-feed', 'Failed to process photos: ' + error.message);
+            console.error('[BooksFromFeed] Polling error:', error);
+            // Continue polling unless it's a fatal error
+            if (error.message.includes('404') || error.message.includes('403')) {
+                clearInterval(pollingInterval);
+                showError('books-from-feed', 'Session expired or unauthorized: ' + error.message);
+            }
         }
-    } else if (data[google.picker.Response.ACTION] == google.picker.Action.CANCEL) {
-        console.log('[BooksFromFeed] User cancelled picker');
+    }, 5000); // Poll every 5 seconds
+}
+
+async function getSession(sessionId) {
+    const response = await fetch(`https://photospicker.googleapis.com/v1/sessions/${sessionId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get session: ${response.status} ${response.statusText}`);
     }
+
+    const session = await response.json();
+    return session;
+}
+
+async function handlePickerResults(sessionId) {
+    try {
+        showInfo('books-from-feed', 'Processing selected photos...');
+
+        // Get the list of selected media items
+        const mediaItems = await listMediaItems(sessionId);
+
+        console.log('[BooksFromFeed] User selected', mediaItems.length, 'photos');
+
+        if (mediaItems.length === 0) {
+            showInfo('books-from-feed', 'No photos selected.');
+            return;
+        }
+
+        // Transform new Picker API response to match backend expectations
+        const photos = mediaItems.map(item => ({
+            id: item.mediaItem.id,
+            name: item.mediaItem.filename || item.mediaItem.id,
+            url: item.mediaItem.baseUrl,
+            thumbnailUrl: item.mediaItem.baseUrl, // Same as baseUrl, backend will add size params
+            description: item.mediaItem.description || '',
+            mimeType: item.mediaItem.mimeType,
+            lastEditedUtc: item.mediaItem.mediaMetadata?.creationTime || new Date().getTime()
+        }));
+
+        // Send to backend for processing
+        const result = await postData('/api/books-from-feed/process-from-picker', { photos });
+
+        displayProcessingResults(result);
+
+        if (result.processedCount > 0) {
+            showSuccess('books-from-feed', `Successfully processed ${result.processedCount} book(s) from ${result.totalPhotos} photo(s).`);
+
+            // Reload books list if on books section
+            if (window.loadBooks) {
+                await loadBooks();
+            }
+        } else {
+            showInfo('books-from-feed', `No new books found in ${result.totalPhotos} photo(s).`);
+        }
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Failed to process photos:', error);
+        showError('books-from-feed', 'Failed to process photos: ' + error.message);
+    }
+}
+
+async function listMediaItems(sessionId) {
+    const mediaItems = [];
+    let pageToken = null;
+
+    do {
+        const url = new URL(`https://photospicker.googleapis.com/v1/sessions/${sessionId}/mediaItems`);
+        if (pageToken) {
+            url.searchParams.set('pageToken', pageToken);
+        }
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to list media items: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.mediaItems) {
+            mediaItems.push(...data.mediaItems);
+        }
+
+        pageToken = data.nextPageToken;
+
+    } while (pageToken);
+
+    return mediaItems;
 }
 
 function displayProcessingResults(result) {
