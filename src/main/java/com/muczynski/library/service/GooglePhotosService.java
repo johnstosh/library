@@ -533,10 +533,10 @@ public class GooglePhotosService {
 
         try {
             do {
-                // Correct endpoint: sessionId is a query parameter, not part of the path
-                String url = "https://photospicker.googleapis.com/v1/mediaItems?sessionId=" + sessionId;
+                // Correct endpoint per REST API Reference: /v1/sessions/{sessionId}/mediaItems
+                String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId + "/mediaItems";
                 if (pageToken != null) {
-                    url += "&pageToken=" + pageToken;
+                    url += "?pageToken=" + pageToken;
                 }
 
                 logger.debug("Fetching media items from: {}", url);
@@ -556,14 +556,14 @@ public class GooglePhotosService {
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                     Map<String, Object> responseBody = response.getBody();
 
-                    logger.debug("Response body: {}", responseBody);
+                    logger.info("Response from Picker API: {}", responseBody);
 
                     @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> pickedItems = (List<Map<String, Object>>) responseBody.get("pickedMediaItemsDetails");
+                    List<Map<String, Object>> mediaItems = (List<Map<String, Object>>) responseBody.get("mediaItems");
 
-                    if (pickedItems != null && !pickedItems.isEmpty()) {
-                        allMediaItems.addAll(pickedItems);
-                        logger.debug("Fetched {} media items in this page", pickedItems.size());
+                    if (mediaItems != null && !mediaItems.isEmpty()) {
+                        allMediaItems.addAll(mediaItems);
+                        logger.info("Fetched {} media items in this page", mediaItems.size());
                     } else {
                         logger.warn("No media items found in response. Response keys: {}", responseBody.keySet());
                     }
