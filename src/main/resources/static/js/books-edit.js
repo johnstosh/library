@@ -57,11 +57,47 @@ async function prepareNewBookForPhoto(title) {
     // Set title to timestamp
     document.getElementById('new-book-title').value = title;
 
-    // Set author to the first one (id 1, assuming populated)
-    document.getElementById('book-author').value = '1';
+    try {
+        // Get first author or create "John Doe" if none exist
+        let authors = await fetchData('/api/authors');
+        let authorId;
+        if (authors && authors.length > 0) {
+            authorId = authors[0].id;
+        } else {
+            // Create a default author
+            const defaultAuthor = await postData('/api/authors', {
+                name: 'John Doe',
+                dateOfBirth: '',
+                dateOfDeath: '',
+                religiousAffiliation: '',
+                birthCountry: '',
+                nationality: '',
+                briefBiography: 'Default author created for book-by-photo'
+            });
+            authorId = defaultAuthor.id;
+            // Reload the authors dropdown
+            await populateBookDropdowns();
+        }
 
-    // Set library to the first one (id 1)
-    document.getElementById('book-library').value = '1';
+        // Get first library or create a default if none exist
+        let libraries = await fetchData('/api/libraries');
+        let libraryId;
+        if (libraries && libraries.length > 0) {
+            libraryId = libraries[0].id;
+        } else {
+            // Create a default library
+            const defaultLibrary = await postData('/api/libraries', {
+                name: 'Default Library',
+                hostname: window.location.hostname
+            });
+            libraryId = defaultLibrary.id;
+            // Reload the libraries dropdown
+            await populateBookDropdowns();
+        }
+
+        // Set author and library dropdowns
+        document.getElementById('book-author').value = authorId;
+        document.getElementById('book-library').value = libraryId;
 
     // Scroll to bottom
     window.scrollTo(0, document.body.scrollHeight);
@@ -69,8 +105,8 @@ async function prepareNewBookForPhoto(title) {
     // Save initial data to backend (minimal, just title/author/library)
     const initialData = {
         title: title,
-        authorId: '1',
-        libraryId: '1',
+        authorId: authorId,
+        libraryId: libraryId,
         publicationYear: '',
         publisher: '',
         plotSummary: '',
@@ -81,7 +117,7 @@ async function prepareNewBookForPhoto(title) {
         locNumber: '',
         statusReason: ''
     };
-    try {
+
         const createdBook = await postData('/api/books', initialData);
         document.getElementById('current-book-id').value = createdBook.id;
         // After save, make buttons available
