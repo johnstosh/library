@@ -85,7 +85,15 @@ public class GoogleOAuthController {
 
         logger.info("Constructed redirect URI: {}", redirectUri);
         logger.debug("Using Client ID: {}...", clientId.substring(0, Math.min(20, clientId.length())));
-        logger.debug("Using scope: {}", scope);
+
+        logger.info("===== REQUESTED SCOPES =====");
+        logger.info("Scopes being requested: {}", scope);
+        String[] requestedScopes = scope.split("\\s+");
+        logger.info("Number of scopes requested: {}", requestedScopes.length);
+        for (String requestedScope : requestedScopes) {
+            logger.info("  - {}", requestedScope);
+        }
+        logger.info("===== END REQUESTED SCOPES =====");
 
         // Build authorization URL with proper URL encoding
         String authUrl = UriComponentsBuilder.fromHttpUrl(authUri)
@@ -302,6 +310,34 @@ public class GoogleOAuthController {
 
             Map<String, Object> responseBody = response.getBody();
             logger.debug("Token exchange response contains keys: {}", responseBody.keySet());
+
+            // Log the granted scopes
+            if (responseBody.containsKey("scope")) {
+                String grantedScopes = (String) responseBody.get("scope");
+                logger.info("===== GRANTED SCOPES =====");
+                logger.info("Scopes returned by Google: {}", grantedScopes);
+
+                // Check each required scope
+                String[] requiredScopes = {
+                    "https://www.googleapis.com/auth/photoslibrary",
+                    "https://www.googleapis.com/auth/photoslibrary.readonly",
+                    "https://www.googleapis.com/auth/photoslibrary.readonly.originals",
+                    "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata",
+                    "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
+                    "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
+                    "https://www.googleapis.com/auth/photoslibrary.appendonly",
+                    "https://www.googleapis.com/auth/photoslibrary.sharing"
+                };
+
+                logger.info("Checking for required scopes:");
+                for (String requiredScope : requiredScopes) {
+                    boolean hasScope = grantedScopes != null && grantedScopes.contains(requiredScope);
+                    logger.info("  {} {}", hasScope ? "✓" : "✗", requiredScope);
+                }
+                logger.info("===== END GRANTED SCOPES =====");
+            } else {
+                logger.warn("Token response does not contain 'scope' field!");
+            }
 
             if (responseBody.containsKey("error")) {
                 String error = (String) responseBody.get("error");
