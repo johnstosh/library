@@ -128,8 +128,8 @@ public class BooksFromFeedService {
                 String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
                 String tempTitle = "Book_" + timestamp;
 
-                // Find or create a placeholder author (will be updated by generateTempBook)
-                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("Unknown Author");
+                // Find or create a placeholder author (will be updated by AI extraction)
+                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library (first library in database)
@@ -315,7 +315,7 @@ public class BooksFromFeedService {
                 String tempTitle = "Book_" + timestamp;
 
                 // Find or create a placeholder author (will be updated by AI extraction)
-                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("Unknown Author");
+                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library (first library in database)

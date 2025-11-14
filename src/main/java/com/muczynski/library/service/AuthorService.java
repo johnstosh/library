@@ -80,7 +80,7 @@ public class AuthorService {
      */
     public Author findOrCreateAuthor(String name) {
         if (name == null || name.trim().isEmpty()) {
-            name = "Unknown Author";
+            name = "John Doe";
         }
 
         Author existingAuthor = authorRepository.findByName(name);
