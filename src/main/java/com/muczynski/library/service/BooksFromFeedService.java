@@ -9,6 +9,7 @@ import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,9 @@ public class BooksFromFeedService {
 
     @Autowired
     private LibraryRepository libraryRepository;
+
+    @Autowired
+    private AuthorRepository authorRepository;
 
     /**
      * Process photos from Google Photos feed to create books
@@ -157,13 +161,21 @@ public class BooksFromFeedService {
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
                 BookDto fullBook = bookService.generateTempBook(bookId);
+
+                // Get author name from Author entity
+                Author bookAuthor = null;
+                if (fullBook.getAuthorId() != null) {
+                    bookAuthor = authorRepository.findById(fullBook.getAuthorId()).orElse(null);
+                }
+                String authorName = bookAuthor != null ? bookAuthor.getName() : "Unknown";
+
                 logger.info("Successfully generated book: title='{}', author='{}'",
-                        fullBook.getTitle(), fullBook.getAuthorName());
+                        fullBook.getTitle(), authorName);
 
                 processedBooks.add(Map.of(
                         "photoId", photoId,
                         "title", fullBook.getTitle(),
-                        "author", fullBook.getAuthorName(),
+                        "author", authorName,
                         "bookId", bookId
                 ));
 
@@ -294,14 +306,22 @@ public class BooksFromFeedService {
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
                 BookDto fullBook = bookService.generateTempBook(bookId);
+
+                // Get author name from Author entity
+                Author bookAuthor = null;
+                if (fullBook.getAuthorId() != null) {
+                    bookAuthor = authorRepository.findById(fullBook.getAuthorId()).orElse(null);
+                }
+                String authorName = bookAuthor != null ? bookAuthor.getName() : "Unknown";
+
                 logger.info("Successfully generated book: title='{}', author='{}'",
-                        fullBook.getTitle(), fullBook.getAuthorName());
+                        fullBook.getTitle(), authorName);
 
                 processedBooks.add(Map.of(
                         "photoId", photoId,
                         "photoName", photoName,
                         "title", fullBook.getTitle(),
-                        "author", fullBook.getAuthorName(),
+                        "author", authorName,
                         "bookId", bookId
                 ));
 
