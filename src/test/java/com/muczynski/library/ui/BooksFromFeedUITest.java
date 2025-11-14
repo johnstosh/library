@@ -285,6 +285,160 @@ public class BooksFromFeedUITest {
     }
 
     @Test
+    void testNewPickerAPIWorkflowWithPhotos() {
+        try {
+            login();
+            navigateToSection("books-from-feed");
+
+            // Mock Google Photos access token in user settings
+            page.evaluate("() => { " +
+                    "  window.testGooglePhotosAccessToken = 'test-mock-token-12345'; " +
+                    "}");
+
+            // Mock fetch to intercept Picker API calls
+            page.route("https://photospicker.googleapis.com/v1/sessions", route -> {
+                // Mock session creation response
+                String mockSessionResponse = "{" +
+                        "\"id\": \"test-session-with-photos\"," +
+                        "\"pickerUri\": \"about:blank\"," +
+                        "\"mediaItemsSet\": false" +
+                        "}";
+                route.fulfill(new Route.FulfillOptions()
+                        .setStatus(200)
+                        .setContentType("application/json")
+                        .setBody(mockSessionResponse));
+            });
+
+            // Mock session polling to return mediaItemsSet=true when complete
+            page.route("https://photospicker.googleapis.com/v1/sessions/test-session-with-photos", route -> {
+                String mockSessionStatusResponse = "{" +
+                        "\"id\": \"test-session-with-photos\"," +
+                        "\"mediaItemsSet\": true" +
+                        "}";
+                route.fulfill(new Route.FulfillOptions()
+                        .setStatus(200)
+                        .setContentType("application/json")
+                        .setBody(mockSessionStatusResponse));
+            });
+
+            // Mock backend media items endpoint with realistic data matching actual Picker API response structure
+            page.route("**/api/books-from-feed/picker-session/test-session-with-photos/media-items", route -> {
+                // Actual Picker API response structure: {id, createTime, type, mediaFile: {baseUrl, filename, mimeType}}
+                String mockMediaItemsResponse = "{" +
+                        "\"mediaItems\": [" +
+                        "  {" +
+                        "    \"id\": \"mock-photo-id-123\"," +
+                        "    \"createTime\": \"2025-11-13T17:39:59.820Z\"," +
+                        "    \"type\": \"PHOTO\"," +
+                        "    \"mediaFile\": {" +
+                        "      \"baseUrl\": \"https://lh3.googleusercontent.com/mock-photo-url\"," +
+                        "      \"filename\": \"test-book-photo.jpg\"," +
+                        "      \"mimeType\": \"image/jpeg\"" +
+                        "    }" +
+                        "  }" +
+                        "]," +
+                        "\"count\": 1" +
+                        "}";
+                route.fulfill(new Route.FulfillOptions()
+                        .setStatus(200)
+                        .setContentType("application/json")
+                        .setBody(mockMediaItemsResponse));
+            });
+
+            // Mock backend process-from-picker endpoint with successful processing result
+            page.route("**/api/books-from-feed/process-from-picker", route -> {
+                String mockProcessResponse = "{" +
+                        "\"processedCount\": 1," +
+                        "\"skippedCount\": 0," +
+                        "\"totalPhotos\": 1," +
+                        "\"processedBooks\": [" +
+                        "  {" +
+                        "    \"title\": \"Test Book from Photo\"," +
+                        "    \"author\": \"Test Author\"," +
+                        "    \"photoName\": \"test-book-photo.jpg\"" +
+                        "  }" +
+                        "]," +
+                        "\"skippedPhotos\": []" +
+                        "}";
+                route.fulfill(new Route.FulfillOptions()
+                        .setStatus(200)
+                        .setContentType("application/json")
+                        .setBody(mockProcessResponse));
+            });
+
+            // Override window.open to prevent actual popup
+            page.evaluate("() => { " +
+                    "  window.open = function() { " +
+                    "    console.log('Mock window.open called'); " +
+                    "    return { close: function() {} }; " +
+                    "  }; " +
+                    "}");
+
+            // Inject mock fetchData and postData functions for the test
+            page.evaluate("() => { " +
+                    "  window.fetchData = async function(url) { " +
+                    "    if (url.includes('user-settings')) { " +
+                    "      return { " +
+                    "        googlePhotosApiKey: 'test-mock-token-12345', " +
+                    "        username: 'librarian' " +
+                    "      }; " +
+                    "    } " +
+                    "    if (url.includes('picker-session')) { " +
+                    "      return { " +
+                    "        mediaItems: [" +
+                    "          {" +
+                    "            id: 'mock-photo-id-123'," +
+                    "            createTime: '2025-11-13T17:39:59.820Z'," +
+                    "            type: 'PHOTO'," +
+                    "            mediaFile: {" +
+                    "              baseUrl: 'https://lh3.googleusercontent.com/mock-photo-url'," +
+                    "              filename: 'test-book-photo.jpg'," +
+                    "              mimeType: 'image/jpeg'" +
+                    "            }" +
+                    "          }" +
+                    "        ]," +
+                    "        count: 1 " +
+                    "      }; " +
+                    "    } " +
+                    "    return {}; " +
+                    "  }; " +
+                    "  window.postData = async function(url, data) { " +
+                    "    return { " +
+                    "      processedCount: 1, " +
+                    "      skippedCount: 0, " +
+                    "      totalPhotos: 1, " +
+                    "      processedBooks: [" +
+                    "        {" +
+                    "          title: 'Test Book from Photo'," +
+                    "          author: 'Test Author'," +
+                    "          photoName: 'test-book-photo.jpg'" +
+                    "        }" +
+                    "      ], " +
+                    "      skippedPhotos: [] " +
+                    "    }; " +
+                    "  }; " +
+                    "}");
+
+            // Click process photos button
+            Locator processButton = page.locator("[data-test='process-photos-btn']");
+            processButton.click();
+
+            // Wait for success message about processing
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+            // Verify success message appears
+            Locator successMessage = page.locator("[data-test='form-success']");
+            successMessage.waitFor(new Locator.WaitForOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+            assertThat(successMessage).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            assertThat(successMessage).containsText("Successfully processed 1 book(s)");
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-new-picker-api-workflow-with-photos.png")));
+            throw e;
+        }
+    }
+
+    @Test
     void testPickerSessionPollingTimeout() {
         try {
             login();
