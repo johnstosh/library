@@ -188,11 +188,11 @@ public class BooksFromFeedUITest {
                         .setBody(mockSessionResponse));
             });
 
-            // Mock session polling to return COMPLETED state
+            // Mock session polling to return mediaItemsSet=true when complete
             page.route("https://photospicker.googleapis.com/v1/sessions/test-session-12345", route -> {
                 String mockSessionStatusResponse = "{" +
                         "\"id\": \"test-session-12345\"," +
-                        "\"state\": \"COMPLETED\"" +
+                        "\"mediaItemsSet\": true" +
                         "}";
                 route.fulfill(new Route.FulfillOptions()
                         .setStatus(200)

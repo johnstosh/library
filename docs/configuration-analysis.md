@@ -174,23 +174,25 @@ Add "Test Configuration" button that:
 **How It Works (New Session-Based Flow):**
 1. User clicks "Process Photos" button
 2. Frontend creates a Picker session via `POST https://photospicker.googleapis.com/v1/sessions`
-3. Popup window opens with Google's official Photos Picker UI
-4. User selects photos of books (up to 20)
-5. Frontend polls session every 5 seconds to detect completion
-6. When `mediaItemsSet` is true, fetch selected items via `GET .../sessions/{id}/mediaItems`
-7. Selected photos are downloaded using Google Photos baseUrls
-8. AI (Grok) analyzes each photo:
+3. Popup window opens with Google's official Photos Picker UI (pickerUri + /autoclose)
+4. User selects photos of books
+5. Picker window auto-closes after selection (web best practice)
+6. Frontend polls session every 5 seconds checking `mediaItemsSet` field
+7. When `mediaItemsSet === true`, fetch selected items via `GET .../sessions/{id}/mediaItems`
+8. Selected photos are downloaded using Google Photos baseUrls
+9. AI (Grok) analyzes each photo:
    - Detects if it's a book cover
    - Extracts title and author
-9. Book entries created in library
-10. Results displayed to user
+10. Book entries created in library
+11. Results displayed to user
 
 **Technical Implementation:**
 - **No gapi.load('picker')** - Removed legacy Google API loader
 - **REST-only flow** - Pure fetch() calls to Picker API endpoints
-- **Polling mechanism** - 5-second intervals, 10-minute timeout
+- **Polling mechanism** - 5-second intervals, checks `mediaItemsSet` boolean field
+- **Auto-close window** - Appends `/autoclose` to pickerUri for automatic window closing
 - **Popup-based** - Opens in new window instead of iframe
-- **Backward compatible** - Backend endpoints unchanged
+- **Direct API calls** - All Picker endpoints called directly from browser with OAuth token
 
 **Benefits:**
 - No more 403 authentication errors from legacy Picker

@@ -40,9 +40,12 @@ async function showPhotoPicker() {
         console.log('[BooksFromFeed] Picker session created:', currentSessionId);
         console.log('[BooksFromFeed] Picker URI:', session.pickerUri);
 
+        // Append /autoclose to automatically close the picker window after selection (web best practice)
+        const pickerUriWithAutoClose = session.pickerUri + '/autoclose';
+
         // Open the picker in a new window
         const pickerWindow = window.open(
-            session.pickerUri,
+            pickerUriWithAutoClose,
             'Google Photos Picker',
             'width=800,height=600,resizable=yes,scrollbars=yes'
         );
@@ -103,16 +106,15 @@ function startPollingSession(sessionId) {
         try {
             const sessionData = await getSession(sessionId);
 
-            // Debug: Log full session response to understand the structure
-            console.log('[BooksFromFeed] Full session data:', JSON.stringify(sessionData, null, 2));
-            console.log('[BooksFromFeed] Session state:', sessionData.state || 'UNKNOWN');
-            console.log('[BooksFromFeed] Session mediaItemsSet:', sessionData.mediaItemsSet);
-
             // Check if user has completed selection
-            // The API returns mediaItemsSet=true when photos are selected
+            // Per Google's docs: mediaItemsSet=true when user finishes selecting photos
+            console.log('[BooksFromFeed] Polling session... mediaItemsSet:', sessionData.mediaItemsSet);
+
             if (sessionData.mediaItemsSet === true) {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
+
+                console.log('[BooksFromFeed] User completed photo selection');
 
                 // Process the selected photos
                 await handlePickerResults(sessionId);
