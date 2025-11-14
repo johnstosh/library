@@ -13,4 +13,5 @@ import org.springframework.stereotype.Repository;
 public interface AuthorRepository extends JpaRepository<Author, Long> {
     Page<Author> findByNameContainingIgnoreCase(String name, Pageable pageable);
     void deleteByReligiousAffiliation(String religiousAffiliation);
+    Author findByName(String name);
 }

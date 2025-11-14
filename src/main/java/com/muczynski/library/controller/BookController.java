@@ -7,6 +7,7 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.PhotoService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +59,7 @@ public class BookController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createBook(@RequestBody BookDto bookDto) {
+    public ResponseEntity<?> createBook(@Valid @RequestBody BookDto bookDto) {
         try {
             BookDto created = bookService.createBook(bookDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -70,7 +71,7 @@ public class BookController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updateBook(@PathVariable Long id, @RequestBody BookDto bookDto) {
+    public ResponseEntity<?> updateBook(@PathVariable Long id, @Valid @RequestBody BookDto bookDto) {
         try {
             BookDto updated = bookService.updateBook(id, bookDto);
             return ResponseEntity.ok(updated);

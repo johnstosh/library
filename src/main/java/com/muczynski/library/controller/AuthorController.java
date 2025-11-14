@@ -7,6 +7,7 @@ import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.PhotoService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,7 +81,7 @@ public class AuthorController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createAuthor(@RequestBody AuthorDto authorDto) {
+    public ResponseEntity<?> createAuthor(@Valid @RequestBody AuthorDto authorDto) {
         try {
             AuthorDto created = authorService.createAuthor(authorDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -92,7 +93,7 @@ public class AuthorController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updateAuthor(@PathVariable Long id, @RequestBody AuthorDto authorDto) {
+    public ResponseEntity<?> updateAuthor(@PathVariable Long id, @Valid @RequestBody AuthorDto authorDto) {
         try {
             AuthorDto updated = authorService.updateAuthor(id, authorDto);
             return ResponseEntity.ok(updated);

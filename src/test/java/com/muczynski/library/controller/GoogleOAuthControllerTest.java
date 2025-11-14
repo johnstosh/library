@@ -69,6 +69,42 @@ class GoogleOAuthControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "testuser")
+    void testAuthorize_ContainsAllRequiredScopes() {
+        // Act - Get the redirect Location header
+        String locationHeader = given()
+            .param("origin", "http://localhost:8080")
+            .auth().none()
+        .when()
+            .get("/api/oauth/google/authorize")
+        .then()
+            .statusCode(302)
+            .extract()
+            .header("Location");
+
+        // Assert - Verify all 8 Google Photos scopes are present in the authorization URL
+        // These scopes are required for the Google Photos Picker API
+        org.junit.jupiter.api.Assertions.assertAll(
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary"),
+                "Should contain photoslibrary scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly"),
+                "Should contain photoslibrary.readonly scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly.originals"),
+                "Should contain photoslibrary.readonly.originals scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.edit.appcreateddata"),
+                "Should contain photoslibrary.edit.appcreateddata scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly.appcreateddata"),
+                "Should contain photoslibrary.readonly.appcreateddata scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photospicker.mediaitems.readonly"),
+                "Should contain photospicker.mediaitems.readonly scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.appendonly"),
+                "Should contain photoslibrary.appendonly scope"),
+            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.sharing"),
+                "Should contain photoslibrary.sharing scope")
+        );
+    }
+
+    @Test
     void testAuthorize_Unauthorized() {
         // Act & Assert - No authentication
         given()

@@ -73,4 +73,25 @@ public class AuthorService {
         authorRepository.deleteById(id);
     }
 
+    /**
+     * Find or create an author by name
+     * @param name Author name
+     * @return The existing or newly created author
+     */
+    public Author findOrCreateAuthor(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            name = "John Doe";
+        }
+
+        Author existingAuthor = authorRepository.findByName(name);
+        if (existingAuthor != null) {
+            return existingAuthor;
+        }
+
+        // Create new author
+        Author newAuthor = new Author();
+        newAuthor.setName(name);
+        return authorRepository.save(newAuthor);
+    }
+
 }

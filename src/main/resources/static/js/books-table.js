@@ -36,7 +36,9 @@ async function loadBooks() {
             row.appendChild(loansCell);
 
             const actionsCell = document.createElement('td');
-            if (isLibrarian) {
+            actionsCell.setAttribute('data-test', 'book-actions');
+            // Only librarians can edit/delete books
+            if (window.isLibrarian) {
                 const editBtn = document.createElement('button');
                 editBtn.setAttribute('data-test', 'edit-book-btn');
                 editBtn.textContent = '✏️';

@@ -15,3 +15,9 @@ Thumbs.db
 bin
 .aider*
 *.png
+
+# Database
+data/
+*.db
+*.mv.db
+*.trace.db
