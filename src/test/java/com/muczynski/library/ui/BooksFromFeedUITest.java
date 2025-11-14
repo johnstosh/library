@@ -200,9 +200,12 @@ public class BooksFromFeedUITest {
                         .setBody(mockSessionStatusResponse));
             });
 
-            // Mock Google Picker API media items endpoint (called directly, not through backend)
-            page.route("https://photospicker.googleapis.com/v1/sessions/test-session-12345/mediaItems", route -> {
-                String mockMediaItemsResponse = "{\"mediaItems\": []}";
+            // Mock backend media items endpoint (proxied due to CORS restrictions)
+            page.route("**/api/books-from-feed/picker-session/test-session-12345/media-items", route -> {
+                String mockMediaItemsResponse = "{" +
+                        "\"mediaItems\": []," +
+                        "\"count\": 0" +
+                        "}";
                 route.fulfill(new Route.FulfillOptions()
                         .setStatus(200)
                         .setContentType("application/json")
@@ -239,6 +242,12 @@ public class BooksFromFeedUITest {
                     "      return { " +
                     "        googlePhotosApiKey: 'test-mock-token-12345', " +
                     "        username: 'librarian' " +
+                    "      }; " +
+                    "    } " +
+                    "    if (url.includes('picker-session')) { " +
+                    "      return { " +
+                    "        mediaItems: [], " +
+                    "        count: 0 " +
                     "      }; " +
                     "    } " +
                     "    return {}; " +

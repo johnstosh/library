@@ -193,21 +193,16 @@ async function handlePickerResults(sessionId) {
 }
 
 async function listMediaItems(sessionId) {
-    // Fetch media items directly from Google Photos Picker API
-    const response = await fetch(`https://photospicker.googleapis.com/v1/sessions/${sessionId}/mediaItems`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    // Fetch media items via backend to avoid CORS restrictions
+    // Google's Picker API blocks CORS on the mediaItems endpoint
+    const response = await fetchData(`/api/books-from-feed/picker-session/${sessionId}/media-items`);
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[BooksFromFeed] MediaItems fetch failed:', response.status, errorText);
-        throw new Error(`Failed to fetch media items: ${response.status} ${response.statusText}`);
+    if (response.error) {
+        console.error('[BooksFromFeed] MediaItems fetch failed:', response.error);
+        throw new Error(response.error);
     }
 
-    const data = await response.json();
-    return data.mediaItems || [];
+    return response.mediaItems || [];
 }
 
 function displayProcessingResults(result) {

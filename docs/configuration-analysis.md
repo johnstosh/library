@@ -178,13 +178,14 @@ Add "Test Configuration" button that:
 4. User selects photos of books
 5. Picker window auto-closes after selection (web best practice)
 6. Frontend polls session every 5 seconds checking `mediaItemsSet` field
-7. When `mediaItemsSet === true`, fetch selected items via `GET .../sessions/{id}/mediaItems`
-8. Selected photos are downloaded using Google Photos baseUrls
-9. AI (Grok) analyzes each photo:
+7. When `mediaItemsSet === true`, fetch selected items via backend proxy
+8. Backend fetches from `GET .../sessions/{id}/mediaItems` (CORS workaround)
+9. Selected photos are downloaded using Google Photos baseUrls
+10. AI (Grok) analyzes each photo:
    - Detects if it's a book cover
    - Extracts title and author
-10. Book entries created in library
-11. Results displayed to user
+11. Book entries created in library
+12. Results displayed to user
 
 **Technical Implementation:**
 - **No gapi.load('picker')** - Removed legacy Google API loader
@@ -192,7 +193,8 @@ Add "Test Configuration" button that:
 - **Polling mechanism** - 5-second intervals, checks `mediaItemsSet` boolean field
 - **Auto-close window** - Appends `/autoclose` to pickerUri for automatic window closing
 - **Popup-based** - Opens in new window instead of iframe
-- **Direct API calls** - All Picker endpoints called directly from browser with OAuth token
+- **Hybrid architecture** - Session create/poll go direct to Google; media items via backend proxy
+- **CORS workaround** - Backend proxy for `/mediaItems` endpoint (Google blocks CORS)
 
 **Benefits:**
 - No more 403 authentication errors from legacy Picker
