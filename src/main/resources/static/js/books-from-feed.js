@@ -102,19 +102,20 @@ function startPollingSession(sessionId) {
 
         try {
             const sessionData = await getSession(sessionId);
+
+            // Debug: Log full session response to understand the structure
+            console.log('[BooksFromFeed] Full session data:', JSON.stringify(sessionData, null, 2));
             console.log('[BooksFromFeed] Session state:', sessionData.state || 'UNKNOWN');
+            console.log('[BooksFromFeed] Session mediaItemsSet:', sessionData.mediaItemsSet);
 
             // Check if user has completed selection
-            if (sessionData.state === 'COMPLETED') {
+            // The API returns mediaItemsSet=true when photos are selected
+            if (sessionData.mediaItemsSet === true) {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
 
                 // Process the selected photos
                 await handlePickerResults(sessionId);
-            } else if (sessionData.state === 'CANCELLED' || sessionData.state === 'EXPIRED') {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
-                showInfo('books-from-feed', 'Photo selection was cancelled or expired.');
             }
         } catch (error) {
             console.error('[BooksFromFeed] Polling error:', error);
