@@ -160,14 +160,15 @@ async function handlePickerResults(sessionId) {
         }
 
         // Transform new Picker API response to match backend expectations
+        // Actual API structure: {id, createTime, type, mediaFile: {baseUrl, filename, mimeType}}
         const photos = mediaItems.map(item => ({
-            id: item.mediaItem.id,
-            name: item.mediaItem.filename || item.mediaItem.id,
-            url: item.mediaItem.baseUrl,
-            thumbnailUrl: item.mediaItem.baseUrl, // Same as baseUrl, backend will add size params
-            description: item.mediaItem.description || '',
-            mimeType: item.mediaItem.mimeType,
-            lastEditedUtc: item.mediaItem.mediaMetadata?.creationTime || new Date().getTime()
+            id: item.id,
+            name: item.mediaFile.filename || item.id,
+            url: item.mediaFile.baseUrl,
+            thumbnailUrl: item.mediaFile.baseUrl, // Same as baseUrl, backend will add size params
+            description: '', // Not present in Picker API response
+            mimeType: item.mediaFile.mimeType,
+            lastEditedUtc: item.createTime || new Date().getTime()
         }));
 
         // Send to backend for processing
