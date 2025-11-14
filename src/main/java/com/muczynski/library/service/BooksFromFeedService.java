@@ -410,9 +410,16 @@ public class BooksFromFeedService {
 
     /**
      * Download photo from a URL (from Google Photos Picker)
-     * Note: This may fail with 403 if the URL requires authentication
+     * Google Photos baseUrl requires =d parameter to download the image
+     * See: https://developers.google.com/photos/library/guides/access-media-items
      */
     private byte[] downloadPhotoFromUrl(String url) {
+        // Append =d parameter to download the image with metadata
+        // (required by Google Photos API to actually download the image file)
+        if (!url.contains("=")) {
+            url = url + "=d";
+        }
+
         logger.debug("Downloading photo from URL: {}", url);
 
         try {
