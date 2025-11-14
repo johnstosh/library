@@ -96,10 +96,13 @@ log "Running Docker image on http://localhost:8080..."
 docker run --rm --name application -p 8080:8080 \
   --network app-network \
   -e PORT=8080 \
+  -e GCP_PROJECT_ID="$GCP_PROJECT_ID" \
   -e DB_PASSWORD="$DB_PASSWORD" \
+  -e SPRING_PROFILES_ACTIVE=dev \
   -e SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:5432/${SERVICE_NAME}" \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD" \
+  -e SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver \
   -e SPRING_JPA_HIBERNATE_DDL_AUTO=update \
   -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect \
   -e SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION=true \
