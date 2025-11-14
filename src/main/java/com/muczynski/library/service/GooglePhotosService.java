@@ -308,7 +308,7 @@ public class GooglePhotosService {
     /**
      * Get valid access token, refreshing if necessary
      */
-    private String getValidAccessToken(String username) {
+    public String getValidAccessToken(String username) {
         logger.debug("Getting valid access token for user: {}", username);
 
         User user = userRepository.findByUsernameIgnoreCase(username)

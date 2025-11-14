@@ -287,6 +287,10 @@ public class BooksFromFeedService {
         String username = authentication.getName();
         logger.info("Processing photos for user: {}", username);
 
+        // Get valid access token for downloading photos from Picker baseUrl
+        // Picker API requires OAuth bearer token in Authorization header when downloading
+        String accessToken = googlePhotosService.getValidAccessToken(username);
+
         List<Map<String, Object>> processedBooks = new ArrayList<>();
         List<Map<String, Object>> skippedPhotos = new ArrayList<>();
 
@@ -313,8 +317,9 @@ public class BooksFromFeedService {
                 }
 
                 // Download the photo from the URL provided by Picker
+                // Picker API requires OAuth authentication for baseUrl downloads
                 logger.debug("Downloading photo {} from URL: {}", photoName, photoUrl);
-                byte[] photoBytes = downloadPhotoFromUrl(photoUrl);
+                byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
                 logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
 
                 // Determine if this is a book photo using AI
@@ -410,10 +415,12 @@ public class BooksFromFeedService {
 
     /**
      * Download photo from a URL (from Google Photos Picker)
-     * Google Photos baseUrl requires =d parameter to download the image
-     * See: https://developers.google.com/photos/library/guides/access-media-items
+     * Google Photos Picker API requires:
+     * 1. Append =d parameter to download the image with metadata
+     * 2. Include OAuth bearer token in Authorization header
+     * See: https://developers.google.com/photos/picker/guides/media-items
      */
-    private byte[] downloadPhotoFromUrl(String url) {
+    private byte[] downloadPhotoFromUrl(String url, String accessToken) {
         // Append =d parameter to download the image with metadata
         // (required by Google Photos API to actually download the image file)
         if (!url.contains("=")) {
@@ -428,6 +435,9 @@ public class BooksFromFeedService {
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(30000);
+
+            // Picker API requires OAuth bearer token for downloading baseUrl
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
 
             int responseCode = connection.getResponseCode();
             logger.debug("HTTP response code: {}", responseCode);
