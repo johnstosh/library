@@ -35,6 +35,12 @@ public class BooksFromFeedService {
     @Autowired
     private BookService bookService;
 
+    @Autowired
+    private AuthorService authorService;
+
+    @Autowired
+    private com.muczynski.library.repository.LibraryRepository libraryRepository;
+
     /**
      * Process photos from Google Photos feed to create books
      * @return Map containing results of the processing
@@ -143,6 +149,18 @@ public class BooksFromFeedService {
                 String authorName = (String) bookMetadata.get("author");
                 logger.info("Extracted metadata from photo {}: title='{}', author='{}'", photoId, title, authorName);
 
+                // Find or create author
+                com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(authorName);
+                logger.debug("Using author: {} (ID: {})", author.getName(), author.getId());
+
+                // Get default library (first library in database)
+                java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
+                if (libraries.isEmpty()) {
+                    throw new RuntimeException("No library found in database. Please create a library first.");
+                }
+                Long libraryId = libraries.get(0).getId();
+                logger.debug("Using library ID: {}", libraryId);
+
                 // Create a temporary book entry with just the title
                 // The AI will fill in the details from the photo
                 Map<String, Object> tempBookData = new HashMap<>();
@@ -152,6 +170,8 @@ public class BooksFromFeedService {
                 logger.info("Creating book entry for: '{}'", title);
                 com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
                 tempBook.setTitle(title);
+                tempBook.setAuthorId(author.getId());
+                tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
 
@@ -364,10 +384,24 @@ public class BooksFromFeedService {
                 String authorName = (String) bookMetadata.get("author");
                 logger.info("Extracted metadata from photo {}: title='{}', author='{}'", photoName, title, authorName);
 
+                // Find or create author
+                com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(authorName);
+                logger.debug("Using author: {} (ID: {})", author.getName(), author.getId());
+
+                // Get default library (first library in database)
+                java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
+                if (libraries.isEmpty()) {
+                    throw new RuntimeException("No library found in database. Please create a library first.");
+                }
+                Long libraryId = libraries.get(0).getId();
+                logger.debug("Using library ID: {}", libraryId);
+
                 // Create book entry
                 logger.info("Creating book entry for: '{}'", title);
                 com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
                 tempBook.setTitle(title);
+                tempBook.setAuthorId(author.getId());
+                tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
 
