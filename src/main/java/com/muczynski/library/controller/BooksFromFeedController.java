@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,13 +21,45 @@ public class BooksFromFeedController {
     private BooksFromFeedService booksFromFeedService;
 
     /**
-     * Process photos from Google Photos to create books
+     * Process photos from Google Photos Library API (complex - has 403 scope issues)
      * @return Processing results
      */
     @PostMapping("/process")
     public ResponseEntity<Map<String, Object>> processPhotos() {
         try {
             Map<String, Object> result = booksFromFeedService.processPhotosFromFeed();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage(),
+                    "processedCount", 0,
+                    "skippedCount", 0,
+                    "totalPhotos", 0
+            ));
+        }
+    }
+
+    /**
+     * Process photos selected via Google Photos Picker API
+     * @param request Contains 'photos' array with photo metadata from Picker
+     * @return Processing results
+     */
+    @PostMapping("/process-from-picker")
+    public ResponseEntity<Map<String, Object>> processPhotosFromPicker(@RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
+
+            if (photos == null || photos.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "No photos provided",
+                        "processedCount", 0,
+                        "skippedCount", 0,
+                        "totalPhotos", 0
+                ));
+            }
+
+            Map<String, Object> result = booksFromFeedService.processPhotosFromPicker(photos);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

@@ -1,41 +1,107 @@
 // (c) Copyright 2025 by Muczynski
+// Books-from-Feed using Google Photos Picker API
+
+let pickerApiLoaded = false;
+let accessToken = null;
 
 async function loadBooksFromFeedSection() {
     console.log('[BooksFromFeed] Loading books-from-feed section');
     clearError('books-from-feed');
+
+    // Load Google Picker API
+    loadGooglePickerAPI();
+}
+
+function loadGooglePickerAPI() {
+    if (pickerApiLoaded) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => {
+        gapi.load('picker', () => {
+            console.log('[BooksFromFeed] Google Picker API loaded');
+            pickerApiLoaded = true;
+        });
+    };
+    document.head.appendChild(script);
 }
 
 async function processPhotosFromFeed() {
-    const processBtn = document.getElementById('process-photos-btn');
-    const originalText = processBtn.textContent;
+    clearError('books-from-feed');
 
+    if (!pickerApiLoaded) {
+        showError('books-from-feed', 'Google Picker API is still loading. Please wait and try again.');
+        return;
+    }
+
+    // Get access token from current user
     try {
-        processBtn.disabled = true;
-        processBtn.textContent = 'Processing...';
-        document.body.style.cursor = 'wait';
-
-        clearError('books-from-feed');
-        showInfo('books-from-feed', 'Processing photos from Google Photos feed... This may take several minutes.');
-
-        const result = await postData('/api/books-from-feed/process', {});
-
-        document.body.style.cursor = 'default';
-        processBtn.disabled = false;
-        processBtn.textContent = originalText;
-
-        displayProcessingResults(result);
-
-        if (result.processedCount > 0) {
-            showSuccess('books-from-feed', `Successfully processed ${result.processedCount} book(s) from ${result.totalPhotos} photo(s).`);
-        } else {
-            showInfo('books-from-feed', `No new books found in ${result.totalPhotos} photo(s).`);
+        const user = await fetchData('/api/user-settings');
+        if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
+            showError('books-from-feed', 'Please authorize Google Photos in Settings first.');
+            return;
         }
+        accessToken = user.googlePhotosApiKey;
 
+        // Show the picker
+        showPhotoPicker();
     } catch (error) {
-        document.body.style.cursor = 'default';
-        processBtn.disabled = false;
-        processBtn.textContent = originalText;
-        showError('books-from-feed', 'Failed to process photos: ' + error.message);
+        showError('books-from-feed', 'Failed to get authorization: ' + error.message);
+    }
+}
+
+function showPhotoPicker() {
+    // Build and show the picker
+    const picker = new google.picker.PickerBuilder()
+        .addView(google.picker.ViewId.PHOTOS)
+        .setOAuthToken(accessToken)
+        .setCallback(pickerCallback)
+        .setTitle('Select Book Cover Photos')
+        .build();
+
+    picker.setVisible(true);
+}
+
+async function pickerCallback(data) {
+    if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
+        const docs = data[google.picker.Response.DOCUMENTS];
+        console.log('[BooksFromFeed] User selected', docs.length, 'photos');
+
+        showInfo('books-from-feed', `Processing ${docs.length} selected photo(s)...`);
+
+        try {
+            // Extract photo URLs and metadata
+            const photos = docs.map(doc => ({
+                id: doc[google.picker.Document.ID],
+                name: doc[google.picker.Document.NAME],
+                url: doc[google.picker.Document.URL],
+                thumbnailUrl: doc[google.picker.Document.THUMBNAILS] ?
+                    doc[google.picker.Document.THUMBNAILS][0].url : null,
+                description: doc[google.picker.Document.DESCRIPTION] || '',
+                mimeType: doc[google.picker.Document.MIME_TYPE],
+                lastEditedUtc: doc[google.picker.Document.LAST_EDITED_UTC]
+            }));
+
+            // Send to backend for processing
+            const result = await postData('/api/books-from-feed/process-from-picker', { photos });
+
+            displayProcessingResults(result);
+
+            if (result.processedCount > 0) {
+                showSuccess('books-from-feed', `Successfully processed ${result.processedCount} book(s) from ${result.totalPhotos} photo(s).`);
+
+                // Reload books list if on books section
+                if (window.loadBooks) {
+                    await loadBooks();
+                }
+            } else {
+                showInfo('books-from-feed', `No new books found in ${result.totalPhotos} photo(s).`);
+            }
+        } catch (error) {
+            showError('books-from-feed', 'Failed to process photos: ' + error.message);
+        }
+    } else if (data[google.picker.Response.ACTION] == google.picker.Action.CANCEL) {
+        console.log('[BooksFromFeed] User cancelled picker');
     }
 }
 
@@ -51,10 +117,9 @@ function displayProcessingResults(result) {
             <h5>Processing Summary</h5>
         </div>
         <div class="card-body">
-            <p><strong>Total Photos Scanned:</strong> ${result.totalPhotos}</p>
+            <p><strong>Total Photos Selected:</strong> ${result.totalPhotos}</p>
             <p><strong>Books Created:</strong> ${result.processedCount}</p>
             <p><strong>Photos Skipped:</strong> ${result.skippedCount}</p>
-            <p><strong>Last Photo Timestamp:</strong> ${formatTimestamp(result.lastTimestamp)}</p>
         </div>
     `;
     resultsContainer.appendChild(summaryCard);
@@ -73,7 +138,7 @@ function displayProcessingResults(result) {
                         <tr>
                             <th>Title</th>
                             <th>Author</th>
-                            <th>Photo ID</th>
+                            <th>Photo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,7 +146,7 @@ function displayProcessingResults(result) {
                             <tr>
                                 <td>${escapeHtml(book.title)}</td>
                                 <td>${escapeHtml(book.author)}</td>
-                                <td><small>${escapeHtml(book.photoId)}</small></td>
+                                <td><small>${escapeHtml(book.photoName || book.photoId)}</small></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -103,14 +168,14 @@ function displayProcessingResults(result) {
                 <table class="table table-sm">
                     <thead>
                         <tr>
-                            <th>Photo ID</th>
+                            <th>Photo</th>
                             <th>Reason</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${result.skippedPhotos.map(photo => `
                             <tr>
-                                <td><small>${escapeHtml(photo.id)}</small></td>
+                                <td><small>${escapeHtml(photo.name || photo.id)}</small></td>
                                 <td><small>${escapeHtml(photo.reason)}</small></td>
                             </tr>
                         `).join('')}
@@ -119,16 +184,6 @@ function displayProcessingResults(result) {
             </div>
         `;
         resultsContainer.appendChild(skippedCard);
-    }
-}
-
-function formatTimestamp(timestamp) {
-    if (!timestamp) return 'N/A';
-    try {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
-    } catch (e) {
-        return timestamp;
     }
 }
 
