@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -32,4 +34,21 @@ public class Photo {
     private Author author;
 
     private Integer photoOrder;
+
+    // Google Photos backup fields
+    private String permanentId;  // Google Photos permanent ID
+
+    private LocalDateTime backedUpAt;  // Timestamp when photo was backed up
+
+    @Enumerated(EnumType.STRING)
+    private BackupStatus backupStatus;  // Status of the backup
+
+    private String backupErrorMessage;  // Error message if backup failed
+
+    public enum BackupStatus {
+        PENDING,      // Not yet backed up
+        IN_PROGRESS,  // Currently being backed up
+        COMPLETED,    // Successfully backed up
+        FAILED        // Backup failed
+    }
 }
