@@ -67,6 +67,37 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Add photo to book using raw image bytes and content type
+     * Used by books-from-feed when downloading photos from Google Photos
+     */
+    @Transactional
+    public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType) {
+        try {
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+            List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setBook(book);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.debug("Added photo to book ID {} with order {}", bookId, savedPhoto.getPhotoOrder());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add photo from bytes to book ID {}: {}", bookId, e.getMessage(), e);
+            throw new RuntimeException("Failed to store photo data: " + e.getMessage(), e);
+        }
+    }
+
     @Transactional
     public void deleteAuthorPhoto(Long authorId, Long photoId) {
         try {

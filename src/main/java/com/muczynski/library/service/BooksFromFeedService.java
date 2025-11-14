@@ -39,10 +39,10 @@ public class BooksFromFeedService {
     private AuthorService authorService;
 
     @Autowired
-    private com.muczynski.library.repository.LibraryRepository libraryRepository;
+    private PhotoService photoService;
 
     @Autowired
-    private BookPhotoProcessingService bookPhotoProcessingService;
+    private com.muczynski.library.repository.LibraryRepository libraryRepository;
 
     /**
      * Process photos from Google Photos feed to create books
@@ -112,33 +112,20 @@ public class BooksFromFeedService {
                 byte[] photoBytes = googlePhotosService.downloadPhoto(baseUrl);
                 logger.info("Downloaded photo {} ({} bytes)", photoId, photoBytes.length);
 
-                // Determine if this is a book photo using AI
-                logger.info("Asking AI if photo {} is a book photo...", photoId);
-                if (!bookPhotoProcessingService.isBookPhoto(photoBytes, "image/jpeg")) {
-                    logger.info("Skipping photo {} - not a book photo", photoId);
-                    skippedPhotos.add(Map.of(
-                            "id", photoId,
-                            "reason", "Not a book photo"
-                    ));
-                    continue;
-                }
-
-                // Create temporary book with timestamp-based name
-                // This matches the books-from-photo workflow
+                // Create temporary book with timestamp-based name (shared workflow)
                 String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
                 String tempTitle = "Book_" + timestamp;
 
-                // Find or create a placeholder author (will be updated by AI extraction)
+                // Find or create placeholder author
                 com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
-                // Get default library (first library in database)
+                // Get default library
                 java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
                 if (libraries.isEmpty()) {
                     throw new RuntimeException("No library found in database. Please create a library first.");
                 }
                 Long libraryId = libraries.get(0).getId();
-                logger.debug("Using library ID: {}", libraryId);
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoId);
@@ -149,66 +136,26 @@ public class BooksFromFeedService {
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
 
-                // Create the book
                 com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
-                logger.info("Created temporary book with ID: {} and title: '{}'", bookId, tempTitle);
+                logger.info("Created temporary book with ID: {}", bookId);
 
-                // Attach photo to book (need to save to database)
-                // TODO: Save photo to book's photo collection
-                // For now, we'll just use generateTempBook with the downloaded bytes
+                // Save photo to database
+                logger.info("Saving photo to book {}", bookId);
+                photoService.addPhotoFromBytes(bookId, photoBytes, "image/jpeg");
 
-                // Use generateTempBook to extract all metadata with AI
-                // This is the shared workflow that provides comprehensive Catholic analysis
-                logger.info("Generating full book details from photo using AI for book ID: {}", bookId);
-                try {
-                    // Note: generateTempBook expects photo to be in database
-                    // We need to save photoBytes first - for now skipping this step
-                    // TODO: Add photo save step before calling generateTempBook
+                // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
+                logger.info("Generating full book details using AI for book {}", bookId);
+                com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
+                logger.info("Successfully generated book: title='{}', author='{}'",
+                        fullBook.getTitle(), fullBook.getAuthorName());
 
-                    // com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
-                    // logger.info("Successfully generated book details: title='{}', author='{}'",
-                    //         fullBook.getTitle(), fullBook.getAuthorName());
-
-                    // For now, just extract basic metadata since we need photo DB integration
-                    Map<String, Object> bookMetadata = bookPhotoProcessingService.extractBasicMetadata(photoBytes, "image/jpeg");
-                    if (bookMetadata != null && bookMetadata.containsKey("title")) {
-                        String extractedTitle = (String) bookMetadata.get("title");
-                        String extractedAuthor = (String) bookMetadata.get("author");
-
-                        // Update book with extracted title
-                        savedBook.setTitle(extractedTitle);
-                        com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(extractedAuthor);
-                        savedBook.setAuthorId(author.getId());
-                        savedBook = bookService.updateBook(bookId, savedBook);
-
-                        logger.info("Updated book {} with title='{}', author='{}'", bookId, extractedTitle, extractedAuthor);
-
-                        processedBooks.add(Map.of(
-                                "photoId", photoId,
-                                "title", extractedTitle,
-                                "author", extractedAuthor,
-                                "bookId", bookId
-                        ));
-                    } else {
-                        logger.warn("Failed to extract metadata for photo {}, keeping temporary book", photoId);
-                        processedBooks.add(Map.of(
-                                "photoId", photoId,
-                                "title", tempTitle,
-                                "author", "Unknown",
-                                "bookId", bookId
-                        ));
-                    }
-                } catch (Exception e) {
-                    logger.error("Error generating book details for book {}: {}", bookId, e.getMessage());
-                    // Keep the temporary book even if generation fails
-                    processedBooks.add(Map.of(
-                            "photoId", photoId,
-                            "title", tempTitle,
-                            "author", "Unknown",
-                            "bookId", bookId
-                    ));
-                }
+                processedBooks.add(Map.of(
+                        "photoId", photoId,
+                        "title", fullBook.getTitle(),
+                        "author", fullBook.getAuthorName(),
+                        "bookId", bookId
+                ));
 
                 logger.info("Successfully processed photo {} as book (ID: {})", photoId, bookId);
 
@@ -298,33 +245,20 @@ public class BooksFromFeedService {
                 byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
                 logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
 
-                // Determine if this is a book photo using AI (shared service)
-                logger.info("Asking AI if photo {} is a book photo...", photoName);
-                if (!bookPhotoProcessingService.isBookPhoto(photoBytes, "image/jpeg")) {
-                    logger.info("Skipping photo {} - not a book photo", photoName);
-                    skippedPhotos.add(Map.of(
-                            "id", photoId,
-                            "name", photoName,
-                            "reason", "Not a book photo"
-                    ));
-                    continue;
-                }
-
                 // Create temporary book with timestamp-based name (shared workflow)
                 String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
                 String tempTitle = "Book_" + timestamp;
 
-                // Find or create a placeholder author (will be updated by AI extraction)
+                // Find or create placeholder author
                 com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
-                // Get default library (first library in database)
+                // Get default library
                 java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
                 if (libraries.isEmpty()) {
                     throw new RuntimeException("No library found in database. Please create a library first.");
                 }
                 Long libraryId = libraries.get(0).getId();
-                logger.debug("Using library ID: {}", libraryId);
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoName);
@@ -335,58 +269,27 @@ public class BooksFromFeedService {
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
 
-                // Create the book
                 com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
-                logger.info("Created temporary book with ID: {} and title: '{}'", bookId, tempTitle);
+                logger.info("Created temporary book with ID: {}", bookId);
 
-                // Extract metadata and update book (shared workflow)
-                logger.info("Extracting book metadata from photo {}...", photoName);
-                try {
-                    // TODO: Save photo to database and use generateTempBook for full extraction
-                    // For now, extract basic metadata with shared service
-                    Map<String, Object> bookMetadata = bookPhotoProcessingService.extractBasicMetadata(photoBytes, "image/jpeg");
+                // Save photo to database
+                logger.info("Saving photo to book {}", bookId);
+                photoService.addPhotoFromBytes(bookId, photoBytes, "image/jpeg");
 
-                    if (bookMetadata != null && bookMetadata.containsKey("title")) {
-                        String extractedTitle = (String) bookMetadata.get("title");
-                        String extractedAuthor = (String) bookMetadata.get("author");
+                // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
+                logger.info("Generating full book details using AI for book {}", bookId);
+                com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
+                logger.info("Successfully generated book: title='{}', author='{}'",
+                        fullBook.getTitle(), fullBook.getAuthorName());
 
-                        // Update book with extracted metadata
-                        savedBook.setTitle(extractedTitle);
-                        com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(extractedAuthor);
-                        savedBook.setAuthorId(author.getId());
-                        savedBook = bookService.updateBook(bookId, savedBook);
-
-                        logger.info("Updated book {} with title='{}', author='{}'", bookId, extractedTitle, extractedAuthor);
-
-                        processedBooks.add(Map.of(
-                                "photoId", photoId,
-                                "photoName", photoName,
-                                "title", extractedTitle,
-                                "author", extractedAuthor,
-                                "bookId", bookId
-                        ));
-                    } else {
-                        logger.warn("Failed to extract metadata for photo {}, keeping temporary book", photoName);
-                        processedBooks.add(Map.of(
-                                "photoId", photoId,
-                                "photoName", photoName,
-                                "title", tempTitle,
-                                "author", "Unknown",
-                                "bookId", bookId
-                        ));
-                    }
-                } catch (Exception e) {
-                    logger.error("Error extracting metadata for photo {}: {}", photoName, e.getMessage());
-                    // Keep the temporary book even if extraction fails
-                    processedBooks.add(Map.of(
-                            "photoId", photoId,
-                            "photoName", photoName,
-                            "title", tempTitle,
-                            "author", "Unknown",
-                            "bookId", bookId
-                    ));
-                }
+                processedBooks.add(Map.of(
+                        "photoId", photoId,
+                        "photoName", photoName,
+                        "title", fullBook.getTitle(),
+                        "author", fullBook.getAuthorName(),
+                        "bookId", bookId
+                ));
 
                 logger.info("Successfully processed photo {} as book (ID: {})", photoName, bookId);
 
