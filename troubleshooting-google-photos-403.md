@@ -6,19 +6,43 @@
 PERMISSION_DENIED
 ```
 
-## Root Cause
-The OAuth access token doesn't include the `photoslibrary.readonly` scope needed to access Google Photos.
+## CRITICAL: Token Has All Scopes But API Still Returns 403?
+
+If your diagnostic logs show:
+```
+✓ Token HAS the required 'photoslibrary.readonly' scope
+✓ All 5 scopes present in token
+```
+
+But you still get 403 "insufficient authentication scopes", the issue is NOT the token itself.
+
+**The most common cause**: Photos Library API is not enabled in Google Cloud Console.
+
+## Root Causes (in order of likelihood)
+
+1. **Photos Library API not enabled** (90% of cases)
+2. **OAuth consent screen missing scopes** (5% of cases)
+3. **Token scopes missing** (5% of cases)
 
 ## Solution Steps
 
-### Step 1: Verify Google Cloud Console Configuration
+### Step 1: ENABLE Photos Library API (MOST IMPORTANT)
+
+**This is the #1 cause of the 403 error even when scopes are correct.**
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Select your project
-3. Navigate to **APIs & Services** > **Library**
-4. Search for **"Photos Library API"**
-5. Click on it and verify it says **"API Enabled"**
-   - If not, click **"Enable"**
+2. **Select your project** (top bar, make sure correct project is selected)
+3. Click on the menu (☰) → **APIs & Services** → **Library**
+4. In the search box, type **"Photos Library API"**
+5. Click on **"Photos Library API"** in the results
+6. **Look at the status**:
+   - If it says **"MANAGE"** → API is already enabled ✓
+   - If it says **"ENABLE"** → Click the ENABLE button ⚠️
+7. After enabling, wait 30-60 seconds for the change to propagate
+8. **Verify**: Go to **APIs & Services** → **Enabled APIs & services**
+   - You should see "Photos Library API" in the list
+
+**IMPORTANT**: Even if you added the scopes to your OAuth consent screen, if the API itself is not enabled, all API calls will fail with 403.
 
 ### Step 2: Verify OAuth Consent Screen
 

@@ -121,6 +121,13 @@ public class GooglePhotosService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
+        logger.info("=== GOOGLE PHOTOS API REQUEST DETAILS ===");
+        logger.info("Endpoint: POST https://photoslibrary.googleapis.com/v1/mediaItems:search");
+        logger.info("Request body: {}", request);
+        logger.info("Authorization: Bearer {}...", apiKey.substring(0, Math.min(20, apiKey.length())));
+        logger.info("Content-Type: {}", headers.getContentType());
+        logger.info("=== END REQUEST DETAILS ===");
+
         try {
             logger.info("Sending request to Google Photos API...");
 
