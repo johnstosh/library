@@ -588,4 +588,102 @@ public class GooglePhotosService {
             throw new RuntimeException("Failed to fetch media items from Picker: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Create a new Google Photos Picker session
+     * This routes through the backend to ensure fresh access tokens with automatic refresh
+     * @return Session info map with id and pickerUri
+     */
+    public Map<String, Object> createPickerSession() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to create picker session without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+
+        // Get valid access token (will auto-refresh if needed)
+        String apiKey = getValidAccessToken(username);
+
+        logger.info("Creating Picker session for user: {}", username);
+
+        try {
+            String url = "https://photospicker.googleapis.com/v1/sessions";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(apiKey);
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            // Empty JSON body as per API spec
+            HttpEntity<String> entity = new HttpEntity<>("{}", headers);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> session = response.getBody();
+                logger.info("Successfully created Picker session: {}", session.get("id"));
+                return session;
+            } else {
+                logger.error("Failed to create Picker session with status: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to create Picker session: " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to create Picker session for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
+            throw new RuntimeException("Failed to create Picker session: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get the status of a Google Photos Picker session
+     * @param sessionId The session ID to check
+     * @return Session status map with mediaItemsSet field
+     */
+    public Map<String, Object> getPickerSessionStatus(String sessionId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to get picker session status without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+
+        // Get valid access token (will auto-refresh if needed)
+        String apiKey = getValidAccessToken(username);
+
+        logger.debug("Checking Picker session status for user: {} session: {}", username, sessionId);
+
+        try {
+            String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(apiKey);
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return response.getBody();
+            } else {
+                logger.error("Failed to get Picker session status with status: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to get Picker session status: " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to get Picker session status for user: {}", username, e);
+            logger.error("Error message: {}", e.getMessage());
+            throw new RuntimeException("Failed to get Picker session status: " + e.getMessage(), e);
+        }
+    }
 }

@@ -75,6 +75,39 @@ public class BooksFromFeedController {
     }
 
     /**
+     * Create a new Google Photos Picker session (server-side to handle token refresh)
+     * @return Session info with id and pickerUri
+     */
+    @PostMapping("/picker-session")
+    public ResponseEntity<Map<String, Object>> createPickerSession() {
+        try {
+            Map<String, Object> session = googlePhotosService.createPickerSession();
+            return ResponseEntity.ok(session);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Poll a Google Photos Picker session for completion status
+     * @param sessionId The session ID from the Picker API
+     * @return Session status with mediaItemsSet field
+     */
+    @GetMapping("/picker-session/{sessionId}")
+    public ResponseEntity<Map<String, Object>> getPickerSessionStatus(@PathVariable String sessionId) {
+        try {
+            Map<String, Object> status = googlePhotosService.getPickerSessionStatus(sessionId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
      * Fetch media items from a Google Photos Picker session (server-side to avoid CORS)
      * @param sessionId The session ID from the Picker API
      * @return Media items list

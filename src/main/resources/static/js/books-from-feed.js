@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 // Books-from-Feed using Google Photos Picker API (New Session-Based Flow)
+// All API calls route through backend to handle OAuth token refresh automatically
 
-let accessToken = null;
 let currentSessionId = null;
 let pollingInterval = null;
 
@@ -13,16 +13,15 @@ async function loadBooksFromFeedSection() {
 async function processPhotosFromFeed() {
     clearError('books-from-feed');
 
-    // Get access token from current user
+    // Check if user has authorized Google Photos
     try {
         const user = await fetchData('/api/user-settings');
         if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
             showError('books-from-feed', 'Please authorize Google Photos in Settings first.');
             return;
         }
-        accessToken = user.googlePhotosApiKey;
 
-        // Show the new Photos Picker
+        // Show the new Photos Picker (backend handles token refresh)
         await showPhotoPicker();
     } catch (error) {
         showError('books-from-feed', 'Failed to get authorization: ' + error.message);
@@ -64,19 +63,18 @@ async function showPhotoPicker() {
 }
 
 async function createPickerSession() {
-    const response = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+    // Call backend endpoint which handles token refresh automatically
+    const response = await fetch('/api/books-from-feed/picker-session', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[BooksFromFeed] Session creation failed:', response.status, errorText);
-        throw new Error(`Failed to create picker session: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        console.error('[BooksFromFeed] Session creation failed:', response.status, errorData);
+        throw new Error(`Failed to create picker session: ${errorData.error || response.statusText}`);
     }
 
     const session = await response.json();
@@ -131,14 +129,12 @@ function startPollingSession(sessionId) {
 }
 
 async function getSession(sessionId) {
-    const response = await fetch(`https://photospicker.googleapis.com/v1/sessions/${sessionId}`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    // Call backend endpoint which handles token refresh automatically
+    const response = await fetch(`/api/books-from-feed/picker-session/${sessionId}`);
 
     if (!response.ok) {
-        throw new Error(`Failed to get session: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(`Failed to get session: ${errorData.error || response.statusText}`);
     }
 
     const session = await response.json();
