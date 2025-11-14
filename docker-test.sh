@@ -103,5 +103,6 @@ docker run --rm --name application -p 8080:8080 \
   -e SPRING_JPA_HIBERNATE_DDL_AUTO=update \
   -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect \
   -e SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION=true \
+  -e APP_ENV=staging \
   us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/library:latest
 

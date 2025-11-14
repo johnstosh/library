@@ -3,8 +3,10 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
@@ -32,12 +34,22 @@ public class PhotoBackupService {
     private UserRepository userRepository;
 
     @Autowired
+    private LibraryRepository libraryRepository;
+
+    @Autowired
     private GooglePhotosService googlePhotosService;
 
     @Value("${google.oauth.client-id}")
     private String clientId;
 
+    @Value("${APP_ENV:production}")
+    private String appEnv;
+
     private final RestTemplate restTemplate;
+
+    // Cache the album ID to avoid repeated lookups
+    private String cachedAlbumId = null;
+    private String cachedAlbumName = null;
 
     public PhotoBackupService() {
         this.restTemplate = new RestTemplate();
@@ -207,6 +219,9 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
+        // Get or create the library album
+        String albumId = getOrCreateAlbum(username);
+
         // Build description from photo caption and associated book/author
         String description = buildPhotoDescription(photo);
 
@@ -222,6 +237,9 @@ public class PhotoBackupService {
 
         Map<String, Object> request = new HashMap<>();
         request.put("newMediaItems", Collections.singletonList(newMediaItem));
+
+        // Add album ID to the request to add the photo to the album
+        request.put("albumId", albumId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -268,6 +286,170 @@ public class PhotoBackupService {
         } catch (Exception e) {
             logger.error("Failed to create media item in Google Photos", e);
             throw new RuntimeException("Failed to create media item: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get the album name based on library name and environment
+     */
+    private String getAlbumName() {
+        if (cachedAlbumName != null) {
+            return cachedAlbumName;
+        }
+
+        // Get the first library from the database
+        List<Library> libraries = libraryRepository.findAll();
+        String libraryName = "Library";
+
+        if (!libraries.isEmpty()) {
+            libraryName = libraries.get(0).getName();
+        } else {
+            logger.warn("No library found in database, using default name: {}", libraryName);
+        }
+
+        // Prefix with "test-" if in staging environment
+        if ("staging".equalsIgnoreCase(appEnv)) {
+            libraryName = "test-" + libraryName;
+            logger.info("Staging environment detected. Using album name: {}", libraryName);
+        } else {
+            logger.info("Production environment. Using album name: {}", libraryName);
+        }
+
+        cachedAlbumName = libraryName;
+        return cachedAlbumName;
+    }
+
+    /**
+     * Get or create the library album in Google Photos
+     */
+    private String getOrCreateAlbum(String username) {
+        if (cachedAlbumId != null) {
+            logger.debug("Using cached album ID: {}", cachedAlbumId);
+            return cachedAlbumId;
+        }
+
+        String albumName = getAlbumName();
+        logger.info("Getting or creating album: {}", albumName);
+
+        // Get valid access token
+        String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        // First, try to find existing album
+        String albumId = findAlbumByTitle(albumName, accessToken);
+
+        if (albumId != null) {
+            logger.info("Found existing album '{}' with ID: {}", albumName, albumId);
+            cachedAlbumId = albumId;
+            return albumId;
+        }
+
+        // Album doesn't exist, create it
+        logger.info("Album '{}' not found, creating new album", albumName);
+        albumId = createAlbum(albumName, accessToken);
+
+        cachedAlbumId = albumId;
+        return albumId;
+    }
+
+    /**
+     * Find an album by title
+     */
+    private String findAlbumByTitle(String title, String accessToken) {
+        try {
+            logger.debug("Searching for album with title: {}", title);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            // List albums - Google Photos API supports pagination
+            String nextPageToken = null;
+            do {
+                String url = "https://photoslibrary.googleapis.com/v1/albums?pageSize=50";
+                if (nextPageToken != null) {
+                    url += "&pageToken=" + nextPageToken;
+                }
+
+                ResponseEntity<Map> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        entity,
+                        Map.class
+                );
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> responseBody = response.getBody();
+
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> albums = (List<Map<String, Object>>) responseBody.get("albums");
+
+                    if (albums != null) {
+                        for (Map<String, Object> album : albums) {
+                            String albumTitle = (String) album.get("title");
+                            if (title.equals(albumTitle)) {
+                                String albumId = (String) album.get("id");
+                                logger.debug("Found matching album: {} with ID: {}", albumTitle, albumId);
+                                return albumId;
+                            }
+                        }
+                    }
+
+                    nextPageToken = (String) responseBody.get("nextPageToken");
+                } else {
+                    logger.error("Failed to list albums with status: {}", response.getStatusCode());
+                    break;
+                }
+
+            } while (nextPageToken != null);
+
+            logger.debug("Album '{}' not found", title);
+            return null;
+
+        } catch (Exception e) {
+            logger.error("Failed to search for album", e);
+            return null;
+        }
+    }
+
+    /**
+     * Create a new album in Google Photos
+     */
+    private String createAlbum(String title, String accessToken) {
+        try {
+            logger.info("Creating new album: {}", title);
+
+            Map<String, Object> album = new HashMap<>();
+            album.put("title", title);
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("album", album);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://photoslibrary.googleapis.com/v1/albums",
+                    entity,
+                    Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                String albumId = (String) responseBody.get("id");
+                logger.info("Successfully created album '{}' with ID: {}", title, albumId);
+                return albumId;
+            } else {
+                logger.error("Failed to create album with status: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to create album: " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to create album", e);
+            throw new RuntimeException("Failed to create album: " + e.getMessage(), e);
         }
     }
 
