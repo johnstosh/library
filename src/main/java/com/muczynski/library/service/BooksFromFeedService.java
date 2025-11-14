@@ -3,8 +3,13 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.Library;
+import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.repository.LibraryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -42,7 +48,7 @@ public class BooksFromFeedService {
     private PhotoService photoService;
 
     @Autowired
-    private com.muczynski.library.repository.LibraryRepository libraryRepository;
+    private LibraryRepository libraryRepository;
 
     /**
      * Process photos from Google Photos feed to create books
@@ -113,15 +119,15 @@ public class BooksFromFeedService {
                 logger.info("Downloaded photo {} ({} bytes)", photoId, photoBytes.length);
 
                 // Create temporary book with timestamp-based name (shared workflow)
-                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
                 String tempTitle = "Book_" + timestamp;
 
                 // Find or create placeholder author
-                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
+                Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library
-                java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
+                List<Library> libraries = libraryRepository.findAll();
                 if (libraries.isEmpty()) {
                     throw new RuntimeException("No library found in database. Please create a library first.");
                 }
@@ -129,14 +135,14 @@ public class BooksFromFeedService {
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoId);
-                com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
+                BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
                 tempBook.setAuthorId(placeholderAuthor.getId());
                 tempBook.setLibraryId(libraryId);
-                tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
-                tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
+                tempBook.setStatus(BookStatus.ACTIVE);
+                tempBook.setDateAddedToLibrary(LocalDate.now());
 
-                com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
+                BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
                 logger.info("Created temporary book with ID: {}", bookId);
 
@@ -146,7 +152,7 @@ public class BooksFromFeedService {
 
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
-                com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
+                BookDto fullBook = bookService.generateTempBook(bookId);
                 logger.info("Successfully generated book: title='{}', author='{}'",
                         fullBook.getTitle(), fullBook.getAuthorName());
 
@@ -246,15 +252,15 @@ public class BooksFromFeedService {
                 logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
 
                 // Create temporary book with timestamp-based name (shared workflow)
-                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
                 String tempTitle = "Book_" + timestamp;
 
                 // Find or create placeholder author
-                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
+                Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library
-                java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
+                List<Library> libraries = libraryRepository.findAll();
                 if (libraries.isEmpty()) {
                     throw new RuntimeException("No library found in database. Please create a library first.");
                 }
@@ -262,14 +268,14 @@ public class BooksFromFeedService {
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoName);
-                com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
+                BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
                 tempBook.setAuthorId(placeholderAuthor.getId());
                 tempBook.setLibraryId(libraryId);
-                tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
-                tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
+                tempBook.setStatus(BookStatus.ACTIVE);
+                tempBook.setDateAddedToLibrary(LocalDate.now());
 
-                com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
+                BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
                 logger.info("Created temporary book with ID: {}", bookId);
 
@@ -279,7 +285,7 @@ public class BooksFromFeedService {
 
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
-                com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
+                BookDto fullBook = bookService.generateTempBook(bookId);
                 logger.info("Successfully generated book: title='{}', author='{}'",
                         fullBook.getTitle(), fullBook.getAuthorName());
 
