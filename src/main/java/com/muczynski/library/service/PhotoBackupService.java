@@ -468,8 +468,8 @@ public class PhotoBackupService {
                 description.append(" - ");
             }
             description.append("Book: ").append(photo.getBook().getTitle());
-            if (photo.getBook().getAuthors() != null && !photo.getBook().getAuthors().isEmpty()) {
-                description.append(" by ").append(photo.getBook().getAuthors().iterator().next().getName());
+            if (photo.getBook().getAuthor() != null) {
+                description.append(" by ").append(photo.getBook().getAuthor().getName());
             }
         } else if (photo.getAuthor() != null) {
             if (description.length() > 0) {
