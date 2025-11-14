@@ -41,6 +41,9 @@ public class BooksFromFeedService {
     @Autowired
     private com.muczynski.library.repository.LibraryRepository libraryRepository;
 
+    @Autowired
+    private BookPhotoProcessingService bookPhotoProcessingService;
+
     /**
      * Process photos from Google Photos feed to create books
      * @return Map containing results of the processing
@@ -111,12 +114,8 @@ public class BooksFromFeedService {
 
                 // Determine if this is a book photo using AI
                 logger.info("Asking AI if photo {} is a book photo...", photoId);
-                String detectionQuestion = "Is this image a photo of a book or book cover? Respond with only 'YES' or 'NO'.";
-                String detectionResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", detectionQuestion);
-                logger.info("AI detection response for photo {}: {}", photoId, detectionResponse);
-
-                if (!detectionResponse.trim().toUpperCase().contains("YES")) {
-                    logger.info("Skipping photo {} - not a book photo (AI said: {})", photoId, detectionResponse);
+                if (!bookPhotoProcessingService.isBookPhoto(photoBytes, "image/jpeg")) {
+                    logger.info("Skipping photo {} - not a book photo", photoId);
                     skippedPhotos.add(Map.of(
                             "id", photoId,
                             "reason", "Not a book photo"
@@ -124,34 +123,14 @@ public class BooksFromFeedService {
                     continue;
                 }
 
-                // Extract book metadata using AI
-                logger.info("Extracting book metadata from photo {}...", photoId);
-                String metadataQuestion = "This is a photo of a book. Please extract the book information and respond ONLY with valid JSON in this exact format:\n" +
-                        "{\"title\": \"book title\", \"author\": \"author name\"}\n" +
-                        "Do not include any other text, explanation, or markdown formatting. Only the JSON object.";
+                // Create temporary book with timestamp-based name
+                // This matches the books-from-photo workflow
+                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String tempTitle = "Book_" + timestamp;
 
-                String metadataResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", metadataQuestion);
-                logger.debug("AI metadata response for photo {}: {}", photoId, metadataResponse);
-
-                // Parse the JSON response
-                Map<String, Object> bookMetadata = parseBookMetadata(metadataResponse);
-
-                if (bookMetadata == null || !bookMetadata.containsKey("title")) {
-                    logger.warn("Failed to extract book metadata from photo {}. AI response: {}", photoId, metadataResponse);
-                    skippedPhotos.add(Map.of(
-                            "id", photoId,
-                            "reason", "Could not extract book metadata"
-                    ));
-                    continue;
-                }
-
-                String title = (String) bookMetadata.get("title");
-                String authorName = (String) bookMetadata.get("author");
-                logger.info("Extracted metadata from photo {}: title='{}', author='{}'", photoId, title, authorName);
-
-                // Find or create author
-                com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(authorName);
-                logger.debug("Using author: {} (ID: {})", author.getName(), author.getId());
+                // Find or create a placeholder author (will be updated by generateTempBook)
+                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("Unknown Author");
+                logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library (first library in database)
                 java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
@@ -161,16 +140,11 @@ public class BooksFromFeedService {
                 Long libraryId = libraries.get(0).getId();
                 logger.debug("Using library ID: {}", libraryId);
 
-                // Create a temporary book entry with just the title
-                // The AI will fill in the details from the photo
-                Map<String, Object> tempBookData = new HashMap<>();
-                tempBookData.put("title", title);
-
-                // We need to create a minimal BookDto, save it, attach the photo, then use generateTempBook
-                logger.info("Creating book entry for: '{}'", title);
+                // Create temporary book entry
+                logger.info("Creating temporary book entry for photo {}", photoId);
                 com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
-                tempBook.setTitle(title);
-                tempBook.setAuthorId(author.getId());
+                tempBook.setTitle(tempTitle);
+                tempBook.setAuthorId(placeholderAuthor.getId());
                 tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
@@ -178,27 +152,65 @@ public class BooksFromFeedService {
                 // Create the book
                 com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
-                logger.info("Created book with ID: {} for title: '{}'", bookId, title);
+                logger.info("Created temporary book with ID: {} and title: '{}'", bookId, tempTitle);
 
-                // Store the photo for this book
-                // We'll need to use PhotoService to attach the photo
-                // Note: Ideally we'd attach the photo here, but to keep it simple,
-                // let's just use the metadata we extracted
+                // Attach photo to book (need to save to database)
+                // TODO: Save photo to book's photo collection
+                // For now, we'll just use generateTempBook with the downloaded bytes
 
-                // Update photo description with book metadata
-                logger.info("Updating photo {} description with book metadata", photoId);
-                String newDescription = String.format("Title: %s\nAuthor: %s", title, authorName);
-                googlePhotosService.updatePhotoDescription(photoId, newDescription);
-                logger.info("Successfully updated photo {} description", photoId);
+                // Use generateTempBook to extract all metadata with AI
+                // This is the shared workflow that provides comprehensive Catholic analysis
+                logger.info("Generating full book details from photo using AI for book ID: {}", bookId);
+                try {
+                    // Note: generateTempBook expects photo to be in database
+                    // We need to save photoBytes first - for now skipping this step
+                    // TODO: Add photo save step before calling generateTempBook
 
-                processedBooks.add(Map.of(
-                        "photoId", photoId,
-                        "title", title,
-                        "author", authorName,
-                        "bookId", bookId
-                ));
+                    // com.muczynski.library.dto.BookDto fullBook = bookService.generateTempBook(bookId);
+                    // logger.info("Successfully generated book details: title='{}', author='{}'",
+                    //         fullBook.getTitle(), fullBook.getAuthorName());
 
-                logger.info("Successfully processed photo {} as book: '{}' (ID: {})", photoId, title, bookId);
+                    // For now, just extract basic metadata since we need photo DB integration
+                    Map<String, Object> bookMetadata = bookPhotoProcessingService.extractBasicMetadata(photoBytes, "image/jpeg");
+                    if (bookMetadata != null && bookMetadata.containsKey("title")) {
+                        String extractedTitle = (String) bookMetadata.get("title");
+                        String extractedAuthor = (String) bookMetadata.get("author");
+
+                        // Update book with extracted title
+                        savedBook.setTitle(extractedTitle);
+                        com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(extractedAuthor);
+                        savedBook.setAuthorId(author.getId());
+                        savedBook = bookService.updateBook(bookId, savedBook);
+
+                        logger.info("Updated book {} with title='{}', author='{}'", bookId, extractedTitle, extractedAuthor);
+
+                        processedBooks.add(Map.of(
+                                "photoId", photoId,
+                                "title", extractedTitle,
+                                "author", extractedAuthor,
+                                "bookId", bookId
+                        ));
+                    } else {
+                        logger.warn("Failed to extract metadata for photo {}, keeping temporary book", photoId);
+                        processedBooks.add(Map.of(
+                                "photoId", photoId,
+                                "title", tempTitle,
+                                "author", "Unknown",
+                                "bookId", bookId
+                        ));
+                    }
+                } catch (Exception e) {
+                    logger.error("Error generating book details for book {}: {}", bookId, e.getMessage());
+                    // Keep the temporary book even if generation fails
+                    processedBooks.add(Map.of(
+                            "photoId", photoId,
+                            "title", tempTitle,
+                            "author", "Unknown",
+                            "bookId", bookId
+                    ));
+                }
+
+                logger.info("Successfully processed photo {} as book (ID: {})", photoId, bookId);
 
             } catch (Exception e) {
                 logger.error("Error processing photo {}: {}", photoId, e.getMessage(), e);
@@ -232,62 +244,6 @@ public class BooksFromFeedService {
                 photos.size(), processedBooks.size(), skippedPhotos.size());
 
         return result;
-    }
-
-    /**
-     * Parse JSON response from AI to extract book metadata
-     */
-    private Map<String, Object> parseBookMetadata(String response) {
-        logger.debug("Parsing book metadata from AI response");
-
-        try {
-            // Remove markdown code blocks if present
-            String cleaned = response.trim();
-            if (cleaned.startsWith("```")) {
-                logger.debug("Removing markdown code blocks from response");
-                cleaned = cleaned.replaceAll("```json\\s*", "").replaceAll("```\\s*$", "").trim();
-            }
-
-            // Simple JSON parsing (in production, use Jackson or Gson)
-            cleaned = cleaned.trim();
-            if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
-                Map<String, Object> result = new HashMap<>();
-
-                // Extract title
-                int titleStart = cleaned.indexOf("\"title\"");
-                if (titleStart != -1) {
-                    int valueStart = cleaned.indexOf(":", titleStart) + 1;
-                    int valueEnd = cleaned.indexOf("\"", cleaned.indexOf("\"", valueStart) + 1);
-                    String title = cleaned.substring(cleaned.indexOf("\"", valueStart) + 1, valueEnd);
-                    result.put("title", title);
-                    logger.debug("Extracted title: {}", title);
-                } else {
-                    logger.warn("Could not find 'title' field in JSON response");
-                }
-
-                // Extract author
-                int authorStart = cleaned.indexOf("\"author\"");
-                if (authorStart != -1) {
-                    int valueStart = cleaned.indexOf(":", authorStart) + 1;
-                    int valueEnd = cleaned.indexOf("\"", cleaned.indexOf("\"", valueStart) + 1);
-                    String author = cleaned.substring(cleaned.indexOf("\"", valueStart) + 1, valueEnd);
-                    result.put("author", author);
-                    logger.debug("Extracted author: {}", author);
-                } else {
-                    logger.warn("Could not find 'author' field in JSON response");
-                }
-
-                logger.debug("Successfully parsed metadata: title={}, author={}", result.get("title"), result.get("author"));
-                return result;
-            } else {
-                logger.warn("Response is not valid JSON (doesn't start with {{ and end with }}): {}", cleaned);
-            }
-        } catch (Exception e) {
-            // Parsing failed
-            logger.error("Failed to parse book metadata from response", e);
-            logger.error("Response was: {}", response);
-        }
-        return null;
     }
 
     /**
@@ -342,14 +298,10 @@ public class BooksFromFeedService {
                 byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
                 logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
 
-                // Determine if this is a book photo using AI
+                // Determine if this is a book photo using AI (shared service)
                 logger.info("Asking AI if photo {} is a book photo...", photoName);
-                String detectionQuestion = "Is this image a photo of a book or book cover? Respond with only 'YES' or 'NO'.";
-                String detectionResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", detectionQuestion);
-                logger.info("AI detection response for photo {}: {}", photoName, detectionResponse);
-
-                if (!detectionResponse.trim().toUpperCase().contains("YES")) {
-                    logger.info("Skipping photo {} - not a book photo (AI said: {})", photoName, detectionResponse);
+                if (!bookPhotoProcessingService.isBookPhoto(photoBytes, "image/jpeg")) {
+                    logger.info("Skipping photo {} - not a book photo", photoName);
                     skippedPhotos.add(Map.of(
                             "id", photoId,
                             "name", photoName,
@@ -358,35 +310,13 @@ public class BooksFromFeedService {
                     continue;
                 }
 
-                // Extract book metadata using AI
-                logger.info("Extracting book metadata from photo {}...", photoName);
-                String metadataQuestion = "This is a photo of a book. Please extract the book information and respond ONLY with valid JSON in this exact format:\n" +
-                        "{\"title\": \"book title\", \"author\": \"author name\"}\n" +
-                        "Do not include any other text, explanation, or markdown formatting. Only the JSON object.";
+                // Create temporary book with timestamp-based name (shared workflow)
+                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String tempTitle = "Book_" + timestamp;
 
-                String metadataResponse = askGrok.askAboutPhoto(photoBytes, "image/jpeg", metadataQuestion);
-                logger.debug("AI metadata response for photo {}: {}", photoName, metadataResponse);
-
-                // Parse the JSON response
-                Map<String, Object> bookMetadata = parseBookMetadata(metadataResponse);
-
-                if (bookMetadata == null || !bookMetadata.containsKey("title")) {
-                    logger.warn("Failed to extract book metadata from photo {}. AI response: {}", photoName, metadataResponse);
-                    skippedPhotos.add(Map.of(
-                            "id", photoId,
-                            "name", photoName,
-                            "reason", "Could not extract book metadata"
-                    ));
-                    continue;
-                }
-
-                String title = (String) bookMetadata.get("title");
-                String authorName = (String) bookMetadata.get("author");
-                logger.info("Extracted metadata from photo {}: title='{}', author='{}'", photoName, title, authorName);
-
-                // Find or create author
-                com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(authorName);
-                logger.debug("Using author: {} (ID: {})", author.getName(), author.getId());
+                // Find or create a placeholder author (will be updated by AI extraction)
+                com.muczynski.library.domain.Author placeholderAuthor = authorService.findOrCreateAuthor("Unknown Author");
+                logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library (first library in database)
                 java.util.List<com.muczynski.library.domain.Library> libraries = libraryRepository.findAll();
@@ -396,11 +326,11 @@ public class BooksFromFeedService {
                 Long libraryId = libraries.get(0).getId();
                 logger.debug("Using library ID: {}", libraryId);
 
-                // Create book entry
-                logger.info("Creating book entry for: '{}'", title);
+                // Create temporary book entry
+                logger.info("Creating temporary book entry for photo {}", photoName);
                 com.muczynski.library.dto.BookDto tempBook = new com.muczynski.library.dto.BookDto();
-                tempBook.setTitle(title);
-                tempBook.setAuthorId(author.getId());
+                tempBook.setTitle(tempTitle);
+                tempBook.setAuthorId(placeholderAuthor.getId());
                 tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(com.muczynski.library.domain.BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(java.time.LocalDate.now());
@@ -408,17 +338,57 @@ public class BooksFromFeedService {
                 // Create the book
                 com.muczynski.library.dto.BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
-                logger.info("Created book with ID: {} for title: '{}'", bookId, title);
+                logger.info("Created temporary book with ID: {} and title: '{}'", bookId, tempTitle);
 
-                processedBooks.add(Map.of(
-                        "photoId", photoId,
-                        "photoName", photoName,
-                        "title", title,
-                        "author", authorName,
-                        "bookId", bookId
-                ));
+                // Extract metadata and update book (shared workflow)
+                logger.info("Extracting book metadata from photo {}...", photoName);
+                try {
+                    // TODO: Save photo to database and use generateTempBook for full extraction
+                    // For now, extract basic metadata with shared service
+                    Map<String, Object> bookMetadata = bookPhotoProcessingService.extractBasicMetadata(photoBytes, "image/jpeg");
 
-                logger.info("Successfully processed photo {} as book: '{}' (ID: {})", photoName, title, bookId);
+                    if (bookMetadata != null && bookMetadata.containsKey("title")) {
+                        String extractedTitle = (String) bookMetadata.get("title");
+                        String extractedAuthor = (String) bookMetadata.get("author");
+
+                        // Update book with extracted metadata
+                        savedBook.setTitle(extractedTitle);
+                        com.muczynski.library.domain.Author author = authorService.findOrCreateAuthor(extractedAuthor);
+                        savedBook.setAuthorId(author.getId());
+                        savedBook = bookService.updateBook(bookId, savedBook);
+
+                        logger.info("Updated book {} with title='{}', author='{}'", bookId, extractedTitle, extractedAuthor);
+
+                        processedBooks.add(Map.of(
+                                "photoId", photoId,
+                                "photoName", photoName,
+                                "title", extractedTitle,
+                                "author", extractedAuthor,
+                                "bookId", bookId
+                        ));
+                    } else {
+                        logger.warn("Failed to extract metadata for photo {}, keeping temporary book", photoName);
+                        processedBooks.add(Map.of(
+                                "photoId", photoId,
+                                "photoName", photoName,
+                                "title", tempTitle,
+                                "author", "Unknown",
+                                "bookId", bookId
+                        ));
+                    }
+                } catch (Exception e) {
+                    logger.error("Error extracting metadata for photo {}: {}", photoName, e.getMessage());
+                    // Keep the temporary book even if extraction fails
+                    processedBooks.add(Map.of(
+                            "photoId", photoId,
+                            "photoName", photoName,
+                            "title", tempTitle,
+                            "author", "Unknown",
+                            "bookId", bookId
+                    ));
+                }
+
+                logger.info("Successfully processed photo {} as book (ID: {})", photoName, bookId);
 
             } catch (Exception e) {
                 logger.error("Error processing photo {}: {}", photoName, e.getMessage(), e);
