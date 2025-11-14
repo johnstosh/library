@@ -533,9 +533,10 @@ public class GooglePhotosService {
 
         try {
             do {
-                String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId + "/mediaItems";
+                // Correct endpoint: sessionId is a query parameter, not part of the path
+                String url = "https://photospicker.googleapis.com/v1/mediaItems?sessionId=" + sessionId;
                 if (pageToken != null) {
-                    url += "?pageToken=" + pageToken;
+                    url += "&pageToken=" + pageToken;
                 }
 
                 logger.debug("Fetching media items from: {}", url);
@@ -555,12 +556,16 @@ public class GooglePhotosService {
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                     Map<String, Object> responseBody = response.getBody();
 
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> mediaItems = (List<Map<String, Object>>) responseBody.get("mediaItems");
+                    logger.debug("Response body: {}", responseBody);
 
-                    if (mediaItems != null && !mediaItems.isEmpty()) {
-                        allMediaItems.addAll(mediaItems);
-                        logger.debug("Fetched {} media items in this page", mediaItems.size());
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> pickedItems = (List<Map<String, Object>>) responseBody.get("pickedMediaItemsDetails");
+
+                    if (pickedItems != null && !pickedItems.isEmpty()) {
+                        allMediaItems.addAll(pickedItems);
+                        logger.debug("Fetched {} media items in this page", pickedItems.size());
+                    } else {
+                        logger.warn("No media items found in response. Response keys: {}", responseBody.keySet());
                     }
 
                     pageToken = (String) responseBody.get("nextPageToken");
