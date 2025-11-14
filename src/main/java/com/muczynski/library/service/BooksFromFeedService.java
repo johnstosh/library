@@ -114,9 +114,13 @@ public class BooksFromFeedService {
 
                 // Download the photo
                 String baseUrl = (String) photo.get("baseUrl");
-                logger.debug("Downloading photo {} from: {}", photoId, baseUrl);
+                String mimeType = (String) photo.get("mimeType");
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg"; // Default fallback
+                }
+                logger.debug("Downloading photo {} from: {} (mimeType: {})", photoId, baseUrl, mimeType);
                 byte[] photoBytes = googlePhotosService.downloadPhoto(baseUrl);
-                logger.info("Downloaded photo {} ({} bytes)", photoId, photoBytes.length);
+                logger.info("Downloaded photo {} ({} bytes, mimeType: {})", photoId, photoBytes.length, mimeType);
 
                 // Create temporary book with timestamp-based name (shared workflow)
                 String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
@@ -146,9 +150,9 @@ public class BooksFromFeedService {
                 Long bookId = savedBook.getId();
                 logger.info("Created temporary book with ID: {}", bookId);
 
-                // Save photo to database
-                logger.info("Saving photo to book {}", bookId);
-                photoService.addPhotoFromBytes(bookId, photoBytes, "image/jpeg");
+                // Save photo to database with actual MIME type
+                logger.info("Saving photo to book {} (mimeType: {})", bookId, mimeType);
+                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType);
 
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
@@ -247,9 +251,13 @@ public class BooksFromFeedService {
 
                 // Download the photo from the URL provided by Picker
                 // Picker API requires OAuth authentication for baseUrl downloads
-                logger.debug("Downloading photo {} from URL: {}", photoName, photoUrl);
+                String mimeType = (String) photo.get("mimeType");
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg"; // Default fallback
+                }
+                logger.debug("Downloading photo {} from URL: {} (mimeType: {})", photoName, photoUrl, mimeType);
                 byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
-                logger.info("Downloaded photo {} ({} bytes)", photoName, photoBytes.length);
+                logger.info("Downloaded photo {} ({} bytes, mimeType: {})", photoName, photoBytes.length, mimeType);
 
                 // Create temporary book with timestamp-based name (shared workflow)
                 String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
@@ -279,9 +287,9 @@ public class BooksFromFeedService {
                 Long bookId = savedBook.getId();
                 logger.info("Created temporary book with ID: {}", bookId);
 
-                // Save photo to database
-                logger.info("Saving photo to book {}", bookId);
-                photoService.addPhotoFromBytes(bookId, photoBytes, "image/jpeg");
+                // Save photo to database with actual MIME type
+                logger.info("Saving photo to book {} (mimeType: {})", bookId, mimeType);
+                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType);
 
                 // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
                 logger.info("Generating full book details using AI for book {}", bookId);
