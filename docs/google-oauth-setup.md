@@ -26,16 +26,32 @@ This guide walks you through configuring Google Cloud Console to enable Google P
    - **Use existing project:**
      - Select your existing project from the list
 
-### Step 2: Enable Google Photos Library API
+### Step 2: Enable Required APIs
+
+You must enable **both** APIs for the Picker to work:
+
+#### Enable Google Photos Library API
 
 1. In the Google Cloud Console, open the navigation menu (☰)
 2. Go to **APIs & Services** → **Library**
-3. Search for "Photos Library API"
+3. Search for **"Photos Library API"**
 4. Click on "Photos Library API"
 5. Click the **"Enable"** button
 6. Wait for the API to be enabled (may take a few seconds)
 
-**Important:** If you skip this step, OAuth will succeed but API calls will fail with "API not enabled" errors.
+#### Enable Google Picker API
+
+1. Still in **APIs & Services** → **Library**
+2. Search for **"Google Picker API"**
+3. Click on "Google Picker API"
+4. Click the **"Enable"** button
+5. Wait for the API to be enabled (may take a few seconds)
+
+**CRITICAL:** If you skip the Picker API, you will get a **403 error** when trying to open the photo picker. If you skip the Photos Library API, OAuth will succeed but photo downloads will fail.
+
+**Verify:** Go to **APIs & Services** → **Enabled APIs & services** and confirm you see:
+- ✅ Google Photos Library API
+- ✅ Google Picker API
 
 ### Step 3: Configure OAuth Consent Screen
 

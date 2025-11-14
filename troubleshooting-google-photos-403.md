@@ -11,7 +11,39 @@
 - Selected photos are sent to backend for AI processing
 - No direct Google Photos Library API calls are made
 
-**This document is preserved for historical reference** in case future development requires direct API access or for troubleshooting similar OAuth issues.
+---
+
+## 🔴 CURRENT ISSUE: 403 Error When Opening Picker
+
+**Symptom:** When clicking "Process Photos", a popup opens but shows:
+```
+403. That's an error.
+We're sorry, but you do not have access to this page. That's all we know.
+```
+
+**Root Cause:** The **Google Picker API** is NOT enabled in your Google Cloud Console.
+
+**Solution:**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. **Select your project** (verify correct project in top bar)
+3. Click menu (☰) → **APIs & Services** → **Library**
+4. Search for **"Google Picker API"**
+5. Click on it and click **"ENABLE"**
+6. Wait 30-60 seconds for changes to propagate
+7. Refresh your app and try again
+
+**Verify Both APIs Are Enabled:**
+
+Go to **APIs & Services** → **Enabled APIs & services** and confirm you see:
+- ✅ **Google Picker API** (for the picker UI to load)
+- ✅ **Google Photos Library API** (for accessing photos)
+
+If either is missing, the feature will not work.
+
+---
+
+**Historical Documentation:** This document is preserved for historical reference in case future development requires direct API access or for troubleshooting similar OAuth issues.
 
 ---
 
