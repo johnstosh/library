@@ -102,15 +102,19 @@ function startPollingSession(sessionId) {
 
         try {
             const sessionData = await getSession(sessionId);
-            console.log('[BooksFromFeed] Session state:', sessionData.mediaItemsSet ? 'COMPLETED' : 'PENDING');
+            console.log('[BooksFromFeed] Session state:', sessionData.state || 'UNKNOWN');
 
             // Check if user has completed selection
-            if (sessionData.mediaItemsSet) {
+            if (sessionData.state === 'COMPLETED') {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
 
                 // Process the selected photos
                 await handlePickerResults(sessionId);
+            } else if (sessionData.state === 'CANCELLED' || sessionData.state === 'EXPIRED') {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                showInfo('books-from-feed', 'Photo selection was cancelled or expired.');
             }
         } catch (error) {
             console.error('[BooksFromFeed] Polling error:', error);
@@ -125,10 +129,9 @@ function startPollingSession(sessionId) {
 
 async function getSession(sessionId) {
     const response = await fetch(`https://photospicker.googleapis.com/v1/sessions/${sessionId}`, {
-        method: 'GET',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
-        },
+            'Authorization': `Bearer ${accessToken}`
+        }
     });
 
     if (!response.ok) {
@@ -187,14 +190,21 @@ async function handlePickerResults(sessionId) {
 }
 
 async function listMediaItems(sessionId) {
-    // Fetch media items via backend to avoid CORS issues
-    const response = await fetchData(`/api/books-from-feed/picker-session/${sessionId}/media-items`);
+    // Fetch media items directly from Google Photos Picker API
+    const response = await fetch(`https://photospicker.googleapis.com/v1/sessions/${sessionId}/mediaItems`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
 
-    if (response.error) {
-        throw new Error(response.error);
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[BooksFromFeed] MediaItems fetch failed:', response.status, errorText);
+        throw new Error(`Failed to fetch media items: ${response.status} ${response.statusText}`);
     }
 
-    return response.mediaItems || [];
+    const data = await response.json();
+    return data.mediaItems || [];
 }
 
 function displayProcessingResults(result) {
