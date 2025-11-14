@@ -66,9 +66,23 @@ This guide walks you through configuring Google Cloud Console to enable Google P
 ### Step 4: Configure OAuth Scopes
 
 1. On the "Scopes" page, click **"Add or Remove Scopes"**
-2. Search for and select:
+2. Search for and select **Google Photos Library API** scopes:
+   - `https://www.googleapis.com/auth/photoslibrary`
    - `https://www.googleapis.com/auth/photoslibrary.readonly`
-   - Description: "View your Google Photos library"
+   - `https://www.googleapis.com/auth/photoslibrary.readonly.originals`
+   - `https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata`
+   - `https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata`
+   - `https://www.googleapis.com/auth/photospicker.mediaitems.readonly`
+   - `https://www.googleapis.com/auth/photoslibrary.appendonly`
+   - `https://www.googleapis.com/auth/photoslibrary.sharing`
+
+   **Note:** The application currently uses the Google Photos Picker API which requires these scopes. These scopes allow the app to:
+   - Display the Google Photos Picker UI
+   - Access photos selected by the user via the Picker
+   - Download selected photos for AI processing
+   - Add to your Google Photos library (if needed)
+   - Manage and add to shared albums (if needed)
+
 3. Click **"Update"**
 4. Click **"Save and Continue"**
 
@@ -151,29 +165,38 @@ Check your `src/main/resources/application.properties` file:
 google.oauth.client-id=422211234280-abss0eud25flhodvgm4cuid7cr4ts4qd.apps.googleusercontent.com
 google.oauth.auth-uri=https://accounts.google.com/o/oauth2/auth
 google.oauth.token-uri=https://oauth2.googleapis.com/token
-google.oauth.scope=https://www.googleapis.com/auth/photoslibrary.readonly
+google.oauth.scope=https://www.googleapis.com/auth/photoslibrary https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/photoslibrary.readonly.originals https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata https://www.googleapis.com/auth/photospicker.mediaitems.readonly https://www.googleapis.com/auth/photoslibrary.appendonly https://www.googleapis.com/auth/photoslibrary.sharing
 ```
 
 **Verify:**
 - The `client-id` matches the one from Google Cloud Console
 - The URIs are correct (these are standard Google OAuth endpoints)
+- The `scope` includes all 8 Google Photos scopes (space-separated)
 
-### Enter Client Secret in Settings
+### Enter Client Secret in Global Settings
+
+**Note:** The Client Secret is now an application-wide setting, not per-user.
 
 1. Open your app: `https://library.muczynskifamily.com`
-2. Log in to your account
-3. Go to **Settings** tab
-4. In the "Google Photos" section:
+2. Log in with a **Librarian** account
+3. Go to **Global Settings** tab
+4. In the "Google OAuth Configuration" section:
    - **Google OAuth Client Secret:** Paste the Client Secret you copied earlier
-   - Click **"Save Settings"**
+   - Click **"Save Global Settings"**
+5. All users will now use this shared Client Secret for Google Photos authorization
 
 ### Authorize Google Photos Access
 
-1. Still in **Settings**, click **"Authorize Google Photos"**
-2. You'll be redirected to Google's consent screen
-3. Review the permissions (readonly access to Google Photos)
-4. Click **"Allow"**
-5. You'll be redirected back to your app with a success message
+Each user must authorize their own Google Photos access:
+
+1. Go to **Settings** tab (User Settings section)
+2. Click **"Authorize Google Photos"**
+3. You'll be redirected to Google's consent screen
+4. Review the permissions requested:
+   - "See, upload, and organize items in your Google Photos library"
+   - These permissions are required for the Google Photos Picker API
+5. Click **"Allow"**
+6. You'll be redirected back to your app with a success message
 
 ---
 
@@ -186,8 +209,16 @@ After setup, verify everything works:
    - Green "Revoke" button (meaning you're connected)
 
 2. Go to the **Books from Feed** section
-3. Click **"Process Photos from Feed"**
-4. The system should scan your Google Photos for book images
+3. Click **"Process Photos"**
+4. The **Google Photos Picker** should open (official Google UI)
+5. Select one or more photos of books from your library
+6. Click **"Select"** in the Picker
+7. The system will:
+   - Download the selected photos
+   - Use AI to detect if they are book covers
+   - Extract book title and author information
+   - Create book entries in your library
+8. View the processing results displayed on the page
 
 ---
 
@@ -197,7 +228,8 @@ After setup, verify everything works:
 
 - **Never commit the Client Secret to version control**
 - Store it securely (password manager, environment variables, secure vault)
-- Your app stores it encrypted in the database per user
+- Your app stores it in the database as a global setting (application-wide, not per-user)
+- Only Librarians can update the global Client Secret
 
 ### Access Tokens
 

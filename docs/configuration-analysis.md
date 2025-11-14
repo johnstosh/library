@@ -9,19 +9,18 @@
 google.oauth.client-id=422211234280-abss0eud25flhodvgm4cuid7cr4ts4qd.apps.googleusercontent.com
 google.oauth.auth-uri=https://accounts.google.com/o/oauth2/auth
 google.oauth.token-uri=https://oauth2.googleapis.com/token
-google.oauth.scope=https://www.googleapis.com/auth/photoslibrary.readonly
+google.oauth.scope=https://www.googleapis.com/auth/photoslibrary https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/photoslibrary.readonly.originals https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata https://www.googleapis.com/auth/photospicker.mediaitems.readonly https://www.googleapis.com/auth/photoslibrary.appendonly https://www.googleapis.com/auth/photoslibrary.sharing
 ```
 
 **Analysis:**
 - ✅ Client ID is configured
 - ✅ OAuth URIs are correct
-- ✅ Scope is appropriate (readonly access to photos)
-- ❌ Client Secret is NOT in application.properties (stored per-user instead)
+- ✅ All 8 required scopes configured for Google Photos Picker API
+- ✅ Client Secret is stored as global application-wide setting (in GlobalSettings entity)
 
 ### Per-User Configuration (User entity)
 
 **Present:**
-- `googleClientSecret` - Google OAuth client secret
 - `googlePhotosApiKey` - OAuth access token
 - `googlePhotosRefreshToken` - OAuth refresh token
 - `googlePhotosTokenExpiry` - Token expiration timestamp
@@ -29,154 +28,177 @@ google.oauth.scope=https://www.googleapis.com/auth/photoslibrary.readonly
 - `xaiApiKey` - AI service API key
 
 **Analysis:**
-- ✅ Tokens stored per-user (correct)
-- ⚠️ Client Secret stored per-user (unusual pattern)
-- ❌ No timestamp for when Client Secret was last updated
+- ✅ Tokens stored per-user (correct - each user authorizes their own Google Photos)
+- ✅ Client Secret moved to global settings (standard OAuth pattern)
+- ✅ Token expiration tracked
 - ❌ No timestamp for when OAuth was last authorized
 - ❌ No processing preferences/settings
 
-### UI Configuration (Settings page)
+### UI Configuration
 
-**Present:**
+**User Settings Page:**
 - Username input
 - Password input
 - XAI API Key input
-- Google OAuth Client Secret input (password field)
 - Google Photos authorization status badges
 - Authorize/Revoke buttons
 
+**Global Settings Page (Librarian only):**
+- Read-only Client ID display
+- Google OAuth Client Secret input (password field)
+- Partial secret display for verification (last 4 characters)
+- Last updated timestamp
+
 **Analysis:**
 - ✅ Basic fields are present
-- ❌ No Client ID display (users can't verify)
+- ✅ Client ID is displayed (read-only)
+- ✅ Partial secret display for verification
+- ✅ Last updated timestamp shown
 - ❌ No redirect URI display
-- ❌ No token expiration display
-- ❌ No last authorization timestamp
-- ❌ No configuration validation feedback
-- ❌ No partial secret display for verification
+- ❌ No token expiration display (per-user)
+- ❌ No last authorization timestamp (per-user)
 - ❌ No "Test Connection" button
 
 ---
 
 ## Issues and Concerns
 
-### 1. Client Secret Architecture Issue ⚠️
+### 1. Client Secret Architecture ✅ RESOLVED
+
+**Previous Issue:** Client Secret was stored per-user, which was inconsistent with standard OAuth patterns.
+
+**Resolution Implemented (Nov 2025):**
+- ✅ Moved Client Secret to GlobalSettings entity (application-wide)
+- ✅ Created Global Settings UI page (Librarian access only)
+- ✅ All users now share the same OAuth client configuration
+- ✅ Users only need to click "Authorize" without configuring secrets
+- ✅ Standard OAuth pattern now followed
 
 **Current Implementation:**
-- Client Secret is stored **per-user** in the database
-- Each user enters their own Client Secret
-
-**Standard OAuth Pattern:**
-- Client ID and Client Secret are **application-wide** settings
+- Client Secret is stored in **GlobalSettings** (application-wide)
+- Only Librarians can update the global Client Secret
 - All users share the same OAuth client
-- Only access tokens and refresh tokens are per-user
+- Each user authorizes their own Google Photos access (access/refresh tokens per-user)
 
-**Questions:**
-1. **Is the current pattern intentional?**
-   - If yes: Each user needs their own Google Cloud project (complex)
-   - If no: Should refactor to application-wide Client Secret
+**Benefits Achieved:**
+- ✅ Standard OAuth pattern
+- ✅ One-time setup by admin
+- ✅ Easier for users (just click "Authorize")
+- ✅ Centralized configuration management
 
-2. **Advantages of per-user approach:**
-   - Each user can use their own Google Cloud project
-   - User-specific quotas and billing
-   - More isolation between users
+### 2. Configuration Visibility - Partially Resolved ⚠️
 
-3. **Disadvantages of per-user approach:**
-   - Complex setup (each user needs Google Cloud Console access)
-   - Inconsistent with standard OAuth patterns
-   - Harder to troubleshoot
-   - Each user needs to configure OAuth client with correct redirect URIs
+**Implemented (Global Settings):**
+- ✅ Client ID display (read-only)
+- ✅ Partial Client Secret display (last 4 characters)
+- ✅ Last updated timestamp for Client Secret
 
-4. **Advantages of application-wide approach:**
-   - Standard OAuth pattern
-   - One-time setup by admin
-   - Easier for users (just click "Authorize")
-   - Centralized quota management
-
-**Recommendation:**
-If this is a multi-tenant app where each user is independent, keep per-user.
-If this is for a single organization/family, move to application-wide Client Secret.
-
-### 2. Missing Configuration Visibility
-
-**Users can't see:**
-- What Client ID the app is using
-- What redirect URI is configured
-- When their Client Secret was last updated
-- When they last authorized Google Photos
-- When their access token expires
-- What the first/last few characters of their secret are (for verification)
+**Still Missing (User Settings):**
+- ❌ Redirect URI display
+- ❌ When user last authorized Google Photos
+- ❌ When user's access token expires
+- ❌ Token expiration countdown/warning
 
 **Impact:**
-- Harder to troubleshoot configuration issues
-- Users can't verify they entered the correct Client Secret
-- Can't tell if authorization is expired or will expire soon
+- Global configuration is now visible to admins
+- Per-user authorization status still has limited visibility
+- Users can't tell when they need to re-authorize
 
 **Recommendation:**
-Add read-only display fields for:
-- Client ID (from application.properties)
-- Redirect URI (dynamically constructed)
+Add to User Settings page:
+- Redirect URI (read-only, for troubleshooting)
 - Last authorized timestamp
 - Token expiration time (user-friendly format)
-- First 4-6 characters of Client Secret (for verification)
-- Last updated timestamp for Client Secret
+- Warning when token will expire soon
 
-### 3. Missing Configuration Validation
+### 3. Configuration Validation - Partially Implemented ⚠️
 
-**Current State:**
-- Client Secret is accepted without validation
-- No format checking
-- No test connection capability
-- Errors only appear during authorization attempt
+**Implemented (Global Settings):**
+- ✅ Client Secret format validation (checks for `GOCSPX-` prefix)
+- ✅ Minimum length validation (30 characters)
+- ✅ Whitespace detection (warns on copy/paste errors)
+- ✅ Real-time validation feedback in UI
 
-**Recommended Validations:**
+**Still Missing:**
+- ❌ "Test Connection" capability
+- ❌ Validation that Client ID and Secret match
+- ❌ Scope verification
 
-**Client Secret Format:**
-- Google Client Secrets typically start with `GOCSPX-`
-- Usually 40+ characters long
-- Contains alphanumeric and special characters
+**Current Validation:**
+- Google Client Secrets must start with `GOCSPX-`
+- Minimum 30 characters long
+- No leading/trailing whitespace
 - Example: `GOCSPX-aBcDeFgHiJkLmNoPqRsTuVwXyZ123`
 
-**Validation Checks:**
-- Warn if doesn't start with `GOCSPX-` (might be wrong value)
-- Warn if too short (< 30 characters)
-- Warn if contains spaces (copy/paste error)
-- Option to "Test Configuration" before authorizing
+**Recommendation:**
+Add "Test Configuration" button that:
+- Attempts a token exchange with dummy code
+- Verifies Client ID/Secret pair is valid
+- Shows success/failure without requiring full OAuth flow
 
-### 4. Missing User Feedback
+### 4. User Feedback - Improved ✅
 
-**Current Issues:**
-- Success/failure only shown after OAuth completes
-- No validation feedback while typing
-- No helpful hints about what to enter
-- No link to Google Cloud Console
-- No step-by-step guide reference
+**Implemented:**
+- ✅ Real-time validation feedback while typing
+- ✅ Validation status indicators (✓ or ⚠️)
+- ✅ Helpful error messages for common issues
+- ✅ Documentation files created (google-oauth-setup.md, troubleshooting guides)
 
-**Recommendations:**
-- Add inline validation as user types
-- Add help text with examples
-- Add link to configuration guide
-- Show validation status (✓ or ⚠️) next to Client Secret field
-- Add tooltips explaining each field
+**Still Could Improve:**
+- ❌ No direct link to Google Cloud Console from UI
+- ❌ No inline tooltips in the forms
+- ❌ No step-by-step wizard for first-time setup
 
-### 5. Missing Processing Configuration
+**Current UX:**
+- Client Secret field validates in real-time
+- Clear success/error messages shown
+- Comprehensive documentation available
+- Partial secret display helps verify correct entry
 
-**Currently Missing:**
-- How many photos to process per batch
-- How far back to look (if lastPhotoTimestamp is empty)
-- Whether to auto-process on a schedule
-- AI confidence threshold for book detection
-- Whether to skip photos that already have descriptions
+### 5. Books-from-Feed Feature - Reimplemented with Picker API ✅
 
-**Potential Settings:**
-```
-[ ] Auto-process daily
-[ ] Process only photos from last: [30] days (if no timestamp)
-[ ] Batch size: [50] photos per request
-[ ] AI confidence threshold: [0.7] (0.0-1.0)
-[ ] Skip photos with existing descriptions
-```
+**Previous Implementation (Deprecated):**
+- Used direct Google Photos Library API calls
+- Required complex scope configuration
+- Faced persistent 403 "insufficient authentication scopes" errors
+- Used `mediaItems:search` endpoint with date filters
 
-**Note:** These might be admin settings rather than user settings.
+**Current Implementation (Nov 2025):**
+- ✅ Uses Google Photos Picker API
+- ✅ User-driven photo selection (no automatic scanning)
+- ✅ Official Google UI for photo selection
+- ✅ No direct API calls to Photos Library
+- ✅ Eliminates authentication scope errors
+
+**How It Works:**
+1. User clicks "Process Photos" button
+2. Google Photos Picker opens (official Google UI)
+3. User selects photos of books
+4. Selected photos are downloaded from Picker URLs
+5. AI (Grok) analyzes each photo:
+   - Detects if it's a book cover
+   - Extracts title and author
+6. Book entries created in library
+7. Results displayed to user
+
+**Benefits:**
+- No more 403 authentication errors
+- Simpler user experience
+- Uses official Google interface
+- User controls exactly which photos to process
+
+### 6. Processing Configuration
+
+**Currently Not Applicable:**
+Since the Picker API is user-driven (not automatic), most processing configuration is not needed:
+- ❌ Batch size (user selects photos manually)
+- ❌ Date range (user picks photos from any date)
+- ❌ Auto-process schedule (process is manual)
+
+**Still Relevant:**
+- AI confidence threshold for book detection (could be added)
+- Skip photos that fail AI detection
+- Maximum number of photos per selection
 
 ---
 
@@ -185,54 +207,67 @@ Add read-only display fields for:
 ### ✅ What We Have
 
 1. **Google Cloud Setup:**
-   - Client ID configured in application.properties
-   - OAuth URIs configured
-   - Appropriate scope (photoslibrary.readonly)
+   - ✅ Client ID configured in application.properties
+   - ✅ OAuth URIs configured
+   - ✅ All 8 required scopes for Picker API configured
+   - ✅ Photos Library API enabled
 
-2. **Per-User Data:**
-   - Client Secret storage (per-user)
-   - Access token storage
-   - Refresh token storage
-   - Token expiry tracking
-   - Last photo timestamp tracking
+2. **Global Configuration (Application-Wide):**
+   - ✅ Client Secret stored in GlobalSettings entity
+   - ✅ Global Settings UI page (Librarian only)
+   - ✅ Client Secret validation and partial display
+   - ✅ Last updated timestamp tracking
 
-3. **UI:**
-   - Basic settings form
-   - Authorization/revocation buttons
-   - Status badges (Authorized/Not Authorized)
+3. **Per-User Data:**
+   - ✅ Access token storage
+   - ✅ Refresh token storage
+   - ✅ Token expiry tracking
+   - ✅ Last photo timestamp tracking
+   - ✅ XAI API key for AI processing
 
-### ❌ What We're Missing
+4. **UI:**
+   - ✅ User Settings page with basic fields
+   - ✅ Global Settings page (Librarian only)
+   - ✅ Authorization/revocation buttons
+   - ✅ Status badges (Authorized/Not Authorized)
+   - ✅ Real-time validation feedback
+   - ✅ Client ID display (read-only)
+   - ✅ Partial secret display
 
-1. **Configuration Visibility:**
-   - No Client ID display
-   - No redirect URI display
-   - No token expiration display
-   - No last authorized timestamp
-   - No partial secret display for verification
-   - No "last updated" timestamp for secret
+5. **Books-from-Feed Feature:**
+   - ✅ Google Photos Picker integration
+   - ✅ AI-powered book detection
+   - ✅ Title and author extraction
+   - ✅ Processing results display
+   - ✅ Detailed success/skip/error reporting
 
-2. **Configuration Validation:**
-   - No Client Secret format validation
-   - No "Test Connection" capability
-   - No real-time validation feedback
+### ❌ What We're Still Missing
+
+1. **User Settings Visibility:**
+   - ❌ No redirect URI display
+   - ❌ No token expiration display
+   - ❌ No last authorized timestamp
+   - ❌ No token expiration warning
+
+2. **Configuration Testing:**
+   - ❌ No "Test Connection" capability
+   - ❌ No validation that Client ID and Secret match
+   - ❌ No scope verification
 
 3. **User Guidance:**
-   - No inline help or tooltips
-   - No links to setup documentation
-   - No examples or format hints
-   - No troubleshooting links
+   - ❌ No inline tooltips in forms
+   - ❌ No direct links to Google Cloud Console from UI
+   - ❌ No step-by-step setup wizard
 
-4. **Processing Settings:**
-   - No batch size configuration
-   - No date range limits
-   - No AI threshold settings
-   - No auto-process options
+4. **Processing Settings (Low Priority):**
+   - ❌ No AI confidence threshold configuration
+   - ❌ No maximum photos per selection limit
+   - Note: Most processing config not needed due to Picker API
 
-5. **Diagnostics:**
-   - No self-test capability
-   - No configuration health check
-   - No detailed error messages in UI
-   - Limited logging (being addressed)
+5. **Diagnostics (Mostly Addressed):**
+   - ✅ Comprehensive diagnostic endpoints created
+   - ✅ Detailed logging implemented
+   - ❌ No UI-based diagnostics panel
 
 ---
 
@@ -291,43 +326,48 @@ Add read-only display fields for:
 
 ---
 
-## Immediate Action Items
+## Implementation Status
 
-**To fix the current redirect_uri_mismatch error:**
+### ✅ Completed (Nov 2025)
 
 1. ✅ Created setup guide (docs/google-oauth-setup.md)
 2. ✅ Created troubleshooting guide (docs/troubleshooting-google-oauth.md)
-3. ⏩ Add logging to OAuth flow (next task)
-4. ⏩ Add Client Secret validation (next task)
-5. ⏩ Improve UI feedback (next task)
+3. ✅ Moved Client Secret to global application-wide setting
+4. ✅ Created Global Settings UI page
+5. ✅ Added Client Secret validation
+6. ✅ Added partial secret display
+7. ✅ Added timestamp tracking
+8. ✅ Implemented Google Photos Picker API
+9. ✅ Added comprehensive diagnostic logging
+10. ✅ Created diagnostic test endpoints
+11. ✅ Updated all 6 required OAuth scopes
+12. ✅ Resolved 403 authentication errors by switching to Picker API
 
-**Next Steps:**
+### 🔄 Next Steps (Lower Priority)
 
-1. Implement logging (tasks 4-6)
-2. Add validation and diagnostics (task 7)
-3. Research secret format standards (task 8)
-4. Add partial secret display (task 9)
-5. Add timestamp tracking (task 10)
-6. Improve UI (task 11)
+1. Add "Test Connection" button to Global Settings
+2. Add token expiration display to User Settings
+3. Add last authorized timestamp to User Settings
+4. Add inline tooltips to configuration forms
+5. Consider UI-based diagnostics panel
 
 ---
 
-## Questions for User
+## Questions for User - RESOLVED ✅
 
-1. **Client Secret Architecture:**
-   - Should Client Secret be per-user or application-wide?
-   - Is each user expected to have their own Google Cloud project?
-   - Or should all users share one OAuth client?
+1. **Client Secret Architecture:** ✅ RESOLVED
+   - ✅ Application-wide Client Secret implemented
+   - ✅ All users share one OAuth client
+   - ✅ Standard OAuth pattern followed
 
-2. **Required Settings:**
-   - Do users need to configure processing options?
-   - Should there be admin-level settings vs user-level?
-   - What level of control do users need?
+2. **Required Settings:** ✅ RESOLVED
+   - ✅ Global Settings for admin configuration (Librarian only)
+   - ✅ User Settings for per-user authorization
+   - ✅ Processing is user-driven via Picker (no auto-config needed)
 
-3. **Auto-Processing:**
-   - Should photos be processed automatically on a schedule?
-   - Or always triggered manually?
+3. **Auto-Processing:** ✅ RESOLVED
+   - ✅ Manual processing via Picker API
+   - ✅ User selects photos explicitly
+   - ✅ No automatic scanning needed
 
-4. **Testing/Staging:**
-   - Is there a test/staging environment?
-   - Should redirect URIs support multiple environments?
+4. **Testing/Staging:** Not applicable for current implementation

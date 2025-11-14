@@ -1,12 +1,29 @@
 # Troubleshooting Google Photos 403 "Insufficient Authentication Scopes"
 
-## Error
+## ⚠️ IMPORTANT: This Issue Has Been Resolved
+
+**Solution Implemented:** The Books-from-Feed feature now uses the **Google Photos Picker API** instead of direct API calls. This eliminates the 403 authentication scope errors entirely by using Google's official picker UI.
+
+**Current Implementation (as of Nov 2025):**
+- Users click "Process Photos" button
+- Google Photos Picker UI opens (official Google interface)
+- Users select book cover photos directly from their library
+- Selected photos are sent to backend for AI processing
+- No direct Google Photos Library API calls are made
+
+**This document is preserved for historical reference** in case future development requires direct API access or for troubleshooting similar OAuth issues.
+
+---
+
+## Historical Error Documentation
+
+### Error (No Longer Occurring)
 ```
 403 Forbidden: Request had insufficient authentication scopes.
 PERMISSION_DENIED
 ```
 
-## CRITICAL: Token Has All Scopes But API Still Returns 403?
+### CRITICAL: Token Has All Scopes But API Still Returns 403?
 
 If your diagnostic logs show:
 ```
