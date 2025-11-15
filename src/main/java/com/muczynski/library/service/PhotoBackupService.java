@@ -60,6 +60,7 @@ public class PhotoBackupService {
      * Runs every hour
      */
     @Scheduled(fixedRate = 3600000) // Run every hour (3600000 ms)
+    @Transactional
     public void backupPhotos() {
         logger.info("Starting scheduled photo backup process...");
 

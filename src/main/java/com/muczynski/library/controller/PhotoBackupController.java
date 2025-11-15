@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -29,6 +30,7 @@ public class PhotoBackupController {
      * Get backup statistics
      */
     @GetMapping("/stats")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getBackupStats() {
         try {
             logger.info("Getting backup statistics");
@@ -46,6 +48,7 @@ public class PhotoBackupController {
      * Get all photos with backup status
      */
     @GetMapping("/photos")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithBackupStatus() {
         try {
             logger.info("Getting all photos with backup status");
@@ -65,6 +68,7 @@ public class PhotoBackupController {
      */
     @PostMapping("/backup-all")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<Map<String, Object>> backupAllPhotos() {
         try {
             logger.info("Manually triggering backup for all photos");
@@ -88,6 +92,7 @@ public class PhotoBackupController {
      */
     @PostMapping("/backup/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<Map<String, Object>> backupPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Manually triggering backup for photo ID: {}", photoId);
