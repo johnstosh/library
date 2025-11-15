@@ -382,6 +382,7 @@ public class PhotoBackupService {
     /**
      * Get backup statistics
      */
+    @Transactional(readOnly = true)
     public Map<String, Object> getBackupStats() {
         List<Photo> allPhotos = photoRepository.findAll();
 
@@ -417,6 +418,7 @@ public class PhotoBackupService {
     /**
      * Get all photos with their backup status
      */
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
         List<Photo> allPhotos = photoRepository.findAll();
         List<Map<String, Object>> result = new ArrayList<>();
