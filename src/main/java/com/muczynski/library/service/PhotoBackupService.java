@@ -420,32 +420,41 @@ public class PhotoBackupService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
+        logger.debug("Fetching all photos with book and author");
         List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+        logger.info("Found {} photos in database", allPhotos.size());
+
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
-            Map<String, Object> photoInfo = new HashMap<>();
-            photoInfo.put("id", photo.getId());
-            photoInfo.put("caption", photo.getCaption());
-            photoInfo.put("backupStatus", photo.getBackupStatus() != null ? photo.getBackupStatus().toString() : "PENDING");
-            photoInfo.put("backedUpAt", photo.getBackedUpAt());
-            photoInfo.put("permanentId", photo.getPermanentId());
-            photoInfo.put("backupErrorMessage", photo.getBackupErrorMessage());
-            photoInfo.put("contentType", photo.getContentType());
+            try {
+                Map<String, Object> photoInfo = new HashMap<>();
+                photoInfo.put("id", photo.getId());
+                photoInfo.put("caption", photo.getCaption());
+                photoInfo.put("backupStatus", photo.getBackupStatus() != null ? photo.getBackupStatus().toString() : "PENDING");
+                photoInfo.put("backedUpAt", photo.getBackedUpAt());
+                photoInfo.put("permanentId", photo.getPermanentId());
+                photoInfo.put("backupErrorMessage", photo.getBackupErrorMessage());
+                photoInfo.put("contentType", photo.getContentType());
 
-            if (photo.getBook() != null) {
-                photoInfo.put("bookTitle", photo.getBook().getTitle());
-                photoInfo.put("bookId", photo.getBook().getId());
+                if (photo.getBook() != null) {
+                    photoInfo.put("bookTitle", photo.getBook().getTitle());
+                    photoInfo.put("bookId", photo.getBook().getId());
+                }
+
+                if (photo.getAuthor() != null) {
+                    photoInfo.put("authorName", photo.getAuthor().getName());
+                    photoInfo.put("authorId", photo.getAuthor().getId());
+                }
+
+                result.add(photoInfo);
+            } catch (Exception e) {
+                logger.error("Error processing photo ID: {} - Error: {}", photo.getId(), e.getMessage(), e);
+                // Continue processing other photos even if one fails
             }
-
-            if (photo.getAuthor() != null) {
-                photoInfo.put("authorName", photo.getAuthor().getName());
-                photoInfo.put("authorId", photo.getAuthor().getId());
-            }
-
-            result.add(photoInfo);
         }
 
+        logger.info("Successfully processed {} photos for display", result.size());
         return result;
     }
 

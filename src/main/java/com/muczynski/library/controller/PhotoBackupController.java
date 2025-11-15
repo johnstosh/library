@@ -50,10 +50,13 @@ public class PhotoBackupController {
         try {
             logger.info("Getting all photos with backup status");
             List<Map<String, Object>> photos = photoBackupService.getAllPhotosWithBackupStatus();
+            logger.info("Successfully retrieved {} photos with backup status", photos.size());
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
-            logger.error("Failed to get photos with backup status", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            logger.error("Failed to get photos with backup status - Error: {} - Message: {}",
+                e.getClass().getSimpleName(), e.getMessage(), e);
+            // Return empty list instead of null to avoid frontend issues
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new java.util.ArrayList<>());
         }
     }
 
