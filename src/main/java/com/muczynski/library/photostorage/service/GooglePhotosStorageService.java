@@ -42,13 +42,12 @@ public class GooglePhotosStorageService {
      *
      * @param accessToken OAuth access token
      * @param title Album title
-     * @param description Album description
      * @return Permanent album ID - store this for future use
      */
-    public String createAlbum(String accessToken, String title, String description) {
+    public String createAlbum(String accessToken, String title) {
         log.info("Creating app-created album: {}", title);
 
-        AlbumResponse response = client.createAlbum(accessToken, title, description);
+        AlbumResponse response = client.createAlbum(accessToken, title);
         String albumId = response.getAlbum().getId();
 
         log.info("Successfully created album '{}' with ID: {}", title, albumId);
@@ -309,8 +308,7 @@ public class GooglePhotosStorageService {
     public String initializeBookCoversAlbum(String accessToken) {
         String albumId = createAlbum(
                 accessToken,
-                "Library Book Covers",
-                "Book cover photos uploaded via Library Management System"
+                "Library Book Covers"
         );
 
         log.info("============================================");
@@ -334,8 +332,7 @@ public class GooglePhotosStorageService {
     public String initializeAuthorPhotosAlbum(String accessToken) {
         String albumId = createAlbum(
                 accessToken,
-                "Library Author Photos",
-                "Author photos uploaded via Library Management System"
+                "Library Author Photos"
         );
 
         log.info("============================================");

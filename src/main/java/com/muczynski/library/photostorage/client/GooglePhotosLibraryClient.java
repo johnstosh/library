@@ -46,16 +46,14 @@ public class GooglePhotosLibraryClient {
      *
      * @param accessToken OAuth access token
      * @param title Album title
-     * @param description Album description
      * @return AlbumResponse with album ID and details
      */
-    public AlbumResponse createAlbum(String accessToken, String title, String description) {
+    public AlbumResponse createAlbum(String accessToken, String title) {
         log.info("Creating Google Photos album: {}", title);
 
         AlbumCreateRequest request = new AlbumCreateRequest();
         AlbumCreateRequest.Album album = new AlbumCreateRequest.Album();
         album.setTitle(title);
-        album.setDescription(description);
         request.setAlbum(album);
 
         HttpEntity<AlbumCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));

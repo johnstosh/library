@@ -295,7 +295,7 @@ public class PhotoBackupService {
         logger.info("Creating new album: {}", title);
 
         // Use the photostorage client to create the album
-        AlbumResponse response = photosLibraryClient.createAlbum(accessToken, title, "Library photos album");
+        AlbumResponse response = photosLibraryClient.createAlbum(accessToken, title);
 
         String albumId = response.getAlbum().getId();
         logger.info("Successfully created album '{}' with ID: {}", title, albumId);

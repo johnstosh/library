@@ -521,13 +521,12 @@ public class GooglePhotosLibraryService {
     /**
      * Create an album for storing book covers
      */
-    public String createAlbum(String accessToken, String title, String description) {
+    public String createAlbum(String accessToken, String title) {
         log.info("Creating Google Photos album: {}", title);
 
         AlbumCreateRequest request = new AlbumCreateRequest();
         AlbumCreateRequest.Album album = new AlbumCreateRequest.Album();
         album.setTitle(title);
-        album.setDescription(description);
         request.setAlbum(album);
 
         HttpHeaders headers = new HttpHeaders();
@@ -867,7 +866,7 @@ class GooglePhotosLibraryServiceTest {
         when(restTemplate.postForEntity(anyString(), any(), eq(AlbumResponse.class)))
             .thenReturn(ResponseEntity.ok(mockResponse));
 
-        String albumId = service.createAlbum("token", "Test Album", "Description");
+        String albumId = service.createAlbum("token", "Test Album");
 
         assertEquals("test-album-id", albumId);
     }
