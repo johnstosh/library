@@ -26,6 +26,18 @@ async function loadPhotoBackupStatus() {
         document.getElementById('stats-pending').textContent = stats.pending || 0;
         document.getElementById('stats-failed').textContent = stats.failed || 0;
 
+        // Update album information
+        const albumNameElement = document.getElementById('album-name');
+        if (albumNameElement) {
+            if (stats.albumName) {
+                albumNameElement.textContent = stats.albumName;
+            } else {
+                albumNameElement.textContent = '(Not configured)';
+                albumNameElement.classList.remove('text-primary');
+                albumNameElement.classList.add('text-muted');
+            }
+        }
+
         // Fetch photo details
         const photos = await fetchData('/api/photo-backup/photos');
         console.log('[Photos] Loaded', photos.length, 'photos');

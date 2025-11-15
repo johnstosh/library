@@ -287,4 +287,75 @@ public class GooglePhotosLibraryClient {
             return baseUrl + "=w" + width;
         }
     }
+
+    /**
+     * List albums with pagination
+     * Required scope: photoslibrary.readonly or photoslibrary.readonly.appcreateddata
+     *
+     * @param accessToken OAuth access token
+     * @param pageSize Number of albums per page (max 50)
+     * @param pageToken Page token for pagination (null for first page)
+     * @return AlbumsListResponse with albums and next page token
+     */
+    public AlbumsListResponse listAlbums(String accessToken, Integer pageSize, String pageToken) {
+        log.debug("Listing albums (pageSize: {}, pageToken: {})", pageSize, pageToken != null ? "present" : "null");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+
+        // Build URL with query parameters
+        StringBuilder urlBuilder = new StringBuilder(config.getBaseUrl() + "/albums");
+        urlBuilder.append("?pageSize=").append(pageSize != null ? pageSize : 50);
+        if (pageToken != null) {
+            urlBuilder.append("&pageToken=").append(pageToken);
+        }
+
+        ResponseEntity<AlbumsListResponse> response = restTemplate.exchange(
+                urlBuilder.toString(),
+                HttpMethod.GET,
+                entity,
+                AlbumsListResponse.class
+        );
+
+        AlbumsListResponse albumsResponse = response.getBody();
+        log.debug("Listed {} albums, nextPageToken: {}",
+                albumsResponse.getAlbums() != null ? albumsResponse.getAlbums().size() : 0,
+                albumsResponse.getNextPageToken() != null ? "present" : "null");
+
+        return albumsResponse;
+    }
+
+    /**
+     * Find an album by its title
+     * Searches through all albums (with pagination) to find one matching the title
+     *
+     * @param accessToken OAuth access token
+     * @param title Album title to search for
+     * @return Album ID if found, null otherwise
+     */
+    public String findAlbumByTitle(String accessToken, String title) {
+        log.debug("Searching for album with title: {}", title);
+
+        String pageToken = null;
+        do {
+            AlbumsListResponse response = listAlbums(accessToken, 50, pageToken);
+
+            if (response.getAlbums() != null) {
+                for (AlbumsListResponse.Album album : response.getAlbums()) {
+                    if (title.equals(album.getTitle())) {
+                        log.debug("Found matching album: {} with ID: {}", album.getTitle(), album.getId());
+                        return album.getId();
+                    }
+                }
+            }
+
+            pageToken = response.getNextPageToken();
+
+        } while (pageToken != null);
+
+        log.debug("Album '{}' not found", title);
+        return null;
+    }
 }

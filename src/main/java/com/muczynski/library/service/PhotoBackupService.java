@@ -51,9 +51,6 @@ public class PhotoBackupService {
     @Value("${APP_ENV:production}")
     private String appEnv;
 
-    // RestTemplate for operations not yet in photostorage client (album listing)
-    private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-
     // Cache the album ID to avoid repeated lookups
     private String cachedAlbumId = null;
     private String cachedAlbumName = null;
@@ -300,61 +297,8 @@ public class PhotoBackupService {
      * Find an album by title
      */
     private String findAlbumByTitle(String title, String accessToken) {
-        try {
-            logger.debug("Searching for album with title: {}", title);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
-
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            // List albums - Google Photos API supports pagination
-            String nextPageToken = null;
-            do {
-                String url = "https://photoslibrary.googleapis.com/v1/albums?pageSize=50";
-                if (nextPageToken != null) {
-                    url += "&pageToken=" + nextPageToken;
-                }
-
-                ResponseEntity<Map> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        entity,
-                        Map.class
-                );
-
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    Map<String, Object> responseBody = response.getBody();
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> albums = (List<Map<String, Object>>) responseBody.get("albums");
-
-                    if (albums != null) {
-                        for (Map<String, Object> album : albums) {
-                            String albumTitle = (String) album.get("title");
-                            if (title.equals(albumTitle)) {
-                                String albumId = (String) album.get("id");
-                                logger.debug("Found matching album: {} with ID: {}", albumTitle, albumId);
-                                return albumId;
-                            }
-                        }
-                    }
-
-                    nextPageToken = (String) responseBody.get("nextPageToken");
-                } else {
-                    logger.error("Failed to list albums with status: {}", response.getStatusCode());
-                    break;
-                }
-
-            } while (nextPageToken != null);
-
-            logger.debug("Album '{}' not found", title);
-            return null;
-
-        } catch (Exception e) {
-            logger.error("Failed to search for album", e);
-            return null;
-        }
+        // Use the photostorage client to find the album
+        return photosLibraryClient.findAlbumByTitle(accessToken, title);
     }
 
     /**
@@ -461,6 +405,11 @@ public class PhotoBackupService {
         stats.put("pending", pending);
         stats.put("failed", failed);
         stats.put("inProgress", inProgress);
+
+        // Add album information
+        String albumName = getAlbumName();
+        stats.put("albumName", albumName);
+        stats.put("albumId", cachedAlbumId);
 
         return stats;
     }
