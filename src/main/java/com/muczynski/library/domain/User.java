@@ -26,6 +26,7 @@ public class User {
     private String googlePhotosRefreshToken = ""; // OAuth refresh token
     private String googlePhotosTokenExpiry = ""; // ISO 8601 timestamp
     private String googleClientSecret = ""; // Google OAuth client secret
+    private String googlePhotosAlbumId = ""; // Permanent album ID for photo backup
     private String lastPhotoTimestamp = "";
 
     @ManyToMany(fetch = FetchType.EAGER)

@@ -51,8 +51,7 @@ public class PhotoBackupService {
     @Value("${APP_ENV:production}")
     private String appEnv;
 
-    // Cache the album ID to avoid repeated lookups
-    private String cachedAlbumId = null;
+    // Cache the album name to avoid repeated database lookups
     private String cachedAlbumName = null;
 
     /**
@@ -274,13 +273,23 @@ public class PhotoBackupService {
      * Get or create the library album in Google Photos
      */
     private String getOrCreateAlbum(String username) {
-        if (cachedAlbumId != null) {
-            logger.debug("Using cached album ID: {}", cachedAlbumId);
-            return cachedAlbumId;
+        // Get the user from database
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found: " + username);
         }
 
+        User user = userOpt.get();
+
+        // Check if user has a saved album ID
+        if (user.getGooglePhotosAlbumId() != null && !user.getGooglePhotosAlbumId().trim().isEmpty()) {
+            logger.info("Using saved album ID from user settings: {}", user.getGooglePhotosAlbumId());
+            return user.getGooglePhotosAlbumId();
+        }
+
+        // No saved album ID, need to create a new album
         String albumName = getAlbumName();
-        logger.info("Getting or creating album: {}", albumName);
+        logger.info("No saved album ID found. Creating new album: {}", albumName);
 
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
@@ -289,14 +298,15 @@ public class PhotoBackupService {
         logger.info("Verifying token scopes before album creation...");
         googlePhotosService.verifyAccessTokenScopes(accessToken);
 
-        // Create the album directly (Google Photos API will handle if it already exists)
-        // Note: We can't search for albums by title because that requires the deprecated
-        // photoslibrary.readonly scope. The app only has photoslibrary.readonly.appcreateddata
-        // which only allows reading app-created albums, not listing all albums.
-        logger.info("Creating album '{}' (or reusing if already exists)", albumName);
+        // Create the album
+        logger.info("Creating new Google Photos album: '{}'", albumName);
         String albumId = createAlbum(albumName, accessToken);
 
-        cachedAlbumId = albumId;
+        // Save the album ID to the user for future use
+        logger.info("Saving album ID '{}' to user settings", albumId);
+        user.setGooglePhotosAlbumId(albumId);
+        userRepository.save(user);
+
         return albumId;
     }
 
@@ -409,7 +419,15 @@ public class PhotoBackupService {
         // Add album information
         String albumName = getAlbumName();
         stats.put("albumName", albumName);
-        stats.put("albumId", cachedAlbumId);
+
+        // Get album ID from librarian user settings
+        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+        if (librarianOpt.isPresent()) {
+            String albumId = librarianOpt.get().getGooglePhotosAlbumId();
+            stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
+        } else {
+            stats.put("albumId", null);
+        }
 
         return stats;
     }
