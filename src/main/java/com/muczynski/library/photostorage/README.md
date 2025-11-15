@@ -46,8 +46,6 @@ google:
     base-url: https://photoslibrary.googleapis.com/v1
     upload-url: https://photoslibrary.googleapis.com/v1/uploads
     picker-base-url: https://photospicker.googleapis.com/v1
-    book-covers-album-id: ${GOOGLE_PHOTOS_BOOK_COVERS_ALBUM_ID:}
-    author-photos-album-id: ${GOOGLE_PHOTOS_AUTHOR_PHOTOS_ALBUM_ID:}
     default-page-size: 100
     cache-base-urls: true
     base-url-cache-duration-minutes: 50
@@ -55,15 +53,15 @@ google:
 
 ## Usage Examples
 
-### 1. Create an Album (One-time Setup)
+### 1. Create an Album
 
 ```java
 @Autowired
 private GooglePhotosStorageService storageService;
 
-// Run once during initial setup
-String albumId = storageService.initializeBookCoversAlbum(accessToken);
-// Output: Album ID to configure in application.yml
+// Create an album and store the returned ID
+String albumId = storageService.createAlbum(accessToken, "Library Book Covers");
+// Store this albumId for future uploads
 ```
 
 ### 2. Upload a Photo
@@ -192,12 +190,9 @@ public class BookPhotoUploadService {
     private final GooglePhotosService existingService; // For token management
     private final PhotoRepository photoRepository;
 
-    public Photo uploadBookCover(Book book, byte[] photoBytes, String username) {
+    public Photo uploadBookCover(Book book, byte[] photoBytes, String albumId, String username) {
         // Get valid access token (uses existing token refresh logic)
         String accessToken = existingService.getValidAccessToken(username);
-
-        // Get album ID from config
-        String albumId = googlePhotosStorage.getBookCoversAlbumId();
 
         // Upload to Google Photos
         String mediaItemId = googlePhotosStorage.uploadPhotoToAlbum(

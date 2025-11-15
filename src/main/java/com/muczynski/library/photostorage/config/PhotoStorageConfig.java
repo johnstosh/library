@@ -30,18 +30,6 @@ public class PhotoStorageConfig {
     private String pickerBaseUrl = "https://photospicker.googleapis.com/v1";
 
     /**
-     * Album ID for storing book covers (app-created album)
-     * Should be configured after creating the album initially
-     */
-    private String bookCoversAlbumId;
-
-    /**
-     * Album ID for storing author photos (app-created album)
-     * Should be configured after creating the album initially
-     */
-    private String authorPhotosAlbumId;
-
-    /**
      * Default page size for paginated API requests
      */
     private Integer defaultPageSize = 100;
