@@ -241,16 +241,26 @@
             <div class="card mb-3">
                 <div class="card-body">
                     <p>This feature processes photos from your Google Photos account to automatically detect and create book entries.</p>
-                    <p><strong>How it works:</strong></p>
+                    <p><strong>How it works (Two-Phase Process):</strong></p>
                     <ol>
-                        <li>Scans photos from your Google Photos starting from the last processed timestamp (or yesterday if first time)</li>
-                        <li>Uses AI to determine which photos are of books</li>
-                        <li>Extracts book title and author information from book photos</li>
-                        <li>Creates book entries in your library</li>
-                        <li>Marks processed photos by adding title and author to the photo description in Google Photos</li>
+                        <li><strong>Phase 1 - Fetch Photos:</strong> Downloads photos from Google Photos and saves them to the database (completes quickly before connection timeout)</li>
+                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from saved photos and create book entries</li>
                     </ol>
                     <p><strong>Note:</strong> Make sure you have configured your Google Photos API key in Settings.</p>
-                    <button id="process-photos-btn" class="btn btn-primary" onclick="processPhotosFromFeed()" data-test="process-photos-btn">Process Photos from Feed</button>
+                    <div class="btn-group mb-2" role="group">
+                        <button id="fetch-photos-btn" class="btn btn-primary" onclick="fetchPhotosFromFeed()" data-test="fetch-photos-btn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            Step 1: Fetch Photos
+                        </button>
+                        <button id="process-saved-btn" class="btn btn-success" onclick="processSavedPhotosFromFeed()" data-test="process-saved-btn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            Step 2: Process with AI
+                        </button>
+                    </div>
+                    <br>
+                    <button id="process-photos-btn" class="btn btn-outline-secondary btn-sm" onclick="processPhotosFromFeed()" data-test="process-photos-btn">
+                        Use Google Photos Picker (Alternative)
+                    </button>
                 </div>
             </div>
             <div id="processing-results" data-test="processing-results"></div>

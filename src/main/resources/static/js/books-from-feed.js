@@ -10,6 +10,226 @@ async function loadBooksFromFeedSection() {
     clearError('books-from-feed');
 }
 
+/**
+ * Phase 1: Fetch photos from Google Photos and save to database
+ */
+async function fetchPhotosFromFeed() {
+    clearError('books-from-feed');
+    const fetchBtn = document.getElementById('fetch-photos-btn');
+    const spinner = fetchBtn.querySelector('.spinner-border');
+
+    try {
+        // Show spinner
+        spinner.classList.remove('d-none');
+        fetchBtn.disabled = true;
+
+        // Check authorization
+        const user = await fetchData('/api/user-settings');
+        if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
+            showError('books-from-feed', 'Please authorize Google Photos in Settings first.');
+            return;
+        }
+
+        showInfo('books-from-feed', 'Fetching photos from Google Photos...');
+
+        // Call Phase 1 endpoint
+        const result = await postData('/api/books-from-feed/fetch-photos', {});
+
+        // Display results
+        displayFetchResults(result);
+
+        if (result.savedCount > 0) {
+            showSuccess('books-from-feed',
+                `Phase 1 Complete: Saved ${result.savedCount} photo(s) to database. Click "Step 2: Process with AI" to continue.`);
+        } else {
+            showInfo('books-from-feed', `No new photos found.`);
+        }
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Phase 1 failed:', error);
+        showError('books-from-feed', 'Phase 1 failed: ' + error.message);
+    } finally {
+        spinner.classList.add('d-none');
+        fetchBtn.disabled = false;
+    }
+}
+
+/**
+ * Phase 2: Process saved photos with AI
+ */
+async function processSavedPhotosFromFeed() {
+    clearError('books-from-feed');
+    const processBtn = document.getElementById('process-saved-btn');
+    const spinner = processBtn.querySelector('.spinner-border');
+
+    try {
+        // Show spinner
+        spinner.classList.remove('d-none');
+        processBtn.disabled = true;
+
+        showInfo('books-from-feed', 'Processing saved photos with AI... This may take a while.');
+
+        // Call Phase 2 endpoint
+        const result = await postData('/api/books-from-feed/process-saved', {});
+
+        // Display results
+        displayProcessResults(result);
+
+        if (result.processedCount > 0) {
+            showSuccess('books-from-feed',
+                `Phase 2 Complete: Created ${result.processedCount} book(s) from ${result.totalBooks} saved photo(s).`);
+
+            // Reload books list if on books section
+            if (window.loadBooks) {
+                await loadBooks();
+            }
+        } else {
+            showInfo('books-from-feed', `No books created from ${result.totalBooks} saved photo(s).`);
+        }
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Phase 2 failed:', error);
+        showError('books-from-feed', 'Phase 2 failed: ' + error.message);
+    } finally {
+        spinner.classList.add('d-none');
+        processBtn.disabled = false;
+    }
+}
+
+function displayFetchResults(result) {
+    const resultsContainer = document.getElementById('processing-results');
+    resultsContainer.innerHTML = '';
+
+    const summaryCard = document.createElement('div');
+    summaryCard.className = 'card mb-3';
+    summaryCard.innerHTML = `
+        <div class="card-header bg-primary text-white">
+            <h5>Phase 1: Fetch Results</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Total Photos Found:</strong> ${result.totalPhotos}</p>
+            <p><strong>Photos Saved:</strong> ${result.savedCount}</p>
+            <p><strong>Photos Skipped:</strong> ${result.skippedCount}</p>
+            ${result.lastTimestamp ? `<p><small>Last timestamp: ${result.lastTimestamp}</small></p>` : ''}
+        </div>
+    `;
+    resultsContainer.appendChild(summaryCard);
+
+    // Skipped photos
+    if (result.skippedPhotos && result.skippedPhotos.length > 0) {
+        const skippedCard = document.createElement('div');
+        skippedCard.className = 'card mb-3';
+        skippedCard.innerHTML = `
+            <div class="card-header">
+                <h6>Skipped Photos (${result.skippedPhotos.length})</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Photo ID</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${result.skippedPhotos.map(photo => `
+                            <tr>
+                                <td><small>${escapeHtml(photo.id)}</small></td>
+                                <td><small>${escapeHtml(photo.reason)}</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        resultsContainer.appendChild(skippedCard);
+    }
+}
+
+function displayProcessResults(result) {
+    const resultsContainer = document.getElementById('processing-results');
+    resultsContainer.innerHTML = '';
+
+    const summaryCard = document.createElement('div');
+    summaryCard.className = 'card mb-3';
+    summaryCard.innerHTML = `
+        <div class="card-header bg-success text-white">
+            <h5>Phase 2: Process Results</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Total Saved Photos:</strong> ${result.totalBooks}</p>
+            <p><strong>Books Created:</strong> ${result.processedCount}</p>
+            <p><strong>Failed:</strong> ${result.failedCount}</p>
+        </div>
+    `;
+    resultsContainer.appendChild(summaryCard);
+
+    // Processed books
+    if (result.processedBooks && result.processedBooks.length > 0) {
+        const booksCard = document.createElement('div');
+        booksCard.className = 'card mb-3';
+        booksCard.innerHTML = `
+            <div class="card-header">
+                <h6>Books Created (${result.processedBooks.length})</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Book ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${result.processedBooks.map(book => `
+                            <tr>
+                                <td>${escapeHtml(book.title)}</td>
+                                <td>${escapeHtml(book.author)}</td>
+                                <td><small>${book.bookId}</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        resultsContainer.appendChild(booksCard);
+    }
+
+    // Failed books
+    if (result.failedBooks && result.failedBooks.length > 0) {
+        const failedCard = document.createElement('div');
+        failedCard.className = 'card mb-3';
+        failedCard.innerHTML = `
+            <div class="card-header">
+                <h6>Failed (${result.failedBooks.length})</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Book ID</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${result.failedBooks.map(book => `
+                            <tr>
+                                <td><small>${book.bookId}</small></td>
+                                <td><small>${escapeHtml(book.reason)}</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        resultsContainer.appendChild(failedCard);
+    }
+}
+
+/**
+ * Alternative workflow: Use Google Photos Picker (existing functionality)
+ */
 async function processPhotosFromFeed() {
     clearError('books-from-feed');
 

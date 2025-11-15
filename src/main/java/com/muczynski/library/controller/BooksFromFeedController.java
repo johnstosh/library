@@ -24,9 +24,52 @@ public class BooksFromFeedController {
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
 
     /**
-     * Process photos from Google Photos Library API (complex - has 403 scope issues)
+     * Phase 1: Fetch photos from Google Photos and save to database
+     * This completes quickly before Google Photos connection timeout
+     * @return Fetch results
+     */
+    @PostMapping("/fetch-photos")
+    public ResponseEntity<Map<String, Object>> fetchPhotos() {
+        try {
+            Map<String, Object> result = booksFromFeedService.fetchAndSavePhotos();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage(),
+                    "savedCount", 0,
+                    "skippedCount", 0,
+                    "totalPhotos", 0
+            ));
+        }
+    }
+
+    /**
+     * Phase 2: Process saved photos using AI book-by-photo workflow
+     * This processes photos that were previously saved to the database
      * @return Processing results
      */
+    @PostMapping("/process-saved")
+    public ResponseEntity<Map<String, Object>> processSavedPhotos() {
+        try {
+            Map<String, Object> result = booksFromFeedService.processSavedPhotos();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage(),
+                    "processedCount", 0,
+                    "failedCount", 0,
+                    "totalBooks", 0
+            ));
+        }
+    }
+
+    /**
+     * Legacy: Process photos from Google Photos Library API in one step
+     * WARNING: May timeout due to long-running Google Photos connection
+     * @deprecated Use POST /fetch-photos then POST /process-saved instead
+     * @return Processing results
+     */
+    @Deprecated
     @PostMapping("/process")
     public ResponseEntity<Map<String, Object>> processPhotos() {
         try {
