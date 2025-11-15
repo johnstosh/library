@@ -7,6 +7,7 @@ export const sectionConfig = {
     'authors': { load: loadAuthors, reset: resetAuthorForm },
     'books': { load: loadBooks, reset: resetBookForm },
     'books-from-feed': { load: loadBooksFromFeedSection, reset: null },
+    'photos': { load: loadPhotosSection, reset: null },
     'search': { load: null, reset: null },
     'library-card': { load: loadApplied, reset: null },
     'users': { load: loadUsers, reset: null },

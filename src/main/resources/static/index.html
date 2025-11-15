@@ -34,6 +34,9 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('books-from-feed', event)" data-test="menu-books-from-feed">Books-from-Feed</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('photos', event)" data-test="menu-photos">Photos</button>
+                </li>
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
@@ -251,6 +254,84 @@
                 </div>
             </div>
             <div id="processing-results" data-test="processing-results"></div>
+        </div>
+
+        <div id="photos-section" class="section" data-test="photos-section">
+            <h2 data-test="photos-header">Photo Backup Status</h2>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <p>This page shows the backup status of all photos in the library to Google Photos.</p>
+                    <p><strong>How it works:</strong></p>
+                    <ul>
+                        <li>Photos are automatically backed up to Google Photos every hour</li>
+                        <li>The permanent ID from Google Photos is stored in the database</li>
+                        <li>You can manually trigger a backup for all pending photos or individual photos</li>
+                    </ul>
+                    <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
+
+                    <div class="d-flex gap-2 mb-3">
+                        <button id="backup-all-photos-btn" class="btn btn-primary" onclick="backupAllPhotos()" data-test="backup-all-photos-btn">Backup All Pending Photos</button>
+                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoBackupStatus()" data-test="refresh-photos-btn">Refresh Status</button>
+                    </div>
+
+                    <div id="backup-stats" class="row mb-3" data-test="backup-stats">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Photos</h5>
+                                    <p class="card-text fs-3" id="stats-total">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Completed</h5>
+                                    <p class="card-text fs-3" id="stats-completed">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-warning">
+                                <div class="card-body">
+                                    <h5 class="card-title">Pending</h5>
+                                    <p class="card-text fs-3" id="stats-pending">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-danger text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Failed</h5>
+                                    <p class="card-text fs-3" id="stats-failed">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Photo Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped" data-test="photos-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Backed Up At</th>
+                                    <th scope="col">Permanent ID</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="photos-table-body" data-test="photos-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="search-section" class="section" data-test="search-section">
@@ -482,6 +563,7 @@
 <script src="js/books-edit.js"></script>
 <script src="js/books-photo.js"></script>
 <script src="js/books-from-feed.js"></script>
+<script src="js/photos.js"></script>
 <script src="js/libraries.js"></script>
 <script src="js/authors-table.js"></script>
 <script src="js/authors-edit.js"></script>
