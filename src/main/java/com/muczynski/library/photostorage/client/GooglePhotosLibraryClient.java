@@ -58,31 +58,23 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<AlbumCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
 
-        log.debug("Sending album create request: {}", request);
-
-        ResponseEntity<String> rawResponse = restTemplate.postForEntity(
+        // Google Photos API returns the Album object directly, not wrapped
+        ResponseEntity<AlbumResponse.Album> response = restTemplate.postForEntity(
                 config.getBaseUrl() + "/albums",
                 entity,
-                String.class
+                AlbumResponse.Album.class
         );
 
-        log.info("Raw album creation response: {}", rawResponse.getBody());
-
-        ResponseEntity<AlbumResponse> response = restTemplate.postForEntity(
-                config.getBaseUrl() + "/albums",
-                entity,
-                AlbumResponse.class
-        );
-
-        AlbumResponse albumResponse = response.getBody();
-        if (albumResponse == null) {
-            throw new RuntimeException("Album creation returned null response body. Raw response: " + rawResponse.getBody());
-        }
-        if (albumResponse.getAlbum() == null) {
-            throw new RuntimeException("Album creation returned null album in response. Raw response: " + rawResponse.getBody());
+        AlbumResponse.Album albumData = response.getBody();
+        if (albumData == null) {
+            throw new RuntimeException("Album creation returned null response body");
         }
 
-        log.info("Created album with ID: {}", albumResponse.getAlbum().getId());
+        // Wrap the album in AlbumResponse for consistency with other methods
+        AlbumResponse albumResponse = new AlbumResponse();
+        albumResponse.setAlbum(albumData);
+
+        log.info("Created album with ID: {}", albumData.getId());
         return albumResponse;
     }
 
