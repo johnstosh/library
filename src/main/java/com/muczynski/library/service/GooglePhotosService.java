@@ -379,12 +379,14 @@ public class GooglePhotosService {
 
                 String scopes = (String) tokenInfo.get("scope");
 
-                // Check for all requested scopes
-                boolean hasPhotoslibrary = scopes != null && scopes.contains("auth/photoslibrary ");
-                boolean hasReadonly = scopes != null && scopes.contains("photoslibrary.readonly ");
+                // Check for all requested scopes (2025 API)
+                boolean hasPhotoslibrary = scopes != null && scopes.contains("auth/photoslibrary");
+                boolean hasReadonly = scopes != null && scopes.contains("photoslibrary.readonly");
                 boolean hasOriginals = scopes != null && scopes.contains("photoslibrary.readonly.originals");
                 boolean hasEditAppData = scopes != null && scopes.contains("photoslibrary.edit.appcreateddata");
                 boolean hasReadAppData = scopes != null && scopes.contains("photoslibrary.readonly.appcreateddata");
+                boolean hasAppendOnly = scopes != null && scopes.contains("photoslibrary.appendonly");
+                boolean hasSharing = scopes != null && scopes.contains("photoslibrary.sharing");
 
                 logger.info("  Scope check:");
                 logger.info("    - photoslibrary (full access): {}", hasPhotoslibrary ? "✓" : "✗");
@@ -392,11 +394,18 @@ public class GooglePhotosService {
                 logger.info("    - photoslibrary.readonly.originals: {}", hasOriginals ? "✓" : "✗");
                 logger.info("    - photoslibrary.edit.appcreateddata: {}", hasEditAppData ? "✓" : "✗");
                 logger.info("    - photoslibrary.readonly.appcreateddata: {}", hasReadAppData ? "✓" : "✗");
+                logger.info("    - photoslibrary.appendonly: {}", hasAppendOnly ? "✓" : "✗");
+                logger.info("    - photoslibrary.sharing: {}", hasSharing ? "✓" : "✗");
 
-                if (hasPhotoslibrary || (hasReadonly && hasOriginals)) {
-                    logger.info("  ✓ Token has sufficient scopes for Google Photos API");
+                // Check for 2025 required scopes for photo backup
+                if (hasAppendOnly && hasReadAppData && hasEditAppData) {
+                    logger.info("  ✓ Token has all required 2025 scopes for photo backup");
                 } else {
-                    logger.error("  ✗ Token may be missing required scopes!");
+                    logger.error("  ✗ Token is missing required 2025 scopes!");
+                    logger.error("  Required for photo backup:");
+                    logger.error("    - photoslibrary.appendonly: {} (for uploading)", hasAppendOnly ? "✓" : "✗ MISSING");
+                    logger.error("    - photoslibrary.readonly.appcreateddata: {} (for reading)", hasReadAppData ? "✓" : "✗ MISSING");
+                    logger.error("    - photoslibrary.edit.appcreateddata: {} (for editing)", hasEditAppData ? "✓" : "✗ MISSING");
                     logger.error("  If you get 403 errors, revoke and re-authorize Google Photos in Settings");
                 }
             } else {
@@ -407,6 +416,13 @@ public class GooglePhotosService {
             logger.warn("Failed to verify token scopes (this is diagnostic only): {}", e.getMessage());
             logger.debug("Token verification error details:", e);
         }
+    }
+
+    /**
+     * Public method to verify token scopes (can be called from other services)
+     */
+    public void verifyAccessTokenScopes(String accessToken) {
+        verifyTokenScopes(accessToken);
     }
 
     /**

@@ -49,7 +49,10 @@ public class GooglePhotosLibraryClient {
      * @return AlbumResponse with album ID and details
      */
     public AlbumResponse createAlbum(String accessToken, String title) {
+        log.info("=== CREATE ALBUM OPERATION ===");
         log.info("Creating Google Photos album: {}", title);
+        log.info("Required scopes: photoslibrary.appendonly OR photoslibrary.edit.appcreateddata");
+        log.info("Endpoint: POST {}/albums", config.getBaseUrl());
 
         AlbumCreateRequest request = new AlbumCreateRequest();
         AlbumCreateRequest.Album album = new AlbumCreateRequest.Album();
@@ -58,24 +61,35 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<AlbumCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
 
-        // Google Photos API returns the Album object directly, not wrapped
-        ResponseEntity<AlbumResponse.Album> response = restTemplate.postForEntity(
-                config.getBaseUrl() + "/albums",
-                entity,
-                AlbumResponse.Album.class
-        );
+        try {
+            // Google Photos API returns the Album object directly, not wrapped
+            ResponseEntity<AlbumResponse.Album> response = restTemplate.postForEntity(
+                    config.getBaseUrl() + "/albums",
+                    entity,
+                    AlbumResponse.Album.class
+            );
 
-        AlbumResponse.Album albumData = response.getBody();
-        if (albumData == null) {
-            throw new RuntimeException("Album creation returned null response body");
+            AlbumResponse.Album albumData = response.getBody();
+            if (albumData == null) {
+                throw new RuntimeException("Album creation returned null response body");
+            }
+
+            // Wrap the album in AlbumResponse for consistency with other methods
+            AlbumResponse albumResponse = new AlbumResponse();
+            albumResponse.setAlbum(albumData);
+
+            log.info("Created album successfully with ID: {}", albumData.getId());
+            return albumResponse;
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have required scopes: photoslibrary.appendonly OR photoslibrary.edit.appcreateddata");
+            log.error("Please revoke and re-authorize Google Photos in Settings");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Album creation failed with error: {}", e.getMessage());
+            throw e;
         }
-
-        // Wrap the album in AlbumResponse for consistency with other methods
-        AlbumResponse albumResponse = new AlbumResponse();
-        albumResponse.setAlbum(albumData);
-
-        log.info("Created album with ID: {}", albumData.getId());
-        return albumResponse;
     }
 
     /**
@@ -89,7 +103,10 @@ public class GooglePhotosLibraryClient {
      * @return Upload token to be used in batchCreate
      */
     public String uploadBytes(String accessToken, byte[] photoBytes, String mimeType) {
-        log.debug("Uploading {} bytes with MIME type: {}", photoBytes.length, mimeType);
+        log.info("=== UPLOAD BYTES OPERATION ===");
+        log.info("Uploading {} bytes with MIME type: {}", photoBytes.length, mimeType);
+        log.info("Required scope: photoslibrary.appendonly");
+        log.info("Endpoint: POST {}", config.getUploadUrl());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -98,15 +115,26 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<byte[]> entity = new HttpEntity<>(photoBytes, headers);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                config.getUploadUrl(),
-                entity,
-                String.class
-        );
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    config.getUploadUrl(),
+                    entity,
+                    String.class
+            );
 
-        String uploadToken = response.getBody();
-        log.debug("Received upload token (length: {})", uploadToken != null ? uploadToken.length() : 0);
-        return uploadToken;
+            String uploadToken = response.getBody();
+            log.info("Upload successful. Received upload token (length: {})", uploadToken != null ? uploadToken.length() : 0);
+            return uploadToken;
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have the required scope: photoslibrary.appendonly");
+            log.error("Please revoke and re-authorize Google Photos in Settings");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Upload failed with error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -120,7 +148,10 @@ public class GooglePhotosLibraryClient {
      * @return BatchCreateResponse with created media item IDs
      */
     public BatchCreateResponse batchCreate(String accessToken, String albumId, List<BatchCreateRequest.NewMediaItem> items) {
-        log.info("Batch creating {} media items", items.size());
+        log.info("=== BATCH CREATE OPERATION ===");
+        log.info("Batch creating {} media items to album: {}", items.size(), albumId);
+        log.info("Required scope: photoslibrary.appendonly");
+        log.info("Endpoint: POST {}/mediaItems:batchCreate", config.getBaseUrl());
 
         BatchCreateRequest request = new BatchCreateRequest();
         request.setAlbumId(albumId);
@@ -128,14 +159,25 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<BatchCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
 
-        ResponseEntity<BatchCreateResponse> response = restTemplate.postForEntity(
-                config.getBaseUrl() + "/mediaItems:batchCreate",
-                entity,
-                BatchCreateResponse.class
-        );
+        try {
+            ResponseEntity<BatchCreateResponse> response = restTemplate.postForEntity(
+                    config.getBaseUrl() + "/mediaItems:batchCreate",
+                    entity,
+                    BatchCreateResponse.class
+            );
 
-        log.info("Batch create completed: {} items", response.getBody().getNewMediaItemResults().size());
-        return response.getBody();
+            log.info("Batch create completed successfully: {} items", response.getBody().getNewMediaItemResults().size());
+            return response.getBody();
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have the required scope: photoslibrary.appendonly");
+            log.error("Please revoke and re-authorize Google Photos in Settings to grant this scope");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Batch create failed with error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**

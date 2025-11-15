@@ -180,6 +180,10 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
+        // Verify token scopes before upload
+        logger.info("Verifying token scopes before upload operation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
+
         // Use the photostorage client for upload
         return photosLibraryClient.uploadBytes(accessToken, imageBytes, contentType);
     }
@@ -192,6 +196,10 @@ public class PhotoBackupService {
 
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        // Verify token scopes before attempting batchCreate
+        logger.info("Verifying token scopes before batchCreate operation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
 
         // Get or create the library album
         String albumId = getOrCreateAlbum(username);
@@ -276,6 +284,10 @@ public class PhotoBackupService {
 
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        // Verify token scopes before creating album
+        logger.info("Verifying token scopes before album creation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
 
         // Create the album directly (Google Photos API will handle if it already exists)
         // Note: We can't search for albums by title because that requires the deprecated
