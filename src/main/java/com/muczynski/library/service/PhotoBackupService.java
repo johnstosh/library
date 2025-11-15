@@ -6,6 +6,11 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
+import com.muczynski.library.photostorage.dto.AlbumResponse;
+import com.muczynski.library.photostorage.dto.BatchCreateRequest;
+import com.muczynski.library.photostorage.dto.BatchCreateResponse;
+import com.muczynski.library.photostorage.dto.SearchResponse;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
@@ -13,11 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -39,21 +42,21 @@ public class PhotoBackupService {
     @Autowired
     private GooglePhotosService googlePhotosService;
 
+    @Autowired
+    private GooglePhotosLibraryClient photosLibraryClient;
+
     @Value("${google.oauth.client-id}")
     private String clientId;
 
     @Value("${APP_ENV:production}")
     private String appEnv;
 
-    private final RestTemplate restTemplate;
+    // RestTemplate for operations not yet in photostorage client (album listing)
+    private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
 
     // Cache the album ID to avoid repeated lookups
     private String cachedAlbumId = null;
     private String cachedAlbumName = null;
-
-    public PhotoBackupService() {
-        this.restTemplate = new RestTemplate();
-    }
 
     /**
      * Scheduled task to backup photos to Google Photos
@@ -179,35 +182,8 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.add("X-Goog-Upload-Content-Type", contentType);
-        headers.add("X-Goog-Upload-Protocol", "raw");
-
-        HttpEntity<byte[]> entity = new HttpEntity<>(imageBytes, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    "https://photoslibrary.googleapis.com/v1/uploads",
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                String uploadToken = response.getBody();
-                logger.debug("Successfully obtained upload token: {}", uploadToken.substring(0, Math.min(20, uploadToken.length())));
-                return uploadToken;
-            } else {
-                logger.error("Failed to upload photo bytes with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to upload photo bytes: " + response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            logger.error("Failed to upload photo bytes to Google Photos", e);
-            throw new RuntimeException("Failed to upload photo bytes: " + e.getMessage(), e);
-        }
+        // Use the photostorage client for upload
+        return photosLibraryClient.uploadBytes(accessToken, imageBytes, contentType);
     }
 
     /**
@@ -225,67 +201,36 @@ public class PhotoBackupService {
         // Build description from photo caption and associated book/author
         String description = buildPhotoDescription(photo);
 
-        // Build request body
-        Map<String, Object> newMediaItem = new HashMap<>();
-        newMediaItem.put("description", description);
+        // Create the new media item request using photostorage DTOs
+        BatchCreateRequest.NewMediaItem newMediaItem = new BatchCreateRequest.NewMediaItem();
+        newMediaItem.setDescription(description);
 
-        Map<String, Object> simpleMediaItem = new HashMap<>();
-        simpleMediaItem.put("uploadToken", uploadToken);
-        simpleMediaItem.put("fileName", "library-photo-" + photo.getId() + getFileExtension(photo.getContentType()));
+        BatchCreateRequest.SimpleMediaItem simpleMediaItem = new BatchCreateRequest.SimpleMediaItem();
+        simpleMediaItem.setUploadToken(uploadToken);
+        newMediaItem.setSimpleMediaItem(simpleMediaItem);
 
-        newMediaItem.put("simpleMediaItem", simpleMediaItem);
+        // Use the photostorage client for batch create
+        BatchCreateResponse response = photosLibraryClient.batchCreate(
+                accessToken,
+                albumId,
+                Collections.singletonList(newMediaItem)
+        );
 
-        Map<String, Object> request = new HashMap<>();
-        request.put("newMediaItems", Collections.singletonList(newMediaItem));
+        // Extract the permanent media item ID
+        if (response.getNewMediaItemResults() != null && !response.getNewMediaItemResults().isEmpty()) {
+            BatchCreateResponse.NewMediaItemResult result = response.getNewMediaItemResults().get(0);
 
-        // Add album ID to the request to add the photo to the album
-        request.put("albumId", albumId);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate",
-                    entity,
-                    Map.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> newMediaItemResults = (List<Map<String, Object>>) responseBody.get("newMediaItemResults");
-
-                if (newMediaItemResults != null && !newMediaItemResults.isEmpty()) {
-                    Map<String, Object> result = newMediaItemResults.get(0);
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> mediaItem = (Map<String, Object>) result.get("mediaItem");
-
-                    if (mediaItem != null && mediaItem.containsKey("id")) {
-                        String permanentId = (String) mediaItem.get("id");
-                        logger.info("Successfully created media item with ID: {}", permanentId);
-                        return permanentId;
-                    } else {
-                        logger.error("Media item created but no ID in response");
-                        throw new RuntimeException("No media item ID in response");
-                    }
-                } else {
-                    logger.error("No media item results in response");
-                    throw new RuntimeException("No media item results in response");
-                }
+            if (result.getMediaItem() != null && result.getMediaItem().getId() != null) {
+                String permanentId = result.getMediaItem().getId();
+                logger.info("Successfully created media item with ID: {}", permanentId);
+                return permanentId;
             } else {
-                logger.error("Failed to create media item with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to create media item: " + response.getStatusCode());
+                logger.error("Media item created but no ID in response");
+                throw new RuntimeException("No media item ID in response");
             }
-
-        } catch (Exception e) {
-            logger.error("Failed to create media item in Google Photos", e);
-            throw new RuntimeException("Failed to create media item: " + e.getMessage(), e);
+        } else {
+            logger.error("No media item results in response");
+            throw new RuntimeException("No media item results in response");
         }
     }
 
@@ -416,41 +361,15 @@ public class PhotoBackupService {
      * Create a new album in Google Photos
      */
     private String createAlbum(String title, String accessToken) {
-        try {
-            logger.info("Creating new album: {}", title);
+        logger.info("Creating new album: {}", title);
 
-            Map<String, Object> album = new HashMap<>();
-            album.put("title", title);
+        // Use the photostorage client to create the album
+        AlbumResponse response = photosLibraryClient.createAlbum(accessToken, title, "Library photos album");
 
-            Map<String, Object> request = new HashMap<>();
-            request.put("album", album);
+        String albumId = response.getAlbum().getId();
+        logger.info("Successfully created album '{}' with ID: {}", title, albumId);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://photoslibrary.googleapis.com/v1/albums",
-                    entity,
-                    Map.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                String albumId = (String) responseBody.get("id");
-                logger.info("Successfully created album '{}' with ID: {}", title, albumId);
-                return albumId;
-            } else {
-                logger.error("Failed to create album with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to create album: " + response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            logger.error("Failed to create album", e);
-            throw new RuntimeException("Failed to create album: " + e.getMessage(), e);
-        }
+        return albumId;
     }
 
     /**
