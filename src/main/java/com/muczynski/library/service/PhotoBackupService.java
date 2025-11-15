@@ -277,29 +277,15 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
-        // First, try to find existing album
-        String albumId = findAlbumByTitle(albumName, accessToken);
-
-        if (albumId != null) {
-            logger.info("Found existing album '{}' with ID: {}", albumName, albumId);
-            cachedAlbumId = albumId;
-            return albumId;
-        }
-
-        // Album doesn't exist, create it
-        logger.info("Album '{}' not found, creating new album", albumName);
-        albumId = createAlbum(albumName, accessToken);
+        // Create the album directly (Google Photos API will handle if it already exists)
+        // Note: We can't search for albums by title because that requires the deprecated
+        // photoslibrary.readonly scope. The app only has photoslibrary.readonly.appcreateddata
+        // which only allows reading app-created albums, not listing all albums.
+        logger.info("Creating album '{}' (or reusing if already exists)", albumName);
+        String albumId = createAlbum(albumName, accessToken);
 
         cachedAlbumId = albumId;
         return albumId;
-    }
-
-    /**
-     * Find an album by title
-     */
-    private String findAlbumByTitle(String title, String accessToken) {
-        // Use the photostorage client to find the album
-        return photosLibraryClient.findAlbumByTitle(accessToken, title);
     }
 
     /**

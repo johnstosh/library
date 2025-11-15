@@ -11,9 +11,10 @@
    - Use `@Transactional(readOnly = true)` for GET endpoints
    - Use `@Transactional` for POST/PUT/DELETE endpoints
 
-3. **Match SecurityConfig patterns**
-   - SecurityConfig uses `hasAuthority("LIBRARIAN")`
-   - Controllers must use the same
+3. **Add new endpoint paths to SecurityConfig.java**
+   - Every new controller path must be added to SecurityConfig
+   - SecurityConfig controls which paths require authentication
+   - Use `hasAuthority("LIBRARIAN")` in SecurityConfig to match controller annotations
 
 ## Quick Reference
 
@@ -48,7 +49,8 @@ public ResponseEntity<String> adminEndpoint() { }
 **403 Forbidden?**
 - Check annotation: `hasRole` → `hasAuthority`
 - Verify user has role in database
-- Check SecurityConfig for path conflicts
+- **Check SecurityConfig.java** - ensure path is configured (e.g., `.requestMatchers("/api/your-path/**")`)
+- Verify SecurityConfig and @PreAuthorize both use `hasAuthority()`
 
 **Large Objects error?**
 - Add `@Transactional` to controller method
