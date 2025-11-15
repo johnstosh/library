@@ -115,7 +115,7 @@ public class PhotoBackupService {
      * Find photos that need to be backed up
      */
     private List<Photo> findPhotosNeedingBackup() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
         List<Photo> photosToBackup = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
@@ -384,7 +384,7 @@ public class PhotoBackupService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getBackupStats() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
 
         long total = allPhotos.size();
         long completed = allPhotos.stream()
@@ -420,7 +420,7 @@ public class PhotoBackupService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
