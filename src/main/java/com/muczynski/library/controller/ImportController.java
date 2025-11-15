@@ -19,14 +19,14 @@ public class ImportController {
     private final ImportService importService;
 
     @PostMapping("/json")
-    @PreAuthorize("hasRole('LIBRARIAN')")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<String> importJson(@RequestBody ImportRequestDto dto) {
         importService.importData(dto);
         return ResponseEntity.ok("Import completed successfully");
     }
 
     @GetMapping("/json")
-    @PreAuthorize("hasRole('LIBRARIAN')")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<ImportRequestDto> exportJson() {
         ImportRequestDto exportData = importService.exportData();
         return ResponseEntity.ok(exportData);

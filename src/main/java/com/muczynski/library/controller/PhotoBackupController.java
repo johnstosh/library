@@ -64,7 +64,7 @@ public class PhotoBackupController {
      * Manually trigger backup for all pending photos
      */
     @PostMapping("/backup-all")
-    @PreAuthorize("hasRole('LIBRARIAN')")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<Map<String, Object>> backupAllPhotos() {
         try {
             logger.info("Manually triggering backup for all photos");
@@ -87,7 +87,7 @@ public class PhotoBackupController {
      * Manually trigger backup for a specific photo
      */
     @PostMapping("/backup/{photoId}")
-    @PreAuthorize("hasRole('LIBRARIAN')")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<Map<String, Object>> backupPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Manually triggering backup for photo ID: {}", photoId);
