@@ -551,6 +551,15 @@
                     <div class="form-text">Authorize access to your Google Photos for the Books-from-Feed feature.</div>
                     <input type="hidden" id="google-photos-api-key" data-test="google-photos-api-key">
                 </div>
+                <div class="mb-3 librarian-only">
+                    <label for="google-photos-album-id" class="form-label">Google Photos Album ID</label>
+                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first backup)" data-test="google-photos-album-id" readonly>
+                    <div class="form-text">
+                        This is the permanent ID of the album where photos are backed up. It's automatically created on the first backup.
+                        You can view it here or manually set it to use a different album.
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2" onclick="toggleAlbumIdEdit()">Edit</button>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save User Settings</button>
             </form>
             <div id="settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="settings-error"></div>
