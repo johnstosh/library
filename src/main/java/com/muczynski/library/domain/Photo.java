@@ -18,6 +18,7 @@ public class Photo {
     private Long id;
 
     @Lob
+    @Basic(fetch = FetchType.LAZY)
     @Column(length = Integer.MAX_VALUE)
     private byte[] image;
 
