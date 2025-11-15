@@ -17,8 +17,9 @@ public class Photo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
     @Basic(fetch = FetchType.LAZY)
-    @Column(columnDefinition = "bytea")
+    @Column(length = Integer.MAX_VALUE)
     private byte[] image;
 
     private String contentType;
