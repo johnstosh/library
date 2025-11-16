@@ -2,7 +2,7 @@
 
 import { checkAuthentication, showLoginError } from './auth.js';
 import { showSection } from './sections.js';
-import { showBulkSuccess, hashPassword, getCookie } from './utils.js';
+import { showBulkSuccess, hashPassword } from './utils.js';
 
 export function initApp() {
     console.log('DOM loaded');
@@ -39,30 +39,26 @@ export function initApp() {
                 formData.append('username', username);
                 formData.append('password', hashedPassword);
 
-                // Get CSRF token for Spring Security
-                const csrfToken = getCookie('XSRF-TOKEN');
-                if (csrfToken) {
-                    formData.append('_csrf', csrfToken);
-                }
-
                 // Submit to login endpoint
+                // Note: Spring Security redirects to /index.html on success or /?error on failure
                 try {
                     const response = await fetch('/login', {
                         method: 'POST',
                         body: formData,
-                        redirect: 'manual' // Prevent following redirects to avoid mixed content issues
+                        credentials: 'same-origin' // Ensure cookies are sent/received
                     });
 
-                    // For manual redirect mode:
-                    // - type === 'opaqueredirect' means successful login (Spring Security redirecting)
-                    // - ok (200-299) also means success
-                    // - error (400+) means login failed
-                    if (response.type === 'opaqueredirect' || response.ok) {
-                        // Login successful, reload page to re-check authentication
-                        console.log('Login successful, reloading page');
-                        window.location.reload();
+                    // Check if login succeeded by looking at the final URL after redirect
+                    if (response.url && response.url.includes('error')) {
+                        // Login failed - Spring Security redirected to /?error
+                        console.log('Login failed, error in URL');
+                        showLoginError();
+                    } else if (response.ok || response.redirected) {
+                        // Login successful
+                        console.log('Login successful, redirected to:', response.url);
+                        // Page should already be at the success URL, but reload to ensure fresh state
+                        window.location.href = '/';
                     } else {
-                        // Login failed
                         console.log('Login failed with response:', response.status);
                         showLoginError();
                     }
