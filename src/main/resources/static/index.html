@@ -560,11 +560,10 @@
                 </div>
                 <div class="mb-3 librarian-only">
                     <label for="google-photos-album-id" class="form-label">Google Photos Album ID</label>
-                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first backup)" data-test="google-photos-album-id" readonly>
+                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first backup)" data-test="google-photos-album-id">
                     <div class="form-text">
                         This is the permanent ID of the album where photos are backed up. It's automatically created on the first backup.
-                        You can view it here or manually set it to use a different album.
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-2" onclick="toggleAlbumIdEdit()">Edit</button>
+                        You can manually set it to use a different album.
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save User Settings</button>

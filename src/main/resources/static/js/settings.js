@@ -19,8 +19,6 @@ async function loadSettings() {
         const albumIdInput = document.getElementById('google-photos-album-id');
         if (albumIdInput) {
             albumIdInput.value = user.googlePhotosAlbumId || '';
-            // Reset to readonly state
-            albumIdInput.readOnly = true;
         }
 
         clearSettingsMessages();
@@ -121,10 +119,6 @@ async function saveSettings(event) {
         await putData('/api/user-settings', payload);
         showSettingsSuccess('Settings saved successfully!');
         document.getElementById('user-password').value = ''; // Clear password field after save
-        // Reset album ID to readonly after save
-        if (albumIdInput) {
-            albumIdInput.readOnly = true;
-        }
     } catch (error) {
         showSettingsError('Failed to save settings: ' + error.message);
     }
@@ -145,19 +139,6 @@ function showSettingsSuccess(message) {
 function clearSettingsMessages() {
     document.getElementById('settings-error').style.display = 'none';
     document.getElementById('settings-success').style.display = 'none';
-}
-
-function toggleAlbumIdEdit() {
-    const albumIdInput = document.getElementById('google-photos-album-id');
-    if (albumIdInput) {
-        if (albumIdInput.readOnly) {
-            albumIdInput.readOnly = false;
-            albumIdInput.focus();
-            albumIdInput.select();
-        } else {
-            albumIdInput.readOnly = true;
-        }
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
