@@ -65,9 +65,15 @@ public class ImportService {
                 user.setUsername(uDto.getUsername());
                 String password = uDto.getPassword();
                 if (password == null || password.isEmpty()) {
-                    password = DEFAULT_PASSWORD;
+                    // No password provided - use default and encode it
+                    user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+                } else if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+                    // Already a BCrypt hash (60 chars) - use directly
+                    user.setPassword(password);
+                } else {
+                    // Plaintext password - encode it
+                    user.setPassword(passwordEncoder.encode(password));
                 }
-                user.setPassword(passwordEncoder.encode(password));
                 user.setXaiApiKey(uDto.getXaiApiKey());
                 user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
                 Set<Role> roles = new HashSet<>();
@@ -211,12 +217,12 @@ public class ImportService {
         }
         dto.setAuthors(authDtos);
 
-        // Export users (password set to empty for security)
+        // Export users (including hashed passwords)
         List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
             ImportUserDto uDto = new ImportUserDto();
             uDto.setUsername(user.getUsername());
-            uDto.setPassword(""); // Do not export actual password
+            uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
             uDto.setXaiApiKey(user.getXaiApiKey());
             uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
             if (user.getRoles() != null) {
@@ -296,7 +302,7 @@ public class ImportService {
             if (loan.getUser() != null) {
                 ImportUserDto userDto = new ImportUserDto();
                 userDto.setUsername(loan.getUser().getUsername());
-                userDto.setPassword(""); // Do not export actual password
+                userDto.setPassword(loan.getUser().getPassword()); // Export BCrypt hashed password (60 chars)
                 userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
                 userDto.setGooglePhotosAlbumId(loan.getUser().getGooglePhotosAlbumId());
                 if (loan.getUser().getRoles() != null) {
