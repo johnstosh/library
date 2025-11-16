@@ -241,16 +241,22 @@
             <div class="card mb-3">
                 <div class="card-body">
                     <p>This feature imports photos from your Google Photos account to automatically detect and create card catalog entries.</p>
-                    <p><strong>How it works:</strong></p>
+                    <p><strong>How it works (Two-Phase Process):</strong></p>
                     <ol>
-                        <li>Click the button below to open Google Photos Picker</li>
-                        <li>Select the photos you want to import</li>
-                        <li>AI will extract book information from the photos and create book entries</li>
+                        <li><strong>Phase 1 - Select & Save Photos:</strong> Open Google Photos Picker, select photos, and save them to the database</li>
+                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from saved photos and create book entries</li>
                     </ol>
                     <p><strong>Note:</strong> Make sure you have authorized Google Photos in Settings.</p>
-                    <button id="process-photos-btn" class="btn btn-primary" onclick="processPhotosFromFeed()" data-test="process-photos-btn">
-                        Select Photos from Google Photos
-                    </button>
+                    <div class="btn-group mb-2" role="group">
+                        <button id="select-photos-btn" class="btn btn-primary" onclick="selectPhotosFromPicker()" data-test="select-photos-btn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            Step 1: Select & Save Photos
+                        </button>
+                        <button id="process-saved-btn" class="btn btn-success" onclick="processSavedPhotosFromFeed()" data-test="process-saved-btn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            Step 2: Process with AI
+                        </button>
+                    </div>
                 </div>
             </div>
             <div id="processing-results" data-test="processing-results"></div>

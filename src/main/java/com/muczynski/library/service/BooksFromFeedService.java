@@ -434,10 +434,120 @@ public class BooksFromFeedService {
     }
 
     /**
-     * Process photos selected via Google Photos Picker API
+     * Save photos selected via Google Photos Picker API to database (Phase 1 - No AI)
+     * @param photos List of photo metadata from the Picker
+     * @return Map containing results of the save operation
+     */
+    public Map<String, Object> savePhotosFromPicker(List<Map<String, Object>> photos) {
+        logger.info("===== Phase 1: Saving photos from Picker to database =====");
+        logger.info("Saving {} photos selected from Picker", photos.size());
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to save photos without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        logger.info("Saving photos for user: {}", username);
+
+        // Get valid access token for downloading photos from Picker baseUrl
+        String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        List<Map<String, Object>> savedPhotos = new ArrayList<>();
+        List<Map<String, Object>> skippedPhotos = new ArrayList<>();
+
+        // Get default library and placeholder author once
+        Library library = libraryService.getOrCreateDefaultLibrary();
+        Long libraryId = library.getId();
+        Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
+
+        int photoIndex = 0;
+        for (Map<String, Object> photo : photos) {
+            photoIndex++;
+            String photoId = (String) photo.get("id");
+            String photoName = (String) photo.get("name");
+            String photoUrl = (String) photo.get("url");
+
+            logger.info("Saving photo {}/{}: name={}, id={}", photoIndex, photos.size(), photoName, photoId);
+
+            try {
+                // Check if photo already has description with book metadata
+                String description = (String) photo.get("description");
+                if (description != null && (description.contains("Title:") || description.contains("Author:"))) {
+                    logger.info("Skipping photo {} - already processed (has book metadata in description)", photoName);
+                    skippedPhotos.add(Map.of(
+                            "id", photoId,
+                            "name", photoName,
+                            "reason", "Already processed (has book metadata in description)"
+                    ));
+                    continue;
+                }
+
+                // Download the photo from the URL provided by Picker
+                String mimeType = (String) photo.get("mimeType");
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg";
+                }
+                logger.debug("Downloading photo {} from URL: {} (mimeType: {})", photoName, photoUrl, mimeType);
+                byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
+                logger.info("Downloaded photo {} ({} bytes, mimeType: {})", photoName, photoBytes.length, mimeType);
+
+                // Create temporary book with special marker for processing later
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String tempTitle = "FromFeed_" + timestamp;
+
+                BookDto tempBook = new BookDto();
+                tempBook.setTitle(tempTitle);
+                tempBook.setAuthorId(placeholderAuthor.getId());
+                tempBook.setLibraryId(libraryId);
+                tempBook.setStatus(BookStatus.ACTIVE);
+                tempBook.setDateAddedToLibrary(LocalDate.now());
+
+                BookDto savedBook = bookService.createBook(tempBook);
+                Long bookId = savedBook.getId();
+                logger.info("Created temporary book with ID: {} (title: {})", bookId, tempTitle);
+
+                // Save photo to database with actual MIME type
+                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType);
+                logger.info("Saved photo to database for book {}", bookId);
+
+                savedPhotos.add(Map.of(
+                        "photoId", photoId,
+                        "photoName", photoName,
+                        "bookId", bookId,
+                        "title", tempTitle
+                ));
+
+            } catch (Exception e) {
+                logger.error("Error saving photo {}: {}", photoName, e.getMessage(), e);
+                skippedPhotos.add(Map.of(
+                        "id", photoId,
+                        "name", photoName,
+                        "reason", "Error: " + e.getMessage()
+                ));
+            }
+        }
+
+        logger.info("Completed Phase 1. Saved: {}, Skipped: {}", savedPhotos.size(), skippedPhotos.size());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("savedCount", savedPhotos.size());
+        result.put("skippedCount", skippedPhotos.size());
+        result.put("totalPhotos", photos.size());
+        result.put("savedPhotos", savedPhotos);
+        result.put("skippedPhotos", skippedPhotos);
+
+        logger.info("===== Phase 1 Complete: {} photos saved to database =====", savedPhotos.size());
+        return result;
+    }
+
+    /**
+     * Process photos selected via Google Photos Picker API (Both phases - download + AI)
      * @param photos List of photo metadata from the Picker
      * @return Map containing results of the processing
+     * @deprecated Use savePhotosFromPicker followed by processSavedPhotos for two-phase workflow
      */
+    @Deprecated
     public Map<String, Object> processPhotosFromPicker(List<Map<String, Object>> photos) {
         logger.info("===== Starting Books-from-Feed processing (Picker) =====");
         logger.info("Processing {} photos selected from Picker", photos.size());

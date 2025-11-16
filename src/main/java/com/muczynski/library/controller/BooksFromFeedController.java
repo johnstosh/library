@@ -90,10 +90,44 @@ public class BooksFromFeedController {
     }
 
     /**
-     * Process photos selected via Google Photos Picker API
+     * Save photos selected via Google Photos Picker API to database (Phase 1 - No AI)
+     * @param request Contains 'photos' array with photo metadata from Picker
+     * @return Save results
+     */
+    @PostMapping("/save-from-picker")
+    public ResponseEntity<Map<String, Object>> savePhotosFromPicker(@RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
+
+            if (photos == null || photos.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "No photos provided",
+                        "savedCount", 0,
+                        "skippedCount", 0,
+                        "totalPhotos", 0
+                ));
+            }
+
+            Map<String, Object> result = booksFromFeedService.savePhotosFromPicker(photos);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage(),
+                    "savedCount", 0,
+                    "skippedCount", 0,
+                    "totalPhotos", 0
+            ));
+        }
+    }
+
+    /**
+     * Process photos selected via Google Photos Picker API (Both phases - download + AI)
      * @param request Contains 'photos' array with photo metadata from Picker
      * @return Processing results
+     * @deprecated Use POST /save-from-picker followed by POST /process-saved for two-phase workflow
      */
+    @Deprecated
     @PostMapping("/process-from-picker")
     public ResponseEntity<Map<String, Object>> processPhotosFromPicker(@RequestBody Map<String, Object> request) {
         try {
