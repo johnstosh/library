@@ -167,7 +167,6 @@ async function exportJson() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         clearError('libraries');
-        alert('Export completed successfully! File downloaded as library-data.json');
     } catch (error) {
         showError('libraries', 'Failed to export data: ' + error.message);
     }
