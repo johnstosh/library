@@ -69,6 +69,7 @@ public class ImportService {
                 }
                 user.setPassword(passwordEncoder.encode(password));
                 user.setXaiApiKey(uDto.getXaiApiKey());
+                user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
                     for (String rName : uDto.getRoles()) {
@@ -217,6 +218,7 @@ public class ImportService {
             uDto.setUsername(user.getUsername());
             uDto.setPassword(""); // Do not export actual password
             uDto.setXaiApiKey(user.getXaiApiKey());
+            uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
             if (user.getRoles() != null) {
                 List<String> roles = user.getRoles().stream()
                         .map(Role::getName)
@@ -296,6 +298,7 @@ public class ImportService {
                 userDto.setUsername(loan.getUser().getUsername());
                 userDto.setPassword(""); // Do not export actual password
                 userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
+                userDto.setGooglePhotosAlbumId(loan.getUser().getGooglePhotosAlbumId());
                 if (loan.getUser().getRoles() != null) {
                     List<String> roles = loan.getUser().getRoles().stream()
                             .map(Role::getName)

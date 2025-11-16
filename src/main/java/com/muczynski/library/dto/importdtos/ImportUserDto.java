@@ -10,5 +10,6 @@ public class ImportUserDto {
     private String username;
     private String password;
     private String xaiApiKey = "";
+    private String googlePhotosAlbumId = "";
     private List<String> roles = new ArrayList<>();
 }
