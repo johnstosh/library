@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.BookStatus;
@@ -69,7 +70,7 @@ public class BooksFromFeedService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to process photos without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
         logger.info("Processing photos for user: {}", username);
@@ -153,7 +154,7 @@ public class BooksFromFeedService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to save photos without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
         logger.info("Saving photos for user: {}", username);
@@ -287,11 +288,11 @@ public class BooksFromFeedService {
                 return photoBytes;
             } else {
                 logger.error("Failed to download photo. HTTP response code: {}", responseCode);
-                throw new RuntimeException("Failed to download photo: HTTP " + responseCode);
+                throw new LibraryException("Failed to download photo: HTTP " + responseCode);
             }
         } catch (Exception e) {
             logger.error("Error downloading photo from URL: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to download photo: " + e.getMessage(), e);
+            throw new LibraryException("Failed to download photo: " + e.getMessage(), e);
         }
     }
 }

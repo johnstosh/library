@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
@@ -44,7 +45,7 @@ public class PhotoService {
     public PhotoDto addPhoto(Long bookId, MultipartFile file) {
         try {
             Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new RuntimeException("Book not found"));
+                    .orElseThrow(() -> new LibraryException("Book not found"));
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)
@@ -60,7 +61,7 @@ public class PhotoService {
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.debug("Failed to add photo to book ID {} due to IO error with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
-            throw new RuntimeException("Failed to store photo data", e);
+            throw new LibraryException("Failed to store photo data", e);
         } catch (Exception e) {
             logger.debug("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
@@ -75,7 +76,7 @@ public class PhotoService {
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType) {
         try {
             Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new RuntimeException("Book not found"));
+                    .orElseThrow(() -> new LibraryException("Book not found"));
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)
@@ -94,7 +95,7 @@ public class PhotoService {
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add photo from bytes to book ID {}: {}", bookId, e.getMessage(), e);
-            throw new RuntimeException("Failed to store photo data: " + e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
         }
     }
 
@@ -102,10 +103,10 @@ public class PhotoService {
     public void deleteAuthorPhoto(Long authorId, Long photoId) {
         try {
             Photo photoToDelete = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
 
             if (photoToDelete.getAuthor() == null || !photoToDelete.getAuthor().getId().equals(authorId)) {
-                throw new RuntimeException("Photo does not belong to the specified author");
+                throw new LibraryException("Photo does not belong to the specified author");
             }
 
             photoRepository.delete(photoToDelete);
@@ -120,10 +121,10 @@ public class PhotoService {
     public void rotateAuthorPhoto(Long authorId, Long photoId, boolean clockwise) {
         try {
             Photo photo = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
 
             if (photo.getAuthor() == null || !photo.getAuthor().getId().equals(authorId)) {
-                throw new RuntimeException("Photo does not belong to the specified author");
+                throw new LibraryException("Photo does not belong to the specified author");
             }
 
             rotateImage(photo, clockwise ? 90 : -90);
@@ -184,7 +185,7 @@ public class PhotoService {
         try {
             BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
             if (originalImage == null) {
-                throw new RuntimeException("Invalid image data");
+                throw new LibraryException("Invalid image data");
             }
 
             int width = originalImage.getWidth();
@@ -210,7 +211,7 @@ public class PhotoService {
             photo.setImage(baos.toByteArray());
         } catch (IOException e) {
             logger.debug("IO error rotating image: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to rotate image", e);
+            throw new LibraryException("Failed to rotate image", e);
         }
     }
 
@@ -218,7 +219,7 @@ public class PhotoService {
     public PhotoDto addPhotoToAuthor(Long authorId, MultipartFile file) {
         try {
             Author author = authorRepository.findById(authorId)
-                    .orElseThrow(() -> new RuntimeException("Author not found"));
+                    .orElseThrow(() -> new LibraryException("Author not found"));
             List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)
@@ -234,7 +235,7 @@ public class PhotoService {
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.debug("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
-            throw new RuntimeException("Failed to store photo data", e);
+            throw new LibraryException("Failed to store photo data", e);
         } catch (Exception e) {
             logger.debug("Failed to add photo to author ID {} with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
@@ -317,7 +318,7 @@ public class PhotoService {
     public PhotoDto updatePhoto(Long photoId, PhotoDto photoDto) {
         try {
             Photo photo = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
             if (photoDto.getCaption() != null) {
                 photo.setCaption(photoDto.getCaption());
             }
@@ -332,7 +333,7 @@ public class PhotoService {
     public void deletePhoto(Long photoId) {
         try {
             Photo photoToDelete = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
 
             Book book = photoToDelete.getBook();
             if (book != null) {
@@ -385,7 +386,7 @@ public class PhotoService {
     public void rotatePhoto(Long photoId, boolean clockwise) {
         try {
             Photo photo = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
             rotateImage(photo, clockwise ? 90 : -90);
             photoRepository.save(photo);
         } catch (Exception e) {
@@ -419,7 +420,7 @@ public class PhotoService {
     public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
         try {
             Photo photo = photoRepository.findById(photoId)
-                    .orElseThrow(() -> new RuntimeException("Photo not found"));
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
 
             BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
             if (originalImage == null) {
@@ -444,7 +445,7 @@ public class PhotoService {
 
         } catch (IOException e) {
             logger.debug("IO error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
-            throw new RuntimeException("Failed to create thumbnail", e);
+            throw new LibraryException("Failed to create thumbnail", e);
         } catch (Exception e) {
             logger.debug("Failed to generate thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
             throw e;

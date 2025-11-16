@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
@@ -55,7 +56,7 @@ public class AuthorService {
     }
 
     public AuthorDto updateAuthor(Long id, AuthorDto authorDto) {
-        Author author = authorRepository.findById(id).orElseThrow(() -> new RuntimeException("Author not found: " + id));
+        Author author = authorRepository.findById(id).orElseThrow(() -> new LibraryException("Author not found: " + id));
         Author updatedAuthor = authorMapper.toEntity(authorDto);
         updatedAuthor.setId(id);
         Author savedAuthor = authorRepository.save(updatedAuthor);
@@ -64,11 +65,11 @@ public class AuthorService {
 
     public void deleteAuthor(Long id) {
         if (!authorRepository.existsById(id)) {
-            throw new RuntimeException("Author not found: " + id);
+            throw new LibraryException("Author not found: " + id);
         }
         long bookCount = bookRepository.countByAuthorId(id);
         if (bookCount > 0) {
-            throw new RuntimeException("Cannot delete author because it has " + bookCount + " associated books.");
+            throw new LibraryException("Cannot delete author because it has " + bookCount + " associated books.");
         }
         authorRepository.deleteById(id);
     }

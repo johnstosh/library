@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.dto.CreateUserDto;
@@ -43,7 +44,7 @@ public class AppliedService {
     }
 
     public Applied updateApplied(Long id, Applied applied) {
-        Applied existingApplied = appliedRepository.findById(id).orElseThrow(() -> new RuntimeException("Applied not found: " + id));
+        Applied existingApplied = appliedRepository.findById(id).orElseThrow(() -> new LibraryException("Applied not found: " + id));
         if (applied.getStatus() != null) {
             existingApplied.setStatus(applied.getStatus());
         }
@@ -52,14 +53,14 @@ public class AppliedService {
 
     public void deleteApplied(Long id) {
         if (!appliedRepository.existsById(id)) {
-            throw new RuntimeException("Applied not found: " + id);
+            throw new LibraryException("Applied not found: " + id);
         }
         appliedRepository.deleteById(id);
     }
 
     public void approveApplication(Long id) {
         Applied applied = appliedRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Application not found: " + id));
+                .orElseThrow(() -> new LibraryException("Application not found: " + id));
 
         userService.createUserFromApplied(applied);
 

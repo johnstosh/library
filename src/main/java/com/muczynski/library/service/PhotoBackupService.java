@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
@@ -231,11 +232,11 @@ public class PhotoBackupService {
                 return permanentId;
             } else {
                 logger.error("Media item created but no ID in response");
-                throw new RuntimeException("No media item ID in response");
+                throw new LibraryException("No media item ID in response");
             }
         } else {
             logger.error("No media item results in response");
-            throw new RuntimeException("No media item results in response");
+            throw new LibraryException("No media item results in response");
         }
     }
 
@@ -276,7 +277,7 @@ public class PhotoBackupService {
         // Get the user from database
         Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
         if (userOpt.isEmpty()) {
-            throw new RuntimeException("User not found: " + username);
+            throw new LibraryException("User not found: " + username);
         }
 
         User user = userOpt.get();
@@ -483,11 +484,11 @@ public class PhotoBackupService {
         Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
 
         if (librarianOpt.isEmpty()) {
-            throw new RuntimeException("No librarian user found");
+            throw new LibraryException("No librarian user found");
         }
 
         Photo photo = photoRepository.findById(photoId)
-                .orElseThrow(() -> new RuntimeException("Photo not found: " + photoId));
+                .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
         backupPhoto(photo, librarianOpt.get().getUsername());
     }

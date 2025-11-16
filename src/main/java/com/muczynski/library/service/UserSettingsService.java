@@ -1,4 +1,5 @@
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
@@ -26,17 +27,17 @@ public class UserSettingsService {
 
     public UserDto getUserSettings(String currentUsername) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
         return userMapper.toDto(user);
     }
 
     public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
             if (userRepository.findByUsernameIgnoreCase(userSettingsDto.getUsername()).isPresent()) {
-                throw new RuntimeException("Username already taken");
+                throw new LibraryException("Username already taken");
             }
             user.setUsername(userSettingsDto.getUsername());
         }
@@ -72,7 +73,7 @@ public class UserSettingsService {
 
     public void deleteUser(String currentUsername) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
         userRepository.delete(user);
     }
 }

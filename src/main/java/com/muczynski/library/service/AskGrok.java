@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,13 +34,13 @@ public class AskGrok {
     public String askAboutPhoto(byte[] imageBytes, String contentType, String question) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
         UserDto userDto = userSettingsService.getUserSettings(username);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new RuntimeException("xAI API key not configured for user: " + username);
+            throw new LibraryException("xAI API key not configured for user: " + username);
         }
 
         Map<String, Object> textPart = new HashMap<>();
@@ -93,9 +94,9 @@ public class AskGrok {
                     }
                 }
             }
-            throw new RuntimeException("Unexpected response format from xAI API");
+            throw new LibraryException("Unexpected response format from xAI API");
         } else {
-            throw new RuntimeException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
+            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
         }
     }
 }

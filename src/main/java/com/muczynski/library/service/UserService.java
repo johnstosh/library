@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.domain.Role;
@@ -72,7 +73,7 @@ public class UserService {
 
     public UserDto createUser(CreateUserDto dto) {
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new LibraryException("Username already exists");
         }
 
         User user = new User();
@@ -94,7 +95,7 @@ public class UserService {
 
     public UserDto createUserFromApplied(Applied applied) {
         if (userRepository.findByUsername(applied.getName()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new LibraryException("Username already exists");
         }
 
         User user = new User();
@@ -115,10 +116,10 @@ public class UserService {
     }
 
     public UserDto updateUser(Long id, CreateUserDto dto) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found: " + id));
+        User user = userRepository.findById(id).orElseThrow(() -> new LibraryException("User not found: " + id));
         if (dto.getUsername() != null && !dto.getUsername().isEmpty() && !dto.getUsername().equals(user.getUsername())) {
             if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-                throw new RuntimeException("Username already exists");
+                throw new LibraryException("Username already exists");
             }
             user.setUsername(dto.getUsername());
         }
@@ -148,18 +149,18 @@ public class UserService {
         if (xaiApiKey.length() < 32) {
             throw new IllegalArgumentException("XAI API key must be at least 32 characters");
         }
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found: " + id));
+        User user = userRepository.findById(id).orElseThrow(() -> new LibraryException("User not found: " + id));
         user.setXaiApiKey(xaiApiKey);
         userRepository.save(user);
     }
 
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found: " + id);
+            throw new LibraryException("User not found: " + id);
         }
         long activeCount = loanRepository.countByUserIdAndReturnDateIsNull(id);
         if (activeCount > 0) {
-            throw new RuntimeException("Cannot delete user because they have " + activeCount + " active loan(s). Please return all books before deleting the user.");
+            throw new LibraryException("Cannot delete user because they have " + activeCount + " active loan(s). Please return all books before deleting the user.");
         }
         loanRepository.deleteByUserId(id);
         userRepository.deleteById(id);

@@ -1,4 +1,5 @@
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
 import com.muczynski.library.dto.LibraryDto;
@@ -92,12 +93,12 @@ public class ImportService {
                 if (bDto.getAuthor() != null) {
                     author = authMap.get(bDto.getAuthor().getName());
                     if (author == null) {
-                        throw new RuntimeException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
+                        throw new LibraryException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
                     }
                 }
                 Library library = libMap.get(bDto.getLibraryName());
                 if (library == null) {
-                    throw new RuntimeException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
+                    throw new LibraryException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
                 }
 
                 Book book = new Book();
@@ -128,14 +129,14 @@ public class ImportService {
                     String key = lDto.getBook().getTitle() + "|" + authorName;
                     book = bookMap.get(key);
                     if (book == null) {
-                        throw new RuntimeException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
+                        throw new LibraryException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
                     }
                 }
                 User user = null;
                 if (lDto.getUser() != null) {
                     user = userMap.get(lDto.getUser().getUsername());
                     if (user == null) {
-                        throw new RuntimeException("User not found for loan: " + lDto.getUser().getUsername());
+                        throw new LibraryException("User not found for loan: " + lDto.getUser().getUsername());
                     }
                 }
 
@@ -166,7 +167,7 @@ public class ImportService {
                     String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
                     Book book = bookMap.get(key);
                     if (book == null) {
-                        throw new RuntimeException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
                     }
                     photo.setBook(book);
                 }
@@ -175,7 +176,7 @@ public class ImportService {
                 if (pDto.getAuthorName() != null) {
                     Author author = authMap.get(pDto.getAuthorName());
                     if (author == null) {
-                        throw new RuntimeException("Author not found for photo: " + pDto.getAuthorName());
+                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
                     }
                     photo.setAuthor(author);
                 }

@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
@@ -123,7 +124,7 @@ public class TestDataService {
             }
         } catch (SQLException e) {
             logger.debug("Failed to obtain database product name during total purge: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to obtain database product name", e);
+            throw new LibraryException("Failed to obtain database product name", e);
         }
     }
 

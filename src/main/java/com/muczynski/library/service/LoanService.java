@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
@@ -36,8 +37,8 @@ public class LoanService {
     private UserRepository userRepository;
 
     public LoanDto checkoutBook(LoanDto loanDto) {
-        Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new RuntimeException("Book not found: " + loanDto.getBookId()));
-        User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new RuntimeException("User not found: " + loanDto.getUserId()));
+        Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
+        User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);
@@ -72,7 +73,7 @@ public class LoanService {
 
     public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new LibraryException("User not found: " + username));
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByUserOrderByDueDateAsc(user);
@@ -91,7 +92,7 @@ public class LoanService {
     }
 
     public LoanDto updateLoan(Long id, LoanDto loanDto) {
-        Loan loan = loanRepository.findById(id).orElseThrow(() -> new RuntimeException("Loan not found: " + id));
+        Loan loan = loanRepository.findById(id).orElseThrow(() -> new LibraryException("Loan not found: " + id));
         if (loanDto.getLoanDate() != null) {
             loan.setLoanDate(loanDto.getLoanDate());
         }
@@ -102,10 +103,10 @@ public class LoanService {
             loan.setReturnDate(loanDto.getReturnDate());
         }
         if (loanDto.getBookId() != null) {
-            loan.setBook(bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new RuntimeException("Book not found: " + loanDto.getBookId())));
+            loan.setBook(bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId())));
         }
         if (loanDto.getUserId() != null) {
-            loan.setUser(userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new RuntimeException("User not found: " + loanDto.getUserId())));
+            loan.setUser(userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId())));
         }
         Loan savedLoan = loanRepository.save(loan);
         return loanMapper.toDto(savedLoan);
@@ -113,7 +114,7 @@ public class LoanService {
 
     public void deleteLoan(Long id) {
         if (!loanRepository.existsById(id)) {
-            throw new RuntimeException("Loan not found: " + id);
+            throw new LibraryException("Loan not found: " + id);
         }
         loanRepository.deleteById(id);
     }

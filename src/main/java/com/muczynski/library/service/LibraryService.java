@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.LibraryDto;
@@ -43,7 +44,7 @@ public class LibraryService {
     }
 
     public LibraryDto updateLibrary(Long id, LibraryDto libraryDto) {
-        Library library = libraryRepository.findById(id).orElseThrow(() -> new RuntimeException("Library not found: " + id));
+        Library library = libraryRepository.findById(id).orElseThrow(() -> new LibraryException("Library not found: " + id));
         Library updatedLibrary = libraryMapper.toEntity(libraryDto);
         updatedLibrary.setId(id);
         Library savedLibrary = libraryRepository.save(updatedLibrary);
@@ -52,7 +53,7 @@ public class LibraryService {
 
     public void deleteLibrary(Long id) {
         if (!libraryRepository.existsById(id)) {
-            throw new RuntimeException("Library not found: " + id);
+            throw new LibraryException("Library not found: " + id);
         }
         libraryRepository.deleteById(id);
     }

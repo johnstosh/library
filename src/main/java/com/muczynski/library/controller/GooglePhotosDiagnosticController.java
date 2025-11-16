@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.controller;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.UserRepository;
@@ -44,7 +45,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -75,7 +76,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -121,7 +122,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -172,7 +173,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
