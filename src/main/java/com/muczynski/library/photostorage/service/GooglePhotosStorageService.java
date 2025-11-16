@@ -42,13 +42,12 @@ public class GooglePhotosStorageService {
      *
      * @param accessToken OAuth access token
      * @param title Album title
-     * @param description Album description
      * @return Permanent album ID - store this for future use
      */
-    public String createAlbum(String accessToken, String title, String description) {
+    public String createAlbum(String accessToken, String title) {
         log.info("Creating app-created album: {}", title);
 
-        AlbumResponse response = client.createAlbum(accessToken, title, description);
+        AlbumResponse response = client.createAlbum(accessToken, title);
         String albumId = response.getAlbum().getId();
 
         log.info("Successfully created album '{}' with ID: {}", title, albumId);
@@ -297,81 +296,5 @@ public class GooglePhotosStorageService {
     @FunctionalInterface
     public interface PhotoPageCallback {
         void onPage(List<MediaItemResponse> photos, int pageNumber);
-    }
-
-    /**
-     * Helper: Initialize book covers album (run once during setup)
-     * Creates the album and returns its ID to be configured in application.yml
-     *
-     * @param accessToken OAuth access token
-     * @return Album ID to configure in google.photos.book-covers-album-id
-     */
-    public String initializeBookCoversAlbum(String accessToken) {
-        String albumId = createAlbum(
-                accessToken,
-                "Library Book Covers",
-                "Book cover photos uploaded via Library Management System"
-        );
-
-        log.info("============================================");
-        log.info("Book Covers Album Created!");
-        log.info("Add this to your application.yml:");
-        log.info("google:");
-        log.info("  photos:");
-        log.info("    book-covers-album-id: {}", albumId);
-        log.info("============================================");
-
-        return albumId;
-    }
-
-    /**
-     * Helper: Initialize author photos album (run once during setup)
-     * Creates the album and returns its ID to be configured in application.yml
-     *
-     * @param accessToken OAuth access token
-     * @return Album ID to configure in google.photos.author-photos-album-id
-     */
-    public String initializeAuthorPhotosAlbum(String accessToken) {
-        String albumId = createAlbum(
-                accessToken,
-                "Library Author Photos",
-                "Author photos uploaded via Library Management System"
-        );
-
-        log.info("============================================");
-        log.info("Author Photos Album Created!");
-        log.info("Add this to your application.yml:");
-        log.info("google:");
-        log.info("  photos:");
-        log.info("    author-photos-album-id: {}", albumId);
-        log.info("============================================");
-
-        return albumId;
-    }
-
-    /**
-     * Get configured book covers album ID from config
-     */
-    public String getBookCoversAlbumId() {
-        if (config.getBookCoversAlbumId() == null || config.getBookCoversAlbumId().isEmpty()) {
-            throw new IllegalStateException(
-                    "Book covers album ID not configured. " +
-                    "Run initializeBookCoversAlbum() and update application.yml"
-            );
-        }
-        return config.getBookCoversAlbumId();
-    }
-
-    /**
-     * Get configured author photos album ID from config
-     */
-    public String getAuthorPhotosAlbumId() {
-        if (config.getAuthorPhotosAlbumId() == null || config.getAuthorPhotosAlbumId().isEmpty()) {
-            throw new IllegalStateException(
-                    "Author photos album ID not configured. " +
-                    "Run initializeAuthorPhotosAlbum() and update application.yml"
-            );
-        }
-        return config.getAuthorPhotosAlbumId();
     }
 }

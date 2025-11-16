@@ -58,6 +58,10 @@ public class UserSettingsService {
             user.setGoogleClientSecret(userSettingsDto.getGoogleClientSecret());
         }
 
+        if (userSettingsDto.getGooglePhotosAlbumId() != null) {
+            user.setGooglePhotosAlbumId(userSettingsDto.getGooglePhotosAlbumId());
+        }
+
         if (StringUtils.hasText(userSettingsDto.getLastPhotoTimestamp())) {
             user.setLastPhotoTimestamp(userSettingsDto.getLastPhotoTimestamp());
         }

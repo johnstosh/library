@@ -16,6 +16,7 @@ public class UserDto {
     private String xaiApiKey;
     private String googlePhotosApiKey;
     private String googleClientSecret;
+    private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;
     private int activeLoansCount;
 }

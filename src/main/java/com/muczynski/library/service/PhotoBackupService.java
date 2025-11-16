@@ -6,6 +6,11 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
+import com.muczynski.library.photostorage.dto.AlbumResponse;
+import com.muczynski.library.photostorage.dto.BatchCreateRequest;
+import com.muczynski.library.photostorage.dto.BatchCreateResponse;
+import com.muczynski.library.photostorage.dto.SearchResponse;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
@@ -13,11 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -39,27 +42,24 @@ public class PhotoBackupService {
     @Autowired
     private GooglePhotosService googlePhotosService;
 
+    @Autowired
+    private GooglePhotosLibraryClient photosLibraryClient;
+
     @Value("${google.oauth.client-id}")
     private String clientId;
 
     @Value("${APP_ENV:production}")
     private String appEnv;
 
-    private final RestTemplate restTemplate;
-
-    // Cache the album ID to avoid repeated lookups
-    private String cachedAlbumId = null;
+    // Cache the album name to avoid repeated database lookups
     private String cachedAlbumName = null;
-
-    public PhotoBackupService() {
-        this.restTemplate = new RestTemplate();
-    }
 
     /**
      * Scheduled task to backup photos to Google Photos
      * Runs every hour
      */
     @Scheduled(fixedRate = 3600000) // Run every hour (3600000 ms)
+    @Transactional
     public void backupPhotos() {
         logger.info("Starting scheduled photo backup process...");
 
@@ -115,7 +115,7 @@ public class PhotoBackupService {
      * Find photos that need to be backed up
      */
     private List<Photo> findPhotosNeedingBackup() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
         List<Photo> photosToBackup = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
@@ -179,35 +179,12 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.add("X-Goog-Upload-Content-Type", contentType);
-        headers.add("X-Goog-Upload-Protocol", "raw");
+        // Verify token scopes before upload
+        logger.info("Verifying token scopes before upload operation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
 
-        HttpEntity<byte[]> entity = new HttpEntity<>(imageBytes, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    "https://photoslibrary.googleapis.com/v1/uploads",
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                String uploadToken = response.getBody();
-                logger.debug("Successfully obtained upload token: {}", uploadToken.substring(0, Math.min(20, uploadToken.length())));
-                return uploadToken;
-            } else {
-                logger.error("Failed to upload photo bytes with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to upload photo bytes: " + response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            logger.error("Failed to upload photo bytes to Google Photos", e);
-            throw new RuntimeException("Failed to upload photo bytes: " + e.getMessage(), e);
-        }
+        // Use the photostorage client for upload
+        return photosLibraryClient.uploadBytes(accessToken, imageBytes, contentType);
     }
 
     /**
@@ -219,73 +196,46 @@ public class PhotoBackupService {
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
+        // Verify token scopes before attempting batchCreate
+        logger.info("Verifying token scopes before batchCreate operation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
+
         // Get or create the library album
         String albumId = getOrCreateAlbum(username);
 
         // Build description from photo caption and associated book/author
         String description = buildPhotoDescription(photo);
 
-        // Build request body
-        Map<String, Object> newMediaItem = new HashMap<>();
-        newMediaItem.put("description", description);
+        // Create the new media item request using photostorage DTOs
+        BatchCreateRequest.NewMediaItem newMediaItem = new BatchCreateRequest.NewMediaItem();
+        newMediaItem.setDescription(description);
 
-        Map<String, Object> simpleMediaItem = new HashMap<>();
-        simpleMediaItem.put("uploadToken", uploadToken);
-        simpleMediaItem.put("fileName", "library-photo-" + photo.getId() + getFileExtension(photo.getContentType()));
+        BatchCreateRequest.SimpleMediaItem simpleMediaItem = new BatchCreateRequest.SimpleMediaItem();
+        simpleMediaItem.setUploadToken(uploadToken);
+        newMediaItem.setSimpleMediaItem(simpleMediaItem);
 
-        newMediaItem.put("simpleMediaItem", simpleMediaItem);
+        // Use the photostorage client for batch create
+        BatchCreateResponse response = photosLibraryClient.batchCreate(
+                accessToken,
+                albumId,
+                Collections.singletonList(newMediaItem)
+        );
 
-        Map<String, Object> request = new HashMap<>();
-        request.put("newMediaItems", Collections.singletonList(newMediaItem));
+        // Extract the permanent media item ID
+        if (response.getNewMediaItemResults() != null && !response.getNewMediaItemResults().isEmpty()) {
+            BatchCreateResponse.NewMediaItemResult result = response.getNewMediaItemResults().get(0);
 
-        // Add album ID to the request to add the photo to the album
-        request.put("albumId", albumId);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate",
-                    entity,
-                    Map.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> newMediaItemResults = (List<Map<String, Object>>) responseBody.get("newMediaItemResults");
-
-                if (newMediaItemResults != null && !newMediaItemResults.isEmpty()) {
-                    Map<String, Object> result = newMediaItemResults.get(0);
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> mediaItem = (Map<String, Object>) result.get("mediaItem");
-
-                    if (mediaItem != null && mediaItem.containsKey("id")) {
-                        String permanentId = (String) mediaItem.get("id");
-                        logger.info("Successfully created media item with ID: {}", permanentId);
-                        return permanentId;
-                    } else {
-                        logger.error("Media item created but no ID in response");
-                        throw new RuntimeException("No media item ID in response");
-                    }
-                } else {
-                    logger.error("No media item results in response");
-                    throw new RuntimeException("No media item results in response");
-                }
+            if (result.getMediaItem() != null && result.getMediaItem().getId() != null) {
+                String permanentId = result.getMediaItem().getId();
+                logger.info("Successfully created media item with ID: {}", permanentId);
+                return permanentId;
             } else {
-                logger.error("Failed to create media item with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to create media item: " + response.getStatusCode());
+                logger.error("Media item created but no ID in response");
+                throw new RuntimeException("No media item ID in response");
             }
-
-        } catch (Exception e) {
-            logger.error("Failed to create media item in Google Photos", e);
-            throw new RuntimeException("Failed to create media item: " + e.getMessage(), e);
+        } else {
+            logger.error("No media item results in response");
+            throw new RuntimeException("No media item results in response");
         }
     }
 
@@ -323,134 +273,56 @@ public class PhotoBackupService {
      * Get or create the library album in Google Photos
      */
     private String getOrCreateAlbum(String username) {
-        if (cachedAlbumId != null) {
-            logger.debug("Using cached album ID: {}", cachedAlbumId);
-            return cachedAlbumId;
+        // Get the user from database
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found: " + username);
         }
 
+        User user = userOpt.get();
+
+        // Check if user has a saved album ID
+        if (user.getGooglePhotosAlbumId() != null && !user.getGooglePhotosAlbumId().trim().isEmpty()) {
+            logger.info("Using saved album ID from user settings: {}", user.getGooglePhotosAlbumId());
+            return user.getGooglePhotosAlbumId();
+        }
+
+        // No saved album ID, need to create a new album
         String albumName = getAlbumName();
-        logger.info("Getting or creating album: {}", albumName);
+        logger.info("No saved album ID found. Creating new album: {}", albumName);
 
         // Get valid access token
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
-        // First, try to find existing album
-        String albumId = findAlbumByTitle(albumName, accessToken);
+        // Verify token scopes before creating album
+        logger.info("Verifying token scopes before album creation...");
+        googlePhotosService.verifyAccessTokenScopes(accessToken);
 
-        if (albumId != null) {
-            logger.info("Found existing album '{}' with ID: {}", albumName, albumId);
-            cachedAlbumId = albumId;
-            return albumId;
-        }
+        // Create the album
+        logger.info("Creating new Google Photos album: '{}'", albumName);
+        String albumId = createAlbum(albumName, accessToken);
 
-        // Album doesn't exist, create it
-        logger.info("Album '{}' not found, creating new album", albumName);
-        albumId = createAlbum(albumName, accessToken);
+        // Save the album ID to the user for future use
+        logger.info("Saving album ID '{}' to user settings", albumId);
+        user.setGooglePhotosAlbumId(albumId);
+        userRepository.save(user);
 
-        cachedAlbumId = albumId;
         return albumId;
-    }
-
-    /**
-     * Find an album by title
-     */
-    private String findAlbumByTitle(String title, String accessToken) {
-        try {
-            logger.debug("Searching for album with title: {}", title);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
-
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            // List albums - Google Photos API supports pagination
-            String nextPageToken = null;
-            do {
-                String url = "https://photoslibrary.googleapis.com/v1/albums?pageSize=50";
-                if (nextPageToken != null) {
-                    url += "&pageToken=" + nextPageToken;
-                }
-
-                ResponseEntity<Map> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        entity,
-                        Map.class
-                );
-
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    Map<String, Object> responseBody = response.getBody();
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> albums = (List<Map<String, Object>>) responseBody.get("albums");
-
-                    if (albums != null) {
-                        for (Map<String, Object> album : albums) {
-                            String albumTitle = (String) album.get("title");
-                            if (title.equals(albumTitle)) {
-                                String albumId = (String) album.get("id");
-                                logger.debug("Found matching album: {} with ID: {}", albumTitle, albumId);
-                                return albumId;
-                            }
-                        }
-                    }
-
-                    nextPageToken = (String) responseBody.get("nextPageToken");
-                } else {
-                    logger.error("Failed to list albums with status: {}", response.getStatusCode());
-                    break;
-                }
-
-            } while (nextPageToken != null);
-
-            logger.debug("Album '{}' not found", title);
-            return null;
-
-        } catch (Exception e) {
-            logger.error("Failed to search for album", e);
-            return null;
-        }
     }
 
     /**
      * Create a new album in Google Photos
      */
     private String createAlbum(String title, String accessToken) {
-        try {
-            logger.info("Creating new album: {}", title);
+        logger.info("Creating new album: {}", title);
 
-            Map<String, Object> album = new HashMap<>();
-            album.put("title", title);
+        // Use the photostorage client to create the album
+        AlbumResponse response = photosLibraryClient.createAlbum(accessToken, title);
 
-            Map<String, Object> request = new HashMap<>();
-            request.put("album", album);
+        String albumId = response.getAlbum().getId();
+        logger.info("Successfully created album '{}' with ID: {}", title, albumId);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://photoslibrary.googleapis.com/v1/albums",
-                    entity,
-                    Map.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                String albumId = (String) responseBody.get("id");
-                logger.info("Successfully created album '{}' with ID: {}", title, albumId);
-                return albumId;
-            } else {
-                logger.error("Failed to create album with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to create album: " + response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            logger.error("Failed to create album", e);
-            throw new RuntimeException("Failed to create album: " + e.getMessage(), e);
-        }
+        return albumId;
     }
 
     /**
@@ -519,8 +391,9 @@ public class PhotoBackupService {
     /**
      * Get backup statistics
      */
+    @Transactional(readOnly = true)
     public Map<String, Object> getBackupStats() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
 
         long total = allPhotos.size();
         long completed = allPhotos.stream()
@@ -543,39 +416,62 @@ public class PhotoBackupService {
         stats.put("failed", failed);
         stats.put("inProgress", inProgress);
 
+        // Add album information
+        String albumName = getAlbumName();
+        stats.put("albumName", albumName);
+
+        // Get album ID from librarian user settings
+        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+        if (librarianOpt.isPresent()) {
+            String albumId = librarianOpt.get().getGooglePhotosAlbumId();
+            stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
+        } else {
+            stats.put("albumId", null);
+        }
+
         return stats;
     }
 
     /**
      * Get all photos with their backup status
      */
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
-        List<Photo> allPhotos = photoRepository.findAll();
+        logger.debug("Fetching all photos with book and author");
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+        logger.info("Found {} photos in database", allPhotos.size());
+
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
-            Map<String, Object> photoInfo = new HashMap<>();
-            photoInfo.put("id", photo.getId());
-            photoInfo.put("caption", photo.getCaption());
-            photoInfo.put("backupStatus", photo.getBackupStatus() != null ? photo.getBackupStatus().toString() : "PENDING");
-            photoInfo.put("backedUpAt", photo.getBackedUpAt());
-            photoInfo.put("permanentId", photo.getPermanentId());
-            photoInfo.put("backupErrorMessage", photo.getBackupErrorMessage());
-            photoInfo.put("contentType", photo.getContentType());
+            try {
+                Map<String, Object> photoInfo = new HashMap<>();
+                photoInfo.put("id", photo.getId());
+                photoInfo.put("caption", photo.getCaption());
+                photoInfo.put("backupStatus", photo.getBackupStatus() != null ? photo.getBackupStatus().toString() : "PENDING");
+                photoInfo.put("backedUpAt", photo.getBackedUpAt());
+                photoInfo.put("permanentId", photo.getPermanentId());
+                photoInfo.put("backupErrorMessage", photo.getBackupErrorMessage());
+                photoInfo.put("contentType", photo.getContentType());
 
-            if (photo.getBook() != null) {
-                photoInfo.put("bookTitle", photo.getBook().getTitle());
-                photoInfo.put("bookId", photo.getBook().getId());
+                if (photo.getBook() != null) {
+                    photoInfo.put("bookTitle", photo.getBook().getTitle());
+                    photoInfo.put("bookId", photo.getBook().getId());
+                }
+
+                if (photo.getAuthor() != null) {
+                    photoInfo.put("authorName", photo.getAuthor().getName());
+                    photoInfo.put("authorId", photo.getAuthor().getId());
+                }
+
+                result.add(photoInfo);
+            } catch (Exception e) {
+                logger.error("Error processing photo ID: {} - Error: {}", photo.getId(), e.getMessage(), e);
+                // Continue processing other photos even if one fails
             }
-
-            if (photo.getAuthor() != null) {
-                photoInfo.put("authorName", photo.getAuthor().getName());
-                photoInfo.put("authorId", photo.getAuthor().getId());
-            }
-
-            result.add(photoInfo);
         }
 
+        logger.info("Successfully processed {} photos for display", result.size());
         return result;
     }
 

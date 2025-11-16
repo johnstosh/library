@@ -18,6 +18,5 @@ public class AlbumCreateRequest {
     @NoArgsConstructor
     public static class Album {
         private String title;
-        private String description;
     }
 }

@@ -55,9 +55,228 @@ public class BooksFromFeedService {
     private AuthorRepository authorRepository;
 
     /**
-     * Process photos from Google Photos feed to create books
+     * Phase 1: Fetch photos from Google Photos and save them to the database as temporary books
+     * This completes quickly before the Google Photos connection times out
+     * @return Map containing results of the fetch operation
+     */
+    public Map<String, Object> fetchAndSavePhotos() {
+        logger.info("===== Phase 1: Fetching photos from Google Photos =====");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to fetch photos without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        logger.info("Fetching photos for user: {}", username);
+
+        UserDto userDto = userSettingsService.getUserSettings(username);
+
+        // Get the last photo timestamp or default to yesterday
+        String lastTimestamp = userDto.getLastPhotoTimestamp();
+        if (lastTimestamp == null || lastTimestamp.trim().isEmpty()) {
+            LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
+            lastTimestamp = yesterday.format(DateTimeFormatter.ISO_DATE_TIME);
+            logger.info("No last photo timestamp found. Using yesterday as default: {}", lastTimestamp);
+        } else {
+            logger.info("Using last photo timestamp: {}", lastTimestamp);
+        }
+
+        // Fetch photos from Google Photos
+        logger.info("Fetching photos from Google Photos since: {}", lastTimestamp);
+        List<Map<String, Object>> photos = googlePhotosService.fetchPhotos(lastTimestamp);
+        logger.info("Fetched {} photos from Google Photos", photos.size());
+
+        List<Map<String, Object>> savedPhotos = new ArrayList<>();
+        List<Map<String, Object>> skippedPhotos = new ArrayList<>();
+        String latestTimestamp = lastTimestamp;
+
+        // Get default library and placeholder author once
+        List<Library> libraries = libraryRepository.findAll();
+        if (libraries.isEmpty()) {
+            throw new RuntimeException("No library found in database. Please create a library first.");
+        }
+        Long libraryId = libraries.get(0).getId();
+        Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
+
+        int photoIndex = 0;
+        for (Map<String, Object> photo : photos) {
+            photoIndex++;
+            String photoId = (String) photo.get("id");
+            logger.info("Saving photo {}/{}: ID={}", photoIndex, photos.size(), photoId);
+
+            try {
+                // Check if photo already has book metadata in description
+                String description = (String) photo.get("description");
+                if (description != null && (description.contains("Title:") || description.contains("Author:"))) {
+                    logger.info("Skipping photo {} - already processed", photoId);
+                    skippedPhotos.add(Map.of(
+                            "id", photoId,
+                            "reason", "Already processed (has book metadata in description)"
+                    ));
+                    continue;
+                }
+
+                // Get photo creation time
+                Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
+                String creationTime = (String) mediaMetadata.get("creationTime");
+                if (creationTime != null && creationTime.compareTo(latestTimestamp) > 0) {
+                    latestTimestamp = creationTime;
+                }
+
+                // Download the photo
+                String baseUrl = (String) photo.get("baseUrl");
+                String mimeType = (String) photo.get("mimeType");
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg";
+                }
+                logger.debug("Downloading photo {} from: {}", photoId, baseUrl);
+                byte[] photoBytes = googlePhotosService.downloadPhoto(baseUrl);
+                logger.info("Downloaded photo {} ({} bytes)", photoId, photoBytes.length);
+
+                // Create temporary book with special marker for processing later
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+                String tempTitle = "FromFeed_" + timestamp;
+
+                BookDto tempBook = new BookDto();
+                tempBook.setTitle(tempTitle);
+                tempBook.setAuthorId(placeholderAuthor.getId());
+                tempBook.setLibraryId(libraryId);
+                tempBook.setStatus(BookStatus.ACTIVE);
+                tempBook.setDateAddedToLibrary(LocalDate.now());
+
+                BookDto savedBook = bookService.createBook(tempBook);
+                Long bookId = savedBook.getId();
+                logger.info("Created temporary book with ID: {} (title: {})", bookId, tempTitle);
+
+                // Save photo to database
+                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType);
+                logger.info("Saved photo to database for book {}", bookId);
+
+                savedPhotos.add(Map.of(
+                        "photoId", photoId,
+                        "bookId", bookId,
+                        "title", tempTitle
+                ));
+
+            } catch (Exception e) {
+                logger.error("Error saving photo {}: {}", photoId, e.getMessage(), e);
+                skippedPhotos.add(Map.of(
+                        "id", photoId,
+                        "reason", "Error: " + e.getMessage()
+                ));
+            }
+        }
+
+        logger.info("Completed Phase 1. Saved: {}, Skipped: {}", savedPhotos.size(), skippedPhotos.size());
+
+        // Update the last photo timestamp
+        logger.info("Updating last photo timestamp to: {}", latestTimestamp);
+        UserSettingsDto settingsUpdate = new UserSettingsDto();
+        settingsUpdate.setLastPhotoTimestamp(latestTimestamp);
+        userSettingsService.updateUserSettings(username, settingsUpdate);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("savedCount", savedPhotos.size());
+        result.put("skippedCount", skippedPhotos.size());
+        result.put("totalPhotos", photos.size());
+        result.put("savedPhotos", savedPhotos);
+        result.put("skippedPhotos", skippedPhotos);
+        result.put("lastTimestamp", latestTimestamp);
+
+        logger.info("===== Phase 1 Complete: {} photos saved to database =====", savedPhotos.size());
+        return result;
+    }
+
+    /**
+     * Phase 2: Process saved photos using the book-by-photo AI workflow
+     * This can run independently after photos are saved to the database
      * @return Map containing results of the processing
      */
+    public Map<String, Object> processSavedPhotos() {
+        logger.info("===== Phase 2: Processing saved photos with AI =====");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to process photos without authentication");
+            throw new RuntimeException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        logger.info("Processing photos for user: {}", username);
+
+        // Find all temporary books from feed (those starting with "FromFeed_")
+        List<BookDto> allBooks = bookService.getAllBooks();
+        List<BookDto> tempBooks = allBooks.stream()
+                .filter(book -> book.getTitle() != null && book.getTitle().startsWith("FromFeed_"))
+                .toList();
+
+        logger.info("Found {} temporary books to process", tempBooks.size());
+
+        List<Map<String, Object>> processedBooks = new ArrayList<>();
+        List<Map<String, Object>> failedBooks = new ArrayList<>();
+
+        int bookIndex = 0;
+        for (BookDto tempBook : tempBooks) {
+            bookIndex++;
+            Long bookId = tempBook.getId();
+            String tempTitle = tempBook.getTitle();
+            logger.info("Processing book {}/{}: ID={}, Title={}", bookIndex, tempBooks.size(), bookId, tempTitle);
+
+            try {
+                // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
+                logger.info("Generating full book details using AI for book {}", bookId);
+                BookDto fullBook = bookService.generateTempBook(bookId);
+
+                // Get author name from Author entity
+                Author bookAuthor = null;
+                if (fullBook.getAuthorId() != null) {
+                    bookAuthor = authorRepository.findById(fullBook.getAuthorId()).orElse(null);
+                }
+                String authorName = bookAuthor != null ? bookAuthor.getName() : "Unknown";
+
+                logger.info("Successfully generated book: title='{}', author='{}'",
+                        fullBook.getTitle(), authorName);
+
+                processedBooks.add(Map.of(
+                        "bookId", bookId,
+                        "title", fullBook.getTitle(),
+                        "author", authorName,
+                        "originalTitle", tempTitle
+                ));
+
+                logger.info("Successfully processed book {}", bookId);
+
+            } catch (Exception e) {
+                logger.error("Error processing book {}: {}", bookId, e.getMessage(), e);
+                failedBooks.add(Map.of(
+                        "bookId", bookId,
+                        "originalTitle", tempTitle,
+                        "reason", "Error: " + e.getMessage()
+                ));
+            }
+        }
+
+        logger.info("Completed Phase 2. Processed: {}, Failed: {}",
+                processedBooks.size(), failedBooks.size());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("processedCount", processedBooks.size());
+        result.put("failedCount", failedBooks.size());
+        result.put("totalBooks", tempBooks.size());
+        result.put("processedBooks", processedBooks);
+        result.put("failedBooks", failedBooks);
+
+        logger.info("===== Phase 2 Complete: {} books processed with AI =====", processedBooks.size());
+        return result;
+    }
+
+    /**
+     * Legacy method: Process photos from Google Photos feed to create books (single-phase)
+     * WARNING: May timeout due to long Google Photos connection
+     * @return Map containing results of the processing
+     * @deprecated Use fetchAndSavePhotos() followed by processSavedPhotos() instead
+     */
+    @Deprecated
     public Map<String, Object> processPhotosFromFeed() {
         logger.info("===== Starting Books-from-Feed processing =====");
 

@@ -46,28 +46,50 @@ public class GooglePhotosLibraryClient {
      *
      * @param accessToken OAuth access token
      * @param title Album title
-     * @param description Album description
      * @return AlbumResponse with album ID and details
      */
-    public AlbumResponse createAlbum(String accessToken, String title, String description) {
+    public AlbumResponse createAlbum(String accessToken, String title) {
+        log.info("=== CREATE ALBUM OPERATION ===");
         log.info("Creating Google Photos album: {}", title);
+        log.info("Required scopes: photoslibrary.appendonly OR photoslibrary.edit.appcreateddata");
+        log.info("Endpoint: POST {}/albums", config.getBaseUrl());
 
         AlbumCreateRequest request = new AlbumCreateRequest();
         AlbumCreateRequest.Album album = new AlbumCreateRequest.Album();
         album.setTitle(title);
-        album.setDescription(description);
         request.setAlbum(album);
 
         HttpEntity<AlbumCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
 
-        ResponseEntity<AlbumResponse> response = restTemplate.postForEntity(
-                config.getBaseUrl() + "/albums",
-                entity,
-                AlbumResponse.class
-        );
+        try {
+            // Google Photos API returns the Album object directly, not wrapped
+            ResponseEntity<AlbumResponse.Album> response = restTemplate.postForEntity(
+                    config.getBaseUrl() + "/albums",
+                    entity,
+                    AlbumResponse.Album.class
+            );
 
-        log.info("Created album with ID: {}", response.getBody().getAlbum().getId());
-        return response.getBody();
+            AlbumResponse.Album albumData = response.getBody();
+            if (albumData == null) {
+                throw new RuntimeException("Album creation returned null response body");
+            }
+
+            // Wrap the album in AlbumResponse for consistency with other methods
+            AlbumResponse albumResponse = new AlbumResponse();
+            albumResponse.setAlbum(albumData);
+
+            log.info("Created album successfully with ID: {}", albumData.getId());
+            return albumResponse;
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have required scopes: photoslibrary.appendonly OR photoslibrary.edit.appcreateddata");
+            log.error("Please revoke and re-authorize Google Photos in Settings");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Album creation failed with error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -81,7 +103,10 @@ public class GooglePhotosLibraryClient {
      * @return Upload token to be used in batchCreate
      */
     public String uploadBytes(String accessToken, byte[] photoBytes, String mimeType) {
-        log.debug("Uploading {} bytes with MIME type: {}", photoBytes.length, mimeType);
+        log.info("=== UPLOAD BYTES OPERATION ===");
+        log.info("Uploading {} bytes with MIME type: {}", photoBytes.length, mimeType);
+        log.info("Required scope: photoslibrary.appendonly");
+        log.info("Endpoint: POST {}", config.getUploadUrl());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -90,15 +115,26 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<byte[]> entity = new HttpEntity<>(photoBytes, headers);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                config.getUploadUrl(),
-                entity,
-                String.class
-        );
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    config.getUploadUrl(),
+                    entity,
+                    String.class
+            );
 
-        String uploadToken = response.getBody();
-        log.debug("Received upload token (length: {})", uploadToken != null ? uploadToken.length() : 0);
-        return uploadToken;
+            String uploadToken = response.getBody();
+            log.info("Upload successful. Received upload token (length: {})", uploadToken != null ? uploadToken.length() : 0);
+            return uploadToken;
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have the required scope: photoslibrary.appendonly");
+            log.error("Please revoke and re-authorize Google Photos in Settings");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Upload failed with error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -112,7 +148,10 @@ public class GooglePhotosLibraryClient {
      * @return BatchCreateResponse with created media item IDs
      */
     public BatchCreateResponse batchCreate(String accessToken, String albumId, List<BatchCreateRequest.NewMediaItem> items) {
-        log.info("Batch creating {} media items", items.size());
+        log.info("=== BATCH CREATE OPERATION ===");
+        log.info("Batch creating {} media items to album: {}", items.size(), albumId);
+        log.info("Required scope: photoslibrary.appendonly");
+        log.info("Endpoint: POST {}/mediaItems:batchCreate", config.getBaseUrl());
 
         BatchCreateRequest request = new BatchCreateRequest();
         request.setAlbumId(albumId);
@@ -120,14 +159,25 @@ public class GooglePhotosLibraryClient {
 
         HttpEntity<BatchCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
 
-        ResponseEntity<BatchCreateResponse> response = restTemplate.postForEntity(
-                config.getBaseUrl() + "/mediaItems:batchCreate",
-                entity,
-                BatchCreateResponse.class
-        );
+        try {
+            ResponseEntity<BatchCreateResponse> response = restTemplate.postForEntity(
+                    config.getBaseUrl() + "/mediaItems:batchCreate",
+                    entity,
+                    BatchCreateResponse.class
+            );
 
-        log.info("Batch create completed: {} items", response.getBody().getNewMediaItemResults().size());
-        return response.getBody();
+            log.info("Batch create completed successfully: {} items", response.getBody().getNewMediaItemResults().size());
+            return response.getBody();
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("=== 403 FORBIDDEN ERROR ===");
+            log.error("The access token does NOT have the required scope: photoslibrary.appendonly");
+            log.error("Please revoke and re-authorize Google Photos in Settings to grant this scope");
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Batch create failed with error: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -286,5 +336,76 @@ public class GooglePhotosLibraryClient {
         } else {
             return baseUrl + "=w" + width;
         }
+    }
+
+    /**
+     * List albums with pagination
+     * Required scope: photoslibrary.readonly or photoslibrary.readonly.appcreateddata
+     *
+     * @param accessToken OAuth access token
+     * @param pageSize Number of albums per page (max 50)
+     * @param pageToken Page token for pagination (null for first page)
+     * @return AlbumsListResponse with albums and next page token
+     */
+    public AlbumsListResponse listAlbums(String accessToken, Integer pageSize, String pageToken) {
+        log.debug("Listing albums (pageSize: {}, pageToken: {})", pageSize, pageToken != null ? "present" : "null");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+
+        // Build URL with query parameters
+        StringBuilder urlBuilder = new StringBuilder(config.getBaseUrl() + "/albums");
+        urlBuilder.append("?pageSize=").append(pageSize != null ? pageSize : 50);
+        if (pageToken != null) {
+            urlBuilder.append("&pageToken=").append(pageToken);
+        }
+
+        ResponseEntity<AlbumsListResponse> response = restTemplate.exchange(
+                urlBuilder.toString(),
+                HttpMethod.GET,
+                entity,
+                AlbumsListResponse.class
+        );
+
+        AlbumsListResponse albumsResponse = response.getBody();
+        log.debug("Listed {} albums, nextPageToken: {}",
+                albumsResponse.getAlbums() != null ? albumsResponse.getAlbums().size() : 0,
+                albumsResponse.getNextPageToken() != null ? "present" : "null");
+
+        return albumsResponse;
+    }
+
+    /**
+     * Find an album by its title
+     * Searches through all albums (with pagination) to find one matching the title
+     *
+     * @param accessToken OAuth access token
+     * @param title Album title to search for
+     * @return Album ID if found, null otherwise
+     */
+    public String findAlbumByTitle(String accessToken, String title) {
+        log.debug("Searching for album with title: {}", title);
+
+        String pageToken = null;
+        do {
+            AlbumsListResponse response = listAlbums(accessToken, 50, pageToken);
+
+            if (response.getAlbums() != null) {
+                for (AlbumsListResponse.Album album : response.getAlbums()) {
+                    if (title.equals(album.getTitle())) {
+                        log.debug("Found matching album: {} with ID: {}", album.getTitle(), album.getId());
+                        return album.getId();
+                    }
+                }
+            }
+
+            pageToken = response.getNextPageToken();
+
+        } while (pageToken != null);
+
+        log.debug("Album '{}' not found", title);
+        return null;
     }
 }

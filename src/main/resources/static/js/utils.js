@@ -18,7 +18,7 @@ export function getCookie(name) {
 }
 
 export async function fetchData(url, options = {}) {
-    const { suppress401Redirect = false } = options;
+    const { suppress401Redirect = false, method = 'GET', body = null } = options;
     const token = getCookie('XSRF-TOKEN');
     const headers = {
         'Content-Type': 'application/json',
@@ -27,11 +27,18 @@ export async function fetchData(url, options = {}) {
         headers['X-CSRF-TOKEN'] = token;
     }
 
+    const fetchOptions = {
+        method: method,
+        headers: headers
+    };
+
+    // Only include body for POST, PUT, PATCH methods
+    if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+        fetchOptions.body = JSON.stringify(body);
+    }
+
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
+        const response = await fetch(url, fetchOptions);
 
         if (response.status === 401) {
             console.log('401 Unauthorized - redirecting to login');

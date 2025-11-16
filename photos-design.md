@@ -133,8 +133,7 @@ curl -X POST 'https://photoslibrary.googleapis.com/v1/albums' \
   -H 'Content-Type: application/json' \
   -d '{
     "album": {
-      "title": "Library Book Covers",
-      "description": "Photos of book covers uploaded via Library App"
+      "title": "Library Book Covers"
     }
   }'
 ```
@@ -142,17 +141,17 @@ curl -X POST 'https://photoslibrary.googleapis.com/v1/albums' \
 **Response**:
 ```json
 {
-  "album": {
-    "id": "ALBUM_ID_1234567890abcdef",
-    "title": "Library Book Covers",
-    "description": "Photos of book covers uploaded via Library App",
-    "productUrl": "https://photos.google.com/albums/ALBUM_ID_1234567890abcdef"
-  }
+  "id": "ALBUM_ID_1234567890abcdef",
+  "title": "Library Book Covers",
+  "productUrl": "https://photos.google.com/albums/ALBUM_ID_1234567890abcdef",
+  "isWriteable": true
 }
 ```
 
 **Key Points**:
-- The `album.id` is the permanent identifier - store this in application configuration
+- The API returns the Album object **directly** (not wrapped in an "album" field)
+- The `description` field is **not supported** by the API (will cause 400 error)
+- The `id` is the permanent identifier - store this in application configuration
 - Album is visible to the user in their Google Photos but only manageable via API
 - One album per library or per user depending on architecture choice
 
@@ -397,7 +396,7 @@ public class AlbumCreateRequest {
     @Data @NoArgsConstructor
     public static class Album {
         private String title;
-        private String description;
+        // Note: description field is NOT supported by the API
     }
 }
 
@@ -521,13 +520,12 @@ public class GooglePhotosLibraryService {
     /**
      * Create an album for storing book covers
      */
-    public String createAlbum(String accessToken, String title, String description) {
+    public String createAlbum(String accessToken, String title) {
         log.info("Creating Google Photos album: {}", title);
 
         AlbumCreateRequest request = new AlbumCreateRequest();
         AlbumCreateRequest.Album album = new AlbumCreateRequest.Album();
         album.setTitle(title);
-        album.setDescription(description);
         request.setAlbum(album);
 
         HttpHeaders headers = new HttpHeaders();
@@ -536,13 +534,14 @@ public class GooglePhotosLibraryService {
 
         HttpEntity<AlbumCreateRequest> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<AlbumResponse> response = restTemplate.postForEntity(
+        // Google Photos API returns the Album object directly, not wrapped
+        ResponseEntity<AlbumResponse.Album> response = restTemplate.postForEntity(
             baseUrl + "/albums",
             entity,
-            AlbumResponse.class
+            AlbumResponse.Album.class
         );
 
-        String albumId = response.getBody().getAlbum().getId();
+        String albumId = response.getBody().getId();
         log.info("Created album with ID: {}", albumId);
         return albumId;
     }
@@ -858,16 +857,15 @@ class GooglePhotosLibraryServiceTest {
 
     @Test
     void testCreateAlbum() {
-        // Mock response
-        AlbumResponse mockResponse = new AlbumResponse();
+        // Mock response - API returns Album object directly
         AlbumResponse.Album album = new AlbumResponse.Album();
         album.setId("test-album-id");
-        mockResponse.setAlbum(album);
+        album.setTitle("Test Album");
 
-        when(restTemplate.postForEntity(anyString(), any(), eq(AlbumResponse.class)))
-            .thenReturn(ResponseEntity.ok(mockResponse));
+        when(restTemplate.postForEntity(anyString(), any(), eq(AlbumResponse.Album.class)))
+            .thenReturn(ResponseEntity.ok(album));
 
-        String albumId = service.createAlbum("token", "Test Album", "Description");
+        String albumId = service.createAlbum("token", "Test Album");
 
         assertEquals("test-album-id", albumId);
     }
