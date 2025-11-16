@@ -27,6 +27,7 @@ public class ImportService {
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
     private final RoleRepository roleRepository;
+    private final PhotoRepository photoRepository;
     private final LibraryMapper libraryMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -145,6 +146,41 @@ public class ImportService {
                 loan.setDueDate(lDto.getDueDate() != null ? lDto.getDueDate() : LocalDate.now().plusWeeks(2));
                 loan.setReturnDate(lDto.getReturnDate());
                 loanRepository.save(loan);
+            }
+        }
+
+        // Import photos
+        if (dto.getPhotos() != null) {
+            for (ImportPhotoDto pDto : dto.getPhotos()) {
+                Photo photo = new Photo();
+                photo.setContentType(pDto.getContentType());
+                photo.setCaption(pDto.getCaption());
+                photo.setPhotoOrder(pDto.getPhotoOrder());
+                photo.setPermanentId(pDto.getPermanentId());
+                photo.setBackedUpAt(pDto.getBackedUpAt());
+                photo.setBackupStatus(pDto.getBackupStatus());
+                photo.setBackupErrorMessage(pDto.getBackupErrorMessage());
+
+                // Link to book if specified
+                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
+                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                    Book book = bookMap.get(key);
+                    if (book == null) {
+                        throw new RuntimeException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                    }
+                    photo.setBook(book);
+                }
+
+                // Link to author if specified
+                if (pDto.getAuthorName() != null) {
+                    Author author = authMap.get(pDto.getAuthorName());
+                    if (author == null) {
+                        throw new RuntimeException("Author not found for photo: " + pDto.getAuthorName());
+                    }
+                    photo.setAuthor(author);
+                }
+
+                photoRepository.save(photo);
             }
         }
     }
@@ -273,6 +309,35 @@ public class ImportService {
             loanDtos.add(lDto);
         }
         dto.setLoans(loanDtos);
+
+        // Export photos (metadata only, no image bytes)
+        List<ImportPhotoDto> photoDtos = new ArrayList<>();
+        for (Photo photo : photoRepository.findAll()) {
+            ImportPhotoDto pDto = new ImportPhotoDto();
+            pDto.setContentType(photo.getContentType());
+            pDto.setCaption(photo.getCaption());
+            pDto.setPhotoOrder(photo.getPhotoOrder());
+            pDto.setPermanentId(photo.getPermanentId());
+            pDto.setBackedUpAt(photo.getBackedUpAt());
+            pDto.setBackupStatus(photo.getBackupStatus());
+            pDto.setBackupErrorMessage(photo.getBackupErrorMessage());
+
+            // Reference book by title and author name
+            if (photo.getBook() != null) {
+                pDto.setBookTitle(photo.getBook().getTitle());
+                if (photo.getBook().getAuthor() != null) {
+                    pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+                }
+            }
+
+            // Reference author by name (for author photos)
+            if (photo.getAuthor() != null) {
+                pDto.setAuthorName(photo.getAuthor().getName());
+            }
+
+            photoDtos.add(pDto);
+        }
+        dto.setPhotos(photoDtos);
 
         return dto;
     }

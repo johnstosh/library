@@ -190,15 +190,17 @@ function setupImportUI() {
         <div class="card mb-3">
             <div class="card-body">
                 <h5>Export JSON Data</h5>
-                <p>Export all data (libraries, authors, books, loans, users) to a JSON file.</p>
+                <p>Export all data (libraries, authors, books, loans, users, photo metadata) to a JSON file.</p>
+                <p><small class="text-muted">Note: Photo image bytes are not exported, only metadata (caption, contentType, Google Photos permanentId, backupStatus, etc.)</small></p>
                 <button id="export-json-btn" class="btn btn-primary" data-test="export-json-btn" onclick="exportJson()">Export Database to JSON</button>
             </div>
         </div>
         <div class="card mb-3">
             <div class="card-body">
                 <h5>Import JSON Data</h5>
-                <p>Import libraries, authors, books, loans, and users from JSON.</p>
-                <textarea id="import-json-textarea" class="form-control mb-2" rows="10" placeholder='{"libraries": [...], "authors": [...], ...}'></textarea>
+                <p>Import libraries, authors, books, loans, users, and photo metadata from JSON.</p>
+                <p><small class="text-muted">Note: Photo image bytes are not imported. Photos must be re-downloaded from Google Photos using their permanentId.</small></p>
+                <textarea id="import-json-textarea" class="form-control mb-2" rows="10" placeholder='{"libraries": [...], "authors": [...], "photos": [...]}'></textarea>
                 <button id="import-json-btn" class="btn btn-warning" data-test="import-json-btn" onclick="importJson()">Import JSON to Database</button>
             </div>
         </div>
