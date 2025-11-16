@@ -31,6 +31,11 @@ public class User {
     private String googlePhotosAlbumId = ""; // Permanent album ID for photo export
     private String lastPhotoTimestamp = "";
 
+    // SSO fields
+    private String ssoProvider; // "google", "local", or null for legacy users
+    private String ssoSubjectId; // OAuth "sub" claim - unique user ID from provider
+    private String email; // Email address from SSO provider
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",

@@ -1,6 +1,16 @@
 // (c) Copyright 2025 by Muczynski
 import { hashPassword } from './utils.js';
 
+function getSsoProviderBadge(ssoProvider) {
+    if (!ssoProvider || ssoProvider === 'local') {
+        return '<span class="badge bg-secondary">Local</span>';
+    }
+    if (ssoProvider === 'google') {
+        return '<span class="badge bg-primary">Google</span>';
+    }
+    return `<span class="badge bg-info">${ssoProvider}</span>`;
+}
+
 async function loadUsers() {
     try {
         const users = await fetchData('/api/users');
@@ -23,6 +33,11 @@ async function loadUsers() {
             loansCell.setAttribute('data-test', 'user-loans-count');
             loansCell.textContent = user.activeLoansCount || 0;
             row.appendChild(loansCell);
+
+            const ssoCell = document.createElement('td');
+            ssoCell.setAttribute('data-test', 'user-sso-provider');
+            ssoCell.innerHTML = getSsoProviderBadge(user.ssoProvider);
+            row.appendChild(ssoCell);
 
             const actionsCell = document.createElement('td');
 

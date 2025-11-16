@@ -18,5 +18,8 @@ public class UserDto {
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;
+    private String ssoProvider;
+    private String ssoSubjectId;
+    private String email;
     private int activeLoansCount;
 }
