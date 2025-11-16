@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,13 +55,12 @@ public class PhotoExportService {
     private String cachedAlbumName = null;
 
     /**
-     * Scheduled task to export photos to Google Photos
-     * Runs every hour
+     * Export photos to Google Photos
+     * Can be triggered manually via API endpoint
      */
-    @Scheduled(fixedRate = 3600000) // Run every hour (3600000 ms)
     @Transactional
     public void exportPhotos() {
-        logger.info("Starting scheduled photo export process...");
+        logger.info("Starting photo export process...");
 
         try {
             // Get the librarian user (assuming they have Google Photos configured)
