@@ -40,7 +40,8 @@ export function initApp() {
                 formData.append('password', hashedPassword);
 
                 // Submit to login endpoint
-                // Note: Spring Security redirects to /index.html on success or /?error on failure
+                // Note: Custom success handler returns 200 OK with JSON (no redirect)
+                // Failure still redirects to /?error
                 try {
                     const response = await fetch('/login', {
                         method: 'POST',
@@ -48,18 +49,18 @@ export function initApp() {
                         credentials: 'same-origin' // Ensure cookies are sent/received
                     });
 
-                    // Check if login succeeded by looking at the final URL after redirect
-                    if (response.url && response.url.includes('error')) {
-                        // Login failed - Spring Security redirected to /?error
-                        console.log('Login failed, error in URL');
-                        showLoginError();
-                    } else if (response.ok || response.redirected) {
-                        // Login successful
-                        console.log('Login successful, redirected to:', response.url);
-                        // Page should already be at the success URL, but reload to ensure fresh state
+                    if (response.ok && !response.redirected) {
+                        // Login successful - got 200 OK with JSON
+                        console.log('Login successful');
+                        // Reload page to check authentication and show appropriate content
                         window.location.href = '/';
+                    } else if (response.redirected && response.url.includes('error')) {
+                        // Login failed - Spring Security redirected to /?error
+                        console.log('Login failed, redirected to error page');
+                        showLoginError();
                     } else {
-                        console.log('Login failed with response:', response.status);
+                        // Unexpected response
+                        console.log('Unexpected login response:', response.status, response.redirected);
                         showLoginError();
                     }
                 } catch (error) {
