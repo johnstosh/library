@@ -16,4 +16,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
 
     @Query("SELECT DISTINCT p FROM Photo p LEFT JOIN FETCH p.book LEFT JOIN FETCH p.author")
     List<Photo> findAllWithBookAndAuthor();
+
+    @Query("SELECT DISTINCT p FROM Photo p LEFT JOIN FETCH p.book LEFT JOIN FETCH p.author ORDER BY p.id")
+    List<Photo> findAllWithBookAndAuthorOrderById();
 }

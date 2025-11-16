@@ -437,8 +437,8 @@ public class PhotoBackupService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
-        logger.debug("Fetching all photos with book and author");
-        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+        logger.debug("Fetching all photos with book and author, sorted by ID");
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthorOrderById();
         logger.info("Found {} photos in database", allPhotos.size());
 
         List<Map<String, Object>> result = new ArrayList<>();
