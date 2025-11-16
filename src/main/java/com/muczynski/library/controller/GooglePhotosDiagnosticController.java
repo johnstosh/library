@@ -53,8 +53,18 @@ public class GooglePhotosDiagnosticController {
                 return ResponseEntity.badRequest().body(Map.of("error", "No access token found"));
             }
 
-            String tokeninfoUrl = "https://oauth2.googleapis.com/tokeninfo?access_token=" + accessToken;
-            ResponseEntity<Map> response = restTemplate.getForEntity(tokeninfoUrl, Map.class);
+            // Use POST with token in body instead of URL parameter for security
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            String body = "access_token=" + accessToken;
+            HttpEntity<String> entity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://oauth2.googleapis.com/tokeninfo",
+                    entity,
+                    Map.class
+            );
 
             return ResponseEntity.ok(Map.of(
                     "status", "Token info retrieved successfully",
