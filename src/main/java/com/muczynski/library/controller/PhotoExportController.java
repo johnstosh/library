@@ -27,36 +27,36 @@ public class PhotoExportController {
     private PhotoExportService photoExportService;
 
     /**
-     * Get backup statistics
+     * Get export statistics
      */
     @GetMapping("/stats")
     @Transactional(readOnly = true)
-    public ResponseEntity<Map<String, Object>> getBackupStats() {
+    public ResponseEntity<Map<String, Object>> getExportStats() {
         try {
-            logger.info("Getting backup statistics");
+            logger.info("Getting export statistics");
             Map<String, Object> stats = photoExportService.getExportStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            logger.error("Failed to get backup statistics", e);
+            logger.error("Failed to get export statistics", e);
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to get backup statistics: " + e.getMessage());
+            error.put("error", "Failed to get export statistics: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     /**
-     * Get all photos with backup status
+     * Get all photos with export status
      */
     @GetMapping("/photos")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithBackupStatus() {
+    public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithExportStatus() {
         try {
-            logger.info("Getting all photos with backup status");
+            logger.info("Getting all photos with export status");
             List<Map<String, Object>> photos = photoExportService.getAllPhotosWithExportStatus();
-            logger.info("Successfully retrieved {} photos with backup status", photos.size());
+            logger.info("Successfully retrieved {} photos with export status", photos.size());
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
-            logger.error("Failed to get photos with backup status - Error: {} - Message: {}",
+            logger.error("Failed to get photos with export status - Error: {} - Message: {}",
                 e.getClass().getSimpleName(), e.getMessage(), e);
             // Return empty list instead of null to avoid frontend issues
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new java.util.ArrayList<>());
@@ -64,49 +64,49 @@ public class PhotoExportController {
     }
 
     /**
-     * Manually trigger backup for all pending photos
+     * Manually trigger export for all pending photos
      */
-    @PostMapping("/backup-all")
+    @PostMapping("/export-all")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> backupAllPhotos() {
+    public ResponseEntity<Map<String, Object>> exportAllPhotos() {
         try {
-            logger.info("Manually triggering backup for all photos");
+            logger.info("Manually triggering export for all photos");
             photoExportService.exportPhotos();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Backup process completed");
+            response.put("message", "Export process started");
             response.put("stats", photoExportService.getExportStats());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Failed to backup all photos", e);
+            logger.error("Failed to export all photos", e);
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to backup photos: " + e.getMessage());
+            error.put("error", "Failed to export photos: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     /**
-     * Manually trigger backup for a specific photo
+     * Manually trigger export for a specific photo
      */
-    @PostMapping("/backup/{photoId}")
+    @PostMapping("/export/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> backupPhoto(@PathVariable Long photoId) {
+    public ResponseEntity<Map<String, Object>> exportPhoto(@PathVariable Long photoId) {
         try {
-            logger.info("Manually triggering backup for photo ID: {}", photoId);
+            logger.info("Manually triggering export for photo ID: {}", photoId);
             photoExportService.exportPhotoById(photoId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("message", "Photo backup completed successfully");
+            response.put("message", "Photo export completed successfully");
             response.put("photoId", photoId);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Failed to backup photo ID: {}", photoId, e);
+            logger.error("Failed to export photo ID: {}", photoId, e);
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to backup photo: " + e.getMessage());
+            error.put("error", "Failed to export photo: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
