@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
@@ -49,130 +50,6 @@ public class GooglePhotosService {
         this.restTemplate = new RestTemplate();
     }
 
-    /**
-     * Fetch photos from Google Photos starting from a given timestamp
-     * @param startTimestamp ISO 8601 timestamp to start from
-     * @return List of photo metadata including URL, description, and timestamp
-     */
-    public List<Map<String, Object>> fetchPhotos(String startTimestamp) {
-        logger.info("Fetching photos from Google Photos with start timestamp: {}", startTimestamp);
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to fetch photos without authentication");
-            throw new RuntimeException("No authenticated user found");
-        }
-        String username = authentication.getName();
-
-        logger.debug("Fetching photos for user: {}", username);
-
-        // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
-
-        // Diagnostic: Verify token scopes
-        verifyTokenScopes(apiKey);
-
-        // Build request to search for photos after the given timestamp
-        Map<String, Object> filters = new HashMap<>();
-
-        // Parse the startTimestamp and create date filter
-        if (startTimestamp != null && !startTimestamp.trim().isEmpty()) {
-            Map<String, Object> startDate = parseTimestamp(startTimestamp);
-
-            // Create endDate as today
-            LocalDateTime today = LocalDateTime.now();
-            Map<String, Object> endDate = new HashMap<>();
-            endDate.put("year", today.getYear());
-            endDate.put("month", today.getMonthValue());
-            endDate.put("day", today.getDayOfMonth());
-
-            // Create date range with startDate and endDate
-            Map<String, Object> dateRange = new HashMap<>();
-            dateRange.put("startDate", startDate);
-            dateRange.put("endDate", endDate);
-
-            // Create ranges array
-            List<Map<String, Object>> ranges = new ArrayList<>();
-            ranges.add(dateRange);
-
-            // Create dateFilter with ranges
-            Map<String, Object> dateFilter = new HashMap<>();
-            dateFilter.put("ranges", ranges);
-
-            filters.put("dateFilter", dateFilter);
-            logger.info("Using date filter with range from: year={}, month={}, day={} to: year={}, month={}, day={}",
-                    startDate.get("year"), startDate.get("month"), startDate.get("day"),
-                    endDate.get("year"), endDate.get("month"), endDate.get("day"));
-        } else {
-            logger.info("No start timestamp provided, fetching recent photos");
-        }
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("pageSize", 100); // Fetch up to 100 photos
-        if (!filters.isEmpty()) {
-            request.put("filters", filters);
-        }
-
-        logger.debug("Google Photos API request: pageSize=100, filters={}", filters);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        logger.info("=== GOOGLE PHOTOS API REQUEST DETAILS ===");
-        logger.info("Endpoint: POST https://photoslibrary.googleapis.com/v1/mediaItems:search");
-        logger.info("Request body: {}", request);
-        logger.info("Authorization: Bearer {}...", apiKey.substring(0, Math.min(20, apiKey.length())));
-        logger.info("Content-Type: {}", headers.getContentType());
-        logger.info("=== END REQUEST DETAILS ===");
-
-        try {
-            logger.info("Sending request to Google Photos API...");
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://photoslibrary.googleapis.com/v1/mediaItems:search",
-                    entity,
-                    Map.class
-            );
-
-            logger.info("Google Photos API response status: {}", response.getStatusCode());
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                Map<String, Object> body = response.getBody();
-                if (body != null && body.containsKey("mediaItems")) {
-                    List<Map<String, Object>> mediaItems = (List<Map<String, Object>>) body.get("mediaItems");
-                    logger.info("Successfully fetched {} photos from Google Photos", mediaItems.size());
-                    return mediaItems;
-                }
-                logger.info("Google Photos API returned no media items");
-                return new ArrayList<>();
-            } else {
-                logger.error("Google Photos API call failed with status: {}", response.getStatusCode());
-                throw new RuntimeException("Google Photos API call failed: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            logger.error("Failed to fetch photos from Google Photos for user: {}", username, e);
-            logger.error("Error message: {}", e.getMessage());
-
-            // Check for specific error types
-            if (e.getMessage() != null) {
-                if (e.getMessage().contains("401") || e.getMessage().contains("Unauthorized")) {
-                    logger.error("Unauthorized (401). Access token may be expired or invalid. Try re-authorizing Google Photos.");
-                } else if (e.getMessage().contains("403") || e.getMessage().contains("Forbidden")) {
-                    logger.error("Forbidden (403). This may mean:");
-                    logger.error("  1. Photos Library API is not enabled in Google Cloud Console");
-                    logger.error("  2. OAuth scope doesn't include photoslibrary.readonly");
-                    logger.error("  3. User revoked access from their Google account");
-                } else if (e.getMessage().contains("404")) {
-                    logger.error("Not Found (404). The Google Photos API endpoint may be incorrect.");
-                }
-            }
-
-            throw new RuntimeException("Failed to fetch photos from Google Photos: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * Download a photo's content from Google Photos
@@ -185,7 +62,7 @@ public class GooglePhotosService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to download photo without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
 
@@ -221,16 +98,16 @@ public class GooglePhotosService {
                     return photoBytes;
                 } else {
                     logger.error("Photo download succeeded but response body is null");
-                    throw new RuntimeException("Photo download returned null");
+                    throw new LibraryException("Photo download returned null");
                 }
             } else {
                 logger.error("Failed to download photo with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to download photo: " + response.getStatusCode());
+                throw new LibraryException("Failed to download photo: " + response.getStatusCode());
             }
         } catch (Exception e) {
             logger.error("Failed to download photo from Google Photos for user: {}", username, e);
             logger.error("Error message: {}", e.getMessage());
-            throw new RuntimeException("Failed to download photo from Google Photos: " + e.getMessage(), e);
+            throw new LibraryException("Failed to download photo from Google Photos: " + e.getMessage(), e);
         }
     }
 
@@ -246,7 +123,7 @@ public class GooglePhotosService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to update photo description without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
 
@@ -279,7 +156,7 @@ public class GooglePhotosService {
         } catch (Exception e) {
             logger.error("Failed to update photo description for photo ID: {} (user: {})", photoId, username, e);
             logger.error("Error message: {}", e.getMessage());
-            throw new RuntimeException("Failed to update photo description: " + e.getMessage(), e);
+            throw new LibraryException("Failed to update photo description: " + e.getMessage(), e);
         }
     }
 
@@ -312,14 +189,14 @@ public class GooglePhotosService {
         logger.debug("Getting valid access token for user: {}", username);
 
         User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         String accessToken = user.getGooglePhotosApiKey();
         String tokenExpiry = user.getGooglePhotosTokenExpiry();
 
         if (accessToken == null || accessToken.trim().isEmpty()) {
             logger.error("User {} has not authorized Google Photos. Access token is empty.", username);
-            throw new RuntimeException("Google Photos not authorized. Please authorize in Settings.");
+            throw new LibraryException("Google Photos not authorized. Please authorize in Settings.");
         }
 
         logger.debug("Access token found for user: {} (length: {} chars)", username, accessToken.length());
@@ -436,7 +313,7 @@ public class GooglePhotosService {
 
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             logger.error("No refresh token available for user: {}. User must re-authorize.", username);
-            throw new RuntimeException("No refresh token available. Please re-authorize Google Photos in Settings.");
+            throw new LibraryException("No refresh token available. Please re-authorize Google Photos in Settings.");
         }
 
         logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());
@@ -446,7 +323,7 @@ public class GooglePhotosService {
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
             logger.error("Client Secret not configured. Cannot refresh token for user: {}.", username);
-            throw new RuntimeException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
+            throw new LibraryException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
         logger.debug("Using Client Secret from global settings");
@@ -475,7 +352,7 @@ public class GooglePhotosService {
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 logger.error("Token refresh failed with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to refresh access token");
+                throw new LibraryException("Failed to refresh access token");
             }
 
             Map<String, Object> tokenResponse = response.getBody();
@@ -486,7 +363,7 @@ public class GooglePhotosService {
 
             if (newAccessToken == null) {
                 logger.error("Token refresh succeeded but no access_token in response");
-                throw new RuntimeException("No access token in refresh response");
+                throw new LibraryException("No access token in refresh response");
             }
 
             logger.info("Successfully refreshed access token for user: {}. New token expires in: {} seconds",
@@ -522,7 +399,7 @@ public class GooglePhotosService {
                 }
             }
 
-            throw new RuntimeException("Failed to refresh access token: " + e.getMessage(), e);
+            throw new LibraryException("Failed to refresh access token: " + e.getMessage(), e);
         }
     }
 
@@ -537,7 +414,7 @@ public class GooglePhotosService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to fetch picker media items without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
 
@@ -590,7 +467,7 @@ public class GooglePhotosService {
 
                 } else {
                     logger.error("Failed to fetch media items with status: {}", response.getStatusCode());
-                    throw new RuntimeException("Failed to fetch media items: " + response.getStatusCode());
+                    throw new LibraryException("Failed to fetch media items: " + response.getStatusCode());
                 }
 
             } while (pageToken != null);
@@ -601,7 +478,7 @@ public class GooglePhotosService {
         } catch (Exception e) {
             logger.error("Failed to fetch media items from Picker session for user: {}", username, e);
             logger.error("Error message: {}", e.getMessage());
-            throw new RuntimeException("Failed to fetch media items from Picker: " + e.getMessage(), e);
+            throw new LibraryException("Failed to fetch media items from Picker: " + e.getMessage(), e);
         }
     }
 
@@ -614,7 +491,7 @@ public class GooglePhotosService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to create picker session without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
 
@@ -646,13 +523,13 @@ public class GooglePhotosService {
                 return session;
             } else {
                 logger.error("Failed to create Picker session with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to create Picker session: " + response.getStatusCode());
+                throw new LibraryException("Failed to create Picker session: " + response.getStatusCode());
             }
 
         } catch (Exception e) {
             logger.error("Failed to create Picker session for user: {}", username, e);
             logger.error("Error message: {}", e.getMessage());
-            throw new RuntimeException("Failed to create Picker session: " + e.getMessage(), e);
+            throw new LibraryException("Failed to create Picker session: " + e.getMessage(), e);
         }
     }
 
@@ -665,7 +542,7 @@ public class GooglePhotosService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("Attempted to get picker session status without authentication");
-            throw new RuntimeException("No authenticated user found");
+            throw new LibraryException("No authenticated user found");
         }
         String username = authentication.getName();
 
@@ -693,13 +570,13 @@ public class GooglePhotosService {
                 return response.getBody();
             } else {
                 logger.error("Failed to get Picker session status with status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to get Picker session status: " + response.getStatusCode());
+                throw new LibraryException("Failed to get Picker session status: " + response.getStatusCode());
             }
 
         } catch (Exception e) {
             logger.error("Failed to get Picker session status for user: {}", username, e);
             logger.error("Error message: {}", e.getMessage());
-            throw new RuntimeException("Failed to get Picker session status: " + e.getMessage(), e);
+            throw new LibraryException("Failed to get Picker session status: " + e.getMessage(), e);
         }
     }
 }

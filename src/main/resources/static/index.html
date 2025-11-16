@@ -243,24 +243,20 @@
                     <p>This feature imports photos from your Google Photos account to automatically detect and create card catalog entries.</p>
                     <p><strong>How it works (Two-Phase Process):</strong></p>
                     <ol>
-                        <li><strong>Phase 1 - Fetch Photos:</strong> Imports photos from Google Photos and saves them to the database</li>
-                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from photos and create book entries</li>
+                        <li><strong>Phase 1 - Select & Save Photos:</strong> Open Google Photos Picker, select photos, and save them to the database</li>
+                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from saved photos and create book entries</li>
                     </ol>
-                    <p><strong>Note:</strong> Make sure you have configured your Google Photos API key in Settings.</p>
+                    <p><strong>Note:</strong> Make sure you have authorized Google Photos in Settings.</p>
                     <div class="btn-group mb-2" role="group">
-                        <button id="fetch-photos-btn" class="btn btn-primary" onclick="fetchPhotosFromFeed()" data-test="fetch-photos-btn">
+                        <button id="select-photos-btn" class="btn btn-primary" onclick="selectPhotosFromPicker()" data-test="select-photos-btn">
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            Step 1: Fetch Photos
+                            Step 1: Select & Save Photos
                         </button>
                         <button id="process-saved-btn" class="btn btn-success" onclick="processSavedPhotosFromFeed()" data-test="process-saved-btn">
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             Step 2: Process with AI
                         </button>
                     </div>
-                    <br>
-                    <button id="process-photos-btn" class="btn btn-outline-secondary btn-sm" onclick="processPhotosFromFeed()" data-test="process-photos-btn">
-                        Use Google Photos Picker (Alternative)
-                    </button>
                 </div>
             </div>
             <div id="processing-results" data-test="processing-results"></div>
@@ -282,11 +278,11 @@
                     <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
 
                     <div class="d-flex gap-2 mb-3">
-                        <button id="backup-all-photos-btn" class="btn btn-primary" onclick="backupAllPhotos()" data-test="backup-all-photos-btn">Export All Pending Photos</button>
-                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoBackupStatus()" data-test="refresh-photos-btn">Refresh Status</button>
+                        <button id="export-all-photos-btn" class="btn btn-primary" onclick="exportAllPhotos()" data-test="export-all-photos-btn">Export All Pending Photos</button>
+                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoExportStatus()" data-test="refresh-photos-btn">Refresh Status</button>
                     </div>
 
-                    <div id="backup-stats" class="row mb-3" data-test="backup-stats">
+                    <div id="export-stats" class="row mb-3" data-test="export-stats">
                         <div class="col-md-3">
                             <div class="card text-center">
                                 <div class="card-body">
@@ -444,7 +440,7 @@
                 <tbody id="loan-list-body" data-test="loan-list-body">
                 </tbody>
             </table>
-            <div data-test="loans-form">
+            <div class="librarian-only" data-test="loans-form">
                 <div class="mb-3">
                     <label for="loan-book" class="form-label">Book:</label>
                     <select id="loan-book" class="form-select" data-test="loan-book" data-test-form="loan-book-select"></select>
@@ -564,11 +560,10 @@
                 </div>
                 <div class="mb-3 librarian-only">
                     <label for="google-photos-album-id" class="form-label">Google Photos Album ID</label>
-                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first backup)" data-test="google-photos-album-id" readonly>
+                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first export)" data-test="google-photos-album-id">
                     <div class="form-text">
-                        This is the permanent ID of the album where photos are backed up. It's automatically created on the first backup.
-                        You can view it here or manually set it to use a different album.
-                        <button type="button" class="btn btn-link btn-sm p-0 ms-2" onclick="toggleAlbumIdEdit()">Edit</button>
+                        This is the permanent ID of the album where photos are exported. It's automatically created on the first export.
+                        You can manually set it to use a different album.
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save User Settings</button>
@@ -589,11 +584,11 @@
 <script src="js/authors-table.js"></script>
 <script src="js/authors-edit.js"></script>
 <script src="js/authors-photo.js"></script>
-<script src="js/users.js"></script>
+<script src="js/users.js" type="module"></script>
 <script src="js/loans.js"></script>
-<script src="js/librarycard.js"></script>
+<script src="js/librarycard.js" type="module"></script>
 <script src="js/search.js"></script>
-<script src="js/settings.js"></script>
+<script src="js/settings.js" type="module"></script>
 <script src="js/global-settings.js"></script>
 <script src="js/test-data.js"></script>
 <script src="js/utils.js" type="module"></script>

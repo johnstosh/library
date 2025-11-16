@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.photostorage.client;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.photostorage.config.PhotoStorageConfig;
 import com.muczynski.library.photostorage.dto.*;
@@ -71,7 +72,7 @@ public class GooglePhotosLibraryClient {
 
             AlbumResponse.Album albumData = response.getBody();
             if (albumData == null) {
-                throw new RuntimeException("Album creation returned null response body");
+                throw new LibraryException("Album creation returned null response body");
             }
 
             // Wrap the album in AlbumResponse for consistency with other methods

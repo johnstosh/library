@@ -12,4 +12,5 @@ public class ImportRequestDto {
     private List<ImportUserDto> users;
     private List<ImportBookDto> books;
     private List<ImportLoanDto> loans;
+    private List<ImportPhotoDto> photos;
 }

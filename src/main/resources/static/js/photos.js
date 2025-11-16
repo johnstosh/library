@@ -1,23 +1,23 @@
 // (c) Copyright 2025 by Muczynski
-// Photo Backup Management
+// Photo Export Management
 
 /**
- * Load the photos section and display backup status
+ * Load the photos section and display export status
  */
 async function loadPhotosSection() {
     console.log('[Photos] Loading photos section');
-    await loadPhotoBackupStatus();
+    await loadPhotoExportStatus();
 }
 
 /**
- * Load and display photo backup statistics and details
+ * Load and display photo export statistics and details
  */
-async function loadPhotoBackupStatus() {
+async function loadPhotoExportStatus() {
     try {
-        console.log('[Photos] Fetching backup status...');
+        console.log('[Photos] Fetching export status...');
 
         // Fetch statistics
-        const stats = await fetchData('/api/photo-backup/stats');
+        const stats = await fetchData('/api/photo-export/stats');
         console.log('[Photos] Stats:', stats);
 
         // Update statistics display
@@ -39,20 +39,20 @@ async function loadPhotoBackupStatus() {
         }
 
         // Fetch photo details
-        const photos = await fetchData('/api/photo-backup/photos');
+        const photos = await fetchData('/api/photo-export/photos');
         console.log('[Photos] Loaded', photos.length, 'photos');
 
         // Render photos table
         renderPhotosTable(photos);
 
     } catch (error) {
-        console.error('[Photos] Failed to load backup status:', error);
-        showError('photos', 'Failed to load backup status: ' + error.message);
+        console.error('[Photos] Failed to load export status:', error);
+        showError('photos', 'Failed to load export status: ' + error.message);
     }
 }
 
 /**
- * Render the photos table with backup status
+ * Render the photos table with export status
  */
 function renderPhotosTable(photos) {
     const tbody = document.getElementById('photos-table-body');
@@ -90,7 +90,7 @@ function renderPhotosTable(photos) {
         const statusBadge = document.createElement('span');
         statusBadge.classList.add('badge');
 
-        switch (photo.backupStatus) {
+        switch (photo.exportStatus) {
             case 'COMPLETED':
                 statusBadge.classList.add('bg-success');
                 statusBadge.textContent = 'Completed';
@@ -98,8 +98,8 @@ function renderPhotosTable(photos) {
             case 'FAILED':
                 statusBadge.classList.add('bg-danger');
                 statusBadge.textContent = 'Failed';
-                if (photo.backupErrorMessage) {
-                    statusBadge.title = photo.backupErrorMessage;
+                if (photo.exportErrorMessage) {
+                    statusBadge.title = photo.exportErrorMessage;
                 }
                 break;
             case 'IN_PROGRESS':
@@ -141,13 +141,13 @@ function renderPhotosTable(photos) {
 
         // Actions
         const actionsCell = document.createElement('td');
-        if (photo.backupStatus !== 'COMPLETED' && photo.backupStatus !== 'IN_PROGRESS') {
-            const backupBtn = document.createElement('button');
-            backupBtn.classList.add('btn', 'btn-sm', 'btn-primary');
-            backupBtn.textContent = 'Backup';
-            backupBtn.onclick = () => backupSinglePhoto(photo.id);
-            actionsCell.appendChild(backupBtn);
-        } else if (photo.backupStatus === 'COMPLETED' && photo.permanentId) {
+        if (photo.exportStatus !== 'COMPLETED' && photo.exportStatus !== 'IN_PROGRESS') {
+            const exportBtn = document.createElement('button');
+            exportBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+            exportBtn.textContent = 'Export';
+            exportBtn.onclick = () => exportSinglePhoto(photo.id);
+            actionsCell.appendChild(exportBtn);
+        } else if (photo.exportStatus === 'COMPLETED' && photo.permanentId) {
             const viewBtn = document.createElement('a');
             viewBtn.classList.add('btn', 'btn-sm', 'btn-outline-primary');
             viewBtn.textContent = 'View';
@@ -162,71 +162,71 @@ function renderPhotosTable(photos) {
 }
 
 /**
- * Backup all pending photos
+ * Export all pending photos
  */
-async function backupAllPhotos() {
+async function exportAllPhotos() {
     try {
-        const confirmBackup = confirm('Are you sure you want to backup all pending photos? This may take a while.');
-        if (!confirmBackup) {
+        const confirmExport = confirm('Are you sure you want to export all pending photos? This may take a while.');
+        if (!confirmExport) {
             return;
         }
 
-        showInfo('photos', 'Starting backup process... This may take a few minutes.');
+        showInfo('photos', 'Starting export process... This may take a few minutes.');
 
-        // Disable backup button
-        const backupBtn = document.getElementById('backup-all-photos-btn');
-        if (backupBtn) {
-            backupBtn.disabled = true;
-            backupBtn.textContent = 'Backing up...';
+        // Disable export button
+        const exportBtn = document.getElementById('export-all-photos-btn');
+        if (exportBtn) {
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Backing up...';
         }
 
-        const result = await fetchData('/api/photo-backup/backup-all', {
+        const result = await fetchData('/api/photo-export/export-all', {
             method: 'POST'
         });
 
-        console.log('[Photos] Backup result:', result);
+        console.log('[Photos] Export result:', result);
 
-        showSuccess('photos', result.message || 'Backup completed successfully!');
+        showSuccess('photos', result.message || 'Export completed successfully!');
 
-        // Reload the backup status
-        await loadPhotoBackupStatus();
+        // Reload the export status
+        await loadPhotoExportStatus();
 
     } catch (error) {
-        console.error('[Photos] Failed to backup photos:', error);
-        showError('photos', 'Failed to backup photos: ' + error.message);
+        console.error('[Photos] Failed to export photos:', error);
+        showError('photos', 'Failed to export photos: ' + error.message);
     } finally {
-        // Re-enable backup button
-        const backupBtn = document.getElementById('backup-all-photos-btn');
-        if (backupBtn) {
-            backupBtn.disabled = false;
-            backupBtn.textContent = 'Backup All Pending Photos';
+        // Re-enable export button
+        const exportBtn = document.getElementById('export-all-photos-btn');
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.textContent = 'Export All Pending Photos';
         }
     }
 }
 
 /**
- * Backup a single photo
+ * Export a single photo
  */
-async function backupSinglePhoto(photoId) {
+async function exportSinglePhoto(photoId) {
     try {
         console.log('[Photos] Backing up photo ID:', photoId);
 
         showInfo('photos', `Backing up photo #${photoId}...`);
 
-        const result = await fetchData(`/api/photo-backup/backup/${photoId}`, {
+        const result = await fetchData(`/api/photo-export/export/${photoId}`, {
             method: 'POST'
         });
 
-        console.log('[Photos] Backup result:', result);
+        console.log('[Photos] Export result:', result);
 
-        showSuccess('photos', result.message || 'Photo backed up successfully!');
+        showSuccess('photos', result.message || 'Photo exported successfully!');
 
-        // Reload the backup status
-        await loadPhotoBackupStatus();
+        // Reload the export status
+        await loadPhotoExportStatus();
 
     } catch (error) {
-        console.error('[Photos] Failed to backup photo:', error);
-        showError('photos', 'Failed to backup photo: ' + error.message);
+        console.error('[Photos] Failed to export photo:', error);
+        showError('photos', 'Failed to export photo: ' + error.message);
     }
 }
 

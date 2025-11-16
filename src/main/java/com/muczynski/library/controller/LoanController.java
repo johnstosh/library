@@ -49,7 +49,7 @@ public class LoanController {
             LoanDto updated = loanService.returnBook(id);
             return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
         } catch (Exception e) {
-            logger.debug("Failed to return loan ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to return loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -69,7 +69,7 @@ public class LoanController {
             }
             return ResponseEntity.ok(loans);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve loans (showAll: {}): {}", showAll, e.getMessage(), e);
+            logger.warn("Failed to retrieve loans (showAll: {}): {}", showAll, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -81,7 +81,7 @@ public class LoanController {
             LoanDto loan = loanService.getLoanById(id);
             return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
         } catch (Exception e) {
-            logger.debug("Failed to retrieve loan by ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to retrieve loan by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -93,7 +93,7 @@ public class LoanController {
             LoanDto updated = loanService.updateLoan(id, loanDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
-            logger.debug("Failed to update loan ID {} with DTO {}: {}", id, loanDto, e.getMessage(), e);
+            logger.warn("Failed to update loan ID {} with DTO {}: {}", id, loanDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -105,7 +105,7 @@ public class LoanController {
             loanService.deleteLoan(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            logger.debug("Failed to delete loan ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to delete loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

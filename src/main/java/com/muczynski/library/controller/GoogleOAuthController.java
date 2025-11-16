@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.controller;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.UserRepository;
@@ -68,7 +69,7 @@ public class GoogleOAuthController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             logger.error("OAuth authorization attempted without authentication");
-            throw new RuntimeException("User must be logged in to authorize Google Photos");
+            throw new LibraryException("User must be logged in to authorize Google Photos");
         }
 
         // Generate state token for CSRF protection
@@ -182,7 +183,7 @@ public class GoogleOAuthController {
 
             // Save tokens to user
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             user.setGooglePhotosApiKey(accessToken);
             if (refreshToken != null) {
@@ -224,7 +225,7 @@ public class GoogleOAuthController {
         logger.info("Revoking Google Photos access for user: {}", username);
 
         User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         boolean hadAccessToken = !user.getGooglePhotosApiKey().isEmpty();
         boolean hadRefreshToken = !user.getGooglePhotosRefreshToken().isEmpty();
@@ -253,7 +254,7 @@ public class GoogleOAuthController {
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
             logger.error("Client Secret not configured. " +
                     "Librarian must set Client Secret in Global Settings or admin must set GOOGLE_CLIENT_SECRET environment variable.");
-            throw new RuntimeException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
+            throw new LibraryException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
         // Validate Client Secret format
@@ -305,7 +306,7 @@ public class GoogleOAuthController {
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 logger.error("Token exchange failed with status: {} (expected 2xx)", response.getStatusCode());
-                throw new RuntimeException("Failed to exchange code for tokens");
+                throw new LibraryException("Failed to exchange code for tokens");
             }
 
             Map<String, Object> responseBody = response.getBody();
@@ -356,7 +357,7 @@ public class GoogleOAuthController {
                     logger.error("Add this exact URI to 'Authorized redirect URIs' in your OAuth client configuration.");
                 }
 
-                throw new RuntimeException(error + ": " + errorDescription);
+                throw new LibraryException(error + ": " + errorDescription);
             }
 
             logger.info("Token exchange successful for user: {}", username);
@@ -380,7 +381,7 @@ public class GoogleOAuthController {
                 }
             }
 
-            throw new RuntimeException("Token exchange failed: " + e.getMessage(), e);
+            throw new LibraryException("Token exchange failed: " + e.getMessage(), e);
         }
     }
 }

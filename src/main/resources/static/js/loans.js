@@ -3,7 +3,10 @@
 async function loadLoansSection() {
     console.log('[Loans] Loading loans section - calling loadLoans() and populateLoanDropdowns()');
     await loadLoans();
-    await populateLoanDropdowns();
+    // Only populate dropdowns for librarians (regular users can't create loans)
+    if (window.isLibrarian) {
+        await populateLoanDropdowns();
+    }
     console.log('[Loans] Loans section fully loaded');
 }
 
@@ -15,12 +18,7 @@ async function loadLoans() {
         const list = document.getElementById('loan-list-body');
         list.innerHTML = '';
 
-        // Fetch all books and users once for efficiency
-        const books = await fetchData('/api/books');
-        const bookMap = new Map(books.map(book => [book.id, book.title]));
-        const users = await fetchData('/api/users');
-        const userMap = new Map(users.map(user => [user.id, user.username]));
-
+        // LoanDto already contains bookTitle and userName, no need to fetch separately
         for (const loan of loans) {
             const row = document.createElement('tr');
             row.setAttribute('data-test', 'loan-item');
@@ -28,12 +26,12 @@ async function loadLoans() {
 
             const titleCell = document.createElement('td');
             titleCell.setAttribute('data-test', 'loan-book-title');
-            titleCell.textContent = bookMap.get(loan.bookId) || 'Unknown Book';
+            titleCell.textContent = loan.bookTitle || 'Unknown Book';
             row.appendChild(titleCell);
 
             const userCell = document.createElement('td');
             userCell.setAttribute('data-test', 'loan-user');
-            userCell.textContent = userMap.get(loan.userId) || 'Unknown';
+            userCell.textContent = loan.userName || 'Unknown';
             row.appendChild(userCell);
 
             const loanDateCell = document.createElement('td');

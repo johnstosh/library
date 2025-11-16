@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +26,8 @@ public class StorageService {
         try {
             Files.createDirectories(rootLocation);
         } catch (IOException e) {
-            logger.debug("Failed to initialize storage directory at {}: {}", rootLocation, e.getMessage(), e);
-            throw new RuntimeException("Could not initialize storage", e);
+            logger.error("Failed to initialize storage directory at {}: {}", rootLocation, e.getMessage(), e);
+            throw new LibraryException("Could not initialize storage", e);
         }
     }
 
@@ -34,14 +35,14 @@ public class StorageService {
         try {
             if (file.isEmpty()) {
                 logger.debug("Attempted to store empty file: {}", file.getOriginalFilename());
-                throw new RuntimeException("Failed to store empty file.");
+                throw new LibraryException("Failed to store empty file.");
             }
             String filename = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
             Files.copy(file.getInputStream(), this.rootLocation.resolve(filename));
             return filename;
         } catch (IOException e) {
-            logger.debug("Failed to store file {} due to IO error: {}", file.getOriginalFilename(), e.getMessage(), e);
-            throw new RuntimeException("Failed to store file.", e);
+            logger.error("Failed to store file {} due to IO error: {}", file.getOriginalFilename(), e.getMessage(), e);
+            throw new LibraryException("Failed to store file.", e);
         }
     }
 
@@ -50,8 +51,8 @@ public class StorageService {
             Path filePath = rootLocation.resolve(filename);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            logger.debug("Failed to delete file {} due to IO error: {}", filename, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete file.", e);
+            logger.error("Failed to delete file {} due to IO error: {}", filename, e.getMessage(), e);
+            throw new LibraryException("Failed to delete file.", e);
         }
     }
 }

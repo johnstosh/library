@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,8 +38,8 @@ public class PhotoController {
                     .contentType(MediaType.parseMediaType(contentType))
                     .body(image);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve image for photo ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(500).build();
+            logger.warn("Failed to retrieve image for photo ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -54,8 +55,8 @@ public class PhotoController {
                     .contentType(MediaType.parseMediaType(thumbnailData.getSecond()))
                     .body(thumbnailData.getFirst());
         } catch (Exception e) {
-            logger.debug("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
-            return ResponseEntity.status(500).build();
+            logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

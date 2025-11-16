@@ -1,4 +1,5 @@
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
 import com.muczynski.library.dto.LibraryDto;
@@ -27,6 +28,7 @@ public class ImportService {
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
     private final RoleRepository roleRepository;
+    private final PhotoRepository photoRepository;
     private final LibraryMapper libraryMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -63,10 +65,17 @@ public class ImportService {
                 user.setUsername(uDto.getUsername());
                 String password = uDto.getPassword();
                 if (password == null || password.isEmpty()) {
-                    password = DEFAULT_PASSWORD;
+                    // No password provided - use default and encode it
+                    user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+                } else if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+                    // Already a BCrypt hash (60 chars) - use directly
+                    user.setPassword(password);
+                } else {
+                    // Plaintext password - encode it
+                    user.setPassword(passwordEncoder.encode(password));
                 }
-                user.setPassword(passwordEncoder.encode(password));
                 user.setXaiApiKey(uDto.getXaiApiKey());
+                user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
                     for (String rName : uDto.getRoles()) {
@@ -91,12 +100,12 @@ public class ImportService {
                 if (bDto.getAuthor() != null) {
                     author = authMap.get(bDto.getAuthor().getName());
                     if (author == null) {
-                        throw new RuntimeException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
+                        throw new LibraryException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
                     }
                 }
                 Library library = libMap.get(bDto.getLibraryName());
                 if (library == null) {
-                    throw new RuntimeException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
+                    throw new LibraryException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
                 }
 
                 Book book = new Book();
@@ -127,14 +136,14 @@ public class ImportService {
                     String key = lDto.getBook().getTitle() + "|" + authorName;
                     book = bookMap.get(key);
                     if (book == null) {
-                        throw new RuntimeException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
+                        throw new LibraryException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
                     }
                 }
                 User user = null;
                 if (lDto.getUser() != null) {
                     user = userMap.get(lDto.getUser().getUsername());
                     if (user == null) {
-                        throw new RuntimeException("User not found for loan: " + lDto.getUser().getUsername());
+                        throw new LibraryException("User not found for loan: " + lDto.getUser().getUsername());
                     }
                 }
 
@@ -145,6 +154,41 @@ public class ImportService {
                 loan.setDueDate(lDto.getDueDate() != null ? lDto.getDueDate() : LocalDate.now().plusWeeks(2));
                 loan.setReturnDate(lDto.getReturnDate());
                 loanRepository.save(loan);
+            }
+        }
+
+        // Import photos
+        if (dto.getPhotos() != null) {
+            for (ImportPhotoDto pDto : dto.getPhotos()) {
+                Photo photo = new Photo();
+                photo.setContentType(pDto.getContentType());
+                photo.setCaption(pDto.getCaption());
+                photo.setPhotoOrder(pDto.getPhotoOrder());
+                photo.setPermanentId(pDto.getPermanentId());
+                photo.setExportedAt(pDto.getExportedAt());
+                photo.setExportStatus(pDto.getExportStatus());
+                photo.setExportErrorMessage(pDto.getExportErrorMessage());
+
+                // Link to book if specified
+                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
+                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                    Book book = bookMap.get(key);
+                    if (book == null) {
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                    }
+                    photo.setBook(book);
+                }
+
+                // Link to author if specified
+                if (pDto.getAuthorName() != null) {
+                    Author author = authMap.get(pDto.getAuthorName());
+                    if (author == null) {
+                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
+                    }
+                    photo.setAuthor(author);
+                }
+
+                photoRepository.save(photo);
             }
         }
     }
@@ -173,13 +217,14 @@ public class ImportService {
         }
         dto.setAuthors(authDtos);
 
-        // Export users (password set to empty for security)
+        // Export users (including hashed passwords)
         List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
             ImportUserDto uDto = new ImportUserDto();
             uDto.setUsername(user.getUsername());
-            uDto.setPassword(""); // Do not export actual password
+            uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
             uDto.setXaiApiKey(user.getXaiApiKey());
+            uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
             if (user.getRoles() != null) {
                 List<String> roles = user.getRoles().stream()
                         .map(Role::getName)
@@ -257,8 +302,9 @@ public class ImportService {
             if (loan.getUser() != null) {
                 ImportUserDto userDto = new ImportUserDto();
                 userDto.setUsername(loan.getUser().getUsername());
-                userDto.setPassword(""); // Do not export actual password
+                userDto.setPassword(loan.getUser().getPassword()); // Export BCrypt hashed password (60 chars)
                 userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
+                userDto.setGooglePhotosAlbumId(loan.getUser().getGooglePhotosAlbumId());
                 if (loan.getUser().getRoles() != null) {
                     List<String> roles = loan.getUser().getRoles().stream()
                             .map(Role::getName)
@@ -273,6 +319,35 @@ public class ImportService {
             loanDtos.add(lDto);
         }
         dto.setLoans(loanDtos);
+
+        // Export photos (metadata only, no image bytes)
+        List<ImportPhotoDto> photoDtos = new ArrayList<>();
+        for (Photo photo : photoRepository.findAll()) {
+            ImportPhotoDto pDto = new ImportPhotoDto();
+            pDto.setContentType(photo.getContentType());
+            pDto.setCaption(photo.getCaption());
+            pDto.setPhotoOrder(photo.getPhotoOrder());
+            pDto.setPermanentId(photo.getPermanentId());
+            pDto.setExportedAt(photo.getExportedAt());
+            pDto.setExportStatus(photo.getExportStatus());
+            pDto.setExportErrorMessage(photo.getExportErrorMessage());
+
+            // Reference book by title and author name
+            if (photo.getBook() != null) {
+                pDto.setBookTitle(photo.getBook().getTitle());
+                if (photo.getBook().getAuthor() != null) {
+                    pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+                }
+            }
+
+            // Reference author by name (for author photos)
+            if (photo.getAuthor() != null) {
+                pDto.setAuthorName(photo.getAuthor().getName());
+            }
+
+            photoDtos.add(pDto);
+        }
+        dto.setPhotos(photoDtos);
 
         return dto;
     }

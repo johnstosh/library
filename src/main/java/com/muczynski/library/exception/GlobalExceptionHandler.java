@@ -116,6 +116,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle library-specific business logic exceptions
+     * Returns HTTP 422 (Unprocessable Entity) for business rule violations
+     */
+    @ExceptionHandler(LibraryException.class)
+    public ResponseEntity<ErrorResponse> handleLibraryException(
+            LibraryException ex, WebRequest request) {
+        logger.warn("Library exception on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("BUSINESS_RULE_VIOLATION", ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    /**
      * Handle generic runtime exceptions (internal server errors)
      */
     @ExceptionHandler(RuntimeException.class)

@@ -36,20 +36,20 @@ public class Photo {
 
     private Integer photoOrder;
 
-    // Google Photos backup fields
+    // Google Photos export fields
     private String permanentId;  // Google Photos permanent ID
 
-    private LocalDateTime backedUpAt;  // Timestamp when photo was backed up
+    private LocalDateTime exportedAt;  // Timestamp when photo was exported
 
     @Enumerated(EnumType.STRING)
-    private BackupStatus backupStatus;  // Status of the backup
+    private ExportStatus exportStatus;  // Status of the export
 
-    private String backupErrorMessage;  // Error message if backup failed
+    private String exportErrorMessage;  // Error message if export failed
 
-    public enum BackupStatus {
-        PENDING,      // Not yet backed up
-        IN_PROGRESS,  // Currently being backed up
-        COMPLETED,    // Successfully backed up
-        FAILED        // Backup failed
+    public enum ExportStatus {
+        PENDING,      // Not yet exported
+        IN_PROGRESS,  // Currently being exported
+        COMPLETED,    // Successfully exported
+        FAILED        // Export failed
     }
 }

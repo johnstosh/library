@@ -31,7 +31,7 @@ public class LibraryController {
             List<LibraryDto> libraries = libraryService.getAllLibraries();
             return ResponseEntity.ok(libraries);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve all libraries: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve all libraries: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -43,7 +43,7 @@ public class LibraryController {
             LibraryDto library = libraryService.getLibraryById(id);
             return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
         } catch (Exception e) {
-            logger.debug("Failed to retrieve library by ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to retrieve library by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -55,7 +55,7 @@ public class LibraryController {
             LibraryDto created = libraryService.createLibrary(libraryDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
-            logger.debug("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
+            logger.warn("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -67,7 +67,7 @@ public class LibraryController {
             LibraryDto updated = libraryService.updateLibrary(id, libraryDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
-            logger.debug("Failed to update library ID {} with DTO {}: {}", id, libraryDto, e.getMessage(), e);
+            logger.warn("Failed to update library ID {} with DTO {}: {}", id, libraryDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -79,7 +79,7 @@ public class LibraryController {
             libraryService.deleteLibrary(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
-            logger.debug("Failed to delete library ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to delete library ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }

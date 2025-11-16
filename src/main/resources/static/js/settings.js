@@ -1,4 +1,6 @@
 // (c) Copyright 2025 by Muczynski
+import { hashPassword } from './utils.js';
+
 async function loadSettings() {
     try {
         const user = await fetchData('/api/user-settings');
@@ -19,8 +21,6 @@ async function loadSettings() {
         const albumIdInput = document.getElementById('google-photos-album-id');
         if (albumIdInput) {
             albumIdInput.value = user.googlePhotosAlbumId || '';
-            // Reset to readonly state
-            albumIdInput.readOnly = true;
         }
 
         clearSettingsMessages();
@@ -114,17 +114,13 @@ async function saveSettings(event) {
     };
 
     if (password) {
-        payload.password = password;
+        payload.password = await hashPassword(password);
     }
 
     try {
         await putData('/api/user-settings', payload);
         showSettingsSuccess('Settings saved successfully!');
         document.getElementById('user-password').value = ''; // Clear password field after save
-        // Reset album ID to readonly after save
-        if (albumIdInput) {
-            albumIdInput.readOnly = true;
-        }
     } catch (error) {
         showSettingsError('Failed to save settings: ' + error.message);
     }
@@ -147,22 +143,15 @@ function clearSettingsMessages() {
     document.getElementById('settings-success').style.display = 'none';
 }
 
-function toggleAlbumIdEdit() {
-    const albumIdInput = document.getElementById('google-photos-album-id');
-    if (albumIdInput) {
-        if (albumIdInput.readOnly) {
-            albumIdInput.readOnly = false;
-            albumIdInput.focus();
-            albumIdInput.select();
-        } else {
-            albumIdInput.readOnly = true;
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const settingsForm = document.getElementById('settings-form');
     if (settingsForm) {
         settingsForm.addEventListener('submit', saveSettings);
     }
 });
+
+// Expose functions globally for HTML onclick/onsubmit handlers and sections.js
+window.loadSettings = loadSettings;
+window.saveSettings = saveSettings;
+window.authorizeGooglePhotos = authorizeGooglePhotos;
+window.revokeGooglePhotos = revokeGooglePhotos;

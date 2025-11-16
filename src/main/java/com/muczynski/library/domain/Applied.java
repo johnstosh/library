@@ -28,6 +28,8 @@ public class Applied {
     private Long id;
 
     private String name;
+
+    @Column(length = 60)
     private String password;
 
     @Enumerated(EnumType.STRING)

@@ -1,10 +1,12 @@
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,22 +28,26 @@ public class UserSettingsService {
 
     public UserDto getUserSettings(String currentUsername) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
         return userMapper.toDto(user);
     }
 
     public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
             if (userRepository.findByUsernameIgnoreCase(userSettingsDto.getUsername()).isPresent()) {
-                throw new RuntimeException("Username already taken");
+                throw new LibraryException("Username already taken");
             }
             user.setUsername(userSettingsDto.getUsername());
         }
 
         if (StringUtils.hasText(userSettingsDto.getPassword())) {
+            // Validate password is SHA-256 hash from frontend
+            if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getPassword())) {
+                throw new LibraryException("Invalid password format - expected SHA-256 hash");
+            }
             user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
         }
 
@@ -72,7 +78,7 @@ public class UserSettingsService {
 
     public void deleteUser(String currentUsername) {
         User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new LibraryException("User not found"));
         userRepository.delete(user);
     }
 }

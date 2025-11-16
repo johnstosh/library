@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
-// Books-from-Feed using Google Photos Picker API (New Session-Based Flow)
+// Books-from-Feed using Google Photos Picker API
 // All API calls route through backend to handle OAuth token refresh automatically
+// NOTE: The old mediaItems:search API is deprecated and should not be used
 
 let currentSessionId = null;
 let pollingInterval = null;
@@ -10,49 +11,6 @@ async function loadBooksFromFeedSection() {
     clearError('books-from-feed');
 }
 
-/**
- * Phase 1: Fetch photos from Google Photos and save to database
- */
-async function fetchPhotosFromFeed() {
-    clearError('books-from-feed');
-    const fetchBtn = document.getElementById('fetch-photos-btn');
-    const spinner = fetchBtn.querySelector('.spinner-border');
-
-    try {
-        // Show spinner
-        spinner.classList.remove('d-none');
-        fetchBtn.disabled = true;
-
-        // Check authorization
-        const user = await fetchData('/api/user-settings');
-        if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
-            showError('books-from-feed', 'Please authorize Google Photos in Settings first.');
-            return;
-        }
-
-        showInfo('books-from-feed', 'Fetching photos from Google Photos...');
-
-        // Call Phase 1 endpoint
-        const result = await postData('/api/books-from-feed/fetch-photos', {});
-
-        // Display results
-        displayFetchResults(result);
-
-        if (result.savedCount > 0) {
-            showSuccess('books-from-feed',
-                `Phase 1 Complete: Saved ${result.savedCount} photo(s) to database. Click "Step 2: Process with AI" to continue.`);
-        } else {
-            showInfo('books-from-feed', `No new photos found.`);
-        }
-
-    } catch (error) {
-        console.error('[BooksFromFeed] Phase 1 failed:', error);
-        showError('books-from-feed', 'Phase 1 failed: ' + error.message);
-    } finally {
-        spinner.classList.add('d-none');
-        fetchBtn.disabled = false;
-    }
-}
 
 /**
  * Phase 2: Process saved photos with AI
@@ -228,9 +186,9 @@ function displayProcessResults(result) {
 }
 
 /**
- * Alternative workflow: Use Google Photos Picker (existing functionality)
+ * Phase 1: Select photos from Google Photos Picker and save to database (no AI)
  */
-async function processPhotosFromFeed() {
+async function selectPhotosFromPicker() {
     clearError('books-from-feed');
 
     // Check if user has authorized Google Photos
@@ -363,7 +321,7 @@ async function getSession(sessionId) {
 
 async function handlePickerResults(sessionId) {
     try {
-        showInfo('books-from-feed', 'Processing selected photos...');
+        showInfo('books-from-feed', 'Saving selected photos to database...');
 
         // Get the list of selected media items
         const mediaItems = await listMediaItems(sessionId);
@@ -387,25 +345,21 @@ async function handlePickerResults(sessionId) {
             lastEditedUtc: item.createTime || new Date().getTime()
         }));
 
-        // Send to backend for processing
-        const result = await postData('/api/books-from-feed/process-from-picker', { photos });
+        // Send to backend for Phase 1 (save only, no AI)
+        const result = await postData('/api/books-from-feed/save-from-picker', { photos });
 
-        displayProcessingResults(result);
+        displayFetchResults(result);
 
-        if (result.processedCount > 0) {
-            showSuccess('books-from-feed', `Successfully processed ${result.processedCount} book(s) from ${result.totalPhotos} photo(s).`);
-
-            // Reload books list if on books section
-            if (window.loadBooks) {
-                await loadBooks();
-            }
+        if (result.savedCount > 0) {
+            showSuccess('books-from-feed',
+                `Phase 1 Complete: Saved ${result.savedCount} photo(s) to database. Click "Step 2: Process with AI" to continue.`);
         } else {
-            showInfo('books-from-feed', `No new books found in ${result.totalPhotos} photo(s).`);
+            showInfo('books-from-feed', `No new photos saved.`);
         }
 
     } catch (error) {
-        console.error('[BooksFromFeed] Failed to process photos:', error);
-        showError('books-from-feed', 'Failed to process photos: ' + error.message);
+        console.error('[BooksFromFeed] Failed to save photos:', error);
+        showError('books-from-feed', 'Failed to save photos: ' + error.message);
     }
 }
 

@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.controller;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.UserRepository;
@@ -44,7 +45,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -52,8 +53,18 @@ public class GooglePhotosDiagnosticController {
                 return ResponseEntity.badRequest().body(Map.of("error", "No access token found"));
             }
 
-            String tokeninfoUrl = "https://oauth2.googleapis.com/tokeninfo?access_token=" + accessToken;
-            ResponseEntity<Map> response = restTemplate.getForEntity(tokeninfoUrl, Map.class);
+            // Use POST with token in body instead of URL parameter for security
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            String body = "access_token=" + accessToken;
+            HttpEntity<String> entity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://oauth2.googleapis.com/tokeninfo",
+                    entity,
+                    Map.class
+            );
 
             return ResponseEntity.ok(Map.of(
                     "status", "Token info retrieved successfully",
@@ -61,7 +72,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Token test failed", e);
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -75,7 +86,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -103,7 +114,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Albums test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "List Albums",
                     "status", "FAILED",
                     "error", e.getMessage()
@@ -121,7 +132,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -154,7 +165,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Simple search test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "Search Media Items (no filters)",
                     "status", "FAILED",
                     "error", e.getMessage()
@@ -172,7 +183,7 @@ public class GooglePhotosDiagnosticController {
             String username = authentication.getName();
 
             User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
 
@@ -225,7 +236,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Date filter search test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "Search Media Items (with date filter)",
                     "status", "FAILED",
                     "error", e.getMessage()

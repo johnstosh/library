@@ -59,6 +59,7 @@ async function loadLibraries() {
         } else {
             pageTitle.textContent = 'Library Management';
         }
+        await setupImportUI(); // Set up import/export UI
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to load libraries: ' + error.message);
@@ -166,34 +167,64 @@ async function exportJson() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         clearError('libraries');
-        alert('Export completed successfully! File downloaded as library-data.json');
     } catch (error) {
         showError('libraries', 'Failed to export data: ' + error.message);
     }
 }
 
-function setupImportUI() {
+async function setupImportUI() {
     if (!isLibrarian) return;
+
+    // Check if import section already exists
+    const existing = document.querySelector('[data-test="import-section"]');
+    if (existing) {
+        return; // Already set up
+    }
+
+    // Fetch photo export stats
+    let photoExportStatus = '';
+    try {
+        const stats = await fetchData('/api/photo-export/stats');
+        const notBackedUp = (stats.pending || 0) + (stats.failed || 0) + (stats.inProgress || 0);
+        const total = stats.total || 0;
+
+        if (total === 0) {
+            photoExportStatus = `<p class="mb-0"><strong>Photo Export Status:</strong> No photos in database</p>`;
+        } else if (notBackedUp === 0) {
+            photoExportStatus = `<p class="mb-0 text-success"><strong>Photo Export Status:</strong> All ${total} photos exported to Google Photos ✓</p>`;
+        } else {
+            photoExportStatus = `<p class="mb-0 text-warning"><strong>Photo Export Status:</strong> ${notBackedUp} out of ${total} photos have not been exported to Google Photos</p>`;
+        }
+    } catch (error) {
+        console.error('Failed to load photo export stats:', error);
+        photoExportStatus = `<p class="mb-0 text-muted"><strong>Photo Export Status:</strong> Unable to load stats</p>`;
+    }
 
     const list = document.getElementById('library-list');
     const importSection = document.createElement('div');
     importSection.setAttribute('data-test', 'import-section');
     importSection.innerHTML = `
-        <h3>Import JSON Data</h3>
-        <p>Import libraries, authors, books, loans, and users from JSON. Photos must be embedded as base64 in authors and books.</p>
-        <textarea id="import-json-textarea" rows="10" cols="80" placeholder='{"libraries": [...], "authors": [...], ...}'></textarea>
-        <br><br>
-        <button id="import-json-btn" data-test="import-json-btn" onclick="importJson()">Import JSON</button>
-        <br><br>
-        <h4>Export JSON Data</h4>
-        <p>Export all data (libraries, authors, books, loans, users) in the same JSON format. Photos are included as base64.</p>
-        <br>
-        <button id="export-json-btn" data-test="export-json-btn" onclick="exportJson()">Export JSON</button>
+        <h3>Import/Export Database</h3>
+        <div class="alert alert-info">
+            ${photoExportStatus}
+        </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Export JSON Data</h5>
+                <p>Export all data (libraries, authors, books, loans, users, photo metadata) to a JSON file.</p>
+                <p><small class="text-muted">Note: Photo image bytes are not exported, only metadata (caption, contentType, Google Photos permanentId, exportStatus, etc.)</small></p>
+                <button id="export-json-btn" class="btn btn-primary" data-test="export-json-btn" onclick="exportJson()">Export Database to JSON</button>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Import JSON Data</h5>
+                <p>Import libraries, authors, books, loans, users, and photo metadata from JSON.</p>
+                <p><small class="text-muted">Note: Photo image bytes are not imported. Photos must be re-downloaded from Google Photos using their permanentId.</small></p>
+                <textarea id="import-json-textarea" class="form-control mb-2" rows="10" placeholder='{"libraries": [...], "authors": [...], "photos": [...]}'></textarea>
+                <button id="import-json-btn" class="btn btn-warning" data-test="import-json-btn" onclick="importJson()">Import JSON to Database</button>
+            </div>
+        </div>
     `;
     list.parentNode.insertBefore(importSection, list.nextSibling);
 }
-
-// Call setupImportUI after loadLibraries or on page load
-document.addEventListener('DOMContentLoaded', () => {
-    loadLibraries().then(() => setupImportUI());
-});

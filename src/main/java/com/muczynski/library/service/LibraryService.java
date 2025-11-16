@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.LibraryDto;
@@ -43,7 +44,7 @@ public class LibraryService {
     }
 
     public LibraryDto updateLibrary(Long id, LibraryDto libraryDto) {
-        Library library = libraryRepository.findById(id).orElseThrow(() -> new RuntimeException("Library not found: " + id));
+        Library library = libraryRepository.findById(id).orElseThrow(() -> new LibraryException("Library not found: " + id));
         Library updatedLibrary = libraryMapper.toEntity(libraryDto);
         updatedLibrary.setId(id);
         Library savedLibrary = libraryRepository.save(updatedLibrary);
@@ -52,8 +53,25 @@ public class LibraryService {
 
     public void deleteLibrary(Long id) {
         if (!libraryRepository.existsById(id)) {
-            throw new RuntimeException("Library not found: " + id);
+            throw new LibraryException("Library not found: " + id);
         }
         libraryRepository.deleteById(id);
+    }
+
+    /**
+     * Get the default library, creating it if it doesn't exist
+     * This ensures there's always at least one library available
+     */
+    public Library getOrCreateDefaultLibrary() {
+        List<Library> libraries = libraryRepository.findAll();
+        if (!libraries.isEmpty()) {
+            return libraries.get(0);
+        }
+
+        // Create default library
+        Library library = new Library();
+        library.setName("St. Martin de Porres");
+        library.setHostname("library.muczynskifamily.com");
+        return libraryRepository.save(library);
     }
 }

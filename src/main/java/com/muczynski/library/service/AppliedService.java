@@ -2,10 +2,12 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.repository.AppliedRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,15 +37,16 @@ public class AppliedService {
     }
 
     public Applied createApplied(Applied applied) {
-        if ("John".equals(applied.getPassword())) {
-            throw new IllegalArgumentException("Password is not complex enough.");
+        // Validate password is SHA-256 hash from frontend
+        if (!PasswordHashingUtil.isValidSHA256Hash(applied.getPassword())) {
+            throw new IllegalArgumentException("Invalid password format - expected SHA-256 hash");
         }
         applied.setPassword(passwordEncoder.encode(applied.getPassword()));
         return appliedRepository.save(applied);
     }
 
     public Applied updateApplied(Long id, Applied applied) {
-        Applied existingApplied = appliedRepository.findById(id).orElseThrow(() -> new RuntimeException("Applied not found: " + id));
+        Applied existingApplied = appliedRepository.findById(id).orElseThrow(() -> new LibraryException("Applied not found: " + id));
         if (applied.getStatus() != null) {
             existingApplied.setStatus(applied.getStatus());
         }
@@ -52,14 +55,14 @@ public class AppliedService {
 
     public void deleteApplied(Long id) {
         if (!appliedRepository.existsById(id)) {
-            throw new RuntimeException("Applied not found: " + id);
+            throw new LibraryException("Applied not found: " + id);
         }
         appliedRepository.deleteById(id);
     }
 
     public void approveApplication(Long id) {
         Applied applied = appliedRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Application not found: " + id));
+                .orElseThrow(() -> new LibraryException("Application not found: " + id));
 
         userService.createUserFromApplied(applied);
 

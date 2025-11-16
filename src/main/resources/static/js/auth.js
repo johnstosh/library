@@ -72,6 +72,31 @@ export function showLoginForm() {
 
 export function showLoginError() {
     console.log('Showing login error');
+
+    // Show login form elements
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.style.display = 'block';
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.style.display = 'none';
+    const loginMenuBtn = document.getElementById('login-menu-btn');
+    if (loginMenuBtn) loginMenuBtn.style.display = 'block';
+    const logoutMenuBtn = document.getElementById('logout-menu-btn');
+    if (logoutMenuBtn) logoutMenuBtn.style.display = 'none';
+
+    // Show section menu but hide non-public items
+    const sectionMenu = document.getElementById('section-menu');
+    if (sectionMenu) {
+        sectionMenu.style.display = 'flex';
+        sectionMenu.querySelectorAll('li').forEach(item => {
+            if (!item.classList.contains('public-item')) {
+                item.style.display = 'none';
+            } else {
+                item.style.display = 'list-item';
+            }
+        });
+    }
+
+    // Show error message (don't hide it like showLoginForm does)
     const errorEl = document.getElementById('login-error');
     console.log('Login error element found:', !!errorEl);
     const message = 'Invalid username or password. Please try again.';
@@ -83,7 +108,6 @@ export function showLoginError() {
         console.log('Login error element not found, falling back to alert');
         alert('Login failed: Invalid username or password.');
     }
-    showLoginForm();
 }
 
 export function showMainContent(roles) {
@@ -134,3 +158,7 @@ export async function logout() {
         window.location.href = '/';
     }
 }
+
+// Expose functions globally for HTML onclick handlers
+window.showLoginForm = showLoginForm;
+window.logout = logout;

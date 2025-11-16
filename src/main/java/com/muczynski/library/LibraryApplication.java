@@ -7,17 +7,16 @@ import com.muczynski.library.domain.Role;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.RoleRepository;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
 @SpringBootApplication
-@EnableScheduling
 public class LibraryApplication {
 
     public static void main(String[] args) {
@@ -36,7 +35,9 @@ public class LibraryApplication {
 
                 User librarianUser = new User();
                 librarianUser.setUsername("librarian");
-                librarianUser.setPassword(passwordEncoder.encode("divinemercy"));
+                // Hash with SHA-256 first (matching frontend), then BCrypt encode
+                String sha256Hash = PasswordHashingUtil.hashPasswordSHA256("divinemercy");
+                librarianUser.setPassword(passwordEncoder.encode(sha256Hash));
                 librarianUser.setRoles(Set.of(librarianRole));
                 userRepository.save(librarianUser);
             }

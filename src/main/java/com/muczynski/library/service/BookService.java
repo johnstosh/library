@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.LibraryException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
@@ -73,8 +74,8 @@ public class BookService {
 
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
-        book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
-        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
+        book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
+        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -99,7 +100,7 @@ public class BookService {
     }
 
     public BookDto updateBook(Long id, BookDto bookDto) {
-        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found: " + id));
+        Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
         book.setTitle(bookDto.getTitle());
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
@@ -113,10 +114,10 @@ public class BookService {
         book.setLocNumber(bookDto.getLocNumber());
         book.setStatusReason(bookDto.getStatusReason());
         if (bookDto.getAuthorId() != null) {
-            book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new RuntimeException("Author not found: " + bookDto.getAuthorId())));
+            book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
         }
         if (bookDto.getLibraryId() != null) {
-            book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new RuntimeException("Library not found: " + bookDto.getLibraryId())));
+            book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
         }
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
@@ -124,11 +125,11 @@ public class BookService {
 
     public void deleteBook(Long id) {
         if (!bookRepository.existsById(id)) {
-            throw new RuntimeException("Book not found: " + id);
+            throw new LibraryException("Book not found: " + id);
         }
         long loanCount = loanRepository.countByBookId(id);
         if (loanCount > 0) {
-            throw new RuntimeException("Cannot delete book because it is currently checked out with " + loanCount + " loan(s).");
+            throw new LibraryException("Cannot delete book because it is currently checked out with " + loanCount + " loan(s).");
         }
         bookRepository.deleteById(id);
     }
@@ -159,7 +160,7 @@ public class BookService {
         int startIndex = trimmedResponse.indexOf('{');
         if (startIndex == -1) {
             logger.debug("No opening brace found in AI response: {}", trimmedResponse);
-            throw new RuntimeException("No valid JSON found in response - no opening brace");
+            throw new LibraryException("No valid JSON found in response - no opening brace");
         }
 
         // Find the end by balancing braces
@@ -180,7 +181,7 @@ public class BookService {
 
         if (endIndex == -1) {
             logger.debug("No closing brace found in AI response: {}", trimmedResponse);
-            throw new RuntimeException("No valid JSON found in response - unbalanced braces");
+            throw new LibraryException("No valid JSON found in response - unbalanced braces");
         }
 
         String jsonSubstring = trimmedResponse.substring(startIndex, endIndex + 1);
@@ -199,7 +200,7 @@ public class BookService {
         } catch (Exception e) {
             logger.debug("Full AI response that failed to parse: {}", trimmedResponse, e);
             logger.debug("Failed to parse JSON from AI response substring: {}", jsonSubstring, e);
-            throw new RuntimeException("Failed to parse JSON from response: " + e.getMessage(), e);
+            throw new LibraryException("Failed to parse JSON from response: " + e.getMessage(), e);
         }
     }
 
@@ -210,7 +211,7 @@ public class BookService {
     public BookDto generateTempBook(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
-            throw new RuntimeException("Book not found: " + id);
+            throw new LibraryException("Book not found: " + id);
         }
 
         dto.setStatus(BookStatus.ACTIVE);
@@ -345,7 +346,7 @@ public class BookService {
                                         logger.debug("Added author image for author ID {}", authorId);
                                     }
                                 } catch (Exception e) {
-                                    logger.debug("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
+                                    logger.warn("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
                                 }
                             }
                         }
@@ -396,7 +397,7 @@ public class BookService {
                                 if (imageResp.getStatusCode().is2xxSuccessful() && imageResp.getBody() != null && imageResp.getBody().length > 0) {
                                     String ct = imageResp.getHeaders().getContentType() != null ?
                                             imageResp.getHeaders().getContentType().toString() : MediaType.IMAGE_JPEG_VALUE;
-                                    Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found: " + id));
+                                    Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
                                     Photo coverPhoto = new Photo();
                                     coverPhoto.setBook(book);
                                     coverPhoto.setImage(imageResp.getBody());
@@ -413,7 +414,7 @@ public class BookService {
                                     logger.debug("Added book cover image for book ID {}", id);
                                 }
                             } catch (Exception e) {
-                                logger.debug("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
+                                logger.warn("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
                             }
                         }
                     }
@@ -428,7 +429,7 @@ public class BookService {
                             Thread.sleep(2000); // 2 seconds delay
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
-                            throw new RuntimeException("Retry interrupted", ie);
+                            throw new LibraryException("Retry interrupted", ie);
                         }
                         continue;
                     } else {
