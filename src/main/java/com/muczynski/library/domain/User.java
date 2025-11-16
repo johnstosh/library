@@ -19,6 +19,8 @@ public class User {
     private Long id;
 
     private String username;
+
+    @Column(length = 60)
     private String password;
 
     private String xaiApiKey = "";
