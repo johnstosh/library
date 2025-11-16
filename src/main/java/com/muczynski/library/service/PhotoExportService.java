@@ -27,9 +27,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
-public class PhotoBackupService {
+public class PhotoExportService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PhotoBackupService.class);
+    private static final Logger logger = LoggerFactory.getLogger(PhotoExportService.class);
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -56,20 +56,20 @@ public class PhotoBackupService {
     private String cachedAlbumName = null;
 
     /**
-     * Scheduled task to backup photos to Google Photos
+     * Scheduled task to export photos to Google Photos
      * Runs every hour
      */
     @Scheduled(fixedRate = 3600000) // Run every hour (3600000 ms)
     @Transactional
-    public void backupPhotos() {
-        logger.info("Starting scheduled photo backup process...");
+    public void exportPhotos() {
+        logger.info("Starting scheduled photo export process...");
 
         try {
             // Get the librarian user (assuming they have Google Photos configured)
             Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
 
             if (librarianOpt.isEmpty()) {
-                logger.warn("No librarian user found for photo backup");
+                logger.warn("No librarian user found for photo export");
                 return;
             }
 
@@ -77,76 +77,76 @@ public class PhotoBackupService {
 
             // Check if Google Photos is configured
             if (librarian.getGooglePhotosApiKey() == null || librarian.getGooglePhotosApiKey().trim().isEmpty()) {
-                logger.warn("Google Photos not configured for librarian user. Skipping backup.");
+                logger.warn("Google Photos not configured for librarian user. Skipping export.");
                 return;
             }
 
             // Find photos that need to be backed up
-            List<Photo> photosToBackup = findPhotosNeedingBackup();
+            List<Photo> photosToExport = findPhotosNeedingExport();
 
-            if (photosToBackup.isEmpty()) {
-                logger.info("No photos need backup at this time");
+            if (photosToExport.isEmpty()) {
+                logger.info("No photos need export at this time");
                 return;
             }
 
-            logger.info("Found {} photos to backup", photosToBackup.size());
+            logger.info("Found {} photos to export", photosToExport.size());
 
             int successCount = 0;
             int failureCount = 0;
 
-            for (Photo photo : photosToBackup) {
+            for (Photo photo : photosToExport) {
                 try {
-                    backupPhoto(photo, librarian.getUsername());
+                    exportPhoto(photo, librarian.getUsername());
                     successCount++;
                 } catch (Exception e) {
-                    logger.error("Failed to backup photo ID: {}", photo.getId(), e);
+                    logger.error("Failed to export photo ID: {}", photo.getId(), e);
                     markPhotoAsFailed(photo, e.getMessage());
                     failureCount++;
                 }
             }
 
-            logger.info("Photo backup complete. Success: {}, Failed: {}", successCount, failureCount);
+            logger.info("Photo export complete. Success: {}, Failed: {}", successCount, failureCount);
 
         } catch (Exception e) {
-            logger.error("Error during scheduled photo backup", e);
+            logger.error("Error during scheduled photo export", e);
         }
     }
 
     /**
      * Find photos that need to be backed up
      */
-    private List<Photo> findPhotosNeedingBackup() {
+    private List<Photo> findPhotosNeedingExport() {
         List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
-        List<Photo> photosToBackup = new ArrayList<>();
+        List<Photo> photosToExport = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
             // Skip if already backed up successfully
-            if (photo.getBackupStatus() == Photo.BackupStatus.COMPLETED &&
+            if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED &&
                 photo.getPermanentId() != null && !photo.getPermanentId().trim().isEmpty()) {
                 continue;
             }
 
             // Skip if currently in progress
-            if (photo.getBackupStatus() == Photo.BackupStatus.IN_PROGRESS) {
+            if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
                 continue;
             }
 
             // Include if pending, failed, or no status
-            photosToBackup.add(photo);
+            photosToExport.add(photo);
         }
 
-        return photosToBackup;
+        return photosToExport;
     }
 
     /**
-     * Backup a single photo to Google Photos
+     * Export a single photo to Google Photos
      */
     @Transactional
-    public void backupPhoto(Photo photo, String username) {
+    public void exportPhoto(Photo photo, String username) {
         logger.info("Backing up photo ID: {}", photo.getId());
 
         // Mark as in progress
-        photo.setBackupStatus(Photo.BackupStatus.IN_PROGRESS);
+        photo.setExportStatus(Photo.ExportStatus.IN_PROGRESS);
         photoRepository.save(photo);
 
         try {
@@ -158,15 +158,15 @@ public class PhotoBackupService {
 
             // Step 3: Mark as completed
             photo.setPermanentId(permanentId);
-            photo.setBackupStatus(Photo.BackupStatus.COMPLETED);
+            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
             photo.setBackedUpAt(LocalDateTime.now());
-            photo.setBackupErrorMessage(null);
+            photo.setExportErrorMessage(null);
             photoRepository.save(photo);
 
             logger.info("Successfully backed up photo ID: {} with permanent ID: {}", photo.getId(), permanentId);
 
         } catch (Exception e) {
-            logger.error("Failed to backup photo ID: {}", photo.getId(), e);
+            logger.error("Failed to export photo ID: {}", photo.getId(), e);
             throw e;
         }
     }
@@ -384,30 +384,30 @@ public class PhotoBackupService {
      */
     @Transactional
     private void markPhotoAsFailed(Photo photo, String errorMessage) {
-        photo.setBackupStatus(Photo.BackupStatus.FAILED);
-        photo.setBackupErrorMessage(errorMessage != null ? errorMessage.substring(0, Math.min(500, errorMessage.length())) : "Unknown error");
+        photo.setExportStatus(Photo.ExportStatus.FAILED);
+        photo.setExportErrorMessage(errorMessage != null ? errorMessage.substring(0, Math.min(500, errorMessage.length())) : "Unknown error");
         photoRepository.save(photo);
     }
 
     /**
-     * Get backup statistics
+     * Get export statistics
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> getBackupStats() {
+    public Map<String, Object> getExportStats() {
         List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
 
         long total = allPhotos.size();
         long completed = allPhotos.stream()
-                .filter(p -> p.getBackupStatus() == Photo.BackupStatus.COMPLETED)
+                .filter(p -> p.getExportStatus() == Photo.ExportStatus.COMPLETED)
                 .count();
         long pending = allPhotos.stream()
-                .filter(p -> p.getBackupStatus() == null || p.getBackupStatus() == Photo.BackupStatus.PENDING)
+                .filter(p -> p.getExportStatus() == null || p.getExportStatus() == Photo.ExportStatus.PENDING)
                 .count();
         long failed = allPhotos.stream()
-                .filter(p -> p.getBackupStatus() == Photo.BackupStatus.FAILED)
+                .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
                 .count();
         long inProgress = allPhotos.stream()
-                .filter(p -> p.getBackupStatus() == Photo.BackupStatus.IN_PROGRESS)
+                .filter(p -> p.getExportStatus() == Photo.ExportStatus.IN_PROGRESS)
                 .count();
 
         Map<String, Object> stats = new HashMap<>();
@@ -434,10 +434,10 @@ public class PhotoBackupService {
     }
 
     /**
-     * Get all photos with their backup status
+     * Get all photos with their export status
      */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getAllPhotosWithBackupStatus() {
+    public List<Map<String, Object>> getAllPhotosWithExportStatus() {
         logger.debug("Fetching all photos with book and author, sorted by ID");
         List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthorOrderById();
         logger.info("Found {} photos in database", allPhotos.size());
@@ -449,10 +449,10 @@ public class PhotoBackupService {
                 Map<String, Object> photoInfo = new HashMap<>();
                 photoInfo.put("id", photo.getId());
                 photoInfo.put("caption", photo.getCaption());
-                photoInfo.put("backupStatus", photo.getBackupStatus() != null ? photo.getBackupStatus().toString() : "PENDING");
-                photoInfo.put("backedUpAt", photo.getBackedUpAt());
+                photoInfo.put("exportStatus", photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
+                photoInfo.put("exportedAt", photo.getBackedUpAt());
                 photoInfo.put("permanentId", photo.getPermanentId());
-                photoInfo.put("backupErrorMessage", photo.getBackupErrorMessage());
+                photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
                 photoInfo.put("contentType", photo.getContentType());
 
                 if (photo.getBook() != null) {
@@ -477,10 +477,10 @@ public class PhotoBackupService {
     }
 
     /**
-     * Manually trigger backup for a specific photo
+     * Manually trigger export for a specific photo
      */
     @Transactional
-    public void backupPhotoById(Long photoId) {
+    public void exportPhotoById(Long photoId) {
         Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
 
         if (librarianOpt.isEmpty()) {
@@ -490,6 +490,6 @@ public class PhotoBackupService {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
-        backupPhoto(photo, librarianOpt.get().getUsername());
+        exportPhoto(photo, librarianOpt.get().getUsername());
     }
 }

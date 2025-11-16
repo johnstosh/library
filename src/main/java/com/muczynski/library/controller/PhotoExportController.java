@@ -3,7 +3,7 @@
  */
 package com.muczynski.library.controller;
 
-import com.muczynski.library.service.PhotoBackupService;
+import com.muczynski.library.service.PhotoExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,13 +18,13 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/photo-backup")
-public class PhotoBackupController {
+@RequestMapping("/api/photo-export")
+public class PhotoExportController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PhotoBackupController.class);
+    private static final Logger logger = LoggerFactory.getLogger(PhotoExportController.class);
 
     @Autowired
-    private PhotoBackupService photoBackupService;
+    private PhotoExportService photoExportService;
 
     /**
      * Get backup statistics
@@ -34,7 +34,7 @@ public class PhotoBackupController {
     public ResponseEntity<Map<String, Object>> getBackupStats() {
         try {
             logger.info("Getting backup statistics");
-            Map<String, Object> stats = photoBackupService.getBackupStats();
+            Map<String, Object> stats = photoExportService.getBackupStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Failed to get backup statistics", e);
@@ -52,7 +52,7 @@ public class PhotoBackupController {
     public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithBackupStatus() {
         try {
             logger.info("Getting all photos with backup status");
-            List<Map<String, Object>> photos = photoBackupService.getAllPhotosWithBackupStatus();
+            List<Map<String, Object>> photos = photoExportService.getAllPhotosWithBackupStatus();
             logger.info("Successfully retrieved {} photos with backup status", photos.size());
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
@@ -72,11 +72,11 @@ public class PhotoBackupController {
     public ResponseEntity<Map<String, Object>> backupAllPhotos() {
         try {
             logger.info("Manually triggering backup for all photos");
-            photoBackupService.backupPhotos();
+            photoExportService.backupPhotos();
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Backup process completed");
-            response.put("stats", photoBackupService.getBackupStats());
+            response.put("stats", photoExportService.getBackupStats());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -96,7 +96,7 @@ public class PhotoBackupController {
     public ResponseEntity<Map<String, Object>> backupPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Manually triggering backup for photo ID: {}", photoId);
-            photoBackupService.backupPhotoById(photoId);
+            photoExportService.backupPhotoById(photoId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Photo backup completed successfully");

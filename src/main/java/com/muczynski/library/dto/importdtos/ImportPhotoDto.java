@@ -14,9 +14,9 @@ public class ImportPhotoDto {
     private String authorName;  // Reference author by name (for author photos)
     private Integer photoOrder;
 
-    // Google Photos backup fields
+    // Google Photos export fields
     private String permanentId;  // Google Photos permanent ID
-    private LocalDateTime backedUpAt;  // Timestamp when photo was backed up
-    private Photo.BackupStatus backupStatus;  // Status of the backup
-    private String backupErrorMessage;  // Error message if backup failed
+    private LocalDateTime exportedAt;  // Timestamp when photo was backed up
+    private Photo.ExportStatus exportStatus;  // Status of the export
+    private String exportErrorMessage;  // Error message if export failed
 }

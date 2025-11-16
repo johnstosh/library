@@ -278,11 +278,11 @@
                     <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
 
                     <div class="d-flex gap-2 mb-3">
-                        <button id="backup-all-photos-btn" class="btn btn-primary" onclick="backupAllPhotos()" data-test="backup-all-photos-btn">Export All Pending Photos</button>
-                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoBackupStatus()" data-test="refresh-photos-btn">Refresh Status</button>
+                        <button id="export-all-photos-btn" class="btn btn-primary" onclick="exportAllPhotos()" data-test="export-all-photos-btn">Export All Pending Photos</button>
+                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoExportStatus()" data-test="refresh-photos-btn">Refresh Status</button>
                     </div>
 
-                    <div id="backup-stats" class="row mb-3" data-test="backup-stats">
+                    <div id="export-stats" class="row mb-3" data-test="export-stats">
                         <div class="col-md-3">
                             <div class="card text-center">
                                 <div class="card-body">
@@ -560,9 +560,9 @@
                 </div>
                 <div class="mb-3 librarian-only">
                     <label for="google-photos-album-id" class="form-label">Google Photos Album ID</label>
-                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first backup)" data-test="google-photos-album-id">
+                    <input type="text" id="google-photos-album-id" class="form-control font-monospace" autocomplete="off" placeholder="Album ID (auto-created on first export)" data-test="google-photos-album-id">
                     <div class="form-text">
-                        This is the permanent ID of the album where photos are backed up. It's automatically created on the first backup.
+                        This is the permanent ID of the album where photos are exported. It's automatically created on the first export.
                         You can manually set it to use a different album.
                     </div>
                 </div>

@@ -19,8 +19,8 @@ public interface PhotoMapper {
     @Mapping(target = "author", ignore = true)
     @Mapping(target = "photoOrder", ignore = true)
     @Mapping(target = "permanentId", ignore = true)
-    @Mapping(target = "backedUpAt", ignore = true)
-    @Mapping(target = "backupStatus", ignore = true)
-    @Mapping(target = "backupErrorMessage", ignore = true)
+    @Mapping(target = "exportedAt", ignore = true)
+    @Mapping(target = "exportStatus", ignore = true)
+    @Mapping(target = "exportErrorMessage", ignore = true)
     Photo toEntity(PhotoDto photoDto);
 }

@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/photo-backup/**").authenticated()
+                        .requestMatchers("/api/photo-export/**").authenticated()
                         .requestMatchers("/api/oauth/google/authorize", "/api/oauth/google/callback").permitAll()
                         .requestMatchers("/api/import/**").hasAuthority("LIBRARIAN")
                         .requestMatchers("/api/auth/**", "/login", "/css/**", "/js/**", "/", "/index.html", "/favicon.ico", "/apply-for-card.html", "/apply").permitAll()

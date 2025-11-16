@@ -159,8 +159,8 @@ public class ImportService {
                 photo.setPhotoOrder(pDto.getPhotoOrder());
                 photo.setPermanentId(pDto.getPermanentId());
                 photo.setBackedUpAt(pDto.getBackedUpAt());
-                photo.setBackupStatus(pDto.getBackupStatus());
-                photo.setBackupErrorMessage(pDto.getBackupErrorMessage());
+                photo.setExportStatus(pDto.getExportStatus());
+                photo.setExportErrorMessage(pDto.getExportErrorMessage());
 
                 // Link to book if specified
                 if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
@@ -320,8 +320,8 @@ public class ImportService {
             pDto.setPhotoOrder(photo.getPhotoOrder());
             pDto.setPermanentId(photo.getPermanentId());
             pDto.setBackedUpAt(photo.getBackedUpAt());
-            pDto.setBackupStatus(photo.getBackupStatus());
-            pDto.setBackupErrorMessage(photo.getBackupErrorMessage());
+            pDto.setExportStatus(photo.getExportStatus());
+            pDto.setExportErrorMessage(photo.getExportErrorMessage());
 
             // Reference book by title and author name
             if (photo.getBook() != null) {
