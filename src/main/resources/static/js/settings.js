@@ -149,3 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsForm.addEventListener('submit', saveSettings);
     }
 });
+
+// Expose functions globally for HTML onclick/onsubmit handlers and sections.js
+window.loadSettings = loadSettings;
+window.saveSettings = saveSettings;
+window.authorizeGooglePhotos = authorizeGooglePhotos;
+window.revokeGooglePhotos = revokeGooglePhotos;

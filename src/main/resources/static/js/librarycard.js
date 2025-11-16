@@ -133,3 +133,10 @@ function showApplySuccess(message) {
         successEl.style.display = 'block';
     }
 }
+
+// Expose functions globally for HTML onclick handlers and sections.js
+window.loadApplied = loadApplied;
+window.applyForCard = applyForCard;
+window.approveApplication = approveApplication;
+window.updateAppliedStatus = updateAppliedStatus;
+window.deleteApplied = deleteApplied;

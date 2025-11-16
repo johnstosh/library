@@ -120,3 +120,7 @@ async function deleteUser(id) {
         showError('users', 'Failed to delete user: ' + error.message);
     }
 }
+
+// Expose functions globally for HTML onclick handlers and sections.js
+window.loadUsers = loadUsers;
+window.addUser = addUser;
