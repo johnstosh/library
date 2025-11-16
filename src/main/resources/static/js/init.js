@@ -43,14 +43,21 @@ export function initApp() {
                 try {
                     const response = await fetch('/login', {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        redirect: 'manual' // Prevent following redirects to avoid mixed content issues
                     });
 
-                    if (response.ok || response.redirected) {
-                        // Login successful, redirect or reload
-                        window.location.href = '/';
+                    // For manual redirect mode:
+                    // - type === 'opaqueredirect' means successful login (Spring Security redirecting)
+                    // - ok (200-299) also means success
+                    // - error (400+) means login failed
+                    if (response.type === 'opaqueredirect' || response.ok) {
+                        // Login successful, reload page to re-check authentication
+                        console.log('Login successful, reloading page');
+                        window.location.reload();
                     } else {
                         // Login failed
+                        console.log('Login failed with response:', response.status);
                         showLoginError();
                     }
                 } catch (error) {
