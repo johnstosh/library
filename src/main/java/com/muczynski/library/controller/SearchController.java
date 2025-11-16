@@ -33,7 +33,7 @@ public class SearchController {
             Map<String, Object> results = searchService.search(query, page, size);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
-            logger.debug("Failed to perform search with query '{}', page {}, size {}: {}", query, page, size, e.getMessage(), e);
+            logger.warn("Failed to perform search with query '{}', page {}, size {}: {}", query, page, size, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

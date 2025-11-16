@@ -38,7 +38,7 @@ public class PhotoController {
                     .contentType(MediaType.parseMediaType(contentType))
                     .body(image);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve image for photo ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to retrieve image for photo ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -55,7 +55,7 @@ public class PhotoController {
                     .contentType(MediaType.parseMediaType(thumbnailData.getSecond()))
                     .body(thumbnailData.getFirst());
         } catch (Exception e) {
-            logger.debug("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
+            logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

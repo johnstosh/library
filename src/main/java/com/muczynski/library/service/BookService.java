@@ -346,7 +346,7 @@ public class BookService {
                                         logger.debug("Added author image for author ID {}", authorId);
                                     }
                                 } catch (Exception e) {
-                                    logger.debug("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
+                                    logger.warn("Failed to download and add author image from URL {}: {}", authorImageUrl, e.getMessage(), e);
                                 }
                             }
                         }
@@ -414,7 +414,7 @@ public class BookService {
                                     logger.debug("Added book cover image for book ID {}", id);
                                 }
                             } catch (Exception e) {
-                                logger.debug("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
+                                logger.warn("Failed to download and add book cover image from URL {}: {}", coverImageUrl, e.getMessage(), e);
                             }
                         }
                     }

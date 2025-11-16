@@ -60,10 +60,10 @@ public class PhotoService {
             photo.setPhotoOrder(maxOrder + 1);
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
-            logger.debug("Failed to add photo to book ID {} due to IO error with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
+            logger.warn("Failed to add photo to book ID {} due to IO error with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             throw new LibraryException("Failed to store photo data", e);
         } catch (Exception e) {
-            logger.debug("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
+            logger.warn("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
         }
     }
@@ -112,7 +112,7 @@ public class PhotoService {
             photoRepository.delete(photoToDelete);
             reorderAuthorPhotos(authorId);
         } catch (Exception e) {
-            logger.debug("Failed to delete photo ID {} for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            logger.warn("Failed to delete photo ID {} for author ID {}: {}", photoId, authorId, e.getMessage(), e);
             throw e;
         }
     }
@@ -130,7 +130,7 @@ public class PhotoService {
             rotateImage(photo, clockwise ? 90 : -90);
             photoRepository.save(photo);
         } catch (Exception e) {
-            logger.debug("Failed to rotate photo ID {} for author ID {} (clockwise: {}): {}", photoId, authorId, clockwise, e.getMessage(), e);
+            logger.warn("Failed to rotate photo ID {} for author ID {} (clockwise: {}): {}", photoId, authorId, clockwise, e.getMessage(), e);
             throw e;
         }
     }
@@ -153,7 +153,7 @@ public class PhotoService {
                 reorderAuthorPhotos(photos);
             }
         } catch (Exception e) {
-            logger.debug("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            logger.warn("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
             throw e;
         }
     }
@@ -176,7 +176,7 @@ public class PhotoService {
                 reorderAuthorPhotos(photos);
             }
         } catch (Exception e) {
-            logger.debug("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
+            logger.warn("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
             throw e;
         }
     }
@@ -210,7 +210,7 @@ public class PhotoService {
             ImageIO.write(rotatedImage, formatName, baos);
             photo.setImage(baos.toByteArray());
         } catch (IOException e) {
-            logger.debug("IO error rotating image: {}", e.getMessage(), e);
+            logger.error("IO error rotating image: {}", e.getMessage(), e);
             throw new LibraryException("Failed to rotate image", e);
         }
     }
@@ -234,10 +234,10 @@ public class PhotoService {
             photo.setPhotoOrder(maxOrder + 1);
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
-            logger.debug("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
+            logger.warn("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
             throw new LibraryException("Failed to store photo data", e);
         } catch (Exception e) {
-            logger.debug("Failed to add photo to author ID {} with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
+            logger.warn("Failed to add photo to author ID {} with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
         }
     }
@@ -250,7 +250,7 @@ public class PhotoService {
                     .map(photoMapper::toDto)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            logger.debug("Failed to retrieve photos for book ID {}: {}", bookId, e.getMessage(), e);
+            logger.warn("Failed to retrieve photos for book ID {}: {}", bookId, e.getMessage(), e);
             throw e;
         }
     }
@@ -273,7 +273,7 @@ public class PhotoService {
                 reorderPhotos(photos);
             }
         } catch (Exception e) {
-            logger.debug("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
+            logger.warn("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             throw e;
         }
     }
@@ -296,7 +296,7 @@ public class PhotoService {
                 reorderPhotos(photos);
             }
         } catch (Exception e) {
-            logger.debug("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
+            logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
             throw e;
         }
     }
@@ -309,7 +309,7 @@ public class PhotoService {
                     .map(photoMapper::toDto)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            logger.debug("Failed to retrieve photos for author ID {}: {}", authorId, e.getMessage(), e);
+            logger.warn("Failed to retrieve photos for author ID {}: {}", authorId, e.getMessage(), e);
             throw e;
         }
     }
@@ -324,7 +324,7 @@ public class PhotoService {
             }
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (Exception e) {
-            logger.debug("Failed to update photo ID {} with DTO {}: {}", photoId, photoDto, e.getMessage(), e);
+            logger.warn("Failed to update photo ID {} with DTO {}: {}", photoId, photoDto, e.getMessage(), e);
             throw e;
         }
     }
@@ -343,7 +343,7 @@ public class PhotoService {
                 photoRepository.delete(photoToDelete);
             }
         } catch (Exception e) {
-            logger.debug("Failed to delete photo ID {}: {}", photoId, e.getMessage(), e);
+            logger.warn("Failed to delete photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
     }
@@ -355,7 +355,7 @@ public class PhotoService {
             }
             photoRepository.saveAll(photos);
         } catch (Exception e) {
-            logger.debug("Failed to reorder photos: {}", e.getMessage(), e);
+            logger.warn("Failed to reorder photos: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -365,7 +365,7 @@ public class PhotoService {
             List<Photo> photos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
             reorderPhotos(photos);
         } catch (Exception e) {
-            logger.debug("Failed to reorder author photos for author ID {}: {}", authorId, e.getMessage(), e);
+            logger.warn("Failed to reorder author photos for author ID {}: {}", authorId, e.getMessage(), e);
             throw e;
         }
     }
@@ -377,7 +377,7 @@ public class PhotoService {
             }
             photoRepository.saveAll(photos);
         } catch (Exception e) {
-            logger.debug("Failed to reorder author photos: {}", e.getMessage(), e);
+            logger.warn("Failed to reorder author photos: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -390,7 +390,7 @@ public class PhotoService {
             rotateImage(photo, clockwise ? 90 : -90);
             photoRepository.save(photo);
         } catch (Exception e) {
-            logger.debug("Failed to rotate photo ID {} (clockwise: {}): {}", photoId, clockwise, e.getMessage(), e);
+            logger.warn("Failed to rotate photo ID {} (clockwise: {}): {}", photoId, clockwise, e.getMessage(), e);
             throw e;
         }
     }
@@ -401,7 +401,7 @@ public class PhotoService {
             Photo photo = photoRepository.findById(photoId).orElse(null);
             return photo != null ? photo.getImage() : null;
         } catch (Exception e) {
-            logger.debug("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
+            logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
     }
@@ -411,7 +411,7 @@ public class PhotoService {
         try {
             return photoRepository.findById(id).orElse(null);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve photo by ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to retrieve photo by ID {}: {}", id, e.getMessage(), e);
             throw e;
         }
     }
@@ -444,10 +444,10 @@ public class PhotoService {
             return Pair.of(baos.toByteArray(), photo.getContentType());
 
         } catch (IOException e) {
-            logger.debug("IO error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
+            logger.error("IO error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
             throw new LibraryException("Failed to create thumbnail", e);
         } catch (Exception e) {
-            logger.debug("Failed to generate thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
+            logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
             throw e;
         }
     }

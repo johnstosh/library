@@ -47,7 +47,7 @@ public class TestDataController {
             response.put("message", "Test data generated successfully for " + count + " books");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.debug("Failed to generate test data with payload {}: {}", payload, e.getMessage(), e);
+            logger.warn("Failed to generate test data with payload {}: {}", payload, e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
@@ -66,7 +66,7 @@ public class TestDataController {
             response.put("message", "Test data generated successfully for " + count + " loans");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.debug("Failed to generate loan test data with payload {}: {}", payload, e.getMessage(), e);
+            logger.warn("Failed to generate loan test data with payload {}: {}", payload, e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
@@ -81,7 +81,7 @@ public class TestDataController {
             testDataService.deleteTestData();
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            logger.debug("Failed to delete all test data: {}", e.getMessage(), e);
+            logger.warn("Failed to delete all test data: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -93,7 +93,7 @@ public class TestDataController {
             testDataService.totalPurge();
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            logger.debug("Failed to perform total purge: {}", e.getMessage(), e);
+            logger.warn("Failed to perform total purge: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Failed to purge database: " + e.getMessage());
         }
@@ -109,7 +109,7 @@ public class TestDataController {
             stats.put("loans", loanRepository.count());
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            logger.debug("Failed to retrieve test data stats: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve test data stats: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
