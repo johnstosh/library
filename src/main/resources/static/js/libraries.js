@@ -59,7 +59,7 @@ async function loadLibraries() {
         } else {
             pageTitle.textContent = 'Library Management';
         }
-        setupImportUI(); // Set up import/export UI
+        await setupImportUI(); // Set up import/export UI
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to load libraries: ' + error.message);
@@ -173,7 +173,7 @@ async function exportJson() {
     }
 }
 
-function setupImportUI() {
+async function setupImportUI() {
     if (!isLibrarian) return;
 
     // Check if import section already exists
@@ -182,11 +182,33 @@ function setupImportUI() {
         return; // Already set up
     }
 
+    // Fetch photo backup stats
+    let photoBackupStatus = '';
+    try {
+        const stats = await fetchData('/api/photo-backup/stats');
+        const notBackedUp = (stats.pending || 0) + (stats.failed || 0) + (stats.inProgress || 0);
+        const total = stats.total || 0;
+
+        if (total === 0) {
+            photoBackupStatus = `<p class="mb-0"><strong>Photo Backup Status:</strong> No photos in database</p>`;
+        } else if (notBackedUp === 0) {
+            photoBackupStatus = `<p class="mb-0 text-success"><strong>Photo Backup Status:</strong> All ${total} photos backed up to Google Photos ✓</p>`;
+        } else {
+            photoBackupStatus = `<p class="mb-0 text-warning"><strong>Photo Backup Status:</strong> ${notBackedUp} out of ${total} photos have not been exported to Google Photos</p>`;
+        }
+    } catch (error) {
+        console.error('Failed to load photo backup stats:', error);
+        photoBackupStatus = `<p class="mb-0 text-muted"><strong>Photo Backup Status:</strong> Unable to load stats</p>`;
+    }
+
     const list = document.getElementById('library-list');
     const importSection = document.createElement('div');
     importSection.setAttribute('data-test', 'import-section');
     importSection.innerHTML = `
         <h3>Import/Export Database</h3>
+        <div class="alert alert-info">
+            ${photoBackupStatus}
+        </div>
         <div class="card mb-3">
             <div class="card-body">
                 <h5>Export JSON Data</h5>
