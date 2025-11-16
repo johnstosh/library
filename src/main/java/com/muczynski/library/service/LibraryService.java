@@ -56,4 +56,21 @@ public class LibraryService {
         }
         libraryRepository.deleteById(id);
     }
+
+    /**
+     * Get the default library, creating it if it doesn't exist
+     * This ensures there's always at least one library available
+     */
+    public Library getOrCreateDefaultLibrary() {
+        List<Library> libraries = libraryRepository.findAll();
+        if (!libraries.isEmpty()) {
+            return libraries.get(0);
+        }
+
+        // Create default library
+        Library library = new Library();
+        library.setName("St. Martin de Porres");
+        library.setHostname("library.muczynskifamily.com");
+        return libraryRepository.save(library);
+    }
 }

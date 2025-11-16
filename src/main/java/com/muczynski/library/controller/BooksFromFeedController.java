@@ -27,7 +27,9 @@ public class BooksFromFeedController {
      * Phase 1: Fetch photos from Google Photos and save to database
      * This completes quickly before Google Photos connection timeout
      * @return Fetch results
+     * @deprecated Use POST /process-from-picker instead. The mediaItems:search API is deprecated.
      */
+    @Deprecated
     @PostMapping("/fetch-photos")
     public ResponseEntity<Map<String, Object>> fetchPhotos() {
         try {
@@ -47,7 +49,9 @@ public class BooksFromFeedController {
      * Phase 2: Process saved photos using AI book-by-photo workflow
      * This processes photos that were previously saved to the database
      * @return Processing results
+     * @deprecated Use POST /process-from-picker instead. The mediaItems:search API is deprecated.
      */
+    @Deprecated
     @PostMapping("/process-saved")
     public ResponseEntity<Map<String, Object>> processSavedPhotos() {
         try {

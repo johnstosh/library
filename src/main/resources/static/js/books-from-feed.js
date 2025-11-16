@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
-// Books-from-Feed using Google Photos Picker API (New Session-Based Flow)
+// Books-from-Feed using Google Photos Picker API
 // All API calls route through backend to handle OAuth token refresh automatically
+// NOTE: The old mediaItems:search API is deprecated and should not be used
 
 let currentSessionId = null;
 let pollingInterval = null;
@@ -12,6 +13,7 @@ async function loadBooksFromFeedSection() {
 
 /**
  * Phase 1: Fetch photos from Google Photos and save to database
+ * @deprecated Use processPhotosFromFeed with Google Photos Picker instead. mediaItems:search is deprecated.
  */
 async function fetchPhotosFromFeed() {
     clearError('books-from-feed');
@@ -56,6 +58,7 @@ async function fetchPhotosFromFeed() {
 
 /**
  * Phase 2: Process saved photos with AI
+ * @deprecated Use processPhotosFromFeed with Google Photos Picker instead. mediaItems:search is deprecated.
  */
 async function processSavedPhotosFromFeed() {
     clearError('books-from-feed');

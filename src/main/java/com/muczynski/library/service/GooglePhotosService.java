@@ -53,7 +53,9 @@ public class GooglePhotosService {
      * Fetch photos from Google Photos starting from a given timestamp
      * @param startTimestamp ISO 8601 timestamp to start from
      * @return List of photo metadata including URL, description, and timestamp
+     * @deprecated Google's mediaItems:search API is deprecated. Use Google Photos Picker API instead.
      */
+    @Deprecated
     public List<Map<String, Object>> fetchPhotos(String startTimestamp) {
         logger.info("Fetching photos from Google Photos with start timestamp: {}", startTimestamp);
 

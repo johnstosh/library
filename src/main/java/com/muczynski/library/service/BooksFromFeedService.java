@@ -54,11 +54,16 @@ public class BooksFromFeedService {
     @Autowired
     private AuthorRepository authorRepository;
 
+    @Autowired
+    private LibraryService libraryService;
+
     /**
      * Phase 1: Fetch photos from Google Photos and save them to the database as temporary books
      * This completes quickly before the Google Photos connection times out
      * @return Map containing results of the fetch operation
+     * @deprecated Use processPhotosFromPicker instead. The mediaItems:search API is deprecated by Google.
      */
+    @Deprecated
     public Map<String, Object> fetchAndSavePhotos() {
         logger.info("===== Phase 1: Fetching photos from Google Photos =====");
 
@@ -92,11 +97,8 @@ public class BooksFromFeedService {
         String latestTimestamp = lastTimestamp;
 
         // Get default library and placeholder author once
-        List<Library> libraries = libraryRepository.findAll();
-        if (libraries.isEmpty()) {
-            throw new RuntimeException("No library found in database. Please create a library first.");
-        }
-        Long libraryId = libraries.get(0).getId();
+        Library library = libraryService.getOrCreateDefaultLibrary();
+        Long libraryId = library.getId();
         Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
 
         int photoIndex = 0;
@@ -354,11 +356,8 @@ public class BooksFromFeedService {
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library
-                List<Library> libraries = libraryRepository.findAll();
-                if (libraries.isEmpty()) {
-                    throw new RuntimeException("No library found in database. Please create a library first.");
-                }
-                Long libraryId = libraries.get(0).getId();
+                Library library = libraryService.getOrCreateDefaultLibrary();
+                Long libraryId = library.getId();
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoId);
@@ -499,11 +498,8 @@ public class BooksFromFeedService {
                 logger.debug("Using placeholder author: {} (ID: {})", placeholderAuthor.getName(), placeholderAuthor.getId());
 
                 // Get default library
-                List<Library> libraries = libraryRepository.findAll();
-                if (libraries.isEmpty()) {
-                    throw new RuntimeException("No library found in database. Please create a library first.");
-                }
-                Long libraryId = libraries.get(0).getId();
+                Library library = libraryService.getOrCreateDefaultLibrary();
+                Long libraryId = library.getId();
 
                 // Create temporary book entry
                 logger.info("Creating temporary book entry for photo {}", photoName);

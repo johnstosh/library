@@ -241,25 +241,15 @@
             <div class="card mb-3">
                 <div class="card-body">
                     <p>This feature imports photos from your Google Photos account to automatically detect and create card catalog entries.</p>
-                    <p><strong>How it works (Two-Phase Process):</strong></p>
+                    <p><strong>How it works:</strong></p>
                     <ol>
-                        <li><strong>Phase 1 - Fetch Photos:</strong> Imports photos from Google Photos and saves them to the database</li>
-                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from photos and create book entries</li>
+                        <li>Click the button below to open Google Photos Picker</li>
+                        <li>Select the photos you want to import</li>
+                        <li>AI will extract book information from the photos and create book entries</li>
                     </ol>
-                    <p><strong>Note:</strong> Make sure you have configured your Google Photos API key in Settings.</p>
-                    <div class="btn-group mb-2" role="group">
-                        <button id="fetch-photos-btn" class="btn btn-primary" onclick="fetchPhotosFromFeed()" data-test="fetch-photos-btn">
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            Step 1: Fetch Photos
-                        </button>
-                        <button id="process-saved-btn" class="btn btn-success" onclick="processSavedPhotosFromFeed()" data-test="process-saved-btn">
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            Step 2: Process with AI
-                        </button>
-                    </div>
-                    <br>
-                    <button id="process-photos-btn" class="btn btn-outline-secondary btn-sm" onclick="processPhotosFromFeed()" data-test="process-photos-btn">
-                        Use Google Photos Picker (Alternative)
+                    <p><strong>Note:</strong> Make sure you have authorized Google Photos in Settings.</p>
+                    <button id="process-photos-btn" class="btn btn-primary" onclick="processPhotosFromFeed()" data-test="process-photos-btn">
+                        Select Photos from Google Photos
                     </button>
                 </div>
             </div>
