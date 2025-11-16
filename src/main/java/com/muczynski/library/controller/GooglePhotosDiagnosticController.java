@@ -72,7 +72,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Token test failed", e);
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -114,7 +114,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Albums test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "List Albums",
                     "status", "FAILED",
                     "error", e.getMessage()
@@ -165,7 +165,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Simple search test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "Search Media Items (no filters)",
                     "status", "FAILED",
                     "error", e.getMessage()
@@ -236,7 +236,7 @@ public class GooglePhotosDiagnosticController {
             ));
         } catch (Exception e) {
             logger.error("Date filter search test FAILED", e);
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "test", "Search Media Items (with date filter)",
                     "status", "FAILED",
                     "error", e.getMessage()
