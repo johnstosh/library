@@ -158,7 +158,7 @@ public class ImportService {
                 photo.setCaption(pDto.getCaption());
                 photo.setPhotoOrder(pDto.getPhotoOrder());
                 photo.setPermanentId(pDto.getPermanentId());
-                photo.setBackedUpAt(pDto.getBackedUpAt());
+                photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
 
@@ -319,7 +319,7 @@ public class ImportService {
             pDto.setCaption(photo.getCaption());
             pDto.setPhotoOrder(photo.getPhotoOrder());
             pDto.setPermanentId(photo.getPermanentId());
-            pDto.setBackedUpAt(photo.getBackedUpAt());
+            pDto.setExportedAt(photo.getExportedAt());
             pDto.setExportStatus(photo.getExportStatus());
             pDto.setExportErrorMessage(photo.getExportErrorMessage());
 

@@ -159,7 +159,7 @@ public class PhotoExportService {
             // Step 3: Mark as completed
             photo.setPermanentId(permanentId);
             photo.setExportStatus(Photo.ExportStatus.COMPLETED);
-            photo.setBackedUpAt(LocalDateTime.now());
+            photo.setExportedAt(LocalDateTime.now());
             photo.setExportErrorMessage(null);
             photoRepository.save(photo);
 
@@ -450,7 +450,7 @@ public class PhotoExportService {
                 photoInfo.put("id", photo.getId());
                 photoInfo.put("caption", photo.getCaption());
                 photoInfo.put("exportStatus", photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
-                photoInfo.put("exportedAt", photo.getBackedUpAt());
+                photoInfo.put("exportedAt", photo.getExportedAt());
                 photoInfo.put("permanentId", photo.getPermanentId());
                 photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
                 photoInfo.put("contentType", photo.getContentType());

@@ -34,7 +34,7 @@ public class PhotoExportController {
     public ResponseEntity<Map<String, Object>> getBackupStats() {
         try {
             logger.info("Getting backup statistics");
-            Map<String, Object> stats = photoExportService.getBackupStats();
+            Map<String, Object> stats = photoExportService.getExportStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Failed to get backup statistics", e);
@@ -52,7 +52,7 @@ public class PhotoExportController {
     public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithBackupStatus() {
         try {
             logger.info("Getting all photos with backup status");
-            List<Map<String, Object>> photos = photoExportService.getAllPhotosWithBackupStatus();
+            List<Map<String, Object>> photos = photoExportService.getAllPhotosWithExportStatus();
             logger.info("Successfully retrieved {} photos with backup status", photos.size());
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
@@ -72,11 +72,11 @@ public class PhotoExportController {
     public ResponseEntity<Map<String, Object>> backupAllPhotos() {
         try {
             logger.info("Manually triggering backup for all photos");
-            photoExportService.backupPhotos();
+            photoExportService.exportPhotos();
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Backup process completed");
-            response.put("stats", photoExportService.getBackupStats());
+            response.put("stats", photoExportService.getExportStats());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -96,7 +96,7 @@ public class PhotoExportController {
     public ResponseEntity<Map<String, Object>> backupPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Manually triggering backup for photo ID: {}", photoId);
-            photoExportService.backupPhotoById(photoId);
+            photoExportService.exportPhotoById(photoId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Photo backup completed successfully");
