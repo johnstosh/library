@@ -222,7 +222,7 @@ public class BookService {
         if (!photos.isEmpty()) {
             Photo photo = photos.get(0);
             String question = """
-                Based on this book cover image, infer the book and author details from a strictly Catholic perspective. Be frank in your assessments, 
+                Based on this book cover image, infer the book and author. Research details from a strictly Catholic perspective. Be frank in your assessments, 
                 without providing a balanced view. Emphasize Catholic teachings, saints, and doctrine where applicable. If the content aligns with 
                 Catholic faith, praise it; if not, critique it with wisdom.
 

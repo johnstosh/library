@@ -237,14 +237,14 @@
         </div>
 
         <div id="books-from-feed-section" class="section" data-test="books-from-feed-section">
-            <h2 data-test="books-from-feed-header">Books from Google Photos Feed</h2>
+            <h2 data-test="books-from-feed-header">Import Book Photos from Google Photos</h2>
             <div class="card mb-3">
                 <div class="card-body">
-                    <p>This feature processes photos from your Google Photos account to automatically detect and create book entries.</p>
+                    <p>This feature imports photos from your Google Photos account to automatically detect and create card catalog entries.</p>
                     <p><strong>How it works (Two-Phase Process):</strong></p>
                     <ol>
-                        <li><strong>Phase 1 - Fetch Photos:</strong> Downloads photos from Google Photos and saves them to the database (completes quickly before connection timeout)</li>
-                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from saved photos and create book entries</li>
+                        <li><strong>Phase 1 - Fetch Photos:</strong> Imports photos from Google Photos and saves them to the database</li>
+                        <li><strong>Phase 2 - Process with AI:</strong> Uses AI to extract book information from photos and create book entries</li>
                     </ol>
                     <p><strong>Note:</strong> Make sure you have configured your Google Photos API key in Settings.</p>
                     <div class="btn-group mb-2" role="group">
@@ -267,21 +267,22 @@
         </div>
 
         <div id="photos-section" class="section" data-test="photos-section">
-            <h2 data-test="photos-header">Photo Backup Status</h2>
+            <h2 data-test="photos-header">Photo Export Status</h2>
             <div class="card mb-3">
                 <div class="card-body">
-                    <p>This page shows the backup status of all photos in the library to Google Photos.</p>
+                    <p>This page shows the export status of all photos in the library to Google Photos.</p>
                     <p><strong>How it works:</strong></p>
                     <ul>
-                        <li>Photos are automatically backed up to Google Photos every hour</li>
-                        <li>The permanent ID from Google Photos is stored in the database</li>
-                        <li>You can manually trigger a backup for all pending photos or individual photos</li>
+                        <li>Photos are exported to Google Photos</li>
+                        <li>An album is created to hold the photos, named after this library</li>
+                        <li>The permanent ID from Google Photos is stored in the database to keep track of export status</li>
+                        <li>You can manually trigger an export for all pending photos or just individual photos</li>
                     </ul>
                     <p id="album-info" class="mb-2"><strong>Google Photos Album:</strong> <span id="album-name" class="font-monospace text-primary">Loading...</span></p>
                     <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
 
                     <div class="d-flex gap-2 mb-3">
-                        <button id="backup-all-photos-btn" class="btn btn-primary" onclick="backupAllPhotos()" data-test="backup-all-photos-btn">Backup All Pending Photos</button>
+                        <button id="backup-all-photos-btn" class="btn btn-primary" onclick="backupAllPhotos()" data-test="backup-all-photos-btn">Export All Pending Photos</button>
                         <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoBackupStatus()" data-test="refresh-photos-btn">Refresh Status</button>
                     </div>
 
