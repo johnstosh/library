@@ -2,7 +2,7 @@
 
 import { checkAuthentication, showLoginError } from './auth.js';
 import { showSection } from './sections.js';
-import { showBulkSuccess, hashPassword } from './utils.js';
+import { showBulkSuccess, hashPassword, getCookie } from './utils.js';
 
 export function initApp() {
     console.log('DOM loaded');
@@ -38,6 +38,12 @@ export function initApp() {
                 const formData = new FormData();
                 formData.append('username', username);
                 formData.append('password', hashedPassword);
+
+                // Get CSRF token for Spring Security
+                const csrfToken = getCookie('XSRF-TOKEN');
+                if (csrfToken) {
+                    formData.append('_csrf', csrfToken);
+                }
 
                 // Submit to login endpoint
                 try {
