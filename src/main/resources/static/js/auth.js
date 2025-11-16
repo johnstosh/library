@@ -134,3 +134,7 @@ export async function logout() {
         window.location.href = '/';
     }
 }
+
+// Expose functions globally for HTML onclick handlers
+window.showLoginForm = showLoginForm;
+window.logout = logout;
