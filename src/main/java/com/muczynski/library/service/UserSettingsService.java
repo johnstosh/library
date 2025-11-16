@@ -6,6 +6,7 @@ import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,10 @@ public class UserSettingsService {
         }
 
         if (StringUtils.hasText(userSettingsDto.getPassword())) {
+            // Validate password is SHA-256 hash from frontend
+            if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getPassword())) {
+                throw new LibraryException("Invalid password format - expected SHA-256 hash");
+            }
             user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
         }
 

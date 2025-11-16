@@ -1,4 +1,6 @@
 // (c) Copyright 2025 by Muczynski
+import { hashPassword } from './utils.js';
+
 async function loadSettings() {
     try {
         const user = await fetchData('/api/user-settings');
@@ -112,7 +114,7 @@ async function saveSettings(event) {
     };
 
     if (password) {
-        payload.password = password;
+        payload.password = await hashPassword(password);
     }
 
     try {

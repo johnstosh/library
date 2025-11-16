@@ -1,4 +1,6 @@
 // (c) Copyright 2025 by Muczynski
+import { hashPassword } from './utils.js';
+
 async function loadUsers() {
     try {
         const users = await fetchData('/api/users');
@@ -55,7 +57,8 @@ async function addUser() {
         return;
     }
     try {
-        await postData('/api/users', { username, password, role });
+        const hashedPassword = await hashPassword(password);
+        await postData('/api/users', { username, password: hashedPassword, role });
         document.getElementById('new-user-username').value = '';
         document.getElementById('new-user-password').value = '';
         document.getElementById('new-user-role').value = 'USER';
@@ -90,7 +93,8 @@ async function updateUser(id) {
         return;
     }
     try {
-        await putData(`/api/users/${id}`, { username, password: password || null, role });
+        const hashedPassword = password ? await hashPassword(password) : null;
+        await putData(`/api/users/${id}`, { username, password: hashedPassword, role });
         document.getElementById('new-user-username').value = '';
         document.getElementById('new-user-password').value = '';
         document.getElementById('new-user-role').value = 'USER';

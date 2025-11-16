@@ -452,3 +452,21 @@ export function formatDate(dateString) {
 export function shouldResetForSection(sectionId) {
     return sectionId !== 'books' && sectionId !== 'authors' || window.isLibrarian;
 }
+
+/**
+ * Hash a password using SHA-256 before sending to server
+ * This prevents plaintext password transmission and eliminates BCrypt's 72-byte limit
+ * @param {string} password - The plaintext password
+ * @returns {Promise<string>} - The SHA-256 hex hash of the password
+ */
+export async function hashPassword(password) {
+    if (!password) {
+        return password; // Return empty/null as-is
+    }
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}

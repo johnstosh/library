@@ -13,6 +13,7 @@ import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.RoleRepository;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -76,6 +77,11 @@ public class UserService {
             throw new LibraryException("Username already exists");
         }
 
+        // Validate password is SHA-256 hash from frontend
+        if (!PasswordHashingUtil.isValidSHA256Hash(dto.getPassword())) {
+            throw new LibraryException("Invalid password format - expected SHA-256 hash");
+        }
+
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
@@ -124,6 +130,10 @@ public class UserService {
             user.setUsername(dto.getUsername());
         }
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+            // Validate password is SHA-256 hash from frontend
+            if (!PasswordHashingUtil.isValidSHA256Hash(dto.getPassword())) {
+                throw new LibraryException("Invalid password format - expected SHA-256 hash");
+            }
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
         if (dto.getRole() != null && !dto.getRole().isEmpty()) {

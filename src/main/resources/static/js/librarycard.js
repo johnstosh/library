@@ -1,4 +1,6 @@
 // (c) Copyright 2025 by Muczynski
+import { hashPassword } from './utils.js';
+
 async function loadApplied() {
     if (!isLibrarian) return;
     try {
@@ -94,7 +96,8 @@ async function applyForCard() {
         return;
     }
     try {
-        await postData('/api/public/register', { username, password }, false, false);
+        const hashedPassword = await hashPassword(password);
+        await postData('/api/public/register', { username, password: hashedPassword }, false, false);
         nameElement.value = '';
         passwordElement.value = '';
         showApplySuccess('Library card application successful.');

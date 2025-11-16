@@ -7,6 +7,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.repository.AppliedRepository;
+import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,8 +37,9 @@ public class AppliedService {
     }
 
     public Applied createApplied(Applied applied) {
-        if ("John".equals(applied.getPassword())) {
-            throw new IllegalArgumentException("Password is not complex enough.");
+        // Validate password is SHA-256 hash from frontend
+        if (!PasswordHashingUtil.isValidSHA256Hash(applied.getPassword())) {
+            throw new IllegalArgumentException("Invalid password format - expected SHA-256 hash");
         }
         applied.setPassword(passwordEncoder.encode(applied.getPassword()));
         return appliedRepository.save(applied);
