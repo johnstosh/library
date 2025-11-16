@@ -392,39 +392,60 @@ public class PhotoExportService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getExportStats() {
-        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
-
-        long total = allPhotos.size();
-        long completed = allPhotos.stream()
-                .filter(p -> p.getExportStatus() == Photo.ExportStatus.COMPLETED)
-                .count();
-        long pending = allPhotos.stream()
-                .filter(p -> p.getExportStatus() == null || p.getExportStatus() == Photo.ExportStatus.PENDING)
-                .count();
-        long failed = allPhotos.stream()
-                .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
-                .count();
-        long inProgress = allPhotos.stream()
-                .filter(p -> p.getExportStatus() == Photo.ExportStatus.IN_PROGRESS)
-                .count();
-
         Map<String, Object> stats = new HashMap<>();
-        stats.put("total", total);
-        stats.put("completed", completed);
-        stats.put("pending", pending);
-        stats.put("failed", failed);
-        stats.put("inProgress", inProgress);
+
+        try {
+            List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+
+            long total = allPhotos.size();
+            long completed = allPhotos.stream()
+                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.COMPLETED)
+                    .count();
+            long pending = allPhotos.stream()
+                    .filter(p -> p.getExportStatus() == null || p.getExportStatus() == Photo.ExportStatus.PENDING)
+                    .count();
+            long failed = allPhotos.stream()
+                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
+                    .count();
+            long inProgress = allPhotos.stream()
+                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.IN_PROGRESS)
+                    .count();
+
+            stats.put("total", total);
+            stats.put("completed", completed);
+            stats.put("pending", pending);
+            stats.put("failed", failed);
+            stats.put("inProgress", inProgress);
+        } catch (Exception e) {
+            logger.error("Failed to retrieve photo statistics from database", e);
+            // Return safe defaults
+            stats.put("total", 0L);
+            stats.put("completed", 0L);
+            stats.put("pending", 0L);
+            stats.put("failed", 0L);
+            stats.put("inProgress", 0L);
+        }
 
         // Add album information
-        String albumName = getAlbumName();
-        stats.put("albumName", albumName);
+        try {
+            String albumName = getAlbumName();
+            stats.put("albumName", albumName);
+        } catch (Exception e) {
+            logger.error("Failed to retrieve album name", e);
+            stats.put("albumName", "Library");
+        }
 
         // Get album ID from librarian user settings
-        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
-        if (librarianOpt.isPresent()) {
-            String albumId = librarianOpt.get().getGooglePhotosAlbumId();
-            stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
-        } else {
+        try {
+            Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+            if (librarianOpt.isPresent()) {
+                String albumId = librarianOpt.get().getGooglePhotosAlbumId();
+                stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
+            } else {
+                stats.put("albumId", null);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to retrieve album ID from librarian user", e);
             stats.put("albumId", null);
         }
 
