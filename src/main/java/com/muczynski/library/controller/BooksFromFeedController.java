@@ -24,34 +24,10 @@ public class BooksFromFeedController {
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
 
     /**
-     * Phase 1: Fetch photos from Google Photos and save to database
-     * This completes quickly before Google Photos connection timeout
-     * @return Fetch results
-     * @deprecated Use POST /process-from-picker instead. The mediaItems:search API is deprecated.
-     */
-    @Deprecated
-    @PostMapping("/fetch-photos")
-    public ResponseEntity<Map<String, Object>> fetchPhotos() {
-        try {
-            Map<String, Object> result = booksFromFeedService.fetchAndSavePhotos();
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", e.getMessage(),
-                    "savedCount", 0,
-                    "skippedCount", 0,
-                    "totalPhotos", 0
-            ));
-        }
-    }
-
-    /**
      * Phase 2: Process saved photos using AI book-by-photo workflow
-     * This processes photos that were previously saved to the database
+     * This processes photos that were previously saved to the database (from save-from-picker)
      * @return Processing results
-     * @deprecated Use POST /process-from-picker instead. The mediaItems:search API is deprecated.
      */
-    @Deprecated
     @PostMapping("/process-saved")
     public ResponseEntity<Map<String, Object>> processSavedPhotos() {
         try {
@@ -63,28 +39,6 @@ public class BooksFromFeedController {
                     "processedCount", 0,
                     "failedCount", 0,
                     "totalBooks", 0
-            ));
-        }
-    }
-
-    /**
-     * Legacy: Process photos from Google Photos Library API in one step
-     * WARNING: May timeout due to long-running Google Photos connection
-     * @deprecated Use POST /fetch-photos then POST /process-saved instead
-     * @return Processing results
-     */
-    @Deprecated
-    @PostMapping("/process")
-    public ResponseEntity<Map<String, Object>> processPhotos() {
-        try {
-            Map<String, Object> result = booksFromFeedService.processPhotosFromFeed();
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", e.getMessage(),
-                    "processedCount", 0,
-                    "skippedCount", 0,
-                    "totalPhotos", 0
             ));
         }
     }
@@ -115,40 +69,6 @@ public class BooksFromFeedController {
             return ResponseEntity.badRequest().body(Map.of(
                     "error", e.getMessage(),
                     "savedCount", 0,
-                    "skippedCount", 0,
-                    "totalPhotos", 0
-            ));
-        }
-    }
-
-    /**
-     * Process photos selected via Google Photos Picker API (Both phases - download + AI)
-     * @param request Contains 'photos' array with photo metadata from Picker
-     * @return Processing results
-     * @deprecated Use POST /save-from-picker followed by POST /process-saved for two-phase workflow
-     */
-    @Deprecated
-    @PostMapping("/process-from-picker")
-    public ResponseEntity<Map<String, Object>> processPhotosFromPicker(@RequestBody Map<String, Object> request) {
-        try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
-
-            if (photos == null || photos.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "No photos provided",
-                        "processedCount", 0,
-                        "skippedCount", 0,
-                        "totalPhotos", 0
-                ));
-            }
-
-            Map<String, Object> result = booksFromFeedService.processPhotosFromPicker(photos);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", e.getMessage(),
-                    "processedCount", 0,
                     "skippedCount", 0,
                     "totalPhotos", 0
             ));

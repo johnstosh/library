@@ -11,54 +11,9 @@ async function loadBooksFromFeedSection() {
     clearError('books-from-feed');
 }
 
-/**
- * Phase 1: Fetch photos from Google Photos and save to database
- * @deprecated Use processPhotosFromFeed with Google Photos Picker instead. mediaItems:search is deprecated.
- */
-async function fetchPhotosFromFeed() {
-    clearError('books-from-feed');
-    const fetchBtn = document.getElementById('fetch-photos-btn');
-    const spinner = fetchBtn.querySelector('.spinner-border');
-
-    try {
-        // Show spinner
-        spinner.classList.remove('d-none');
-        fetchBtn.disabled = true;
-
-        // Check authorization
-        const user = await fetchData('/api/user-settings');
-        if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
-            showError('books-from-feed', 'Please authorize Google Photos in Settings first.');
-            return;
-        }
-
-        showInfo('books-from-feed', 'Fetching photos from Google Photos...');
-
-        // Call Phase 1 endpoint
-        const result = await postData('/api/books-from-feed/fetch-photos', {});
-
-        // Display results
-        displayFetchResults(result);
-
-        if (result.savedCount > 0) {
-            showSuccess('books-from-feed',
-                `Phase 1 Complete: Saved ${result.savedCount} photo(s) to database. Click "Step 2: Process with AI" to continue.`);
-        } else {
-            showInfo('books-from-feed', `No new photos found.`);
-        }
-
-    } catch (error) {
-        console.error('[BooksFromFeed] Phase 1 failed:', error);
-        showError('books-from-feed', 'Phase 1 failed: ' + error.message);
-    } finally {
-        spinner.classList.add('d-none');
-        fetchBtn.disabled = false;
-    }
-}
 
 /**
  * Phase 2: Process saved photos with AI
- * @deprecated Use processPhotosFromFeed with Google Photos Picker instead. mediaItems:search is deprecated.
  */
 async function processSavedPhotosFromFeed() {
     clearError('books-from-feed');
