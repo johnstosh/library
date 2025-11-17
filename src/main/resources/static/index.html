@@ -55,6 +55,9 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('global-settings', event)" data-test="menu-global-settings">Global Settings</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('loc-bulk-lookup', event)" data-test="menu-loc-bulk-lookup">LOC Bulk Lookup</button>
+                </li>
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('settings', event)" data-test="menu-settings">Settings</button>
                 </li>
@@ -526,6 +529,51 @@
             </div>
         </div>
 
+        <!-- LOC Bulk Lookup Section (Librarian-only) -->
+        <div id="loc-bulk-lookup-section" class="section librarian-only" data-test="loc-bulk-lookup-section">
+            <h2 data-test="loc-bulk-lookup-header">LOC Bulk Lookup</h2>
+            <p class="text-muted">Lookup Library of Congress call numbers for books in bulk.</p>
+
+            <div class="mb-3">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-primary" onclick="loadLocLookupBooks('all')" data-test="view-all-books-btn">
+                        View All Books
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="loadLocLookupBooks('missing')" data-test="view-missing-loc-btn">
+                        View Books Missing LOC
+                    </button>
+                </div>
+                <button type="button" class="btn btn-success ms-3" onclick="lookupAllMissing()" data-test="lookup-all-missing-btn">
+                    Lookup All Missing LOC Numbers
+                </button>
+            </div>
+
+            <div id="loc-lookup-progress" class="alert alert-info" style="display: none;" data-test="loc-lookup-progress">
+                Processing... <span id="loc-lookup-progress-text"></span>
+            </div>
+
+            <div id="loc-lookup-results" class="alert alert-success" style="display: none;" data-test="loc-lookup-results"></div>
+            <div id="loc-lookup-error" class="alert alert-danger" style="display: none;" data-test="loc-lookup-error"></div>
+
+            <table class="table table-striped" data-test="loc-lookup-table">
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Year</th>
+                        <th>Current LOC Number</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
+                    <tr>
+                        <td colspan="6" class="text-center">Click a button above to load books</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <div id="settings-section" class="section" data-test="settings-section">
             <h2 data-test="settings-header">User Settings</h2>
             <form id="settings-form" onsubmit="saveSettings(event)">
@@ -590,6 +638,7 @@
 <script src="js/search.js"></script>
 <script src="js/settings.js" type="module"></script>
 <script src="js/global-settings.js"></script>
+<script src="js/loc-bulk-lookup.js" type="module"></script>
 <script src="js/test-data.js"></script>
 <script src="js/utils.js" type="module"></script>
 <script src="js/auth.js" type="module"></script>

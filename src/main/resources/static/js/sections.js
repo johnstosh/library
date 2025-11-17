@@ -13,6 +13,8 @@ export const sectionConfig = {
     'users': { load: loadUsers, reset: null },
     'loans': { load: loadLoansSection, reset: null },
     'test-data': { load: loadTestDataStats, reset: null },
+    'global-settings': { load: loadGlobalSettings, reset: null },
+    'loc-bulk-lookup': { load: null, reset: null },
     'settings': { load: loadSettings, reset: null }
 };
 

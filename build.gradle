@@ -45,6 +45,9 @@ dependencies {
 
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+    // Marc4J for LOC call number lookup
+    implementation 'org.marc4j:marc4j:2.9.5'
 }
 
 jar {
