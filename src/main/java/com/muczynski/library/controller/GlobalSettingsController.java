@@ -47,4 +47,32 @@ public class GlobalSettingsController {
         GlobalSettingsDto updated = globalSettingsService.updateGlobalSettings(dto);
         return ResponseEntity.ok(updated);
     }
+
+    /**
+     * Check if SSO is configured
+     * Public endpoint - no authentication required
+     */
+    @GetMapping("/sso-status")
+    public ResponseEntity<SsoStatusDto> getSsoStatus() {
+        logger.info("Checking SSO configuration status");
+        GlobalSettingsDto settings = globalSettingsService.getGlobalSettingsDto();
+        SsoStatusDto status = new SsoStatusDto();
+        status.setSsoConfigured(settings.isGoogleSsoClientIdConfigured() && settings.isGoogleSsoClientSecretConfigured());
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * DTO for SSO status response
+     */
+    public static class SsoStatusDto {
+        private boolean ssoConfigured;
+
+        public boolean isSsoConfigured() {
+            return ssoConfigured;
+        }
+
+        public void setSsoConfigured(boolean ssoConfigured) {
+            this.ssoConfigured = ssoConfigured;
+        }
+    }
 }
