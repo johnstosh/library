@@ -60,6 +60,83 @@ public class BooksFromFeedService {
 
 
     /**
+     * Get saved books that need processing (those starting with "FromFeed_")
+     * @return List of books with basic info (id, title, firstPhotoId)
+     */
+    public List<Map<String, Object>> getSavedBooks() {
+        logger.info("Getting saved books that need processing");
+
+        List<BookDto> allBooks = bookService.getAllBooks();
+        List<Map<String, Object>> savedBooks = new ArrayList<>();
+
+        for (BookDto book : allBooks) {
+            if (book.getTitle() != null && book.getTitle().startsWith("FromFeed_")) {
+                Map<String, Object> bookInfo = new HashMap<>();
+                bookInfo.put("id", book.getId());
+                bookInfo.put("title", book.getTitle());
+                bookInfo.put("firstPhotoId", book.getFirstPhotoId());
+                bookInfo.put("status", "pending");
+                savedBooks.add(bookInfo);
+            }
+        }
+
+        logger.info("Found {} saved books needing processing", savedBooks.size());
+        return savedBooks;
+    }
+
+    /**
+     * Process a single saved book using AI book-by-photo workflow
+     * @param bookId The ID of the book to process
+     * @return Map containing result of the processing
+     */
+    public Map<String, Object> processSingleBook(Long bookId) {
+        logger.info("Processing single book: {}", bookId);
+
+        try {
+            // Get the book to check if it's a temp book
+            BookDto tempBook = bookService.getBookById(bookId);
+            if (tempBook == null) {
+                throw new LibraryException("Book not found: " + bookId);
+            }
+
+            String tempTitle = tempBook.getTitle();
+            if (!tempTitle.startsWith("FromFeed_")) {
+                throw new LibraryException("Book is not a temporary FromFeed book");
+            }
+
+            // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
+            logger.info("Generating full book details using AI for book {}", bookId);
+            BookDto fullBook = bookService.generateTempBook(bookId);
+
+            // Get author name from Author entity
+            Author bookAuthor = null;
+            if (fullBook.getAuthorId() != null) {
+                bookAuthor = authorRepository.findById(fullBook.getAuthorId()).orElse(null);
+            }
+            String authorName = bookAuthor != null ? bookAuthor.getName() : "Unknown";
+
+            logger.info("Successfully generated book: title='{}', author='{}'", fullBook.getTitle(), authorName);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("bookId", bookId);
+            result.put("title", fullBook.getTitle());
+            result.put("author", authorName);
+            result.put("originalTitle", tempTitle);
+
+            return result;
+
+        } catch (Exception e) {
+            logger.error("Error processing book {}: {}", bookId, e.getMessage(), e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("bookId", bookId);
+            result.put("error", e.getMessage());
+            return result;
+        }
+    }
+
+    /**
      * Phase 2: Process saved photos using the book-by-photo AI workflow
      * This can run independently after photos are saved to the database
      * @return Map containing results of the processing

@@ -22,6 +22,7 @@ public class UserMapper {
         userDto.setGoogleClientSecret(user.getGoogleClientSecret());
         userDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
         userDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
+        userDto.setLibraryCardDesign(user.getLibraryCardDesign());
         userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
         return userDto;
     }

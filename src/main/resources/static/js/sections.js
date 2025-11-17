@@ -2,6 +2,16 @@
 
 import { shouldResetForSection } from './utils.js';
 
+// Combined loader for library-card section
+function loadLibraryCardSectionCombined() {
+    if (window.loadLibraryCardSection) {
+        window.loadLibraryCardSection();
+    }
+    if (window.loadApplied) {
+        window.loadApplied();
+    }
+}
+
 export const sectionConfig = {
     'libraries': { load: loadLibraries, reset: null },
     'authors': { load: loadAuthors, reset: resetAuthorForm },
@@ -9,7 +19,7 @@ export const sectionConfig = {
     'books-from-feed': { load: loadBooksFromFeedSection, reset: null },
     'photos': { load: loadPhotosSection, reset: null },
     'search': { load: null, reset: null },
-    'library-card': { load: loadApplied, reset: null },
+    'library-card': { load: loadLibraryCardSectionCombined, reset: null },
     'users': { load: loadUsers, reset: null },
     'loans': { load: loadLoansSection, reset: null },
     'test-data': { load: loadTestDataStats, reset: null },

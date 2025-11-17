@@ -221,7 +221,12 @@
                 </div>
                 <div class="mb-3">
                     <label for="book-author" class="form-label">Author:</label>
-                    <select id="book-author" class="form-select" data-test="book-author"></select>
+                    <div class="input-group">
+                        <input type="text" id="book-author" class="form-control" placeholder="Type to search authors..." autocomplete="off" list="author-datalist" data-test="book-author">
+                        <button type="button" class="btn btn-outline-secondary" id="clear-author-btn" title="Clear author">✕</button>
+                    </div>
+                    <datalist id="author-datalist"></datalist>
+                    <input type="hidden" id="book-author-id" data-test="book-author-id">
                 </div>
                 <div class="mb-3">
                     <label for="book-library" class="form-label">Library:</label>
@@ -256,13 +261,45 @@
                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             Step 1: Select & Save Photos
                         </button>
-                        <button id="process-saved-btn" class="btn btn-success" onclick="processSavedPhotosFromFeed()" data-test="process-saved-btn">
-                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            Step 2: Process with AI
-                        </button>
                     </div>
                 </div>
             </div>
+
+            <!-- Step 2: Saved Books Table -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Step 2: Process Saved Photos with AI</h5>
+                    <div class="btn-group" role="group">
+                        <button id="view-saved-books-btn" class="btn btn-sm btn-secondary" onclick="loadSavedBooks()" data-test="view-saved-books-btn">
+                            View Saved Books
+                        </button>
+                        <button id="process-all-btn" class="btn btn-sm btn-success" onclick="processAllBooks()" data-test="process-all-btn">
+                            Process All
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="saved-books-table" data-test="saved-books-table">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Temp Title</th>
+                                    <th>Status</th>
+                                    <th>Result</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="saved-books-table-body" data-test="saved-books-table-body">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="processing-results" data-test="processing-results"></div>
         </div>
 
@@ -371,6 +408,65 @@
                 </form>
                 <div id="apply-error" class="alert alert-danger mt-3" style="display: none;" data-test="apply-error"></div>
                 <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
+            </div>
+
+            <!-- Print Library Card Section (for logged-in users) -->
+            <div id="print-card-section" class="mt-5" data-test="print-card-section" style="display: none;">
+                <h2 data-test="print-card-header">Print Your Library Card</h2>
+                <p class="text-muted">Select your preferred card design and print a wallet-sized library card.</p>
+
+                <div class="mb-4">
+                    <label class="form-label"><strong>Select Card Design:</strong></label>
+                    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3" id="card-design-selector" data-test="card-design-selector">
+                        <div class="col">
+                            <input type="radio" class="btn-check" name="card-design" id="design-countryside-youth" value="COUNTRYSIDE_YOUTH" autocomplete="off" data-test="design-countryside-youth">
+                            <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-2" for="design-countryside-youth">
+                                <img src="/images/library-cards/countryside_youth.jpg" class="img-fluid rounded mb-2" alt="Countryside Youth" style="max-height: 150px; object-fit: cover;">
+                                <small>Countryside Youth</small>
+                            </label>
+                        </div>
+                        <div class="col">
+                            <input type="radio" class="btn-check" name="card-design" id="design-sacred-heart" value="SACRED_HEART_PORTRAIT" autocomplete="off" data-test="design-sacred-heart">
+                            <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-2" for="design-sacred-heart">
+                                <img src="/images/library-cards/sacred_heart_portrait.jpg" class="img-fluid rounded mb-2" alt="Sacred Heart Portrait" style="max-height: 150px; object-fit: cover;">
+                                <small>Sacred Heart Portrait</small>
+                            </label>
+                        </div>
+                        <div class="col">
+                            <input type="radio" class="btn-check" name="card-design" id="design-radiant-blessing" value="RADIANT_BLESSING" autocomplete="off" data-test="design-radiant-blessing">
+                            <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-2" for="design-radiant-blessing">
+                                <img src="/images/library-cards/radiant_blessing.jpg" class="img-fluid rounded mb-2" alt="Radiant Blessing" style="max-height: 150px; object-fit: cover;">
+                                <small>Radiant Blessing</small>
+                            </label>
+                        </div>
+                        <div class="col">
+                            <input type="radio" class="btn-check" name="card-design" id="design-patron-creatures" value="PATRON_OF_CREATURES" autocomplete="off" data-test="design-patron-creatures">
+                            <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-2" for="design-patron-creatures">
+                                <img src="/images/library-cards/patron_of_creatures.jpg" class="img-fluid rounded mb-2" alt="Patron of Creatures" style="max-height: 150px; object-fit: cover;">
+                                <small>Patron of Creatures</small>
+                            </label>
+                        </div>
+                        <div class="col">
+                            <input type="radio" class="btn-check" name="card-design" id="design-classical-devotion" value="CLASSICAL_DEVOTION" autocomplete="off" data-test="design-classical-devotion">
+                            <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-2" for="design-classical-devotion">
+                                <img src="/images/library-cards/classical_devotion.jpg" class="img-fluid rounded mb-2" alt="Classical Devotion" style="max-height: 150px; object-fit: cover;">
+                                <small>Classical Devotion</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button id="save-card-design-btn" class="btn btn-success" onclick="saveCardDesign()" data-test="save-card-design-btn">
+                        Save Design Preference
+                    </button>
+                    <button id="print-card-btn" class="btn btn-primary ms-2" onclick="printLibraryCard()" data-test="print-card-btn">
+                        Print Library Card (PDF)
+                    </button>
+                </div>
+
+                <div id="card-design-success" class="alert alert-success mt-3" style="display: none;" data-test="card-design-success"></div>
+                <div id="card-design-error" class="alert alert-danger mt-3" style="display: none;" data-test="card-design-error"></div>
             </div>
 
             <div id="applied-section" class="librarian-only mt-5" data-test="applied-section">
@@ -614,6 +710,17 @@
                         This is the permanent ID of the album where photos are exported. It's automatically created on the first export.
                         You can manually set it to use a different album.
                     </div>
+                </div>
+                <div class="mb-3">
+                    <label for="settings-card-design" class="form-label">Library Card Design</label>
+                    <select id="settings-card-design" class="form-select" data-test="settings-card-design">
+                        <option value="COUNTRYSIDE_YOUTH">Countryside Youth</option>
+                        <option value="SACRED_HEART_PORTRAIT">Sacred Heart Portrait</option>
+                        <option value="RADIANT_BLESSING">Radiant Blessing</option>
+                        <option value="PATRON_OF_CREATURES">Patron of Creatures</option>
+                        <option value="CLASSICAL_DEVOTION">Classical Devotion</option>
+                    </select>
+                    <div class="form-text">Choose your preferred library card design. You can preview and print your card in the Library Card section.</div>
                 </div>
                 <button type="submit" class="btn btn-primary" data-test="save-settings-btn">Save User Settings</button>
             </form>

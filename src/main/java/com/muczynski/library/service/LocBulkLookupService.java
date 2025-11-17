@@ -118,17 +118,20 @@ public class LocBulkLookupService {
     }
 
     /**
-     * Perform LOC lookup for a book and update if found
+     * Perform LOC lookup for a book and update if found.
+     * Tries title + author first, then falls back to title-only if that fails.
      */
     private LocLookupResultDto performLocLookup(Book book) {
         LocSearchRequest request = new LocSearchRequest();
         request.setTitle(book.getTitle());
 
-        if (book.getAuthor() != null) {
+        boolean hasAuthor = book.getAuthor() != null;
+        if (hasAuthor) {
             request.setAuthor(book.getAuthor().getName());
         }
 
         try {
+            // Try with title + author (if author exists)
             LocCallNumberResponse response = locCatalogService.getLocCallNumber(request);
 
             // Update the book with the found LOC number
@@ -145,6 +148,40 @@ public class LocBulkLookupService {
                     .build();
 
         } catch (ResponseStatusException e) {
+            // If lookup with author failed and we have an author, try title-only as fallback
+            if (hasAuthor) {
+                log.info("LOC lookup with title + author failed for book {}, trying title-only fallback", book.getId());
+
+                try {
+                    LocSearchRequest titleOnlyRequest = new LocSearchRequest();
+                    titleOnlyRequest.setTitle(book.getTitle());
+
+                    LocCallNumberResponse response = locCatalogService.getLocCallNumber(titleOnlyRequest);
+
+                    // Update the book with the found LOC number
+                    book.setLocNumber(response.getCallNumber());
+                    bookRepository.save(book);
+
+                    log.info("Successfully updated LOC number for book {} using title-only fallback: {}", book.getId(), response.getCallNumber());
+
+                    return LocLookupResultDto.builder()
+                            .bookId(book.getId())
+                            .success(true)
+                            .locNumber(response.getCallNumber())
+                            .matchCount(response.getMatchCount())
+                            .build();
+
+                } catch (Exception fallbackException) {
+                    log.warn("LOC title-only fallback also failed for book {}: {}", book.getId(), fallbackException.getMessage());
+                    return LocLookupResultDto.builder()
+                            .bookId(book.getId())
+                            .success(false)
+                            .errorMessage("Failed with title+author and title-only: " + fallbackException.getMessage())
+                            .build();
+                }
+            }
+
+            // Original failure without author or fallback didn't help
             log.warn("LOC lookup failed for book {}: {}", book.getId(), e.getReason());
             return LocLookupResultDto.builder()
                     .bookId(book.getId())

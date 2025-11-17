@@ -134,9 +134,119 @@ function showApplySuccess(message) {
     }
 }
 
+/**
+ * Load library card design preference and show print section if user is logged in
+ */
+async function loadLibraryCardSection() {
+    try {
+        // Check if user is logged in by fetching user settings
+        const userSettings = await fetchData('/api/user-settings', { suppress401Redirect: true });
+
+        if (userSettings) {
+            // User is logged in, show print section and hide apply section
+            const printSection = document.getElementById('print-card-section');
+            const applySection = document.getElementById('apply-for-card-section');
+
+            if (printSection) {
+                printSection.style.display = 'block';
+            }
+            if (applySection) {
+                applySection.style.display = 'none';
+            }
+
+            // Load and select the user's card design
+            const currentDesign = userSettings.libraryCardDesign || 'CLASSICAL_DEVOTION';
+            const radioButton = document.getElementById(`design-${currentDesign.toLowerCase().replace(/_/g, '-')}`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
+        }
+    } catch (error) {
+        // User not logged in, show apply section
+        console.log('User not logged in, showing apply section');
+    }
+}
+
+/**
+ * Save the selected library card design
+ */
+async function saveCardDesign() {
+    try {
+        clearCardDesignMessages();
+
+        // Get selected design
+        const selectedRadio = document.querySelector('input[name="card-design"]:checked');
+        if (!selectedRadio) {
+            showCardDesignError('Please select a card design first.');
+            return;
+        }
+
+        const design = selectedRadio.value;
+
+        // Save to user settings
+        await putData('/api/user-settings', { libraryCardDesign: design });
+
+        showCardDesignSuccess('Card design saved successfully!');
+
+        // Also update the settings dropdown if it exists
+        const settingsDropdown = document.getElementById('settings-card-design');
+        if (settingsDropdown) {
+            settingsDropdown.value = design;
+        }
+    } catch (error) {
+        showCardDesignError('Failed to save card design: ' + error.message);
+    }
+}
+
+/**
+ * Print library card as PDF
+ */
+async function printLibraryCard() {
+    try {
+        clearCardDesignMessages();
+
+        // Open PDF in new window
+        window.open('/api/library-card/print', '_blank');
+
+        showCardDesignSuccess('Opening your library card PDF...');
+    } catch (error) {
+        showCardDesignError('Failed to generate library card: ' + error.message);
+    }
+}
+
+function showCardDesignError(message) {
+    const errorEl = document.getElementById('card-design-error');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+    }
+}
+
+function showCardDesignSuccess(message) {
+    const successEl = document.getElementById('card-design-success');
+    if (successEl) {
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+    }
+}
+
+function clearCardDesignMessages() {
+    const errorEl = document.getElementById('card-design-error');
+    const successEl = document.getElementById('card-design-success');
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
+    if (successEl) {
+        successEl.style.display = 'none';
+    }
+}
+
 // Expose functions globally for HTML onclick handlers and sections.js
 window.loadApplied = loadApplied;
 window.applyForCard = applyForCard;
 window.approveApplication = approveApplication;
 window.updateAppliedStatus = updateAppliedStatus;
 window.deleteApplied = deleteApplied;
+window.loadLibraryCardSection = loadLibraryCardSection;
+window.saveCardDesign = saveCardDesign;
+window.printLibraryCard = printLibraryCard;

@@ -23,6 +23,12 @@ async function loadSettings() {
             albumIdInput.value = user.googlePhotosAlbumId || '';
         }
 
+        // Load Library Card Design
+        const cardDesignSelect = document.getElementById('settings-card-design');
+        if (cardDesignSelect) {
+            cardDesignSelect.value = user.libraryCardDesign || 'CLASSICAL_DEVOTION';
+        }
+
         clearSettingsMessages();
 
         // Check for OAuth callback messages
@@ -100,6 +106,8 @@ async function saveSettings(event) {
     const googlePhotosApiKey = googlePhotosInput ? googlePhotosInput.value.trim() : '';
     const albumIdInput = document.getElementById('google-photos-album-id');
     const googlePhotosAlbumId = albumIdInput ? albumIdInput.value.trim() : '';
+    const cardDesignSelect = document.getElementById('settings-card-design');
+    const libraryCardDesign = cardDesignSelect ? cardDesignSelect.value : 'CLASSICAL_DEVOTION';
 
     if (!username) {
         showSettingsError('Name is required.');
@@ -110,7 +118,8 @@ async function saveSettings(event) {
         username,
         xaiApiKey,
         googlePhotosApiKey,
-        googlePhotosAlbumId
+        googlePhotosAlbumId,
+        libraryCardDesign
     };
 
     if (password) {
@@ -121,6 +130,12 @@ async function saveSettings(event) {
         await putData('/api/user-settings', payload);
         showSettingsSuccess('Settings saved successfully!');
         document.getElementById('user-password').value = ''; // Clear password field after save
+
+        // Also update the library card section's radio buttons if visible
+        const radioButton = document.getElementById(`design-${libraryCardDesign.toLowerCase().replace(/_/g, '-')}`);
+        if (radioButton) {
+            radioButton.checked = true;
+        }
     } catch (error) {
         showSettingsError('Failed to save settings: ' + error.message);
     }

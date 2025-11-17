@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData, showError, showSuccess, clearError, clearSuccess } from './utils.js';
+import { fetchData } from './utils.js';
 
 /**
  * Initialize event listeners when DOM is ready
@@ -74,8 +74,7 @@ function createBookRow(book) {
         const img = document.createElement('img');
         img.src = `/api/photos/${book.firstPhotoId}/image`;
         img.style.width = '50px';
-        img.style.height = '50px';
-        img.style.objectFit = 'cover';
+        img.style.height = 'auto';
         photoCell.appendChild(img);
     } else {
         photoCell.textContent = '-';
@@ -138,7 +137,6 @@ async function lookupSingleBook(bookId) {
         // Show progress indicator on the row
         const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
         const actionsCell = row.querySelector('td:last-child');
-        const originalContent = actionsCell.innerHTML;
         actionsCell.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Looking up...';
 
         const result = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
@@ -146,21 +144,49 @@ async function lookupSingleBook(bookId) {
         });
 
         if (result.success) {
-            // Update the LOC number cell
-            const locCell = row.querySelector('[data-test="loc-number"]');
-            locCell.innerHTML = '';
-            const code = document.createElement('code');
-            code.textContent = result.locNumber;
-            code.className = 'text-success fw-bold';
-            locCell.appendChild(code);
+            // Update the LOC number cell (check if row still exists in DOM)
+            const currentRow = document.querySelector(`tr[data-book-id="${bookId}"]`);
+            if (currentRow) {
+                const locCell = currentRow.querySelector('[data-test="loc-number"]');
+                if (locCell) {
+                    locCell.innerHTML = '';
+                    const code = document.createElement('code');
+                    code.textContent = result.locNumber;
+                    code.className = 'text-success fw-bold';
+                    locCell.appendChild(code);
+                }
+
+                // Restore the actions cell with a new button
+                const currentActionsCell = currentRow.querySelector('td:last-child');
+                if (currentActionsCell) {
+                    currentActionsCell.innerHTML = '';
+                    const lookupBtn = document.createElement('button');
+                    lookupBtn.className = 'btn btn-sm btn-primary';
+                    lookupBtn.textContent = 'Lookup';
+                    lookupBtn.setAttribute('data-test', 'lookup-single-btn');
+                    lookupBtn.onclick = () => lookupSingleBook(bookId);
+                    currentActionsCell.appendChild(lookupBtn);
+                }
+            }
 
             showSuccess('loc-lookup', `Found LOC number: ${result.locNumber}`);
         } else {
+            // Restore the actions cell with a new button
+            const currentRow = document.querySelector(`tr[data-book-id="${bookId}"]`);
+            if (currentRow) {
+                const currentActionsCell = currentRow.querySelector('td:last-child');
+                if (currentActionsCell) {
+                    currentActionsCell.innerHTML = '';
+                    const lookupBtn = document.createElement('button');
+                    lookupBtn.className = 'btn btn-sm btn-primary';
+                    lookupBtn.textContent = 'Lookup';
+                    lookupBtn.setAttribute('data-test', 'lookup-single-btn');
+                    lookupBtn.onclick = () => lookupSingleBook(bookId);
+                    currentActionsCell.appendChild(lookupBtn);
+                }
+            }
             showError('loc-lookup', `Lookup failed: ${result.errorMessage}`);
         }
-
-        // Restore the actions cell
-        actionsCell.innerHTML = originalContent;
 
     } catch (error) {
         showError('loc-lookup', 'Lookup failed: ' + error.message);
@@ -169,12 +195,12 @@ async function lookupSingleBook(bookId) {
         const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
         if (row) {
             const actionsCell = row.querySelector('td:last-child');
+            actionsCell.innerHTML = '';
             const lookupBtn = document.createElement('button');
             lookupBtn.className = 'btn btn-sm btn-primary';
             lookupBtn.textContent = 'Lookup';
             lookupBtn.setAttribute('data-test', 'lookup-single-btn');
             lookupBtn.onclick = () => lookupSingleBook(bookId);
-            actionsCell.innerHTML = '';
             actionsCell.appendChild(lookupBtn);
         }
     }
@@ -212,11 +238,13 @@ async function lookupAllMissing() {
                 const row = document.querySelector(`tr[data-book-id="${result.bookId}"]`);
                 if (row) {
                     const locCell = row.querySelector('[data-test="loc-number"]');
-                    locCell.innerHTML = '';
-                    const code = document.createElement('code');
-                    code.textContent = result.locNumber;
-                    code.className = 'text-success fw-bold';
-                    locCell.appendChild(code);
+                    if (locCell) {
+                        locCell.innerHTML = '';
+                        const code = document.createElement('code');
+                        code.textContent = result.locNumber;
+                        code.className = 'text-success fw-bold';
+                        locCell.appendChild(code);
+                    }
                 }
             } else {
                 failureCount++;
