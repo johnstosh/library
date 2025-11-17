@@ -32,7 +32,8 @@ function resetBookForm() {
     document.getElementById('new-book-status').value = 'ACTIVE';
     document.getElementById('new-book-loc').value = '';
     document.getElementById('new-book-status-reason').value = '';
-    document.getElementById('book-author').selectedIndex = 0;
+    document.getElementById('book-author').value = '';
+    document.getElementById('book-author-id').value = '';
     document.getElementById('book-library').selectedIndex = 0;
     document.getElementById('current-book-id').value = '';
 
@@ -95,8 +96,12 @@ async function prepareNewBookForPhoto(title) {
             await populateBookDropdowns();
         }
 
-        // Set author and library dropdowns
-        document.getElementById('book-author').value = authorId;
+        // Set author name and ID
+        document.getElementById('book-author-id').value = authorId;
+        const author = allAuthors.find(a => a.id == authorId);
+        document.getElementById('book-author').value = author ? author.name : '';
+
+        // Set library dropdown
         document.getElementById('book-library').value = libraryId;
 
     // Scroll to bottom
@@ -151,7 +156,7 @@ async function addBook() {
     const status = document.getElementById('new-book-status').value;
     const locNumber = document.getElementById('new-book-loc').value;
     const statusReason = document.getElementById('new-book-status-reason').value;
-    const authorId = document.getElementById('book-author').value;
+    const authorId = document.getElementById('book-author-id').value;
     const libraryId = document.getElementById('book-library').value;
     if (!title || !authorId || !libraryId) {
         showError('books', 'Title, author, and library are required.');
@@ -181,7 +186,16 @@ async function editBook(id) {
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('new-book-loc').value = data.locNumber || '';
     document.getElementById('new-book-status-reason').value = data.statusReason || '';
-    document.getElementById('book-author').value = data.authorId || '';
+
+    // Set author name and ID
+    document.getElementById('book-author-id').value = data.authorId || '';
+    if (data.authorId) {
+        const author = allAuthors.find(a => a.id == data.authorId);
+        document.getElementById('book-author').value = author ? author.name : '';
+    } else {
+        document.getElementById('book-author').value = '';
+    }
+
     document.getElementById('book-library').value = data.libraryId || '';
     document.getElementById('current-book-id').value = id;
     const btn = document.getElementById('add-book-btn');
@@ -224,13 +238,17 @@ async function generateBookByPhoto(bookId) {
         if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
         if (updatedBook.locNumber && updatedBook.locNumber.trim() !== '') document.getElementById('new-book-loc').value = updatedBook.locNumber;
         if (updatedBook.statusReason && updatedBook.statusReason.trim() !== '') document.getElementById('new-book-status-reason').value = updatedBook.statusReason;
-        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
         if (updatedBook.libraryId) document.getElementById('book-library').value = updatedBook.libraryId;
 
         // Repopulate dropdowns to include any new authors
         await populateBookDropdowns();
-        // Reselect the author, in case the dropdown was repopulated
-        if (updatedBook.authorId) document.getElementById('book-author').value = updatedBook.authorId;
+
+        // Set author name and ID after repopulating
+        if (updatedBook.authorId) {
+            document.getElementById('book-author-id').value = updatedBook.authorId;
+            const author = allAuthors.find(a => a.id == updatedBook.authorId);
+            document.getElementById('book-author').value = author ? author.name : '';
+        }
 
 
         showSuccess('books', 'Book metadata generated successfully using AI');
@@ -257,7 +275,7 @@ async function updateBook(id) {
     const status = document.getElementById('new-book-status').value;
     const locNumber = document.getElementById('new-book-loc').value;
     const statusReason = document.getElementById('new-book-status-reason').value;
-    const authorId = document.getElementById('book-author').value;
+    const authorId = document.getElementById('book-author-id').value;
     const libraryId = document.getElementById('book-library').value;
     if (!title || !authorId || !libraryId) {
         showError('books', 'Title, author, and library are required.');
@@ -276,16 +294,19 @@ async function updateBook(id) {
     }
 }
 
+// Store all authors for autocomplete
+let allAuthors = [];
+
 async function populateBookDropdowns() {
     try {
-        const authors = await fetchData('/api/authors');
-        const authorSelect = document.getElementById('book-author');
-        authorSelect.innerHTML = '';
-        authors.forEach(author => {
+        allAuthors = await fetchData('/api/authors');
+        const authorDatalist = document.getElementById('author-datalist');
+        authorDatalist.innerHTML = '';
+        allAuthors.forEach(author => {
             const option = document.createElement('option');
-            option.value = author.id;
-            option.textContent = author.name;
-            authorSelect.appendChild(option);
+            option.value = author.name;
+            option.setAttribute('data-author-id', author.id);
+            authorDatalist.appendChild(option);
         });
 
         const libraries = await fetchData('/api/libraries');
@@ -316,3 +337,52 @@ async function createBookByPhoto() {
     // This function will be created in books.js
     await prepareNewBookForPhoto(title);
 }
+
+// Initialize event listeners for author autocomplete
+document.addEventListener('DOMContentLoaded', function() {
+    const authorInput = document.getElementById('book-author');
+    const authorIdInput = document.getElementById('book-author-id');
+    const clearAuthorBtn = document.getElementById('clear-author-btn');
+
+    // Handle author selection
+    if (authorInput) {
+        authorInput.addEventListener('input', function() {
+            const inputValue = this.value.trim();
+
+            // Find exact match first
+            let matchedAuthor = allAuthors.find(author => author.name === inputValue);
+
+            if (matchedAuthor) {
+                authorIdInput.value = matchedAuthor.id;
+            } else {
+                // Clear the ID if no exact match
+                authorIdInput.value = '';
+            }
+        });
+
+        // Handle blur to validate selection
+        authorInput.addEventListener('blur', function() {
+            const inputValue = this.value.trim();
+            if (inputValue === '') {
+                authorIdInput.value = '';
+                return;
+            }
+
+            // Check if the input matches an existing author
+            const matchedAuthor = allAuthors.find(author => author.name === inputValue);
+            if (!matchedAuthor) {
+                // Allow custom author names (the backend might create them)
+                authorIdInput.value = '';
+            }
+        });
+    }
+
+    // Handle clear button
+    if (clearAuthorBtn) {
+        clearAuthorBtn.addEventListener('click', function() {
+            authorInput.value = '';
+            authorIdInput.value = '';
+            authorInput.focus();
+        });
+    }
+});

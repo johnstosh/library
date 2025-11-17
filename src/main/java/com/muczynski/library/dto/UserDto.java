@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.dto;
 
+import com.muczynski.library.domain.LibraryCardDesign;
 import lombok.Data;
 
 import java.util.Set;
@@ -18,5 +19,6 @@ public class UserDto {
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;
+    private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
 }

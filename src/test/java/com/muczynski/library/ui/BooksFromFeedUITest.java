@@ -466,7 +466,7 @@ public class BooksFromFeedUITest {
                 route.fulfill(new Route.FulfillOptions()
                         .setStatus(200)
                         .setContentType("application/json")
-                        .setBody(mockSessionResponse));
+                        .setBody(mockSessionStatusResponse));
             });
 
             // Override polling interval to 100ms for faster test

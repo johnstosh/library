@@ -5,25 +5,276 @@
 
 let currentSessionId = null;
 let pollingInterval = null;
+let savedBooksCache = [];
 
 async function loadBooksFromFeedSection() {
     console.log('[BooksFromFeed] Loading books-from-feed section');
     clearError('books-from-feed');
+    // Auto-load saved books when section loads
+    await loadSavedBooks();
+}
+
+/**
+ * Load saved books that need processing
+ */
+async function loadSavedBooks() {
+    try {
+        clearError('books-from-feed');
+        showInfo('books-from-feed', 'Loading saved books...');
+
+        const books = await fetchData('/api/books-from-feed/saved-books');
+        savedBooksCache = books;
+
+        const tableBody = document.getElementById('saved-books-table-body');
+        tableBody.innerHTML = '';
+
+        if (books.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="6" class="text-center text-muted">No saved books found. Use Step 1 to select photos first.</td>';
+            tableBody.appendChild(row);
+            clearError('books-from-feed');
+            clearInfo('books-from-feed');
+            return;
+        }
+
+        books.forEach(book => {
+            const row = createSavedBookRow(book);
+            tableBody.appendChild(row);
+        });
+
+        showSuccess('books-from-feed', `Loaded ${books.length} saved book(s) ready for processing`);
+    } catch (error) {
+        console.error('[BooksFromFeed] Failed to load saved books:', error);
+        showError('books-from-feed', 'Failed to load saved books: ' + error.message);
+    }
+}
+
+/**
+ * Create a table row for a saved book
+ */
+function createSavedBookRow(book) {
+    const row = document.createElement('tr');
+    row.setAttribute('data-book-id', book.id);
+    row.setAttribute('data-test', 'saved-book-row');
+
+    // Photo cell
+    const photoCell = document.createElement('td');
+    if (book.firstPhotoId) {
+        const img = document.createElement('img');
+        img.src = `/api/photos/${book.firstPhotoId}/image`;
+        img.style.width = '50px';
+        img.style.height = '50px';
+        img.style.objectFit = 'cover';
+        photoCell.appendChild(img);
+    } else {
+        photoCell.textContent = '-';
+    }
+    row.appendChild(photoCell);
+
+    // Title/Author cell (combined)
+    const titleCell = document.createElement('td');
+    titleCell.setAttribute('data-test', 'book-temp-title');
+
+    // Title on first line
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = book.title;
+    titleSpan.style.fontWeight = 'bold';
+    titleCell.appendChild(titleSpan);
+
+    // Author on second line
+    if (book.author && book.author.trim() !== '') {
+        titleCell.appendChild(document.createElement('br'));
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = book.author;
+        authorSpan.style.fontSize = '0.9em';
+        authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+        titleCell.appendChild(authorSpan);
+    }
+    row.appendChild(titleCell);
+
+    // LOC Number cell
+    const locCell = document.createElement('td');
+    if (book.locNumber) {
+        const locCode = document.createElement('code');
+        locCode.textContent = book.locNumber;
+        locCode.className = 'text-success';
+        locCell.appendChild(locCode);
+    } else {
+        const locSpan = document.createElement('span');
+        locSpan.textContent = '-';
+        locSpan.className = 'text-muted';
+        locCell.appendChild(locSpan);
+    }
+    row.appendChild(locCell);
+
+    // Status cell
+    const statusCell = document.createElement('td');
+    statusCell.setAttribute('data-test', 'book-status');
+    const statusBadge = document.createElement('span');
+    statusBadge.className = 'badge bg-secondary';
+    statusBadge.textContent = 'Pending';
+    statusCell.appendChild(statusBadge);
+    row.appendChild(statusCell);
+
+    // Result cell
+    const resultCell = document.createElement('td');
+    resultCell.setAttribute('data-test', 'book-result');
+    resultCell.textContent = '-';
+    row.appendChild(resultCell);
+
+    // Actions cell
+    const actionsCell = document.createElement('td');
+    const processBtn = document.createElement('button');
+    processBtn.className = 'btn btn-sm btn-primary';
+    processBtn.textContent = 'Process';
+    processBtn.setAttribute('data-test', 'process-single-btn');
+    processBtn.onclick = () => processSingleBook(book.id);
+    actionsCell.appendChild(processBtn);
+    row.appendChild(actionsCell);
+
+    return row;
+}
+
+/**
+ * Process a single book by ID
+ */
+async function processSingleBook(bookId) {
+    const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
+    if (!row) {
+        console.error('[BooksFromFeed] Row not found for book:', bookId);
+        return;
+    }
+
+    const statusCell = row.querySelector('[data-test="book-status"]');
+    const resultCell = row.querySelector('[data-test="book-result"]');
+    const actionsCell = row.querySelector('td:last-child');
+
+    try {
+        // Update status to processing
+        statusCell.innerHTML = '<span class="badge bg-warning">Processing...</span>';
+        actionsCell.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        const result = await postData(`/api/books-from-feed/process-single/${bookId}`, {});
+
+        if (result.success) {
+            // Update status to success
+            statusCell.innerHTML = '<span class="badge bg-success">Completed</span>';
+            resultCell.innerHTML = `<strong>${escapeHtml(result.title)}</strong><br><small>by ${escapeHtml(result.author)}</small>`;
+            actionsCell.innerHTML = '<span class="text-success">✓</span>';
+        } else {
+            // Update status to error
+            statusCell.innerHTML = '<span class="badge bg-danger">Failed</span>';
+            resultCell.innerHTML = `<small class="text-danger">${escapeHtml(result.error || 'Unknown error')}</small>`;
+
+            // Re-create the process button
+            actionsCell.innerHTML = '';
+            const retryBtn = document.createElement('button');
+            retryBtn.className = 'btn btn-sm btn-warning';
+            retryBtn.textContent = 'Retry';
+            retryBtn.onclick = () => processSingleBook(bookId);
+            actionsCell.appendChild(retryBtn);
+        }
+    } catch (error) {
+        console.error('[BooksFromFeed] Failed to process book:', bookId, error);
+
+        // Update status to error
+        statusCell.innerHTML = '<span class="badge bg-danger">Error</span>';
+        resultCell.innerHTML = `<small class="text-danger">${escapeHtml(error.message)}</small>`;
+
+        // Re-create the process button
+        actionsCell.innerHTML = '';
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'btn btn-sm btn-warning';
+        retryBtn.textContent = 'Retry';
+        retryBtn.onclick = () => processSingleBook(bookId);
+        actionsCell.appendChild(retryBtn);
+    }
+}
+
+/**
+ * Process all saved books one-by-one
+ */
+async function processAllBooks() {
+    const tableBody = document.getElementById('saved-books-table-body');
+    const rows = tableBody.querySelectorAll('tr[data-book-id]');
+
+    if (rows.length === 0) {
+        showError('books-from-feed', 'No books to process');
+        return;
+    }
+
+    // Disable the "Process All" button during processing
+    const processAllBtn = document.getElementById('process-all-btn');
+    processAllBtn.disabled = true;
+    processAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+
+    try {
+        showInfo('books-from-feed', `Processing ${rows.length} book(s)...`);
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Process books one-by-one
+        for (const row of rows) {
+            const bookId = row.getAttribute('data-book-id');
+            const statusCell = row.querySelector('[data-test="book-status"]');
+            const statusBadge = statusCell.querySelector('.badge');
+
+            // Skip already processed books
+            if (statusBadge && statusBadge.textContent === 'Completed') {
+                successCount++;
+                continue;
+            }
+
+            await processSingleBook(bookId);
+
+            // Check if processing succeeded
+            const updatedStatusBadge = statusCell.querySelector('.badge');
+            if (updatedStatusBadge && updatedStatusBadge.textContent === 'Completed') {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        }
+
+        // Show summary
+        if (failureCount === 0) {
+            showSuccess('books-from-feed', `Successfully processed ${successCount} book(s)!`);
+        } else {
+            showInfo('books-from-feed', `Processed ${successCount} book(s), ${failureCount} failed`);
+        }
+
+        // Reload books list if on books section
+        if (window.loadBooks) {
+            await loadBooks();
+        }
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Error during bulk processing:', error);
+        showError('books-from-feed', 'Bulk processing error: ' + error.message);
+    } finally {
+        // Re-enable the "Process All" button
+        processAllBtn.disabled = false;
+        processAllBtn.textContent = 'Process All';
+    }
 }
 
 
 /**
- * Phase 2: Process saved photos with AI
+ * Phase 2: Process saved photos with AI (legacy bulk processing)
+ * Note: This function is deprecated in favor of processAllBooks()
  */
 async function processSavedPhotosFromFeed() {
     clearError('books-from-feed');
     const processBtn = document.getElementById('process-saved-btn');
-    const spinner = processBtn.querySelector('.spinner-border');
 
     try {
-        // Show spinner
-        spinner.classList.remove('d-none');
-        processBtn.disabled = true;
+        // Show spinner if button exists
+        if (processBtn) {
+            const spinner = processBtn.querySelector('.spinner-border');
+            if (spinner) spinner.classList.remove('d-none');
+            processBtn.disabled = true;
+        }
 
         showInfo('books-from-feed', 'Processing saved photos with AI... This may take a while.');
 
@@ -41,6 +292,9 @@ async function processSavedPhotosFromFeed() {
             if (window.loadBooks) {
                 await loadBooks();
             }
+
+            // Reload saved books table
+            await loadSavedBooks();
         } else {
             showInfo('books-from-feed', `No books created from ${result.totalBooks} saved photo(s).`);
         }
@@ -49,8 +303,12 @@ async function processSavedPhotosFromFeed() {
         console.error('[BooksFromFeed] Phase 2 failed:', error);
         showError('books-from-feed', 'Phase 2 failed: ' + error.message);
     } finally {
-        spinner.classList.add('d-none');
-        processBtn.disabled = false;
+        // Re-enable button if it exists
+        if (processBtn) {
+            const spinner = processBtn.querySelector('.spinner-border');
+            if (spinner) spinner.classList.add('d-none');
+            processBtn.disabled = false;
+        }
     }
 }
 
@@ -353,6 +611,8 @@ async function handlePickerResults(sessionId) {
         if (result.savedCount > 0) {
             showSuccess('books-from-feed',
                 `Phase 1 Complete: Saved ${result.savedCount} photo(s) to database. Click "Step 2: Process with AI" to continue.`);
+            // Reload saved books table to show newly saved books
+            await loadSavedBooks();
         } else {
             showInfo('books-from-feed', `No new photos saved.`);
         }
@@ -489,4 +749,33 @@ function showInfo(section, message) {
     }
     infoDiv.textContent = message;
     infoDiv.style.display = 'block';
+}
+
+function showError(section, message) {
+    const container = document.getElementById(`${section}-section`);
+    let errorDiv = container.querySelector('[data-test="form-error"]');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.setAttribute('data-test', 'form-error');
+        errorDiv.className = 'alert alert-danger';
+        container.insertBefore(errorDiv, container.firstChild);
+    }
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function clearError(section) {
+    const container = document.getElementById(`${section}-section`);
+    const errorDiv = container.querySelector('[data-test="form-error"]');
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+}
+
+function clearInfo(section) {
+    const container = document.getElementById(`${section}-section`);
+    const infoDiv = container.querySelector('[data-test="form-info"]');
+    if (infoDiv) {
+        infoDiv.style.display = 'none';
+    }
 }

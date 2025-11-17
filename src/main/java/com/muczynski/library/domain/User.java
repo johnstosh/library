@@ -31,6 +31,10 @@ public class User {
     private String googlePhotosAlbumId = ""; // Permanent album ID for photo export
     private String lastPhotoTimestamp = "";
 
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
+    private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
