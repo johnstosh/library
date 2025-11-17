@@ -8,7 +8,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
 import com.muczynski.library.repository.BookRepository;
-import edu.byu.library.CallNumber;
+import edu.byu.hbll.marc.CallNumber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
