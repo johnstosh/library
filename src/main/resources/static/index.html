@@ -536,6 +536,52 @@
                     <div id="global-settings-success" class="alert alert-success mt-3" style="display: none;" data-test="global-settings-success"></div>
                 </div>
             </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Google SSO Configuration (User Authentication)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> Google SSO credentials are separate from Google Photos OAuth.
+                        These credentials are used for user authentication (login with Google).
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>SSO Client ID:</strong></div>
+                        <div class="col-md-9">
+                            <code id="global-sso-client-id" data-test="global-sso-client-id">(loading...)</code>
+                            <span id="global-sso-client-id-configured" data-test="global-sso-client-id-configured"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3"><strong>SSO Client Secret:</strong></div>
+                        <div class="col-md-9">
+                            <span id="global-sso-secret-partial" data-test="global-sso-secret-partial">(loading...)</span>
+                            <span id="global-sso-secret-configured" data-test="global-sso-secret-configured"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3"><strong>Last Updated:</strong></div>
+                        <div class="col-md-9"><span id="global-sso-updated-at" data-test="global-sso-updated-at">(loading...)</span></div>
+                    </div>
+
+                    <form id="global-sso-settings-form" onsubmit="saveGlobalSsoSettings(event)" data-test="global-sso-settings-form">
+                        <div class="mb-3">
+                            <label for="global-sso-client-id-input" class="form-label">Google SSO Client ID</label>
+                            <input type="text" id="global-sso-client-id-input" class="form-control" autocomplete="off" placeholder="Enter Google SSO Client ID" data-test="global-sso-client-id-input">
+                            <div class="form-text">Get this from Google Cloud Console (OAuth 2.0 credentials for web application).</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="global-sso-client-secret-input" class="form-label">Google SSO Client Secret</label>
+                            <input type="password" id="global-sso-client-secret-input" class="form-control" autocomplete="off" placeholder="Enter Google SSO Client Secret" data-test="global-sso-client-secret-input">
+                            <div class="form-text">Enter the Client Secret for Google SSO (user authentication).</div>
+                        </div>
+                        <button type="submit" class="btn btn-warning" data-test="update-global-sso-btn">Update Google SSO Credentials</button>
+                    </form>
+                    <div id="global-sso-settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="global-sso-settings-error"></div>
+                    <div id="global-sso-settings-success" class="alert alert-success mt-3" style="display: none;" data-test="global-sso-settings-success"></div>
+                </div>
+            </div>
         </div>
 
         <div id="settings-section" class="section" data-test="settings-section">

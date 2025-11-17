@@ -44,6 +44,38 @@ public class GlobalSettingsDto {
     private String redirectUri;
 
     /**
+     * Google SSO OAuth Client ID (for user authentication)
+     */
+    private String googleSsoClientId;
+
+    /**
+     * Google SSO OAuth Client Secret (write-only when updating)
+     * Set to empty string or null to keep existing value
+     */
+    private String googleSsoClientSecret;
+
+    /**
+     * Partial SSO Client Secret for verification (read-only)
+     * Shows first 8 characters
+     */
+    private String googleSsoClientSecretPartial;
+
+    /**
+     * When the SSO credentials were last updated
+     */
+    private Instant googleSsoCredentialsUpdatedAt;
+
+    /**
+     * Whether the SSO Client Secret is configured (has a value)
+     */
+    private boolean googleSsoClientSecretConfigured;
+
+    /**
+     * Whether the SSO Client ID is configured (has a value)
+     */
+    private boolean googleSsoClientIdConfigured;
+
+    /**
      * Last updated timestamp for any settings change
      */
     private Instant lastUpdated;

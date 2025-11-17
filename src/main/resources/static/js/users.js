@@ -3,7 +3,7 @@ import { hashPassword } from './utils.js';
 
 function getSsoProviderBadge(ssoProvider) {
     if (!ssoProvider || ssoProvider === 'local') {
-        return '<span class="badge bg-secondary">Local</span>';
+        return '<span class="badge bg-success">Local</span>';
     }
     if (ssoProvider === 'google') {
         return '<span class="badge bg-primary">Google</span>';

@@ -48,6 +48,25 @@ public class GlobalSettings {
     private String redirectUri = "";
 
     /**
+     * Google SSO OAuth Client ID (for user authentication)
+     * Separate from Google Photos OAuth credentials
+     */
+    @Column(length = 500)
+    private String googleSsoClientId = "";
+
+    /**
+     * Google SSO OAuth Client Secret (for user authentication)
+     * Separate from Google Photos OAuth credentials
+     */
+    @Column(length = 500)
+    private String googleSsoClientSecret = "";
+
+    /**
+     * Timestamp when the Google SSO credentials were last updated
+     */
+    private Instant googleSsoCredentialsUpdatedAt;
+
+    /**
      * Last updated timestamp for any settings change
      */
     private Instant lastUpdated;
