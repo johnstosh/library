@@ -24,6 +24,38 @@ public class BooksFromFeedController {
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
 
     /**
+     * Get saved books that need processing (those starting with "FromFeed_")
+     * @return List of books that need processing
+     */
+    @GetMapping("/saved-books")
+    public ResponseEntity<List<Map<String, Object>>> getSavedBooks() {
+        try {
+            List<Map<String, Object>> books = booksFromFeedService.getSavedBooks();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(List.of());
+        }
+    }
+
+    /**
+     * Process a single saved book using AI book-by-photo workflow
+     * @param bookId The ID of the book to process
+     * @return Processing result for this book
+     */
+    @PostMapping("/process-single/{bookId}")
+    public ResponseEntity<Map<String, Object>> processSingleBook(@PathVariable Long bookId) {
+        try {
+            Map<String, Object> result = booksFromFeedService.processSingleBook(bookId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
      * Phase 2: Process saved photos using AI book-by-photo workflow
      * This processes photos that were previously saved to the database (from save-from-picker)
      * @return Processing results

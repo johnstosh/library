@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.dto;
 
+import com.muczynski.library.domain.LibraryCardDesign;
 import lombok.Data;
 
 import java.util.Set;
@@ -21,5 +22,6 @@ public class UserDto {
     private String ssoProvider;
     private String ssoSubjectId;
     private String email;
+    private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
 }

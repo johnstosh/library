@@ -28,6 +28,8 @@ public class BookDto {
     @NotNull(message = "Author ID is required")
     private Long authorId;
 
+    private String author; // Author name for display purposes
+
     private Long libraryId;
     private Long firstPhotoId;
     private Long loanCount;

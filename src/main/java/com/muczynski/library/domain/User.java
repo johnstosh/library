@@ -36,6 +36,10 @@ public class User {
     private String ssoSubjectId; // OAuth "sub" claim - unique user ID from provider
     private String email; // Email address from SSO provider
 
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
+    private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",

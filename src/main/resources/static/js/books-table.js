@@ -21,11 +21,41 @@ async function loadBooks() {
             row.appendChild(photoCell);
 
             const titleCell = document.createElement('td');
+
+            // Title on first line
             const titleSpan = document.createElement('span');
             titleSpan.setAttribute('data-test', 'book-title');
             titleSpan.textContent = book.title;
+            titleSpan.style.fontWeight = 'bold';
             titleCell.appendChild(titleSpan);
+
+            // Author on second line
+            if (book.author && book.author.trim() !== '') {
+                titleCell.appendChild(document.createElement('br'));
+                const authorSpan = document.createElement('span');
+                authorSpan.setAttribute('data-test', 'book-author');
+                authorSpan.textContent = book.author;
+                authorSpan.style.fontSize = '0.9em';
+                authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+                titleCell.appendChild(authorSpan);
+            }
+
             row.appendChild(titleCell);
+
+            const locCell = document.createElement('td');
+            locCell.setAttribute('data-test', 'book-loc-number');
+            if (book.locNumber) {
+                const locCode = document.createElement('code');
+                locCode.textContent = book.locNumber;
+                locCode.className = 'text-success';
+                locCell.appendChild(locCode);
+            } else {
+                const locSpan = document.createElement('span');
+                locSpan.textContent = '-';
+                locSpan.className = 'text-muted';
+                locCell.appendChild(locSpan);
+            }
+            row.appendChild(locCell);
 
             const loansCell = document.createElement('td');
             if (book.status === 'WITHDRAWN' || book.status === 'LOST') {

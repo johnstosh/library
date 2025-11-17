@@ -72,6 +72,10 @@ public class UserSettingsService {
             user.setLastPhotoTimestamp(userSettingsDto.getLastPhotoTimestamp());
         }
 
+        if (userSettingsDto.getLibraryCardDesign() != null) {
+            user.setLibraryCardDesign(userSettingsDto.getLibraryCardDesign());
+        }
+
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }

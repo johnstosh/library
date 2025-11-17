@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.dto;
 
+import com.muczynski.library.domain.LibraryCardDesign;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,4 +17,5 @@ public class UserSettingsDto {
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;
+    private LibraryCardDesign libraryCardDesign;
 }

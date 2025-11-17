@@ -44,6 +44,7 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             <tr>
                 <th scope="col">Photo</th>
                 <th scope="col">Book</th>
+                <th scope="col">LOC Number</th>
                 <th scope="col">Actions</th>
             </tr>
         `;
@@ -67,8 +68,36 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             row.appendChild(photoCell);
 
             const titleCell = document.createElement('td');
-            titleCell.textContent = book.title;
+            // Title on first line
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = book.title;
+            titleSpan.style.fontWeight = 'bold';
+            titleCell.appendChild(titleSpan);
+
+            // Author on second line
+            if (book.author && book.author.trim() !== '') {
+                titleCell.appendChild(document.createElement('br'));
+                const authorSpan = document.createElement('span');
+                authorSpan.textContent = book.author;
+                authorSpan.style.fontSize = '0.9em';
+                authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+                titleCell.appendChild(authorSpan);
+            }
             row.appendChild(titleCell);
+
+            const locCell = document.createElement('td');
+            if (book.locNumber) {
+                const locCode = document.createElement('code');
+                locCode.textContent = book.locNumber;
+                locCode.className = 'text-success';
+                locCell.appendChild(locCode);
+            } else {
+                const locSpan = document.createElement('span');
+                locSpan.textContent = '-';
+                locSpan.className = 'text-muted';
+                locCell.appendChild(locSpan);
+            }
+            row.appendChild(locCell);
 
             const actionsCell = document.createElement('td');
             const viewBtn = document.createElement('button');

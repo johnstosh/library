@@ -83,13 +83,8 @@ public class BookService {
     public List<BookDto> getAllBooks() {
         return bookRepository.findAll().stream()
                 .map(bookMapper::toDto)
-                .sorted(Comparator.comparing(bookDto -> {
-                    String title = bookDto.getTitle().toLowerCase();
-                    if (title.startsWith("the ")) {
-                        return title.substring(4);
-                    }
-                    return title;
-                }))
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
     }
 
@@ -223,7 +218,7 @@ public class BookService {
         if (!photos.isEmpty()) {
             Photo photo = photos.get(0);
             String question = """
-                Based on this book cover image, infer the book and author. Research details from a strictly Catholic perspective. Be frank in your assessments, 
+                Based on this book cover image, infer the book and author. Research details from a Catholic perspective. Be frank in your assessments, 
                 without providing a balanced view. Emphasize Catholic teachings, saints, and doctrine where applicable. If the content aligns with 
                 Catholic faith, praise it; if not, critique it with wisdom.
 
@@ -241,7 +236,7 @@ public class BookService {
                 - title: title of the book. If there's ambiguity, explain in plotSummary.
                 - publicationYear: publication year, if known. If there's any uncertainty, leave null.
                 - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave  null.
-                - locNumber: Library of Congress LC call number, if known. If unknown or uncertain, leave null.
+                - locNumber: leave null.
                 - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite. If a grokipedia.com article is available, 
                   then summarize the summary of that article and end with a URL to the article for more details.
                 - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.

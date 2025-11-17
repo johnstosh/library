@@ -59,7 +59,7 @@ function renderPhotosTable(photos) {
     tbody.innerHTML = '';
 
     if (photos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No photos in the database</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No photos in the database</td></tr>';
         return;
     }
 
@@ -71,19 +71,49 @@ function renderPhotosTable(photos) {
         idCell.textContent = photo.id;
         row.appendChild(idCell);
 
-        // Description
-        const descCell = document.createElement('td');
-        let description = photo.caption || '';
+        // Title/Author column
+        const titleCell = document.createElement('td');
         if (photo.bookTitle) {
-            description = `Book: ${photo.bookTitle}`;
+            // Book photo: show title on first line, author on second line
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = photo.bookTitle;
+            titleSpan.style.fontWeight = 'bold';
+            titleCell.appendChild(titleSpan);
+
+            if (photo.bookAuthorName && photo.bookAuthorName.trim() !== '') {
+                titleCell.appendChild(document.createElement('br'));
+                const authorSpan = document.createElement('span');
+                authorSpan.textContent = photo.bookAuthorName;
+                authorSpan.style.fontSize = '0.9em';
+                authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+                titleCell.appendChild(authorSpan);
+            }
         } else if (photo.authorName) {
-            description = `Author: ${photo.authorName}`;
+            // Author photo: show author name
+            const authorSpan = document.createElement('span');
+            authorSpan.textContent = photo.authorName;
+            authorSpan.style.fontWeight = 'bold';
+            titleCell.appendChild(authorSpan);
+        } else {
+            // Unknown photo: show caption or ID
+            titleCell.textContent = photo.caption || `Photo #${photo.id}`;
         }
-        if (!description) {
-            description = `Photo #${photo.id}`;
+        row.appendChild(titleCell);
+
+        // LOC Number column
+        const locCell = document.createElement('td');
+        if (photo.bookLocNumber) {
+            const locCode = document.createElement('code');
+            locCode.textContent = photo.bookLocNumber;
+            locCode.className = 'text-success';
+            locCell.appendChild(locCode);
+        } else {
+            const locSpan = document.createElement('span');
+            locSpan.textContent = '-';
+            locSpan.className = 'text-muted';
+            locCell.appendChild(locSpan);
         }
-        descCell.textContent = description;
-        row.appendChild(descCell);
+        row.appendChild(locCell);
 
         // Status
         const statusCell = document.createElement('td');
