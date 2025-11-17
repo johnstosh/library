@@ -30,7 +30,7 @@ async function loadSavedBooks() {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="5" class="text-center text-muted">No saved books found. Use Step 1 to select photos first.</td>';
+            row.innerHTML = '<td colspan="6" class="text-center text-muted">No saved books found. Use Step 1 to select photos first.</td>';
             tableBody.appendChild(row);
             clearError('books-from-feed');
             clearInfo('books-from-feed');
@@ -71,11 +71,41 @@ function createSavedBookRow(book) {
     }
     row.appendChild(photoCell);
 
-    // Temp title cell
+    // Title/Author cell (combined)
     const titleCell = document.createElement('td');
-    titleCell.textContent = book.title;
     titleCell.setAttribute('data-test', 'book-temp-title');
+
+    // Title on first line
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = book.title;
+    titleSpan.style.fontWeight = 'bold';
+    titleCell.appendChild(titleSpan);
+
+    // Author on second line
+    if (book.author && book.author.trim() !== '') {
+        titleCell.appendChild(document.createElement('br'));
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = book.author;
+        authorSpan.style.fontSize = '0.9em';
+        authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+        titleCell.appendChild(authorSpan);
+    }
     row.appendChild(titleCell);
+
+    // LOC Number cell
+    const locCell = document.createElement('td');
+    if (book.locNumber) {
+        const locCode = document.createElement('code');
+        locCode.textContent = book.locNumber;
+        locCode.className = 'text-success';
+        locCell.appendChild(locCode);
+    } else {
+        const locSpan = document.createElement('span');
+        locSpan.textContent = '-';
+        locSpan.className = 'text-muted';
+        locCell.appendChild(locSpan);
+    }
+    row.appendChild(locCell);
 
     // Status cell
     const statusCell = document.createElement('td');

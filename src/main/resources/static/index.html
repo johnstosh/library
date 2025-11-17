@@ -58,6 +58,9 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('loc-bulk-lookup', event)" data-test="menu-loc-bulk-lookup">LOC Bulk Lookup</button>
                 </li>
+                <li class="nav-item librarian-only">
+                    <button class="nav-link" onclick="showSection('labels', event)" data-test="menu-labels">Labels</button>
+                </li>
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('settings', event)" data-test="menu-settings">Settings</button>
                 </li>
@@ -284,7 +287,8 @@
                             <thead>
                                 <tr>
                                     <th>Photo</th>
-                                    <th>Temp Title</th>
+                                    <th>Title/Author</th>
+                                    <th>LOC Number</th>
                                     <th>Status</th>
                                     <th>Result</th>
                                     <th>Actions</th>
@@ -292,7 +296,7 @@
                             </thead>
                             <tbody id="saved-books-table-body" data-test="saved-books-table-body">
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
+                                    <td colspan="6" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -368,7 +372,8 @@
                             <thead>
                                 <tr>
                                     <th scope="col">ID</th>
-                                    <th scope="col">Description</th>
+                                    <th scope="col">Title/Author</th>
+                                    <th scope="col">LOC Number</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Backed Up At</th>
                                     <th scope="col">Permanent ID</th>
@@ -656,16 +661,51 @@
                 <thead>
                     <tr>
                         <th>Photo</th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Year</th>
-                        <th>Current LOC Number</th>
+                        <th>Book</th>
+                        <th>LOC Number</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
                     <tr>
-                        <td colspan="6" class="text-center">Click a button above to load books</td>
+                        <td colspan="4" class="text-center">Click a button above to load books</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="labels-section" class="section librarian-only" data-test="labels-section">
+            <h2 data-test="labels-header">Labels</h2>
+            <p class="text-muted">Generate Avery 6572 labels (2" x 2-5/8") for books with LOC call numbers.</p>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-primary" id="load-books-for-labels-btn" data-test="load-books-for-labels-btn">
+                    Load Books for Labels
+                </button>
+                <button type="button" class="btn btn-success ms-3" id="generate-all-labels-btn" data-test="generate-all-labels-btn">
+                    Generate PDF for All Books
+                </button>
+                <button type="button" class="btn btn-warning ms-2" id="generate-selected-labels-btn" data-test="generate-selected-labels-btn">
+                    Generate PDF for Selected
+                </button>
+            </div>
+
+            <div id="labels-results" class="alert alert-success" style="display: none;" data-test="labels-results"></div>
+            <div id="labels-error" class="alert alert-danger" style="display: none;" data-test="labels-error"></div>
+
+            <table class="table table-striped" data-test="labels-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
+                        <th>Photo</th>
+                        <th>Title/Author</th>
+                        <th>LOC Number</th>
+                        <th>Date Added</th>
+                    </tr>
+                </thead>
+                <tbody id="labels-table-body" data-test="labels-table-body">
+                    <tr>
+                        <td colspan="5" class="text-center">Click "Load Books for Labels" to see books</td>
                     </tr>
                 </tbody>
             </table>
@@ -747,6 +787,7 @@
 <script src="js/settings.js" type="module"></script>
 <script src="js/global-settings.js"></script>
 <script src="js/loc-bulk-lookup.js" type="module"></script>
+<script src="js/labels.js" type="module"></script>
 <script src="js/test-data.js"></script>
 <script src="js/utils.js" type="module"></script>
 <script src="js/auth.js" type="module"></script>

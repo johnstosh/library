@@ -44,7 +44,7 @@ async function loadLocLookupBooks(mode) {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="6" class="text-center">No books found</td>';
+            row.innerHTML = '<td colspan="4" class="text-center">No books found</td>';
             tableBody.appendChild(row);
             return;
         }
@@ -81,21 +81,26 @@ function createBookRow(book) {
     }
     row.appendChild(photoCell);
 
-    // Title cell
+    // Book cell (title + author)
     const titleCell = document.createElement('td');
-    titleCell.textContent = book.title;
     titleCell.setAttribute('data-test', 'book-title');
+
+    // Title on first line
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = book.title;
+    titleSpan.style.fontWeight = 'bold';
+    titleCell.appendChild(titleSpan);
+
+    // Author on second line
+    if (book.authorName && book.authorName.trim() !== '') {
+        titleCell.appendChild(document.createElement('br'));
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = book.authorName;
+        authorSpan.style.fontSize = '0.9em';
+        authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+        titleCell.appendChild(authorSpan);
+    }
     row.appendChild(titleCell);
-
-    // Author cell
-    const authorCell = document.createElement('td');
-    authorCell.textContent = book.authorName || '-';
-    row.appendChild(authorCell);
-
-    // Year cell
-    const yearCell = document.createElement('td');
-    yearCell.textContent = book.publicationYear || '-';
-    row.appendChild(yearCell);
 
     // LOC Number cell
     const locCell = document.createElement('td');

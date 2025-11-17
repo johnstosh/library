@@ -51,6 +51,9 @@ dependencies {
 
     // BYU Call Number library for sorting
     implementation 'edu.byu.hbll:callnumber:1.1.0'
+
+    // iText 7 for PDF generation (library cards)
+    implementation 'com.itextpdf:itext-core:8.0.5'
 }
 
 jar {

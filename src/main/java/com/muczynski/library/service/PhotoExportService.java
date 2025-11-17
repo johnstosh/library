@@ -477,6 +477,11 @@ public class PhotoExportService {
                 if (photo.getBook() != null) {
                     photoInfo.put("bookTitle", photo.getBook().getTitle());
                     photoInfo.put("bookId", photo.getBook().getId());
+                    photoInfo.put("bookLocNumber", photo.getBook().getLocNumber());
+                    // Include book's author if available
+                    if (photo.getBook().getAuthor() != null) {
+                        photoInfo.put("bookAuthorName", photo.getBook().getAuthor().getName());
+                    }
                 }
 
                 if (photo.getAuthor() != null) {
