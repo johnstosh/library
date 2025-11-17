@@ -35,7 +35,10 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         try {
+            logger.info("GET /api/users/me called, authentication: {}", authentication != null ? authentication.getClass().getName() : "null");
+
             if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("Authentication is null or not authenticated");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
@@ -44,6 +47,7 @@ public class UserController {
 
             // Handle both UserDetails (form login) and OAuth2User (SSO login)
             Object principal = authentication.getPrincipal();
+            logger.info("Principal type: {}", principal != null ? principal.getClass().getName() : "null");
             if (principal instanceof UserDetails) {
                 // Traditional form-based login
                 UserDetails userDetails = (UserDetails) principal;
@@ -73,6 +77,8 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
+            logger.info("Username determined: {}, roles: {}", username, roles);
+
             UserDto userDto = new UserDto();
             userDto.setUsername(username);
             userDto.setRoles(roles);
@@ -80,10 +86,13 @@ public class UserController {
             // Load full user details including ID and API key by username
             UserDto fullUser = userService.getUserByUsername(username);
             if (fullUser != null) {
+                logger.info("Found user in database: ID={}, username={}, ssoProvider={}", fullUser.getId(), fullUser.getUsername(), fullUser.getSsoProvider());
                 userDto.setId(fullUser.getId());
                 userDto.setXaiApiKey(fullUser.getXaiApiKey());
                 userDto.setSsoProvider(fullUser.getSsoProvider());
                 userDto.setEmail(fullUser.getEmail());
+            } else {
+                logger.warn("User not found in database for username: {}", username);
             }
 
             return ResponseEntity.ok(userDto);

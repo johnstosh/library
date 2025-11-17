@@ -33,8 +33,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        log.info("CustomOAuth2UserService.loadUser() called");
+
         // Get user info from OAuth2 provider (Google)
         OAuth2User oauth2User = super.loadUser(userRequest);
+
+        log.info("OAuth2User loaded successfully, attributes: {}", oauth2User.getAttributes());
 
         // Extract user attributes
         Map<String, Object> attributes = oauth2User.getAttributes();

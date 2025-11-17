@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/photos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/authors", "/api/libraries").permitAll()
                         .requestMatchers("/apply/api/**").hasAuthority("LIBRARIAN")
+                        .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
