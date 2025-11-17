@@ -8,7 +8,8 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
 import com.muczynski.library.repository.BookRepository;
-import edu.byu.hbll.marc.CallNumber;
+import edu.byu.hbll.callnumber.CallNumber;
+import edu.byu.hbll.callnumber.CallNumberParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -203,8 +204,9 @@ public class LocBulkLookupService {
 
             // Both have call numbers, use BYU library to compare
             try {
-                CallNumber cn1 = CallNumber.parse(loc1);
-                CallNumber cn2 = CallNumber.parse(loc2);
+                CallNumberParser parser = CallNumberParser.SYMPHONY_NONSTRICT;
+                CallNumber cn1 = parser.parse(loc1);
+                CallNumber cn2 = parser.parse(loc2);
                 return cn1.compareTo(cn2);
             } catch (Exception e) {
                 // If parsing fails, fall back to string comparison
