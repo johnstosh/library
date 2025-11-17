@@ -81,6 +81,50 @@ function displayGlobalSettings(settings) {
             configuredElement.innerHTML = '<span class="badge bg-warning">Not Configured</span>';
         }
     }
+
+    // Display SSO Client ID
+    const ssoClientIdElement = document.getElementById('global-sso-client-id');
+    if (ssoClientIdElement) {
+        ssoClientIdElement.textContent = settings.googleSsoClientId || '(not configured)';
+    }
+
+    // Display SSO Client ID configured status
+    const ssoClientIdConfiguredElement = document.getElementById('global-sso-client-id-configured');
+    if (ssoClientIdConfiguredElement) {
+        if (settings.googleSsoClientIdConfigured) {
+            ssoClientIdConfiguredElement.innerHTML = ' <span class="badge bg-success">Configured</span>';
+        } else {
+            ssoClientIdConfiguredElement.innerHTML = ' <span class="badge bg-warning">Not Configured</span>';
+        }
+    }
+
+    // Display SSO Client Secret partial
+    const ssoSecretPartialElement = document.getElementById('global-sso-secret-partial');
+    if (ssoSecretPartialElement) {
+        ssoSecretPartialElement.textContent = settings.googleSsoClientSecretPartial || '(not configured)';
+    }
+
+    // Display SSO Client Secret configured status
+    const ssoSecretConfiguredElement = document.getElementById('global-sso-secret-configured');
+    if (ssoSecretConfiguredElement) {
+        if (settings.googleSsoClientSecretConfigured) {
+            ssoSecretConfiguredElement.innerHTML = ' <span class="badge bg-success">Configured</span>';
+        } else {
+            ssoSecretConfiguredElement.innerHTML = ' <span class="badge bg-warning">Not Configured</span>';
+        }
+    }
+
+    // Display SSO credentials last updated timestamp
+    const ssoUpdatedElement = document.getElementById('global-sso-updated-at');
+    if (ssoUpdatedElement) {
+        if (settings.googleSsoCredentialsUpdatedAt) {
+            const date = new Date(settings.googleSsoCredentialsUpdatedAt);
+            ssoUpdatedElement.textContent = formatRelativeTime(date);
+            ssoUpdatedElement.title = date.toLocaleString();
+        } else {
+            ssoUpdatedElement.textContent = '(never)';
+        }
+    }
 }
 
 // Save global settings (librarian-only)
@@ -149,6 +193,80 @@ function showGlobalSettingsError(message) {
         errorDiv.style.display = 'block';
     }
 }
+
+// Save Google SSO settings (librarian-only)
+async function saveGlobalSsoSettings(event) {
+    event.preventDefault();
+
+    // Hide previous messages
+    const errorDiv = document.getElementById('global-sso-settings-error');
+    const successDiv = document.getElementById('global-sso-settings-success');
+    if (errorDiv) errorDiv.style.display = 'none';
+    if (successDiv) successDiv.style.display = 'none';
+
+    const clientId = document.getElementById('global-sso-client-id-input').value.trim();
+    const clientSecret = document.getElementById('global-sso-client-secret-input').value.trim();
+
+    if (!clientId && !clientSecret) {
+        showGlobalSsoSettingsError('Please enter at least one SSO credential to update');
+        return;
+    }
+
+    try {
+        const body = {};
+        if (clientId) body.googleSsoClientId = clientId;
+        if (clientSecret) body.googleSsoClientSecret = clientSecret;
+
+        const response = await fetch('/api/global-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            const updatedSettings = await response.json();
+            displayGlobalSettings(updatedSettings);
+
+            // Clear the input fields
+            document.getElementById('global-sso-client-id-input').value = '';
+            document.getElementById('global-sso-client-secret-input').value = '';
+
+            // Show success message
+            showGlobalSsoSettingsSuccess('Google SSO credentials updated successfully!');
+        } else if (response.status === 403) {
+            showGlobalSsoSettingsError('Permission denied. Only librarians can update global settings.');
+        } else {
+            showGlobalSsoSettingsError('Failed to update SSO credentials. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error saving SSO settings:', error);
+        showGlobalSsoSettingsError('Error saving SSO credentials. Please try again.');
+    }
+}
+
+// Show SSO settings success message
+function showGlobalSsoSettingsSuccess(message) {
+    const successDiv = document.getElementById('global-sso-settings-success');
+    if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+    }
+}
+
+// Show SSO settings error message
+function showGlobalSsoSettingsError(message) {
+    const errorDiv = document.getElementById('global-sso-settings-error');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+// Expose functions globally for HTML onclick handlers
+window.saveGlobalSsoSettings = saveGlobalSsoSettings;
 
 // Format relative time (e.g., "5 minutes ago", "2 hours ago")
 function formatRelativeTime(date) {

@@ -34,6 +34,12 @@ public class GlobalSettingsService {
     @Value("${GOOGLE_CLIENT_SECRET:}")
     private String envClientSecret;
 
+    @Value("${GOOGLE_SSO_CLIENT_ID:}")
+    private String envSsoClientId;
+
+    @Value("${GOOGLE_SSO_CLIENT_SECRET:}")
+    private String envSsoClientSecret;
+
     /**
      * Get the global settings singleton
      */
@@ -90,6 +96,33 @@ public class GlobalSettingsService {
         // Don't include the actual secret in responses
         dto.setGoogleClientSecret(null);
 
+        // Handle Google SSO credentials
+        String effectiveSsoClientId = getEffectiveSsoClientId();
+        String effectiveSsoClientSecret = getEffectiveSsoClientSecret();
+
+        dto.setGoogleSsoClientId(effectiveSsoClientId);
+        dto.setGoogleSsoCredentialsUpdatedAt(settings.getGoogleSsoCredentialsUpdatedAt());
+
+        // Set SSO Client ID configured status
+        dto.setGoogleSsoClientIdConfigured(effectiveSsoClientId != null && !effectiveSsoClientId.isEmpty());
+
+        // Set partial SSO secret for verification
+        if (effectiveSsoClientSecret != null && !effectiveSsoClientSecret.trim().isEmpty()) {
+            dto.setGoogleSsoClientSecretConfigured(true);
+            if (effectiveSsoClientSecret.length() >= 4) {
+                String lastFour = effectiveSsoClientSecret.substring(effectiveSsoClientSecret.length() - 4);
+                dto.setGoogleSsoClientSecretPartial("..." + lastFour);
+            } else {
+                dto.setGoogleSsoClientSecretPartial("(too short)");
+            }
+        } else {
+            dto.setGoogleSsoClientSecretConfigured(false);
+            dto.setGoogleSsoClientSecretPartial("(not configured)");
+        }
+
+        // Don't include the actual SSO secret in responses
+        dto.setGoogleSsoClientSecret(null);
+
         return dto;
     }
 
@@ -133,6 +166,23 @@ public class GlobalSettingsService {
         if (dto.getRedirectUri() != null && !dto.getRedirectUri().trim().isEmpty()) {
             logger.info("Updating redirect URI reference: {}", dto.getRedirectUri());
             settings.setRedirectUri(dto.getRedirectUri().trim());
+            updated = true;
+        }
+
+        // Update SSO Client ID if provided
+        if (dto.getGoogleSsoClientId() != null && !dto.getGoogleSsoClientId().trim().isEmpty()) {
+            logger.info("Updating Google SSO Client ID");
+            settings.setGoogleSsoClientId(dto.getGoogleSsoClientId().trim());
+            settings.setGoogleSsoCredentialsUpdatedAt(Instant.now());
+            updated = true;
+        }
+
+        // Update SSO Client Secret if provided
+        if (dto.getGoogleSsoClientSecret() != null && !dto.getGoogleSsoClientSecret().trim().isEmpty()) {
+            String newSecret = dto.getGoogleSsoClientSecret().trim();
+            logger.info("Updating Google SSO Client Secret (length: {} chars)", newSecret.length());
+            settings.setGoogleSsoClientSecret(newSecret);
+            settings.setGoogleSsoCredentialsUpdatedAt(Instant.now());
             updated = true;
         }
 
@@ -195,5 +245,54 @@ public class GlobalSettingsService {
     public boolean isClientSecretConfigured() {
         String secret = getEffectiveClientSecret();
         return secret != null && !secret.isEmpty();
+    }
+
+    /**
+     * Get the effective SSO Client ID (from database or environment variable)
+     */
+    public String getEffectiveSsoClientId() {
+        GlobalSettings settings = getGlobalSettings();
+        String dbClientId = settings.getGoogleSsoClientId();
+
+        // Prefer database value over environment variable
+        if (dbClientId != null && !dbClientId.trim().isEmpty()) {
+            logger.debug("Using SSO Client ID from database");
+            return dbClientId.trim();
+        } else if (envSsoClientId != null && !envSsoClientId.trim().isEmpty()) {
+            logger.debug("Using SSO Client ID from environment variable");
+            return envSsoClientId.trim();
+        } else {
+            logger.debug("No SSO Client ID configured");
+            return "";
+        }
+    }
+
+    /**
+     * Get the effective SSO Client Secret (from database or environment variable)
+     */
+    public String getEffectiveSsoClientSecret() {
+        GlobalSettings settings = getGlobalSettings();
+        String dbSecret = settings.getGoogleSsoClientSecret();
+
+        // Prefer database value over environment variable
+        if (dbSecret != null && !dbSecret.trim().isEmpty()) {
+            logger.debug("Using SSO Client Secret from database (length: {} chars)", dbSecret.length());
+            return dbSecret.trim();
+        } else if (envSsoClientSecret != null && !envSsoClientSecret.trim().isEmpty()) {
+            logger.debug("Using SSO Client Secret from environment variable (length: {} chars)", envSsoClientSecret.length());
+            return envSsoClientSecret.trim();
+        } else {
+            logger.debug("No SSO Client Secret configured");
+            return "";
+        }
+    }
+
+    /**
+     * Check if SSO credentials are configured
+     */
+    public boolean isSsoCredentialsConfigured() {
+        String clientId = getEffectiveSsoClientId();
+        String clientSecret = getEffectiveSsoClientSecret();
+        return clientId != null && !clientId.isEmpty() && clientSecret != null && !clientSecret.isEmpty();
     }
 }

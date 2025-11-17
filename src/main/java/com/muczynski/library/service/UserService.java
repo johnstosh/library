@@ -85,6 +85,7 @@ public class UserService {
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
         Role role = roleRepository.findByName(dto.getRole()).orElseGet(() -> {
             Role newRole = new Role();
@@ -107,6 +108,7 @@ public class UserService {
         User user = new User();
         user.setUsername(applied.getName());
         user.setPassword(applied.getPassword()); // Already encoded from Applied creation
+        user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
         Role role = roleRepository.findByName("USER").orElseGet(() -> {
             Role newRole = new Role();
@@ -123,6 +125,10 @@ public class UserService {
 
     public UserDto updateUser(Long id, CreateUserDto dto) {
         User user = userRepository.findById(id).orElseThrow(() -> new LibraryException("User not found: " + id));
+
+        // Check if user is SSO user
+        boolean isSsoUser = user.getSsoProvider() != null && !user.getSsoProvider().equals("local");
+
         if (dto.getUsername() != null && !dto.getUsername().isEmpty() && !dto.getUsername().equals(user.getUsername())) {
             if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
                 throw new LibraryException("Username already exists");
@@ -130,6 +136,10 @@ public class UserService {
             user.setUsername(dto.getUsername());
         }
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+            // Prevent password updates for SSO users
+            if (isSsoUser) {
+                throw new LibraryException("Cannot update password for SSO user");
+            }
             // Validate password is SHA-256 hash from frontend
             if (!PasswordHashingUtil.isValidSHA256Hash(dto.getPassword())) {
                 throw new LibraryException("Invalid password format - expected SHA-256 hash");

@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,26 +33,71 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/me")
-    public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         try {
-            if (userDetails == null) {
+            logger.info("GET /api/users/me called, authentication: {}", authentication != null ? authentication.getClass().getName() : "null");
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.warn("Authentication is null or not authenticated");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
+
+            String username = null;
+            Set<String> roles = null;
+
+            // Handle both UserDetails (form login) and OAuth2User (SSO login)
+            Object principal = authentication.getPrincipal();
+            logger.info("Principal type: {}", principal != null ? principal.getClass().getName() : "null");
+            if (principal instanceof UserDetails) {
+                // Traditional form-based login
+                UserDetails userDetails = (UserDetails) principal;
+                username = userDetails.getUsername();
+                roles = userDetails.getAuthorities().stream()
+                        .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                        .collect(Collectors.toSet());
+            } else if (principal instanceof OAuth2User) {
+                // OAuth2 SSO login
+                OAuth2User oauth2User = (OAuth2User) principal;
+                // For Google OAuth2, the email is used as the username
+                username = oauth2User.getAttribute("email");
+                if (username == null) {
+                    // Fallback to 'sub' if email not available
+                    username = oauth2User.getAttribute("sub");
+                }
+                roles = authentication.getAuthorities().stream()
+                        .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                        .collect(Collectors.toSet());
+            } else {
+                logger.warn("Unknown principal type: {}", principal.getClass().getName());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            if (username == null) {
+                logger.warn("Could not determine username from principal");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            logger.info("Username determined: {}, roles: {}", username, roles);
+
             UserDto userDto = new UserDto();
-            userDto.setUsername(userDetails.getUsername());
-            Set<String> roles = userDetails.getAuthorities().stream()
-                    .map(auth -> auth.getAuthority().replace("ROLE_", ""))
-                    .collect(Collectors.toSet());
+            userDto.setUsername(username);
             userDto.setRoles(roles);
+
             // Load full user details including ID and API key by username
-            UserDto fullUser = userService.getUserByUsername(userDetails.getUsername());
+            UserDto fullUser = userService.getUserByUsername(username);
             if (fullUser != null) {
+                logger.info("Found user in database: ID={}, username={}, ssoProvider={}", fullUser.getId(), fullUser.getUsername(), fullUser.getSsoProvider());
                 userDto.setId(fullUser.getId());
                 userDto.setXaiApiKey(fullUser.getXaiApiKey());
+                userDto.setSsoProvider(fullUser.getSsoProvider());
+                userDto.setEmail(fullUser.getEmail());
+            } else {
+                logger.warn("User not found in database for username: {}", username);
             }
+
             return ResponseEntity.ok(userDto);
         } catch (Exception e) {
-            logger.warn("Failed to get current user for {}: {}", userDetails != null ? userDetails.getUsername() : "unknown", e.getMessage(), e);
+            logger.warn("Failed to get current user: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
