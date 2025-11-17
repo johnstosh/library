@@ -5,6 +5,8 @@ package com.muczynski.library.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +28,8 @@ import java.io.IOException;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
@@ -94,10 +98,19 @@ public class SecurityConfig {
                                                                 HttpServletResponse response,
                                                                 Authentication authentication) throws IOException {
                                 // Redirect to home page after successful OAuth2 login
+                                logger.info("OAuth2 login successful for: {}", authentication.getName());
                                 response.sendRedirect("/");
                             }
                         })
-                        .failureUrl("/?error=true")
+                        .failureHandler((request, response, exception) -> {
+                            logger.error("OAuth2 login failed", exception);
+                            logger.error("Exception type: {}", exception.getClass().getName());
+                            logger.error("Exception message: {}", exception.getMessage());
+                            if (exception.getCause() != null) {
+                                logger.error("Cause: {}", exception.getCause().getMessage());
+                            }
+                            response.sendRedirect("/?error=true");
+                        })
                 )
                 .logout(logout -> logout.permitAll());
         return http.build();

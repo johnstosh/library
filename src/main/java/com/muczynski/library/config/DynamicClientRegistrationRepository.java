@@ -30,6 +30,8 @@ public class DynamicClientRegistrationRepository implements ClientRegistrationRe
 
     @Override
     public ClientRegistration findByRegistrationId(String registrationId) {
+        logger.info("findByRegistrationId called with: {}", registrationId);
+
         if (!"google".equals(registrationId)) {
             logger.debug("Unsupported registration ID: {}", registrationId);
             return null;
@@ -38,6 +40,10 @@ public class DynamicClientRegistrationRepository implements ClientRegistrationRe
         String clientId = globalSettingsService.getEffectiveSsoClientId();
         String clientSecret = globalSettingsService.getEffectiveSsoClientSecret();
 
+        logger.info("Retrieved SSO credentials - Client ID: {}, Client Secret length: {}",
+                    clientId != null ? clientId : "null",
+                    clientSecret != null ? clientSecret.length() : 0);
+
         if (clientId == null || clientId.isEmpty() || clientSecret == null || clientSecret.isEmpty()) {
             logger.warn("Google SSO credentials not configured in GlobalSettings");
             return null;
@@ -45,7 +51,7 @@ public class DynamicClientRegistrationRepository implements ClientRegistrationRe
 
         logger.debug("Building Google SSO ClientRegistration with Client ID: {}", clientId);
 
-        return ClientRegistration.withRegistrationId("google")
+        ClientRegistration registration = ClientRegistration.withRegistrationId("google")
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
@@ -59,5 +65,8 @@ public class DynamicClientRegistrationRepository implements ClientRegistrationRe
                 .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
                 .clientName("Google")
                 .build();
+
+        logger.info("Successfully built ClientRegistration for Google SSO");
+        return registration;
     }
 }
