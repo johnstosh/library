@@ -27,6 +27,21 @@ async function loadBooks() {
             titleCell.appendChild(titleSpan);
             row.appendChild(titleCell);
 
+            const locCell = document.createElement('td');
+            locCell.setAttribute('data-test', 'book-loc-number');
+            if (book.locNumber) {
+                const locCode = document.createElement('code');
+                locCode.textContent = book.locNumber;
+                locCode.className = 'text-success';
+                locCell.appendChild(locCode);
+            } else {
+                const locSpan = document.createElement('span');
+                locSpan.textContent = '-';
+                locSpan.className = 'text-muted';
+                locCell.appendChild(locSpan);
+            }
+            row.appendChild(locCell);
+
             const loansCell = document.createElement('td');
             if (book.status === 'WITHDRAWN' || book.status === 'LOST') {
                 loansCell.textContent = book.status.toLowerCase();

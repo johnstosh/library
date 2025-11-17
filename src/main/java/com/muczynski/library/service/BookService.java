@@ -83,13 +83,8 @@ public class BookService {
     public List<BookDto> getAllBooks() {
         return bookRepository.findAll().stream()
                 .map(bookMapper::toDto)
-                .sorted(Comparator.comparing(bookDto -> {
-                    String title = bookDto.getTitle().toLowerCase();
-                    if (title.startsWith("the ")) {
-                        return title.substring(4);
-                    }
-                    return title;
-                }))
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
     }
 

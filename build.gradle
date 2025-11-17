@@ -48,6 +48,9 @@ dependencies {
 
     // Marc4J for LOC call number lookup
     implementation 'org.marc4j:marc4j:2.9.5'
+
+    // BYU Call Number library for sorting
+    implementation 'edu.byu.library:callnumber:1.0.0'
 }
 
 jar {

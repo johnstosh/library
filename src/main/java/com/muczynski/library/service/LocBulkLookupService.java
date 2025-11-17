@@ -8,6 +8,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
 import com.muczynski.library.repository.BookRepository;
+import edu.byu.library.CallNumber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,23 +33,26 @@ public class LocBulkLookupService {
     private final LocCatalogService locCatalogService;
 
     /**
-     * Get all books with their current LOC status
+     * Get all books with their current LOC status, sorted by call number
+     * (blank/missing call numbers at the top)
      */
     public List<BookLocStatusDto> getAllBooksWithLocStatus() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
+                .sorted(createCallNumberComparator())
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get books that don't have LOC numbers
+     * Get books that don't have LOC numbers, sorted by title
      */
     public List<BookLocStatusDto> getBooksWithMissingLoc() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .filter(book -> book.getLocNumber() == null || book.getLocNumber().trim().isEmpty())
                 .map(this::mapToBookLocStatusDto)
+                .sorted(Comparator.comparing(BookLocStatusDto::getTitle, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
     }
 
@@ -170,5 +175,43 @@ public class LocBulkLookupService {
                     ? book.getPhotos().get(0).getId()
                     : null)
                 .build();
+    }
+
+    /**
+     * Create a comparator for sorting by call number
+     * Books with missing/blank call numbers are sorted to the top
+     */
+    private Comparator<BookLocStatusDto> createCallNumberComparator() {
+        return (book1, book2) -> {
+            String loc1 = book1.getCurrentLocNumber();
+            String loc2 = book2.getCurrentLocNumber();
+
+            // Handle null or blank call numbers - they should appear at the top
+            boolean isBlank1 = loc1 == null || loc1.trim().isEmpty();
+            boolean isBlank2 = loc2 == null || loc2.trim().isEmpty();
+
+            if (isBlank1 && isBlank2) {
+                // Both blank, sort by title
+                return book1.getTitle().compareToIgnoreCase(book2.getTitle());
+            }
+            if (isBlank1) {
+                return -1; // book1 comes first
+            }
+            if (isBlank2) {
+                return 1; // book2 comes first
+            }
+
+            // Both have call numbers, use BYU library to compare
+            try {
+                CallNumber cn1 = CallNumber.parse(loc1);
+                CallNumber cn2 = CallNumber.parse(loc2);
+                return cn1.compareTo(cn2);
+            } catch (Exception e) {
+                // If parsing fails, fall back to string comparison
+                log.warn("Failed to parse call numbers for comparison: '{}' vs '{}': {}",
+                        loc1, loc2, e.getMessage());
+                return loc1.compareToIgnoreCase(loc2);
+            }
+        };
     }
 }
