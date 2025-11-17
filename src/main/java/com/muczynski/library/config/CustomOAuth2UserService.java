@@ -92,9 +92,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         user.setGooglePhotosAlbumId("");
         user.setLastPhotoTimestamp("");
 
-        // Assign default USER role
+        // Assign default USER role (create if doesn't exist)
         Role userRole = roleRepository.findByName("USER")
-                .orElseThrow(() -> new RuntimeException("USER role not found in database"));
+                .orElseGet(() -> {
+                    log.info("USER role not found, creating it");
+                    Role newRole = new Role();
+                    newRole.setName("USER");
+                    return roleRepository.save(newRole);
+                });
 
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
