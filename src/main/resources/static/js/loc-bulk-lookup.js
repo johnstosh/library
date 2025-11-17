@@ -4,10 +4,31 @@
 import { fetchData, showError, showSuccess, clearError, clearSuccess } from './utils.js';
 
 /**
+ * Initialize event listeners when DOM is ready
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listeners to buttons
+    const viewAllBtn = document.getElementById('view-all-books-btn');
+    if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', () => loadLocLookupBooks('all'));
+    }
+
+    const viewMissingBtn = document.getElementById('view-missing-loc-btn');
+    if (viewMissingBtn) {
+        viewMissingBtn.addEventListener('click', () => loadLocLookupBooks('missing'));
+    }
+
+    const lookupAllBtn = document.getElementById('lookup-all-missing-btn');
+    if (lookupAllBtn) {
+        lookupAllBtn.addEventListener('click', () => lookupAllMissing());
+    }
+});
+
+/**
  * Load books for LOC lookup table
  * @param {string} mode - 'all' or 'missing'
  */
-window.loadLocLookupBooks = async function(mode) {
+async function loadLocLookupBooks(mode) {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
@@ -109,7 +130,7 @@ function createBookRow(book) {
 /**
  * Lookup LOC number for a single book
  */
-window.lookupSingleBook = async function(bookId) {
+async function lookupSingleBook(bookId) {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
@@ -162,7 +183,7 @@ window.lookupSingleBook = async function(bookId) {
 /**
  * Lookup LOC numbers for all books missing LOC numbers
  */
-window.lookupAllMissing = async function() {
+async function lookupAllMissing() {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');

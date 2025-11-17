@@ -537,14 +537,14 @@
 
             <div class="mb-3">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-primary" onclick="loadLocLookupBooks('all')" data-test="view-all-books-btn">
+                    <button type="button" class="btn btn-primary" id="view-all-books-btn" data-test="view-all-books-btn">
                         View All Books
                     </button>
-                    <button type="button" class="btn btn-warning" onclick="loadLocLookupBooks('missing')" data-test="view-missing-loc-btn">
+                    <button type="button" class="btn btn-warning" id="view-missing-loc-btn" data-test="view-missing-loc-btn">
                         View Books Missing LOC
                     </button>
                 </div>
-                <button type="button" class="btn btn-success ms-3" onclick="lookupAllMissing()" data-test="lookup-all-missing-btn">
+                <button type="button" class="btn btn-success ms-3" id="lookup-all-missing-btn" data-test="lookup-all-missing-btn">
                     Lookup All Missing LOC Numbers
                 </button>
             </div>
