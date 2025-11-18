@@ -38,7 +38,11 @@ public class AuthorService {
 
     public List<AuthorDto> getAllAuthors() {
         return authorRepository.findAll().stream()
-                .map(authorMapper::toDto)
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
                 .sorted(Comparator.comparing(author -> {
                     if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
                         return null;
@@ -51,7 +55,11 @@ public class AuthorService {
 
     public AuthorDto getAuthorById(Long id) {
         return authorRepository.findById(id)
-                .map(authorMapper::toDto)
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
                 .orElse(null);
     }
 
