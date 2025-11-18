@@ -477,13 +477,18 @@ export async function hashPassword(password) {
  * library book spine labels have limited horizontal space. Breaking up
  * the call number makes it easier to read vertically on the spine.
  *
- * Example:
+ * Examples:
  *   Input:  "BX 4705.M124 A77 2005"
  *   Output: "BX<br>4705<br>.M124<br>A77<br>2005"
  *
+ *   Input:  "BV210 .3 .B464 2013"
+ *   Output: "BV<br>210<br>.3<br>.B464<br>2013"
+ *
  * The parsing rules are:
  * 1. Split by spaces to get major components
- * 2. For components containing a period (e.g., "4705.M124"), split at the
+ * 2. For components that start with letters followed by digits (e.g., "BV210"),
+ *    split into the letter prefix and the rest (e.g., "BV", "210")
+ * 3. For components containing a period (e.g., "4705.M124"), split at the
  *    period keeping the period with the second part (e.g., "4705", ".M124")
  *
  * @param {string} locNumber - The LOC call number to format
@@ -498,6 +503,38 @@ export function formatLocForSpine(locNumber) {
     const spaceParts = locNumber.trim().split(/\s+/);
 
     for (const part of spaceParts) {
+        // First, check if this part starts with letters followed by digits (like "BV210")
+        // This handles cases where class letters and numbers are not separated by space
+        if (part.length > 1 && /^[a-zA-Z]/.test(part.charAt(0))) {
+            let firstDigitIndex = -1;
+            for (let i = 0; i < part.length; i++) {
+                if (/\d/.test(part.charAt(i))) {
+                    firstDigitIndex = i;
+                    break;
+                }
+            }
+
+            // If we found digits after letters, split there
+            if (firstDigitIndex > 0) {
+                const letterPart = part.substring(0, firstDigitIndex);
+                const restPart = part.substring(firstDigitIndex);
+
+                // Add the letter part
+                parts.push(letterPart);
+
+                // Now process the rest (which starts with digits) for periods
+                const periodIndex = restPart.indexOf('.');
+                if (periodIndex > 0) {
+                    parts.push(restPart.substring(0, periodIndex));
+                    parts.push(restPart.substring(periodIndex));
+                } else {
+                    parts.push(restPart);
+                }
+                continue;
+            }
+        }
+
+        // Check if this part contains a period (like "4705.M124")
         const periodIndex = part.indexOf('.');
         if (periodIndex > 0) {
             // Split at the period, keeping the period with the second part
