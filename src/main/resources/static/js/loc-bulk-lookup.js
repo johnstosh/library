@@ -102,7 +102,7 @@ function createBookRow(book) {
     }
     row.appendChild(titleCell);
 
-    // LOC Number cell
+    // LOC Call Number cell
     const locCell = document.createElement('td');
     locCell.setAttribute('data-test', 'loc-number');
     if (book.currentLocNumber) {

@@ -92,7 +92,7 @@ function createSavedBookRow(book) {
     }
     row.appendChild(titleCell);
 
-    // LOC Number cell
+    // LOC Call Number cell
     const locCell = document.createElement('td');
     if (book.locNumber) {
         const locCode = document.createElement('code');
