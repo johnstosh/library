@@ -44,6 +44,7 @@ function resetBookForm() {
     document.getElementById('add-photo-btn').style.display = 'none';
     document.getElementById('add-photo-google-btn').style.display = 'none';
     document.getElementById('cancel-book-btn').style.display = 'none';
+    document.getElementById('clone-book-btn').style.display = 'none';
     document.getElementById('book-by-photo-btn').style.display = 'none';
     document.getElementById('book-by-photo-btn').onclick = null;
     document.getElementById('book-photos-container').style.display = 'none';
@@ -130,6 +131,7 @@ async function prepareNewBookForPhoto(title) {
         document.getElementById('add-photo-btn').style.display = 'inline-block';
         document.getElementById('add-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-book-btn').style.display = 'inline-block';
+        document.getElementById('clone-book-btn').style.display = 'inline-block';
         document.getElementById('book-by-photo-btn').style.display = 'none'; // Hidden until photo added
         document.getElementById('book-by-photo-btn').onclick = null;
 
@@ -224,6 +226,7 @@ async function editBook(id) {
     document.getElementById('add-photo-btn').style.display = 'inline-block';
     document.getElementById('add-photo-google-btn').style.display = 'inline-block';
     document.getElementById('cancel-book-btn').style.display = 'inline-block';
+    document.getElementById('clone-book-btn').style.display = 'inline-block';
 
     const photos = await fetchData(`/api/books/${id}/photos`);
     await displayBookPhotos(photos, id);
@@ -330,6 +333,33 @@ async function updateBook(id) {
         showBookList(true);
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
+    }
+}
+
+async function cloneBook() {
+    const bookId = document.getElementById('current-book-id').value;
+    if (!bookId) {
+        showError('books', 'No book selected to clone.');
+        return;
+    }
+
+    try {
+        document.body.style.cursor = 'wait';
+        const clonedBook = await postData(`/api/books/${bookId}/clone`);
+
+        // Reload the books list
+        await loadBooks();
+        await populateLoanDropdowns();
+
+        // Open the cloned book in edit mode
+        await editBook(clonedBook.id);
+
+        showSuccess('books', `Book cloned successfully as "${clonedBook.title}"`);
+        clearError('books');
+    } catch (error) {
+        showError('books', 'Failed to clone book: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
     }
 }
 

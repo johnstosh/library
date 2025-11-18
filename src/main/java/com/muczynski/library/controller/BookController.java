@@ -102,6 +102,18 @@ public class BookController {
         }
     }
 
+    @PostMapping("/{id}/clone")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> cloneBook(@PathVariable Long id) {
+        try {
+            BookDto cloned = bookService.cloneBook(id);
+            return ResponseEntity.status(HttpStatus.CREATED).body(cloned);
+        } catch (Exception e) {
+            logger.warn("Failed to clone book ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {

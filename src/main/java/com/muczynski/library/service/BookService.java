@@ -129,6 +129,71 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    public BookDto cloneBook(Long id) {
+        Book original = bookRepository.findById(id)
+                .orElseThrow(() -> new LibraryException("Book not found: " + id));
+
+        // Generate new title with copy number
+        String newTitle = generateCloneTitle(original.getTitle());
+
+        // Create new book with same data but new title
+        Book clone = new Book();
+        clone.setTitle(newTitle);
+        clone.setPublicationYear(original.getPublicationYear());
+        clone.setPublisher(original.getPublisher());
+        clone.setPlotSummary(original.getPlotSummary());
+        clone.setRelatedWorks(original.getRelatedWorks());
+        clone.setDetailedDescription(original.getDetailedDescription());
+        clone.setDateAddedToLibrary(LocalDate.now());
+        clone.setStatus(original.getStatus());
+        clone.setLocNumber(original.getLocNumber());
+        clone.setStatusReason(original.getStatusReason());
+        clone.setAuthor(original.getAuthor());
+        clone.setLibrary(original.getLibrary());
+
+        Book savedClone = bookRepository.save(clone);
+        logger.info("Cloned book ID {} to new book ID {} with title '{}'", id, savedClone.getId(), newTitle);
+        return bookMapper.toDto(savedClone);
+    }
+
+    private String generateCloneTitle(String originalTitle) {
+        // Extract base title by removing any existing ", c. N" suffix
+        String baseTitle = originalTitle;
+        int copyIndex = 1;
+
+        // Check if title already ends with ", c. N" pattern (case insensitive)
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("^(.+),\\s*[cC]\\.\\s*(\\d+)$");
+        java.util.regex.Matcher matcher = pattern.matcher(originalTitle);
+        if (matcher.matches()) {
+            baseTitle = matcher.group(1);
+        }
+
+        // Find all existing books with the same base title
+        List<Book> allBooks = bookRepository.findAll();
+        int maxCopyNumber = 1;
+
+        for (Book book : allBooks) {
+            String bookTitle = book.getTitle();
+
+            // Check if this book's title matches the base title exactly
+            if (bookTitle.equals(baseTitle)) {
+                maxCopyNumber = Math.max(maxCopyNumber, 1);
+            }
+
+            // Check if this book's title matches the pattern "baseTitle, c. N"
+            java.util.regex.Matcher bookMatcher = java.util.regex.Pattern
+                    .compile("^" + java.util.regex.Pattern.quote(baseTitle) + ",\\s*[cC]\\.\\s*(\\d+)$")
+                    .matcher(bookTitle);
+            if (bookMatcher.matches()) {
+                int num = Integer.parseInt(bookMatcher.group(1));
+                maxCopyNumber = Math.max(maxCopyNumber, num);
+            }
+        }
+
+        // Return the next copy number
+        return baseTitle + ", c. " + (maxCopyNumber + 1);
+    }
+
     private void handleRandomAuthor(BookDto dto) {
         Author randomAuthorEntity = randomAuthor.create();
 
