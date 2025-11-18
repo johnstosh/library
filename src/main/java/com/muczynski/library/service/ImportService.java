@@ -115,11 +115,21 @@ public class ImportService {
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
                     for (String rName : uDto.getRoles()) {
-                        Role role = roleRepository.findByName(rName).orElseGet(() -> {
+                        // Use list-based query to handle potential duplicates gracefully
+                        List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(rName);
+                        Role role;
+                        if (existingRoles.isEmpty()) {
                             Role r = new Role();
                             r.setName(rName);
-                            return roleRepository.save(r);
-                        });
+                            role = roleRepository.save(r);
+                        } else {
+                            role = existingRoles.get(0); // Select the one with the lowest ID
+                            if (existingRoles.size() > 1) {
+                                logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                                           "Consider cleaning up duplicate entries in the database.",
+                                           existingRoles.size(), rName, role.getId());
+                            }
+                        }
                         roles.add(role);
                     }
                     user.setRoles(roles);

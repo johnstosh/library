@@ -100,11 +100,21 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
-        Role role = roleRepository.findByName(dto.getRole()).orElseGet(() -> {
+        // Use list-based query to handle potential duplicates gracefully
+        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(dto.getRole());
+        Role role;
+        if (existingRoles.isEmpty()) {
             Role newRole = new Role();
             newRole.setName(dto.getRole());
-            return roleRepository.save(newRole);
-        });
+            role = roleRepository.save(newRole);
+        } else {
+            role = existingRoles.get(0); // Select the one with the lowest ID
+            if (existingRoles.size() > 1) {
+                logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                           "Consider cleaning up duplicate entries in the database.",
+                           existingRoles.size(), dto.getRole(), role.getId());
+            }
+        }
         user.setRoles(Collections.singleton(role));
 
         User savedUser = userRepository.save(user);
@@ -124,11 +134,21 @@ public class UserService {
         user.setPassword(applied.getPassword()); // Already encoded from Applied creation
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
-        Role role = roleRepository.findByName("USER").orElseGet(() -> {
+        // Use list-based query to handle potential duplicates gracefully
+        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("USER");
+        Role role;
+        if (existingRoles.isEmpty()) {
             Role newRole = new Role();
             newRole.setName("USER");
-            return roleRepository.save(newRole);
-        });
+            role = roleRepository.save(newRole);
+        } else {
+            role = existingRoles.get(0); // Select the one with the lowest ID
+            if (existingRoles.size() > 1) {
+                logger.warn("Found {} duplicate roles with name 'USER'. Using role with lowest ID: {}. " +
+                           "Consider cleaning up duplicate entries in the database.",
+                           existingRoles.size(), role.getId());
+            }
+        }
         user.setRoles(Collections.singleton(role));
 
         User savedUser = userRepository.save(user);
@@ -161,11 +181,21 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
         if (dto.getRole() != null && !dto.getRole().isEmpty()) {
-            Role role = roleRepository.findByName(dto.getRole()).orElseGet(() -> {
+            // Use list-based query to handle potential duplicates gracefully
+            java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(dto.getRole());
+            Role role;
+            if (existingRoles.isEmpty()) {
                 Role newRole = new Role();
                 newRole.setName(dto.getRole());
-                return roleRepository.save(newRole);
-            });
+                role = roleRepository.save(newRole);
+            } else {
+                role = existingRoles.get(0); // Select the one with the lowest ID
+                if (existingRoles.size() > 1) {
+                    logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                               "Consider cleaning up duplicate entries in the database.",
+                               existingRoles.size(), dto.getRole(), role.getId());
+                }
+            }
             user.getRoles().clear();
             user.getRoles().add(role);
         }

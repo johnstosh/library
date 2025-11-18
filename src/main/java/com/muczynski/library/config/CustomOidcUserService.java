@@ -120,13 +120,22 @@ public class CustomOidcUserService extends OidcUserService {
         user.setLastPhotoTimestamp("");
 
         // Assign default USER role (create if doesn't exist)
-        Role userRole = roleRepository.findByName("USER")
-                .orElseGet(() -> {
-                    log.info("USER role not found, creating it");
-                    Role newRole = new Role();
-                    newRole.setName("USER");
-                    return roleRepository.save(newRole);
-                });
+        // Use list-based query to handle potential duplicates gracefully
+        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("USER");
+        Role userRole;
+        if (existingRoles.isEmpty()) {
+            log.info("USER role not found, creating it");
+            Role newRole = new Role();
+            newRole.setName("USER");
+            userRole = roleRepository.save(newRole);
+        } else {
+            userRole = existingRoles.get(0); // Select the one with the lowest ID
+            if (existingRoles.size() > 1) {
+                log.warn("Found {} duplicate roles with name 'USER'. Using role with lowest ID: {}. " +
+                         "Consider cleaning up duplicate entries in the database.",
+                         existingRoles.size(), userRole.getId());
+            }
+        }
 
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
