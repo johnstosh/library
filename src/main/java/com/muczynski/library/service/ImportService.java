@@ -222,11 +222,43 @@ public class ImportService {
         // Import photos
         if (dto.getPhotos() != null) {
             for (ImportPhotoDto pDto : dto.getPhotos()) {
-                // Check if photo with same permanentId already exists
+                // First resolve book and author references
+                Book book = null;
+                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
+                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                    book = bookMap.get(key);
+                    if (book == null) {
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                    }
+                }
+
+                Author author = null;
+                if (pDto.getAuthorName() != null) {
+                    author = authMap.get(pDto.getAuthorName());
+                    if (author == null) {
+                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
+                    }
+                }
+
+                // Try to find existing photo by various identifiers
                 Photo photo = null;
+
+                // 1. Try by permanentId (Google Photos ID)
                 if (pDto.getPermanentId() != null && !pDto.getPermanentId().isEmpty()) {
                     photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
                 }
+
+                // 2. If not found and it's a book photo, try by book + photoOrder
+                if (photo == null && book != null && pDto.getPhotoOrder() != null) {
+                    photo = photoRepository.findByBookIdAndPhotoOrder(book.getId(), pDto.getPhotoOrder()).orElse(null);
+                }
+
+                // 3. If not found and it's an author-only photo, try by author + photoOrder
+                if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
+                    photo = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrder(author.getId(), pDto.getPhotoOrder()).orElse(null);
+                }
+
+                // 4. Create new photo if not found
                 if (photo == null) {
                     photo = new Photo();
                 }
@@ -239,25 +271,8 @@ public class ImportService {
                 photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
-
-                // Link to book if specified
-                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
-                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
-                    Book book = bookMap.get(key);
-                    if (book == null) {
-                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
-                    }
-                    photo.setBook(book);
-                }
-
-                // Link to author if specified
-                if (pDto.getAuthorName() != null) {
-                    Author author = authMap.get(pDto.getAuthorName());
-                    if (author == null) {
-                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
-                    }
-                    photo.setAuthor(author);
-                }
+                photo.setBook(book);
+                photo.setAuthor(author);
 
                 photoRepository.save(photo);
             }
