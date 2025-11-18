@@ -26,17 +26,22 @@ async function loadGlobalSettings() {
 
 // Display global settings in the UI
 function displayGlobalSettings(settings) {
-    // Display Client ID (read-only)
+    // === Google Photos OAuth Section ===
+
+    // Display Client ID
     const clientIdElement = document.getElementById('global-client-id');
     if (clientIdElement) {
         clientIdElement.textContent = settings.googleClientId || '(not configured)';
     }
 
-    // Display Redirect URI (read-only)
-    const redirectUriElement = document.getElementById('global-redirect-uri');
-    if (redirectUriElement) {
-        const redirectUri = settings.redirectUri || window.location.origin + '/api/oauth/google/callback';
-        redirectUriElement.textContent = redirectUri;
+    // Display Client ID configured status
+    const clientIdConfiguredElement = document.getElementById('global-client-id-configured');
+    if (clientIdConfiguredElement) {
+        if (settings.googleClientId && settings.googleClientId.length > 0) {
+            clientIdConfiguredElement.innerHTML = ' <span class="badge bg-success">Configured</span>';
+        } else {
+            clientIdConfiguredElement.innerHTML = ' <span class="badge bg-warning">Not Configured</span>';
+        }
     }
 
     // Display partial Client Secret
@@ -45,10 +50,27 @@ function displayGlobalSettings(settings) {
         secretPartialElement.textContent = settings.googleClientSecretPartial || '(not configured)';
     }
 
+    // Display Client Secret configured status
+    const configuredElement = document.getElementById('global-secret-configured');
+    if (configuredElement) {
+        if (settings.googleClientSecretConfigured) {
+            configuredElement.innerHTML = ' <span class="badge bg-success">Configured</span>';
+        } else {
+            configuredElement.innerHTML = ' <span class="badge bg-warning">Not Configured</span>';
+        }
+    }
+
+    // Display Redirect URI
+    const redirectUriElement = document.getElementById('global-redirect-uri');
+    if (redirectUriElement) {
+        const redirectUri = settings.redirectUri || window.location.origin + '/api/oauth/google/callback';
+        redirectUriElement.textContent = redirectUri;
+    }
+
     // Display Client Secret validation
     const secretValidationElement = document.getElementById('global-secret-validation');
     if (secretValidationElement) {
-        secretValidationElement.textContent = settings.googleClientSecretValidation || '';
+        secretValidationElement.textContent = settings.googleClientSecretValidation || '-';
 
         // Color code the validation message
         if (settings.googleClientSecretValidation === 'Valid') {
@@ -72,15 +94,7 @@ function displayGlobalSettings(settings) {
         }
     }
 
-    // Display configured status
-    const configuredElement = document.getElementById('global-secret-configured');
-    if (configuredElement) {
-        if (settings.googleClientSecretConfigured) {
-            configuredElement.innerHTML = '<span class="badge bg-success">Configured</span>';
-        } else {
-            configuredElement.innerHTML = '<span class="badge bg-warning">Not Configured</span>';
-        }
-    }
+    // === Google SSO Section ===
 
     // Display SSO Client ID
     const ssoClientIdElement = document.getElementById('global-sso-client-id');
@@ -114,6 +128,24 @@ function displayGlobalSettings(settings) {
         }
     }
 
+    // Display SSO Redirect URI
+    const ssoRedirectUriElement = document.getElementById('global-sso-redirect-uri');
+    if (ssoRedirectUriElement) {
+        ssoRedirectUriElement.textContent = window.location.origin + '/login/oauth2/code/google';
+    }
+
+    // Display SSO Secret validation (placeholder - matching Photos OAuth pattern)
+    const ssoSecretValidationElement = document.getElementById('global-sso-secret-validation');
+    if (ssoSecretValidationElement) {
+        if (settings.googleSsoClientSecretConfigured) {
+            ssoSecretValidationElement.textContent = 'Valid';
+            ssoSecretValidationElement.className = 'text-success';
+        } else {
+            ssoSecretValidationElement.textContent = 'Client Secret not configured';
+            ssoSecretValidationElement.className = 'text-danger';
+        }
+    }
+
     // Display SSO credentials last updated timestamp
     const ssoUpdatedElement = document.getElementById('global-sso-updated-at');
     if (ssoUpdatedElement) {
@@ -137,34 +169,38 @@ async function saveGlobalSettings(event) {
     if (errorDiv) errorDiv.style.display = 'none';
     if (successDiv) successDiv.style.display = 'none';
 
+    const newClientId = document.getElementById('global-client-id-input').value.trim();
     const newSecret = document.getElementById('global-client-secret').value.trim();
 
-    if (!newSecret) {
-        showGlobalSettingsError('Please enter a Client Secret');
+    if (!newClientId && !newSecret) {
+        showGlobalSettingsError('Please enter at least one credential to update');
         return;
     }
 
     try {
+        const body = {};
+        if (newClientId) body.googleClientId = newClientId;
+        if (newSecret) body.googleClientSecret = newSecret;
+
         const response = await fetch('/api/global-settings', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
-            body: JSON.stringify({
-                googleClientSecret: newSecret
-            })
+            body: JSON.stringify(body)
         });
 
         if (response.ok) {
             const updatedSettings = await response.json();
             displayGlobalSettings(updatedSettings);
 
-            // Clear the input field
+            // Clear the input fields
+            document.getElementById('global-client-id-input').value = '';
             document.getElementById('global-client-secret').value = '';
 
             // Show success message
-            showGlobalSettingsSuccess('Global Client Secret updated successfully!');
+            showGlobalSettingsSuccess('Google Photos OAuth credentials updated successfully!');
         } else if (response.status === 403) {
             showGlobalSettingsError('Permission denied. Only librarians can update global settings.');
         } else {
