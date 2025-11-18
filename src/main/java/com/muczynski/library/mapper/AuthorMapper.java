@@ -17,6 +17,7 @@ import java.util.Comparator;
 public interface AuthorMapper {
 
     @Mapping(target = "firstPhotoId", ignore = true)
+    @Mapping(target = "bookCount", ignore = true)
     AuthorDto toDto(Author author);
 
     @Mapping(target = "photos", ignore = true)
