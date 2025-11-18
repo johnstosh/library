@@ -245,12 +245,18 @@ public class ImportService {
 
                 // 1. If it's a book photo, match by book + photoOrder
                 if (book != null && pDto.getPhotoOrder() != null) {
-                    photo = photoRepository.findByBookIdAndPhotoOrder(book.getId(), pDto.getPhotoOrder()).orElse(null);
+                    List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
+                    if (!photos.isEmpty()) {
+                        photo = photos.get(0); // Use the one with lowest ID
+                    }
                 }
 
                 // 2. If it's an author-only photo, match by author + photoOrder
                 if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
-                    photo = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrder(author.getId(), pDto.getPhotoOrder()).orElse(null);
+                    List<Photo> photos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), pDto.getPhotoOrder());
+                    if (!photos.isEmpty()) {
+                        photo = photos.get(0); // Use the one with lowest ID
+                    }
                 }
 
                 // 3. Create new photo if not found
