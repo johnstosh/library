@@ -408,12 +408,30 @@ public class PhotoExportService {
                     .toList();
 
             long total = activePhotos.size();
-            long completed = activePhotos.stream()
-                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.COMPLETED)
+
+            // Exported: has permanentId (was uploaded to Google Photos)
+            long exported = activePhotos.stream()
+                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty())
                     .count();
-            long pending = activePhotos.stream()
-                    .filter(p -> p.getExportStatus() == null || p.getExportStatus() == Photo.ExportStatus.PENDING)
+
+            // Imported: has permanentId AND has image data (fully synced)
+            long imported = activePhotos.stream()
+                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty()
+                            && p.getImage() != null && p.getImage().length > 0)
                     .count();
+
+            // Pending export: has image but no permanentId
+            long pendingExport = activePhotos.stream()
+                    .filter(p -> p.getImage() != null && p.getImage().length > 0
+                            && (p.getPermanentId() == null || p.getPermanentId().trim().isEmpty()))
+                    .count();
+
+            // Pending import: has permanentId but no image
+            long pendingImport = activePhotos.stream()
+                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty()
+                            && (p.getImage() == null || p.getImage().length == 0))
+                    .count();
+
             long failed = activePhotos.stream()
                     .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
                     .count();
@@ -422,18 +440,28 @@ public class PhotoExportService {
                     .count();
 
             stats.put("total", total);
-            stats.put("completed", completed);
-            stats.put("pending", pending);
+            stats.put("exported", exported);
+            stats.put("imported", imported);
+            stats.put("pendingExport", pendingExport);
+            stats.put("pendingImport", pendingImport);
             stats.put("failed", failed);
             stats.put("inProgress", inProgress);
+
+            // Keep legacy fields for backwards compatibility
+            stats.put("completed", exported);
+            stats.put("pending", pendingExport);
         } catch (Exception e) {
             logger.error("Failed to retrieve photo statistics from database", e);
             // Return safe defaults
             stats.put("total", 0L);
-            stats.put("completed", 0L);
-            stats.put("pending", 0L);
+            stats.put("exported", 0L);
+            stats.put("imported", 0L);
+            stats.put("pendingExport", 0L);
+            stats.put("pendingImport", 0L);
             stats.put("failed", 0L);
             stats.put("inProgress", 0L);
+            stats.put("completed", 0L);
+            stats.put("pending", 0L);
         }
 
         // Add album information
@@ -487,6 +515,7 @@ public class PhotoExportService {
                 photoInfo.put("permanentId", photo.getPermanentId());
                 photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
                 photoInfo.put("contentType", photo.getContentType());
+                photoInfo.put("hasImage", photo.getImage() != null && photo.getImage().length > 0);
 
                 if (photo.getBook() != null) {
                     photoInfo.put("bookTitle", photo.getBook().getTitle());
@@ -529,5 +558,185 @@ public class PhotoExportService {
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
         exportPhoto(photo, librarianOpt.get().getUsername());
+    }
+
+    /**
+     * Import a photo from Google Photos by downloading the image using its permanent ID
+     */
+    @Transactional
+    public void importPhotoById(Long photoId) {
+        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+
+        if (librarianOpt.isEmpty()) {
+            throw new LibraryException("No librarian user found");
+        }
+
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+
+        if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+            throw new LibraryException("Photo does not have a permanent ID to import from");
+        }
+
+        String username = librarianOpt.get().getUsername();
+        String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        try {
+            // Get media item details from Google Photos
+            var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
+
+            if (mediaItem == null) {
+                throw new LibraryException("Media item not found in Google Photos");
+            }
+
+            // Download the image bytes
+            String baseUrl = mediaItem.getBaseUrl();
+            if (baseUrl == null || baseUrl.isEmpty()) {
+                throw new LibraryException("No base URL available for media item");
+            }
+
+            // Use downloadPhoto which already appends =d for original quality
+            byte[] imageBytes = photosLibraryClient.downloadPhoto(accessToken, baseUrl);
+
+            if (imageBytes == null || imageBytes.length == 0) {
+                throw new LibraryException("Failed to download image from Google Photos");
+            }
+
+            // Update the photo with downloaded image
+            photo.setImage(imageBytes);
+            if (mediaItem.getMimeType() != null) {
+                photo.setContentType(mediaItem.getMimeType());
+            }
+            photoRepository.save(photo);
+
+            logger.info("Successfully imported photo ID: {} from Google Photos ({} bytes)", photoId, imageBytes.length);
+
+        } catch (Exception e) {
+            logger.error("Failed to import photo ID: {}", photoId, e);
+            throw new LibraryException("Failed to import photo: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Import all photos that have permanent IDs but no image data
+     */
+    @Transactional
+    public Map<String, Object> importAllPhotos() {
+        logger.info("Starting import of all pending photos...");
+
+        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+        if (librarianOpt.isEmpty()) {
+            throw new LibraryException("No librarian user found");
+        }
+
+        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+
+        // Find photos that need import (have permanentId but no image)
+        List<Photo> photosToImport = allPhotos.stream()
+                .filter(p -> p.getDeletedAt() == null)
+                .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty())
+                .filter(p -> p.getImage() == null || p.getImage().length == 0)
+                .toList();
+
+        if (photosToImport.isEmpty()) {
+            logger.info("No photos need import at this time");
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "No photos need import");
+            result.put("imported", 0);
+            result.put("failed", 0);
+            return result;
+        }
+
+        logger.info("Found {} photos to import", photosToImport.size());
+
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (Photo photo : photosToImport) {
+            try {
+                importPhotoById(photo.getId());
+                successCount++;
+            } catch (Exception e) {
+                logger.error("Failed to import photo ID: {}", photo.getId(), e);
+                failureCount++;
+            }
+        }
+
+        logger.info("Photo import complete. Success: {}, Failed: {}", successCount, failureCount);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", String.format("Import complete. %d succeeded, %d failed", successCount, failureCount));
+        result.put("imported", successCount);
+        result.put("failed", failureCount);
+        return result;
+    }
+
+    /**
+     * Verify that a photo's permanent ID still works in Google Photos
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> verifyPhotoById(Long photoId) {
+        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
+
+        if (librarianOpt.isEmpty()) {
+            throw new LibraryException("No librarian user found");
+        }
+
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+
+        if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+            throw new LibraryException("Photo does not have a permanent ID to verify");
+        }
+
+        String username = librarianOpt.get().getUsername();
+        String accessToken = googlePhotosService.getValidAccessToken(username);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("photoId", photoId);
+        result.put("permanentId", photo.getPermanentId());
+
+        try {
+            // Try to get media item details from Google Photos
+            var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
+
+            if (mediaItem != null) {
+                result.put("valid", true);
+                result.put("message", "Permanent ID is valid");
+                result.put("filename", mediaItem.getFilename());
+                result.put("mimeType", mediaItem.getMimeType());
+            } else {
+                result.put("valid", false);
+                result.put("message", "Media item not found in Google Photos");
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to verify photo ID: {}", photoId, e);
+            result.put("valid", false);
+            result.put("message", "Verification failed: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * Unlink a photo by removing its permanent ID
+     */
+    @Transactional
+    public void unlinkPhotoById(Long photoId) {
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+
+        if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+            throw new LibraryException("Photo does not have a permanent ID to unlink");
+        }
+
+        String oldPermanentId = photo.getPermanentId();
+        photo.setPermanentId(null);
+        photo.setExportStatus(Photo.ExportStatus.PENDING);
+        photo.setExportedAt(null);
+        photoRepository.save(photo);
+
+        logger.info("Unlinked photo ID: {} from permanent ID: {}", photoId, oldPermanentId);
     }
 }

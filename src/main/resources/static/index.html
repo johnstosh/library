@@ -320,55 +320,72 @@
         </div>
 
         <div id="photos-section" class="section" data-test="photos-section">
-            <h2 data-test="photos-header">Photo Export Status</h2>
+            <h2 data-test="photos-header">Photo Import/Export Status</h2>
             <div class="card mb-3">
                 <div class="card-body">
-                    <p>This page shows the export status of all photos in the library to Google Photos.</p>
+                    <p>This page shows the import/export status of all photos in the library with Google Photos.</p>
                     <p><strong>How it works:</strong></p>
                     <ul>
-                        <li>Photos are exported to Google Photos</li>
+                        <li>Photos are exported to Google Photos and assigned a permanent ID</li>
+                        <li>Photos can be imported from Google Photos using their permanent ID</li>
                         <li>An album is created to hold the photos, named after this library</li>
-                        <li>The permanent ID from Google Photos is stored in the database to keep track of export status</li>
-                        <li>You can manually trigger an export for all pending photos or just individual photos</li>
+                        <li>You can manually trigger import/export for all pending photos or individual photos</li>
                     </ul>
                     <p id="album-info" class="mb-2"><strong>Google Photos Album:</strong> <span id="album-name" class="font-monospace text-primary">Loading...</span></p>
                     <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
 
                     <div class="d-flex gap-2 mb-3">
                         <button id="export-all-photos-btn" class="btn btn-primary" onclick="exportAllPhotos()" data-test="export-all-photos-btn">Export All Pending Photos</button>
+                        <button id="import-all-photos-btn" class="btn btn-success" onclick="importAllPhotos()" data-test="import-all-photos-btn">Import All Pending Photos</button>
                         <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoExportStatus()" data-test="refresh-photos-btn">Refresh Status</button>
                     </div>
 
                     <div id="export-stats" class="row mb-3" data-test="export-stats">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card text-center">
                                 <div class="card-body">
-                                    <h5 class="card-title">Total Photos</h5>
-                                    <p class="card-text fs-3" id="stats-total">0</p>
+                                    <h6 class="card-title">Total Photos</h6>
+                                    <p class="card-text fs-4" id="stats-total">0</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card text-center bg-success text-white">
                                 <div class="card-body">
-                                    <h5 class="card-title">Completed</h5>
-                                    <p class="card-text fs-3" id="stats-completed">0</p>
+                                    <h6 class="card-title">Exported</h6>
+                                    <p class="card-text fs-4" id="stats-exported">0</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <div class="card text-center bg-info text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Imported</h6>
+                                    <p class="card-text fs-4" id="stats-imported">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
                             <div class="card text-center bg-warning">
                                 <div class="card-body">
-                                    <h5 class="card-title">Pending</h5>
-                                    <p class="card-text fs-3" id="stats-pending">0</p>
+                                    <h6 class="card-title">Pending Export</h6>
+                                    <p class="card-text fs-4" id="stats-pending-export">0</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <div class="card text-center bg-secondary text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Pending Import</h6>
+                                    <p class="card-text fs-4" id="stats-pending-import">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
                             <div class="card text-center bg-danger text-white">
                                 <div class="card-body">
-                                    <h5 class="card-title">Failed</h5>
-                                    <p class="card-text fs-3" id="stats-failed">0</p>
+                                    <h6 class="card-title">Failed</h6>
+                                    <p class="card-text fs-4" id="stats-failed">0</p>
                                 </div>
                             </div>
                         </div>
