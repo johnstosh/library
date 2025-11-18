@@ -229,6 +229,18 @@ public class PhotoExportService {
         if (response.getNewMediaItemResults() != null && !response.getNewMediaItemResults().isEmpty()) {
             BatchCreateResponse.NewMediaItemResult result = response.getNewMediaItemResults().get(0);
 
+            // Check status first - code 0 means success
+            if (result.getStatus() != null) {
+                Integer statusCode = result.getStatus().getCode();
+                String statusMessage = result.getStatus().getMessage();
+                logger.info("Batch create status - code: {}, message: {}", statusCode, statusMessage);
+
+                if (statusCode != null && statusCode != 0) {
+                    logger.error("Batch create failed with status code: {}, message: {}", statusCode, statusMessage);
+                    throw new LibraryException("Batch create failed: " + statusMessage);
+                }
+            }
+
             if (result.getMediaItem() != null && result.getMediaItem().getId() != null) {
                 String permanentId = result.getMediaItem().getId();
                 logger.info("Successfully created media item with ID: {}", permanentId);
@@ -732,6 +744,13 @@ public class PhotoExportService {
                 result.put("message", "Media item not found in Google Photos");
             }
 
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+            logger.warn("Verification returned 404 for photo ID {}: permanent ID {} not found in Google Photos. " +
+                    "This may indicate the photo was deleted, or was uploaded with a different OAuth client/authorization.",
+                    photoId, photo.getPermanentId());
+            result.put("valid", false);
+            result.put("message", "Media item not found in Google Photos. The photo may have been deleted, " +
+                    "or the permanent ID was stored from a failed upload. Consider unlinking and re-exporting.");
         } catch (Exception e) {
             logger.warn("Verification failed for photo ID {}: {}", photoId, e.getMessage());
             result.put("valid", false);
