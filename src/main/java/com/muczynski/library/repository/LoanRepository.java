@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
@@ -22,4 +23,5 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     long countByBookIdAndReturnDateIsNull(Long bookId);
     long countByUserIdAndReturnDateIsNull(Long userId);
     void deleteByUserId(Long userId);
+    Optional<Loan> findByBookIdAndUserIdAndLoanDate(Long bookId, Long userId, LocalDate loanDate);
 }

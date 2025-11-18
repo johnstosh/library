@@ -9,9 +9,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);
+    Optional<Book> findByTitleAndAuthor_Name(String title, String authorName);
+    Optional<Book> findByTitleAndAuthorIsNull(String title);
 }
