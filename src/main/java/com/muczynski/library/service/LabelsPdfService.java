@@ -139,8 +139,10 @@ public class LabelsPdfService {
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
         // Ratio 3:1 to give more space to title/author, less to LOC
+        // Use fixed layout to ensure consistent column widths across all labels
         Table innerTable = new Table(new float[]{3, 1});
         innerTable.setWidth(UnitValue.createPercentValue(100));
+        innerTable.setFixedLayout();
 
         // Left side: Title and Author (with solid border)
         Cell leftCell = new Cell();
