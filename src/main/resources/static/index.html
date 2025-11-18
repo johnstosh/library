@@ -135,43 +135,53 @@
                 </tbody>
             </table>
             <div class="librarian-only" data-test="authors-form">
-                <div class="mb-3">
-                    <label for="new-author-name" class="form-label">Author Name:</label>
-                    <input type="text" id="new-author-name" class="form-control" placeholder="New author name" autocomplete="off" data-test="new-author-name">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-dob" class="form-label">Date of Birth:</label>
-                    <input type="date" id="new-author-dob" class="form-control" autocomplete="off" data-test="new-author-dob">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-dod" class="form-label">Date of Death:</label>
-                    <input type="date" id="new-author-dod" class="form-control" autocomplete="off" data-test="new-author-dod">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-religion" class="form-label">Religious Affiliation:</label>
-                    <input type="text" id="new-author-religion" class="form-control" placeholder="Religious Affiliation" autocomplete="off" data-test="new-author-religion">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-country" class="form-label">Birth Country:</label>
-                    <input type="text" id="new-author-country" class="form-control" placeholder="Birth Country" autocomplete="off" data-test="new-author-country">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-nationality" class="form-label">Nationality:</label>
-                    <input type="text" id="new-author-nationality" class="form-control" placeholder="Nationality" autocomplete="off" data-test="new-author-nationality">
-                </div>
-                <div class="mb-3">
-                    <label for="new-author-bio" class="form-label">Brief Biography:</label>
-                    <textarea id="new-author-bio" class="form-control" placeholder="Brief Biography" autocomplete="off" data-test="new-author-bio"></textarea>
-                </div>
-                <button id="add-author-btn" class="btn btn-primary mb-3" onclick="addAuthor()" data-test="add-author-btn">Add Author</button>
-                <button id="cancel-author-btn" class="btn btn-secondary mb-3" onclick="resetAuthorForm()" data-test="cancel-author-btn" style="display: none;">Cancel</button>
-                <button id="add-author-photo-btn" class="btn btn-secondary mb-3" onclick="addAuthorPhoto()" data-test="add-author-photo-btn" style="display: none;">Add Photo</button>
-                <button id="add-author-photo-google-btn" class="btn btn-secondary mb-3" onclick="addAuthorPhotoFromGooglePhotos()" data-test="add-author-photo-google-btn" style="display: none;">Add Photo from Google Photos</button>
                 <input type="hidden" id="current-author-id">
                 <input type="file" id="author-photo-upload" style="display: none;" accept="image/*" capture="environment"/>
-                <div id="author-photos-container" class="mb-3" style="display: none;" data-test="author-photos-container">
-                    <h3 data-test="author-photos-header">Author Photos</h3>
-                    <div id="author-photos" data-test="author-photos"></div>
+                <div class="row">
+                    <!-- Left side: Form fields and action buttons -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="new-author-name" class="form-label">Author Name:</label>
+                            <input type="text" id="new-author-name" class="form-control" placeholder="New author name" autocomplete="off" data-test="new-author-name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-dob" class="form-label">Date of Birth:</label>
+                            <input type="date" id="new-author-dob" class="form-control" autocomplete="off" data-test="new-author-dob">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-dod" class="form-label">Date of Death:</label>
+                            <input type="date" id="new-author-dod" class="form-control" autocomplete="off" data-test="new-author-dod">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-religion" class="form-label">Religious Affiliation:</label>
+                            <input type="text" id="new-author-religion" class="form-control" placeholder="Religious Affiliation" autocomplete="off" data-test="new-author-religion">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-country" class="form-label">Birth Country:</label>
+                            <input type="text" id="new-author-country" class="form-control" placeholder="Birth Country" autocomplete="off" data-test="new-author-country">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-nationality" class="form-label">Nationality:</label>
+                            <input type="text" id="new-author-nationality" class="form-control" placeholder="Nationality" autocomplete="off" data-test="new-author-nationality">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-author-bio" class="form-label">Brief Biography:</label>
+                            <textarea id="new-author-bio" class="form-control" placeholder="Brief Biography" autocomplete="off" data-test="new-author-bio"></textarea>
+                        </div>
+                        <button id="add-author-btn" class="btn btn-primary mb-3" onclick="addAuthor()" data-test="add-author-btn">Add Author</button>
+                        <button id="cancel-author-btn" class="btn btn-secondary mb-3" onclick="resetAuthorForm()" data-test="cancel-author-btn" style="display: none;">Cancel</button>
+                    </div>
+                    <!-- Right side: Photo buttons and photos -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <button id="add-author-photo-btn" class="btn btn-secondary" onclick="addAuthorPhoto()" data-test="add-author-photo-btn" style="display: none;">Add Photo</button>
+                            <button id="add-author-photo-google-btn" class="btn btn-secondary" onclick="addAuthorPhotoFromGooglePhotos()" data-test="add-author-photo-google-btn" style="display: none;">Add Photo from Google Photos</button>
+                        </div>
+                        <div id="author-photos-container" class="mb-3" style="display: none;" data-test="author-photos-container">
+                            <h3 data-test="author-photos-header">Author Photos</h3>
+                            <div id="author-photos" data-test="author-photos"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
