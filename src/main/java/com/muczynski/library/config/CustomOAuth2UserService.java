@@ -50,8 +50,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("OAuth2 login attempt - Provider: {}, Email: {}, Subject ID: {}", provider, email, subjectId);
 
         // Find or create user
-        User user = userRepository.findBySsoProviderAndSsoSubjectId(provider, subjectId)
-                .orElseGet(() -> createNewSsoUser(provider, subjectId, email, name));
+        // Use the list-based query to handle potential duplicates gracefully
+        java.util.List<User> users = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc(provider, subjectId);
+        User user;
+        if (users.isEmpty()) {
+            user = createNewSsoUser(provider, subjectId, email, name);
+        } else {
+            user = users.get(0); // Select the one with the lowest ID
+            if (users.size() > 1) {
+                log.warn("Found {} duplicate users for SSO provider '{}' and subject ID '{}'. Using user with lowest ID: {}. " +
+                         "Consider cleaning up duplicate entries in the database.",
+                         users.size(), provider, subjectId, user.getId());
+            }
+        }
 
         // Update email on each login (in case it changed)
         if (email != null && !email.equals(user.getEmail())) {
