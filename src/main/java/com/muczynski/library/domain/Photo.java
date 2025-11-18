@@ -46,6 +46,8 @@ public class Photo {
 
     private String exportErrorMessage;  // Error message if export failed
 
+    private LocalDateTime deletedAt;  // Soft delete timestamp (null if not deleted)
+
     public enum ExportStatus {
         PENDING,      // Not yet exported
         IN_PROGRESS,  // Currently being exported
