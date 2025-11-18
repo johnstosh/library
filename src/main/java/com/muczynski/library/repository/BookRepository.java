@@ -20,7 +20,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);
     Optional<Book> findByTitleAndAuthor_Name(String title, String authorName);
+    List<Book> findAllByTitleAndAuthor_NameOrderByIdAsc(String title, String authorName);
     Optional<Book> findByTitleAndAuthorIsNull(String title);
+    List<Book> findAllByTitleAndAuthorIsNullOrderByIdAsc(String title);
 
     List<Book> findByDateAddedToLibraryOrderByTitleAsc(LocalDate dateAddedToLibrary);
 

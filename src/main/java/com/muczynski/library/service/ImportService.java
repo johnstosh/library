@@ -157,9 +157,27 @@ public class ImportService {
                 // Check if book with same title and author already exists
                 Book book;
                 if (author != null) {
-                    book = bookRepository.findByTitleAndAuthor_Name(bDto.getTitle(), author.getName()).orElse(null);
+                    List<Book> existingBooks = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bDto.getTitle(), author.getName());
+                    if (existingBooks.isEmpty()) {
+                        book = null;
+                    } else {
+                        book = existingBooks.get(0);
+                        if (existingBooks.size() > 1) {
+                            logger.warn("Found {} duplicate books with title '{}' and author '{}'. Using first one with ID: {}",
+                                    existingBooks.size(), bDto.getTitle(), author.getName(), book.getId());
+                        }
+                    }
                 } else {
-                    book = bookRepository.findByTitleAndAuthorIsNull(bDto.getTitle()).orElse(null);
+                    List<Book> existingBooks = bookRepository.findAllByTitleAndAuthorIsNullOrderByIdAsc(bDto.getTitle());
+                    if (existingBooks.isEmpty()) {
+                        book = null;
+                    } else {
+                        book = existingBooks.get(0);
+                        if (existingBooks.size() > 1) {
+                            logger.warn("Found {} duplicate books with title '{}' and no author. Using first one with ID: {}",
+                                    existingBooks.size(), bDto.getTitle(), book.getId());
+                        }
+                    }
                 }
                 if (book == null) {
                     book = new Book();
