@@ -100,11 +100,11 @@ function renderPhotosTable(photos) {
         }
         row.appendChild(titleCell);
 
-        // LOC Call Number column
+        // LOC Call Number column - formatted for spine display with each component on its own line
         const locCell = document.createElement('td');
         if (photo.bookLocNumber) {
             const locCode = document.createElement('code');
-            locCode.textContent = photo.bookLocNumber;
+            locCode.innerHTML = window.formatLocForSpine(photo.bookLocNumber);
             locCode.className = 'text-success';
             locCell.appendChild(locCode);
         } else {
