@@ -388,7 +388,7 @@ public class PhotoExportService {
     @Transactional
     private void markPhotoAsFailed(Photo photo, String errorMessage) {
         photo.setExportStatus(Photo.ExportStatus.FAILED);
-        photo.setExportErrorMessage(errorMessage != null ? errorMessage.substring(0, Math.min(500, errorMessage.length())) : "Unknown error");
+        photo.setExportErrorMessage(errorMessage != null ? errorMessage.substring(0, Math.min(255, errorMessage.length())) : "Unknown error");
         photoRepository.save(photo);
     }
 
