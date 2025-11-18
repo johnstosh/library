@@ -12,6 +12,8 @@ import com.muczynski.library.mapper.LoanMapper;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class LoanService {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoanService.class);
 
     @Autowired
     private LoanRepository loanRepository;
@@ -72,8 +76,15 @@ public class LoanService {
     }
 
     public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new LibraryException("User not found: " + username));
+        List<User> users = userRepository.findAllByUsernameOrderByIdAsc(username);
+        if (users.isEmpty()) {
+            throw new LibraryException("User not found: " + username);
+        }
+        User user = users.get(0);
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
+                       users.size(), username, user.getId());
+        }
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByUserOrderByDueDateAsc(user);

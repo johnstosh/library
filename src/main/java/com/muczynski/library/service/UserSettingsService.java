@@ -7,15 +7,21 @@ import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 @Service
 @Transactional
 public class UserSettingsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserSettingsService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -26,18 +32,29 @@ public class UserSettingsService {
     @Autowired
     private UserMapper userMapper;
 
+    private User findUserByUsername(String username) {
+        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
+        if (users.isEmpty()) {
+            throw new LibraryException("User not found");
+        }
+        User user = users.get(0);
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
+                       users.size(), username, user.getId());
+        }
+        return user;
+    }
+
     public UserDto getUserSettings(String currentUsername) {
-        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new LibraryException("User not found"));
+        User user = findUserByUsername(currentUsername);
         return userMapper.toDto(user);
     }
 
     public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
-        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new LibraryException("User not found"));
+        User user = findUserByUsername(currentUsername);
 
         if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
-            if (userRepository.findByUsernameIgnoreCase(userSettingsDto.getUsername()).isPresent()) {
+            if (!userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(userSettingsDto.getUsername()).isEmpty()) {
                 throw new LibraryException("Username already taken");
             }
             user.setUsername(userSettingsDto.getUsername());
@@ -81,8 +98,7 @@ public class UserSettingsService {
     }
 
     public void deleteUser(String currentUsername) {
-        User user = userRepository.findByUsernameIgnoreCase(currentUsername)
-                .orElseThrow(() -> new LibraryException("User not found"));
+        User user = findUserByUsername(currentUsername);
         userRepository.delete(user);
     }
 }
