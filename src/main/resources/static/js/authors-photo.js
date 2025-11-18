@@ -38,6 +38,14 @@ function displayAuthorPhotos(photos, authorId) {
             deleteBtn.onclick = () => deleteAuthorPhoto(authorId, photo.id);
             thumbnail.appendChild(deleteBtn);
 
+            // Edit/Crop button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'photo-overlay-btn edit-btn';
+            editBtn.innerHTML = '✏️';
+            editBtn.title = 'Crop Photo';
+            editBtn.onclick = () => openCropModalForAuthor(authorId, photo.id);
+            thumbnail.appendChild(editBtn);
+
             if (index > 0) {
                 const moveLeftBtn = document.createElement('button');
                 moveLeftBtn.className = 'photo-overlay-btn move-left-btn';

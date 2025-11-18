@@ -122,20 +122,8 @@ async function rotatePhotoCW(bookId, photoId) {
 }
 
 async function editPhoto(bookId, photoId) {
-    // For now, since PhotoDto fields are not specified in UI, prompt for a potential field like caption
-    // Assuming PhotoDto has a 'caption' field; adjust as needed
-    const caption = prompt('Enter new caption for the photo (or leave blank):');
-    if (caption === null) return; // Cancelled
-
-    try {
-        const photoDto = { caption: caption || null };
-        await putData(`/api/books/${bookId}/photos/${photoId}`, photoDto);
-        const photos = await fetchData(`/api/books/${bookId}/photos`);
-        await displayBookPhotos(photos, bookId);
-        clearError('books');
-    } catch (error) {
-        showError('books', 'Failed to update photo: ' + error.message);
-    }
+    // Open the crop modal for the photo
+    openCropModalForBook(bookId, photoId);
 }
 
 async function movePhotoLeft(bookId, photoId) {

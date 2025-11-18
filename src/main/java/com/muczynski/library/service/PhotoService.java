@@ -491,6 +491,39 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Replace the photo image with a cropped version
+     * @param photoId The photo ID
+     * @param file The cropped image file
+     */
+    @Transactional
+    public void cropPhoto(Long photoId, MultipartFile file) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
+
+            // Update the image data with the cropped version
+            photo.setImage(file.getBytes());
+            photo.setContentType(file.getContentType());
+
+            // Reset export status since the image has been modified
+            if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED) {
+                photo.setExportStatus(Photo.ExportStatus.PENDING);
+                photo.setPermanentId(null);
+                photo.setExportedAt(null);
+            }
+
+            photoRepository.save(photo);
+            logger.info("Cropped photo ID {}", photoId);
+        } catch (IOException e) {
+            logger.error("Failed to crop photo ID {} due to IO error: {}", photoId, e.getMessage(), e);
+            throw new LibraryException("Failed to store cropped photo data", e);
+        } catch (Exception e) {
+            logger.error("Failed to crop photo ID {}: {}", photoId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
     @Transactional(readOnly = true)
     public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
         try {
