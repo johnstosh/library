@@ -116,22 +116,20 @@ public class PhotoExportController {
      */
     @PostMapping("/import/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<Map<String, Object>> importPhoto(@PathVariable Long photoId) {
-        try {
-            logger.info("Importing photo ID: {} from Google Photos", photoId);
-            photoExportService.importPhotoById(photoId);
+        logger.info("Importing photo ID: {} from Google Photos", photoId);
+        String errorMessage = photoExportService.importPhotoById(photoId);
 
-            Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("photoId", photoId);
+
+        if (errorMessage == null) {
             response.put("message", "Photo imported successfully");
-            response.put("photoId", photoId);
-
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("Failed to import photo ID: {}", photoId, e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to import photo: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        } else {
+            logger.error("Failed to import photo ID: {}: {}", photoId, errorMessage);
+            response.put("error", "Failed to import photo: " + errorMessage);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
