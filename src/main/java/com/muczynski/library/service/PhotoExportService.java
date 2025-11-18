@@ -733,7 +733,7 @@ public class PhotoExportService {
             }
 
         } catch (Exception e) {
-            logger.error("Failed to verify photo ID: {}", photoId, e);
+            logger.warn("Verification failed for photo ID {}: {}", photoId, e.getMessage());
             result.put("valid", false);
             result.put("message", "Verification failed: " + e.getMessage());
         }
