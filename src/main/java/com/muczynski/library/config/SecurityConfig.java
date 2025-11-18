@@ -38,6 +38,9 @@ public class SecurityConfig {
     private CustomOAuth2UserService customOAuth2UserService;
 
     @Autowired
+    private CustomOidcUserService customOidcUserService;
+
+    @Autowired
     private DynamicClientRegistrationRepository dynamicClientRegistrationRepository;
 
     @Bean
@@ -92,6 +95,7 @@ public class SecurityConfig {
                         .clientRegistrationRepository(dynamicClientRegistrationRepository)
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
+                                .oidcUserService(customOidcUserService)
                         )
                         .successHandler(new AuthenticationSuccessHandler() {
                             @Override
