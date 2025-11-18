@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
