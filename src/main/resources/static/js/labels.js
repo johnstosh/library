@@ -115,36 +115,13 @@ function createBookRow(book) {
     }
     row.appendChild(titleCell);
 
-    // LOC Number cell (split letters and digits onto separate lines)
+    // LOC Number cell - formatted for spine display with each component on its own line
     const locCell = document.createElement('td');
     if (book.locNumber) {
-        // Split LOC number: letters on first line, digits on second line
-        // Example: "PS3515.O9" becomes "PS" and "3515.O9"
-        const match = book.locNumber.match(/^([A-Z]+)(.*)$/);
-        if (match) {
-            const letters = match[1];
-            const rest = match[2];
-
-            const lettersCode = document.createElement('code');
-            lettersCode.textContent = letters;
-            lettersCode.className = 'text-success';
-            lettersCode.style.fontWeight = 'bold';
-            locCell.appendChild(lettersCode);
-
-            if (rest) {
-                locCell.appendChild(document.createElement('br'));
-                const restCode = document.createElement('code');
-                restCode.textContent = rest;
-                restCode.className = 'text-success';
-                locCell.appendChild(restCode);
-            }
-        } else {
-            // Fallback if format doesn't match expected pattern
-            const code = document.createElement('code');
-            code.textContent = book.locNumber;
-            code.className = 'text-success';
-            locCell.appendChild(code);
-        }
+        const code = document.createElement('code');
+        code.innerHTML = window.formatLocForSpine(book.locNumber);
+        code.className = 'text-success';
+        locCell.appendChild(code);
     } else {
         locCell.textContent = '-';
     }

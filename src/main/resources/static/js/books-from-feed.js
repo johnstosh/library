@@ -96,7 +96,7 @@ function createSavedBookRow(book) {
     const locCell = document.createElement('td');
     if (book.locNumber) {
         const locCode = document.createElement('code');
-        locCode.textContent = book.locNumber;
+        locCode.innerHTML = window.formatLocForSpine(book.locNumber);
         locCode.className = 'text-success';
         locCell.appendChild(locCode);
     } else {

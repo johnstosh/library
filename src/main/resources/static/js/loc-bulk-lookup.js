@@ -156,7 +156,7 @@ async function lookupSingleBook(bookId) {
                 if (locCell) {
                     locCell.innerHTML = '';
                     const code = document.createElement('code');
-                    code.textContent = result.locNumber;
+                    code.innerHTML = window.formatLocForSpine(result.locNumber);
                     code.className = 'text-success fw-bold';
                     locCell.appendChild(code);
                 }
@@ -246,7 +246,7 @@ async function lookupAllMissing() {
                     if (locCell) {
                         locCell.innerHTML = '';
                         const code = document.createElement('code');
-                        code.textContent = result.locNumber;
+                        code.innerHTML = window.formatLocForSpine(result.locNumber);
                         code.className = 'text-success fw-bold';
                         locCell.appendChild(code);
                     }

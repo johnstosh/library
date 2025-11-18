@@ -46,7 +46,7 @@ async function loadBooks() {
             locCell.setAttribute('data-test', 'book-loc-number');
             if (book.locNumber) {
                 const locCode = document.createElement('code');
-                locCode.textContent = book.locNumber;
+                locCode.innerHTML = window.formatLocForSpine(book.locNumber);
                 locCode.className = 'text-success';
                 locCell.appendChild(locCode);
             } else {
