@@ -29,12 +29,11 @@ public class LabelsService {
     private final LabelsPdfService labelsPdfService;
 
     /**
-     * Get all books with LOC numbers, sorted by date added (newest first)
+     * Get all books, sorted by date added (newest first)
      */
     public List<BookLocStatusDto> getBooksForLabels() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
-                .filter(book -> book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
                 .map(this::mapToBookLocStatusDto)
                 .sorted(Comparator.comparing(BookLocStatusDto::getDateAdded,
                         Comparator.nullsLast(Comparator.reverseOrder())))
@@ -55,18 +54,9 @@ public class LabelsService {
             throw new LibraryException("No books found for the given IDs");
         }
 
-        // Filter books that have LOC numbers
-        List<Book> booksWithLoc = books.stream()
-                .filter(book -> book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
-                .collect(Collectors.toList());
+        log.info("Generating labels PDF for {} books", books.size());
 
-        if (booksWithLoc.isEmpty()) {
-            throw new LibraryException("None of the selected books have LOC numbers");
-        }
-
-        log.info("Generating labels PDF for {} books", booksWithLoc.size());
-
-        return labelsPdfService.generateLabelsPdf(booksWithLoc);
+        return labelsPdfService.generateLabelsPdf(books);
     }
 
     /**
