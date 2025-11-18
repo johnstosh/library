@@ -400,9 +400,8 @@ export function showError(sectionId, message) {
         }
     }
     errorDiv.textContent = message;
-    if (['authors', 'books', 'users'].includes(sectionId)) {
-        window.scrollTo(0, 0);
-    }
+    // Scroll error into view for better visibility
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 export function clearError(sectionId) {

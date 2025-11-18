@@ -129,11 +129,21 @@ async function deleteLibrary(id) {
 }
 
 async function importJson() {
-    const jsonText = document.getElementById('import-json-textarea').value.trim();
-    if (!jsonText) {
-        showError('libraries', 'Please enter JSON data to import.');
+    const fileInput = document.getElementById('import-json-file');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showError('libraries', 'Please select a JSON file to import.');
         return;
     }
+
+    const file = fileInput.files[0];
+    let jsonText;
+    try {
+        jsonText = await file.text();
+    } catch (error) {
+        showError('libraries', 'Failed to read file: ' + error.message);
+        return;
+    }
+
     let importData;
     try {
         importData = JSON.parse(jsonText);
@@ -143,7 +153,7 @@ async function importJson() {
     }
     try {
         await postData('/api/import/json', importData);
-        document.getElementById('import-json-textarea').value = '';
+        fileInput.value = ''; // Clear the file input
         await loadLibraries();
         await populateBookDropdowns();
         clearError('libraries');
@@ -221,7 +231,9 @@ async function setupImportUI() {
                 <h5>Import JSON Data</h5>
                 <p>Import libraries, authors, books, loans, users, and photo metadata from JSON.</p>
                 <p><small class="text-muted">Note: Photo image bytes are not imported. Photos must be re-downloaded from Google Photos using their permanentId.</small></p>
-                <textarea id="import-json-textarea" class="form-control mb-2" rows="10" placeholder='{"libraries": [...], "authors": [...], "photos": [...]}'></textarea>
+                <div class="mb-2">
+                    <input type="file" id="import-json-file" class="form-control" accept=".json,application/json" data-test="import-json-file">
+                </div>
                 <button id="import-json-btn" class="btn btn-warning" data-test="import-json-btn" onclick="importJson()">Import JSON to Database</button>
             </div>
         </div>
