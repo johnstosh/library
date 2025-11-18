@@ -14,6 +14,8 @@ import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.RoleRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -63,17 +67,24 @@ public class UserService {
     }
 
     public UserDto getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .map(user -> {
-                    UserDto dto = userMapper.toDto(user);
-                    dto.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(user.getId()));
-                    return dto;
-                })
-                .orElse(null);
+        // Use list-based query to handle potential duplicates gracefully
+        List<User> users = userRepository.findAllByUsernameOrderByIdAsc(username);
+        if (users.isEmpty()) {
+            return null;
+        }
+        User user = users.get(0); // Select the one with the lowest ID
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}. " +
+                       "Consider cleaning up duplicate entries in the database.",
+                       users.size(), username, user.getId());
+        }
+        UserDto dto = userMapper.toDto(user);
+        dto.setActiveLoansCount((int) loanRepository.countByUserIdAndReturnDateIsNull(user.getId()));
+        return dto;
     }
 
     public UserDto createUser(CreateUserDto dto) {
-        if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
+        if (!userRepository.findAllByUsernameOrderByIdAsc(dto.getUsername()).isEmpty()) {
             throw new LibraryException("Username already exists");
         }
 
@@ -101,7 +112,7 @@ public class UserService {
     }
 
     public UserDto createUserFromApplied(Applied applied) {
-        if (userRepository.findByUsername(applied.getName()).isPresent()) {
+        if (!userRepository.findAllByUsernameOrderByIdAsc(applied.getName()).isEmpty()) {
             throw new LibraryException("Username already exists");
         }
 
@@ -130,7 +141,7 @@ public class UserService {
         boolean isSsoUser = user.getSsoProvider() != null && !user.getSsoProvider().equals("local");
 
         if (dto.getUsername() != null && !dto.getUsername().isEmpty() && !dto.getUsername().equals(user.getUsername())) {
-            if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
+            if (!userRepository.findAllByUsernameOrderByIdAsc(dto.getUsername()).isEmpty()) {
                 throw new LibraryException("Username already exists");
             }
             user.setUsername(dto.getUsername());
