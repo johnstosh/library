@@ -26,16 +26,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Load books for LOC lookup table
- * @param {string} mode - 'all' or 'missing'
+ * @param {string} mode - 'all', 'missing', or 'most-recent'
  */
 async function loadLocLookupBooks(mode) {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
 
-        const endpoint = mode === 'missing'
-            ? '/api/loc-bulk-lookup/books/missing-loc'
-            : '/api/loc-bulk-lookup/books';
+        let endpoint;
+        if (mode === 'missing') {
+            endpoint = '/api/loc-bulk-lookup/books/missing-loc';
+        } else if (mode === 'most-recent') {
+            endpoint = '/api/loc-bulk-lookup/books/most-recent';
+        } else {
+            endpoint = '/api/loc-bulk-lookup/books';
+        }
 
         const books = await fetchData(endpoint);
 
@@ -54,11 +59,20 @@ async function loadLocLookupBooks(mode) {
             tableBody.appendChild(row);
         });
 
-        showSuccess('loc-lookup', `Loaded ${books.length} book(s)`);
+        const modeText = mode === 'most-recent' ? ' from most recent date' : '';
+        showSuccess('loc-lookup', `Loaded ${books.length} book(s)${modeText}`);
     } catch (error) {
         showError('loc-lookup', 'Failed to load books: ' + error.message);
     }
-};
+}
+
+/**
+ * Load books from the most recent date added to the library
+ * This is called when the LOC Bulk Lookup section is shown
+ */
+export async function loadLocBulkLookupSection() {
+    await loadLocLookupBooks('most-recent');
+}
 
 /**
  * Create a table row for a book

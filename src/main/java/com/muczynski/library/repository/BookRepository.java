@@ -7,8 +7,11 @@ import com.muczynski.library.domain.Book;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -18,4 +21,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     long countByAuthorId(Long authorId);
     Optional<Book> findByTitleAndAuthor_Name(String title, String authorName);
     Optional<Book> findByTitleAndAuthorIsNull(String title);
+
+    List<Book> findByDateAddedToLibraryOrderByTitleAsc(LocalDate dateAddedToLibrary);
+
+    @Query("SELECT MAX(b.dateAddedToLibrary) FROM Book b")
+    LocalDate findMaxDateAddedToLibrary();
 }

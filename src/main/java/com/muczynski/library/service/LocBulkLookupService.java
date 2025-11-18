@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -54,6 +56,21 @@ public class LocBulkLookupService {
                 .filter(book -> book.getLocNumber() == null || book.getLocNumber().trim().isEmpty())
                 .map(this::mapToBookLocStatusDto)
                 .sorted(Comparator.comparing(BookLocStatusDto::getTitle, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get books added on the most recent date, sorted by title
+     */
+    public List<BookLocStatusDto> getBooksFromMostRecentDate() {
+        LocalDate mostRecentDate = bookRepository.findMaxDateAddedToLibrary();
+        if (mostRecentDate == null) {
+            return Collections.emptyList();
+        }
+
+        List<Book> books = bookRepository.findByDateAddedToLibraryOrderByTitleAsc(mostRecentDate);
+        return books.stream()
+                .map(this::mapToBookLocStatusDto)
                 .collect(Collectors.toList());
     }
 
