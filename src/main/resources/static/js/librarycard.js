@@ -143,15 +143,11 @@ async function loadLibraryCardSection() {
         const userSettings = await fetchData('/api/user-settings', { suppress401Redirect: true });
 
         if (userSettings) {
-            // User is logged in, show print section and hide apply section
+            // User is logged in, show print section (apply section always visible at bottom)
             const printSection = document.getElementById('print-card-section');
-            const applySection = document.getElementById('apply-for-card-section');
 
             if (printSection) {
                 printSection.style.display = 'block';
-            }
-            if (applySection) {
-                applySection.style.display = 'none';
             }
 
             // Load and select the user's card design
