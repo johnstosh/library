@@ -409,7 +409,12 @@
         </div>
 
         <div id="library-card-section" class="section" data-test="library-card-section">
-            <!-- Print Library Card Section (for logged-in users) -->
+            <!--
+                IMPORTANT: Print Library Card Section - MUST be shown for logged-in users!
+                This section allows users to select a card design and print their library card.
+                It is shown/hidden by loadLibraryCardSection() in librarycard.js based on login status.
+                Works for both SSO users and traditional login users.
+            -->
             <div id="print-card-section" class="mt-5" data-test="print-card-section" style="display: none;">
                 <h2 data-test="print-card-header">Print Your Library Card</h2>
                 <p class="text-muted">Select your preferred card design and print a wallet-sized library card.</p>

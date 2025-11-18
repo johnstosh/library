@@ -136,30 +136,49 @@ function showApplySuccess(message) {
 
 /**
  * Load library card design preference and show print section if user is logged in
+ *
+ * IMPORTANT: This function MUST show the print-card-section for logged-in users.
+ * The print section allows users to select a card design and print their library card.
+ * It should be visible for ALL logged-in users (both SSO and traditional login).
+ * The apply-for-card section at the bottom is always visible for anyone who wants to apply.
  */
 async function loadLibraryCardSection() {
+    const printSection = document.getElementById('print-card-section');
+
     try {
         // Check if user is logged in by fetching user settings
+        // This works for both SSO users and traditional login users
         const userSettings = await fetchData('/api/user-settings', { suppress401Redirect: true });
 
         if (userSettings) {
-            // User is logged in, show print section (apply section always visible at bottom)
-            const printSection = document.getElementById('print-card-section');
-
+            // User is logged in - MUST show the print section
+            // This is the Library Card design selector that allows users to:
+            // 1. Select their preferred card design
+            // 2. Save their design preference
+            // 3. Print their library card as PDF
             if (printSection) {
                 printSection.style.display = 'block';
             }
 
-            // Load and select the user's card design
+            // Load and select the user's saved card design preference
             const currentDesign = userSettings.libraryCardDesign || 'CLASSICAL_DEVOTION';
             const radioButton = document.getElementById(`design-${currentDesign.toLowerCase().replace(/_/g, '-')}`);
             if (radioButton) {
                 radioButton.checked = true;
             }
+        } else {
+            // No user settings returned - hide print section
+            if (printSection) {
+                printSection.style.display = 'none';
+            }
         }
     } catch (error) {
-        // User not logged in, show apply section
-        console.log('User not logged in, showing apply section');
+        // Error fetching user settings - user is not logged in or there was an API error
+        // Hide print section and only show apply section
+        console.log('Could not load user settings:', error.message || error);
+        if (printSection) {
+            printSection.style.display = 'none';
+        }
     }
 }
 
