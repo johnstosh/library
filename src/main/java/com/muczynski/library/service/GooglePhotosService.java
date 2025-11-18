@@ -579,4 +579,49 @@ public class GooglePhotosService {
             throw new LibraryException("Failed to get Picker session status: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Download photo from a URL (from Google Photos Picker)
+     * Google Photos Picker API requires:
+     * 1. Append =d parameter to download the image with metadata
+     * 2. Include OAuth bearer token in Authorization header
+     * See: https://developers.google.com/photos/picker/guides/media-items
+     */
+    public byte[] downloadPhotoFromUrl(String url, String accessToken) {
+        // Append =d parameter to download the image with metadata
+        // (required by Google Photos API to actually download the image file)
+        if (!url.contains("=")) {
+            url = url + "=d";
+        }
+
+        logger.debug("Downloading photo from URL: {}", url);
+
+        try {
+            java.net.URL photoUrl = new java.net.URL(url);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) photoUrl.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+
+            // Picker API requires OAuth bearer token for downloading baseUrl
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+            int responseCode = connection.getResponseCode();
+            logger.debug("HTTP response code: {}", responseCode);
+
+            if (responseCode == 200) {
+                java.io.InputStream inputStream = connection.getInputStream();
+                byte[] photoBytes = inputStream.readAllBytes();
+                inputStream.close();
+                logger.debug("Successfully downloaded {} bytes", photoBytes.length);
+                return photoBytes;
+            } else {
+                logger.error("Failed to download photo. HTTP response code: {}", responseCode);
+                throw new LibraryException("Failed to download photo: HTTP " + responseCode);
+            }
+        } catch (Exception e) {
+            logger.error("Error downloading photo from URL: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to download photo: " + e.getMessage(), e);
+        }
+    }
 }

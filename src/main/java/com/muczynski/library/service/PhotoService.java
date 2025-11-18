@@ -100,6 +100,43 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Add photo to book from Google Photos with permanent ID
+     * Used when importing photos directly from Google Photos Picker
+     * The photo is marked as already exported since it comes from Google Photos
+     */
+    @Transactional
+    public PhotoDto addPhotoFromGooglePhotos(Long bookId, byte[] imageBytes, String contentType, String permanentId) {
+        try {
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new LibraryException("Book not found"));
+            List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setBook(book);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+
+            // Set Google Photos permanent ID and mark as already exported
+            photo.setPermanentId(permanentId);
+            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+            photo.setExportedAt(LocalDateTime.now());
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added photo from Google Photos to book ID {} with permanent ID: {}", bookId, permanentId);
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add photo from Google Photos to book ID {}: {}", bookId, e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
+        }
+    }
+
     @Transactional
     public void deleteAuthorPhoto(Long authorId, Long photoId) {
         try {

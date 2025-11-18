@@ -42,6 +42,7 @@ function resetBookForm() {
     btn.onclick = addBook;
 
     document.getElementById('add-photo-btn').style.display = 'none';
+    document.getElementById('add-photo-google-btn').style.display = 'none';
     document.getElementById('cancel-book-btn').style.display = 'none';
     document.getElementById('book-by-photo-btn').style.display = 'none';
     document.getElementById('book-by-photo-btn').onclick = null;
@@ -127,6 +128,7 @@ async function prepareNewBookForPhoto(title) {
         document.getElementById('current-book-id').value = createdBook.id;
         // After save, make buttons available
         document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('add-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-book-btn').style.display = 'inline-block';
         document.getElementById('book-by-photo-btn').style.display = 'none'; // Hidden until photo added
         document.getElementById('book-by-photo-btn').onclick = null;
@@ -220,6 +222,7 @@ async function editBook(id) {
     btn.textContent = 'Update Book';
     btn.onclick = () => updateBook(id);
     document.getElementById('add-photo-btn').style.display = 'inline-block';
+    document.getElementById('add-photo-google-btn').style.display = 'inline-block';
     document.getElementById('cancel-book-btn').style.display = 'inline-block';
 
     const photos = await fetchData(`/api/books/${id}/photos`);

@@ -231,6 +231,7 @@ async function viewBook(id) {
         // Hide action buttons
         document.getElementById('add-book-btn').style.display = 'none';
         document.getElementById('add-photo-btn').style.display = 'none';
+        document.getElementById('add-photo-google-btn').style.display = 'none';
         document.getElementById('book-by-photo-btn').style.display = 'none';
 
         // Show back button
@@ -242,6 +243,7 @@ async function viewBook(id) {
         btn.textContent = 'Update Book';
         btn.onclick = () => updateBook(id);
         document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('add-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-book-btn').style.display = 'inline-block';
     }
 
