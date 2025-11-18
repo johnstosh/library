@@ -240,25 +240,20 @@ public class ImportService {
                     }
                 }
 
-                // Try to find existing photo by various identifiers
+                // Try to find existing photo by book/author + photoOrder
                 Photo photo = null;
 
-                // 1. Try by permanentId (Google Photos ID)
-                if (pDto.getPermanentId() != null && !pDto.getPermanentId().isEmpty()) {
-                    photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
-                }
-
-                // 2. If not found and it's a book photo, try by book + photoOrder
-                if (photo == null && book != null && pDto.getPhotoOrder() != null) {
+                // 1. If it's a book photo, match by book + photoOrder
+                if (book != null && pDto.getPhotoOrder() != null) {
                     photo = photoRepository.findByBookIdAndPhotoOrder(book.getId(), pDto.getPhotoOrder()).orElse(null);
                 }
 
-                // 3. If not found and it's an author-only photo, try by author + photoOrder
+                // 2. If it's an author-only photo, match by author + photoOrder
                 if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
                     photo = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrder(author.getId(), pDto.getPhotoOrder()).orElse(null);
                 }
 
-                // 4. Create new photo if not found
+                // 3. Create new photo if not found
                 if (photo == null) {
                     photo = new Photo();
                 }
