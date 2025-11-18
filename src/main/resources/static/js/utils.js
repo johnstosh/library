@@ -481,15 +481,16 @@ export async function hashPassword(password) {
  *   Input:  "BX 4705.M124 A77 2005"
  *   Output: "BX<br>4705<br>.M124<br>A77<br>2005"
  *
- *   Input:  "BV210 .3 .B464 2013"
- *   Output: "BV<br>210<br>.3<br>.B464<br>2013"
+ *   Input:  "PN1009.5.C45 O27 1998"
+ *   Output: "PN<br>1009.5<br>.C45<br>O27<br>1998"
  *
  * The parsing rules are:
  * 1. Split by spaces to get major components
- * 2. For components that start with letters followed by digits (e.g., "BV210"),
- *    split into the letter prefix and the rest (e.g., "BV", "210")
- * 3. For components containing a period (e.g., "4705.M124"), split at the
- *    period keeping the period with the second part (e.g., "4705", ".M124")
+ * 2. For the FIRST component only, if it starts with letters followed by digits
+ *    (e.g., "PN1009"), split into the letter prefix and the rest (e.g., "PN", "1009")
+ * 3. For components containing a period followed by a LETTER (e.g., "4705.M124"),
+ *    split at that period keeping the period with the second part (e.g., "4705", ".M124")
+ * 4. Periods followed by digits are NOT split (e.g., "1009.5" stays together)
  *
  * @param {string} locNumber - The LOC call number to format
  * @returns {string} The formatted call number with HTML <br> tags between components
@@ -502,10 +503,12 @@ export function formatLocForSpine(locNumber) {
     const parts = [];
     const spaceParts = locNumber.trim().split(/\s+/);
 
-    for (const part of spaceParts) {
-        // First, check if this part starts with letters followed by digits (like "BV210")
+    for (let componentIndex = 0; componentIndex < spaceParts.length; componentIndex++) {
+        const part = spaceParts[componentIndex];
+
+        // Only for the FIRST component: check if it starts with letters followed by digits
         // This handles cases where class letters and numbers are not separated by space
-        if (part.length > 1 && /^[a-zA-Z]/.test(part.charAt(0))) {
+        if (componentIndex === 0 && part.length > 1 && /^[a-zA-Z]/.test(part.charAt(0))) {
             let firstDigitIndex = -1;
             for (let i = 0; i < part.length; i++) {
                 if (/\d/.test(part.charAt(i))) {
@@ -522,30 +525,44 @@ export function formatLocForSpine(locNumber) {
                 // Add the letter part
                 parts.push(letterPart);
 
-                // Now process the rest (which starts with digits) for periods
-                const periodIndex = restPart.indexOf('.');
-                if (periodIndex > 0) {
-                    parts.push(restPart.substring(0, periodIndex));
-                    parts.push(restPart.substring(periodIndex));
-                } else {
-                    parts.push(restPart);
-                }
+                // Now process the rest for periods followed by letters
+                splitAtLetterPeriods(restPart, parts);
                 continue;
             }
         }
 
-        // Check if this part contains a period (like "4705.M124")
-        const periodIndex = part.indexOf('.');
-        if (periodIndex > 0) {
-            // Split at the period, keeping the period with the second part
-            parts.push(part.substring(0, periodIndex));
-            parts.push(part.substring(periodIndex)); // includes the period
-        } else {
-            parts.push(part);
-        }
+        // Process for periods followed by letters
+        splitAtLetterPeriods(part, parts);
     }
 
     return parts.join('<br>');
+}
+
+/**
+ * Splits a string at periods that are followed by letters, adding results to parts array.
+ * Periods followed by digits are NOT split points (e.g., "1009.5" stays together).
+ */
+function splitAtLetterPeriods(part, parts) {
+    if (!part || part.length === 0) {
+        return;
+    }
+
+    // Find all period positions where the period is followed by a letter
+    let startIndex = 0;
+    for (let i = 0; i < part.length; i++) {
+        if (part.charAt(i) === '.' && i + 1 < part.length && /[a-zA-Z]/.test(part.charAt(i + 1))) {
+            // Found a period followed by a letter - split here
+            if (i > startIndex) {
+                parts.push(part.substring(startIndex, i));
+            }
+            startIndex = i; // Start next part from the period
+        }
+    }
+
+    // Add the remaining part
+    if (startIndex < part.length) {
+        parts.push(part.substring(startIndex));
+    }
 }
 
 // Expose formatLocForSpine globally for non-module scripts
