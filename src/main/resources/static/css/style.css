@@ -74,6 +74,41 @@ body {
     color: #000 !important;
 }
 
+.btn-secondary:hover {
+    background-color: #8BC78F !important;
+    border-color: #8BC78F !important;
+    color: #000 !important;
+}
+
+/* Button hover states - use light green instead of grey */
+.btn-outline-secondary:hover,
+.btn-outline-primary:hover,
+.btn-outline-danger:hover,
+.btn-outline-warning:hover,
+.btn-outline-info:hover,
+.btn-outline-dark:hover,
+.btn-outline-light:hover {
+    background-color: #C8E6C9 !important; /* Light green */
+    border-color: #A5D6A7 !important;
+}
+
+.btn:hover {
+    background-color: #C8E6C9 !important; /* Light green fallback */
+}
+
+/* Preserve specific button type colors on hover */
+.btn-primary:hover {
+    background-color: #1b5e20 !important;
+    border-color: #1b5e20 !important;
+    color: #fff !important;
+}
+
+.btn-danger:hover {
+    background-color: #C62828 !important;
+    border-color: #C62828 !important;
+    color: #fff !important;
+}
+
 .alert-danger {
     background-color: var(--bs-danger) !important;
     border-color: var(--bs-danger) !important;
