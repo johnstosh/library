@@ -16,6 +16,7 @@ import com.itextpdf.layout.properties.VerticalAlignment;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.util.LocCallNumberFormatter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -41,6 +42,16 @@ public class LabelsPdfService {
     private static final float BOTTOM_MARGIN = 0.5f * 72;
     private static final float LEFT_MARGIN = 0.3125f * 72;
     private static final float RIGHT_MARGIN = 0.3125f * 72;
+
+    // Font sizes (configurable via application.properties)
+    @Value("${app.labels.font-size.title:11}")
+    private int titleFontSize;
+
+    @Value("${app.labels.font-size.author:10}")
+    private int authorFontSize;
+
+    @Value("${app.labels.font-size.loc:10}")
+    private int locFontSize;
 
     /**
      * Generate labels PDF for the given list of books
@@ -140,7 +151,7 @@ public class LabelsPdfService {
 
         // Title (bold, slightly larger) - no truncation, will wrap naturally
         Paragraph titlePara = new Paragraph(book.getTitle())
-                .setFontSize(9)
+                .setFontSize(titleFontSize)
                 .setBold()
                 .setMargin(0)
                 .setPadding(0);
@@ -149,7 +160,7 @@ public class LabelsPdfService {
         // Author - no truncation, will wrap naturally
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : "Unknown";
         Paragraph authorPara = new Paragraph(authorName)
-                .setFontSize(8)
+                .setFontSize(authorFontSize)
                 .setMargin(0)
                 .setPadding(0)
                 .setMarginTop(2);
@@ -167,7 +178,7 @@ public class LabelsPdfService {
         String formattedLoc = formatLocNumber(locNumber);
 
         Paragraph locPara = new Paragraph(formattedLoc)
-                .setFontSize(8)
+                .setFontSize(locFontSize)
                 .setMargin(0)
                 .setPadding(0)
                 .setTextAlignment(TextAlignment.CENTER);
