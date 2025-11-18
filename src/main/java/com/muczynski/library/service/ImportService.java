@@ -36,7 +36,17 @@ public class ImportService {
         Map<String, Library> libMap = new HashMap<>();
         if (dto.getLibraries() != null) {
             for (LibraryDto lDto : dto.getLibraries()) {
-                Library lib = libraryMapper.toEntity(lDto);
+                // Check if library with same name already exists
+                Library lib = libraryRepository.findByName(lDto.getName()).orElse(null);
+                if (lib == null) {
+                    // Create new library without copying ID from import
+                    lib = new Library();
+                    lib.setName(lDto.getName());
+                    lib.setHostname(lDto.getHostname());
+                } else {
+                    // Update existing library
+                    lib.setHostname(lDto.getHostname());
+                }
                 lib = libraryRepository.save(lib);
                 libMap.put(lDto.getName(), lib);
             }

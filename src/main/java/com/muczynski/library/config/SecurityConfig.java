@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/global-settings/sso-status").permitAll()
                         .requestMatchers("/api/photo-export/**").authenticated()
                         .requestMatchers("/api/oauth/google/authorize", "/api/oauth/google/callback").permitAll()
                         .requestMatchers("/api/import/**").hasAuthority("LIBRARIAN")

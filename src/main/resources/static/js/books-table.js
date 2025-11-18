@@ -46,7 +46,7 @@ async function loadBooks() {
             locCell.setAttribute('data-test', 'book-loc-number');
             if (book.locNumber) {
                 const locCode = document.createElement('code');
-                locCode.textContent = book.locNumber;
+                locCode.innerHTML = window.formatLocForSpine(book.locNumber);
                 locCode.className = 'text-success';
                 locCell.appendChild(locCode);
             } else {
@@ -67,6 +67,15 @@ async function loadBooks() {
 
             const actionsCell = document.createElement('td');
             actionsCell.setAttribute('data-test', 'book-actions');
+
+            // View button for all users
+            const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-book-btn');
+            viewBtn.textContent = '👁️';
+            viewBtn.title = 'View';
+            viewBtn.onclick = () => viewBook(book.id);
+            actionsCell.appendChild(viewBtn);
+
             // Only librarians can edit/delete books
             if (window.isLibrarian) {
                 const editBtn = document.createElement('button');

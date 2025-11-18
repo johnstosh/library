@@ -32,6 +32,15 @@ async function loadAuthors() {
 
             const tdActions = document.createElement('td');
             tdActions.setAttribute('data-test', 'author-actions');
+
+            // View button for all users
+            const viewBtn = document.createElement('button');
+            viewBtn.setAttribute('data-test', 'view-author-btn');
+            viewBtn.textContent = '👁️';
+            viewBtn.title = 'View';
+            viewBtn.onclick = () => viewAuthor(author.id);
+            tdActions.appendChild(viewBtn);
+
             // Only librarians can edit/delete authors
             if (window.isLibrarian) {
                 const editBtn = document.createElement('button');

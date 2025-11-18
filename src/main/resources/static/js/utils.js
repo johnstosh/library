@@ -400,9 +400,8 @@ export function showError(sectionId, message) {
         }
     }
     errorDiv.textContent = message;
-    if (['authors', 'books', 'users'].includes(sectionId)) {
-        window.scrollTo(0, 0);
-    }
+    // Scroll error into view for better visibility
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 export function clearError(sectionId) {
@@ -470,3 +469,47 @@ export async function hashPassword(password) {
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
 }
+
+/**
+ * Formats a LOC call number for display on a book spine label.
+ *
+ * Each component of the call number is placed on its own line because
+ * library book spine labels have limited horizontal space. Breaking up
+ * the call number makes it easier to read vertically on the spine.
+ *
+ * Example:
+ *   Input:  "BX 4705.M124 A77 2005"
+ *   Output: "BX<br>4705<br>.M124<br>A77<br>2005"
+ *
+ * The parsing rules are:
+ * 1. Split by spaces to get major components
+ * 2. For components containing a period (e.g., "4705.M124"), split at the
+ *    period keeping the period with the second part (e.g., "4705", ".M124")
+ *
+ * @param {string} locNumber - The LOC call number to format
+ * @returns {string} The formatted call number with HTML <br> tags between components
+ */
+export function formatLocForSpine(locNumber) {
+    if (!locNumber || locNumber.trim() === '') {
+        return '';
+    }
+
+    const parts = [];
+    const spaceParts = locNumber.trim().split(/\s+/);
+
+    for (const part of spaceParts) {
+        const periodIndex = part.indexOf('.');
+        if (periodIndex > 0) {
+            // Split at the period, keeping the period with the second part
+            parts.push(part.substring(0, periodIndex));
+            parts.push(part.substring(periodIndex)); // includes the period
+        } else {
+            parts.push(part);
+        }
+    }
+
+    return parts.join('<br>');
+}
+
+// Expose formatLocForSpine globally for non-module scripts
+window.formatLocForSpine = formatLocForSpine;

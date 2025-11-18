@@ -14,6 +14,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.util.LocCallNumberFormatter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -70,8 +71,12 @@ public class LabelsPdfService {
                         document.add(currentTable);
                     }
 
-                    currentTable = new Table(LABELS_PER_ROW);
-                    currentTable.setWidth(UnitValue.createPercentValue(100));
+                    // Create table with fixed column widths matching label dimensions
+                    float[] columnWidths = new float[LABELS_PER_ROW];
+                    for (int i = 0; i < LABELS_PER_ROW; i++) {
+                        columnWidths[i] = LABEL_WIDTH;
+                    }
+                    currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     rowIndex = 0;
                     colIndex = 0;
@@ -188,38 +193,21 @@ public class LabelsPdfService {
     }
 
     /**
-     * Format LOC call number for multi-line display
-     * Splits the letter prefix onto one line and the rest on the next line
-     * Example: "PS3515.O9" becomes:
-     * PS
-     * 3515.O9
+     * Format LOC call number for multi-line display on book spine labels.
+     *
+     * Uses the centralized LocCallNumberFormatter to ensure consistent formatting
+     * across the application. Each component of the call number is placed on its
+     * own line because library book spine labels have limited horizontal space.
+     *
+     * Example: "BX 4705.M124 A77 2005" becomes:
+     * BX
+     * 4705
+     * .M124
+     * A77
+     * 2005
      */
     private String formatLocNumber(String locNumber) {
-        if (locNumber == null || locNumber.trim().isEmpty()) {
-            return "";
-        }
-
-        String trimmed = locNumber.trim();
-
-        // Extract leading letters and the rest
-        // Pattern: one or more uppercase letters at the start, followed by everything else
-        if (trimmed.matches("^[A-Z]+.*")) {
-            int i = 0;
-            while (i < trimmed.length() && Character.isLetter(trimmed.charAt(i))) {
-                i++;
-            }
-            String letters = trimmed.substring(0, i);
-            String rest = trimmed.substring(i);
-
-            if (!rest.isEmpty()) {
-                return letters + "\n" + rest;
-            } else {
-                return letters;
-            }
-        }
-
-        // Fallback: return as-is if format doesn't match expected pattern
-        return trimmed;
+        return LocCallNumberFormatter.formatForSpine(locNumber);
     }
 
 }

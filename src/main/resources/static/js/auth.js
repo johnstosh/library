@@ -2,6 +2,54 @@
 
 import { fetchData } from './utils.js';
 
+/**
+ * Check SSO configuration and update the Google SSO button visibility
+ */
+async function checkAndUpdateSsoButton() {
+    try {
+        const response = await fetch('/api/global-settings/sso-status', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const status = await response.json();
+            const ssoButton = document.querySelector('[data-test="google-sso-button"]');
+            const ssoSeparator = ssoButton?.previousElementSibling;
+
+            if (ssoButton) {
+                if (status.ssoConfigured) {
+                    ssoButton.style.display = 'block';
+                    if (ssoSeparator && ssoSeparator.classList.contains('my-3')) {
+                        ssoSeparator.style.display = 'block';
+                    }
+                } else {
+                    ssoButton.style.display = 'none';
+                    if (ssoSeparator && ssoSeparator.classList.contains('my-3')) {
+                        ssoSeparator.style.display = 'none';
+                    }
+                }
+            }
+        } else {
+            console.error('Failed to check SSO status:', response.status);
+            // If we can't check, hide the button to be safe
+            const ssoButton = document.querySelector('[data-test="google-sso-button"]');
+            if (ssoButton) {
+                ssoButton.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking SSO status:', error);
+        // If we can't check, hide the button to be safe
+        const ssoButton = document.querySelector('[data-test="google-sso-button"]');
+        if (ssoButton) {
+            ssoButton.style.display = 'none';
+        }
+    }
+}
+
 export async function checkAuthentication() {
     console.log('Checking authentication...');
     try {
@@ -42,7 +90,7 @@ export function showPublicSearchPage() {
     }
 }
 
-export function showLoginForm() {
+export async function showLoginForm() {
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.style.display = 'block';
     const mainContent = document.getElementById('main-content');
@@ -68,9 +116,12 @@ export function showLoginForm() {
             }
         });
     }
+
+    // Check SSO configuration and show/hide Google SSO button
+    await checkAndUpdateSsoButton();
 }
 
-export function showLoginError() {
+export async function showLoginError() {
     console.log('Showing login error');
 
     // Show login form elements
@@ -95,6 +146,9 @@ export function showLoginError() {
             }
         });
     }
+
+    // Check SSO configuration and show/hide Google SSO button
+    await checkAndUpdateSsoButton();
 
     // Show error message (don't hide it like showLoginForm does)
     const errorEl = document.getElementById('login-error');

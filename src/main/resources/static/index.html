@@ -180,7 +180,7 @@
                 <tr>
                     <th scope="col">Photo</th>
                     <th scope="col">Book</th>
-                    <th scope="col">LOC Number</th>
+                    <th scope="col">LOC Call Number</th>
                     <th scope="col">Loans</th>
                     <th scope="col">Actions</th>
                 </tr>
@@ -226,8 +226,8 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label for="new-book-loc" class="form-label">LOC Number:</label>
-                    <input type="text" id="new-book-loc" class="form-control" placeholder="LOC Number" autocomplete="off" data-test="new-book-loc">
+                    <label for="new-book-loc" class="form-label">LOC Call Number:</label>
+                    <input type="text" id="new-book-loc" class="form-control" placeholder="LOC Call Number" autocomplete="off" data-test="new-book-loc">
                 </div>
                 <div class="mb-3">
                     <label for="new-book-status-reason" class="form-label">Status Reason:</label>
@@ -299,7 +299,7 @@
                                 <tr>
                                     <th>Photo</th>
                                     <th>Title/Author</th>
-                                    <th>LOC Number</th>
+                                    <th>LOC Call Number</th>
                                     <th>Status</th>
                                     <th>Result</th>
                                     <th>Actions</th>
@@ -384,7 +384,7 @@
                                 <tr>
                                     <th scope="col">ID</th>
                                     <th scope="col">Title/Author</th>
-                                    <th scope="col">LOC Number</th>
+                                    <th scope="col">LOC Call Number</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Backed Up At</th>
                                     <th scope="col">Permanent ID</th>
@@ -409,23 +409,6 @@
         </div>
 
         <div id="library-card-section" class="section" data-test="library-card-section">
-            <div id="apply-for-card-section" data-test="apply-for-card-section">
-                <h2 data-test="apply-for-card-header">Apply for a Library Card</h2>
-                <form data-test="apply-for-card-form">
-                    <div class="mb-3">
-                        <label for="new-applicant-name" class="form-label">Name:</label>
-                        <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="off" data-test="new-applicant-name">
-                    </div>
-                    <div class="mb-3">
-                        <label for="new-applicant-password" class="form-label">Password:</label>
-                        <input type="password" id="new-applicant-password" class="form-control" placeholder="Password" autocomplete="new-password" data-test="new-applicant-password">
-                    </div>
-                    <button id="apply-for-card-btn" type="button" class="btn btn-primary" onclick="applyForCard()" data-test="apply-for-card-btn">Apply</button>
-                </form>
-                <div id="apply-error" class="alert alert-danger mt-3" style="display: none;" data-test="apply-error"></div>
-                <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
-            </div>
-
             <!-- Print Library Card Section (for logged-in users) -->
             <div id="print-card-section" class="mt-5" data-test="print-card-section" style="display: none;">
                 <h2 data-test="print-card-header">Print Your Library Card</h2>
@@ -498,6 +481,23 @@
                     <tbody id="applied-list-body" data-test="applied-list-body">
                     </tbody>
                 </table>
+            </div>
+
+            <div id="apply-for-card-section" class="mt-5" data-test="apply-for-card-section">
+                <h2 data-test="apply-for-card-header">Apply for a Library Card</h2>
+                <form data-test="apply-for-card-form">
+                    <div class="mb-3">
+                        <label for="new-applicant-name" class="form-label">Name:</label>
+                        <input type="text" id="new-applicant-name" class="form-control" placeholder="Your Name" autocomplete="off" data-test="new-applicant-name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new-applicant-password" class="form-label">Password:</label>
+                        <input type="password" id="new-applicant-password" class="form-control" placeholder="Password" autocomplete="new-password" data-test="new-applicant-password">
+                    </div>
+                    <button id="apply-for-card-btn" type="button" class="btn btn-primary" onclick="applyForCard()" data-test="apply-for-card-btn">Apply</button>
+                </form>
+                <div id="apply-error" class="alert alert-danger mt-3" style="display: none;" data-test="apply-error"></div>
+                <div id="apply-success" class="alert alert-success mt-3" style="display: none;" data-test="apply-success"></div>
             </div>
         </div>
 
@@ -704,7 +704,7 @@
                     </button>
                 </div>
                 <button type="button" class="btn btn-success ms-3" id="lookup-all-missing-btn" data-test="lookup-all-missing-btn">
-                    Lookup All Missing LOC Numbers
+                    Lookup All Missing LOC Call Numbers
                 </button>
             </div>
 
@@ -720,7 +720,7 @@
                     <tr>
                         <th>Photo</th>
                         <th>Book</th>
-                        <th>LOC Number</th>
+                        <th>LOC Call Number</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -757,7 +757,7 @@
                         <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
                         <th>Photo</th>
                         <th>Title/Author</th>
-                        <th>LOC Number</th>
+                        <th>LOC Call Number</th>
                         <th>Date Added</th>
                     </tr>
                 </thead>

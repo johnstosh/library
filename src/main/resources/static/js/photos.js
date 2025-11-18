@@ -100,7 +100,7 @@ function renderPhotosTable(photos) {
         }
         row.appendChild(titleCell);
 
-        // LOC Number column
+        // LOC Call Number column
         const locCell = document.createElement('td');
         if (photo.bookLocNumber) {
             const locCode = document.createElement('code');
