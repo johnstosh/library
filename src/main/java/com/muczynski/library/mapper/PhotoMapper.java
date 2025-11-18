@@ -22,5 +22,6 @@ public interface PhotoMapper {
     @Mapping(target = "exportedAt", ignore = true)
     @Mapping(target = "exportStatus", ignore = true)
     @Mapping(target = "exportErrorMessage", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
     Photo toEntity(PhotoDto photoDto);
 }
