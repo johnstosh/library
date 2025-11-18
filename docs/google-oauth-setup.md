@@ -141,9 +141,9 @@ If your app is in "Testing" mode (not published):
 
 After creation, a dialog will appear with your credentials:
 
-1. **Copy the Client ID** (looks like: `422211234280-abss0eud25flhodvgm4cuid7cr4ts4qd.apps.googleusercontent.com`)
-   - This is already configured in your `application.properties` file
-   - Verify it matches: `google.oauth.client-id=...`
+1. **Copy the Client ID** (looks like: `123456789012-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com`)
+   - Configure this in your `application.properties` file
+   - Set it as: `google.oauth.client-id=YOUR_CLIENT_ID`
 
 2. **Copy the Client Secret** (looks like: `GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
    - ⚠️ **Keep this secret!** Anyone with this can impersonate your app
@@ -178,7 +178,7 @@ If you want any Google user to access your app (not just test users):
 Check your `src/main/resources/application.properties` file:
 
 ```properties
-google.oauth.client-id=422211234280-abss0eud25flhodvgm4cuid7cr4ts4qd.apps.googleusercontent.com
+google.oauth.client-id=YOUR_CLIENT_ID.apps.googleusercontent.com
 google.oauth.auth-uri=https://accounts.google.com/o/oauth2/auth
 google.oauth.token-uri=https://oauth2.googleapis.com/token
 google.oauth.scope=https://www.googleapis.com/auth/photoslibrary https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/photoslibrary.readonly.originals https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata https://www.googleapis.com/auth/photospicker.mediaitems.readonly https://www.googleapis.com/auth/photoslibrary.appendonly https://www.googleapis.com/auth/photoslibrary.sharing

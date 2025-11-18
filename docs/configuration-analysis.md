@@ -6,7 +6,7 @@
 
 **Present:**
 ```properties
-google.oauth.client-id=422211234280-abss0eud25flhodvgm4cuid7cr4ts4qd.apps.googleusercontent.com
+google.oauth.client-id=YOUR_CLIENT_ID.apps.googleusercontent.com
 google.oauth.auth-uri=https://accounts.google.com/o/oauth2/auth
 google.oauth.token-uri=https://oauth2.googleapis.com/token
 google.oauth.scope=https://www.googleapis.com/auth/photoslibrary https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/photoslibrary.readonly.originals https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata https://www.googleapis.com/auth/photospicker.mediaitems.readonly https://www.googleapis.com/auth/photoslibrary.appendonly https://www.googleapis.com/auth/photoslibrary.sharing
