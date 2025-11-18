@@ -261,6 +261,32 @@ public class BookController {
         }
     }
 
+    @PutMapping("/{id}/title-author-from-photo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> getTitleAuthorFromPhoto(@PathVariable Long id) {
+        try {
+            BookDto updated = bookService.getTitleAuthorFromPhoto(id);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/book-from-title-author")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String title = request.get("title");
+            String authorName = request.get("authorName");
+            BookDto updated = bookService.getBookFromTitleAuthor(id, title, authorName);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{bookId}/photos/{photoId}/move-left")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {

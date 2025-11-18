@@ -99,4 +99,57 @@ public class AskGrok {
             throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
         }
     }
+
+    public String askTextOnly(String question) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
+        }
+        String username = authentication.getName();
+        UserDto userDto = userSettingsService.getUserSettings(username);
+        String apiKey = userDto.getXaiApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new LibraryException("xAI API key not configured for user: " + username);
+        }
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", question);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", "grok-3-latest");
+        request.put("messages", Arrays.asList(message));
+        request.put("max_tokens", 2000);
+        request.put("temperature", 0.7);
+        request.put("stream", false);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://api.x.ai/v1/chat/completions",
+                entity,
+                Map.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            Map<String, Object> body = response.getBody();
+            if (body != null && body.containsKey("choices")) {
+                List<Map> choices = (List<Map>) body.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    if (choice.containsKey("message")) {
+                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
+                        return (String) messageResponse.get("content");
+                    }
+                }
+            }
+            throw new LibraryException("Unexpected response format from xAI API");
+        } else {
+            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
+        }
+    }
 }
