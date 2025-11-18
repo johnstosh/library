@@ -135,4 +135,22 @@ class LocCallNumberFormatterTest {
 
         assertEquals(expected, result);
     }
+
+    /**
+     * Tests a call number where class letters and numbers are not separated by space.
+     *
+     * Some LOC call numbers like "BV210 .3 .B464 2013" have the class letters
+     * and class number combined without a space (BV210). The formatter must
+     * recognize this pattern and split "BV210" into "BV" and "210" so that
+     * each component appears on its own line on the book spine.
+     */
+    @Test
+    void formatForSpine_combinedLettersAndDigits_splitsCorrectly() {
+        String input = "BV210 .3 .B464 2013";
+        String expected = "BV\n210\n.3\n.B464\n2013";
+
+        String result = LocCallNumberFormatter.formatForSpine(input);
+
+        assertEquals(expected, result);
+    }
 }

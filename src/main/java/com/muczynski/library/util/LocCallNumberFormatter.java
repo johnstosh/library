@@ -18,13 +18,18 @@ public class LocCallNumberFormatter {
      * library book spine labels have limited horizontal space. Breaking up
      * the call number makes it easier to read vertically on the spine.
      *
-     * Example:
+     * Examples:
      *   Input:  "BX 4705.M124 A77 2005"
      *   Output: "BX\n4705\n.M124\nA77\n2005"
      *
+     *   Input:  "BV210 .3 .B464 2013"
+     *   Output: "BV\n210\n.3\n.B464\n2013"
+     *
      * The parsing rules are:
      * 1. Split by spaces to get major components
-     * 2. For components containing a period (e.g., "4705.M124"), split at the
+     * 2. For components that start with letters followed by digits (e.g., "BV210"),
+     *    split into the letter prefix and the rest (e.g., "BV", "210")
+     * 3. For components containing a period (e.g., "4705.M124"), split at the
      *    period keeping the period with the second part (e.g., "4705", ".M124")
      *
      * @param locNumber the LOC call number to format (e.g., "BX 4705.M124 A77 2005")
@@ -42,6 +47,37 @@ public class LocCallNumberFormatter {
         String[] spaceParts = locNumber.trim().split("\\s+");
 
         for (String part : spaceParts) {
+            // First, check if this part starts with letters followed by digits (like "BV210")
+            // This handles cases where class letters and numbers are not separated by space
+            if (part.length() > 1 && Character.isLetter(part.charAt(0))) {
+                int firstDigitIndex = -1;
+                for (int i = 0; i < part.length(); i++) {
+                    if (Character.isDigit(part.charAt(i))) {
+                        firstDigitIndex = i;
+                        break;
+                    }
+                }
+
+                // If we found digits after letters, split there
+                if (firstDigitIndex > 0) {
+                    String letterPart = part.substring(0, firstDigitIndex);
+                    String restPart = part.substring(firstDigitIndex);
+
+                    // Add the letter part
+                    parts.add(letterPart);
+
+                    // Now process the rest (which starts with digits) for periods
+                    int periodIndex = restPart.indexOf('.');
+                    if (periodIndex > 0) {
+                        parts.add(restPart.substring(0, periodIndex));
+                        parts.add(restPart.substring(periodIndex));
+                    } else {
+                        parts.add(restPart);
+                    }
+                    continue;
+                }
+            }
+
             // Check if this part contains a period (like "4705.M124")
             int periodIndex = part.indexOf('.');
             if (periodIndex > 0) {
