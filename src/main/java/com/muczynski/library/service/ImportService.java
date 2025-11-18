@@ -87,6 +87,7 @@ public class ImportService {
                     user = existingUsers.get(0); // Use existing user with lowest ID
                 } else {
                     user = new User();
+                    user.setUserIdentifier(UUID.randomUUID().toString()); // Generate unique identifier
                     user.setUsername(uDto.getUsername());
                 }
 

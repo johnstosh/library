@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -86,8 +87,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private User createNewSsoUser(String provider, String subjectId, String email, String name) {
         User user = new User();
 
-        // Use email as username, or fallback to provider_subjectId if no email
-        String username = email != null ? email : (provider + "_" + subjectId);
+        // Generate unique identifier (UUID) for this user
+        user.setUserIdentifier(UUID.randomUUID().toString());
+
+        // Use real name as username, or fallback to email, then provider_subjectId
+        String username = name != null && !name.trim().isEmpty() ? name :
+                         (email != null ? email : (provider + "_" + subjectId));
         user.setUsername(username);
 
         // SSO users don't have passwords

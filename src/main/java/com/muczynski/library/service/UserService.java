@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -94,6 +95,7 @@ public class UserService {
         }
 
         User user = new User();
+        user.setUserIdentifier(UUID.randomUUID().toString()); // Generate unique identifier
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
@@ -117,6 +119,7 @@ public class UserService {
         }
 
         User user = new User();
+        user.setUserIdentifier(UUID.randomUUID().toString()); // Generate unique identifier
         user.setUsername(applied.getName());
         user.setPassword(applied.getPassword()); // Already encoded from Applied creation
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
