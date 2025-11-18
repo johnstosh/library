@@ -177,3 +177,135 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
 
     resultsDiv.appendChild(paginationControls);
 }
+
+/**
+ * View a book's details in read-only mode.
+ * Navigates to the Books section and displays all book information.
+ */
+async function viewBook(id) {
+    showSection('books');
+    showBookList(false);
+
+    const data = await fetchData(`/api/books/${id}`);
+
+    // Populate form fields with book data
+    document.getElementById('new-book-title').value = data.title || '';
+    document.getElementById('new-book-year').value = data.publicationYear || '';
+    document.getElementById('new-book-publisher').value = data.publisher || '';
+    document.getElementById('new-book-summary').value = data.plotSummary || '';
+    document.getElementById('new-book-related').value = data.relatedWorks || '';
+    document.getElementById('new-book-description').value = data.detailedDescription || '';
+    document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
+    document.getElementById('new-book-status').value = data.status || 'ACTIVE';
+    document.getElementById('new-book-loc').value = data.locNumber || '';
+    document.getElementById('new-book-status-reason').value = data.statusReason || '';
+
+    // Set author name and ID
+    document.getElementById('book-author-id').value = data.authorId || '';
+    if (data.authorId) {
+        const author = allAuthors.find(a => a.id == data.authorId);
+        document.getElementById('book-author').value = author ? author.name : '';
+    } else {
+        document.getElementById('book-author').value = '';
+    }
+
+    document.getElementById('book-library').value = data.libraryId || '';
+    document.getElementById('current-book-id').value = id;
+
+    // For non-librarians, make fields read-only and hide action buttons
+    if (!window.isLibrarian) {
+        // Make form fields read-only
+        document.getElementById('new-book-title').readOnly = true;
+        document.getElementById('new-book-year').readOnly = true;
+        document.getElementById('new-book-publisher').readOnly = true;
+        document.getElementById('new-book-summary').readOnly = true;
+        document.getElementById('new-book-related').readOnly = true;
+        document.getElementById('new-book-description').readOnly = true;
+        document.getElementById('new-book-added').readOnly = true;
+        document.getElementById('new-book-status').disabled = true;
+        document.getElementById('new-book-loc').readOnly = true;
+        document.getElementById('new-book-status-reason').readOnly = true;
+        document.getElementById('book-author').readOnly = true;
+        document.getElementById('book-library').disabled = true;
+
+        // Hide action buttons
+        document.getElementById('add-book-btn').style.display = 'none';
+        document.getElementById('add-photo-btn').style.display = 'none';
+        document.getElementById('book-by-photo-btn').style.display = 'none';
+
+        // Show back button
+        document.getElementById('cancel-book-btn').style.display = 'inline-block';
+        document.getElementById('cancel-book-btn').textContent = 'Back to List';
+    } else {
+        // Librarian mode - set up for editing
+        const btn = document.getElementById('add-book-btn');
+        btn.textContent = 'Update Book';
+        btn.onclick = () => updateBook(id);
+        document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('cancel-book-btn').style.display = 'inline-block';
+    }
+
+    // Load and display photos
+    const photos = await fetchData(`/api/books/${id}/photos`);
+    await displayBookPhotos(photos, id);
+    if (photos && photos.length > 0 && window.isLibrarian) {
+        document.getElementById('book-by-photo-btn').style.display = 'inline-block';
+        document.getElementById('book-by-photo-btn').onclick = () => generateBookByPhoto(id);
+    }
+}
+
+/**
+ * View an author's details in read-only mode.
+ * Navigates to the Authors section and displays all author information.
+ */
+async function viewAuthor(id) {
+    showSection('authors');
+    showAuthorList(false);
+
+    const data = await fetchData(`/api/authors/${id}`);
+
+    // Populate form fields with author data
+    document.getElementById('new-author-name').value = data.name || '';
+    document.getElementById('new-author-dob').value = data.dateOfBirth || '';
+    document.getElementById('new-author-dod').value = data.dateOfDeath || '';
+    document.getElementById('new-author-religion').value = data.religiousAffiliation || '';
+    document.getElementById('new-author-country').value = data.birthCountry || '';
+    document.getElementById('new-author-nationality').value = data.nationality || '';
+    document.getElementById('new-author-bio').value = data.briefBiography || '';
+    document.getElementById('current-author-id').value = id;
+
+    // For non-librarians, make fields read-only and hide action buttons
+    if (!window.isLibrarian) {
+        // Make form fields read-only
+        document.getElementById('new-author-name').readOnly = true;
+        document.getElementById('new-author-dob').readOnly = true;
+        document.getElementById('new-author-dod').readOnly = true;
+        document.getElementById('new-author-religion').readOnly = true;
+        document.getElementById('new-author-country').readOnly = true;
+        document.getElementById('new-author-nationality').readOnly = true;
+        document.getElementById('new-author-bio').readOnly = true;
+
+        // Hide action buttons
+        document.getElementById('add-author-btn').style.display = 'none';
+        document.getElementById('add-author-photo-btn').style.display = 'none';
+
+        // Show back button
+        document.getElementById('cancel-author-btn').style.display = 'inline-block';
+        document.getElementById('cancel-author-btn').textContent = 'Back to List';
+    } else {
+        // Librarian mode - set up for editing
+        const btn = document.getElementById('add-author-btn');
+        btn.textContent = 'Update Author';
+        btn.onclick = () => updateAuthor(id);
+        document.getElementById('add-author-photo-btn').style.display = 'inline-block';
+        document.getElementById('cancel-author-btn').style.display = 'inline-block';
+    }
+
+    // Load and display photos
+    const photos = await fetchData(`/api/authors/${id}/photos`);
+    displayAuthorPhotos(photos, id);
+}
+
+// Expose view functions globally
+window.viewBook = viewBook;
+window.viewAuthor = viewAuthor;
