@@ -18,14 +18,20 @@ public class LocCallNumberFormatter {
      * library book spine labels have limited horizontal space. Breaking up
      * the call number makes it easier to read vertically on the spine.
      *
-     * Example:
+     * Examples:
      *   Input:  "BX 4705.M124 A77 2005"
      *   Output: "BX\n4705\n.M124\nA77\n2005"
      *
+     *   Input:  "BV210 .3 .B464 2013"
+     *   Output: "BV\n210\n.3\n.B464\n2013"
+     *
      * The parsing rules are:
      * 1. Split by spaces to get major components
-     * 2. For components containing a period (e.g., "4705.M124"), split at the
-     *    period keeping the period with the second part (e.g., "4705", ".M124")
+     * 2. For the FIRST component only, if it starts with letters followed by digits
+     *    (e.g., "BV210"), split into the letter prefix and the rest (e.g., "BV", "210")
+     * 3. For components containing a period followed by a LETTER (e.g., "4705.M124"),
+     *    split at that period keeping the period with the second part (e.g., "4705", ".M124")
+     * 4. Periods followed by digits are NOT split (e.g., "1009.5" stays together)
      *
      * @param locNumber the LOC call number to format (e.g., "BX 4705.M124 A77 2005")
      * @return the formatted call number with each component on its own line,
@@ -41,19 +47,66 @@ public class LocCallNumberFormatter {
         // Split by spaces first
         String[] spaceParts = locNumber.trim().split("\\s+");
 
-        for (String part : spaceParts) {
-            // Check if this part contains a period (like "4705.M124")
-            int periodIndex = part.indexOf('.');
-            if (periodIndex > 0) {
-                // Split at the period, keeping the period with the second part
-                parts.add(part.substring(0, periodIndex));
-                parts.add(part.substring(periodIndex)); // includes the period
-            } else {
-                parts.add(part);
+        for (int componentIndex = 0; componentIndex < spaceParts.length; componentIndex++) {
+            String part = spaceParts[componentIndex];
+
+            // Only for the FIRST component: check if it starts with letters followed by digits
+            // This handles cases where class letters and numbers are not separated by space
+            if (componentIndex == 0 && part.length() > 1 && Character.isLetter(part.charAt(0))) {
+                int firstDigitIndex = -1;
+                for (int i = 0; i < part.length(); i++) {
+                    if (Character.isDigit(part.charAt(i))) {
+                        firstDigitIndex = i;
+                        break;
+                    }
+                }
+
+                // If we found digits after letters, split there
+                if (firstDigitIndex > 0) {
+                    String letterPart = part.substring(0, firstDigitIndex);
+                    String restPart = part.substring(firstDigitIndex);
+
+                    // Add the letter part
+                    parts.add(letterPart);
+
+                    // Now process the rest for periods followed by letters
+                    splitAtLetterPeriods(restPart, parts);
+                    continue;
+                }
             }
+
+            // Process for periods followed by letters
+            splitAtLetterPeriods(part, parts);
         }
 
         return String.join("\n", parts);
+    }
+
+    /**
+     * Splits a string at periods that are followed by letters, adding results to parts list.
+     * Periods followed by digits are NOT split points (e.g., "1009.5" stays together).
+     */
+    private static void splitAtLetterPeriods(String part, List<String> parts) {
+        if (part.isEmpty()) {
+            return;
+        }
+
+        // Find all period positions where the period is followed by a letter
+        int startIndex = 0;
+        for (int i = 0; i < part.length(); i++) {
+            if (part.charAt(i) == '.' && i + 1 < part.length() && Character.isLetter(part.charAt(i + 1))) {
+                // Found a period followed by a letter - split here
+                if (i > startIndex) {
+                    parts.add(part.substring(startIndex, i));
+                }
+                startIndex = i; // Start next part from the period
+            }
+        }
+
+        // Add the remaining part
+        if (startIndex < part.length()) {
+            parts.add(part.substring(startIndex));
+        }
     }
 
     /**

@@ -49,7 +49,7 @@
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
-                <li class="nav-item librarian-only" data-test="menu-test-data-item">
+                <li class="nav-item public-item" data-test="menu-test-data-item">
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
                 <li class="nav-item librarian-only">
@@ -409,7 +409,12 @@
         </div>
 
         <div id="library-card-section" class="section" data-test="library-card-section">
-            <!-- Print Library Card Section (for logged-in users) -->
+            <!--
+                IMPORTANT: Print Library Card Section - MUST be shown for logged-in users!
+                This section allows users to select a card design and print their library card.
+                It is shown/hidden by loadLibraryCardSection() in librarycard.js based on login status.
+                Works for both SSO users and traditional login users.
+            -->
             <div id="print-card-section" class="mt-5" data-test="print-card-section" style="display: none;">
                 <h2 data-test="print-card-header">Print Your Library Card</h2>
                 <p class="text-muted">Select your preferred card design and print a wallet-sized library card.</p>
@@ -469,7 +474,7 @@
             </div>
 
             <div id="applied-section" class="librarian-only mt-5" data-test="applied-section">
-                <h2 data-test="applied-header">Applications</h2>
+                <h2 data-test="applied-header">Library Card Applications</h2>
                 <table class="table" data-test="applied-table">
                     <thead>
                     <tr>
@@ -600,91 +605,107 @@
             <h2 data-test="global-settings-header">Global Settings</h2>
             <p class="text-muted">These settings apply to all users and can only be changed by librarians.</p>
 
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Google OAuth Configuration</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>Client ID:</strong></div>
-                        <div class="col-md-9"><code id="global-client-id" data-test="global-client-id">(loading...)</code></div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>Redirect URI:</strong></div>
-                        <div class="col-md-9"><code id="global-redirect-uri" data-test="global-redirect-uri">(loading...)</code></div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>Client Secret:</strong></div>
-                        <div class="col-md-9">
-                            <span id="global-secret-partial" data-test="global-secret-partial">(loading...)</span>
-                            <span id="global-secret-configured" data-test="global-secret-configured"></span>
+            <div class="row">
+                <!-- Google Photos OAuth Column -->
+                <div class="col-md-6">
+                    <div class="card mb-3 h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Google Photos OAuth</h5>
                         </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>Secret Validation:</strong></div>
-                        <div class="col-md-9"><span id="global-secret-validation" data-test="global-secret-validation"></span></div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-3"><strong>Last Updated:</strong></div>
-                        <div class="col-md-9"><span id="global-secret-updated-at" data-test="global-secret-updated-at">(loading...)</span></div>
-                    </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Client ID:</strong></div>
+                                <div class="col-7">
+                                    <code id="global-client-id" data-test="global-client-id" style="word-break: break-all; font-size: 0.8em;">(loading...)</code>
+                                    <span id="global-client-id-configured" data-test="global-client-id-configured"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Client Secret:</strong></div>
+                                <div class="col-7">
+                                    <span id="global-secret-partial" data-test="global-secret-partial">(loading...)</span>
+                                    <span id="global-secret-configured" data-test="global-secret-configured"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Redirect URI:</strong></div>
+                                <div class="col-7"><code id="global-redirect-uri" data-test="global-redirect-uri" style="word-break: break-all; font-size: 0.8em;">(loading...)</code></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Secret Validation:</strong></div>
+                                <div class="col-7"><span id="global-secret-validation" data-test="global-secret-validation"></span></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-5"><strong>Last Updated:</strong></div>
+                                <div class="col-7"><span id="global-secret-updated-at" data-test="global-secret-updated-at">(loading...)</span></div>
+                            </div>
 
-                    <form id="global-settings-form" onsubmit="saveGlobalSettings(event)" data-test="global-settings-form">
-                        <div class="mb-3">
-                            <label for="global-client-secret" class="form-label">Update Client Secret</label>
-                            <input type="password" id="global-client-secret" class="form-control" autocomplete="off" placeholder="Enter new Google OAuth Client Secret" data-test="global-client-secret">
-                            <div class="form-text">Enter a new Client Secret to update. This will affect all users. Get this from Google Cloud Console.</div>
+                            <form id="global-settings-form" onsubmit="saveGlobalSettings(event)" data-test="global-settings-form">
+                                <div class="mb-3">
+                                    <label for="global-client-id-input" class="form-label">Client ID</label>
+                                    <input type="text" id="global-client-id-input" class="form-control form-control-sm" autocomplete="off" placeholder="Enter Google Photos OAuth Client ID" data-test="global-client-id-input">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="global-client-secret" class="form-label">Client Secret</label>
+                                    <input type="password" id="global-client-secret" class="form-control form-control-sm" autocomplete="off" placeholder="Enter Google Photos OAuth Client Secret" data-test="global-client-secret">
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-sm" data-test="update-global-secret-btn">Update Photos OAuth</button>
+                            </form>
+                            <div id="global-settings-error" class="alert alert-danger mt-3 py-2" style="display: none;" data-test="global-settings-error"></div>
+                            <div id="global-settings-success" class="alert alert-success mt-3 py-2" style="display: none;" data-test="global-settings-success"></div>
                         </div>
-                        <button type="submit" class="btn btn-warning" data-test="update-global-secret-btn">Update Global Client Secret</button>
-                    </form>
-                    <div id="global-settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="global-settings-error"></div>
-                    <div id="global-settings-success" class="alert alert-success mt-3" style="display: none;" data-test="global-settings-success"></div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Google SSO Configuration (User Authentication)</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <strong>Note:</strong> Google SSO credentials are separate from Google Photos OAuth.
-                        These credentials are used for user authentication (login with Google).
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>SSO Client ID:</strong></div>
-                        <div class="col-md-9">
-                            <code id="global-sso-client-id" data-test="global-sso-client-id">(loading...)</code>
-                            <span id="global-sso-client-id-configured" data-test="global-sso-client-id-configured"></span>
+                <!-- Google SSO Column -->
+                <div class="col-md-6">
+                    <div class="card mb-3 h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Google SSO (User Login)</h5>
                         </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3"><strong>SSO Client Secret:</strong></div>
-                        <div class="col-md-9">
-                            <span id="global-sso-secret-partial" data-test="global-sso-secret-partial">(loading...)</span>
-                            <span id="global-sso-secret-configured" data-test="global-sso-secret-configured"></span>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-3"><strong>Last Updated:</strong></div>
-                        <div class="col-md-9"><span id="global-sso-updated-at" data-test="global-sso-updated-at">(loading...)</span></div>
-                    </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Client ID:</strong></div>
+                                <div class="col-7">
+                                    <code id="global-sso-client-id" data-test="global-sso-client-id" style="word-break: break-all; font-size: 0.8em;">(loading...)</code>
+                                    <span id="global-sso-client-id-configured" data-test="global-sso-client-id-configured"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Client Secret:</strong></div>
+                                <div class="col-7">
+                                    <span id="global-sso-secret-partial" data-test="global-sso-secret-partial">(loading...)</span>
+                                    <span id="global-sso-secret-configured" data-test="global-sso-secret-configured"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Redirect URI:</strong></div>
+                                <div class="col-7"><code id="global-sso-redirect-uri" data-test="global-sso-redirect-uri" style="word-break: break-all; font-size: 0.8em;">(loading...)</code></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><strong>Secret Validation:</strong></div>
+                                <div class="col-7"><span id="global-sso-secret-validation" data-test="global-sso-secret-validation"></span></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-5"><strong>Last Updated:</strong></div>
+                                <div class="col-7"><span id="global-sso-updated-at" data-test="global-sso-updated-at">(loading...)</span></div>
+                            </div>
 
-                    <form id="global-sso-settings-form" onsubmit="saveGlobalSsoSettings(event)" data-test="global-sso-settings-form">
-                        <div class="mb-3">
-                            <label for="global-sso-client-id-input" class="form-label">Google SSO Client ID</label>
-                            <input type="text" id="global-sso-client-id-input" class="form-control" autocomplete="off" placeholder="Enter Google SSO Client ID" data-test="global-sso-client-id-input">
-                            <div class="form-text">Get this from Google Cloud Console (OAuth 2.0 credentials for web application).</div>
+                            <form id="global-sso-settings-form" onsubmit="saveGlobalSsoSettings(event)" data-test="global-sso-settings-form">
+                                <div class="mb-3">
+                                    <label for="global-sso-client-id-input" class="form-label">Client ID</label>
+                                    <input type="text" id="global-sso-client-id-input" class="form-control form-control-sm" autocomplete="off" placeholder="Enter Google SSO Client ID" data-test="global-sso-client-id-input">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="global-sso-client-secret-input" class="form-label">Client Secret</label>
+                                    <input type="password" id="global-sso-client-secret-input" class="form-control form-control-sm" autocomplete="off" placeholder="Enter Google SSO Client Secret" data-test="global-sso-client-secret-input">
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-sm" data-test="update-global-sso-btn">Update SSO OAuth</button>
+                            </form>
+                            <div id="global-sso-settings-error" class="alert alert-danger mt-3 py-2" style="display: none;" data-test="global-sso-settings-error"></div>
+                            <div id="global-sso-settings-success" class="alert alert-success mt-3 py-2" style="display: none;" data-test="global-sso-settings-success"></div>
                         </div>
-                        <div class="mb-3">
-                            <label for="global-sso-client-secret-input" class="form-label">Google SSO Client Secret</label>
-                            <input type="password" id="global-sso-client-secret-input" class="form-control" autocomplete="off" placeholder="Enter Google SSO Client Secret" data-test="global-sso-client-secret-input">
-                            <div class="form-text">Enter the Client Secret for Google SSO (user authentication).</div>
-                        </div>
-                        <button type="submit" class="btn btn-warning" data-test="update-global-sso-btn">Update Google SSO Credentials</button>
-                    </form>
-                    <div id="global-sso-settings-error" class="alert alert-danger mt-3" style="display: none;" data-test="global-sso-settings-error"></div>
-                    <div id="global-sso-settings-success" class="alert alert-success mt-3" style="display: none;" data-test="global-sso-settings-success"></div>
+                    </div>
                 </div>
             </div>
         </div>

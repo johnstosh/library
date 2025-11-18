@@ -100,11 +100,11 @@ function renderPhotosTable(photos) {
         }
         row.appendChild(titleCell);
 
-        // LOC Call Number column
+        // LOC Call Number column - formatted for spine display with each component on its own line
         const locCell = document.createElement('td');
         if (photo.bookLocNumber) {
             const locCode = document.createElement('code');
-            locCode.textContent = photo.bookLocNumber;
+            locCode.innerHTML = window.formatLocForSpine(photo.bookLocNumber);
             locCode.className = 'text-success';
             locCell.appendChild(locCode);
         } else {
@@ -171,6 +171,8 @@ function renderPhotosTable(photos) {
 
         // Actions
         const actionsCell = document.createElement('td');
+        actionsCell.classList.add('d-flex', 'gap-1');
+
         if (photo.exportStatus !== 'COMPLETED' && photo.exportStatus !== 'IN_PROGRESS') {
             const exportBtn = document.createElement('button');
             exportBtn.classList.add('btn', 'btn-sm', 'btn-primary');
@@ -185,6 +187,15 @@ function renderPhotosTable(photos) {
             viewBtn.target = '_blank';
             actionsCell.appendChild(viewBtn);
         }
+
+        // Delete button (trash icon)
+        const deleteBtn = document.createElement('button');
+        deleteBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
+        deleteBtn.innerHTML = '&#128465;'; // Trash can emoji
+        deleteBtn.title = 'Delete photo';
+        deleteBtn.onclick = () => deletePhotoWithUndo(photo.id, row, actionsCell, deleteBtn);
+        actionsCell.appendChild(deleteBtn);
+
         row.appendChild(actionsCell);
 
         tbody.appendChild(row);
@@ -257,6 +268,82 @@ async function exportSinglePhoto(photoId) {
     } catch (error) {
         console.error('[Photos] Failed to export photo:', error);
         showError('photos', 'Failed to export photo: ' + error.message);
+    }
+}
+
+/**
+ * Delete a photo with undo functionality
+ */
+async function deletePhotoWithUndo(photoId, row, actionsCell, deleteBtn) {
+    try {
+        // Call the delete API
+        const response = await fetch(`/api/photos/${photoId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete photo');
+        }
+
+        // Apply strikeout styling to all cells in the row except the actions cell
+        row.querySelectorAll('td').forEach(cell => {
+            if (cell !== actionsCell) {
+                cell.style.textDecoration = 'line-through';
+                cell.style.opacity = '0.5';
+            }
+        });
+
+        // Replace delete button with undo button
+        deleteBtn.innerHTML = '&#8634;'; // Undo arrow emoji
+        deleteBtn.classList.remove('btn-outline-danger');
+        deleteBtn.classList.add('btn-outline-warning');
+        deleteBtn.title = 'Undo delete';
+        deleteBtn.onclick = () => restorePhotoUndo(photoId, row, actionsCell, deleteBtn);
+
+        showSuccess('photos', `Photo #${photoId} deleted. Click undo to restore.`);
+
+    } catch (error) {
+        console.error('[Photos] Failed to delete photo:', error);
+        showError('photos', 'Failed to delete photo: ' + error.message);
+    }
+}
+
+/**
+ * Restore a deleted photo (undo)
+ */
+async function restorePhotoUndo(photoId, row, actionsCell, undoBtn) {
+    try {
+        // Call the restore API
+        const response = await fetch(`/api/photos/${photoId}/restore`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to restore photo');
+        }
+
+        // Remove strikeout styling from all cells
+        row.querySelectorAll('td').forEach(cell => {
+            if (cell !== actionsCell) {
+                cell.style.textDecoration = '';
+                cell.style.opacity = '';
+            }
+        });
+
+        // Replace undo button with delete button
+        undoBtn.innerHTML = '&#128465;'; // Trash can emoji
+        undoBtn.classList.remove('btn-outline-warning');
+        undoBtn.classList.add('btn-outline-danger');
+        undoBtn.title = 'Delete photo';
+        undoBtn.onclick = () => deletePhotoWithUndo(photoId, row, actionsCell, undoBtn);
+
+        showSuccess('photos', `Photo #${photoId} restored.`);
+
+    } catch (error) {
+        console.error('[Photos] Failed to restore photo:', error);
+        showError('photos', 'Failed to restore photo: ' + error.message);
     }
 }
 

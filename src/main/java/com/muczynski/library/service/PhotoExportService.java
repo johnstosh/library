@@ -118,6 +118,11 @@ public class PhotoExportService {
         List<Photo> photosToExport = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
+            // Skip soft-deleted photos
+            if (photo.getDeletedAt() != null) {
+                continue;
+            }
+
             // Skip if already backed up successfully
             if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED &&
                 photo.getPermanentId() != null && !photo.getPermanentId().trim().isEmpty()) {
@@ -397,17 +402,22 @@ public class PhotoExportService {
         try {
             List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
 
-            long total = allPhotos.size();
-            long completed = allPhotos.stream()
+            // Filter out soft-deleted photos
+            List<Photo> activePhotos = allPhotos.stream()
+                    .filter(p -> p.getDeletedAt() == null)
+                    .toList();
+
+            long total = activePhotos.size();
+            long completed = activePhotos.stream()
                     .filter(p -> p.getExportStatus() == Photo.ExportStatus.COMPLETED)
                     .count();
-            long pending = allPhotos.stream()
+            long pending = activePhotos.stream()
                     .filter(p -> p.getExportStatus() == null || p.getExportStatus() == Photo.ExportStatus.PENDING)
                     .count();
-            long failed = allPhotos.stream()
+            long failed = activePhotos.stream()
                     .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
                     .count();
-            long inProgress = allPhotos.stream()
+            long inProgress = activePhotos.stream()
                     .filter(p -> p.getExportStatus() == Photo.ExportStatus.IN_PROGRESS)
                     .count();
 
@@ -464,6 +474,10 @@ public class PhotoExportService {
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (Photo photo : allPhotos) {
+            // Skip soft-deleted photos
+            if (photo.getDeletedAt() != null) {
+                continue;
+            }
             try {
                 Map<String, Object> photoInfo = new HashMap<>();
                 photoInfo.put("id", photo.getId());

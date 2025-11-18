@@ -45,6 +45,17 @@ public class LocBulkLookupController {
     }
 
     /**
+     * Get books added on the most recent date
+     */
+    @GetMapping("/books/most-recent")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<BookLocStatusDto>> getBooksFromMostRecentDate() {
+        log.info("Getting books from most recent date added");
+        List<BookLocStatusDto> books = locBulkLookupService.getBooksFromMostRecentDate();
+        return ResponseEntity.ok(books);
+    }
+
+    /**
      * Lookup LOC number for a single book
      */
     @PostMapping("/lookup/{bookId}")

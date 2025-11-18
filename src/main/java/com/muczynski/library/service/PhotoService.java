@@ -28,6 +28,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -448,6 +449,40 @@ public class PhotoService {
             throw new LibraryException("Failed to create thumbnail", e);
         } catch (Exception e) {
             logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Soft delete a photo by setting its deletedAt timestamp
+     */
+    @Transactional
+    public void softDeletePhoto(Long photoId) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
+            photo.setDeletedAt(LocalDateTime.now());
+            photoRepository.save(photo);
+            logger.info("Soft deleted photo ID {}", photoId);
+        } catch (Exception e) {
+            logger.warn("Failed to soft delete photo ID {}: {}", photoId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Restore a soft-deleted photo by clearing its deletedAt timestamp
+     */
+    @Transactional
+    public void restorePhoto(Long photoId) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
+            photo.setDeletedAt(null);
+            photoRepository.save(photo);
+            logger.info("Restored photo ID {}", photoId);
+        } catch (Exception e) {
+            logger.warn("Failed to restore photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
     }

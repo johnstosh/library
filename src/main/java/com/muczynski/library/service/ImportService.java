@@ -7,6 +7,8 @@ import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class ImportService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ImportService.class);
 
     public static final String DEFAULT_PASSWORD = "divinemercy";
 
@@ -55,8 +59,13 @@ public class ImportService {
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
             for (ImportAuthorDto aDto : dto.getAuthors()) {
-                Author auth = new Author();
-                auth.setName(aDto.getName());
+                // Check if author with same name already exists
+                Author auth = authorRepository.findByName(aDto.getName());
+                if (auth == null) {
+                    auth = new Author();
+                    auth.setName(aDto.getName());
+                }
+                // Update fields (merge)
                 auth.setDateOfBirth(aDto.getDateOfBirth());
                 auth.setDateOfDeath(aDto.getDateOfDeath());
                 auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
@@ -71,21 +80,38 @@ public class ImportService {
         Map<String, User> userMap = new HashMap<>();
         if (dto.getUsers() != null) {
             for (ImportUserDto uDto : dto.getUsers()) {
-                User user = new User();
-                user.setUsername(uDto.getUsername());
-                String password = uDto.getPassword();
-                if (password == null || password.isEmpty()) {
-                    // No password provided - use default and encode it
-                    user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
-                } else if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
-                    // Already a BCrypt hash (60 chars) - use directly
-                    user.setPassword(password);
+                // Check if user with same username already exists (case-insensitive)
+                List<User> existingUsers = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(uDto.getUsername());
+                User user;
+                if (!existingUsers.isEmpty()) {
+                    user = existingUsers.get(0); // Use existing user with lowest ID
                 } else {
-                    // Plaintext password - encode it
-                    user.setPassword(passwordEncoder.encode(password));
+                    user = new User();
+                    user.setUserIdentifier(UUID.randomUUID().toString()); // Generate unique identifier
+                    user.setUsername(uDto.getUsername());
                 }
-                user.setXaiApiKey(uDto.getXaiApiKey());
-                user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
+
+                // Update password if provided
+                String password = uDto.getPassword();
+                if (password != null && !password.isEmpty()) {
+                    if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+                        // Already a BCrypt hash (60 chars) - use directly
+                        user.setPassword(password);
+                    } else {
+                        // Plaintext password - encode it
+                        user.setPassword(passwordEncoder.encode(password));
+                    }
+                } else if (user.getPassword() == null || user.getPassword().isEmpty()) {
+                    // No password and user is new - use default
+                    user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+                }
+                // Update other fields (merge)
+                if (uDto.getXaiApiKey() != null) {
+                    user.setXaiApiKey(uDto.getXaiApiKey());
+                }
+                if (uDto.getGooglePhotosAlbumId() != null) {
+                    user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
+                }
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
                     for (String rName : uDto.getRoles()) {
@@ -96,8 +122,8 @@ public class ImportService {
                         });
                         roles.add(role);
                     }
+                    user.setRoles(roles);
                 }
-                user.setRoles(roles);
                 user = userRepository.save(user);
                 userMap.put(uDto.getUsername(), user);
             }
@@ -118,14 +144,29 @@ public class ImportService {
                     throw new LibraryException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
                 }
 
-                Book book = new Book();
-                book.setTitle(bDto.getTitle());
+                // Check if book with same title and author already exists
+                Book book;
+                if (author != null) {
+                    book = bookRepository.findByTitleAndAuthor_Name(bDto.getTitle(), author.getName()).orElse(null);
+                } else {
+                    book = bookRepository.findByTitleAndAuthorIsNull(bDto.getTitle()).orElse(null);
+                }
+                if (book == null) {
+                    book = new Book();
+                    book.setTitle(bDto.getTitle());
+                }
+
+                // Update fields (merge)
                 book.setPublicationYear(bDto.getPublicationYear());
                 book.setPublisher(bDto.getPublisher());
                 book.setPlotSummary(bDto.getPlotSummary());
                 book.setRelatedWorks(bDto.getRelatedWorks());
                 book.setDetailedDescription(bDto.getDetailedDescription());
-                book.setDateAddedToLibrary(bDto.getDateAddedToLibrary() != null ? bDto.getDateAddedToLibrary() : LocalDate.now());
+                if (bDto.getDateAddedToLibrary() != null) {
+                    book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
+                } else if (book.getDateAddedToLibrary() == null) {
+                    book.setDateAddedToLibrary(LocalDate.now());
+                }
                 book.setStatus(bDto.getStatus() != null ? bDto.getStatus() : BookStatus.ACTIVE);
                 book.setLocNumber(bDto.getLocNumber());
                 book.setStatusReason(bDto.getStatusReason());
@@ -157,11 +198,22 @@ public class ImportService {
                     }
                 }
 
-                Loan loan = new Loan();
-                loan.setBook(book);
-                loan.setUser(user);
-                loan.setLoanDate(lDto.getLoanDate() != null ? lDto.getLoanDate() : LocalDate.now());
-                loan.setDueDate(lDto.getDueDate() != null ? lDto.getDueDate() : LocalDate.now().plusWeeks(2));
+                LocalDate loanDate = lDto.getLoanDate() != null ? lDto.getLoanDate() : LocalDate.now();
+
+                // Check if loan already exists (same book, user, and loan date)
+                Loan loan = null;
+                if (book != null && user != null) {
+                    loan = loanRepository.findByBookIdAndUserIdAndLoanDate(book.getId(), user.getId(), loanDate).orElse(null);
+                }
+                if (loan == null) {
+                    loan = new Loan();
+                    loan.setBook(book);
+                    loan.setUser(user);
+                    loan.setLoanDate(loanDate);
+                }
+
+                // Update fields (merge)
+                loan.setDueDate(lDto.getDueDate() != null ? lDto.getDueDate() : loanDate.plusWeeks(2));
                 loan.setReturnDate(lDto.getReturnDate());
                 loanRepository.save(loan);
             }
@@ -170,7 +222,49 @@ public class ImportService {
         // Import photos
         if (dto.getPhotos() != null) {
             for (ImportPhotoDto pDto : dto.getPhotos()) {
-                Photo photo = new Photo();
+                // First resolve book and author references
+                Book book = null;
+                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
+                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                    book = bookMap.get(key);
+                    if (book == null) {
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                    }
+                }
+
+                Author author = null;
+                if (pDto.getAuthorName() != null) {
+                    author = authMap.get(pDto.getAuthorName());
+                    if (author == null) {
+                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
+                    }
+                }
+
+                // Try to find existing photo by book/author + photoOrder
+                Photo photo = null;
+
+                // 1. If it's a book photo, match by book + photoOrder
+                if (book != null && pDto.getPhotoOrder() != null) {
+                    List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
+                    if (!photos.isEmpty()) {
+                        photo = photos.get(0); // Use the one with lowest ID
+                    }
+                }
+
+                // 2. If it's an author-only photo, match by author + photoOrder
+                if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
+                    List<Photo> photos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), pDto.getPhotoOrder());
+                    if (!photos.isEmpty()) {
+                        photo = photos.get(0); // Use the one with lowest ID
+                    }
+                }
+
+                // 3. Create new photo if not found
+                if (photo == null) {
+                    photo = new Photo();
+                }
+
+                // Update fields (merge)
                 photo.setContentType(pDto.getContentType());
                 photo.setCaption(pDto.getCaption());
                 photo.setPhotoOrder(pDto.getPhotoOrder());
@@ -178,25 +272,8 @@ public class ImportService {
                 photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
-
-                // Link to book if specified
-                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
-                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
-                    Book book = bookMap.get(key);
-                    if (book == null) {
-                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
-                    }
-                    photo.setBook(book);
-                }
-
-                // Link to author if specified
-                if (pDto.getAuthorName() != null) {
-                    Author author = authMap.get(pDto.getAuthorName());
-                    if (author == null) {
-                        throw new LibraryException("Author not found for photo: " + pDto.getAuthorName());
-                    }
-                    photo.setAuthor(author);
-                }
+                photo.setBook(book);
+                photo.setAuthor(author);
 
                 photoRepository.save(photo);
             }

@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski - Sections Module
 
 import { shouldResetForSection } from './utils.js';
+import { loadLocBulkLookupSection } from './loc-bulk-lookup.js';
 
 // Combined loader for library-card section
 function loadLibraryCardSectionCombined() {
@@ -24,7 +25,7 @@ export const sectionConfig = {
     'loans': { load: loadLoansSection, reset: null },
     'test-data': { load: loadTestDataStats, reset: null },
     'global-settings': { load: loadGlobalSettings, reset: null },
-    'loc-bulk-lookup': { load: null, reset: null },
+    'loc-bulk-lookup': { load: loadLocBulkLookupSection, reset: null },
     'settings': { load: loadSettings, reset: null }
 };
 

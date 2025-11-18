@@ -117,9 +117,9 @@ function createBookRow(book) {
 
     // LOC Call Number cell - formatted for spine display with each component on its own line
     const locCell = document.createElement('td');
-    if (book.locNumber) {
+    if (book.currentLocNumber) {
         const code = document.createElement('code');
-        code.innerHTML = window.formatLocForSpine(book.locNumber);
+        code.innerHTML = window.formatLocForSpine(book.currentLocNumber);
         code.className = 'text-success';
         locCell.appendChild(code);
     } else {

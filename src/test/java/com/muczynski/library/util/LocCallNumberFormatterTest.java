@@ -45,12 +45,13 @@ class LocCallNumberFormatterTest {
     }
 
     /**
-     * Tests that a call number with only class and number works correctly.
+     * Tests that a call number with decimal class number stays together.
+     * Periods followed by digits are NOT split (e.g., "76.73" stays together).
      */
     @Test
-    void formatForSpine_classAndNumberOnly_splitsCorrectly() {
+    void formatForSpine_decimalClassNumber_staysTogether() {
         String input = "QA 76.73";
-        String expected = "QA\n76\n.73";
+        String expected = "QA\n76.73";
 
         String result = LocCallNumberFormatter.formatForSpine(input);
 
@@ -130,6 +131,43 @@ class LocCallNumberFormatterTest {
     void formatForSpine_multipleCutters_splitsCorrectly() {
         String input = "PR 6068.O93 Z46 1998";
         String expected = "PR\n6068\n.O93\nZ46\n1998";
+
+        String result = LocCallNumberFormatter.formatForSpine(input);
+
+        assertEquals(expected, result);
+    }
+
+    /**
+     * Tests a call number where class letters and numbers are not separated by space.
+     *
+     * Some LOC call numbers like "BV210 .3 .B464 2013" have the class letters
+     * and class number combined without a space (BV210). The formatter must
+     * recognize this pattern and split "BV210" into "BV" and "210" so that
+     * each component appears on its own line on the book spine.
+     */
+    @Test
+    void formatForSpine_combinedLettersAndDigits_splitsCorrectly() {
+        String input = "BV210 .3 .B464 2013";
+        String expected = "BV\n210\n.3\n.B464\n2013";
+
+        String result = LocCallNumberFormatter.formatForSpine(input);
+
+        assertEquals(expected, result);
+    }
+
+    /**
+     * Tests a call number with decimal in class number and letter-digit combo not at start.
+     *
+     * The call number "PN1009.5.C45 O27 1998" tests multiple rules:
+     * 1. "PN1009.5.C45" is the first component, so "PN" is split from "1009.5.C45"
+     * 2. "1009.5" stays together because the period is followed by a digit (5)
+     * 3. ".C45" is split off because the period is followed by a letter (C)
+     * 4. "O27" is NOT split because it's not the first component
+     */
+    @Test
+    void formatForSpine_decimalAndLetterDigitNotAtStart_handlesCorrectly() {
+        String input = "PN1009.5.C45 O27 1998";
+        String expected = "PN\n1009.5\n.C45\nO27\n1998";
 
         String result = LocCallNumberFormatter.formatForSpine(input);
 

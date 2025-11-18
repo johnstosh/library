@@ -156,13 +156,31 @@ async function addBook() {
     const status = document.getElementById('new-book-status').value;
     const locNumber = document.getElementById('new-book-loc').value;
     const statusReason = document.getElementById('new-book-status-reason').value;
-    const authorId = document.getElementById('book-author-id').value;
+    let authorId = document.getElementById('book-author-id').value;
+    const authorName = document.getElementById('book-author').value.trim();
     const libraryId = document.getElementById('book-library').value;
-    if (!title || !authorId || !libraryId) {
-        showError('books', 'Title, author, and library are required.');
+    if (!title || !libraryId) {
+        showError('books', 'Title and library are required.');
         return;
     }
     try {
+        // If author name is provided but no ID, create a new author
+        if (authorName && !authorId) {
+            const newAuthor = await postData('/api/authors', {
+                name: authorName,
+                dateOfBirth: '',
+                dateOfDeath: '',
+                religiousAffiliation: '',
+                birthCountry: '',
+                nationality: '',
+                briefBiography: ''
+            });
+            authorId = newAuthor.id;
+            // Update the hidden field and refresh dropdowns
+            document.getElementById('book-author-id').value = authorId;
+            await populateBookDropdowns();
+        }
+
         await postData('/api/books', { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, locNumber, statusReason, authorId, libraryId });
         resetBookForm();
         await loadBooks();
@@ -275,13 +293,31 @@ async function updateBook(id) {
     const status = document.getElementById('new-book-status').value;
     const locNumber = document.getElementById('new-book-loc').value;
     const statusReason = document.getElementById('new-book-status-reason').value;
-    const authorId = document.getElementById('book-author-id').value;
+    let authorId = document.getElementById('book-author-id').value;
+    const authorName = document.getElementById('book-author').value.trim();
     const libraryId = document.getElementById('book-library').value;
-    if (!title || !authorId || !libraryId) {
-        showError('books', 'Title, author, and library are required.');
+    if (!title || !libraryId) {
+        showError('books', 'Title and library are required.');
         return;
     }
     try {
+        // If author name is provided but no ID, create a new author
+        if (authorName && !authorId) {
+            const newAuthor = await postData('/api/authors', {
+                name: authorName,
+                dateOfBirth: '',
+                dateOfDeath: '',
+                religiousAffiliation: '',
+                birthCountry: '',
+                nationality: '',
+                briefBiography: ''
+            });
+            authorId = newAuthor.id;
+            // Update the hidden field and refresh dropdowns
+            document.getElementById('book-author-id').value = authorId;
+            await populateBookDropdowns();
+        }
+
         await putData(`/api/books/${id}`, { title, publicationYear, publisher, plotSummary, relatedWorks, detailedDescription, dateAddedToLibrary, status, locNumber, statusReason, authorId, libraryId });
         resetBookForm();
         await loadBooks();

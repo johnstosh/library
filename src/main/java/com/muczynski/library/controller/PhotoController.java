@@ -59,4 +59,28 @@ public class PhotoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long id) {
+        try {
+            photoService.softDeletePhoto(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to delete photo ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restorePhoto(@PathVariable Long id) {
+        try {
+            photoService.restorePhoto(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to restore photo ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

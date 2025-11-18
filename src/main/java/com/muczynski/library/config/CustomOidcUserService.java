@@ -11,15 +11,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,31 +26,29 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+public class CustomOidcUserService extends OidcUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 
     @Override
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        log.info("CustomOAuth2UserService.loadUser() called");
+    public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
+        log.info("CustomOidcUserService.loadUser() called");
 
-        // Get user info from OAuth2 provider (Google)
-        OAuth2User oauth2User = super.loadUser(userRequest);
+        // Get user info from OIDC provider (Google)
+        OidcUser oidcUser = super.loadUser(userRequest);
 
-        log.info("OAuth2User loaded successfully, attributes: {}", oauth2User.getAttributes());
+        log.info("OidcUser loaded successfully, subject: {}", oidcUser.getSubject());
 
         // Extract user attributes
-        Map<String, Object> attributes = oauth2User.getAttributes();
         String provider = userRequest.getClientRegistration().getRegistrationId(); // "google"
-        String subjectId = (String) attributes.get("sub"); // Unique Google user ID
-        String email = (String) attributes.get("email");
-        String name = (String) attributes.get("name");
+        String subjectId = oidcUser.getSubject(); // Unique Google user ID
+        String email = oidcUser.getEmail();
+        String name = oidcUser.getFullName();
 
-        log.info("OAuth2 login attempt - Provider: {}, Email: {}, Subject ID: {}", provider, email, subjectId);
+        log.info("OIDC login attempt - Provider: {}, Email: {}, Subject ID: {}, Name: {}", provider, email, subjectId, name);
 
         // Find or create user
-        // Use the list-based query to handle potential duplicates gracefully
         java.util.List<User> users = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc(provider, subjectId);
         User user;
         if (users.isEmpty()) {
@@ -59,17 +56,27 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         } else {
             user = users.get(0); // Select the one with the lowest ID
             if (users.size() > 1) {
-                log.warn("Found {} duplicate users for SSO provider '{}' and subject ID '{}'. Using user with lowest ID: {}. " +
-                         "Consider cleaning up duplicate entries in the database.",
+                log.warn("Found {} duplicate users for SSO provider '{}' and subject ID '{}'. Using user with lowest ID: {}.",
                          users.size(), provider, subjectId, user.getId());
             }
         }
 
-        // Update email on each login (in case it changed)
+        // Update email and name on each login (in case they changed)
+        boolean updated = false;
         if (email != null && !email.equals(user.getEmail())) {
             user.setEmail(email);
+            updated = true;
+        }
+        if (name != null && !name.equals(user.getUsername())) {
+            // Only update username if it was set from email (not a custom name)
+            if (user.getUsername() != null && user.getUsername().contains("@")) {
+                user.setUsername(name);
+                updated = true;
+            }
+        }
+        if (updated) {
             userRepository.save(user);
-            log.info("Updated email for user: {} (ID: {})", user.getUsername(), user.getId());
+            log.info("Updated user info for: {} (ID: {})", user.getUsername(), user.getId());
         }
 
         // Convert user roles to Spring Security authorities
@@ -80,8 +87,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("User authenticated successfully: {} with roles: {}", user.getUsername(),
                 user.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
 
-        // Return OAuth2User with authorities
-        return new DefaultOAuth2User(authorities, attributes, "sub");
+        // Return OidcUser with our database authorities
+        return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
     }
 
     private User createNewSsoUser(String provider, String subjectId, String email, String name) {
