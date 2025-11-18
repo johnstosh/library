@@ -102,12 +102,12 @@ function createBookRow(book) {
     }
     row.appendChild(titleCell);
 
-    // LOC Call Number cell
+    // LOC Call Number cell - formatted for spine display with each component on its own line
     const locCell = document.createElement('td');
     locCell.setAttribute('data-test', 'loc-number');
     if (book.currentLocNumber) {
         const code = document.createElement('code');
-        code.textContent = book.currentLocNumber;
+        code.innerHTML = window.formatLocForSpine(book.currentLocNumber);
         code.className = 'text-success';
         locCell.appendChild(code);
     } else {
