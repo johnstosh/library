@@ -290,6 +290,7 @@ async function viewAuthor(id) {
         // Hide action buttons
         document.getElementById('add-author-btn').style.display = 'none';
         document.getElementById('add-author-photo-btn').style.display = 'none';
+        document.getElementById('add-author-photo-google-btn').style.display = 'none';
 
         // Show back button
         document.getElementById('cancel-author-btn').style.display = 'inline-block';
@@ -300,6 +301,7 @@ async function viewAuthor(id) {
         btn.textContent = 'Update Author';
         btn.onclick = () => updateAuthor(id);
         document.getElementById('add-author-photo-btn').style.display = 'inline-block';
+        document.getElementById('add-author-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-author-btn').style.display = 'inline-block';
     }
 
