@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -560,16 +562,16 @@ public class PhotoExportService {
      */
     @Transactional
     public void exportPhotoById(Long photoId) {
-        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
-
-        if (librarianOpt.isEmpty()) {
-            throw new LibraryException("No librarian user found");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
         }
+        String username = authentication.getName();
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
-        exportPhoto(photo, librarianOpt.get().getUsername());
+        exportPhoto(photo, username);
     }
 
     /**
@@ -578,11 +580,11 @@ public class PhotoExportService {
      */
     @Transactional
     public String importPhotoById(Long photoId) {
-        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
-
-        if (librarianOpt.isEmpty()) {
-            return "No librarian user found";
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "No authenticated user found";
         }
+        String username = authentication.getName();
 
         Photo photo = photoRepository.findById(photoId).orElse(null);
         if (photo == null) {
@@ -593,7 +595,6 @@ public class PhotoExportService {
             return "Photo does not have a permanent ID to import from";
         }
 
-        String username = librarianOpt.get().getUsername();
         String accessToken;
         try {
             accessToken = googlePhotosService.getValidAccessToken(username);
@@ -659,10 +660,11 @@ public class PhotoExportService {
     public Map<String, Object> importAllPhotos() {
         logger.info("Starting import of all pending photos...");
 
-        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
-        if (librarianOpt.isEmpty()) {
-            throw new LibraryException("No librarian user found");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
         }
+        String username = authentication.getName();
 
         List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
 
@@ -710,11 +712,11 @@ public class PhotoExportService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> verifyPhotoById(Long photoId) {
-        Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
-
-        if (librarianOpt.isEmpty()) {
-            throw new LibraryException("No librarian user found");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
         }
+        String username = authentication.getName();
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
@@ -722,8 +724,6 @@ public class PhotoExportService {
         if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
             throw new LibraryException("Photo does not have a permanent ID to verify");
         }
-
-        String username = librarianOpt.get().getUsername();
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
         Map<String, Object> result = new HashMap<>();
