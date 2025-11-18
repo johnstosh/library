@@ -165,13 +165,24 @@ async function importJson() {
 
 async function exportJson() {
     try {
+        // Get library name for filename
+        const libraries = await fetchData('/api/libraries');
+        let filename = 'library-data';
+        if (libraries && libraries.length > 0) {
+            // Sanitize library name for use as filename
+            filename = libraries[0].name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
         const data = await fetchData('/api/import/json');
         const jsonStr = JSON.stringify(data, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'library-data.json';
+        a.download = `${filename}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
