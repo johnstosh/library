@@ -192,73 +192,83 @@
                 </tbody>
             </table>
             <div class="librarian-only" data-test="books-form">
-                <div class="mb-3">
-                    <label for="new-book-title" class="form-label">Book Title:</label>
-                    <input type="text" id="new-book-title" class="form-control" placeholder="New book title" autocomplete="off" data-test="new-book-title">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-year" class="form-label">Publication Year:</label>
-                    <input type="number" id="new-book-year" class="form-control" placeholder="Publication Year" autocomplete="off" data-test="new-book-year">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-publisher" class="form-label">Publisher:</label>
-                    <input type="text" id="new-book-publisher" class="form-control" placeholder="Publisher" autocomplete="off" data-test="new-book-publisher">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-summary" class="form-label">Plot Summary:</label>
-                    <textarea id="new-book-summary" class="form-control" placeholder="Plot Summary" autocomplete="off" data-test="new-book-summary"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-related" class="form-label">Related Works:</label>
-                    <input type="text" id="new-book-related" class="form-control" placeholder="Related Works" autocomplete="off" data-test="new-book-related">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-description" class="form-label">Detailed Description:</label>
-                    <textarea id="new-book-description" class="form-control" placeholder="Detailed Description" autocomplete="off" data-test="new-book-description"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-added" class="form-label">Date Added to Library:</label>
-                    <input type="date" id="new-book-added" class="form-control" autocomplete="off" data-test="new-book-added">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-status" class="form-label">Status:</label>
-                    <select id="new-book-status" class="form-select" data-test="new-book-status">
-                        <option value="ACTIVE">Active</option>
-                        <option value="LOST">Lost</option>
-                        <option value="WITHDRAWN">Withdrawn</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-loc" class="form-label">LOC Call Number:</label>
-                    <input type="text" id="new-book-loc" class="form-control" placeholder="LOC Call Number" autocomplete="off" data-test="new-book-loc">
-                </div>
-                <div class="mb-3">
-                    <label for="new-book-status-reason" class="form-label">Status Reason:</label>
-                    <input type="text" id="new-book-status-reason" class="form-control" placeholder="Status Reason" autocomplete="off" data-test="new-book-status-reason">
-                </div>
-                <div class="mb-3">
-                    <label for="book-author" class="form-label">Author:</label>
-                    <div class="input-group">
-                        <input type="text" id="book-author" class="form-control" placeholder="Type to search authors..." autocomplete="off" list="author-datalist" data-test="book-author">
-                        <button type="button" class="btn btn-outline-secondary" id="clear-author-btn" title="Clear author">✕</button>
-                    </div>
-                    <datalist id="author-datalist"></datalist>
-                    <input type="hidden" id="book-author-id" data-test="book-author-id">
-                </div>
-                <div class="mb-3">
-                    <label for="book-library" class="form-label">Library:</label>
-                    <select id="book-library" class="form-select" data-test="book-library"></select>
-                </div>
                 <input type="hidden" id="current-book-id">
-                <button id="add-book-btn" class="btn btn-primary mb-3" onclick="addBook()" data-test="add-book-btn">Add Book</button>
-                <button id="cancel-book-btn" class="btn btn-secondary mb-3" onclick="resetBookForm()" data-test="cancel-book-btn" style="display: none;">Cancel</button>
-                <button id="add-photo-btn" class="btn btn-secondary mb-3" onclick="addPhoto()" data-test="add-photo-btn" style="display: none;">Add Photo</button>
-                <button id="add-photo-google-btn" class="btn btn-secondary mb-3" onclick="addPhotoFromGooglePhotos()" data-test="add-photo-google-btn" style="display: none;">Add Photo from Google Photos</button>
-                <button id="book-by-photo-btn" class="btn btn-secondary mb-3" onclick="createBookByPhoto()" data-test="book-by-photo-btn" style="display: none;">Book-by-Photo</button>
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
-                <div id="book-photos-container" class="mb-3" style="display: none;" data-test="book-photos-container">
-                    <h3 data-test="book-photos-header">Book Photos</h3>
-                    <div id="book-photos" data-test="book-photos"></div>
+                <div class="row">
+                    <!-- Left side: Form fields and action buttons -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="new-book-title" class="form-label">Book Title:</label>
+                            <input type="text" id="new-book-title" class="form-control" placeholder="New book title" autocomplete="off" data-test="new-book-title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-year" class="form-label">Publication Year:</label>
+                            <input type="number" id="new-book-year" class="form-control" placeholder="Publication Year" autocomplete="off" data-test="new-book-year">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-publisher" class="form-label">Publisher:</label>
+                            <input type="text" id="new-book-publisher" class="form-control" placeholder="Publisher" autocomplete="off" data-test="new-book-publisher">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-summary" class="form-label">Plot Summary:</label>
+                            <textarea id="new-book-summary" class="form-control" placeholder="Plot Summary" autocomplete="off" data-test="new-book-summary"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-related" class="form-label">Related Works:</label>
+                            <input type="text" id="new-book-related" class="form-control" placeholder="Related Works" autocomplete="off" data-test="new-book-related">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-description" class="form-label">Detailed Description:</label>
+                            <textarea id="new-book-description" class="form-control" placeholder="Detailed Description" autocomplete="off" data-test="new-book-description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-added" class="form-label">Date Added to Library:</label>
+                            <input type="date" id="new-book-added" class="form-control" autocomplete="off" data-test="new-book-added">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-status" class="form-label">Status:</label>
+                            <select id="new-book-status" class="form-select" data-test="new-book-status">
+                                <option value="ACTIVE">Active</option>
+                                <option value="LOST">Lost</option>
+                                <option value="WITHDRAWN">Withdrawn</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-loc" class="form-label">LOC Call Number:</label>
+                            <input type="text" id="new-book-loc" class="form-control" placeholder="LOC Call Number" autocomplete="off" data-test="new-book-loc">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-book-status-reason" class="form-label">Status Reason:</label>
+                            <input type="text" id="new-book-status-reason" class="form-control" placeholder="Status Reason" autocomplete="off" data-test="new-book-status-reason">
+                        </div>
+                        <div class="mb-3">
+                            <label for="book-author" class="form-label">Author:</label>
+                            <div class="input-group">
+                                <input type="text" id="book-author" class="form-control" placeholder="Type to search authors..." autocomplete="off" list="author-datalist" data-test="book-author">
+                                <button type="button" class="btn btn-outline-secondary" id="clear-author-btn" title="Clear author">✕</button>
+                            </div>
+                            <datalist id="author-datalist"></datalist>
+                            <input type="hidden" id="book-author-id" data-test="book-author-id">
+                        </div>
+                        <div class="mb-3">
+                            <label for="book-library" class="form-label">Library:</label>
+                            <select id="book-library" class="form-select" data-test="book-library"></select>
+                        </div>
+                        <button id="add-book-btn" class="btn btn-primary mb-3" onclick="addBook()" data-test="add-book-btn">Add Book</button>
+                        <button id="cancel-book-btn" class="btn btn-secondary mb-3" onclick="resetBookForm()" data-test="cancel-book-btn" style="display: none;">Cancel</button>
+                    </div>
+                    <!-- Right side: Photo buttons and photos -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <button id="add-photo-btn" class="btn btn-secondary" onclick="addPhoto()" data-test="add-photo-btn" style="display: none;">Add Photo</button>
+                            <button id="add-photo-google-btn" class="btn btn-secondary" onclick="addPhotoFromGooglePhotos()" data-test="add-photo-google-btn" style="display: none;">Add Photo from Google Photos</button>
+                            <button id="book-by-photo-btn" class="btn btn-secondary" onclick="createBookByPhoto()" data-test="book-by-photo-btn" style="display: none;">Book-by-Photo</button>
+                        </div>
+                        <div id="book-photos-container" class="mb-3" style="display: none;" data-test="book-photos-container">
+                            <h3 data-test="book-photos-header">Book Photos</h3>
+                            <div id="book-photos" data-test="book-photos"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
