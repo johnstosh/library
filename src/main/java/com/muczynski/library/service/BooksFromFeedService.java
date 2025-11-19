@@ -7,11 +7,16 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.PhotoRepository;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +61,35 @@ public class BooksFromFeedService {
     private AuthorRepository authorRepository;
 
     @Autowired
+    private PhotoRepository photoRepository;
+
+    @Autowired
     private LibraryService libraryService;
+
+    /**
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
 
 
     /**
@@ -279,6 +312,32 @@ public class BooksFromFeedService {
                 logger.debug("Downloading photo {} from URL: {} (mimeType: {})", photoName, photoUrl, mimeType);
                 byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
                 logger.info("Downloaded photo {} ({} bytes, mimeType: {})", photoName, photoBytes.length, mimeType);
+
+                // Check if this photo already exists in the database by checksum
+                String checksum = computeChecksum(photoBytes);
+                if (checksum != null) {
+                    java.util.Optional<Photo> existingPhoto = photoRepository.findByImageChecksum(checksum);
+                    if (existingPhoto.isPresent()) {
+                        Photo existing = existingPhoto.get();
+                        Long existingBookId = existing.getBook() != null ? existing.getBook().getId() : null;
+                        String existingTitle = existing.getBook() != null ? existing.getBook().getTitle() : "Unknown";
+                        String existingAuthor = existing.getBook() != null && existing.getBook().getAuthor() != null
+                                ? existing.getBook().getAuthor().getName() : "Unknown";
+
+                        logger.info("Photo {} already exists in database (book ID: {}, title: '{}')",
+                                photoName, existingBookId, existingTitle);
+
+                        savedPhotos.add(Map.of(
+                                "photoId", photoId,
+                                "photoName", photoName,
+                                "bookId", existingBookId != null ? existingBookId : -1,
+                                "title", existingTitle,
+                                "author", existingAuthor,
+                                "existingPhoto", true
+                        ));
+                        continue;
+                    }
+                }
 
                 // Create temporary book with special marker for processing later
                 String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));

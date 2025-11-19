@@ -28,6 +28,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,6 +44,31 @@ public class PhotoService {
     private final AuthorRepository authorRepository;
     private final PhotoMapper photoMapper;
 
+    /**
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
+
     @Transactional
     public PhotoDto addPhoto(Long bookId, MultipartFile file) {
         try {
@@ -53,12 +80,14 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
+            byte[] imageBytes = file.getBytes();
             Photo photo = new Photo();
             photo.setBook(book);
-            photo.setImage(file.getBytes());
+            photo.setImage(imageBytes);
             photo.setContentType(file.getContentType());
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.warn("Failed to add photo to book ID {} due to IO error with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
@@ -90,6 +119,7 @@ public class PhotoService {
             photo.setContentType(contentType != null ? contentType : "image/jpeg");
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
 
             Photo savedPhoto = photoRepository.save(photo);
             logger.debug("Added photo to book ID {} with order {}", bookId, savedPhoto.getPhotoOrder());
@@ -122,6 +152,7 @@ public class PhotoService {
             photo.setContentType(contentType != null ? contentType : "image/jpeg");
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
 
             // Set Google Photos permanent ID and mark as already exported
             photo.setPermanentId(permanentId);
@@ -264,12 +295,14 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
+            byte[] imageBytes = file.getBytes();
             Photo photo = new Photo();
             photo.setAuthor(author);
-            photo.setImage(file.getBytes());
+            photo.setImage(imageBytes);
             photo.setContentType(file.getContentType());
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.warn("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
@@ -302,6 +335,7 @@ public class PhotoService {
             photo.setContentType(contentType != null ? contentType : "image/jpeg");
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
 
             // Set Google Photos permanent ID and mark as already exported
             photo.setPermanentId(permanentId);
@@ -503,8 +537,10 @@ public class PhotoService {
                     .orElseThrow(() -> new LibraryException("Photo not found"));
 
             // Update the image data with the cropped version
-            photo.setImage(file.getBytes());
+            byte[] imageBytes = file.getBytes();
+            photo.setImage(imageBytes);
             photo.setContentType(file.getContentType());
+            photo.setImageChecksum(computeChecksum(imageBytes));
 
             // Reset export status since the image has been modified
             if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED) {
