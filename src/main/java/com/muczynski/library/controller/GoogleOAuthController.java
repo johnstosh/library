@@ -32,12 +32,6 @@ public class GoogleOAuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(GoogleOAuthController.class);
 
-    @Value("${google.oauth.client-id}")
-    private String clientId;
-
-    @Value("${GOOGLE_CLIENT_SECRET:}")
-    private String clientSecret;
-
     @Value("${google.oauth.auth-uri}")
     private String authUri;
 
@@ -72,6 +66,13 @@ public class GoogleOAuthController {
             throw new LibraryException("User must be logged in to authorize Google Photos");
         }
 
+        // Get effective client ID from global settings
+        String effectiveClientId = globalSettingsService.getEffectiveClientId();
+        if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
+            logger.error("Client ID not configured. Librarian must set Client ID in Global Settings.");
+            throw new LibraryException("Google Client ID not configured. Contact your librarian to configure it in Global Settings.");
+        }
+
         // Generate state token for CSRF protection
         String state = UUID.randomUUID().toString();
         String username = authentication.getName();
@@ -85,7 +86,7 @@ public class GoogleOAuthController {
         String redirectUri = origin + "/api/oauth/google/callback";
 
         logger.info("Constructed redirect URI: {}", redirectUri);
-        logger.debug("Using Client ID: {}...", clientId.substring(0, Math.min(20, clientId.length())));
+        logger.debug("Using Client ID: {}...", effectiveClientId.substring(0, Math.min(20, effectiveClientId.length())));
 
         logger.info("===== REQUESTED SCOPES =====");
         logger.info("Scopes being requested: {}", scope);
@@ -98,7 +99,7 @@ public class GoogleOAuthController {
 
         // Build authorization URL with proper URL encoding
         String authUrl = UriComponentsBuilder.fromHttpUrl(authUri)
-                .queryParam("client_id", clientId)
+                .queryParam("client_id", effectiveClientId)
                 .queryParam("redirect_uri", redirectUri)
                 .queryParam("response_type", "code")
                 .queryParam("scope", scope)
@@ -248,8 +249,15 @@ public class GoogleOAuthController {
     private Map<String, Object> exchangeCodeForTokens(String code, String username, String origin) {
         logger.debug("Exchanging authorization code for tokens (user: {}, origin: {})", username, origin);
 
-        // Get Client Secret from global settings (application-wide)
+        // Get Client ID and Client Secret from global settings (application-wide)
+        String effectiveClientId = globalSettingsService.getEffectiveClientId();
         String effectiveClientSecret = globalSettingsService.getEffectiveClientSecret();
+
+        if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
+            logger.error("Client ID not configured. " +
+                    "Librarian must set Client ID in Global Settings.");
+            throw new LibraryException("Google Client ID not configured. Contact your librarian to configure it in Global Settings.");
+        }
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
             logger.error("Client Secret not configured. " +
@@ -284,7 +292,7 @@ public class GoogleOAuthController {
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("code", code);
-        body.add("client_id", clientId);
+        body.add("client_id", effectiveClientId);
         body.add("client_secret", effectiveClientSecret);
         body.add("redirect_uri", redirectUri);
         body.add("grant_type", "authorization_code");
