@@ -318,22 +318,28 @@ public class GooglePhotosService {
 
         logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());
 
-        // Get Client Secret from global settings (application-wide)
+        // Get Client ID and Secret from global settings (application-wide)
+        String effectiveClientId = globalSettingsService.getEffectiveClientId();
         String effectiveClientSecret = globalSettingsService.getEffectiveClientSecret();
+
+        if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
+            logger.error("Client ID not configured. Cannot refresh token for user: {}.", username);
+            throw new LibraryException("Google Client ID not configured. Contact your librarian to configure it in Global Settings.");
+        }
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
             logger.error("Client Secret not configured. Cannot refresh token for user: {}.", username);
             throw new LibraryException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
-        logger.debug("Using Client Secret from global settings");
+        logger.debug("Using Client ID and Secret from global settings");
 
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("client_id", clientId);
+            body.add("client_id", effectiveClientId);
             body.add("client_secret", effectiveClientSecret);
             body.add("refresh_token", refreshToken);
             body.add("grant_type", "refresh_token");
@@ -577,6 +583,51 @@ public class GooglePhotosService {
             logger.error("Failed to get Picker session status for user: {}", username, e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to get Picker session status: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Download photo from a URL (from Google Photos Picker)
+     * Google Photos Picker API requires:
+     * 1. Append =d parameter to download the image with metadata
+     * 2. Include OAuth bearer token in Authorization header
+     * See: https://developers.google.com/photos/picker/guides/media-items
+     */
+    public byte[] downloadPhotoFromUrl(String url, String accessToken) {
+        // Append =d parameter to download the image with metadata
+        // (required by Google Photos API to actually download the image file)
+        if (!url.contains("=")) {
+            url = url + "=d";
+        }
+
+        logger.debug("Downloading photo from URL: {}", url);
+
+        try {
+            java.net.URL photoUrl = new java.net.URL(url);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) photoUrl.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+
+            // Picker API requires OAuth bearer token for downloading baseUrl
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+            int responseCode = connection.getResponseCode();
+            logger.debug("HTTP response code: {}", responseCode);
+
+            if (responseCode == 200) {
+                java.io.InputStream inputStream = connection.getInputStream();
+                byte[] photoBytes = inputStream.readAllBytes();
+                inputStream.close();
+                logger.debug("Successfully downloaded {} bytes", photoBytes.length);
+                return photoBytes;
+            } else {
+                logger.error("Failed to download photo. HTTP response code: {}", responseCode);
+                throw new LibraryException("Failed to download photo: HTTP " + responseCode);
+            }
+        } catch (Exception e) {
+            logger.error("Error downloading photo from URL: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to download photo: " + e.getMessage(), e);
         }
     }
 }

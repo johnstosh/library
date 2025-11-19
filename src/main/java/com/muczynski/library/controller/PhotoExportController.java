@@ -110,4 +110,87 @@ public class PhotoExportController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    /**
+     * Import a photo from Google Photos using its permanent ID
+     */
+    @PostMapping("/import/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Map<String, Object>> importPhoto(@PathVariable Long photoId) {
+        logger.info("Importing photo ID: {} from Google Photos", photoId);
+        String errorMessage = photoExportService.importPhotoById(photoId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("photoId", photoId);
+
+        if (errorMessage == null) {
+            response.put("message", "Photo imported successfully");
+            return ResponseEntity.ok(response);
+        } else {
+            logger.error("Failed to import photo ID: {}: {}", photoId, errorMessage);
+            response.put("error", "Failed to import photo: " + errorMessage);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * Import all photos that have permanent IDs but no image data
+     */
+    @PostMapping("/import-all")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> importAllPhotos() {
+        try {
+            logger.info("Importing all pending photos from Google Photos");
+            Map<String, Object> result = photoExportService.importAllPhotos();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import all photos", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to import photos: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Verify that a photo's permanent ID still works in Google Photos
+     */
+    @PostMapping("/verify/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Map<String, Object>> verifyPhoto(@PathVariable Long photoId) {
+        try {
+            logger.info("Verifying photo ID: {}", photoId);
+            Map<String, Object> result = photoExportService.verifyPhotoById(photoId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to verify photo ID: {}", photoId, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to verify photo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Unlink a photo by removing its permanent ID
+     */
+    @PostMapping("/unlink/{photoId}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> unlinkPhoto(@PathVariable Long photoId) {
+        try {
+            logger.info("Unlinking photo ID: {}", photoId);
+            photoExportService.unlinkPhotoById(photoId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Photo unlinked successfully");
+            response.put("photoId", photoId);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Failed to unlink photo ID: {}", photoId, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to unlink photo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }

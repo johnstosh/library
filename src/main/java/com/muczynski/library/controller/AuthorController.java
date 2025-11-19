@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -17,7 +18,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/authors")
@@ -30,6 +33,9 @@ public class AuthorController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private GooglePhotosService googlePhotosService;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -76,6 +82,69 @@ public class AuthorController {
         } catch (Exception e) {
             logger.warn("Failed to add photo to author ID {} with file {}: {}", id, file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{authorId}/photos/from-google-photos")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> addPhotosFromGooglePhotos(@PathVariable Long authorId, @RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
+
+            if (photos == null || photos.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "No photos provided",
+                        "savedCount", 0
+                ));
+            }
+
+            // Get valid access token for downloading photos
+            String accessToken = googlePhotosService.getValidAccessToken("librarian");
+
+            List<PhotoDto> savedPhotos = new ArrayList<>();
+            List<Map<String, Object>> failedPhotos = new ArrayList<>();
+
+            for (Map<String, Object> photo : photos) {
+                String permanentId = (String) photo.get("id");
+                String baseUrl = (String) photo.get("url");
+                String mimeType = (String) photo.get("mimeType");
+
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg";
+                }
+
+                try {
+                    // Download photo bytes from Google Photos
+                    byte[] photoBytes = googlePhotosService.downloadPhotoFromUrl(baseUrl, accessToken);
+
+                    // Save to database with permanent ID
+                    PhotoDto savedPhoto = photoService.addAuthorPhotoFromGooglePhotos(authorId, photoBytes, mimeType, permanentId);
+                    savedPhotos.add(savedPhoto);
+                    logger.info("Added photo from Google Photos to author {}: permanentId={}", authorId, permanentId);
+
+                } catch (Exception e) {
+                    logger.error("Failed to add photo {} to author {}: {}", permanentId, authorId, e.getMessage());
+                    failedPhotos.add(Map.of(
+                            "id", permanentId,
+                            "error", e.getMessage()
+                    ));
+                }
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "savedCount", savedPhotos.size(),
+                    "failedCount", failedPhotos.size(),
+                    "savedPhotos", savedPhotos,
+                    "failedPhotos", failedPhotos
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to add photos from Google Photos to author {}: {}", authorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", e.getMessage(),
+                    "savedCount", 0
+            ));
         }
     }
 

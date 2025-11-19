@@ -14,6 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Set;
 
 @SpringBootApplication
@@ -27,11 +28,16 @@ public class LibraryApplication {
     public CommandLineRunner initData(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             if (userRepository.count() == 0) {
-                Role librarianRole = roleRepository.findByName("LIBRARIAN").orElseGet(() -> {
+                // Use list-based query to handle potential duplicates gracefully
+                List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
+                Role librarianRole;
+                if (existingRoles.isEmpty()) {
                     Role role = new Role();
                     role.setName("LIBRARIAN");
-                    return roleRepository.save(role);
-                });
+                    librarianRole = roleRepository.save(role);
+                } else {
+                    librarianRole = existingRoles.get(0); // Select the one with the lowest ID
+                }
 
                 User librarianUser = new User();
                 librarianUser.setUsername("librarian");

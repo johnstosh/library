@@ -6,6 +6,7 @@ import com.muczynski.library.dto.LibraryDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
+import com.muczynski.library.repository.PhotoMetadataProjection;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,11 +116,21 @@ public class ImportService {
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
                     for (String rName : uDto.getRoles()) {
-                        Role role = roleRepository.findByName(rName).orElseGet(() -> {
+                        // Use list-based query to handle potential duplicates gracefully
+                        List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(rName);
+                        Role role;
+                        if (existingRoles.isEmpty()) {
                             Role r = new Role();
                             r.setName(rName);
-                            return roleRepository.save(r);
-                        });
+                            role = roleRepository.save(r);
+                        } else {
+                            role = existingRoles.get(0); // Select the one with the lowest ID
+                            if (existingRoles.size() > 1) {
+                                logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                                           "Consider cleaning up duplicate entries in the database.",
+                                           existingRoles.size(), rName, role.getId());
+                            }
+                        }
                         roles.add(role);
                     }
                     user.setRoles(roles);
@@ -147,9 +158,27 @@ public class ImportService {
                 // Check if book with same title and author already exists
                 Book book;
                 if (author != null) {
-                    book = bookRepository.findByTitleAndAuthor_Name(bDto.getTitle(), author.getName()).orElse(null);
+                    List<Book> existingBooks = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bDto.getTitle(), author.getName());
+                    if (existingBooks.isEmpty()) {
+                        book = null;
+                    } else {
+                        book = existingBooks.get(0);
+                        if (existingBooks.size() > 1) {
+                            logger.warn("Found {} duplicate books with title '{}' and author '{}'. Using first one with ID: {}",
+                                    existingBooks.size(), bDto.getTitle(), author.getName(), book.getId());
+                        }
+                    }
                 } else {
-                    book = bookRepository.findByTitleAndAuthorIsNull(bDto.getTitle()).orElse(null);
+                    List<Book> existingBooks = bookRepository.findAllByTitleAndAuthorIsNullOrderByIdAsc(bDto.getTitle());
+                    if (existingBooks.isEmpty()) {
+                        book = null;
+                    } else {
+                        book = existingBooks.get(0);
+                        if (existingBooks.size() > 1) {
+                            logger.warn("Found {} duplicate books with title '{}' and no author. Using first one with ID: {}",
+                                    existingBooks.size(), bDto.getTitle(), book.getId());
+                        }
+                    }
                 }
                 if (book == null) {
                     book = new Book();
@@ -324,7 +353,7 @@ public class ImportService {
 
         // Export books
         List<ImportBookDto> bookDtos = new ArrayList<>();
-        for (Book book : bookRepository.findAll()) {
+        for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
@@ -356,7 +385,7 @@ public class ImportService {
 
         // Export loans
         List<ImportLoanDto> loanDtos = new ArrayList<>();
-        for (Loan loan : loanRepository.findAll()) {
+        for (Loan loan : loanRepository.findAllWithBookAndUser()) {
             ImportLoanDto lDto = new ImportLoanDto();
             if (loan.getBook() != null) {
                 ImportBookDto bookDto = new ImportBookDto();
@@ -407,9 +436,9 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // Export photos (metadata only, no image bytes)
+        // Export photos (metadata only, no image bytes - using projection to avoid OOM)
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (Photo photo : photoRepository.findAll()) {
+        for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
             ImportPhotoDto pDto = new ImportPhotoDto();
             pDto.setContentType(photo.getContentType());
             pDto.setCaption(photo.getCaption());
@@ -420,16 +449,19 @@ public class ImportService {
             pDto.setExportErrorMessage(photo.getExportErrorMessage());
 
             // Reference book by title and author name
-            if (photo.getBook() != null) {
-                pDto.setBookTitle(photo.getBook().getTitle());
-                if (photo.getBook().getAuthor() != null) {
-                    pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+            PhotoMetadataProjection.BookProjection book = photo.getBook();
+            if (book != null) {
+                pDto.setBookTitle(book.getTitle());
+                PhotoMetadataProjection.AuthorProjection bookAuthor = book.getAuthor();
+                if (bookAuthor != null) {
+                    pDto.setBookAuthorName(bookAuthor.getName());
                 }
             }
 
             // Reference author by name (for author photos)
-            if (photo.getAuthor() != null) {
-                pDto.setAuthorName(photo.getAuthor().getName());
+            PhotoMetadataProjection.AuthorProjection author = photo.getAuthor();
+            if (author != null) {
+                pDto.setAuthorName(author.getName());
             }
 
             photoDtos.add(pDto);

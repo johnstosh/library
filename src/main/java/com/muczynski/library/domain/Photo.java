@@ -48,6 +48,9 @@ public class Photo {
 
     private LocalDateTime deletedAt;  // Soft delete timestamp (null if not deleted)
 
+    @Column(length = 64)
+    private String imageChecksum;  // SHA-256 checksum of image bytes for duplicate detection
+
     public enum ExportStatus {
         PENDING,      // Not yet exported
         IN_PROGRESS,  // Currently being exported

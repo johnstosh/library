@@ -8,6 +8,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.PhotoRepository;
 import edu.byu.hbll.callnumber.CallNumber;
 import edu.byu.hbll.callnumber.CallNumberParser;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 public class LocBulkLookupService {
 
     private final BookRepository bookRepository;
+    private final PhotoRepository photoRepository;
     private final LocCatalogService locCatalogService;
 
     /**
@@ -226,9 +228,8 @@ public class LocBulkLookupService {
                 .currentLocNumber(book.getLocNumber())
                 .hasLocNumber(book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
                 .publicationYear(book.getPublicationYear())
-                .firstPhotoId(book.getPhotos() != null && !book.getPhotos().isEmpty()
-                    ? book.getPhotos().get(0).getId()
-                    : null)
+                // Use efficient query to get first photo ID without loading photos collection
+                .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
                 .build();
     }
 

@@ -10,12 +10,16 @@ import com.muczynski.library.dto.BookDto;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.PhotoRepository;
 
 @Service
 public class BookMapper {
 
     @Autowired
     private LoanRepository loanRepository;
+
+    @Autowired
+    private PhotoRepository photoRepository;
 
     public BookDto toDto(Book book) {
         if (book == null) {
@@ -41,8 +45,10 @@ public class BookMapper {
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
         }
-        if (book.getPhotos() != null && !book.getPhotos().isEmpty()) {
-            bookDto.setFirstPhotoId(book.getPhotos().get(0).getId());
+        // Use efficient query to get first photo ID without loading photos collection
+        Long firstPhotoId = photoRepository.findFirstPhotoIdByBookId(book.getId());
+        if (firstPhotoId != null) {
+            bookDto.setFirstPhotoId(firstPhotoId);
         }
 
         bookDto.setLoanCount(loanRepository.countByBookIdAndReturnDateIsNull(book.getId()));

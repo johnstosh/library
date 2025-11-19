@@ -12,9 +12,12 @@ import com.muczynski.library.mapper.PhotoMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.util.Pair;
@@ -28,6 +31,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,6 +46,32 @@ public class PhotoService {
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
     private final PhotoMapper photoMapper;
+    private final EntityManager entityManager;
+
+    /**
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
 
     @Transactional
     public PhotoDto addPhoto(Long bookId, MultipartFile file) {
@@ -53,12 +84,14 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
+            byte[] imageBytes = file.getBytes();
             Photo photo = new Photo();
             photo.setBook(book);
-            photo.setImage(file.getBytes());
+            photo.setImage(imageBytes);
             photo.setContentType(file.getContentType());
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.warn("Failed to add photo to book ID {} due to IO error with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
@@ -90,12 +123,51 @@ public class PhotoService {
             photo.setContentType(contentType != null ? contentType : "image/jpeg");
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
 
             Photo savedPhoto = photoRepository.save(photo);
             logger.debug("Added photo to book ID {} with order {}", bookId, savedPhoto.getPhotoOrder());
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add photo from bytes to book ID {}: {}", bookId, e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Add photo to book from Google Photos with permanent ID
+     * Used when importing photos directly from Google Photos Picker
+     * The photo is marked as already exported since it comes from Google Photos
+     */
+    @Transactional
+    public PhotoDto addPhotoFromGooglePhotos(Long bookId, byte[] imageBytes, String contentType, String permanentId) {
+        try {
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new LibraryException("Book not found"));
+            List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setBook(book);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            // Set Google Photos permanent ID and mark as already exported
+            photo.setPermanentId(permanentId);
+            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+            photo.setExportedAt(LocalDateTime.now());
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added photo from Google Photos to book ID {} with permanent ID: {}", bookId, permanentId);
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add photo from Google Photos to book ID {}: {}", bookId, e.getMessage(), e);
             throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
         }
     }
@@ -227,12 +299,14 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
+            byte[] imageBytes = file.getBytes();
             Photo photo = new Photo();
             photo.setAuthor(author);
-            photo.setImage(file.getBytes());
+            photo.setImage(imageBytes);
             photo.setContentType(file.getContentType());
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
             return photoMapper.toDto(photoRepository.save(photo));
         } catch (IOException e) {
             logger.warn("Failed to add photo to author ID {} due to IO error with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
@@ -240,6 +314,44 @@ public class PhotoService {
         } catch (Exception e) {
             logger.warn("Failed to add photo to author ID {} with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Add photo to author from Google Photos with permanent ID
+     * Used when importing photos directly from Google Photos Picker
+     * The photo is marked as already exported since it comes from Google Photos
+     */
+    @Transactional
+    public PhotoDto addAuthorPhotoFromGooglePhotos(Long authorId, byte[] imageBytes, String contentType, String permanentId) {
+        try {
+            Author author = authorRepository.findById(authorId)
+                    .orElseThrow(() -> new LibraryException("Author not found"));
+            List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setAuthor(author);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            // Set Google Photos permanent ID and mark as already exported
+            photo.setPermanentId(permanentId);
+            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+            photo.setExportedAt(LocalDateTime.now());
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added author photo from Google Photos to author ID {} with permanent ID: {}", authorId, permanentId);
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add author photo from Google Photos to author ID {}: {}", authorId, e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
         }
     }
 
@@ -417,6 +529,41 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Replace the photo image with a cropped version
+     * @param photoId The photo ID
+     * @param file The cropped image file
+     */
+    @Transactional
+    public void cropPhoto(Long photoId, MultipartFile file) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
+
+            // Update the image data with the cropped version
+            byte[] imageBytes = file.getBytes();
+            photo.setImage(imageBytes);
+            photo.setContentType(file.getContentType());
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            // Reset export status since the image has been modified
+            if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED) {
+                photo.setExportStatus(Photo.ExportStatus.PENDING);
+                photo.setPermanentId(null);
+                photo.setExportedAt(null);
+            }
+
+            photoRepository.save(photo);
+            logger.info("Cropped photo ID {}", photoId);
+        } catch (IOException e) {
+            logger.error("Failed to crop photo ID {} due to IO error: {}", photoId, e.getMessage(), e);
+            throw new LibraryException("Failed to store cropped photo data", e);
+        } catch (Exception e) {
+            logger.error("Failed to crop photo ID {}: {}", photoId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
     @Transactional(readOnly = true)
     public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
         try {
@@ -484,6 +631,68 @@ public class PhotoService {
         } catch (Exception e) {
             logger.warn("Failed to restore photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Migrate existing photos to compute SHA-256 checksums
+     * Runs after application startup to backfill checksums for photos that don't have them
+     * Processes photos one at a time to avoid OutOfMemoryError
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void migratePhotosWithoutChecksum() {
+        try {
+            // Get only the IDs first - this doesn't load image bytes
+            List<Long> photoIds = photoRepository.findIdsWithoutChecksum();
+
+            if (photoIds.isEmpty()) {
+                logger.info("Checksum migration: No photos without checksum found");
+                return;
+            }
+
+            logger.info("Checksum migration: Found {} photos without checksum, computing...", photoIds.size());
+
+            int processed = 0;
+            int failed = 0;
+
+            // Process photos one at a time to avoid loading all images into memory
+            for (Long photoId : photoIds) {
+                try {
+                    Photo photo = photoRepository.findById(photoId).orElse(null);
+                    if (photo == null) {
+                        continue;
+                    }
+
+                    byte[] imageBytes = photo.getImage();
+                    if (imageBytes != null && imageBytes.length > 0) {
+                        String checksum = computeChecksum(imageBytes);
+                        photo.setImageChecksum(checksum);
+                        photoRepository.save(photo);
+                        processed++;
+
+                        if (processed % 100 == 0) {
+                            logger.info("Checksum migration: Processed {} of {} photos", processed, photoIds.size());
+                        }
+                    } else {
+                        logger.warn("Checksum migration: Photo ID {} has no image data", photo.getId());
+                        failed++;
+                    }
+
+                    // Clear the persistence context to free memory after each photo
+                    entityManager.flush();
+                    entityManager.clear();
+
+                } catch (Exception e) {
+                    logger.error("Checksum migration: Failed to compute checksum for photo ID {}: {}", photoId, e.getMessage());
+                    failed++;
+                }
+            }
+
+            logger.info("Checksum migration complete: {} photos processed, {} failed", processed, failed);
+
+        } catch (Exception e) {
+            logger.error("Checksum migration failed: {}", e.getMessage(), e);
         }
     }
 }

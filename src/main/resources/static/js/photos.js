@@ -22,8 +22,10 @@ async function loadPhotoExportStatus() {
 
         // Update statistics display
         document.getElementById('stats-total').textContent = stats.total || 0;
-        document.getElementById('stats-completed').textContent = stats.completed || 0;
-        document.getElementById('stats-pending').textContent = stats.pending || 0;
+        document.getElementById('stats-exported').textContent = stats.exported || 0;
+        document.getElementById('stats-imported').textContent = stats.imported || 0;
+        document.getElementById('stats-pending-export').textContent = stats.pendingExport || 0;
+        document.getElementById('stats-pending-import').textContent = stats.pendingImport || 0;
         document.getElementById('stats-failed').textContent = stats.failed || 0;
 
         // Update album information
@@ -171,21 +173,57 @@ function renderPhotosTable(photos) {
 
         // Actions
         const actionsCell = document.createElement('td');
-        actionsCell.classList.add('d-flex', 'gap-1');
+        actionsCell.classList.add('d-flex', 'gap-1', 'flex-wrap');
 
-        if (photo.exportStatus !== 'COMPLETED' && photo.exportStatus !== 'IN_PROGRESS') {
+        // Export button - show if photo has image but no permanentId
+        if (photo.hasImage && !photo.permanentId) {
             const exportBtn = document.createElement('button');
             exportBtn.classList.add('btn', 'btn-sm', 'btn-primary');
             exportBtn.textContent = 'Export';
+            exportBtn.title = 'Export to Google Photos';
             exportBtn.onclick = () => exportSinglePhoto(photo.id);
             actionsCell.appendChild(exportBtn);
-        } else if (photo.exportStatus === 'COMPLETED' && photo.permanentId) {
+        }
+
+        // Import button - show if photo has permanentId but no image
+        if (photo.permanentId && !photo.hasImage) {
+            const importBtn = document.createElement('button');
+            importBtn.classList.add('btn', 'btn-sm', 'btn-success');
+            importBtn.textContent = 'Import';
+            importBtn.title = 'Import from Google Photos';
+            importBtn.onclick = () => importSinglePhoto(photo.id);
+            actionsCell.appendChild(importBtn);
+        }
+
+        // View button - show if exported
+        if (photo.permanentId) {
             const viewBtn = document.createElement('a');
             viewBtn.classList.add('btn', 'btn-sm', 'btn-outline-primary');
             viewBtn.textContent = 'View';
+            viewBtn.title = 'View in Google Photos';
             viewBtn.href = `https://photos.google.com/lr/photo/${photo.permanentId}`;
             viewBtn.target = '_blank';
             actionsCell.appendChild(viewBtn);
+        }
+
+        // Verify button - show if has permanentId
+        if (photo.permanentId) {
+            const verifyBtn = document.createElement('button');
+            verifyBtn.classList.add('btn', 'btn-sm', 'btn-outline-info');
+            verifyBtn.textContent = 'Verify';
+            verifyBtn.title = 'Verify permanent ID still works';
+            verifyBtn.onclick = () => verifyPhoto(photo.id);
+            actionsCell.appendChild(verifyBtn);
+        }
+
+        // Unlink button - show if has permanentId
+        if (photo.permanentId) {
+            const unlinkBtn = document.createElement('button');
+            unlinkBtn.classList.add('btn', 'btn-sm', 'btn-outline-warning');
+            unlinkBtn.textContent = 'Unlink';
+            unlinkBtn.title = 'Remove permanent ID';
+            unlinkBtn.onclick = () => unlinkPhoto(photo.id);
+            actionsCell.appendChild(unlinkBtn);
         }
 
         // Delete button (trash icon)
@@ -268,6 +306,134 @@ async function exportSinglePhoto(photoId) {
     } catch (error) {
         console.error('[Photos] Failed to export photo:', error);
         showError('photos', 'Failed to export photo: ' + error.message);
+    }
+}
+
+/**
+ * Import all pending photos from Google Photos
+ */
+async function importAllPhotos() {
+    try {
+        const confirmImport = confirm('Are you sure you want to import all pending photos from Google Photos? This may take a while.');
+        if (!confirmImport) {
+            return;
+        }
+
+        showInfo('photos', 'Starting import process... This may take a few minutes.');
+
+        // Disable import button
+        const importBtn = document.getElementById('import-all-photos-btn');
+        if (importBtn) {
+            importBtn.disabled = true;
+            importBtn.textContent = 'Importing...';
+        }
+
+        const result = await fetchData('/api/photo-export/import-all', {
+            method: 'POST'
+        });
+
+        console.log('[Photos] Import result:', result);
+
+        showSuccess('photos', result.message || 'Import completed successfully!');
+
+        // Reload the export status
+        await loadPhotoExportStatus();
+
+    } catch (error) {
+        console.error('[Photos] Failed to import photos:', error);
+        showError('photos', 'Failed to import photos: ' + error.message);
+    } finally {
+        // Re-enable import button
+        const importBtn = document.getElementById('import-all-photos-btn');
+        if (importBtn) {
+            importBtn.disabled = false;
+            importBtn.textContent = 'Import All Pending Photos';
+        }
+    }
+}
+
+/**
+ * Import a single photo from Google Photos
+ */
+async function importSinglePhoto(photoId) {
+    try {
+        console.log('[Photos] Importing photo ID:', photoId);
+
+        showInfo('photos', `Importing photo #${photoId} from Google Photos...`);
+
+        const result = await fetchData(`/api/photo-export/import/${photoId}`, {
+            method: 'POST'
+        });
+
+        console.log('[Photos] Import result:', result);
+
+        showSuccess('photos', result.message || 'Photo imported successfully!');
+
+        // Reload the export status
+        await loadPhotoExportStatus();
+
+    } catch (error) {
+        console.error('[Photos] Failed to import photo:', error);
+        showError('photos', 'Failed to import photo: ' + error.message);
+    }
+}
+
+/**
+ * Verify a photo's permanent ID
+ */
+async function verifyPhoto(photoId) {
+    try {
+        console.log('[Photos] Verifying photo ID:', photoId);
+
+        showInfo('photos', `Verifying photo #${photoId}...`);
+
+        const result = await fetchData(`/api/photo-export/verify/${photoId}`, {
+            method: 'POST'
+        });
+
+        console.log('[Photos] Verify result:', result);
+
+        if (result.valid) {
+            showSuccess('photos', `Photo #${photoId} verified: ${result.message}` +
+                (result.filename ? ` (${result.filename})` : ''));
+        } else {
+            showError('photos', `Photo #${photoId} verification failed: ${result.message}`);
+        }
+
+    } catch (error) {
+        console.error('[Photos] Failed to verify photo:', error);
+        showError('photos', 'Failed to verify photo: ' + error.message);
+    }
+}
+
+/**
+ * Unlink a photo by removing its permanent ID
+ */
+async function unlinkPhoto(photoId) {
+    try {
+        const confirmUnlink = confirm(`Are you sure you want to unlink photo #${photoId}? This will remove the permanent ID and the photo will need to be re-exported.`);
+        if (!confirmUnlink) {
+            return;
+        }
+
+        console.log('[Photos] Unlinking photo ID:', photoId);
+
+        showInfo('photos', `Unlinking photo #${photoId}...`);
+
+        const result = await fetchData(`/api/photo-export/unlink/${photoId}`, {
+            method: 'POST'
+        });
+
+        console.log('[Photos] Unlink result:', result);
+
+        showSuccess('photos', result.message || 'Photo unlinked successfully!');
+
+        // Reload the export status
+        await loadPhotoExportStatus();
+
+    } catch (error) {
+        console.error('[Photos] Failed to unlink photo:', error);
+        showError('photos', 'Failed to unlink photo: ' + error.message);
     }
 }
 

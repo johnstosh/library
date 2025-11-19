@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/photos")
@@ -80,6 +81,18 @@ public class PhotoController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to restore photo ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PutMapping("/{id}/crop")
+    public ResponseEntity<Void> cropPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            photoService.cropPhoto(id, file);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to crop photo ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

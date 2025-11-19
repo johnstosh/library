@@ -30,6 +30,11 @@ async function loadAuthors() {
             tdName.textContent = author.name;
             tr.appendChild(tdName);
 
+            const tdBooks = document.createElement('td');
+            tdBooks.setAttribute('data-test', 'author-book-count');
+            tdBooks.textContent = author.bookCount || 0;
+            tr.appendChild(tdBooks);
+
             const tdActions = document.createElement('td');
             tdActions.setAttribute('data-test', 'author-actions');
 

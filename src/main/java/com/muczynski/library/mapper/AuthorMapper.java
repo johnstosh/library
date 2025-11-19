@@ -4,30 +4,56 @@
 package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
-import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.AuthorDto;
-import org.mapstruct.AfterMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import com.muczynski.library.repository.PhotoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
+@Service
+public class AuthorMapper {
 
-@Mapper(componentModel = "spring")
-public interface AuthorMapper {
+    @Autowired
+    private PhotoRepository photoRepository;
 
-    @Mapping(target = "firstPhotoId", ignore = true)
-    AuthorDto toDto(Author author);
+    public AuthorDto toDto(Author author) {
+        if (author == null) {
+            return null;
+        }
 
-    @Mapping(target = "photos", ignore = true)
-    Author toEntity(AuthorDto authorDto);
+        AuthorDto dto = new AuthorDto();
+        dto.setId(author.getId());
+        dto.setName(author.getName());
+        dto.setDateOfBirth(author.getDateOfBirth());
+        dto.setDateOfDeath(author.getDateOfDeath());
+        dto.setReligiousAffiliation(author.getReligiousAffiliation());
+        dto.setBirthCountry(author.getBirthCountry());
+        dto.setNationality(author.getNationality());
+        dto.setBriefBiography(author.getBriefBiography());
 
-    @AfterMapping
-    default void afterToDto(Author author, @MappingTarget AuthorDto dto) {
-        author.getPhotos().stream()
-                .min(Comparator.nullsLast(Comparator.comparing(Photo::getPhotoOrder, Comparator.nullsLast(Comparator.naturalOrder()))))
-                .ifPresent(photo -> {
-                    dto.setFirstPhotoId(photo.getId());
-                });
+        // Use efficient query to get first photo ID without loading photos collection
+        Long firstPhotoId = photoRepository.findFirstPhotoIdByAuthorId(author.getId());
+        if (firstPhotoId != null) {
+            dto.setFirstPhotoId(firstPhotoId);
+        }
+
+        return dto;
+    }
+
+    public Author toEntity(AuthorDto authorDto) {
+        if (authorDto == null) {
+            return null;
+        }
+
+        Author author = new Author();
+        author.setId(authorDto.getId());
+        author.setName(authorDto.getName());
+        author.setDateOfBirth(authorDto.getDateOfBirth());
+        author.setDateOfDeath(authorDto.getDateOfDeath());
+        author.setReligiousAffiliation(authorDto.getReligiousAffiliation());
+        author.setBirthCountry(authorDto.getBirthCountry());
+        author.setNationality(authorDto.getNationality());
+        author.setBriefBiography(authorDto.getBriefBiography());
+
+        return author;
     }
 }

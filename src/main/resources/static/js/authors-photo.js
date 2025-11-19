@@ -38,6 +38,14 @@ function displayAuthorPhotos(photos, authorId) {
             deleteBtn.onclick = () => deleteAuthorPhoto(authorId, photo.id);
             thumbnail.appendChild(deleteBtn);
 
+            // Edit/Crop button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'photo-overlay-btn edit-btn';
+            editBtn.innerHTML = '✏️';
+            editBtn.title = 'Crop Photo';
+            editBtn.onclick = () => openCropModalForAuthor(authorId, photo.id);
+            thumbnail.appendChild(editBtn);
+
             if (index > 0) {
                 const moveLeftBtn = document.createElement('button');
                 moveLeftBtn.className = 'photo-overlay-btn move-left-btn';
@@ -134,6 +142,182 @@ async function moveAuthorPhotoRight(authorId, photoId) {
 
 async function addAuthorPhoto() {
     document.getElementById('author-photo-upload').click();
+}
+
+// Variables for Google Photos picker
+let authorGooglePhotosPickerSessionId = null;
+let authorGooglePhotosPickerPollingInterval = null;
+
+/**
+ * Add photo from Google Photos using the Picker API
+ */
+async function addAuthorPhotoFromGooglePhotos() {
+    const authorId = document.getElementById('current-author-id').value;
+    if (!authorId) {
+        showError('authors', 'No author selected for photo upload.');
+        return;
+    }
+
+    // Check if user has authorized Google Photos
+    try {
+        const user = await fetchData('/api/user-settings');
+        if (!user.googlePhotosApiKey || user.googlePhotosApiKey.trim() === '') {
+            showError('authors', 'Please authorize Google Photos in Settings first.');
+            return;
+        }
+
+        // Show the Photos Picker
+        await showGooglePhotosPickerForAuthor(authorId);
+    } catch (error) {
+        showError('authors', 'Failed to get authorization: ' + error.message);
+    }
+}
+
+async function showGooglePhotosPickerForAuthor(authorId) {
+    try {
+        clearError('authors');
+        document.body.style.cursor = 'wait';
+
+        // Create a new picker session
+        const response = await fetch('/api/books-from-feed/picker-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || response.statusText);
+        }
+
+        const session = await response.json();
+        authorGooglePhotosPickerSessionId = session.id;
+
+        console.log('[AuthorsPhoto] Picker session created:', authorGooglePhotosPickerSessionId);
+        console.log('[AuthorsPhoto] Picker URI:', session.pickerUri);
+
+        // Append /autoclose to automatically close the picker window after selection
+        const pickerUriWithAutoClose = session.pickerUri + '/autoclose';
+
+        // Open the picker in a new window
+        const pickerWindow = window.open(
+            pickerUriWithAutoClose,
+            'Google Photos Picker',
+            'width=800,height=600,resizable=yes,scrollbars=yes'
+        );
+
+        if (!pickerWindow) {
+            throw new Error('Popup blocked. Please allow popups for this site.');
+        }
+
+        // Start polling for session completion
+        startAuthorGooglePhotosPickerPolling(session.id, authorId);
+
+    } catch (error) {
+        console.error('[AuthorsPhoto] Failed to show picker:', error);
+        showError('authors', 'Failed to open Google Photos picker: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
+    }
+}
+
+function startAuthorGooglePhotosPickerPolling(sessionId, authorId) {
+    // Clear any existing polling interval
+    if (authorGooglePhotosPickerPollingInterval) {
+        clearInterval(authorGooglePhotosPickerPollingInterval);
+    }
+
+    let pollCount = 0;
+    const maxPolls = 120; // Poll for up to 10 minutes (120 * 5 seconds)
+
+    authorGooglePhotosPickerPollingInterval = setInterval(async () => {
+        pollCount++;
+
+        if (pollCount >= maxPolls) {
+            clearInterval(authorGooglePhotosPickerPollingInterval);
+            showError('authors', 'Photo selection timed out. Please try again.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/books-from-feed/picker-session/${sessionId}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || response.statusText);
+            }
+
+            const sessionData = await response.json();
+
+            // Check if user has completed selection
+            console.log('[AuthorsPhoto] Polling session... mediaItemsSet:', sessionData.mediaItemsSet);
+
+            if (sessionData.mediaItemsSet === true) {
+                clearInterval(authorGooglePhotosPickerPollingInterval);
+                authorGooglePhotosPickerPollingInterval = null;
+
+                console.log('[AuthorsPhoto] User completed photo selection');
+
+                // Process the selected photos
+                await handleAuthorGooglePhotosPickerResults(sessionId, authorId);
+            }
+        } catch (error) {
+            console.error('[AuthorsPhoto] Polling error:', error);
+            // Continue polling unless it's a fatal error
+            if (error.message.includes('404') || error.message.includes('403')) {
+                clearInterval(authorGooglePhotosPickerPollingInterval);
+                showError('authors', 'Session expired or unauthorized: ' + error.message);
+            }
+        }
+    }, 5000); // Poll every 5 seconds
+}
+
+async function handleAuthorGooglePhotosPickerResults(sessionId, authorId) {
+    try {
+        document.body.style.cursor = 'wait';
+
+        // Get the list of selected media items
+        const response = await fetchData(`/api/books-from-feed/picker-session/${sessionId}/media-items`);
+        const mediaItems = response.mediaItems || [];
+
+        console.log('[AuthorsPhoto] User selected', mediaItems.length, 'photos');
+
+        if (mediaItems.length === 0) {
+            clearError('authors');
+            return;
+        }
+
+        // Transform Picker API response to match backend expectations
+        const photos = mediaItems.map(item => ({
+            id: item.id,
+            url: item.mediaFile.baseUrl,
+            mimeType: item.mediaFile.mimeType
+        }));
+
+        // Send to backend to add photos to author
+        const result = await postData(`/api/authors/${authorId}/photos/from-google-photos`, { photos });
+
+        if (result.savedCount > 0) {
+            // Reload photos for the author
+            const updatedPhotos = await fetchData(`/api/authors/${authorId}/photos`);
+            displayAuthorPhotos(updatedPhotos, authorId);
+            await loadAuthors();
+
+            clearError('authors');
+            // Scroll to bottom to show new photos
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        if (result.failedCount > 0) {
+            showError('authors', `Added ${result.savedCount} photo(s), but ${result.failedCount} failed.`);
+        }
+
+    } catch (error) {
+        console.error('[AuthorsPhoto] Failed to save photos from Google:', error);
+        showError('authors', 'Failed to add photos from Google Photos: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
+    }
 }
 
 async function handleAuthorPhotoUpload(event) {

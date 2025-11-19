@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.BookLocStatusDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class LabelsService {
 
     private final BookRepository bookRepository;
+    private final PhotoRepository photoRepository;
     private final LabelsPdfService labelsPdfService;
 
     /**
@@ -73,9 +75,8 @@ public class LabelsService {
                 .dateAdded(book.getDateAddedToLibrary() != null
                     ? book.getDateAddedToLibrary().toString()
                     : null)
-                .firstPhotoId(book.getPhotos() != null && !book.getPhotos().isEmpty()
-                    ? book.getPhotos().get(0).getId()
-                    : null)
+                // Use efficient query to get first photo ID without loading photos collection
+                .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
                 .build();
     }
 }

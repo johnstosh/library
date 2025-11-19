@@ -165,13 +165,33 @@ async function importJson() {
 
 async function exportJson() {
     try {
+        // Get library name, books, and authors for filename
+        const [libraries, books, authors] = await Promise.all([
+            fetchData('/api/libraries'),
+            fetchData('/api/books'),
+            fetchData('/api/authors')
+        ]);
+
+        let libraryName = 'library';
+        if (libraries && libraries.length > 0) {
+            // Sanitize library name for use as filename
+            libraryName = libraries[0].name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        const bookCount = books ? books.length : 0;
+        const authorCount = authors ? authors.length : 0;
+        const filename = `${libraryName}-${bookCount}-books-${authorCount}-authors`;
+
         const data = await fetchData('/api/import/json');
         const jsonStr = JSON.stringify(data, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'library-data.json';
+        a.download = `${filename}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

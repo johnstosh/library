@@ -231,6 +231,7 @@ async function viewBook(id) {
         // Hide action buttons
         document.getElementById('add-book-btn').style.display = 'none';
         document.getElementById('add-photo-btn').style.display = 'none';
+        document.getElementById('add-photo-google-btn').style.display = 'none';
         document.getElementById('book-by-photo-btn').style.display = 'none';
 
         // Show back button
@@ -242,6 +243,7 @@ async function viewBook(id) {
         btn.textContent = 'Update Book';
         btn.onclick = () => updateBook(id);
         document.getElementById('add-photo-btn').style.display = 'inline-block';
+        document.getElementById('add-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-book-btn').style.display = 'inline-block';
     }
 
@@ -288,6 +290,7 @@ async function viewAuthor(id) {
         // Hide action buttons
         document.getElementById('add-author-btn').style.display = 'none';
         document.getElementById('add-author-photo-btn').style.display = 'none';
+        document.getElementById('add-author-photo-google-btn').style.display = 'none';
 
         // Show back button
         document.getElementById('cancel-author-btn').style.display = 'inline-block';
@@ -298,6 +301,7 @@ async function viewAuthor(id) {
         btn.textContent = 'Update Author';
         btn.onclick = () => updateAuthor(id);
         document.getElementById('add-author-photo-btn').style.display = 'inline-block';
+        document.getElementById('add-author-photo-google-btn').style.display = 'inline-block';
         document.getElementById('cancel-author-btn').style.display = 'inline-block';
     }
 

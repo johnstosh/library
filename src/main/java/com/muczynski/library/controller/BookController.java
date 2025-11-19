@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,9 @@ public class BookController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private GooglePhotosService googlePhotosService;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -97,6 +102,18 @@ public class BookController {
         }
     }
 
+    @PostMapping("/{id}/clone")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> cloneBook(@PathVariable Long id) {
+        try {
+            BookDto cloned = bookService.cloneBook(id);
+            return ResponseEntity.status(HttpStatus.CREATED).body(cloned);
+        } catch (Exception e) {
+            logger.warn("Failed to clone book ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
@@ -106,6 +123,69 @@ public class BookController {
         } catch (Exception e) {
             logger.warn("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{bookId}/photos/from-google-photos")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
+
+            if (photos == null || photos.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "No photos provided",
+                        "savedCount", 0
+                ));
+            }
+
+            // Get valid access token for downloading photos
+            String accessToken = googlePhotosService.getValidAccessToken("librarian");
+
+            List<PhotoDto> savedPhotos = new ArrayList<>();
+            List<Map<String, Object>> failedPhotos = new ArrayList<>();
+
+            for (Map<String, Object> photo : photos) {
+                String permanentId = (String) photo.get("id");
+                String baseUrl = (String) photo.get("url");
+                String mimeType = (String) photo.get("mimeType");
+
+                if (mimeType == null || mimeType.trim().isEmpty()) {
+                    mimeType = "image/jpeg";
+                }
+
+                try {
+                    // Download photo bytes from Google Photos
+                    byte[] photoBytes = googlePhotosService.downloadPhotoFromUrl(baseUrl, accessToken);
+
+                    // Save to database with permanent ID
+                    PhotoDto savedPhoto = photoService.addPhotoFromGooglePhotos(bookId, photoBytes, mimeType, permanentId);
+                    savedPhotos.add(savedPhoto);
+                    logger.info("Added photo from Google Photos to book {}: permanentId={}", bookId, permanentId);
+
+                } catch (Exception e) {
+                    logger.error("Failed to add photo {} to book {}: {}", permanentId, bookId, e.getMessage());
+                    failedPhotos.add(Map.of(
+                            "id", permanentId,
+                            "error", e.getMessage()
+                    ));
+                }
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "savedCount", savedPhotos.size(),
+                    "failedCount", failedPhotos.size(),
+                    "savedPhotos", savedPhotos,
+                    "failedPhotos", failedPhotos
+            ));
+
+        } catch (Exception e) {
+            logger.error("Failed to add photos from Google Photos to book {}: {}", bookId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", e.getMessage(),
+                    "savedCount", 0
+            ));
         }
     }
 
@@ -177,6 +257,32 @@ public class BookController {
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to generate book by photo for ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/title-author-from-photo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> getTitleAuthorFromPhoto(@PathVariable Long id) {
+        try {
+            BookDto updated = bookService.getTitleAuthorFromPhoto(id);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/book-from-title-author")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String title = request.get("title");
+            String authorName = request.get("authorName");
+            BookDto updated = bookService.getBookFromTitleAuthor(id, title, authorName);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

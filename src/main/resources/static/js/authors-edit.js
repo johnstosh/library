@@ -45,6 +45,7 @@ async function editAuthor(id) {
 
     document.getElementById('cancel-author-btn').style.display = 'inline-block';
     document.getElementById('add-author-photo-btn').style.display = 'inline-block';
+    document.getElementById('add-author-photo-google-btn').style.display = 'inline-block';
 
     showAuthorList(false);
 
@@ -91,6 +92,7 @@ function resetAuthorForm() {
 
     document.getElementById('cancel-author-btn').style.display = 'none';
     document.getElementById('add-author-photo-btn').style.display = 'none';
+    document.getElementById('add-author-photo-google-btn').style.display = 'none';
     document.getElementById('author-photos-container').style.display = 'none';
 
     showAuthorList(true);
