@@ -318,22 +318,28 @@ public class GooglePhotosService {
 
         logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());
 
-        // Get Client Secret from global settings (application-wide)
+        // Get Client ID and Secret from global settings (application-wide)
+        String effectiveClientId = globalSettingsService.getEffectiveClientId();
         String effectiveClientSecret = globalSettingsService.getEffectiveClientSecret();
+
+        if (effectiveClientId == null || effectiveClientId.trim().isEmpty()) {
+            logger.error("Client ID not configured. Cannot refresh token for user: {}.", username);
+            throw new LibraryException("Google Client ID not configured. Contact your librarian to configure it in Global Settings.");
+        }
 
         if (effectiveClientSecret == null || effectiveClientSecret.trim().isEmpty()) {
             logger.error("Client Secret not configured. Cannot refresh token for user: {}.", username);
             throw new LibraryException("Google Client Secret not configured. Contact your librarian to configure it in Global Settings.");
         }
 
-        logger.debug("Using Client Secret from global settings");
+        logger.debug("Using Client ID and Secret from global settings");
 
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("client_id", clientId);
+            body.add("client_id", effectiveClientId);
             body.add("client_secret", effectiveClientSecret);
             body.add("refresh_token", refreshToken);
             body.add("grant_type", "refresh_token");

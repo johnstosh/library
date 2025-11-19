@@ -31,6 +31,9 @@ public class GlobalSettingsService {
     @Value("${google.oauth.client-id}")
     private String configuredClientId;
 
+    @Value("${GOOGLE_CLIENT_ID:}")
+    private String envClientId;
+
     @Value("${GOOGLE_CLIENT_SECRET:}")
     private String envClientSecret;
 
@@ -197,9 +200,28 @@ public class GlobalSettingsService {
     }
 
     /**
-     * Get the effective Client Secret (from database or environment variable)
-     * This is what the OAuth flow should use
+     * Get the effective Client ID (from database, environment variable, or config file)
      */
+    public String getEffectiveClientId() {
+        GlobalSettings settings = getGlobalSettings();
+        String dbClientId = settings.getGoogleClientId();
+
+        // Prefer database value over environment variable over config file
+        if (dbClientId != null && !dbClientId.trim().isEmpty()) {
+            logger.debug("Using Client ID from database");
+            return dbClientId.trim();
+        } else if (envClientId != null && !envClientId.trim().isEmpty()) {
+            logger.debug("Using Client ID from environment variable");
+            return envClientId.trim();
+        } else if (configuredClientId != null && !configuredClientId.trim().isEmpty()) {
+            logger.debug("Using Client ID from application.properties");
+            return configuredClientId.trim();
+        } else {
+            logger.warn("No Client ID configured in database, environment variable, or config file");
+            return null;
+        }
+    }
+
     public String getEffectiveClientSecret() {
         GlobalSettings settings = getGlobalSettings();
         String dbSecret = settings.getGoogleClientSecret();
