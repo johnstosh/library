@@ -195,7 +195,8 @@ async function viewBook(id) {
     document.getElementById('new-book-summary').value = data.plotSummary || '';
     document.getElementById('new-book-related').value = data.relatedWorks || '';
     document.getElementById('new-book-description').value = data.detailedDescription || '';
-    document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    document.getElementById('new-book-added').value = data.dateAddedToLibrary ? data.dateAddedToLibrary.substring(0, 16) : '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('new-book-loc').value = data.locNumber || '';
     document.getElementById('new-book-status-reason').value = data.statusReason || '';

@@ -25,7 +25,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -93,29 +92,52 @@ public class BooksFromFeedService {
 
 
     /**
-     * Get saved books that need processing (those starting with "FromFeed_")
+     * Get saved books: books from most recent datetime plus books with "FromFeed_" prefix,
+     * sorted by datetime (most recent first)
      * @return List of books with basic info (id, title, firstPhotoId)
      */
     public List<Map<String, Object>> getSavedBooks() {
-        logger.info("Getting saved books that need processing");
+        logger.info("Getting saved books: most recent datetime plus FromFeed prefix");
 
         List<BookDto> allBooks = bookService.getAllBooks();
         List<Map<String, Object>> savedBooks = new ArrayList<>();
 
+        // Find the most recent datetime
+        LocalDateTime mostRecentDateTime = null;
         for (BookDto book : allBooks) {
-            if (book.getTitle() != null && book.getTitle().startsWith("FromFeed_")) {
+            if (book.getDateAddedToLibrary() != null) {
+                if (mostRecentDateTime == null || book.getDateAddedToLibrary().isAfter(mostRecentDateTime)) {
+                    mostRecentDateTime = book.getDateAddedToLibrary();
+                }
+            }
+        }
+
+        // Get the date part of most recent datetime for comparison
+        java.time.LocalDate mostRecentDate = mostRecentDateTime != null ? mostRecentDateTime.toLocalDate() : null;
+
+        // Filter books: FromFeed prefix OR from most recent date
+        for (BookDto book : allBooks) {
+            boolean isFromFeed = book.getTitle() != null && book.getTitle().startsWith("FromFeed_");
+            boolean isFromMostRecentDate = mostRecentDate != null
+                    && book.getDateAddedToLibrary() != null
+                    && book.getDateAddedToLibrary().toLocalDate().equals(mostRecentDate);
+
+            if (isFromFeed || isFromMostRecentDate) {
                 Map<String, Object> bookInfo = new HashMap<>();
                 bookInfo.put("id", book.getId());
                 bookInfo.put("title", book.getTitle());
                 bookInfo.put("author", book.getAuthor()); // Author name for display
                 bookInfo.put("firstPhotoId", book.getFirstPhotoId());
                 bookInfo.put("locNumber", book.getLocNumber()); // LOC number for display
-                bookInfo.put("status", "pending");
+                bookInfo.put("status", isFromFeed ? "pending" : "processed");
+                bookInfo.put("dateAdded", book.getDateAddedToLibrary() != null
+                        ? book.getDateAddedToLibrary().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        : null);
                 savedBooks.add(bookInfo);
             }
         }
 
-        logger.info("Found {} saved books needing processing", savedBooks.size());
+        logger.info("Found {} books (most recent date + FromFeed prefix)", savedBooks.size());
         return savedBooks;
     }
 
@@ -348,7 +370,7 @@ public class BooksFromFeedService {
                 tempBook.setAuthorId(placeholderAuthor.getId());
                 tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(BookStatus.ACTIVE);
-                tempBook.setDateAddedToLibrary(LocalDate.now());
+                tempBook.setDateAddedToLibrary(LocalDateTime.now());
 
                 BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();

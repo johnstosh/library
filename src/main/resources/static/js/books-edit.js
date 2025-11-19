@@ -206,7 +206,8 @@ async function editBook(id) {
     document.getElementById('new-book-summary').value = data.plotSummary || '';
     document.getElementById('new-book-related').value = data.relatedWorks || '';
     document.getElementById('new-book-description').value = data.detailedDescription || '';
-    document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    document.getElementById('new-book-added').value = data.dateAddedToLibrary ? data.dateAddedToLibrary.substring(0, 16) : '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('new-book-loc').value = data.locNumber || '';
     document.getElementById('new-book-status-reason').value = data.statusReason || '';
@@ -263,7 +264,8 @@ async function generateBookByPhoto(bookId) {
         if (updatedBook.plotSummary && updatedBook.plotSummary.trim() !== '') document.getElementById('new-book-summary').value = updatedBook.plotSummary;
         if (updatedBook.relatedWorks && updatedBook.relatedWorks.trim() !== '') document.getElementById('new-book-related').value = updatedBook.relatedWorks;
         if (updatedBook.detailedDescription && updatedBook.detailedDescription.trim() !== '') document.getElementById('new-book-description').value = updatedBook.detailedDescription;
-        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary;
+        // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary.substring(0, 16);
         if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
         if (updatedBook.locNumber && updatedBook.locNumber.trim() !== '') document.getElementById('new-book-loc').value = updatedBook.locNumber;
         if (updatedBook.statusReason && updatedBook.statusReason.trim() !== '') document.getElementById('new-book-status-reason').value = updatedBook.statusReason;

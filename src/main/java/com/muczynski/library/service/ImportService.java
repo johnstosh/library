@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -194,7 +195,7 @@ public class ImportService {
                 if (bDto.getDateAddedToLibrary() != null) {
                     book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
                 } else if (book.getDateAddedToLibrary() == null) {
-                    book.setDateAddedToLibrary(LocalDate.now());
+                    book.setDateAddedToLibrary(LocalDateTime.now());
                 }
                 book.setStatus(bDto.getStatus() != null ? bDto.getStatus() : BookStatus.ACTIVE);
                 book.setLocNumber(bDto.getLocNumber());

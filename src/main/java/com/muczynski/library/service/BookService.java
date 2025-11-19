@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +145,7 @@ public class BookService {
         clone.setPlotSummary(original.getPlotSummary());
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setDetailedDescription(original.getDetailedDescription());
-        clone.setDateAddedToLibrary(LocalDate.now());
+        clone.setDateAddedToLibrary(LocalDateTime.now());
         clone.setStatus(original.getStatus());
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
@@ -276,7 +277,7 @@ public class BookService {
 
         dto.setStatus(BookStatus.ACTIVE);
         if (dto.getDateAddedToLibrary() == null) {
-            dto.setDateAddedToLibrary(LocalDate.now());
+            dto.setDateAddedToLibrary(LocalDateTime.now());
         }
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);

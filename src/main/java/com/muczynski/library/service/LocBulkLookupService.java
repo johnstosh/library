@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -62,15 +64,20 @@ public class LocBulkLookupService {
     }
 
     /**
-     * Get books added on the most recent date, sorted by title
+     * Get books added on the most recent date, sorted by datetime (most recent first)
      */
     public List<BookLocStatusDto> getBooksFromMostRecentDate() {
-        LocalDate mostRecentDate = bookRepository.findMaxDateAddedToLibrary();
-        if (mostRecentDate == null) {
+        LocalDateTime mostRecentDateTime = bookRepository.findMaxDateAddedToLibrary();
+        if (mostRecentDateTime == null) {
             return Collections.emptyList();
         }
 
-        List<Book> books = bookRepository.findByDateAddedToLibraryOrderByTitleAsc(mostRecentDate);
+        // Get the start and end of the day for the most recent datetime
+        LocalDate mostRecentDate = mostRecentDateTime.toLocalDate();
+        LocalDateTime startOfDay = mostRecentDate.atStartOfDay();
+        LocalDateTime endOfDay = mostRecentDate.plusDays(1).atStartOfDay();
+
+        List<Book> books = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay);
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
                 .collect(Collectors.toList());
@@ -221,6 +228,11 @@ public class LocBulkLookupService {
      * Map Book entity to BookLocStatusDto
      */
     private BookLocStatusDto mapToBookLocStatusDto(Book book) {
+        String dateAddedStr = null;
+        if (book.getDateAddedToLibrary() != null) {
+            dateAddedStr = book.getDateAddedToLibrary().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
+
         return BookLocStatusDto.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -230,6 +242,7 @@ public class LocBulkLookupService {
                 .publicationYear(book.getPublicationYear())
                 // Use efficient query to get first photo ID without loading photos collection
                 .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
+                .dateAdded(dateAddedStr)
                 .build();
     }
 

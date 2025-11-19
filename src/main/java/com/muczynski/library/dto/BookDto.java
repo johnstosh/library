@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class BookDto {
@@ -22,7 +22,7 @@ public class BookDto {
     private String plotSummary;
     private String relatedWorks;
     private String detailedDescription;
-    private LocalDate dateAddedToLibrary;
+    private LocalDateTime dateAddedToLibrary;
     private BookStatus status;
 
     @NotNull(message = "Author ID is required")
