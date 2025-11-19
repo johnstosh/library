@@ -213,6 +213,15 @@
                             <input type="text" id="new-book-title" class="form-control" placeholder="New book title" autocomplete="off" data-test="new-book-title">
                         </div>
                         <div class="mb-3">
+                            <label for="book-author" class="form-label">Author:</label>
+                            <div class="input-group">
+                                <input type="text" id="book-author" class="form-control" placeholder="Type to search authors..." autocomplete="off" list="author-datalist" data-test="book-author">
+                                <button type="button" class="btn btn-outline-secondary" id="clear-author-btn" title="Clear author">✕</button>
+                            </div>
+                            <datalist id="author-datalist"></datalist>
+                            <input type="hidden" id="book-author-id" data-test="book-author-id">
+                        </div>
+                        <div class="mb-3">
                             <label for="new-book-year" class="form-label">Publication Year:</label>
                             <input type="number" id="new-book-year" class="form-control" placeholder="Publication Year" autocomplete="off" data-test="new-book-year">
                         </div>
@@ -251,15 +260,6 @@
                         <div class="mb-3">
                             <label for="new-book-status-reason" class="form-label">Status Reason:</label>
                             <input type="text" id="new-book-status-reason" class="form-control" placeholder="Status Reason" autocomplete="off" data-test="new-book-status-reason">
-                        </div>
-                        <div class="mb-3">
-                            <label for="book-author" class="form-label">Author:</label>
-                            <div class="input-group">
-                                <input type="text" id="book-author" class="form-control" placeholder="Type to search authors..." autocomplete="off" list="author-datalist" data-test="book-author">
-                                <button type="button" class="btn btn-outline-secondary" id="clear-author-btn" title="Clear author">✕</button>
-                            </div>
-                            <datalist id="author-datalist"></datalist>
-                            <input type="hidden" id="book-author-id" data-test="book-author-id">
                         </div>
                         <div class="mb-3">
                             <label for="book-library" class="form-label">Library:</label>
