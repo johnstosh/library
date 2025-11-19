@@ -6,6 +6,7 @@ import com.muczynski.library.dto.LibraryDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
+import com.muczynski.library.repository.PhotoMetadataProjection;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -435,9 +436,9 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // Export photos (metadata only, no image bytes)
+        // Export photos (metadata only, no image bytes - using projection to avoid OOM)
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (Photo photo : photoRepository.findAllWithBookAndAuthor()) {
+        for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
             ImportPhotoDto pDto = new ImportPhotoDto();
             pDto.setContentType(photo.getContentType());
             pDto.setCaption(photo.getCaption());
@@ -448,16 +449,19 @@ public class ImportService {
             pDto.setExportErrorMessage(photo.getExportErrorMessage());
 
             // Reference book by title and author name
-            if (photo.getBook() != null) {
-                pDto.setBookTitle(photo.getBook().getTitle());
-                if (photo.getBook().getAuthor() != null) {
-                    pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+            PhotoMetadataProjection.BookProjection book = photo.getBook();
+            if (book != null) {
+                pDto.setBookTitle(book.getTitle());
+                PhotoMetadataProjection.AuthorProjection bookAuthor = book.getAuthor();
+                if (bookAuthor != null) {
+                    pDto.setBookAuthorName(bookAuthor.getName());
                 }
             }
 
             // Reference author by name (for author photos)
-            if (photo.getAuthor() != null) {
-                pDto.setAuthorName(photo.getAuthor().getName());
+            PhotoMetadataProjection.AuthorProjection author = photo.getAuthor();
+            if (author != null) {
+                pDto.setAuthorName(author.getName());
             }
 
             photoDtos.add(pDto);

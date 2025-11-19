@@ -75,4 +75,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // Get first photo ID for an author without loading the photos collection
     @Query("SELECT p.id FROM Photo p WHERE p.author.id = :authorId AND p.book IS NULL ORDER BY p.photoOrder ASC LIMIT 1")
     Long findFirstPhotoIdByAuthorId(@Param("authorId") Long authorId);
+
+    // Projection query that returns only metadata without image bytes - for export operations
+    List<PhotoMetadataProjection> findAllProjectedBy();
 }
