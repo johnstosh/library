@@ -352,7 +352,7 @@ public class ImportService {
 
         // Export books
         List<ImportBookDto> bookDtos = new ArrayList<>();
-        for (Book book : bookRepository.findAll()) {
+        for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
@@ -384,7 +384,7 @@ public class ImportService {
 
         // Export loans
         List<ImportLoanDto> loanDtos = new ArrayList<>();
-        for (Loan loan : loanRepository.findAll()) {
+        for (Loan loan : loanRepository.findAllWithBookAndUser()) {
             ImportLoanDto lDto = new ImportLoanDto();
             if (loan.getBook() != null) {
                 ImportBookDto bookDto = new ImportBookDto();
@@ -437,7 +437,7 @@ public class ImportService {
 
         // Export photos (metadata only, no image bytes)
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (Photo photo : photoRepository.findAll()) {
+        for (Photo photo : photoRepository.findAllWithBookAndAuthor()) {
             ImportPhotoDto pDto = new ImportPhotoDto();
             pDto.setContentType(photo.getContentType());
             pDto.setCaption(photo.getCaption());

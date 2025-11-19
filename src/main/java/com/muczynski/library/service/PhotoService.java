@@ -12,6 +12,7 @@ import com.muczynski.library.mapper.PhotoMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class PhotoService {
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
     private final PhotoMapper photoMapper;
+    private final EntityManager entityManager;
 
     /**
      * Compute SHA-256 checksum of image bytes
@@ -635,25 +637,33 @@ public class PhotoService {
     /**
      * Migrate existing photos to compute SHA-256 checksums
      * Runs after application startup to backfill checksums for photos that don't have them
+     * Processes photos one at a time to avoid OutOfMemoryError
      */
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void migratePhotosWithoutChecksum() {
         try {
-            List<Photo> photosWithoutChecksum = photoRepository.findByImageChecksumIsNull();
+            // Get only the IDs first - this doesn't load image bytes
+            List<Long> photoIds = photoRepository.findIdsWithoutChecksum();
 
-            if (photosWithoutChecksum.isEmpty()) {
+            if (photoIds.isEmpty()) {
                 logger.info("Checksum migration: No photos without checksum found");
                 return;
             }
 
-            logger.info("Checksum migration: Found {} photos without checksum, computing...", photosWithoutChecksum.size());
+            logger.info("Checksum migration: Found {} photos without checksum, computing...", photoIds.size());
 
             int processed = 0;
             int failed = 0;
 
-            for (Photo photo : photosWithoutChecksum) {
+            // Process photos one at a time to avoid loading all images into memory
+            for (Long photoId : photoIds) {
                 try {
+                    Photo photo = photoRepository.findById(photoId).orElse(null);
+                    if (photo == null) {
+                        continue;
+                    }
+
                     byte[] imageBytes = photo.getImage();
                     if (imageBytes != null && imageBytes.length > 0) {
                         String checksum = computeChecksum(imageBytes);
@@ -662,14 +672,19 @@ public class PhotoService {
                         processed++;
 
                         if (processed % 100 == 0) {
-                            logger.info("Checksum migration: Processed {} of {} photos", processed, photosWithoutChecksum.size());
+                            logger.info("Checksum migration: Processed {} of {} photos", processed, photoIds.size());
                         }
                     } else {
                         logger.warn("Checksum migration: Photo ID {} has no image data", photo.getId());
                         failed++;
                     }
+
+                    // Clear the persistence context to free memory after each photo
+                    entityManager.flush();
+                    entityManager.clear();
+
                 } catch (Exception e) {
-                    logger.error("Checksum migration: Failed to compute checksum for photo ID {}: {}", photo.getId(), e.getMessage());
+                    logger.error("Checksum migration: Failed to compute checksum for photo ID {}: {}", photoId, e.getMessage());
                     failed++;
                 }
             }

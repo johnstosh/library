@@ -16,6 +16,9 @@ import java.util.Optional;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
+
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library")
+    List<Book> findAllWithAuthorAndLibrary();
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);

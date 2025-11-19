@@ -114,30 +114,20 @@ public class PhotoExportService {
 
     /**
      * Find photos that need to be backed up
+     * Uses efficient ID-based query to avoid loading image bytes during filtering
      */
     private List<Photo> findPhotosNeedingExport() {
-        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+        // Get IDs of photos needing export without loading image bytes
+        List<Long> photoIds = photoRepository.findIdsNeedingExport();
+
+        if (photoIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Load photos one at a time for export processing
         List<Photo> photosToExport = new ArrayList<>();
-
-        for (Photo photo : allPhotos) {
-            // Skip soft-deleted photos
-            if (photo.getDeletedAt() != null) {
-                continue;
-            }
-
-            // Skip if already backed up successfully
-            if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED &&
-                photo.getPermanentId() != null && !photo.getPermanentId().trim().isEmpty()) {
-                continue;
-            }
-
-            // Skip if currently in progress
-            if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
-                continue;
-            }
-
-            // Include if pending, failed, or no status
-            photosToExport.add(photo);
+        for (Long photoId : photoIds) {
+            photoRepository.findById(photoId).ifPresent(photosToExport::add);
         }
 
         return photosToExport;
@@ -408,50 +398,21 @@ public class PhotoExportService {
 
     /**
      * Get export statistics
+     * Uses efficient COUNT queries to avoid loading image bytes into memory
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getExportStats() {
         Map<String, Object> stats = new HashMap<>();
 
         try {
-            List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
-
-            // Filter out soft-deleted photos
-            List<Photo> activePhotos = allPhotos.stream()
-                    .filter(p -> p.getDeletedAt() == null)
-                    .toList();
-
-            long total = activePhotos.size();
-
-            // Exported: has permanentId (was uploaded to Google Photos)
-            long exported = activePhotos.stream()
-                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty())
-                    .count();
-
-            // Imported: has permanentId AND has image data (fully synced)
-            long imported = activePhotos.stream()
-                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty()
-                            && p.getImage() != null && p.getImage().length > 0)
-                    .count();
-
-            // Pending export: has image but no permanentId
-            long pendingExport = activePhotos.stream()
-                    .filter(p -> p.getImage() != null && p.getImage().length > 0
-                            && (p.getPermanentId() == null || p.getPermanentId().trim().isEmpty()))
-                    .count();
-
-            // Pending import: has permanentId but no image
-            long pendingImport = activePhotos.stream()
-                    .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty()
-                            && (p.getImage() == null || p.getImage().length == 0))
-                    .count();
-
-            long failed = activePhotos.stream()
-                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.FAILED)
-                    .count();
-            long inProgress = activePhotos.stream()
-                    .filter(p -> p.getExportStatus() == Photo.ExportStatus.IN_PROGRESS)
-                    .count();
+            // Use efficient COUNT queries that don't load image bytes
+            long total = photoRepository.countActivePhotos();
+            long exported = photoRepository.countExportedPhotos();
+            long imported = photoRepository.countImportedPhotos();
+            long pendingExport = photoRepository.countPendingExportPhotos();
+            long pendingImport = photoRepository.countPendingImportPhotos();
+            long failed = photoRepository.countByExportStatus(Photo.ExportStatus.FAILED);
+            long inProgress = photoRepository.countByExportStatus(Photo.ExportStatus.IN_PROGRESS);
 
             stats.put("total", total);
             stats.put("exported", exported);
@@ -506,6 +467,7 @@ public class PhotoExportService {
 
     /**
      * Get all photos with their export status
+     * Uses imageChecksum as a proxy for hasImage to avoid loading image bytes
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithExportStatus() {
@@ -529,7 +491,8 @@ public class PhotoExportService {
                 photoInfo.put("permanentId", photo.getPermanentId());
                 photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
                 photoInfo.put("contentType", photo.getContentType());
-                photoInfo.put("hasImage", photo.getImage() != null && photo.getImage().length > 0);
+                // Use imageChecksum as proxy for hasImage to avoid loading image bytes
+                photoInfo.put("hasImage", photo.getImageChecksum() != null);
 
                 if (photo.getBook() != null) {
                     photoInfo.put("bookTitle", photo.getBook().getTitle());
@@ -655,6 +618,7 @@ public class PhotoExportService {
 
     /**
      * Import all photos that have permanent IDs but no image data
+     * Uses efficient ID-based query to avoid loading image bytes
      */
     @Transactional
     public Map<String, Object> importAllPhotos() {
@@ -664,18 +628,11 @@ public class PhotoExportService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
 
-        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthor();
+        // Use efficient query that returns only IDs without loading image bytes
+        List<Long> photoIdsToImport = photoRepository.findIdsNeedingImport();
 
-        // Find photos that need import (have permanentId but no image)
-        List<Photo> photosToImport = allPhotos.stream()
-                .filter(p -> p.getDeletedAt() == null)
-                .filter(p -> p.getPermanentId() != null && !p.getPermanentId().trim().isEmpty())
-                .filter(p -> p.getImage() == null || p.getImage().length == 0)
-                .toList();
-
-        if (photosToImport.isEmpty()) {
+        if (photoIdsToImport.isEmpty()) {
             logger.info("No photos need import at this time");
             Map<String, Object> result = new HashMap<>();
             result.put("message", "No photos need import");
@@ -684,13 +641,13 @@ public class PhotoExportService {
             return result;
         }
 
-        logger.info("Found {} photos to import", photosToImport.size());
+        logger.info("Found {} photos to import", photoIdsToImport.size());
 
         int successCount = 0;
         int failureCount = 0;
 
-        for (Photo photo : photosToImport) {
-            String errorMessage = importPhotoById(photo.getId());
+        for (Long photoId : photoIdsToImport) {
+            String errorMessage = importPhotoById(photoId);
             if (errorMessage == null) {
                 successCount++;
             } else {
