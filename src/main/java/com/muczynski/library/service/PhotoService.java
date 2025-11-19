@@ -15,6 +15,8 @@ import com.muczynski.library.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.util.Pair;
@@ -627,6 +629,55 @@ public class PhotoService {
         } catch (Exception e) {
             logger.warn("Failed to restore photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Migrate existing photos to compute SHA-256 checksums
+     * Runs after application startup to backfill checksums for photos that don't have them
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void migratePhotosWithoutChecksum() {
+        try {
+            List<Photo> photosWithoutChecksum = photoRepository.findByImageChecksumIsNull();
+
+            if (photosWithoutChecksum.isEmpty()) {
+                logger.info("Checksum migration: No photos without checksum found");
+                return;
+            }
+
+            logger.info("Checksum migration: Found {} photos without checksum, computing...", photosWithoutChecksum.size());
+
+            int processed = 0;
+            int failed = 0;
+
+            for (Photo photo : photosWithoutChecksum) {
+                try {
+                    byte[] imageBytes = photo.getImage();
+                    if (imageBytes != null && imageBytes.length > 0) {
+                        String checksum = computeChecksum(imageBytes);
+                        photo.setImageChecksum(checksum);
+                        photoRepository.save(photo);
+                        processed++;
+
+                        if (processed % 100 == 0) {
+                            logger.info("Checksum migration: Processed {} of {} photos", processed, photosWithoutChecksum.size());
+                        }
+                    } else {
+                        logger.warn("Checksum migration: Photo ID {} has no image data", photo.getId());
+                        failed++;
+                    }
+                } catch (Exception e) {
+                    logger.error("Checksum migration: Failed to compute checksum for photo ID {}: {}", photo.getId(), e.getMessage());
+                    failed++;
+                }
+            }
+
+            logger.info("Checksum migration complete: {} photos processed, {} failed", processed, failed);
+
+        } catch (Exception e) {
+            logger.error("Checksum migration failed: {}", e.getMessage(), e);
         }
     }
 }
