@@ -99,19 +99,27 @@ async function openCropModal(photoId) {
 async function autoCrop() {
     if (!cropperInstance) return;
 
-    const image = document.getElementById('crop-image');
-
     try {
-        // Get the natural dimensions of the image
+        // Get the natural dimensions from Cropper
         const imageData = cropperInstance.getImageData();
         const naturalWidth = imageData.naturalWidth;
         const naturalHeight = imageData.naturalHeight;
+
+        // Create a fresh image for smartcrop analysis (Cropper may have modified the original)
+        const tempImage = new Image();
+        tempImage.crossOrigin = 'anonymous';
+
+        await new Promise((resolve, reject) => {
+            tempImage.onload = resolve;
+            tempImage.onerror = reject;
+            tempImage.src = `/api/photos/${currentCropPhotoId}/image`;
+        });
 
         // Calculate target dimensions (square crop for best results)
         const minDimension = Math.min(naturalWidth, naturalHeight);
 
         // Use smartcrop to find the best crop
-        const result = await smartcrop.crop(image, {
+        const result = await smartcrop.crop(tempImage, {
             width: minDimension,
             height: minDimension,
             minScale: 0.8
