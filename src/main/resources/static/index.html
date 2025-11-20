@@ -219,18 +219,20 @@
 
         <div id="authors-section" class="section" data-test="authors-section">
             <h2 data-test="authors-header">Authors</h2>
-            <table class="table" data-test="author-table">
-                <thead>
-                <tr>
-                    <th scope="col">Photo</th>
-                    <th scope="col">Author</th>
-                    <th scope="col">Books</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="author-list-body" data-test="author-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="author-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Author</th>
+                        <th scope="col">Books</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="author-list-body" data-test="author-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="authors-form">
                 <input type="hidden" id="current-author-id">
                 <input type="file" id="author-photo-upload" style="display: none;" accept="image/*" capture="environment"/>
@@ -285,19 +287,21 @@
 
         <div id="books-section" class="section" data-test="books-section">
             <h2 data-test="books-header">Books</h2>
-            <table class="table" data-test="book-table">
-                <thead>
-                <tr>
-                    <th scope="col">Photo</th>
-                    <th scope="col">Book</th>
-                    <th scope="col">LOC Call Number</th>
-                    <th scope="col">Loans</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="book-list-body" data-test="book-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="book-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Book</th>
+                        <th scope="col">LOC Call Number</th>
+                        <th scope="col">Loans</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="book-list-body" data-test="book-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="books-form">
                 <input type="hidden" id="current-book-id">
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
@@ -518,17 +522,19 @@
 
             <div id="applied-section" class="librarian-only mt-5" data-test="applied-section">
                 <h2 data-test="applied-header">Library Card Applications</h2>
-                <table class="table" data-test="applied-table">
-                    <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="applied-list-body" data-test="applied-list-body">
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table" data-test="applied-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="applied-list-body" data-test="applied-list-body">
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="apply-for-card-section" class="mt-5" data-test="apply-for-card-section">
@@ -551,18 +557,20 @@
 
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
-            <table class="table" data-test="user-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Books on Loan</th>
-                        <th scope="col">SSO</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="user-list-body" data-test="user-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="user-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Books on Loan</th>
+                            <th scope="col">SSO</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list-body" data-test="user-list-body">
+                    </tbody>
+                </table>
+            </div>
             <form data-test="users-form">
                 <div class="mb-3">
                     <label for="new-user-username" class="form-label">Name:</label>
@@ -591,20 +599,22 @@
                     Show returned loans
                 </label>
             </div>
-            <table class="table" data-test="loan-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Book Title</th>
-                        <th scope="col">Name</th>
-                        <th scope="col">Loan Date</th>
-                        <th scope="col">Due Date</th>
-                        <th scope="col">Return Date</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="loan-list-body" data-test="loan-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="loan-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Book Title</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Loan Date</th>
+                            <th scope="col">Due Date</th>
+                            <th scope="col">Return Date</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loan-list-body" data-test="loan-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="loans-form">
                 <div class="mb-3">
                     <label for="loan-book" class="form-label">Book:</label>
@@ -784,21 +794,23 @@
             <div id="loc-lookup-results" class="alert alert-success" style="display: none;" data-test="loc-lookup-results"></div>
             <div id="loc-lookup-error" class="alert alert-danger" style="display: none;" data-test="loc-lookup-error"></div>
 
-            <table class="table table-striped" data-test="loc-lookup-table">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Book</th>
-                        <th>LOC Call Number</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
-                    <tr>
-                        <td colspan="4" class="text-center">Click a button above to load books</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped" data-test="loc-lookup-table">
+                    <thead>
+                        <tr>
+                            <th>Photo</th>
+                            <th>Book</th>
+                            <th>LOC Call Number</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
+                        <tr>
+                            <td colspan="4" class="text-center">Click a button above to load books</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="labels-section" class="section librarian-only" data-test="labels-section">
@@ -820,22 +832,24 @@
             <div id="labels-results" class="alert alert-success" style="display: none;" data-test="labels-results"></div>
             <div id="labels-error" class="alert alert-danger" style="display: none;" data-test="labels-error"></div>
 
-            <table class="table table-striped" data-test="labels-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
-                        <th>Photo</th>
-                        <th>Title/Author</th>
-                        <th>LOC Call Number</th>
-                        <th>Date Added</th>
-                    </tr>
-                </thead>
-                <tbody id="labels-table-body" data-test="labels-table-body">
-                    <tr>
-                        <td colspan="5" class="text-center">Click "Load Books for Labels" to see books</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped" data-test="labels-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
+                            <th>Photo</th>
+                            <th>Title/Author</th>
+                            <th>LOC Call Number</th>
+                            <th>Date Added</th>
+                        </tr>
+                    </thead>
+                    <tbody id="labels-table-body" data-test="labels-table-body">
+                        <tr>
+                            <td colspan="5" class="text-center">Click "Load Books for Labels" to see books</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="settings-section" class="section" data-test="settings-section">
