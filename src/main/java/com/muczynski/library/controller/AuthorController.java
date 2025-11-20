@@ -208,6 +208,24 @@ public class AuthorController {
         }
     }
 
+    @PostMapping("/delete-authors-with-no-books")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteAuthorsWithNoBooks() {
+        try {
+            int deletedCount = authorService.deleteAuthorsWithNoBooks();
+            logger.info("Deleted {} authors with no books", deletedCount);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Deleted " + deletedCount + " author(s) with no books",
+                    "deletedCount", deletedCount
+            ));
+        } catch (Exception e) {
+            logger.error("Failed to delete authors with no books: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
     @DeleteMapping("/{authorId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<Void> deleteAuthorPhoto(@PathVariable Long authorId, @PathVariable Long photoId) {

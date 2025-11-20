@@ -142,3 +142,18 @@ function displayAuthorBooks(books) {
 
     booksDiv.appendChild(ul);
 }
+
+async function deleteAuthorsWithNoBooks() {
+    const confirmed = confirm('Are you sure you want to delete all authors who have no books? This action cannot be undone.');
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const result = await postData('/api/authors/delete-authors-with-no-books', {});
+        showSuccess('authors', result.message || `Deleted ${result.deletedCount} author(s) with no books`);
+        await loadAuthors();
+    } catch (error) {
+        showError('authors', 'Failed to delete authors: ' + error.message);
+    }
+}

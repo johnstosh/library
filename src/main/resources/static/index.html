@@ -219,6 +219,11 @@
 
         <div id="authors-section" class="section" data-test="authors-section">
             <h2 data-test="authors-header">Authors</h2>
+            <div class="mb-3 librarian-only">
+                <button type="button" class="btn btn-danger" id="delete-authors-no-books-btn" onclick="deleteAuthorsWithNoBooks()" data-test="delete-authors-no-books-btn">
+                    Delete All Authors Who Have No Books
+                </button>
+            </div>
             <div class="table-responsive">
                 <table class="table" data-test="author-table">
                     <thead>
