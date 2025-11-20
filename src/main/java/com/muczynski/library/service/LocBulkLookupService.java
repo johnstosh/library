@@ -146,8 +146,19 @@ public class LocBulkLookupService {
     /**
      * Perform LOC lookup for a book and update if found.
      * Tries title + author first, then falls back to title-only if that fails.
+     * Skips temporary titles (those starting with date pattern).
      */
     private LocLookupResultDto performLocLookup(Book book) {
+        // Skip temporary titles (those starting with date pattern like 2025-01-15_...)
+        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+            log.info("Skipping LOC lookup for temporary title: {}", book.getTitle());
+            return LocLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Not Ready - Temporary title")
+                    .build();
+        }
+
         LocSearchRequest request = new LocSearchRequest();
         request.setTitle(book.getTitle());
 

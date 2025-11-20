@@ -66,6 +66,30 @@ public class BooksFromFeedService {
     private LibraryService libraryService;
 
     /**
+     * Generate a temporary title for a book from feed.
+     * Format: yyyy-MM-dd_HH:mm:ss
+     * Example: 2025-01-15_14:30:45
+     */
+    public static String generateTemporaryTitle() {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+        return timestamp;
+    }
+
+    /**
+     * Check if a title is a temporary title from feed.
+     * Recognizes titles starting with date pattern: NNNN-NN-NN or NNNN-N-N (variable digits for month/day)
+     * Examples: 2025-01-15_14:30:45, 2025-1-5_08:00:00
+     */
+    public static boolean isTemporaryTitle(String title) {
+        if (title == null || title.isEmpty()) {
+            return false;
+        }
+        // Pattern: starts with YYYY-M-D or YYYY-MM-DD (variable digits for month and day)
+        // Regex: ^\d{4}-\d{1,2}-\d{1,2}
+        return title.matches("^\\d{4}-\\d{1,2}-\\d{1,2}.*");
+    }
+
+    /**
      * Compute SHA-256 checksum of image bytes
      */
     private String computeChecksum(byte[] imageBytes) {
@@ -112,12 +136,12 @@ public class BooksFromFeedService {
 
 
     /**
-     * Get saved books: books from most recent datetime plus books with "FromFeed_" prefix,
+     * Get saved books: books from most recent datetime plus books with temporary titles,
      * sorted by datetime (most recent first)
      * @return List of books with basic info (id, title, firstPhotoId)
      */
     public List<Map<String, Object>> getSavedBooks() {
-        logger.info("Getting saved books: most recent datetime plus FromFeed prefix");
+        logger.info("Getting saved books: most recent datetime plus temporary titles");
 
         List<BookDto> allBooks = bookService.getAllBooks();
         List<Map<String, Object>> savedBooks = new ArrayList<>();
@@ -135,14 +159,14 @@ public class BooksFromFeedService {
         // Get the date part of most recent datetime for comparison
         java.time.LocalDate mostRecentDate = mostRecentDateTime != null ? mostRecentDateTime.toLocalDate() : null;
 
-        // Filter books: FromFeed prefix OR from most recent date
+        // Filter books: temporary title OR from most recent date
         for (BookDto book : allBooks) {
-            boolean isFromFeed = book.getTitle() != null && book.getTitle().startsWith("FromFeed_");
+            boolean isTemporary = isTemporaryTitle(book.getTitle());
             boolean isFromMostRecentDate = mostRecentDate != null
                     && book.getDateAddedToLibrary() != null
                     && book.getDateAddedToLibrary().toLocalDate().equals(mostRecentDate);
 
-            if (isFromFeed || isFromMostRecentDate) {
+            if (isTemporary || isFromMostRecentDate) {
                 Map<String, Object> bookInfo = new HashMap<>();
                 bookInfo.put("id", book.getId());
                 bookInfo.put("title", book.getTitle());
@@ -162,7 +186,7 @@ public class BooksFromFeedService {
             }
         }
 
-        logger.info("Found {} books (most recent date + FromFeed prefix)", savedBooks.size());
+        logger.info("Found {} books (most recent date + temporary titles)", savedBooks.size());
         return savedBooks;
     }
 
@@ -182,8 +206,8 @@ public class BooksFromFeedService {
             }
 
             String tempTitle = tempBook.getTitle();
-            if (!tempTitle.startsWith("FromFeed_")) {
-                throw new LibraryException("Book is not a temporary FromFeed book");
+            if (!isTemporaryTitle(tempTitle)) {
+                throw new LibraryException("Book is not a temporary book from feed");
             }
 
             // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
@@ -234,10 +258,10 @@ public class BooksFromFeedService {
         String username = authentication.getName();
         logger.info("Processing photos for user: {}", username);
 
-        // Find all temporary books from feed (those starting with "FromFeed_")
+        // Find all temporary books from feed (those with temporary titles)
         List<BookDto> allBooks = bookService.getAllBooks();
         List<BookDto> tempBooks = allBooks.stream()
-                .filter(book -> book.getTitle() != null && book.getTitle().startsWith("FromFeed_"))
+                .filter(book -> isTemporaryTitle(book.getTitle()))
                 .toList();
 
         logger.info("Found {} temporary books to process", tempBooks.size());
@@ -386,9 +410,8 @@ public class BooksFromFeedService {
                     }
                 }
 
-                // Create temporary book with special marker for processing later
-                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
-                String tempTitle = "FromFeed_" + timestamp;
+                // Create temporary book with timestamp title for processing later
+                String tempTitle = generateTemporaryTitle();
 
                 BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
