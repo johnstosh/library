@@ -22,6 +22,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +53,22 @@ public class GoogleOAuthController {
     // Store state tokens temporarily (in production, use Redis or similar)
     // Maps state token to "username:origin"
     private final Map<String, String> stateTokens = new ConcurrentHashMap<>();
+
+    /**
+     * Find user by username, handling duplicates by using the one with lowest ID
+     */
+    private User findUserByUsername(String username) {
+        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
+        if (users.isEmpty()) {
+            throw new LibraryException("User not found");
+        }
+        User user = users.get(0);
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
+                       users.size(), username, user.getId());
+        }
+        return user;
+    }
 
     /**
      * Initiate OAuth flow - redirects user to Google consent screen
@@ -183,8 +200,7 @@ public class GoogleOAuthController {
             logger.debug("Token expiry timestamp: {}", expiryTime);
 
             // Save tokens to user
-            User user = userRepository.findByUsernameIgnoreCase(username)
-                    .orElseThrow(() -> new LibraryException("User not found"));
+            User user = findUserByUsername(username);
 
             user.setGooglePhotosApiKey(accessToken);
             if (refreshToken != null) {
@@ -225,8 +241,7 @@ public class GoogleOAuthController {
         String username = authentication.getName();
         logger.info("Revoking Google Photos access for user: {}", username);
 
-        User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new LibraryException("User not found"));
+        User user = findUserByUsername(username);
 
         boolean hadAccessToken = !user.getGooglePhotosApiKey().isEmpty();
         boolean hadRefreshToken = !user.getGooglePhotosRefreshToken().isEmpty();
