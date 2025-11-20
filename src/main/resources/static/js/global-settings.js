@@ -313,7 +313,8 @@ function showGlobalSsoSettingsError(message) {
     }
 }
 
-// Expose functions globally for HTML onclick handlers
+// Expose functions globally for HTML onclick handlers and sections.js
+window.loadGlobalSettings = loadGlobalSettings;
 window.saveGlobalSettings = saveGlobalSettings;
 window.saveGlobalSsoSettings = saveGlobalSsoSettings;
 
