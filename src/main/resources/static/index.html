@@ -427,6 +427,12 @@
                         <button id="process-all-btn" class="btn btn-sm btn-success" onclick="processAllBooks()" data-test="process-all-btn">
                             Process All
                         </button>
+                        <button id="process-pending-btn" class="btn btn-sm btn-warning" onclick="processPendingBooks()" data-test="process-pending-btn">
+                            Process Pending
+                        </button>
+                        <button id="process-selected-btn" class="btn btn-sm btn-primary" onclick="processSelectedBooks()" data-test="process-selected-btn">
+                            Process Selected
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -434,6 +440,7 @@
                         <table class="table table-striped" id="saved-books-table" data-test="saved-books-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="select-all-books" onchange="toggleAllBookSelections(this.checked)" title="Select/Deselect All"></th>
                                     <th>Photo</th>
                                     <th>Title/Author</th>
                                     <th>LOC Call Number</th>
@@ -444,7 +451,7 @@
                             </thead>
                             <tbody id="saved-books-table-body" data-test="saved-books-table-body">
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
+                                    <td colspan="7" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
                                 </tr>
                             </tbody>
                         </table>
