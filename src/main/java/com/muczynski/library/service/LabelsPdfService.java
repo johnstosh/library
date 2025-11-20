@@ -31,9 +31,8 @@ import java.util.List;
 public class LabelsPdfService {
 
     // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
-    // Adjusted height slightly to account for table/cell rendering overhead and prevent spillover
     private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
-    private static final float LABEL_HEIGHT = 1.96f * 72;   // 141.12 points (1.96")
+    private static final float LABEL_HEIGHT = 2.0f * 72;    // 144 points (2.0")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
@@ -113,11 +112,14 @@ public class LabelsPdfService {
                 labelIndex++;
             }
 
-            // Add the last table and fill remaining cells
+            // Add the last table and fill remaining cells in the current row only
             if (currentTable != null) {
-                while (colIndex < LABELS_PER_ROW) {
-                    currentTable.addCell(createEmptyCell());
-                    colIndex++;
+                // Only fill remaining cells in the current row if we started a row
+                if (colIndex > 0) {
+                    while (colIndex < LABELS_PER_ROW) {
+                        currentTable.addCell(createEmptyCell());
+                        colIndex++;
+                    }
                 }
                 document.add(currentTable);
             }
@@ -143,7 +145,7 @@ public class LabelsPdfService {
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
         cell.setPadding(5);
-        cell.setBorder(new com.itextpdf.layout.borders.SolidBorder(1));
+        cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
         // Ratio 3:1 to give more space to title/author, less to LOC
