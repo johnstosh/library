@@ -32,6 +32,7 @@ public class BookDto {
 
     private Long libraryId;
     private Long firstPhotoId;
+    private String firstPhotoChecksum;
     private Long loanCount;
     private String locNumber;
     private String statusReason;

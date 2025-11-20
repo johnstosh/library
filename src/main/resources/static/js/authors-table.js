@@ -16,10 +16,11 @@ async function loadAuthors() {
                 thumbnail.className = 'author-photo-thumbnail';
 
                 const img = document.createElement('img');
-                img.src = `/api/photos/${author.firstPhotoId}/image`;
                 img.alt = `Photo of ${author.name}`;
                 img.style.width = '50px';
                 img.style.height = 'auto';
+                // Use cached thumbnail loading
+                window.loadCachedThumbnail(img, author.firstPhotoId, author.firstPhotoChecksum);
                 thumbnail.appendChild(img);
                 tdPhoto.appendChild(thumbnail);
             }

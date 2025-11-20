@@ -61,10 +61,11 @@ function createSavedBookRow(book) {
     const photoCell = document.createElement('td');
     if (book.firstPhotoId) {
         const img = document.createElement('img');
-        img.src = `/api/photos/${book.firstPhotoId}/image`;
         img.style.width = '50px';
         img.style.height = '50px';
         img.style.objectFit = 'cover';
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
         photoCell.appendChild(img);
     } else {
         photoCell.textContent = '-';

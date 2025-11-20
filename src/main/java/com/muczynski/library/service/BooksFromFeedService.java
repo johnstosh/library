@@ -128,6 +128,7 @@ public class BooksFromFeedService {
                 bookInfo.put("title", book.getTitle());
                 bookInfo.put("author", book.getAuthor()); // Author name for display
                 bookInfo.put("firstPhotoId", book.getFirstPhotoId());
+                bookInfo.put("firstPhotoChecksum", book.getFirstPhotoChecksum()); // For thumbnail caching
                 bookInfo.put("locNumber", book.getLocNumber()); // LOC number for display
                 bookInfo.put("status", isFromFeed ? "pending" : "processed");
                 bookInfo.put("dateAdded", book.getDateAddedToLibrary() != null

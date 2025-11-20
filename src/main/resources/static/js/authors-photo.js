@@ -14,7 +14,8 @@ function displayAuthorPhotos(photos, authorId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'author-photo');
-            img.src = `/api/photos/${photo.id}/image`;
+            // Use cached thumbnail loading
+            window.loadCachedThumbnail(img, photo.id, photo.imageChecksum);
             thumbnail.appendChild(img);
 
             const rotateCcwBtn = document.createElement('button');

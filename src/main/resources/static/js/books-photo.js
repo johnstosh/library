@@ -14,9 +14,10 @@ function displayBookPhotos(photos, bookId) {
 
             const img = document.createElement('img');
             img.setAttribute('data-test', 'book-photo');
-            img.src = `/api/photos/${photo.id}/image`;
             img.style.width = '300px';
             img.style.height = 'auto';
+            // Use cached thumbnail loading
+            window.loadCachedThumbnail(img, photo.id, photo.imageChecksum);
             thumbnail.appendChild(img);
 
             // Rotate CCW button (upper left)

@@ -12,10 +12,11 @@ async function loadBooks() {
             const photoCell = document.createElement('td');
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${book.firstPhotoId}/image`;
                 img.style.width = '50px';
                 img.style.height = 'auto';
                 img.setAttribute('data-test', 'book-thumbnail');
+                // Use cached thumbnail loading
+                window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
                 photoCell.appendChild(img);
             }
             row.appendChild(photoCell);
