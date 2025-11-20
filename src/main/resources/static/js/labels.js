@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData, showButtonSpinner, hideButtonSpinner } from './utils.js';
+import { fetchData } from './utils.js';
 
 /**
  * Load Labels section - auto-loads books from most recent day

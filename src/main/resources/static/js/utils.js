@@ -565,8 +565,10 @@ function splitAtLetterPeriods(part, parts) {
     }
 }
 
-// Expose formatLocForSpine globally for non-module scripts
+// Expose functions globally for non-module scripts
 window.formatLocForSpine = formatLocForSpine;
+window.showButtonSpinner = showButtonSpinner;
+window.hideButtonSpinner = hideButtonSpinner;
 
 /**
  * Shows a spinner on a button and disables it during async operations.
@@ -574,7 +576,7 @@ window.formatLocForSpine = formatLocForSpine;
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} spinnerText - Optional text to show next to spinner (e.g., "Loading...")
  */
-export function showButtonSpinner(button, spinnerText = null) {
+function showButtonSpinner(button, spinnerText = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 
@@ -608,7 +610,7 @@ export function showButtonSpinner(button, spinnerText = null) {
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} text - Optional text to set (if not provided, uses stored original text)
  */
-export function hideButtonSpinner(button, text = null) {
+function hideButtonSpinner(button, text = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 

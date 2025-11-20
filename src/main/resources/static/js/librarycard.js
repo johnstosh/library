@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { hashPassword, showButtonSpinner, hideButtonSpinner } from './utils.js';
+import { hashPassword } from './utils.js';
 
 async function loadApplied() {
     if (!isLibrarian) return;

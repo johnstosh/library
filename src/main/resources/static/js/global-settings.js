@@ -2,8 +2,6 @@
  * Global Settings Management (Librarian-only)
  */
 
-import { showButtonSpinner, hideButtonSpinner } from './utils.js';
-
 // Load global settings on page load
 async function loadGlobalSettings() {
     try {

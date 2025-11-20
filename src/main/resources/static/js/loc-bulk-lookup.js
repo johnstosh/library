@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData, showButtonSpinner, hideButtonSpinner } from './utils.js';
+import { fetchData } from './utils.js';
 
 /**
  * Initialize event listeners when DOM is ready
