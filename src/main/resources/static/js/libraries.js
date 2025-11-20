@@ -211,33 +211,11 @@ async function setupImportUI() {
         return; // Already set up
     }
 
-    // Fetch photo export stats
-    let photoExportStatus = '';
-    try {
-        const stats = await fetchData('/api/photo-export/stats');
-        const notBackedUp = (stats.pending || 0) + (stats.failed || 0) + (stats.inProgress || 0);
-        const total = stats.total || 0;
-
-        if (total === 0) {
-            photoExportStatus = `<p class="mb-0"><strong>Photo Export Status:</strong> No photos in database</p>`;
-        } else if (notBackedUp === 0) {
-            photoExportStatus = `<p class="mb-0 text-success"><strong>Photo Export Status:</strong> All ${total} photos exported to Google Photos ✓</p>`;
-        } else {
-            photoExportStatus = `<p class="mb-0 text-warning"><strong>Photo Export Status:</strong> ${notBackedUp} out of ${total} photos have not been exported to Google Photos</p>`;
-        }
-    } catch (error) {
-        console.error('Failed to load photo export stats:', error);
-        photoExportStatus = `<p class="mb-0 text-muted"><strong>Photo Export Status:</strong> Unable to load stats</p>`;
-    }
-
     const list = document.getElementById('library-list');
     const importSection = document.createElement('div');
     importSection.setAttribute('data-test', 'import-section');
     importSection.innerHTML = `
         <h3>Import/Export Database</h3>
-        <div class="alert alert-info">
-            ${photoExportStatus}
-        </div>
         <div class="card mb-3">
             <div class="card-body">
                 <h5>Export JSON Data</h5>

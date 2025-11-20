@@ -13,12 +13,20 @@ function loadLibraryCardSectionCombined() {
     }
 }
 
+// Combined loader for libraries section (includes photo export status)
+function loadLibrariesSectionCombined() {
+    loadLibraries();
+    // Load photo export status for librarians
+    if (window.isLibrarian && window.loadPhotoExportStatus) {
+        window.loadPhotoExportStatus();
+    }
+}
+
 export const sectionConfig = {
-    'libraries': { load: loadLibraries, reset: null },
+    'libraries': { load: loadLibrariesSectionCombined, reset: null },
     'authors': { load: loadAuthors, reset: resetAuthorForm },
     'books': { load: loadBooks, reset: resetBookForm },
     'books-from-feed': { load: loadBooksFromFeedSection, reset: null },
-    'photos': { load: loadPhotosSection, reset: null },
     'search': { load: null, reset: null },
     'library-card': { load: loadLibraryCardSectionCombined, reset: null },
     'users': { load: loadUsers, reset: null },
