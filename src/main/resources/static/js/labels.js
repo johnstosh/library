@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData } from './utils.js';
+import { fetchData, showButtonSpinner, hideButtonSpinner } from './utils.js';
 
 /**
  * Load Labels section - auto-loads books from most recent day
@@ -150,6 +150,9 @@ function createBookRow(book) {
  * @param {string} mode - 'all' or 'selected'
  */
 async function generateLabels(mode) {
+    const btnId = mode === 'selected' ? 'generate-selected-labels-btn' : 'generate-all-labels-btn';
+    const btn = document.getElementById(btnId);
+
     try {
         clearError('labels');
         clearSuccess('labels');
@@ -172,6 +175,8 @@ async function generateLabels(mode) {
             }
             bookIds = Array.from(allCheckboxes).map(cb => parseInt(cb.getAttribute('data-book-id')));
         }
+
+        showButtonSpinner(btn, 'Generating...');
 
         // Build URL with book IDs as query parameters
         const params = new URLSearchParams();
@@ -202,6 +207,9 @@ async function generateLabels(mode) {
         showSuccess('labels', `Generated labels for ${bookIds.length} book(s)`);
     } catch (error) {
         showError('labels', 'Failed to generate labels: ' + error.message);
+    } finally {
+        const originalText = mode === 'selected' ? 'Generate Selected Labels' : 'Generate All Labels';
+        hideButtonSpinner(btn, originalText);
     }
 }
 

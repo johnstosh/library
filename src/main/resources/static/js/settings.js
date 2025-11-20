@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { hashPassword } from './utils.js';
+import { hashPassword, showButtonSpinner, hideButtonSpinner } from './utils.js';
 
 async function loadSettings() {
     try {
@@ -68,12 +68,17 @@ async function revokeGooglePhotos() {
         return;
     }
 
+    const btn = document.getElementById('revoke-google-photos-btn');
+    showButtonSpinner(btn, 'Revoking...');
+
     try {
         await postData('/api/oauth/google/revoke', {});
         showSettingsSuccess('Google Photos access revoked');
         updateGooglePhotosStatus(false);
     } catch (error) {
         showSettingsError('Failed to revoke access: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Revoke Access');
     }
 }
 
@@ -126,6 +131,9 @@ async function saveSettings(event) {
         payload.password = await hashPassword(password);
     }
 
+    const btn = document.querySelector('#settings-form button[type="submit"]');
+    showButtonSpinner(btn, 'Saving...');
+
     try {
         await putData('/api/user-settings', payload);
         showSettingsSuccess('Settings saved successfully!');
@@ -138,6 +146,8 @@ async function saveSettings(event) {
         }
     } catch (error) {
         showSettingsError('Failed to save settings: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Save User Settings');
     }
 }
 

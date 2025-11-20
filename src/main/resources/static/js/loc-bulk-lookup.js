@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData } from './utils.js';
+import { fetchData, showButtonSpinner, hideButtonSpinner } from './utils.js';
 
 /**
  * Initialize event listeners when DOM is ready
@@ -259,7 +259,8 @@ async function lookupTableMissing() {
         }
 
         // Show spinner in button
-        setButtonLoading('lookup-table-missing-btn', true);
+        const btn = document.getElementById('lookup-table-missing-btn');
+        showButtonSpinner(btn, 'Looking up...');
 
         // Show progress
         const progressDiv = document.getElementById('loc-lookup-progress');
@@ -306,9 +307,6 @@ async function lookupTableMissing() {
         // Hide progress
         progressDiv.style.display = 'none';
 
-        // Hide spinner in button
-        setButtonLoading('lookup-table-missing-btn', false);
-
         let message = `Table lookup completed: ${successCount} success, ${failureCount} failed`;
         if (successCount > 0) {
             showSuccess('loc-lookup', message);
@@ -319,8 +317,10 @@ async function lookupTableMissing() {
     } catch (error) {
         const progressDiv = document.getElementById('loc-lookup-progress');
         progressDiv.style.display = 'none';
-        setButtonLoading('lookup-table-missing-btn', false);
         showError('loc-lookup', 'Table lookup failed: ' + error.message);
+    } finally {
+        const btn = document.getElementById('lookup-table-missing-btn');
+        hideButtonSpinner(btn, 'Lookup Table Missing');
     }
 }
 
@@ -333,7 +333,8 @@ async function lookupAllMissing() {
         clearSuccess('loc-lookup');
 
         // Show spinner in button
-        setButtonLoading('lookup-all-missing-btn', true);
+        const btn = document.getElementById('lookup-all-missing-btn');
+        showButtonSpinner(btn, 'Looking up...');
 
         // Show progress
         const progressDiv = document.getElementById('loc-lookup-progress');
@@ -347,9 +348,6 @@ async function lookupAllMissing() {
 
         // Hide progress
         progressDiv.style.display = 'none';
-
-        // Hide spinner in button
-        setButtonLoading('lookup-all-missing-btn', false);
 
         // Process results
         let successCount = 0;
@@ -385,8 +383,10 @@ async function lookupAllMissing() {
     } catch (error) {
         const progressDiv = document.getElementById('loc-lookup-progress');
         progressDiv.style.display = 'none';
-        setButtonLoading('lookup-all-missing-btn', false);
         showError('loc-lookup', 'Bulk lookup failed: ' + error.message);
+    } finally {
+        const btn = document.getElementById('lookup-all-missing-btn');
+        hideButtonSpinner(btn, 'Lookup All Missing');
     }
 };
 
@@ -423,25 +423,3 @@ function clearSuccess(section) {
     }
 }
 
-/**
- * Toggle loading state of a button (shows/hides spinner)
- * @param {string} buttonId - The ID of the button
- * @param {boolean} isLoading - Whether the button should show loading state
- */
-function setButtonLoading(buttonId, isLoading) {
-    const button = document.getElementById(buttonId);
-    if (!button) return;
-
-    const spinner = button.querySelector('.spinner-border');
-    const btnText = button.querySelector('.btn-text');
-
-    if (isLoading) {
-        button.disabled = true;
-        if (spinner) spinner.classList.remove('d-none');
-        if (btnText) btnText.classList.add('me-2');
-    } else {
-        button.disabled = false;
-        if (spinner) spinner.classList.add('d-none');
-        if (btnText) btnText.classList.remove('me-2');
-    }
-}
