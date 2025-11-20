@@ -62,8 +62,7 @@ function createSavedBookRow(book) {
     if (book.firstPhotoId) {
         const img = document.createElement('img');
         img.style.width = '50px';
-        img.style.height = '50px';
-        img.style.objectFit = 'cover';
+        img.style.height = 'auto';
         // Use cached thumbnail loading
         window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
         photoCell.appendChild(img);
