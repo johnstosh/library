@@ -33,8 +33,9 @@ import java.util.List;
 public class LabelsPdfService {
 
     // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
+    // Reduced height by 1/8" to account for printing/spacing
     private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
-    private static final float LABEL_HEIGHT = 2.0f * 72;    // 144 points (2.0")
+    private static final float LABEL_HEIGHT = 1.875f * 72;  // 135 points (1.875" = 2.0" - 0.125")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
@@ -98,7 +99,8 @@ public class LabelsPdfService {
                     currentTable.setMargin(0);
                     currentTable.setPadding(0);
                     currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
-                    currentTable.setHorizontalBorderSpacing(0);
+                    // Account for 1/8" horizontal dead zone between labels on physical sheet
+                    currentTable.setHorizontalBorderSpacing(0.125f * 72);  // 9 points (1/8")
                     currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
