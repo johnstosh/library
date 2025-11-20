@@ -244,6 +244,8 @@ function renderPhotosTable(photos) {
  * Export all pending photos
  */
 async function exportAllPhotos() {
+    const exportBtn = document.getElementById('export-all-photos-btn');
+
     try {
         // Get all photos from the current table
         const photos = await fetchData('/api/photo-export/photos');
@@ -263,11 +265,8 @@ async function exportAllPhotos() {
 
         console.log('[Photos] Exporting', pendingPhotos.length, 'pending photos');
 
-        // Disable export button
-        const exportBtn = document.getElementById('export-all-photos-btn');
-        if (exportBtn) {
-            exportBtn.disabled = true;
-        }
+        // Show spinner on button
+        showButtonSpinner(exportBtn, 'Exporting...');
 
         let successCount = 0;
         let failureCount = 0;
@@ -280,8 +279,15 @@ async function exportAllPhotos() {
             try {
                 showInfo('photos', `Exporting photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
 
+                // Update button text with progress (recreate spinner element each time)
                 if (exportBtn) {
-                    exportBtn.textContent = `Exporting ${photoNum}/${pendingPhotos.length}...`;
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner-border spinner-border-sm me-1';
+                    spinner.setAttribute('role', 'status');
+                    spinner.setAttribute('aria-hidden', 'true');
+                    exportBtn.innerHTML = '';
+                    exportBtn.appendChild(spinner);
+                    exportBtn.appendChild(document.createTextNode(`Exporting ${photoNum}/${pendingPhotos.length}...`));
                 }
 
                 // Export the photo
@@ -313,11 +319,9 @@ async function exportAllPhotos() {
         console.error('[Photos] Failed to export photos:', error);
         showError('photos', 'Failed to export photos: ' + error.message);
     } finally {
-        // Re-enable export button
-        const exportBtn = document.getElementById('export-all-photos-btn');
+        // Hide spinner and restore button
         if (exportBtn) {
-            exportBtn.disabled = false;
-            exportBtn.textContent = 'Export All Pending Photos';
+            hideButtonSpinner(exportBtn, 'Export All Pending Photos');
         }
     }
 }
@@ -352,6 +356,8 @@ async function exportSinglePhoto(photoId) {
  * Import all pending photos from Google Photos
  */
 async function importAllPhotos() {
+    const importBtn = document.getElementById('import-all-photos-btn');
+
     try {
         // Get all photos from the current table
         const photos = await fetchData('/api/photo-export/photos');
@@ -371,11 +377,8 @@ async function importAllPhotos() {
 
         console.log('[Photos] Importing', pendingPhotos.length, 'pending photos');
 
-        // Disable import button
-        const importBtn = document.getElementById('import-all-photos-btn');
-        if (importBtn) {
-            importBtn.disabled = true;
-        }
+        // Show spinner on button
+        showButtonSpinner(importBtn, 'Importing...');
 
         let successCount = 0;
         let failureCount = 0;
@@ -388,8 +391,15 @@ async function importAllPhotos() {
             try {
                 showInfo('photos', `Importing photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
 
+                // Update button text with progress (recreate spinner element each time)
                 if (importBtn) {
-                    importBtn.textContent = `Importing ${photoNum}/${pendingPhotos.length}...`;
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner-border spinner-border-sm me-1';
+                    spinner.setAttribute('role', 'status');
+                    spinner.setAttribute('aria-hidden', 'true');
+                    importBtn.innerHTML = '';
+                    importBtn.appendChild(spinner);
+                    importBtn.appendChild(document.createTextNode(`Importing ${photoNum}/${pendingPhotos.length}...`));
                 }
 
                 // Import the photo
@@ -421,11 +431,9 @@ async function importAllPhotos() {
         console.error('[Photos] Failed to import photos:', error);
         showError('photos', 'Failed to import photos: ' + error.message);
     } finally {
-        // Re-enable import button
-        const importBtn = document.getElementById('import-all-photos-btn');
+        // Hide spinner and restore button
         if (importBtn) {
-            importBtn.disabled = false;
-            importBtn.textContent = 'Import All Pending Photos';
+            hideButtonSpinner(importBtn, 'Import All Pending Photos');
         }
     }
 }

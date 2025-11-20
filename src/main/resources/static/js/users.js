@@ -71,6 +71,10 @@ async function addUser() {
         showError('users', 'Name, password, and role are required.');
         return;
     }
+
+    const btn = document.getElementById('add-user-btn');
+    showButtonSpinner(btn, 'Adding...');
+
     try {
         const hashedPassword = await hashPassword(password);
         await postData('/api/users', { username, password: hashedPassword, role });
@@ -82,6 +86,8 @@ async function addUser() {
         clearError('users');
     } catch (error) {
         showError('users', 'Failed to add user: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -107,6 +113,10 @@ async function updateUser(id) {
         showError('users', 'Name and role are required.');
         return;
     }
+
+    const btn = document.getElementById('add-user-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         const hashedPassword = password ? await hashPassword(password) : null;
         await putData(`/api/users/${id}`, { username, password: hashedPassword, role });
@@ -115,12 +125,13 @@ async function updateUser(id) {
         document.getElementById('new-user-role').value = 'USER';
         await loadUsers();
         await populateLoanDropdowns();
-        const btn = document.getElementById('add-user-btn');
         btn.textContent = 'Add User';
         btn.onclick = addUser;
         clearError('users');
     } catch (error) {
         showError('users', 'Failed to update user: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 

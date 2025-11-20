@@ -212,10 +212,9 @@ async function processAllBooks() {
         return;
     }
 
-    // Disable the "Process All" button during processing
+    // Show spinner on the "Process All" button during processing
     const processAllBtn = document.getElementById('process-all-btn');
-    processAllBtn.disabled = true;
-    processAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    showButtonSpinner(processAllBtn, 'Processing...');
 
     try {
         showInfo('books-from-feed', `Processing ${rows.length} book(s)...`);
@@ -262,9 +261,8 @@ async function processAllBooks() {
         console.error('[BooksFromFeed] Error during bulk processing:', error);
         showError('books-from-feed', 'Bulk processing error: ' + error.message);
     } finally {
-        // Re-enable the "Process All" button
-        processAllBtn.disabled = false;
-        processAllBtn.textContent = 'Process All';
+        // Hide spinner and restore the "Process All" button
+        hideButtonSpinner(processAllBtn);
     }
 }
 

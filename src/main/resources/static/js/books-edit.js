@@ -171,6 +171,10 @@ async function addBook() {
         showError('books', 'Title and library are required.');
         return;
     }
+
+    const btn = document.getElementById('add-book-btn');
+    showButtonSpinner(btn, 'Adding...');
+
     try {
         // If author name is provided but no ID, create a new author
         if (authorName && !authorId) {
@@ -196,6 +200,8 @@ async function addBook() {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add book: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -253,7 +259,7 @@ async function generateBookByPhoto(bookId) {
     addBookBtn.disabled = true;
     cancelBookBtn.disabled = true;
     addPhotoBtn.disabled = true;
-    bookByPhotoBtn.disabled = true;
+    showButtonSpinner(bookByPhotoBtn, 'Generating...');
 
     document.body.style.cursor = 'wait';
     try {
@@ -292,7 +298,7 @@ async function generateBookByPhoto(bookId) {
         addBookBtn.disabled = false;
         cancelBookBtn.disabled = false;
         addPhotoBtn.disabled = false;
-        bookByPhotoBtn.disabled = false;
+        hideButtonSpinner(bookByPhotoBtn);
         document.body.style.cursor = 'default';
     }
 }
@@ -315,6 +321,10 @@ async function updateBook(id) {
         showError('books', 'Title and library are required.');
         return;
     }
+
+    const btn = document.getElementById('add-book-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         // If author name is provided but no ID, create a new author
         if (authorName && !authorId) {
@@ -342,6 +352,8 @@ async function updateBook(id) {
         showBookList(true);
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -351,6 +363,9 @@ async function cloneBook() {
         showError('books', 'No book selected to clone.');
         return;
     }
+
+    const btn = document.getElementById('clone-book-btn');
+    showButtonSpinner(btn, 'Cloning...');
 
     try {
         document.body.style.cursor = 'wait';
@@ -368,6 +383,7 @@ async function cloneBook() {
     } catch (error) {
         showError('books', 'Failed to clone book: ' + error.message);
     } finally {
+        hideButtonSpinner(btn);
         document.body.style.cursor = 'default';
     }
 }
@@ -380,7 +396,7 @@ async function getTitleAuthorFromPhoto() {
     }
 
     const titleAuthorBtn = document.getElementById('title-author-from-photo-btn');
-    titleAuthorBtn.disabled = true;
+    showButtonSpinner(titleAuthorBtn, 'Extracting...');
     document.body.style.cursor = 'wait';
 
     try {
@@ -406,7 +422,7 @@ async function getTitleAuthorFromPhoto() {
     } catch (error) {
         showError('books', 'Failed to extract title and author from photo: ' + error.message);
     } finally {
-        titleAuthorBtn.disabled = false;
+        hideButtonSpinner(titleAuthorBtn);
         document.body.style.cursor = 'default';
     }
 }
@@ -427,7 +443,7 @@ async function getBookFromTitleAuthor() {
     }
 
     const bookFromTitleBtn = document.getElementById('book-from-title-author-btn');
-    bookFromTitleBtn.disabled = true;
+    showButtonSpinner(bookFromTitleBtn, 'Generating...');
     document.body.style.cursor = 'wait';
 
     try {
@@ -460,7 +476,7 @@ async function getBookFromTitleAuthor() {
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
     } finally {
-        bookFromTitleBtn.disabled = false;
+        hideButtonSpinner(bookFromTitleBtn);
         document.body.style.cursor = 'default';
     }
 }

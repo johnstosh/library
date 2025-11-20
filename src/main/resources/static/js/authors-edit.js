@@ -12,6 +12,10 @@ async function addAuthor() {
         showError('authors', 'Author name is required.');
         return;
     }
+
+    const btn = document.getElementById('add-author-btn');
+    showButtonSpinner(btn, 'Adding...');
+
     try {
         const newAuthor = await postData('/api/authors', { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
         document.getElementById('new-author-name').value = '';
@@ -26,6 +30,8 @@ async function addAuthor() {
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to add author: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -68,6 +74,10 @@ async function updateAuthor(id) {
         showError('authors', 'Author name is required.');
         return;
     }
+
+    const btn = document.getElementById('add-author-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         await putData(`/api/authors/${id}`, { name, dateOfBirth, dateOfDeath, religiousAffiliation, birthCountry, nationality, briefBiography });
         await loadAuthors();
@@ -76,6 +86,8 @@ async function updateAuthor(id) {
         clearError('authors');
     } catch (error) {
         showError('authors', 'Failed to update author: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -190,11 +202,16 @@ async function deleteAuthorsWithNoBooks() {
         return;
     }
 
+    const btn = document.getElementById('delete-authors-no-books-btn');
+    showButtonSpinner(btn, 'Deleting...');
+
     try {
         const result = await postData('/api/authors/delete-authors-with-no-books', {});
         showSuccess('authors', result.message || `Deleted ${result.deletedCount} author(s) with no books`);
         await loadAuthors();
     } catch (error) {
         showError('authors', 'Failed to delete authors: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }

@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski - Main App Entry Point
 
-import { getCookie, fetchData, postData, putData, deleteData, showError, clearError, showBulkSuccess, formatDate, shouldResetForSection } from './utils.js';
+import { getCookie, fetchData, postData, putData, deleteData, showError, clearError, showBulkSuccess, formatDate, shouldResetForSection, showButtonSpinner, hideButtonSpinner } from './utils.js';
 import { checkAuthentication, showPublicSearchPage, showLoginForm, showLoginError, showMainContent, logout } from './auth.js';
 import { sectionConfig, showSection } from './sections.js';
 import { initApp } from './init.js';
@@ -17,6 +17,8 @@ window.clearError = clearError;
 window.showBulkSuccess = showBulkSuccess;
 window.formatDate = formatDate;
 window.shouldResetForSection = shouldResetForSection;
+window.showButtonSpinner = showButtonSpinner;
+window.hideButtonSpinner = hideButtonSpinner;
 window.checkAuthentication = checkAuthentication;
 window.showPublicSearchPage = showPublicSearchPage;
 window.showLoginForm = showLoginForm;
