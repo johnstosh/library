@@ -638,3 +638,13 @@ function clearMessages() {
         resultsDiv.innerHTML = '';
     }
 }
+
+// Expose functions globally for use in other modules and HTML
+window.loadPhotosSection = loadPhotosSection;
+window.loadPhotoExportStatus = loadPhotoExportStatus;
+window.exportAllPhotos = exportAllPhotos;
+window.exportSinglePhoto = exportSinglePhoto;
+window.importAllPhotos = importAllPhotos;
+window.importSinglePhoto = importSinglePhoto;
+window.verifyPhoto = verifyPhoto;
+window.unlinkPhoto = unlinkPhoto;
