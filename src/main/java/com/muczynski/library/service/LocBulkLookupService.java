@@ -40,26 +40,25 @@ public class LocBulkLookupService {
     private final LocCatalogService locCatalogService;
 
     /**
-     * Get all books with their current LOC status, sorted by call number
-     * (blank/missing call numbers at the top)
+     * Get all books with their current LOC status, sorted by date added (most recent first)
      */
     public List<BookLocStatusDto> getAllBooksWithLocStatus() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
-                .sorted(createCallNumberComparator())
+                .sorted(createDateAddedComparator())
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get books that don't have LOC numbers, sorted by title
+     * Get books that don't have LOC numbers, sorted by date added (most recent first)
      */
     public List<BookLocStatusDto> getBooksWithMissingLoc() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .filter(book -> book.getLocNumber() == null || book.getLocNumber().trim().isEmpty())
                 .map(this::mapToBookLocStatusDto)
-                .sorted(Comparator.comparing(BookLocStatusDto::getTitle, String.CASE_INSENSITIVE_ORDER))
+                .sorted(createDateAddedComparator())
                 .collect(Collectors.toList());
     }
 
@@ -255,6 +254,37 @@ public class LocBulkLookupService {
                 .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
                 .dateAdded(dateAddedStr)
                 .build();
+    }
+
+    /**
+     * Create a comparator for sorting by date added to library
+     * Most recent dates first, nulls last, ties broken by title
+     */
+    private Comparator<BookLocStatusDto> createDateAddedComparator() {
+        return (book1, book2) -> {
+            String date1 = book1.getDateAdded();
+            String date2 = book2.getDateAdded();
+
+            // Handle null dates - they should appear at the end
+            if (date1 == null && date2 == null) {
+                return book1.getTitle().compareToIgnoreCase(book2.getTitle());
+            }
+            if (date1 == null) {
+                return 1; // book1 comes after
+            }
+            if (date2 == null) {
+                return -1; // book2 comes after
+            }
+
+            // Both have dates, compare in descending order (most recent first)
+            int dateComparison = date2.compareTo(date1);
+            if (dateComparison != 0) {
+                return dateComparison;
+            }
+
+            // Dates are equal, sort by title
+            return book1.getTitle().compareToIgnoreCase(book2.getTitle());
+        };
     }
 
     /**
