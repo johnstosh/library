@@ -122,21 +122,62 @@ function displayAuthorBooks(books) {
         const li = document.createElement('li');
         li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
 
+        // Left side: title and year
+        const leftDiv = document.createElement('div');
+        leftDiv.classList.add('d-flex', 'align-items-center', 'gap-2');
+
         const titleSpan = document.createElement('span');
         titleSpan.textContent = book.title;
         if (book.publicationYear) {
             titleSpan.textContent += ` (${book.publicationYear})`;
         }
-        li.appendChild(titleSpan);
+        leftDiv.appendChild(titleSpan);
 
         // Add LOC number badge if available
         if (book.locNumber) {
             const badge = document.createElement('span');
             badge.classList.add('badge', 'bg-success');
             badge.textContent = book.locNumber;
-            li.appendChild(badge);
+            leftDiv.appendChild(badge);
         }
 
+        li.appendChild(leftDiv);
+
+        // Right side: action buttons
+        const actionsDiv = document.createElement('div');
+        actionsDiv.classList.add('btn-group', 'btn-group-sm');
+
+        // View button
+        const viewBtn = document.createElement('button');
+        viewBtn.classList.add('btn', 'btn-outline-secondary');
+        viewBtn.textContent = '👁️';
+        viewBtn.title = 'View';
+        viewBtn.onclick = () => {
+            window.viewBook(book.id);
+        };
+        actionsDiv.appendChild(viewBtn);
+
+        // Edit button
+        const editBtn = document.createElement('button');
+        editBtn.classList.add('btn', 'btn-outline-secondary');
+        editBtn.textContent = '✏️';
+        editBtn.title = 'Edit';
+        editBtn.onclick = () => {
+            editBook(book.id);
+        };
+        actionsDiv.appendChild(editBtn);
+
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.classList.add('btn', 'btn-outline-danger');
+        delBtn.textContent = '🗑️';
+        delBtn.title = 'Delete';
+        delBtn.onclick = () => {
+            deleteBook(book.id);
+        };
+        actionsDiv.appendChild(delBtn);
+
+        li.appendChild(actionsDiv);
         ul.appendChild(li);
     });
 

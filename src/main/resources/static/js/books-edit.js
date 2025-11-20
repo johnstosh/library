@@ -21,7 +21,28 @@ function clearSuccess(sectionId) {
     }
 }
 
-function resetBookForm() {
+async function resetBookForm() {
+    const currentBookId = document.getElementById('current-book-id').value;
+
+    // If there's a current book being edited, check if it should be deleted
+    if (currentBookId) {
+        try {
+            // Get the book's photos to check if it has any
+            const photos = await fetchData(`/api/books/${currentBookId}/photos`);
+
+            // If no photos attached, delete the temporary book
+            if (!photos || photos.length === 0) {
+                await deleteData(`/api/books/${currentBookId}`);
+                console.log(`[Books] Deleted temporary book ${currentBookId} with no photos`);
+                // Reload books list to reflect deletion
+                await loadBooks();
+            }
+        } catch (error) {
+            console.error(`[Books] Failed to check/delete book ${currentBookId}:`, error);
+            // Continue with form reset even if deletion fails
+        }
+    }
+
     document.getElementById('new-book-title').value = '';
     document.getElementById('new-book-year').value = '';
     document.getElementById('new-book-publisher').value = '';
@@ -63,26 +84,8 @@ async function prepareNewBookForPhoto(title) {
     document.getElementById('new-book-title').value = title;
 
     try {
-        // Get first author or create "John Doe" if none exist
-        let authors = await fetchData('/api/authors');
-        let authorId;
-        if (authors && authors.length > 0) {
-            authorId = authors[0].id;
-        } else {
-            // Create a default author
-            const defaultAuthor = await postData('/api/authors', {
-                name: 'John Doe',
-                dateOfBirth: '',
-                dateOfDeath: '',
-                religiousAffiliation: '',
-                birthCountry: '',
-                nationality: '',
-                briefBiography: 'Default author created for book-by-photo'
-            });
-            authorId = defaultAuthor.id;
-            // Reload the authors dropdown
-            await populateBookDropdowns();
-        }
+        // Set author to null - user can set it later if needed
+        const authorId = null;
 
         // Get first library or create a default if none exist
         let libraries = await fetchData('/api/libraries');
@@ -100,10 +103,9 @@ async function prepareNewBookForPhoto(title) {
             await populateBookDropdowns();
         }
 
-        // Set author name and ID
-        document.getElementById('book-author-id').value = authorId;
-        const author = allAuthors.find(a => a.id == authorId);
-        document.getElementById('book-author').value = author ? author.name : '';
+        // Clear author fields
+        document.getElementById('book-author-id').value = '';
+        document.getElementById('book-author').value = '';
 
         // Set library dropdown
         document.getElementById('book-library').value = libraryId;
@@ -111,7 +113,7 @@ async function prepareNewBookForPhoto(title) {
     // Scroll to bottom
     window.scrollTo(0, document.body.scrollHeight);
 
-    // Save initial data to backend (minimal, just title/author/library)
+    // Save initial data to backend (minimal, just title and library, no author)
     const initialData = {
         title: title,
         authorId: authorId,
