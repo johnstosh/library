@@ -9,8 +9,18 @@ let activityListenersActive = false;
 
 /**
  * Handles inactivity timeout by logging out the user and redirecting to login
+ * Does not timeout if any buttons are currently processing (have spinners)
  */
 function handleInactivityTimeout() {
+    // Check if any buttons are currently processing
+    const activeSpinners = document.querySelectorAll('.spinner-border');
+    if (activeSpinners.length > 0) {
+        console.log('[Auth] Inactivity timeout deferred - buttons are processing');
+        // Reset timer to check again later
+        resetInactivityTimer();
+        return;
+    }
+
     console.log('[Auth] Inactivity timeout reached, logging out user');
     stopInactivityTimeout();
     logout();

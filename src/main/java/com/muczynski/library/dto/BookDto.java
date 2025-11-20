@@ -25,8 +25,7 @@ public class BookDto {
     private LocalDateTime dateAddedToLibrary;
     private BookStatus status;
 
-    @NotNull(message = "Author ID is required")
-    private Long authorId;
+    private Long authorId;  // Nullable - can be set during AI processing
 
     private String author; // Author name for display purposes
 
