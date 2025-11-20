@@ -7,9 +7,11 @@ import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
@@ -80,6 +82,9 @@ public class LabelsPdfService {
                             colIndex++;
                         }
                         document.add(currentTable);
+
+                        // Force page break before starting next page of labels
+                        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
                     }
 
                     // Create table with fixed column widths matching label dimensions
