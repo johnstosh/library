@@ -30,18 +30,19 @@ import java.util.List;
 @Slf4j
 public class LabelsPdfService {
 
-    // Avery 6572 specifications (approximation for 2" H x 2.625" W)
-    private static final float LABEL_WIDTH = 2.625f * 72;  // 189 points
-    private static final float LABEL_HEIGHT = 2.0f * 72;   // 144 points
+    // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
+    // Adjusted height slightly to account for table/cell rendering overhead and prevent spillover
+    private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
+    private static final float LABEL_HEIGHT = 1.96f * 72;   // 141.12 points (1.96")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
 
-    // Page margins
-    private static final float TOP_MARGIN = 0.5f * 72;
-    private static final float BOTTOM_MARGIN = 0.5f * 72;
-    private static final float LEFT_MARGIN = 0.3125f * 72;
-    private static final float RIGHT_MARGIN = 0.3125f * 72;
+    // Avery 6572 page margins (official specs)
+    private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
+    private static final float BOTTOM_MARGIN = 0.5f * 72;    // 36 points (0.5")
+    private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
+    private static final float RIGHT_MARGIN = 0.1875f * 72;  // 13.5 points (0.1875")
 
     // Font sizes (configurable via application.properties)
     @Value("${app.labels.font-size.title:11}")
@@ -89,6 +90,12 @@ public class LabelsPdfService {
                     }
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
+                    // Remove all table spacing to prevent overflow
+                    currentTable.setMargin(0);
+                    currentTable.setPadding(0);
+                    currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
+                    currentTable.setHorizontalBorderSpacing(0);
+                    currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
                 }
@@ -134,6 +141,7 @@ public class LabelsPdfService {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
+        cell.setMargin(0);  // No margin to prevent overflow
         cell.setPadding(5);
         cell.setBorder(new com.itextpdf.layout.borders.SolidBorder(1));
 
@@ -201,6 +209,8 @@ public class LabelsPdfService {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
+        cell.setMargin(0);  // No margin to prevent overflow
+        cell.setPadding(0);
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
         return cell;
     }
