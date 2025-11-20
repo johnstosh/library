@@ -348,10 +348,9 @@ public class BooksFromFeedService {
         List<Map<String, Object>> savedPhotos = new ArrayList<>();
         List<Map<String, Object>> skippedPhotos = new ArrayList<>();
 
-        // Get default library and placeholder author once
+        // Get default library once
         Library library = libraryService.getOrCreateDefaultLibrary();
         Long libraryId = library.getId();
-        Author placeholderAuthor = authorService.findOrCreateAuthor("John Doe");
 
         int photoIndex = 0;
         for (Map<String, Object> photo : photos) {
@@ -415,7 +414,7 @@ public class BooksFromFeedService {
 
                 BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
-                tempBook.setAuthorId(placeholderAuthor.getId());
+                tempBook.setAuthorId(null);  // Author will be set during AI processing
                 tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(LocalDateTime.now());
