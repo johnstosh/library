@@ -95,6 +95,12 @@ public class BookService {
                 .orElse(null);
     }
 
+    public List<BookDto> getBooksByAuthorId(Long authorId) {
+        return bookRepository.findByAuthorIdOrderByTitleAsc(authorId).stream()
+                .map(bookMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public BookDto updateBook(Long id, BookDto bookDto) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
         book.setTitle(bookDto.getTitle());

@@ -4,8 +4,10 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
 import jakarta.validation.Valid;
@@ -37,6 +39,9 @@ public class AuthorController {
     private PhotoService photoService;
 
     @Autowired
+    private BookService bookService;
+
+    @Autowired
     private GooglePhotosService googlePhotosService;
 
     @GetMapping
@@ -59,6 +64,18 @@ public class AuthorController {
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve photos for author ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/books")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksByAuthorId(@PathVariable Long id) {
+        try {
+            List<BookDto> books = bookService.getBooksByAuthorId(id);
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

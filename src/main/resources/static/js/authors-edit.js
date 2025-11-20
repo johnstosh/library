@@ -51,6 +51,9 @@ async function editAuthor(id) {
 
     const photos = await fetchData(`/api/authors/${id}/photos`);
     displayAuthorPhotos(photos, id);
+
+    const books = await fetchData(`/api/authors/${id}/books`);
+    displayAuthorBooks(books);
 }
 
 async function updateAuthor(id) {
@@ -94,7 +97,48 @@ function resetAuthorForm() {
     document.getElementById('add-author-photo-btn').style.display = 'none';
     document.getElementById('add-author-photo-google-btn').style.display = 'none';
     document.getElementById('author-photos-container').style.display = 'none';
+    document.getElementById('author-books-container').style.display = 'none';
 
     showAuthorList(true);
     clearError('authors');
+}
+
+function displayAuthorBooks(books) {
+    const container = document.getElementById('author-books-container');
+    const booksDiv = document.getElementById('author-books');
+
+    if (!books || books.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    booksDiv.innerHTML = '';
+
+    const ul = document.createElement('ul');
+    ul.classList.add('list-group');
+
+    books.forEach(book => {
+        const li = document.createElement('li');
+        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = book.title;
+        if (book.publicationYear) {
+            titleSpan.textContent += ` (${book.publicationYear})`;
+        }
+        li.appendChild(titleSpan);
+
+        // Add LOC number badge if available
+        if (book.locNumber) {
+            const badge = document.createElement('span');
+            badge.classList.add('badge', 'bg-success');
+            badge.textContent = book.locNumber;
+            li.appendChild(badge);
+        }
+
+        ul.appendChild(li);
+    });
+
+    booksDiv.appendChild(ul);
 }
