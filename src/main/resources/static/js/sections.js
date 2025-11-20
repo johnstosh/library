@@ -2,6 +2,7 @@
 
 import { shouldResetForSection } from './utils.js';
 import { loadLocBulkLookupSection } from './loc-bulk-lookup.js';
+import { loadLabelsSection } from './labels.js';
 
 // Combined loader for library-card section
 function loadLibraryCardSectionCombined() {
@@ -34,6 +35,7 @@ export const sectionConfig = {
     'test-data': { load: loadTestDataStats, reset: null },
     'global-settings': { load: loadGlobalSettings, reset: null },
     'loc-bulk-lookup': { load: loadLocBulkLookupSection, reset: null },
+    'labels': { load: loadLabelsSection, reset: null },
     'settings': { load: loadSettings, reset: null }
 };
 

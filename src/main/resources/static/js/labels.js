@@ -4,6 +4,15 @@
 import { fetchData } from './utils.js';
 
 /**
+ * Load Labels section - auto-loads books from most recent day
+ */
+export async function loadLabelsSection() {
+    console.log('[Labels] Loading labels section');
+    // Auto-load books from most recent day
+    await loadBooksForLabels();
+}
+
+/**
  * Initialize event listeners when DOM is ready
  */
 document.addEventListener('DOMContentLoaded', function() {
@@ -33,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Load books for labels, sorted by date added
+ * Load books from most recent day for labels
  */
 async function loadBooksForLabels() {
     try {
