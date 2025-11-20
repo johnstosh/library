@@ -243,10 +243,43 @@ html, body {
 
 /* Mobile-specific improvements for phones */
 @media (max-width: 768px) {
+    /* Smaller font sizes for mobile */
+    body {
+        font-size: 13px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.3rem;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+
+    h4, h5, h6 {
+        font-size: 1rem;
+    }
+
+    /* Remove container left/right whitespace */
+    .container {
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+
+    /* Remove section left/right whitespace */
+    .section {
+        padding: 1rem 2px;
+    }
+
     /* Larger touch targets for buttons */
     .btn {
         min-height: 44px;
         padding: 0.5rem 1rem;
+        font-size: 13px;
     }
 
     /* Stack buttons vertically on very small screens */
@@ -264,30 +297,36 @@ html, body {
         margin-bottom: 1.5rem !important;
     }
 
-    /* Larger font size for readability */
-    body {
-        font-size: 16px;
-    }
-
-    /* Better spacing for sections */
-    .section {
-        padding: 1.5rem 1rem;
-    }
-
     /* Larger touch targets for form controls */
     .form-control, .form-select {
         min-height: 44px;
-        font-size: 16px; /* Prevents zoom on iOS */
+        font-size: 14px; /* Prevents zoom on iOS */
+    }
+
+    .form-label {
+        font-size: 13px;
     }
 
     /* Better spacing for action buttons in tables */
     table .btn {
         margin-bottom: 0.25rem;
+        font-size: 12px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Smaller table text */
+    table {
+        font-size: 12px;
     }
 
     /* Better navbar brand sizing */
     .navbar-brand {
-        font-size: 1.1rem;
+        font-size: 1rem;
+    }
+
+    /* Smaller nav links */
+    #section-menu .nav-link {
+        font-size: 13px;
     }
 
     /* Ensure modals are properly sized */
@@ -297,8 +336,13 @@ html, body {
 
     /* Better spacing for alerts */
     .alert {
-        font-size: 0.95rem;
-        padding: 0.75rem;
+        font-size: 12px;
+        padding: 0.5rem;
+    }
+
+    /* Smaller text in various elements */
+    p, li, span, div {
+        font-size: 13px;
     }
 }
 
