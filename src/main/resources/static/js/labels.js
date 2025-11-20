@@ -9,7 +9,7 @@ import { fetchData } from './utils.js';
 export async function loadLabelsSection() {
     console.log('[Labels] Loading labels section');
     // Auto-load books from most recent day
-    await loadBooksForLabels();
+    await loadBooksForLabels('most-recent');
 }
 
 /**
@@ -17,9 +17,14 @@ export async function loadLabelsSection() {
  */
 document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to buttons
-    const loadBooksBtn = document.getElementById('load-books-for-labels-btn');
-    if (loadBooksBtn) {
-        loadBooksBtn.addEventListener('click', () => loadBooksForLabels());
+    const viewMostRecentBtn = document.getElementById('view-most-recent-day-btn');
+    if (viewMostRecentBtn) {
+        viewMostRecentBtn.addEventListener('click', () => loadBooksForLabels('most-recent'));
+    }
+
+    const viewAllBooksBtn = document.getElementById('view-all-books-btn');
+    if (viewAllBooksBtn) {
+        viewAllBooksBtn.addEventListener('click', () => loadBooksForLabels('all'));
     }
 
     const generateAllBtn = document.getElementById('generate-all-labels-btn');
@@ -42,14 +47,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Load books from most recent day for labels
+ * Load books for labels
+ * @param {string} mode - 'most-recent' or 'all'
  */
-async function loadBooksForLabels() {
+async function loadBooksForLabels(mode) {
     try {
         clearError('labels');
         clearSuccess('labels');
 
-        const books = await fetchData('/api/labels/books');
+        const endpoint = mode === 'all' ? '/api/labels/books/all' : '/api/labels/books';
+        const books = await fetchData(endpoint);
 
         const tableBody = document.getElementById('labels-table-body');
         tableBody.innerHTML = '';
@@ -66,7 +73,8 @@ async function loadBooksForLabels() {
             tableBody.appendChild(row);
         });
 
-        showSuccess('labels', `Loaded ${books.length} book(s)`);
+        const modeText = mode === 'all' ? ' (all books)' : ' (most recent day)';
+        showSuccess('labels', `Loaded ${books.length} book(s)${modeText}`);
     } catch (error) {
         showError('labels', 'Failed to load books: ' + error.message);
     }

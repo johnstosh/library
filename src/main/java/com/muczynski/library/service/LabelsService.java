@@ -56,6 +56,22 @@ public class LabelsService {
     }
 
     /**
+     * Get all books with LOC numbers, sorted by date added (newest first)
+     */
+    public List<BookLocStatusDto> getAllBooksForLabels() {
+        // Get all books with LOC numbers
+        List<Book> books = bookRepository.findAll().stream()
+                .filter(book -> book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
+                .sorted(Comparator.comparing(Book::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+
+        return books.stream()
+                .map(this::mapToBookLocStatusDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Generate labels PDF for the specified books
      */
     public byte[] generateLabelsPdf(List<Long> bookIds) {
