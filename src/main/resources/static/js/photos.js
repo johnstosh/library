@@ -245,30 +245,69 @@ function renderPhotosTable(photos) {
  */
 async function exportAllPhotos() {
     try {
-        const confirmExport = confirm('Are you sure you want to export all pending photos? This may take a while.');
+        // Get all photos from the current table
+        const photos = await fetchData('/api/photo-export/photos');
+
+        // Filter to get only pending export photos (hasImage && !permanentId)
+        const pendingPhotos = photos.filter(photo => photo.hasImage && !photo.permanentId);
+
+        if (pendingPhotos.length === 0) {
+            showInfo('photos', 'No pending photos to export.');
+            return;
+        }
+
+        const confirmExport = confirm(`Are you sure you want to export ${pendingPhotos.length} pending photo(s)? This may take a while.`);
         if (!confirmExport) {
             return;
         }
 
-        showInfo('photos', 'Starting export process... This may take a few minutes.');
+        console.log('[Photos] Exporting', pendingPhotos.length, 'pending photos');
 
         // Disable export button
         const exportBtn = document.getElementById('export-all-photos-btn');
         if (exportBtn) {
             exportBtn.disabled = true;
-            exportBtn.textContent = 'Backing up...';
         }
 
-        const result = await fetchData('/api/photo-export/export-all', {
-            method: 'POST'
-        });
+        let successCount = 0;
+        let failureCount = 0;
 
-        console.log('[Photos] Export result:', result);
+        // Loop through each pending photo and export it
+        for (let i = 0; i < pendingPhotos.length; i++) {
+            const photo = pendingPhotos[i];
+            const photoNum = i + 1;
 
-        showSuccess('photos', result.message || 'Export completed successfully!');
+            try {
+                showInfo('photos', `Exporting photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
 
-        // Reload the export status
-        await loadPhotoExportStatus();
+                if (exportBtn) {
+                    exportBtn.textContent = `Exporting ${photoNum}/${pendingPhotos.length}...`;
+                }
+
+                // Export the photo
+                const result = await fetchData(`/api/photo-export/export/${photo.id}`, {
+                    method: 'POST'
+                });
+
+                console.log(`[Photos] Exported photo ${photo.id}:`, result);
+                successCount++;
+
+                // Update the table to show the new status
+                await loadPhotoExportStatus();
+
+            } catch (error) {
+                console.error(`[Photos] Failed to export photo ${photo.id}:`, error);
+                failureCount++;
+                // Continue with next photo even if this one failed
+            }
+        }
+
+        // Show final results
+        if (failureCount === 0) {
+            showSuccess('photos', `Successfully exported all ${successCount} photo(s)!`);
+        } else {
+            showError('photos', `Export completed: ${successCount} succeeded, ${failureCount} failed.`);
+        }
 
     } catch (error) {
         console.error('[Photos] Failed to export photos:', error);
@@ -314,30 +353,69 @@ async function exportSinglePhoto(photoId) {
  */
 async function importAllPhotos() {
     try {
-        const confirmImport = confirm('Are you sure you want to import all pending photos from Google Photos? This may take a while.');
+        // Get all photos from the current table
+        const photos = await fetchData('/api/photo-export/photos');
+
+        // Filter to get only pending import photos (permanentId && !hasImage)
+        const pendingPhotos = photos.filter(photo => photo.permanentId && !photo.hasImage);
+
+        if (pendingPhotos.length === 0) {
+            showInfo('photos', 'No pending photos to import.');
+            return;
+        }
+
+        const confirmImport = confirm(`Are you sure you want to import ${pendingPhotos.length} pending photo(s) from Google Photos? This may take a while.`);
         if (!confirmImport) {
             return;
         }
 
-        showInfo('photos', 'Starting import process... This may take a few minutes.');
+        console.log('[Photos] Importing', pendingPhotos.length, 'pending photos');
 
         // Disable import button
         const importBtn = document.getElementById('import-all-photos-btn');
         if (importBtn) {
             importBtn.disabled = true;
-            importBtn.textContent = 'Importing...';
         }
 
-        const result = await fetchData('/api/photo-export/import-all', {
-            method: 'POST'
-        });
+        let successCount = 0;
+        let failureCount = 0;
 
-        console.log('[Photos] Import result:', result);
+        // Loop through each pending photo and import it
+        for (let i = 0; i < pendingPhotos.length; i++) {
+            const photo = pendingPhotos[i];
+            const photoNum = i + 1;
 
-        showSuccess('photos', result.message || 'Import completed successfully!');
+            try {
+                showInfo('photos', `Importing photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
 
-        // Reload the export status
-        await loadPhotoExportStatus();
+                if (importBtn) {
+                    importBtn.textContent = `Importing ${photoNum}/${pendingPhotos.length}...`;
+                }
+
+                // Import the photo
+                const result = await fetchData(`/api/photo-export/import/${photo.id}`, {
+                    method: 'POST'
+                });
+
+                console.log(`[Photos] Imported photo ${photo.id}:`, result);
+                successCount++;
+
+                // Update the table to show the new status
+                await loadPhotoExportStatus();
+
+            } catch (error) {
+                console.error(`[Photos] Failed to import photo ${photo.id}:`, error);
+                failureCount++;
+                // Continue with next photo even if this one failed
+            }
+        }
+
+        // Show final results
+        if (failureCount === 0) {
+            showSuccess('photos', `Successfully imported all ${successCount} photo(s)!`);
+        } else {
+            showError('photos', `Import completed: ${successCount} succeeded, ${failureCount} failed.`);
+        }
 
     } catch (error) {
         console.error('[Photos] Failed to import photos:', error);
