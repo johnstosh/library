@@ -73,6 +73,10 @@ async function addLibrary() {
         showError('libraries', 'Name and hostname are required.');
         return;
     }
+
+    const btn = document.getElementById('add-library-btn');
+    showButtonSpinner(btn, 'Adding...');
+
     try {
         await postData('/api/libraries', { name, hostname });
         document.getElementById('new-library-name').value = '';
@@ -82,6 +86,8 @@ async function addLibrary() {
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to add library: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Add Library');
     }
 }
 
@@ -101,18 +107,24 @@ async function updateLibrary(id) {
         showError('libraries', 'Name and hostname are required.');
         return;
     }
+
+    const btn = document.getElementById('add-library-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         await putData(`/api/libraries/${id}`, { name, hostname });
         document.getElementById('new-library-name').value = '';
         document.getElementById('new-library-hostname').value = '';
         await loadLibraries();
         await populateBookDropdowns();
-        const btn = document.getElementById('add-library-btn');
         btn.textContent = 'Add Library';
         btn.onclick = addLibrary;
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to update library: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Add Library');
+        btn.onclick = addLibrary;
     }
 }
 
@@ -151,6 +163,10 @@ async function importJson() {
         showError('libraries', 'Invalid JSON format: ' + error.message);
         return;
     }
+
+    const btn = document.getElementById('import-json-btn');
+    showButtonSpinner(btn, 'Importing...');
+
     try {
         await postData('/api/import/json', importData);
         fileInput.value = ''; // Clear the file input
@@ -160,10 +176,15 @@ async function importJson() {
         alert('Import completed successfully!');
     } catch (error) {
         showError('libraries', 'Failed to import data: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Import JSON to Database');
     }
 }
 
 async function exportJson() {
+    const btn = document.getElementById('export-json-btn');
+    showButtonSpinner(btn, 'Exporting...');
+
     try {
         // Get library name, books, and authors for filename
         const [libraries, books, authors] = await Promise.all([
@@ -199,6 +220,8 @@ async function exportJson() {
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to export data: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Export Database to JSON');
     }
 }
 

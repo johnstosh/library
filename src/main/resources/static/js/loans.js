@@ -110,6 +110,10 @@ async function checkoutBook() {
         showError('loans', 'Book and name are required.');
         return;
     }
+
+    const btn = document.getElementById('checkout-btn');
+    showButtonSpinner(btn, 'Checking out...');
+
     try {
         await postData('/api/loans/checkout', { bookId, userId, loanDate: loanDate || null, dueDate: dueDate || null, returnDate: returnDate || null });
         document.getElementById('loan-book').selectedIndex = 0;
@@ -123,6 +127,8 @@ async function checkoutBook() {
         clearError('loans');
     } catch (error) {
         showError('loans', 'Failed to checkout book: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Checkout Book');
     }
 }
 
@@ -148,6 +154,10 @@ async function updateLoan(id) {
         showError('loans', 'Book and name are required.');
         return;
     }
+
+    const btn = document.getElementById('checkout-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         await putData(`/api/loans/${id}`, { bookId, userId, loanDate: loanDate || null, dueDate: dueDate || null, returnDate: returnDate || null });
         document.getElementById('loan-book').selectedIndex = 0;
@@ -156,12 +166,14 @@ async function updateLoan(id) {
         document.getElementById('due-date').value = '';
         document.getElementById('return-date').value = '';
         await loadLoans();
-        const btn = document.getElementById('checkout-btn');
         btn.textContent = 'Checkout Book';
         btn.onclick = checkoutBook;
         clearError('loans');
     } catch (error) {
         showError('loans', 'Failed to update loan: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Checkout Book');
+        btn.onclick = checkoutBook;
     }
 }
 
