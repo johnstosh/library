@@ -148,15 +148,15 @@ function renderPhotosTable(photos) {
         statusCell.appendChild(statusBadge);
         row.appendChild(statusCell);
 
-        // Backed Up At
-        const backedUpCell = document.createElement('td');
-        if (photo.backedUpAt) {
-            const date = new Date(photo.backedUpAt);
-            backedUpCell.textContent = date.toLocaleString();
+        // Exported At
+        const exportedAtCell = document.createElement('td');
+        if (photo.exportedAt) {
+            const date = new Date(photo.exportedAt);
+            exportedAtCell.textContent = date.toLocaleString();
         } else {
-            backedUpCell.textContent = '-';
+            exportedAtCell.textContent = '-';
         }
-        row.appendChild(backedUpCell);
+        row.appendChild(exportedAtCell);
 
         // Permanent ID
         const permanentIdCell = document.createElement('td');
