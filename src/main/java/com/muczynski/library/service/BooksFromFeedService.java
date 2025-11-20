@@ -90,6 +90,26 @@ public class BooksFromFeedService {
         }
     }
 
+    /**
+     * Determine book status based on whether it has been enriched with data
+     * This is advisory only and doesn't affect available actions
+     */
+    private String determineBookStatus(BookDto book) {
+        // Check if book has been enriched with data
+        boolean hasPlotSummary = book.getPlotSummary() != null && !book.getPlotSummary().trim().isEmpty();
+        boolean hasDetailedDescription = book.getDetailedDescription() != null && !book.getDetailedDescription().trim().isEmpty();
+        boolean hasPublicationYear = book.getPublicationYear() != null;
+        boolean hasPublisher = book.getPublisher() != null && !book.getPublisher().trim().isEmpty();
+
+        // If book has any enriched data, consider it processed
+        if (hasPlotSummary || hasDetailedDescription || hasPublicationYear || hasPublisher) {
+            return "processed";
+        }
+
+        // Otherwise, it's pending
+        return "pending";
+    }
+
 
     /**
      * Get saved books: books from most recent datetime plus books with "FromFeed_" prefix,
@@ -130,7 +150,11 @@ public class BooksFromFeedService {
                 bookInfo.put("firstPhotoId", book.getFirstPhotoId());
                 bookInfo.put("firstPhotoChecksum", book.getFirstPhotoChecksum()); // For thumbnail caching
                 bookInfo.put("locNumber", book.getLocNumber()); // LOC number for display
-                bookInfo.put("status", isFromFeed ? "pending" : "processed");
+
+                // Determine status based on whether book has been enriched with data (advisory only)
+                String status = determineBookStatus(book);
+                bookInfo.put("status", status);
+
                 bookInfo.put("dateAdded", book.getDateAddedToLibrary() != null
                         ? book.getDateAddedToLibrary().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                         : null);

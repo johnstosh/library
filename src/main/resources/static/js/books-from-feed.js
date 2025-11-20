@@ -107,12 +107,21 @@ function createSavedBookRow(book) {
     }
     row.appendChild(locCell);
 
-    // Status cell
+    // Status cell (advisory only, doesn't affect actions)
     const statusCell = document.createElement('td');
     statusCell.setAttribute('data-test', 'book-status');
     const statusBadge = document.createElement('span');
-    statusBadge.className = 'badge bg-secondary';
-    statusBadge.textContent = 'Pending';
+
+    // Use status from backend (advisory only)
+    const status = book.status || 'pending';
+    if (status === 'processed') {
+        statusBadge.className = 'badge bg-success';
+        statusBadge.textContent = 'Processed';
+    } else {
+        statusBadge.className = 'badge bg-secondary';
+        statusBadge.textContent = 'Pending';
+    }
+
     statusCell.appendChild(statusBadge);
     row.appendChild(statusCell);
 
