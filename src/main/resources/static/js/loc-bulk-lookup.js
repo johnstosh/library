@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
         viewMissingBtn.addEventListener('click', () => loadLocLookupBooks('missing'));
     }
 
+    const lookupTableBtn = document.getElementById('lookup-table-missing-btn');
+    if (lookupTableBtn) {
+        lookupTableBtn.addEventListener('click', () => lookupTableMissing());
+    }
+
     const lookupAllBtn = document.getElementById('lookup-all-missing-btn');
     if (lookupAllBtn) {
         lookupAllBtn.addEventListener('click', () => lookupAllMissing());
@@ -227,12 +232,108 @@ async function lookupSingleBook(bookId) {
 };
 
 /**
+ * Lookup LOC numbers for books missing LOC in the current table
+ */
+async function lookupTableMissing() {
+    try {
+        clearError('loc-lookup');
+        clearSuccess('loc-lookup');
+
+        // Get all book IDs from the current table that don't have LOC numbers
+        const tableBody = document.getElementById('loc-lookup-table-body');
+        const rows = tableBody.querySelectorAll('tr[data-book-id]');
+
+        const missingBookIds = [];
+        rows.forEach(row => {
+            const locCell = row.querySelector('[data-test="loc-number"]');
+            // Check if LOC cell shows "Not set"
+            if (locCell && locCell.textContent.includes('Not set')) {
+                const bookId = row.getAttribute('data-book-id');
+                missingBookIds.push(bookId);
+            }
+        });
+
+        if (missingBookIds.length === 0) {
+            showSuccess('loc-lookup', 'No books in table are missing LOC numbers');
+            return;
+        }
+
+        // Show spinner in button
+        setButtonLoading('lookup-table-missing-btn', true);
+
+        // Show progress
+        const progressDiv = document.getElementById('loc-lookup-progress');
+        const progressText = document.getElementById('loc-lookup-progress-text');
+        progressDiv.style.display = 'block';
+        progressText.textContent = `Looking up ${missingBookIds.length} book(s) from table...`;
+
+        // Lookup each book
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const bookId of missingBookIds) {
+            try {
+                const result = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
+                    method: 'POST'
+                });
+
+                if (result.success) {
+                    successCount++;
+                    // Update the row
+                    const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
+                    if (row) {
+                        const locCell = row.querySelector('[data-test="loc-number"]');
+                        if (locCell) {
+                            locCell.innerHTML = '';
+                            const code = document.createElement('code');
+                            code.innerHTML = window.formatLocForSpine(result.locNumber);
+                            code.className = 'text-success fw-bold';
+                            locCell.appendChild(code);
+                        }
+                    }
+                } else {
+                    failureCount++;
+                }
+            } catch (error) {
+                console.error(`Failed to lookup book ${bookId}:`, error);
+                failureCount++;
+            }
+
+            // Update progress
+            progressText.textContent = `Looked up ${successCount + failureCount}/${missingBookIds.length} book(s)...`;
+        }
+
+        // Hide progress
+        progressDiv.style.display = 'none';
+
+        // Hide spinner in button
+        setButtonLoading('lookup-table-missing-btn', false);
+
+        let message = `Table lookup completed: ${successCount} success, ${failureCount} failed`;
+        if (successCount > 0) {
+            showSuccess('loc-lookup', message);
+        } else {
+            showError('loc-lookup', message);
+        }
+
+    } catch (error) {
+        const progressDiv = document.getElementById('loc-lookup-progress');
+        progressDiv.style.display = 'none';
+        setButtonLoading('lookup-table-missing-btn', false);
+        showError('loc-lookup', 'Table lookup failed: ' + error.message);
+    }
+}
+
+/**
  * Lookup LOC numbers for all books missing LOC numbers
  */
 async function lookupAllMissing() {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
+
+        // Show spinner in button
+        setButtonLoading('lookup-all-missing-btn', true);
 
         // Show progress
         const progressDiv = document.getElementById('loc-lookup-progress');
@@ -246,6 +347,9 @@ async function lookupAllMissing() {
 
         // Hide progress
         progressDiv.style.display = 'none';
+
+        // Hide spinner in button
+        setButtonLoading('lookup-all-missing-btn', false);
 
         // Process results
         let successCount = 0;
@@ -281,6 +385,7 @@ async function lookupAllMissing() {
     } catch (error) {
         const progressDiv = document.getElementById('loc-lookup-progress');
         progressDiv.style.display = 'none';
+        setButtonLoading('lookup-all-missing-btn', false);
         showError('loc-lookup', 'Bulk lookup failed: ' + error.message);
     }
 };
@@ -315,5 +420,28 @@ function clearSuccess(section) {
     const successDiv = document.getElementById(`${section}-results`);
     if (successDiv) {
         successDiv.style.display = 'none';
+    }
+}
+
+/**
+ * Toggle loading state of a button (shows/hides spinner)
+ * @param {string} buttonId - The ID of the button
+ * @param {boolean} isLoading - Whether the button should show loading state
+ */
+function setButtonLoading(buttonId, isLoading) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+
+    const spinner = button.querySelector('.spinner-border');
+    const btnText = button.querySelector('.btn-text');
+
+    if (isLoading) {
+        button.disabled = true;
+        if (spinner) spinner.classList.remove('d-none');
+        if (btnText) btnText.classList.add('me-2');
+    } else {
+        button.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (btnText) btnText.classList.remove('me-2');
     }
 }
