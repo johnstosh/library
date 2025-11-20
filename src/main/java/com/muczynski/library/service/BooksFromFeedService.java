@@ -199,16 +199,13 @@ public class BooksFromFeedService {
         logger.info("Processing single book: {}", bookId);
 
         try {
-            // Get the book to check if it's a temp book
+            // Get the book
             BookDto tempBook = bookService.getBookById(bookId);
             if (tempBook == null) {
                 throw new LibraryException("Book not found: " + bookId);
             }
 
-            String tempTitle = tempBook.getTitle();
-            if (!isTemporaryTitle(tempTitle)) {
-                throw new LibraryException("Book is not a temporary book from feed");
-            }
+            String originalTitle = tempBook.getTitle();
 
             // Use books-from-photo workflow: generateTempBook does comprehensive AI extraction
             logger.info("Generating full book details using AI for book {}", bookId);
@@ -228,7 +225,7 @@ public class BooksFromFeedService {
             result.put("bookId", bookId);
             result.put("title", fullBook.getTitle());
             result.put("author", authorName);
-            result.put("originalTitle", tempTitle);
+            result.put("originalTitle", originalTitle);
 
             return result;
 
