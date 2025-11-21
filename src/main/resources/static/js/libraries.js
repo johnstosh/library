@@ -29,17 +29,21 @@ async function loadLibraries() {
             row.appendChild(nameCell);
             const actionsCell = document.createElement('td');
             if (isLibrarian) {
+                // Edit button (icon-only)
                 const editBtn = document.createElement('button');
-                editBtn.setAttribute('data-test', 'edit-library-btn');
-                editBtn.textContent = '✏️';
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                 editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-library-btn');
                 editBtn.onclick = () => editLibrary(library.id);
                 actionsCell.appendChild(editBtn);
 
+                // Delete button (icon-only)
                 const delBtn = document.createElement('button');
-                delBtn.setAttribute('data-test', 'delete-library-btn');
-                delBtn.textContent = '🗑️';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.innerHTML = '<i class="bi bi-trash"></i>';
                 delBtn.title = 'Delete';
+                delBtn.setAttribute('data-test', 'delete-library-btn');
                 delBtn.onclick = () => deleteLibrary(library.id);
                 actionsCell.appendChild(delBtn);
             }
