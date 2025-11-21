@@ -39,27 +39,30 @@ async function loadAuthors() {
             const tdActions = document.createElement('td');
             tdActions.setAttribute('data-test', 'author-actions');
 
-            // View button for all users
+            // View button (icon-only) - always visible
             const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-author-btn');
-            viewBtn.textContent = '👁️';
+            viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
             viewBtn.title = 'View';
+            viewBtn.setAttribute('data-test', 'view-author-btn');
             viewBtn.onclick = () => viewAuthor(author.id);
             tdActions.appendChild(viewBtn);
 
-            // Only librarians can edit/delete authors
+            // Edit and Delete buttons (icon-only) - only for librarians
             if (window.isLibrarian) {
                 const editBtn = document.createElement('button');
-                editBtn.setAttribute('data-test', 'edit-author-btn');
-                editBtn.textContent = '✏️';
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                 editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-author-btn');
                 editBtn.onclick = () => editAuthor(author.id);
                 tdActions.appendChild(editBtn);
 
                 const delBtn = document.createElement('button');
-                delBtn.setAttribute('data-test', 'delete-author-btn');
-                delBtn.textContent = '🗑️';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.innerHTML = '<i class="bi bi-trash"></i>';
                 delBtn.title = 'Delete';
+                delBtn.setAttribute('data-test', 'delete-author-btn');
                 delBtn.onclick = () => deleteAuthor(author.id);
                 tdActions.appendChild(delBtn);
             }

@@ -69,27 +69,30 @@ async function loadBooks() {
             const actionsCell = document.createElement('td');
             actionsCell.setAttribute('data-test', 'book-actions');
 
-            // View button for all users
+            // View button (icon-only) - always visible
             const viewBtn = document.createElement('button');
-            viewBtn.setAttribute('data-test', 'view-book-btn');
-            viewBtn.textContent = '👁️';
+            viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
             viewBtn.title = 'View';
+            viewBtn.setAttribute('data-test', 'view-book-btn');
             viewBtn.onclick = () => viewBook(book.id);
             actionsCell.appendChild(viewBtn);
 
-            // Only librarians can edit/delete books
+            // Edit and Delete buttons (icon-only) - only for librarians
             if (window.isLibrarian) {
                 const editBtn = document.createElement('button');
-                editBtn.setAttribute('data-test', 'edit-book-btn');
-                editBtn.textContent = '✏️';
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                 editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-book-btn');
                 editBtn.onclick = () => editBook(book.id);
                 actionsCell.appendChild(editBtn);
 
                 const delBtn = document.createElement('button');
-                delBtn.setAttribute('data-test', 'delete-book-btn');
-                delBtn.textContent = '🗑️';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.innerHTML = '<i class="bi bi-trash"></i>';
                 delBtn.title = 'Delete';
+                delBtn.setAttribute('data-test', 'delete-book-btn');
                 delBtn.onclick = () => deleteBook(book.id);
                 actionsCell.appendChild(delBtn);
             }
