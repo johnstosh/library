@@ -6,6 +6,10 @@ on:
     - cron: '0 0 * * 0'
   # Optional: Also allow manual triggers via the GitHub UI
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - claude/include-books-without-loc-01Fe53UKh4oDuAbRLWDmpmQv
 
 jobs:
   deploy:
