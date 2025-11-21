@@ -138,14 +138,42 @@ function createBookRow(book) {
     }
     row.appendChild(locCell);
 
-    // Actions cell
+    // Actions cell - Lookup button followed by view/edit/delete icons
     const actionsCell = document.createElement('td');
     const lookupBtn = document.createElement('button');
-    lookupBtn.className = 'btn btn-sm btn-primary';
+    lookupBtn.className = 'btn btn-sm btn-primary me-2';
     lookupBtn.textContent = 'Lookup';
     lookupBtn.setAttribute('data-test', 'lookup-single-btn');
     lookupBtn.onclick = () => lookupSingleBook(book.id);
     actionsCell.appendChild(lookupBtn);
+
+    // View button (icon-only)
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+    viewBtn.title = 'View';
+    viewBtn.setAttribute('data-test', 'view-loc-book-btn');
+    viewBtn.onclick = () => window.viewBook(book.id);
+    actionsCell.appendChild(viewBtn);
+
+    // Edit button (icon-only)
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+    editBtn.title = 'Edit';
+    editBtn.setAttribute('data-test', 'edit-loc-book-btn');
+    editBtn.onclick = () => editBook(book.id);
+    actionsCell.appendChild(editBtn);
+
+    // Delete button (icon-only)
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-sm btn-outline-danger';
+    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+    deleteBtn.title = 'Delete';
+    deleteBtn.setAttribute('data-test', 'delete-loc-book-btn');
+    deleteBtn.onclick = () => deleteBook(book.id);
+    actionsCell.appendChild(deleteBtn);
+
     row.appendChild(actionsCell);
 
     return row;
@@ -181,33 +209,81 @@ async function lookupSingleBook(bookId) {
                     locCell.appendChild(code);
                 }
 
-                // Restore the actions cell with a new button
+                // Restore the actions cell with buttons
                 const currentActionsCell = currentRow.querySelector('td:last-child');
                 if (currentActionsCell) {
                     currentActionsCell.innerHTML = '';
                     const lookupBtn = document.createElement('button');
-                    lookupBtn.className = 'btn btn-sm btn-primary';
+                    lookupBtn.className = 'btn btn-sm btn-primary me-2';
                     lookupBtn.textContent = 'Lookup';
                     lookupBtn.setAttribute('data-test', 'lookup-single-btn');
                     lookupBtn.onclick = () => lookupSingleBook(bookId);
                     currentActionsCell.appendChild(lookupBtn);
+
+                    // View button
+                    const viewBtn = document.createElement('button');
+                    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+                    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                    viewBtn.title = 'View';
+                    viewBtn.onclick = () => window.viewBook(bookId);
+                    currentActionsCell.appendChild(viewBtn);
+
+                    // Edit button
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.onclick = () => editBook(bookId);
+                    currentActionsCell.appendChild(editBtn);
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.onclick = () => deleteBook(bookId);
+                    currentActionsCell.appendChild(deleteBtn);
                 }
             }
 
             showSuccess('loc-lookup', `Found LOC number: ${result.locNumber}`);
         } else {
-            // Restore the actions cell with a new button
+            // Restore the actions cell with buttons
             const currentRow = document.querySelector(`tr[data-book-id="${bookId}"]`);
             if (currentRow) {
                 const currentActionsCell = currentRow.querySelector('td:last-child');
                 if (currentActionsCell) {
                     currentActionsCell.innerHTML = '';
                     const lookupBtn = document.createElement('button');
-                    lookupBtn.className = 'btn btn-sm btn-primary';
+                    lookupBtn.className = 'btn btn-sm btn-primary me-2';
                     lookupBtn.textContent = 'Lookup';
                     lookupBtn.setAttribute('data-test', 'lookup-single-btn');
                     lookupBtn.onclick = () => lookupSingleBook(bookId);
                     currentActionsCell.appendChild(lookupBtn);
+
+                    // View button
+                    const viewBtn = document.createElement('button');
+                    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+                    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                    viewBtn.title = 'View';
+                    viewBtn.onclick = () => window.viewBook(bookId);
+                    currentActionsCell.appendChild(viewBtn);
+
+                    // Edit button
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.onclick = () => editBook(bookId);
+                    currentActionsCell.appendChild(editBtn);
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.onclick = () => deleteBook(bookId);
+                    currentActionsCell.appendChild(deleteBtn);
                 }
             }
             showError('loc-lookup', `Lookup failed: ${result.errorMessage}`);
@@ -222,11 +298,35 @@ async function lookupSingleBook(bookId) {
             const actionsCell = row.querySelector('td:last-child');
             actionsCell.innerHTML = '';
             const lookupBtn = document.createElement('button');
-            lookupBtn.className = 'btn btn-sm btn-primary';
+            lookupBtn.className = 'btn btn-sm btn-primary me-2';
             lookupBtn.textContent = 'Lookup';
             lookupBtn.setAttribute('data-test', 'lookup-single-btn');
             lookupBtn.onclick = () => lookupSingleBook(bookId);
             actionsCell.appendChild(lookupBtn);
+
+            // View button
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            viewBtn.title = 'View';
+            viewBtn.onclick = () => window.viewBook(bookId);
+            actionsCell.appendChild(viewBtn);
+
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+            editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+            editBtn.title = 'Edit';
+            editBtn.onclick = () => editBook(bookId);
+            actionsCell.appendChild(editBtn);
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm btn-outline-danger';
+            deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+            deleteBtn.title = 'Delete';
+            deleteBtn.onclick = () => deleteBook(bookId);
+            actionsCell.appendChild(deleteBtn);
         }
     }
 };
