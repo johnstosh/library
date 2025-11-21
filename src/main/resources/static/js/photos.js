@@ -78,10 +78,20 @@ function createPhotoRow(photo) {
     const row = document.createElement('tr');
     row.setAttribute('data-photo-id', photo.id);
 
-    // ID
-    const idCell = document.createElement('td');
-    idCell.textContent = photo.id;
-    row.appendChild(idCell);
+    // Photo thumbnail
+    const photoCell = document.createElement('td');
+    if (photo.id && photo.checksum) {
+        const img = document.createElement('img');
+        img.style.width = '50px';
+        img.style.height = 'auto';
+        img.alt = `Photo #${photo.id}`;
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, photo.id, photo.checksum);
+        photoCell.appendChild(img);
+    } else {
+        photoCell.textContent = '-';
+    }
+    row.appendChild(photoCell);
 
     // Title/Author column
     const titleCell = document.createElement('td');
