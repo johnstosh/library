@@ -565,18 +565,17 @@ function splitAtLetterPeriods(part, parts) {
     }
 }
 
-// Expose functions globally for non-module scripts
-window.formatLocForSpine = formatLocForSpine;
-window.showButtonSpinner = showButtonSpinner;
-window.hideButtonSpinner = hideButtonSpinner;
-
 /**
  * Shows a spinner on a button and disables it during async operations.
  * Stores the original button text and disabled state for later restoration.
+ *
+ * NOTE: These button spinner functions must be exported as named exports for ES6 module imports.
+ * They are also exposed on window object for legacy non-module scripts that use onclick handlers.
+ *
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} spinnerText - Optional text to show next to spinner (e.g., "Loading...")
  */
-function showButtonSpinner(button, spinnerText = null) {
+export function showButtonSpinner(button, spinnerText = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 
@@ -610,7 +609,7 @@ function showButtonSpinner(button, spinnerText = null) {
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} text - Optional text to set (if not provided, uses stored original text)
  */
-function hideButtonSpinner(button, text = null) {
+export function hideButtonSpinner(button, text = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 
@@ -626,3 +625,9 @@ function hideButtonSpinner(button, text = null) {
     delete btn.dataset.originalText;
     delete btn.dataset.originalDisabled;
 }
+
+// Expose functions globally for non-module scripts (e.g., inline onclick handlers)
+// These are needed because not all parts of the application use ES6 modules
+window.formatLocForSpine = formatLocForSpine;
+window.showButtonSpinner = showButtonSpinner;
+window.hideButtonSpinner = hideButtonSpinner;
