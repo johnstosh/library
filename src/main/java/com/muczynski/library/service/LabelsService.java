@@ -32,6 +32,8 @@ public class LabelsService {
 
     /**
      * Get books from the most recent day, sorted by date added (newest first)
+     * NOTE: This intentionally includes ALL books, regardless of whether they have LOC call numbers.
+     * This allows labels to be generated for any book added on the most recent day.
      */
     public List<BookLocStatusDto> getBooksForLabels() {
         // Find the most recent datetime
@@ -47,7 +49,7 @@ public class LabelsService {
         java.time.LocalDateTime startOfDay = mostRecentDate.atStartOfDay();
         java.time.LocalDateTime endOfDay = mostRecentDate.plusDays(1).atStartOfDay();
 
-        // Get books from most recent day
+        // Get books from most recent day - intentionally includes all books regardless of LOC status
         List<Book> books = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay);
 
         return books.stream()
@@ -56,12 +58,13 @@ public class LabelsService {
     }
 
     /**
-     * Get all books with LOC numbers, sorted by date added (newest first)
+     * Get all books, sorted by date added (newest first)
+     * NOTE: This intentionally includes ALL books, regardless of whether they have LOC call numbers.
+     * This allows labels to be generated for any book in the library.
      */
     public List<BookLocStatusDto> getAllBooksForLabels() {
-        // Get all books with LOC numbers
+        // Get all books - intentionally includes books without LOC numbers
         List<Book> books = bookRepository.findAll().stream()
-                .filter(book -> book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
                 .sorted(Comparator.comparing(Book::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());

@@ -25,7 +25,7 @@ public class LabelsController {
     private final LabelsService labelsService;
 
     /**
-     * Get books from most recent day with LOC numbers, sorted by date added
+     * Get books from most recent day (regardless of LOC status), sorted by date added
      */
     @GetMapping("/books")
     public ResponseEntity<List<BookLocStatusDto>> getBooksForLabels() {
@@ -34,7 +34,7 @@ public class LabelsController {
     }
 
     /**
-     * Get all books with LOC numbers, sorted by date added
+     * Get all books (regardless of LOC status), sorted by date added
      */
     @GetMapping("/books/all")
     public ResponseEntity<List<BookLocStatusDto>> getAllBooksForLabels() {
