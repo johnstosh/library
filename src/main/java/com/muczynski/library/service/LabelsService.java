@@ -31,14 +31,43 @@ public class LabelsService {
     private final LabelsPdfService labelsPdfService;
 
     /**
-     * Get all books, sorted by date added (newest first)
+     * Get books from the most recent day, sorted by date added (newest first)
      */
     public List<BookLocStatusDto> getBooksForLabels() {
-        List<Book> books = bookRepository.findAll();
+        // Find the most recent datetime
+        java.time.LocalDateTime mostRecentDateTime = bookRepository.findMaxDateAddedToLibrary();
+
+        if (mostRecentDateTime == null) {
+            // No books with dates
+            return List.of();
+        }
+
+        // Get the date part for comparison
+        java.time.LocalDate mostRecentDate = mostRecentDateTime.toLocalDate();
+        java.time.LocalDateTime startOfDay = mostRecentDate.atStartOfDay();
+        java.time.LocalDateTime endOfDay = mostRecentDate.plusDays(1).atStartOfDay();
+
+        // Get books from most recent day
+        List<Book> books = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay);
+
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
-                .sorted(Comparator.comparing(BookLocStatusDto::getDateAdded,
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all books with LOC numbers, sorted by date added (newest first)
+     */
+    public List<BookLocStatusDto> getAllBooksForLabels() {
+        // Get all books with LOC numbers
+        List<Book> books = bookRepository.findAll().stream()
+                .filter(book -> book.getLocNumber() != null && !book.getLocNumber().trim().isEmpty())
+                .sorted(Comparator.comparing(Book::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+
+        return books.stream()
+                .map(this::mapToBookLocStatusDto)
                 .collect(Collectors.toList());
     }
 
@@ -75,8 +104,9 @@ public class LabelsService {
                 .dateAdded(book.getDateAddedToLibrary() != null
                     ? book.getDateAddedToLibrary().toString()
                     : null)
-                // Use efficient query to get first photo ID without loading photos collection
+                // Use efficient query to get first photo ID and checksum without loading photos collection
                 .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
+                .firstPhotoChecksum(photoRepository.findFirstPhotoChecksumByBookId(book.getId()))
                 .build();
     }
 }

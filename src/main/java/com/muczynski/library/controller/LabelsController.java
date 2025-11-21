@@ -25,11 +25,20 @@ public class LabelsController {
     private final LabelsService labelsService;
 
     /**
-     * Get all books with LOC numbers, sorted by date added
+     * Get books from most recent day with LOC numbers, sorted by date added
      */
     @GetMapping("/books")
     public ResponseEntity<List<BookLocStatusDto>> getBooksForLabels() {
         List<BookLocStatusDto> books = labelsService.getBooksForLabels();
+        return ResponseEntity.ok(books);
+    }
+
+    /**
+     * Get all books with LOC numbers, sorted by date added
+     */
+    @GetMapping("/books/all")
+    public ResponseEntity<List<BookLocStatusDto>> getAllBooksForLabels() {
+        List<BookLocStatusDto> books = labelsService.getAllBooksForLabels();
         return ResponseEntity.ok(books);
     }
 

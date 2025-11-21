@@ -530,36 +530,63 @@ public class PhotoService {
     }
 
     /**
-     * Replace the photo image with a cropped version
-     * @param photoId The photo ID
-     * @param file The cropped image file
+     * Add edited photo as a new photo to the left of the original
+     * Instead of replacing the original, this creates a new photo with the edited image
+     * and places it before the original in the photo order
+     * @param photoId The original photo ID
+     * @param file The edited image file
      */
     @Transactional
     public void cropPhoto(Long photoId, MultipartFile file) {
         try {
-            Photo photo = photoRepository.findById(photoId)
+            Photo originalPhoto = photoRepository.findById(photoId)
                     .orElseThrow(() -> new LibraryException("Photo not found"));
 
-            // Update the image data with the cropped version
-            byte[] imageBytes = file.getBytes();
-            photo.setImage(imageBytes);
-            photo.setContentType(file.getContentType());
-            photo.setImageChecksum(computeChecksum(imageBytes));
+            // Get the book or author from the original photo
+            Book book = originalPhoto.getBook();
+            Author author = originalPhoto.getAuthor();
 
-            // Reset export status since the image has been modified
-            if (photo.getExportStatus() == Photo.ExportStatus.COMPLETED) {
-                photo.setExportStatus(Photo.ExportStatus.PENDING);
-                photo.setPermanentId(null);
-                photo.setExportedAt(null);
+            if (book == null && author == null) {
+                throw new LibraryException("Photo must be associated with a book or author");
             }
 
-            photoRepository.save(photo);
-            logger.info("Cropped photo ID {}", photoId);
+            int originalOrder = originalPhoto.getPhotoOrder();
+
+            // Shift all photos at or after the original's position to the right
+            List<Photo> photosToShift;
+            if (book != null) {
+                photosToShift = photoRepository.findByBookIdOrderByPhotoOrder(book.getId());
+            } else {
+                photosToShift = photoRepository.findByAuthorIdOrderByPhotoOrder(author.getId());
+            }
+
+            // Shift photos that are at or after the original's position
+            for (Photo photo : photosToShift) {
+                if (photo.getPhotoOrder() >= originalOrder) {
+                    photo.setPhotoOrder(photo.getPhotoOrder() + 1);
+                }
+            }
+            photoRepository.saveAll(photosToShift);
+
+            // Create a new photo with the edited image at the original's position
+            byte[] imageBytes = file.getBytes();
+            Photo newPhoto = new Photo();
+            newPhoto.setBook(book);
+            newPhoto.setAuthor(author);
+            newPhoto.setImage(imageBytes);
+            newPhoto.setContentType(file.getContentType());
+            newPhoto.setCaption(""); // New edited photo starts with empty caption
+            newPhoto.setPhotoOrder(originalOrder); // Place at original's position (left of shifted original)
+            newPhoto.setImageChecksum(computeChecksum(imageBytes));
+
+            photoRepository.save(newPhoto);
+            logger.info("Added edited photo to the left of original photo ID {}. New photo order: {}, Original shifted to: {}",
+                    photoId, originalOrder, originalOrder + 1);
         } catch (IOException e) {
-            logger.error("Failed to crop photo ID {} due to IO error: {}", photoId, e.getMessage(), e);
-            throw new LibraryException("Failed to store cropped photo data", e);
+            logger.error("Failed to add edited photo for original ID {} due to IO error: {}", photoId, e.getMessage(), e);
+            throw new LibraryException("Failed to store edited photo data", e);
         } catch (Exception e) {
-            logger.error("Failed to crop photo ID {}: {}", photoId, e.getMessage(), e);
+            logger.error("Failed to add edited photo for original ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
     }

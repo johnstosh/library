@@ -30,10 +30,14 @@ public class AuthorMapper {
         dto.setNationality(author.getNationality());
         dto.setBriefBiography(author.getBriefBiography());
 
-        // Use efficient query to get first photo ID without loading photos collection
+        // Use efficient queries to get first photo ID and checksum without loading photos collection
         Long firstPhotoId = photoRepository.findFirstPhotoIdByAuthorId(author.getId());
         if (firstPhotoId != null) {
             dto.setFirstPhotoId(firstPhotoId);
+            String firstPhotoChecksum = photoRepository.findFirstPhotoChecksumByAuthorId(author.getId());
+            if (firstPhotoChecksum != null) {
+                dto.setFirstPhotoChecksum(firstPhotoChecksum);
+            }
         }
 
         return dto;

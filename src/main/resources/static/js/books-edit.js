@@ -21,7 +21,28 @@ function clearSuccess(sectionId) {
     }
 }
 
-function resetBookForm() {
+async function resetBookForm() {
+    const currentBookId = document.getElementById('current-book-id').value;
+
+    // If there's a current book being edited, check if it should be deleted
+    if (currentBookId) {
+        try {
+            // Get the book's photos to check if it has any
+            const photos = await fetchData(`/api/books/${currentBookId}/photos`);
+
+            // If no photos attached, delete the temporary book
+            if (!photos || photos.length === 0) {
+                await deleteData(`/api/books/${currentBookId}`);
+                console.log(`[Books] Deleted temporary book ${currentBookId} with no photos`);
+                // Reload books list to reflect deletion
+                await loadBooks();
+            }
+        } catch (error) {
+            console.error(`[Books] Failed to check/delete book ${currentBookId}:`, error);
+            // Continue with form reset even if deletion fails
+        }
+    }
+
     document.getElementById('new-book-title').value = '';
     document.getElementById('new-book-year').value = '';
     document.getElementById('new-book-publisher').value = '';
@@ -63,26 +84,8 @@ async function prepareNewBookForPhoto(title) {
     document.getElementById('new-book-title').value = title;
 
     try {
-        // Get first author or create "John Doe" if none exist
-        let authors = await fetchData('/api/authors');
-        let authorId;
-        if (authors && authors.length > 0) {
-            authorId = authors[0].id;
-        } else {
-            // Create a default author
-            const defaultAuthor = await postData('/api/authors', {
-                name: 'John Doe',
-                dateOfBirth: '',
-                dateOfDeath: '',
-                religiousAffiliation: '',
-                birthCountry: '',
-                nationality: '',
-                briefBiography: 'Default author created for book-by-photo'
-            });
-            authorId = defaultAuthor.id;
-            // Reload the authors dropdown
-            await populateBookDropdowns();
-        }
+        // Set author to null - user can set it later if needed
+        const authorId = null;
 
         // Get first library or create a default if none exist
         let libraries = await fetchData('/api/libraries');
@@ -100,10 +103,9 @@ async function prepareNewBookForPhoto(title) {
             await populateBookDropdowns();
         }
 
-        // Set author name and ID
-        document.getElementById('book-author-id').value = authorId;
-        const author = allAuthors.find(a => a.id == authorId);
-        document.getElementById('book-author').value = author ? author.name : '';
+        // Clear author fields
+        document.getElementById('book-author-id').value = '';
+        document.getElementById('book-author').value = '';
 
         // Set library dropdown
         document.getElementById('book-library').value = libraryId;
@@ -111,7 +113,7 @@ async function prepareNewBookForPhoto(title) {
     // Scroll to bottom
     window.scrollTo(0, document.body.scrollHeight);
 
-    // Save initial data to backend (minimal, just title/author/library)
+    // Save initial data to backend (minimal, just title and library, no author)
     const initialData = {
         title: title,
         authorId: authorId,
@@ -169,6 +171,10 @@ async function addBook() {
         showError('books', 'Title and library are required.');
         return;
     }
+
+    const btn = document.getElementById('add-book-btn');
+    showButtonSpinner(btn, 'Adding...');
+
     try {
         // If author name is provided but no ID, create a new author
         if (authorName && !authorId) {
@@ -194,6 +200,8 @@ async function addBook() {
         clearError('books');
     } catch (error) {
         showError('books', 'Failed to add book: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -206,7 +214,8 @@ async function editBook(id) {
     document.getElementById('new-book-summary').value = data.plotSummary || '';
     document.getElementById('new-book-related').value = data.relatedWorks || '';
     document.getElementById('new-book-description').value = data.detailedDescription || '';
-    document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    document.getElementById('new-book-added').value = data.dateAddedToLibrary ? data.dateAddedToLibrary.substring(0, 16) : '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('new-book-loc').value = data.locNumber || '';
     document.getElementById('new-book-status-reason').value = data.statusReason || '';
@@ -250,7 +259,7 @@ async function generateBookByPhoto(bookId) {
     addBookBtn.disabled = true;
     cancelBookBtn.disabled = true;
     addPhotoBtn.disabled = true;
-    bookByPhotoBtn.disabled = true;
+    showButtonSpinner(bookByPhotoBtn, 'Generating...');
 
     document.body.style.cursor = 'wait';
     try {
@@ -263,7 +272,8 @@ async function generateBookByPhoto(bookId) {
         if (updatedBook.plotSummary && updatedBook.plotSummary.trim() !== '') document.getElementById('new-book-summary').value = updatedBook.plotSummary;
         if (updatedBook.relatedWorks && updatedBook.relatedWorks.trim() !== '') document.getElementById('new-book-related').value = updatedBook.relatedWorks;
         if (updatedBook.detailedDescription && updatedBook.detailedDescription.trim() !== '') document.getElementById('new-book-description').value = updatedBook.detailedDescription;
-        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary;
+        // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+        if (updatedBook.dateAddedToLibrary) document.getElementById('new-book-added').value = updatedBook.dateAddedToLibrary.substring(0, 16);
         if (updatedBook.status) document.getElementById('new-book-status').value = updatedBook.status;
         if (updatedBook.locNumber && updatedBook.locNumber.trim() !== '') document.getElementById('new-book-loc').value = updatedBook.locNumber;
         if (updatedBook.statusReason && updatedBook.statusReason.trim() !== '') document.getElementById('new-book-status-reason').value = updatedBook.statusReason;
@@ -288,7 +298,7 @@ async function generateBookByPhoto(bookId) {
         addBookBtn.disabled = false;
         cancelBookBtn.disabled = false;
         addPhotoBtn.disabled = false;
-        bookByPhotoBtn.disabled = false;
+        hideButtonSpinner(bookByPhotoBtn);
         document.body.style.cursor = 'default';
     }
 }
@@ -311,6 +321,10 @@ async function updateBook(id) {
         showError('books', 'Title and library are required.');
         return;
     }
+
+    const btn = document.getElementById('add-book-btn');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         // If author name is provided but no ID, create a new author
         if (authorName && !authorId) {
@@ -338,6 +352,8 @@ async function updateBook(id) {
         showBookList(true);
     } catch (error) {
         showError('books', 'Failed to update book: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn);
     }
 }
 
@@ -347,6 +363,9 @@ async function cloneBook() {
         showError('books', 'No book selected to clone.');
         return;
     }
+
+    const btn = document.getElementById('clone-book-btn');
+    showButtonSpinner(btn, 'Cloning...');
 
     try {
         document.body.style.cursor = 'wait';
@@ -364,6 +383,7 @@ async function cloneBook() {
     } catch (error) {
         showError('books', 'Failed to clone book: ' + error.message);
     } finally {
+        hideButtonSpinner(btn);
         document.body.style.cursor = 'default';
     }
 }
@@ -376,7 +396,7 @@ async function getTitleAuthorFromPhoto() {
     }
 
     const titleAuthorBtn = document.getElementById('title-author-from-photo-btn');
-    titleAuthorBtn.disabled = true;
+    showButtonSpinner(titleAuthorBtn, 'Extracting...');
     document.body.style.cursor = 'wait';
 
     try {
@@ -402,7 +422,7 @@ async function getTitleAuthorFromPhoto() {
     } catch (error) {
         showError('books', 'Failed to extract title and author from photo: ' + error.message);
     } finally {
-        titleAuthorBtn.disabled = false;
+        hideButtonSpinner(titleAuthorBtn);
         document.body.style.cursor = 'default';
     }
 }
@@ -423,7 +443,7 @@ async function getBookFromTitleAuthor() {
     }
 
     const bookFromTitleBtn = document.getElementById('book-from-title-author-btn');
-    bookFromTitleBtn.disabled = true;
+    showButtonSpinner(bookFromTitleBtn, 'Generating...');
     document.body.style.cursor = 'wait';
 
     try {
@@ -456,7 +476,7 @@ async function getBookFromTitleAuthor() {
     } catch (error) {
         showError('books', 'Failed to generate book metadata: ' + error.message);
     } finally {
-        bookFromTitleBtn.disabled = false;
+        hideButtonSpinner(bookFromTitleBtn);
         document.body.style.cursor = 'default';
     }
 }

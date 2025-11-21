@@ -30,7 +30,7 @@ async function loadSavedBooks() {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="6" class="text-center text-muted">No saved books found. Use Step 1 to select photos first.</td>';
+            row.innerHTML = '<td colspan="7" class="text-center text-muted">No saved books found. Use Step 1 to select photos first.</td>';
             tableBody.appendChild(row);
             clearError('books-from-feed');
             clearInfo('books-from-feed');
@@ -57,14 +57,23 @@ function createSavedBookRow(book) {
     row.setAttribute('data-book-id', book.id);
     row.setAttribute('data-test', 'saved-book-row');
 
+    // Checkbox cell
+    const checkboxCell = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'book-select-checkbox';
+    checkbox.setAttribute('data-book-id', book.id);
+    checkboxCell.appendChild(checkbox);
+    row.appendChild(checkboxCell);
+
     // Photo cell
     const photoCell = document.createElement('td');
     if (book.firstPhotoId) {
         const img = document.createElement('img');
-        img.src = `/api/photos/${book.firstPhotoId}/image`;
         img.style.width = '50px';
-        img.style.height = '50px';
-        img.style.objectFit = 'cover';
+        img.style.height = 'auto';
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
         photoCell.appendChild(img);
     } else {
         photoCell.textContent = '-';
@@ -107,12 +116,21 @@ function createSavedBookRow(book) {
     }
     row.appendChild(locCell);
 
-    // Status cell
+    // Status cell (advisory only, doesn't affect actions)
     const statusCell = document.createElement('td');
     statusCell.setAttribute('data-test', 'book-status');
     const statusBadge = document.createElement('span');
-    statusBadge.className = 'badge bg-secondary';
-    statusBadge.textContent = 'Pending';
+
+    // Use status from backend (advisory only)
+    const status = book.status || 'pending';
+    if (status === 'processed') {
+        statusBadge.className = 'badge bg-success';
+        statusBadge.textContent = 'Processed';
+    } else {
+        statusBadge.className = 'badge bg-secondary';
+        statusBadge.textContent = 'Pending';
+    }
+
     statusCell.appendChild(statusBadge);
     row.appendChild(statusCell);
 
@@ -203,10 +221,9 @@ async function processAllBooks() {
         return;
     }
 
-    // Disable the "Process All" button during processing
+    // Show spinner on the "Process All" button during processing
     const processAllBtn = document.getElementById('process-all-btn');
-    processAllBtn.disabled = true;
-    processAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    showButtonSpinner(processAllBtn, 'Processing...');
 
     try {
         showInfo('books-from-feed', `Processing ${rows.length} book(s)...`);
@@ -253,9 +270,8 @@ async function processAllBooks() {
         console.error('[BooksFromFeed] Error during bulk processing:', error);
         showError('books-from-feed', 'Bulk processing error: ' + error.message);
     } finally {
-        // Re-enable the "Process All" button
-        processAllBtn.disabled = false;
-        processAllBtn.textContent = 'Process All';
+        // Hide spinner and restore the "Process All" button
+        hideButtonSpinner(processAllBtn);
     }
 }
 
@@ -777,5 +793,155 @@ function clearInfo(section) {
     const infoDiv = container.querySelector('[data-test="form-info"]');
     if (infoDiv) {
         infoDiv.style.display = 'none';
+    }
+}
+
+/**
+ * Toggle all book selection checkboxes
+ */
+function toggleAllBookSelections(checked) {
+    const checkboxes = document.querySelectorAll('.book-select-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+}
+
+/**
+ * Process only books with "Pending" status
+ */
+async function processPendingBooks() {
+    const tableBody = document.getElementById('saved-books-table-body');
+    const rows = tableBody.querySelectorAll('tr[data-book-id]');
+
+    if (rows.length === 0) {
+        showError('books-from-feed', 'No books to process');
+        return;
+    }
+
+    // Filter for pending books only
+    const pendingRows = Array.from(rows).filter(row => {
+        const statusCell = row.querySelector('[data-test="book-status"]');
+        const statusBadge = statusCell?.querySelector('.badge');
+        return statusBadge && statusBadge.textContent === 'Pending';
+    });
+
+    if (pendingRows.length === 0) {
+        showInfo('books-from-feed', 'No pending books to process');
+        return;
+    }
+
+    // Show spinner on the "Process Pending" button during processing
+    const processPendingBtn = document.getElementById('process-pending-btn');
+    showButtonSpinner(processPendingBtn, 'Processing...');
+
+    try {
+        showInfo('books-from-feed', `Processing ${pendingRows.length} pending book(s)...`);
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Process pending books one-by-one
+        for (const row of pendingRows) {
+            const bookId = row.getAttribute('data-book-id');
+            const statusCell = row.querySelector('[data-test="book-status"]');
+
+            await processSingleBook(bookId);
+
+            // Check if processing succeeded
+            const updatedStatusBadge = statusCell.querySelector('.badge');
+            if (updatedStatusBadge && updatedStatusBadge.textContent === 'Completed') {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        }
+
+        // Show summary
+        if (failureCount === 0) {
+            showSuccess('books-from-feed', `Successfully processed ${successCount} pending book(s)!`);
+        } else {
+            showInfo('books-from-feed', `Processed ${successCount} book(s), ${failureCount} failed`);
+        }
+
+        // Reload books list if on books section
+        if (window.loadBooks) {
+            await loadBooks();
+        }
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Error during pending processing:', error);
+        showError('books-from-feed', 'Pending processing error: ' + error.message);
+    } finally {
+        // Hide spinner and restore the "Process Pending" button
+        hideButtonSpinner(processPendingBtn);
+    }
+}
+
+/**
+ * Process only selected books
+ */
+async function processSelectedBooks() {
+    const tableBody = document.getElementById('saved-books-table-body');
+    const checkboxes = document.querySelectorAll('.book-select-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        showError('books-from-feed', 'No books selected. Please select books to process.');
+        return;
+    }
+
+    // Show spinner on the "Process Selected" button during processing
+    const processSelectedBtn = document.getElementById('process-selected-btn');
+    showButtonSpinner(processSelectedBtn, 'Processing...');
+
+    try {
+        showInfo('books-from-feed', `Processing ${checkboxes.length} selected book(s)...`);
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Process selected books one-by-one
+        for (const checkbox of checkboxes) {
+            const bookId = checkbox.getAttribute('data-book-id');
+            const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
+            const statusCell = row?.querySelector('[data-test="book-status"]');
+
+            await processSingleBook(bookId);
+
+            // Check if processing succeeded
+            const updatedStatusBadge = statusCell?.querySelector('.badge');
+            if (updatedStatusBadge && updatedStatusBadge.textContent === 'Completed') {
+                successCount++;
+            } else {
+                failureCount++;
+            }
+        }
+
+        // Show summary
+        if (failureCount === 0) {
+            showSuccess('books-from-feed', `Successfully processed ${successCount} selected book(s)!`);
+        } else {
+            showInfo('books-from-feed', `Processed ${successCount} book(s), ${failureCount} failed`);
+        }
+
+        // Reload books list if on books section
+        if (window.loadBooks) {
+            await loadBooks();
+        }
+
+        // Uncheck all checkboxes after processing
+        const selectAllCheckbox = document.getElementById('select-all-books');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+    } catch (error) {
+        console.error('[BooksFromFeed] Error during selected processing:', error);
+        showError('books-from-feed', 'Selected processing error: ' + error.message);
+    } finally {
+        // Hide spinner and restore the "Process Selected" button
+        hideButtonSpinner(processSelectedBtn);
     }
 }

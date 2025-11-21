@@ -2,6 +2,7 @@
 
 import { shouldResetForSection } from './utils.js';
 import { loadLocBulkLookupSection } from './loc-bulk-lookup.js';
+import { loadLabelsSection } from './labels.js';
 
 // Combined loader for library-card section
 function loadLibraryCardSectionCombined() {
@@ -13,12 +14,20 @@ function loadLibraryCardSectionCombined() {
     }
 }
 
+// Combined loader for libraries section (includes photo export status)
+function loadLibrariesSectionCombined() {
+    loadLibraries();
+    // Load photo export status for librarians
+    if (window.isLibrarian && window.loadPhotoExportStatus) {
+        window.loadPhotoExportStatus();
+    }
+}
+
 export const sectionConfig = {
-    'libraries': { load: loadLibraries, reset: null },
+    'libraries': { load: loadLibrariesSectionCombined, reset: null },
     'authors': { load: loadAuthors, reset: resetAuthorForm },
     'books': { load: loadBooks, reset: resetBookForm },
     'books-from-feed': { load: loadBooksFromFeedSection, reset: null },
-    'photos': { load: loadPhotosSection, reset: null },
     'search': { load: null, reset: null },
     'library-card': { load: loadLibraryCardSectionCombined, reset: null },
     'users': { load: loadUsers, reset: null },
@@ -26,6 +35,7 @@ export const sectionConfig = {
     'test-data': { load: loadTestDataStats, reset: null },
     'global-settings': { load: loadGlobalSettings, reset: null },
     'loc-bulk-lookup': { load: loadLocBulkLookupSection, reset: null },
+    'labels': { load: loadLabelsSection, reset: null },
     'settings': { load: loadSettings, reset: null }
 };
 

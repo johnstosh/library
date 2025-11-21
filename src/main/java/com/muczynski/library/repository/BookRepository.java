@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,13 +22,15 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);
+    List<Book> findByAuthorIdOrderByTitleAsc(Long authorId);
     Optional<Book> findByTitleAndAuthor_Name(String title, String authorName);
     List<Book> findAllByTitleAndAuthor_NameOrderByIdAsc(String title, String authorName);
     Optional<Book> findByTitleAndAuthorIsNull(String title);
     List<Book> findAllByTitleAndAuthorIsNullOrderByIdAsc(String title);
 
-    List<Book> findByDateAddedToLibraryOrderByTitleAsc(LocalDate dateAddedToLibrary);
-
     @Query("SELECT MAX(b.dateAddedToLibrary) FROM Book b")
-    LocalDate findMaxDateAddedToLibrary();
+    LocalDateTime findMaxDateAddedToLibrary();
+
+    @Query("SELECT b FROM Book b WHERE b.dateAddedToLibrary >= :startOfDay AND b.dateAddedToLibrary < :endOfDay ORDER BY b.dateAddedToLibrary DESC")
+    List<Book> findByDateAddedToLibraryBetweenOrderByDateAddedDesc(LocalDateTime startOfDay, LocalDateTime endOfDay);
 }

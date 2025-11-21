@@ -24,7 +24,7 @@ public class BooksFromFeedController {
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
 
     /**
-     * Get saved books that need processing (those starting with "FromFeed_")
+     * Get saved books that need processing (those with temporary timestamp titles)
      * @return List of books that need processing
      */
     @GetMapping("/saved-books")

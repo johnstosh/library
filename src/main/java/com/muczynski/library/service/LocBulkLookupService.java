@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,39 +40,43 @@ public class LocBulkLookupService {
     private final LocCatalogService locCatalogService;
 
     /**
-     * Get all books with their current LOC status, sorted by call number
-     * (blank/missing call numbers at the top)
+     * Get all books with their current LOC status, sorted by date added (most recent first)
      */
     public List<BookLocStatusDto> getAllBooksWithLocStatus() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
-                .sorted(createCallNumberComparator())
+                .sorted(createDateAddedComparator())
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get books that don't have LOC numbers, sorted by title
+     * Get books that don't have LOC numbers, sorted by date added (most recent first)
      */
     public List<BookLocStatusDto> getBooksWithMissingLoc() {
         List<Book> books = bookRepository.findAll();
         return books.stream()
                 .filter(book -> book.getLocNumber() == null || book.getLocNumber().trim().isEmpty())
                 .map(this::mapToBookLocStatusDto)
-                .sorted(Comparator.comparing(BookLocStatusDto::getTitle, String.CASE_INSENSITIVE_ORDER))
+                .sorted(createDateAddedComparator())
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get books added on the most recent date, sorted by title
+     * Get books added on the most recent date, sorted by datetime (most recent first)
      */
     public List<BookLocStatusDto> getBooksFromMostRecentDate() {
-        LocalDate mostRecentDate = bookRepository.findMaxDateAddedToLibrary();
-        if (mostRecentDate == null) {
+        LocalDateTime mostRecentDateTime = bookRepository.findMaxDateAddedToLibrary();
+        if (mostRecentDateTime == null) {
             return Collections.emptyList();
         }
 
-        List<Book> books = bookRepository.findByDateAddedToLibraryOrderByTitleAsc(mostRecentDate);
+        // Get the start and end of the day for the most recent datetime
+        LocalDate mostRecentDate = mostRecentDateTime.toLocalDate();
+        LocalDateTime startOfDay = mostRecentDate.atStartOfDay();
+        LocalDateTime endOfDay = mostRecentDate.plusDays(1).atStartOfDay();
+
+        List<Book> books = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay);
         return books.stream()
                 .map(this::mapToBookLocStatusDto)
                 .collect(Collectors.toList());
@@ -138,19 +144,36 @@ public class LocBulkLookupService {
 
     /**
      * Perform LOC lookup for a book and update if found.
-     * Tries title + author first, then falls back to title-only if that fails.
+     * Tries multiple strategies in order:
+     * 1. Title + author (if author exists)
+     * 2. Title-only (fallback if #1 fails)
+     * 3. Truncated title at colon + author (if title contains ":")
+     * 4. Truncated title at colon only (final fallback)
+     * Skips temporary titles (those starting with date pattern).
      */
     private LocLookupResultDto performLocLookup(Book book) {
-        LocSearchRequest request = new LocSearchRequest();
-        request.setTitle(book.getTitle());
+        // Skip temporary titles (those starting with date pattern like 2025-01-15_...)
+        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+            log.info("Skipping LOC lookup for temporary title: {}", book.getTitle());
+            return LocLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Not Ready - Temporary title")
+                    .build();
+        }
 
+        String originalTitle = book.getTitle();
         boolean hasAuthor = book.getAuthor() != null;
+        String authorName = hasAuthor ? book.getAuthor().getName() : null;
+
+        // Strategy 1: Try with original title + author (if author exists)
+        LocSearchRequest request = new LocSearchRequest();
+        request.setTitle(originalTitle);
         if (hasAuthor) {
-            request.setAuthor(book.getAuthor().getName());
+            request.setAuthor(authorName);
         }
 
         try {
-            // Try with title + author (if author exists)
             LocCallNumberResponse response = locCatalogService.getLocCallNumber(request);
 
             // Update the book with the found LOC number
@@ -167,13 +190,13 @@ public class LocBulkLookupService {
                     .build();
 
         } catch (ResponseStatusException e) {
-            // If lookup with author failed and we have an author, try title-only as fallback
+            // Strategy 2: If lookup with author failed and we have an author, try title-only
             if (hasAuthor) {
                 log.info("LOC lookup with title + author failed for book {}, trying title-only fallback", book.getId());
 
                 try {
                     LocSearchRequest titleOnlyRequest = new LocSearchRequest();
-                    titleOnlyRequest.setTitle(book.getTitle());
+                    titleOnlyRequest.setTitle(originalTitle);
 
                     LocCallNumberResponse response = locCatalogService.getLocCallNumber(titleOnlyRequest);
 
@@ -190,17 +213,76 @@ public class LocBulkLookupService {
                             .matchCount(response.getMatchCount())
                             .build();
 
-                } catch (Exception fallbackException) {
-                    log.warn("LOC title-only fallback also failed for book {}: {}", book.getId(), fallbackException.getMessage());
+                } catch (Exception titleOnlyException) {
+                    log.warn("LOC title-only fallback also failed for book {}: {}", book.getId(), titleOnlyException.getMessage());
+                    // Continue to colon truncation strategy below
+                }
+            }
+
+            // Strategy 3 & 4: If title contains colon, try with truncated title
+            if (originalTitle.contains(":")) {
+                String truncatedTitle = originalTitle.substring(0, originalTitle.indexOf(":")).trim();
+                log.info("Title contains colon, trying with truncated title: '{}' -> '{}'", originalTitle, truncatedTitle);
+
+                // Strategy 3: Try truncated title + author (if author exists)
+                if (hasAuthor) {
+                    try {
+                        LocSearchRequest truncatedWithAuthorRequest = new LocSearchRequest();
+                        truncatedWithAuthorRequest.setTitle(truncatedTitle);
+                        truncatedWithAuthorRequest.setAuthor(authorName);
+
+                        LocCallNumberResponse response = locCatalogService.getLocCallNumber(truncatedWithAuthorRequest);
+
+                        // Update the book with the found LOC number
+                        book.setLocNumber(response.getCallNumber());
+                        bookRepository.save(book);
+
+                        log.info("Successfully updated LOC number for book {} using truncated title + author: {}", book.getId(), response.getCallNumber());
+
+                        return LocLookupResultDto.builder()
+                                .bookId(book.getId())
+                                .success(true)
+                                .locNumber(response.getCallNumber())
+                                .matchCount(response.getMatchCount())
+                                .build();
+
+                    } catch (Exception truncatedAuthorException) {
+                        log.warn("LOC truncated title + author fallback failed for book {}: {}", book.getId(), truncatedAuthorException.getMessage());
+                        // Continue to final fallback
+                    }
+                }
+
+                // Strategy 4: Final fallback - try truncated title only
+                try {
+                    LocSearchRequest truncatedOnlyRequest = new LocSearchRequest();
+                    truncatedOnlyRequest.setTitle(truncatedTitle);
+
+                    LocCallNumberResponse response = locCatalogService.getLocCallNumber(truncatedOnlyRequest);
+
+                    // Update the book with the found LOC number
+                    book.setLocNumber(response.getCallNumber());
+                    bookRepository.save(book);
+
+                    log.info("Successfully updated LOC number for book {} using truncated title-only: {}", book.getId(), response.getCallNumber());
+
+                    return LocLookupResultDto.builder()
+                            .bookId(book.getId())
+                            .success(true)
+                            .locNumber(response.getCallNumber())
+                            .matchCount(response.getMatchCount())
+                            .build();
+
+                } catch (Exception truncatedOnlyException) {
+                    log.warn("LOC truncated title-only fallback also failed for book {}: {}", book.getId(), truncatedOnlyException.getMessage());
                     return LocLookupResultDto.builder()
                             .bookId(book.getId())
                             .success(false)
-                            .errorMessage("Failed with title+author and title-only: " + fallbackException.getMessage())
+                            .errorMessage("All lookup strategies failed (including truncated title)")
                             .build();
                 }
             }
 
-            // Original failure without author or fallback didn't help
+            // No colon in title, all strategies exhausted
             log.warn("LOC lookup failed for book {}: {}", book.getId(), e.getReason());
             return LocLookupResultDto.builder()
                     .bookId(book.getId())
@@ -221,6 +303,11 @@ public class LocBulkLookupService {
      * Map Book entity to BookLocStatusDto
      */
     private BookLocStatusDto mapToBookLocStatusDto(Book book) {
+        String dateAddedStr = null;
+        if (book.getDateAddedToLibrary() != null) {
+            dateAddedStr = book.getDateAddedToLibrary().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
+
         return BookLocStatusDto.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -230,7 +317,39 @@ public class LocBulkLookupService {
                 .publicationYear(book.getPublicationYear())
                 // Use efficient query to get first photo ID without loading photos collection
                 .firstPhotoId(photoRepository.findFirstPhotoIdByBookId(book.getId()))
+                .dateAdded(dateAddedStr)
                 .build();
+    }
+
+    /**
+     * Create a comparator for sorting by date added to library
+     * Most recent dates first, nulls last, ties broken by title
+     */
+    private Comparator<BookLocStatusDto> createDateAddedComparator() {
+        return (book1, book2) -> {
+            String date1 = book1.getDateAdded();
+            String date2 = book2.getDateAdded();
+
+            // Handle null dates - they should appear at the end
+            if (date1 == null && date2 == null) {
+                return book1.getTitle().compareToIgnoreCase(book2.getTitle());
+            }
+            if (date1 == null) {
+                return 1; // book1 comes after
+            }
+            if (date2 == null) {
+                return -1; // book2 comes after
+            }
+
+            // Both have dates, compare in descending order (most recent first)
+            int dateComparison = date2.compareTo(date1);
+            if (dateComparison != 0) {
+                return dateComparison;
+            }
+
+            // Dates are equal, sort by title
+            return book1.getTitle().compareToIgnoreCase(book2.getTitle());
+        };
     }
 
     /**

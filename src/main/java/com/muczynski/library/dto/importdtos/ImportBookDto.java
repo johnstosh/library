@@ -3,7 +3,7 @@ package com.muczynski.library.dto.importdtos;
 import com.muczynski.library.domain.BookStatus;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class ImportBookDto {
@@ -13,7 +13,7 @@ public class ImportBookDto {
     private String plotSummary;
     private String relatedWorks;
     private String detailedDescription;
-    private LocalDate dateAddedToLibrary;
+    private LocalDateTime dateAddedToLibrary;
     private BookStatus status;
     private String locNumber;
     private String statusReason;

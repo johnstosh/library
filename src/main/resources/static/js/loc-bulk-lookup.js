@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
         viewMissingBtn.addEventListener('click', () => loadLocLookupBooks('missing'));
     }
 
+    const lookupTableBtn = document.getElementById('lookup-table-missing-btn');
+    if (lookupTableBtn) {
+        lookupTableBtn.addEventListener('click', () => lookupTableMissing());
+    }
+
     const lookupAllBtn = document.getElementById('lookup-all-missing-btn');
     if (lookupAllBtn) {
         lookupAllBtn.addEventListener('click', () => lookupAllMissing());
@@ -86,9 +91,10 @@ function createBookRow(book) {
     const photoCell = document.createElement('td');
     if (book.firstPhotoId) {
         const img = document.createElement('img');
-        img.src = `/api/photos/${book.firstPhotoId}/image`;
         img.style.width = '50px';
         img.style.height = 'auto';
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
         photoCell.appendChild(img);
     } else {
         photoCell.textContent = '-';
@@ -226,12 +232,109 @@ async function lookupSingleBook(bookId) {
 };
 
 /**
+ * Lookup LOC numbers for books missing LOC in the current table
+ */
+async function lookupTableMissing() {
+    try {
+        clearError('loc-lookup');
+        clearSuccess('loc-lookup');
+
+        // Get all book IDs from the current table that don't have LOC numbers
+        const tableBody = document.getElementById('loc-lookup-table-body');
+        const rows = tableBody.querySelectorAll('tr[data-book-id]');
+
+        const missingBookIds = [];
+        rows.forEach(row => {
+            const locCell = row.querySelector('[data-test="loc-number"]');
+            // Check if LOC cell shows "Not set"
+            if (locCell && locCell.textContent.includes('Not set')) {
+                const bookId = row.getAttribute('data-book-id');
+                missingBookIds.push(bookId);
+            }
+        });
+
+        if (missingBookIds.length === 0) {
+            showSuccess('loc-lookup', 'No books in table are missing LOC numbers');
+            return;
+        }
+
+        // Show spinner in button
+        const btn = document.getElementById('lookup-table-missing-btn');
+        showButtonSpinner(btn, 'Looking up...');
+
+        // Show progress
+        const progressDiv = document.getElementById('loc-lookup-progress');
+        const progressText = document.getElementById('loc-lookup-progress-text');
+        progressDiv.style.display = 'block';
+        progressText.textContent = `Looking up ${missingBookIds.length} book(s) from table...`;
+
+        // Lookup each book
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const bookId of missingBookIds) {
+            try {
+                const result = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
+                    method: 'POST'
+                });
+
+                if (result.success) {
+                    successCount++;
+                    // Update the row
+                    const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
+                    if (row) {
+                        const locCell = row.querySelector('[data-test="loc-number"]');
+                        if (locCell) {
+                            locCell.innerHTML = '';
+                            const code = document.createElement('code');
+                            code.innerHTML = window.formatLocForSpine(result.locNumber);
+                            code.className = 'text-success fw-bold';
+                            locCell.appendChild(code);
+                        }
+                    }
+                } else {
+                    failureCount++;
+                }
+            } catch (error) {
+                console.error(`Failed to lookup book ${bookId}:`, error);
+                failureCount++;
+            }
+
+            // Update progress
+            progressText.textContent = `Looked up ${successCount + failureCount}/${missingBookIds.length} book(s)...`;
+        }
+
+        // Hide progress
+        progressDiv.style.display = 'none';
+
+        let message = `Table lookup completed: ${successCount} success, ${failureCount} failed`;
+        if (successCount > 0) {
+            showSuccess('loc-lookup', message);
+        } else {
+            showError('loc-lookup', message);
+        }
+
+    } catch (error) {
+        const progressDiv = document.getElementById('loc-lookup-progress');
+        progressDiv.style.display = 'none';
+        showError('loc-lookup', 'Table lookup failed: ' + error.message);
+    } finally {
+        const btn = document.getElementById('lookup-table-missing-btn');
+        hideButtonSpinner(btn, 'Lookup Table Missing');
+    }
+}
+
+/**
  * Lookup LOC numbers for all books missing LOC numbers
  */
 async function lookupAllMissing() {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
+
+        // Show spinner in button
+        const btn = document.getElementById('lookup-all-missing-btn');
+        showButtonSpinner(btn, 'Looking up...');
 
         // Show progress
         const progressDiv = document.getElementById('loc-lookup-progress');
@@ -281,6 +384,9 @@ async function lookupAllMissing() {
         const progressDiv = document.getElementById('loc-lookup-progress');
         progressDiv.style.display = 'none';
         showError('loc-lookup', 'Bulk lookup failed: ' + error.message);
+    } finally {
+        const btn = document.getElementById('lookup-all-missing-btn');
+        hideButtonSpinner(btn, 'Lookup All Missing');
     }
 };
 
@@ -316,3 +422,4 @@ function clearSuccess(section) {
         successDiv.style.display = 'none';
     }
 }
+

@@ -12,4 +12,5 @@ public class PhotoDto {
     private String caption;
     private Long bookId;
     private Long authorId;
+    private String imageChecksum;
 }

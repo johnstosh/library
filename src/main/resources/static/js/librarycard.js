@@ -95,6 +95,10 @@ async function applyForCard() {
         showApplyError('Please fill in all fields.');
         return;
     }
+
+    const btn = document.getElementById('apply-for-card-btn');
+    showButtonSpinner(btn, 'Applying...');
+
     try {
         const hashedPassword = await hashPassword(password);
         await postData('/api/public/register', { username, password: hashedPassword }, false, false);
@@ -108,6 +112,8 @@ async function applyForCard() {
         }
     } catch (error) {
         showApplyError(error.message || 'An unknown error occurred.');
+    } finally {
+        hideButtonSpinner(btn, 'Apply');
     }
 }
 
@@ -186,6 +192,8 @@ async function loadLibraryCardSection() {
  * Save the selected library card design
  */
 async function saveCardDesign() {
+    const btn = document.getElementById('save-card-design-btn');
+
     try {
         clearCardDesignMessages();
 
@@ -197,6 +205,8 @@ async function saveCardDesign() {
         }
 
         const design = selectedRadio.value;
+
+        showButtonSpinner(btn, 'Saving...');
 
         // Save to user settings
         await putData('/api/user-settings', { libraryCardDesign: design });
@@ -210,6 +220,8 @@ async function saveCardDesign() {
         }
     } catch (error) {
         showCardDesignError('Failed to save card design: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Save Design');
     }
 }
 

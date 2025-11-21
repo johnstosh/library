@@ -21,6 +21,9 @@ async function generateTestData() {
         return;
     }
 
+    const btn = document.getElementById('generate-test-data-btn');
+    showButtonSpinner(btn, 'Generating...');
+
     try {
         await postData('/api/test-data/generate', { numBooks: numBooks });
 
@@ -31,6 +34,8 @@ async function generateTestData() {
         clearError('test-data');
     } catch (error) {
         showError('test-data', 'Failed to generate test data: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Add Random Books');
     }
 }
 
@@ -42,6 +47,9 @@ async function generateTestLoans() {
         return;
     }
 
+    const btn = document.getElementById('generate-test-loans-btn');
+    showButtonSpinner(btn, 'Generating...');
+
     try {
         await postData('/api/test-data/generate-loans', { numLoans: numLoans });
 
@@ -50,6 +58,8 @@ async function generateTestLoans() {
         clearError('test-data');
     } catch (error) {
         showError('test-data', 'Failed to generate test loans: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Add-Random-Loans');
     }
 }
 
@@ -57,6 +67,9 @@ async function deleteAllTestData() {
     if (!confirm('Are you sure you want to delete all test data? This action cannot be undone.')) {
         return;
     }
+
+    const btn = document.getElementById('delete-all-test-data-btn');
+    showButtonSpinner(btn, 'Deleting...');
 
     try {
         // Read an existing protected endpoint first to validate session/CSRF
@@ -70,6 +83,8 @@ async function deleteAllTestData() {
         clearError('test-data');
     } catch (error) {
         showError('test-data', 'Failed to delete test data: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Delete All Test Data');
     }
 }
 
@@ -77,6 +92,9 @@ async function totalPurge() {
     if (!confirm('Are you sure you want to totally purge the database? This action cannot be undone and will require a server restart.')) {
         return;
     }
+
+    const btn = document.getElementById('total-purge-btn');
+    showButtonSpinner(btn, 'Purging...');
 
     try {
         // Read an existing protected endpoint first to validate session/CSRF
@@ -88,5 +106,7 @@ async function totalPurge() {
         alert('Total purge successful. Please restart the server.');
     } catch (error) {
         showError('test-data', 'Failed to purge database: ' + error.message);
+    } finally {
+        hideButtonSpinner(btn, 'Total Purge');
     }
 }

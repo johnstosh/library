@@ -20,17 +20,22 @@ public interface PhotoMetadataProjection {
     LocalDateTime getExportedAt();
     Photo.ExportStatus getExportStatus();
     String getExportErrorMessage();
+    String getImageChecksum();  // Used to determine if photo has image data
+    LocalDateTime getDeletedAt();  // Used to filter out soft-deleted photos
 
     // Nested projections for related entities
     BookProjection getBook();
     AuthorProjection getAuthor();
 
     interface BookProjection {
+        Long getId();
         String getTitle();
+        String getLocNumber();
         AuthorProjection getAuthor();
     }
 
     interface AuthorProjection {
+        Long getId();
         String getName();
     }
 }

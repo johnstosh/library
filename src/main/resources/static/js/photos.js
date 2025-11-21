@@ -66,219 +66,304 @@ function renderPhotosTable(photos) {
     }
 
     photos.forEach(photo => {
-        const row = document.createElement('tr');
-
-        // ID
-        const idCell = document.createElement('td');
-        idCell.textContent = photo.id;
-        row.appendChild(idCell);
-
-        // Title/Author column
-        const titleCell = document.createElement('td');
-        if (photo.bookTitle) {
-            // Book photo: show title on first line, author on second line
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = photo.bookTitle;
-            titleSpan.style.fontWeight = 'bold';
-            titleCell.appendChild(titleSpan);
-
-            if (photo.bookAuthorName && photo.bookAuthorName.trim() !== '') {
-                titleCell.appendChild(document.createElement('br'));
-                const authorSpan = document.createElement('span');
-                authorSpan.textContent = photo.bookAuthorName;
-                authorSpan.style.fontSize = '0.9em';
-                authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
-                titleCell.appendChild(authorSpan);
-            }
-        } else if (photo.authorName) {
-            // Author photo: show author name
-            const authorSpan = document.createElement('span');
-            authorSpan.textContent = photo.authorName;
-            authorSpan.style.fontWeight = 'bold';
-            titleCell.appendChild(authorSpan);
-        } else {
-            // Unknown photo: show caption or ID
-            titleCell.textContent = photo.caption || `Photo #${photo.id}`;
-        }
-        row.appendChild(titleCell);
-
-        // LOC Call Number column - formatted for spine display with each component on its own line
-        const locCell = document.createElement('td');
-        if (photo.bookLocNumber) {
-            const locCode = document.createElement('code');
-            locCode.innerHTML = window.formatLocForSpine(photo.bookLocNumber);
-            locCode.className = 'text-success';
-            locCell.appendChild(locCode);
-        } else {
-            const locSpan = document.createElement('span');
-            locSpan.textContent = '-';
-            locSpan.className = 'text-muted';
-            locCell.appendChild(locSpan);
-        }
-        row.appendChild(locCell);
-
-        // Status
-        const statusCell = document.createElement('td');
-        const statusBadge = document.createElement('span');
-        statusBadge.classList.add('badge');
-
-        switch (photo.exportStatus) {
-            case 'COMPLETED':
-                statusBadge.classList.add('bg-success');
-                statusBadge.textContent = 'Completed';
-                break;
-            case 'FAILED':
-                statusBadge.classList.add('bg-danger');
-                statusBadge.textContent = 'Failed';
-                if (photo.exportErrorMessage) {
-                    statusBadge.title = photo.exportErrorMessage;
-                }
-                break;
-            case 'IN_PROGRESS':
-                statusBadge.classList.add('bg-info');
-                statusBadge.textContent = 'In Progress';
-                break;
-            case 'PENDING':
-            default:
-                statusBadge.classList.add('bg-warning');
-                statusBadge.textContent = 'Pending';
-                break;
-        }
-
-        statusCell.appendChild(statusBadge);
-        row.appendChild(statusCell);
-
-        // Backed Up At
-        const backedUpCell = document.createElement('td');
-        if (photo.backedUpAt) {
-            const date = new Date(photo.backedUpAt);
-            backedUpCell.textContent = date.toLocaleString();
-        } else {
-            backedUpCell.textContent = '-';
-        }
-        row.appendChild(backedUpCell);
-
-        // Permanent ID
-        const permanentIdCell = document.createElement('td');
-        if (photo.permanentId) {
-            const idSpan = document.createElement('span');
-            idSpan.classList.add('font-monospace', 'small');
-            idSpan.textContent = photo.permanentId.substring(0, 20) + '...';
-            idSpan.title = photo.permanentId;
-            permanentIdCell.appendChild(idSpan);
-        } else {
-            permanentIdCell.textContent = '-';
-        }
-        row.appendChild(permanentIdCell);
-
-        // Actions
-        const actionsCell = document.createElement('td');
-        actionsCell.classList.add('d-flex', 'gap-1', 'flex-wrap');
-
-        // Export button - show if photo has image but no permanentId
-        if (photo.hasImage && !photo.permanentId) {
-            const exportBtn = document.createElement('button');
-            exportBtn.classList.add('btn', 'btn-sm', 'btn-primary');
-            exportBtn.textContent = 'Export';
-            exportBtn.title = 'Export to Google Photos';
-            exportBtn.onclick = () => exportSinglePhoto(photo.id);
-            actionsCell.appendChild(exportBtn);
-        }
-
-        // Import button - show if photo has permanentId but no image
-        if (photo.permanentId && !photo.hasImage) {
-            const importBtn = document.createElement('button');
-            importBtn.classList.add('btn', 'btn-sm', 'btn-success');
-            importBtn.textContent = 'Import';
-            importBtn.title = 'Import from Google Photos';
-            importBtn.onclick = () => importSinglePhoto(photo.id);
-            actionsCell.appendChild(importBtn);
-        }
-
-        // View button - show if exported
-        if (photo.permanentId) {
-            const viewBtn = document.createElement('a');
-            viewBtn.classList.add('btn', 'btn-sm', 'btn-outline-primary');
-            viewBtn.textContent = 'View';
-            viewBtn.title = 'View in Google Photos';
-            viewBtn.href = `https://photos.google.com/lr/photo/${photo.permanentId}`;
-            viewBtn.target = '_blank';
-            actionsCell.appendChild(viewBtn);
-        }
-
-        // Verify button - show if has permanentId
-        if (photo.permanentId) {
-            const verifyBtn = document.createElement('button');
-            verifyBtn.classList.add('btn', 'btn-sm', 'btn-outline-info');
-            verifyBtn.textContent = 'Verify';
-            verifyBtn.title = 'Verify permanent ID still works';
-            verifyBtn.onclick = () => verifyPhoto(photo.id);
-            actionsCell.appendChild(verifyBtn);
-        }
-
-        // Unlink button - show if has permanentId
-        if (photo.permanentId) {
-            const unlinkBtn = document.createElement('button');
-            unlinkBtn.classList.add('btn', 'btn-sm', 'btn-outline-warning');
-            unlinkBtn.textContent = 'Unlink';
-            unlinkBtn.title = 'Remove permanent ID';
-            unlinkBtn.onclick = () => unlinkPhoto(photo.id);
-            actionsCell.appendChild(unlinkBtn);
-        }
-
-        // Delete button (trash icon)
-        const deleteBtn = document.createElement('button');
-        deleteBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
-        deleteBtn.innerHTML = '&#128465;'; // Trash can emoji
-        deleteBtn.title = 'Delete photo';
-        deleteBtn.onclick = () => deletePhotoWithUndo(photo.id, row, actionsCell, deleteBtn);
-        actionsCell.appendChild(deleteBtn);
-
-        row.appendChild(actionsCell);
-
+        const row = createPhotoRow(photo);
         tbody.appendChild(row);
     });
+}
+
+/**
+ * Create a table row for a photo
+ */
+function createPhotoRow(photo) {
+    const row = document.createElement('tr');
+    row.setAttribute('data-photo-id', photo.id);
+
+    // ID
+    const idCell = document.createElement('td');
+    idCell.textContent = photo.id;
+    row.appendChild(idCell);
+
+    // Title/Author column
+    const titleCell = document.createElement('td');
+    if (photo.bookTitle) {
+        // Book photo: show title on first line, author on second line
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = photo.bookTitle;
+        titleSpan.style.fontWeight = 'bold';
+        titleCell.appendChild(titleSpan);
+
+        if (photo.bookAuthorName && photo.bookAuthorName.trim() !== '') {
+            titleCell.appendChild(document.createElement('br'));
+            const authorSpan = document.createElement('span');
+            authorSpan.textContent = photo.bookAuthorName;
+            authorSpan.style.fontSize = '0.9em';
+            authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+            titleCell.appendChild(authorSpan);
+        }
+    } else if (photo.authorName) {
+        // Author photo: show author name
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = photo.authorName;
+        authorSpan.style.fontWeight = 'bold';
+        titleCell.appendChild(authorSpan);
+    } else {
+        // Unknown photo: show caption or ID
+        titleCell.textContent = photo.caption || `Photo #${photo.id}`;
+    }
+    row.appendChild(titleCell);
+
+    // LOC Call Number column - formatted for spine display with each component on its own line
+    const locCell = document.createElement('td');
+    if (photo.bookLocNumber) {
+        const locCode = document.createElement('code');
+        locCode.innerHTML = window.formatLocForSpine(photo.bookLocNumber);
+        locCode.className = 'text-success';
+        locCell.appendChild(locCode);
+    } else {
+        const locSpan = document.createElement('span');
+        locSpan.textContent = '-';
+        locSpan.className = 'text-muted';
+        locCell.appendChild(locSpan);
+    }
+    row.appendChild(locCell);
+
+    // Status
+    const statusCell = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.classList.add('badge');
+
+    switch (photo.exportStatus) {
+        case 'COMPLETED':
+            statusBadge.classList.add('bg-success');
+            statusBadge.textContent = 'Completed';
+            break;
+        case 'FAILED':
+            statusBadge.classList.add('bg-danger');
+            statusBadge.textContent = 'Failed';
+            if (photo.exportErrorMessage) {
+                statusBadge.title = photo.exportErrorMessage;
+            }
+            break;
+        case 'IN_PROGRESS':
+            statusBadge.classList.add('bg-info');
+            statusBadge.textContent = 'In Progress';
+            break;
+        case 'PENDING':
+        default:
+            statusBadge.classList.add('bg-warning');
+            statusBadge.textContent = 'Pending';
+            break;
+    }
+
+    statusCell.appendChild(statusBadge);
+    row.appendChild(statusCell);
+
+    // Exported At
+    const exportedAtCell = document.createElement('td');
+    if (photo.exportedAt) {
+        const date = new Date(photo.exportedAt);
+        exportedAtCell.textContent = date.toLocaleString();
+    } else {
+        exportedAtCell.textContent = '-';
+    }
+    row.appendChild(exportedAtCell);
+
+    // Permanent ID
+    const permanentIdCell = document.createElement('td');
+    if (photo.permanentId) {
+        const idSpan = document.createElement('span');
+        idSpan.classList.add('font-monospace', 'small');
+        idSpan.textContent = photo.permanentId.substring(0, 20) + '...';
+        idSpan.title = photo.permanentId;
+        permanentIdCell.appendChild(idSpan);
+    } else {
+        permanentIdCell.textContent = '-';
+    }
+    row.appendChild(permanentIdCell);
+
+    // Actions
+    const actionsCell = document.createElement('td');
+    actionsCell.classList.add('d-flex', 'gap-1', 'flex-wrap');
+
+    // Export button - show if photo has image but no permanentId
+    if (photo.hasImage && !photo.permanentId) {
+        const exportBtn = document.createElement('button');
+        exportBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        exportBtn.textContent = 'Export';
+        exportBtn.title = 'Export to Google Photos';
+        exportBtn.onclick = () => exportSinglePhoto(photo.id);
+        actionsCell.appendChild(exportBtn);
+    }
+
+    // Import button - show if photo has permanentId but no image
+    if (photo.permanentId && !photo.hasImage) {
+        const importBtn = document.createElement('button');
+        importBtn.classList.add('btn', 'btn-sm', 'btn-success');
+        importBtn.textContent = 'Import';
+        importBtn.title = 'Import from Google Photos';
+        importBtn.onclick = () => importSinglePhoto(photo.id);
+        actionsCell.appendChild(importBtn);
+    }
+
+    // View button - show if exported
+    if (photo.permanentId) {
+        const viewBtn = document.createElement('a');
+        viewBtn.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+        viewBtn.textContent = 'View';
+        viewBtn.title = 'View in Google Photos';
+        viewBtn.href = `https://photos.google.com/lr/photo/${photo.permanentId}`;
+        viewBtn.target = '_blank';
+        actionsCell.appendChild(viewBtn);
+    }
+
+    // Verify button - show if has permanentId
+    if (photo.permanentId) {
+        const verifyBtn = document.createElement('button');
+        verifyBtn.classList.add('btn', 'btn-sm', 'btn-outline-info');
+        verifyBtn.textContent = 'Verify';
+        verifyBtn.title = 'Verify permanent ID still works';
+        verifyBtn.onclick = () => verifyPhoto(photo.id);
+        actionsCell.appendChild(verifyBtn);
+    }
+
+    // Unlink button - show if has permanentId
+    if (photo.permanentId) {
+        const unlinkBtn = document.createElement('button');
+        unlinkBtn.classList.add('btn', 'btn-sm', 'btn-outline-warning');
+        unlinkBtn.textContent = 'Unlink';
+        unlinkBtn.title = 'Remove permanent ID';
+        unlinkBtn.onclick = () => unlinkPhoto(photo.id);
+        actionsCell.appendChild(unlinkBtn);
+    }
+
+    // Delete button (trash icon)
+    const deleteBtn = document.createElement('button');
+    deleteBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
+    deleteBtn.innerHTML = '&#128465;'; // Trash can emoji
+    deleteBtn.title = 'Delete photo';
+    deleteBtn.onclick = () => deletePhotoWithUndo(photo.id, row, actionsCell, deleteBtn);
+    actionsCell.appendChild(deleteBtn);
+
+    row.appendChild(actionsCell);
+
+    return row;
+}
+
+/**
+ * Update a single photo row in place without reloading the entire table
+ */
+async function updatePhotoRow(photoId) {
+    try {
+        // Fetch the updated photo data
+        const allPhotos = await fetchData('/api/photo-export/photos');
+        const updatedPhoto = allPhotos.find(p => p.id === photoId);
+
+        if (!updatedPhoto) {
+            console.warn(`Photo ${photoId} not found in updated data`);
+            return;
+        }
+
+        // Find the existing row
+        const existingRow = document.querySelector(`tr[data-photo-id="${photoId}"]`);
+        if (!existingRow) {
+            console.warn(`Row for photo ${photoId} not found in table`);
+            return;
+        }
+
+        // Create a new row with updated data
+        const newRow = createPhotoRow(updatedPhoto);
+
+        // Replace the old row with the new one
+        existingRow.replaceWith(newRow);
+
+        console.log(`[Photos] Updated row for photo ${photoId} in place`);
+    } catch (error) {
+        console.error(`[Photos] Failed to update row for photo ${photoId}:`, error);
+    }
 }
 
 /**
  * Export all pending photos
  */
 async function exportAllPhotos() {
+    const exportBtn = document.getElementById('export-all-photos-btn');
+
     try {
-        const confirmExport = confirm('Are you sure you want to export all pending photos? This may take a while.');
+        // Get all photos from the current table
+        const photos = await fetchData('/api/photo-export/photos');
+
+        // Filter to get only pending export photos (hasImage && !permanentId)
+        const pendingPhotos = photos.filter(photo => photo.hasImage && !photo.permanentId);
+
+        if (pendingPhotos.length === 0) {
+            showInfo('photos', 'No pending photos to export.');
+            return;
+        }
+
+        const confirmExport = confirm(`Are you sure you want to export ${pendingPhotos.length} pending photo(s)? This may take a while.`);
         if (!confirmExport) {
             return;
         }
 
-        showInfo('photos', 'Starting export process... This may take a few minutes.');
+        console.log('[Photos] Exporting', pendingPhotos.length, 'pending photos');
 
-        // Disable export button
-        const exportBtn = document.getElementById('export-all-photos-btn');
-        if (exportBtn) {
-            exportBtn.disabled = true;
-            exportBtn.textContent = 'Backing up...';
+        // Show spinner on button
+        showButtonSpinner(exportBtn, 'Exporting...');
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Loop through each pending photo and export it
+        for (let i = 0; i < pendingPhotos.length; i++) {
+            const photo = pendingPhotos[i];
+            const photoNum = i + 1;
+
+            try {
+                showInfo('photos', `Exporting photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
+
+                // Update button text with progress (recreate spinner element each time)
+                if (exportBtn) {
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner-border spinner-border-sm me-1';
+                    spinner.setAttribute('role', 'status');
+                    spinner.setAttribute('aria-hidden', 'true');
+                    exportBtn.innerHTML = '';
+                    exportBtn.appendChild(spinner);
+                    exportBtn.appendChild(document.createTextNode(`Exporting ${photoNum}/${pendingPhotos.length}...`));
+                }
+
+                // Export the photo
+                const result = await fetchData(`/api/photo-export/export/${photo.id}`, {
+                    method: 'POST'
+                });
+
+                console.log(`[Photos] Exported photo ${photo.id}:`, result);
+                successCount++;
+
+                // Update just this row instead of reloading the entire table
+                await updatePhotoRow(photo.id);
+
+            } catch (error) {
+                console.error(`[Photos] Failed to export photo ${photo.id}:`, error);
+                failureCount++;
+                // Continue with next photo even if this one failed
+            }
         }
 
-        const result = await fetchData('/api/photo-export/export-all', {
-            method: 'POST'
-        });
-
-        console.log('[Photos] Export result:', result);
-
-        showSuccess('photos', result.message || 'Export completed successfully!');
-
-        // Reload the export status
-        await loadPhotoExportStatus();
+        // Show final results
+        if (failureCount === 0) {
+            showSuccess('photos', `Successfully exported all ${successCount} photo(s)!`);
+        } else {
+            showError('photos', `Export completed: ${successCount} succeeded, ${failureCount} failed.`);
+        }
 
     } catch (error) {
         console.error('[Photos] Failed to export photos:', error);
         showError('photos', 'Failed to export photos: ' + error.message);
     } finally {
-        // Re-enable export button
-        const exportBtn = document.getElementById('export-all-photos-btn');
+        // Hide spinner and restore button
         if (exportBtn) {
-            exportBtn.disabled = false;
-            exportBtn.textContent = 'Export All Pending Photos';
+            hideButtonSpinner(exportBtn, 'Export All Pending Photos');
         }
     }
 }
@@ -300,8 +385,8 @@ async function exportSinglePhoto(photoId) {
 
         showSuccess('photos', result.message || 'Photo exported successfully!');
 
-        // Reload the export status
-        await loadPhotoExportStatus();
+        // Update just this row instead of reloading the entire table
+        await updatePhotoRow(photoId);
 
     } catch (error) {
         console.error('[Photos] Failed to export photo:', error);
@@ -313,41 +398,84 @@ async function exportSinglePhoto(photoId) {
  * Import all pending photos from Google Photos
  */
 async function importAllPhotos() {
+    const importBtn = document.getElementById('import-all-photos-btn');
+
     try {
-        const confirmImport = confirm('Are you sure you want to import all pending photos from Google Photos? This may take a while.');
+        // Get all photos from the current table
+        const photos = await fetchData('/api/photo-export/photos');
+
+        // Filter to get only pending import photos (permanentId && !hasImage)
+        const pendingPhotos = photos.filter(photo => photo.permanentId && !photo.hasImage);
+
+        if (pendingPhotos.length === 0) {
+            showInfo('photos', 'No pending photos to import.');
+            return;
+        }
+
+        const confirmImport = confirm(`Are you sure you want to import ${pendingPhotos.length} pending photo(s) from Google Photos? This may take a while.`);
         if (!confirmImport) {
             return;
         }
 
-        showInfo('photos', 'Starting import process... This may take a few minutes.');
+        console.log('[Photos] Importing', pendingPhotos.length, 'pending photos');
 
-        // Disable import button
-        const importBtn = document.getElementById('import-all-photos-btn');
-        if (importBtn) {
-            importBtn.disabled = true;
-            importBtn.textContent = 'Importing...';
+        // Show spinner on button
+        showButtonSpinner(importBtn, 'Importing...');
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        // Loop through each pending photo and import it
+        for (let i = 0; i < pendingPhotos.length; i++) {
+            const photo = pendingPhotos[i];
+            const photoNum = i + 1;
+
+            try {
+                showInfo('photos', `Importing photo ${photoNum} of ${pendingPhotos.length} (ID: ${photo.id})...`);
+
+                // Update button text with progress (recreate spinner element each time)
+                if (importBtn) {
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner-border spinner-border-sm me-1';
+                    spinner.setAttribute('role', 'status');
+                    spinner.setAttribute('aria-hidden', 'true');
+                    importBtn.innerHTML = '';
+                    importBtn.appendChild(spinner);
+                    importBtn.appendChild(document.createTextNode(`Importing ${photoNum}/${pendingPhotos.length}...`));
+                }
+
+                // Import the photo
+                const result = await fetchData(`/api/photo-export/import/${photo.id}`, {
+                    method: 'POST'
+                });
+
+                console.log(`[Photos] Imported photo ${photo.id}:`, result);
+                successCount++;
+
+                // Update just this row instead of reloading the entire table
+                await updatePhotoRow(photo.id);
+
+            } catch (error) {
+                console.error(`[Photos] Failed to import photo ${photo.id}:`, error);
+                failureCount++;
+                // Continue with next photo even if this one failed
+            }
         }
 
-        const result = await fetchData('/api/photo-export/import-all', {
-            method: 'POST'
-        });
-
-        console.log('[Photos] Import result:', result);
-
-        showSuccess('photos', result.message || 'Import completed successfully!');
-
-        // Reload the export status
-        await loadPhotoExportStatus();
+        // Show final results
+        if (failureCount === 0) {
+            showSuccess('photos', `Successfully imported all ${successCount} photo(s)!`);
+        } else {
+            showError('photos', `Import completed: ${successCount} succeeded, ${failureCount} failed.`);
+        }
 
     } catch (error) {
         console.error('[Photos] Failed to import photos:', error);
         showError('photos', 'Failed to import photos: ' + error.message);
     } finally {
-        // Re-enable import button
-        const importBtn = document.getElementById('import-all-photos-btn');
+        // Hide spinner and restore button
         if (importBtn) {
-            importBtn.disabled = false;
-            importBtn.textContent = 'Import All Pending Photos';
+            hideButtonSpinner(importBtn, 'Import All Pending Photos');
         }
     }
 }
@@ -369,8 +497,8 @@ async function importSinglePhoto(photoId) {
 
         showSuccess('photos', result.message || 'Photo imported successfully!');
 
-        // Reload the export status
-        await loadPhotoExportStatus();
+        // Update just this row instead of reloading the entire table
+        await updatePhotoRow(photoId);
 
     } catch (error) {
         console.error('[Photos] Failed to import photo:', error);
@@ -428,8 +556,8 @@ async function unlinkPhoto(photoId) {
 
         showSuccess('photos', result.message || 'Photo unlinked successfully!');
 
-        // Reload the export status
-        await loadPhotoExportStatus();
+        // Update just this row instead of reloading the entire table
+        await updatePhotoRow(photoId);
 
     } catch (error) {
         console.error('[Photos] Failed to unlink photo:', error);
@@ -552,3 +680,13 @@ function clearMessages() {
         resultsDiv.innerHTML = '';
     }
 }
+
+// Expose functions globally for use in other modules and HTML
+window.loadPhotosSection = loadPhotosSection;
+window.loadPhotoExportStatus = loadPhotoExportStatus;
+window.exportAllPhotos = exportAllPhotos;
+window.exportSinglePhoto = exportSinglePhoto;
+window.importAllPhotos = importAllPhotos;
+window.importSinglePhoto = importSinglePhoto;
+window.verifyPhoto = verifyPhoto;
+window.unlinkPhoto = unlinkPhoto;

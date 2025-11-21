@@ -4,8 +4,10 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
 import jakarta.validation.Valid;
@@ -15,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,6 +37,9 @@ public class AuthorController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private BookService bookService;
 
     @Autowired
     private GooglePhotosService googlePhotosService;
@@ -57,6 +64,18 @@ public class AuthorController {
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve photos for author ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/books")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksByAuthorId(@PathVariable Long id) {
+        try {
+            List<BookDto> books = bookService.getBooksByAuthorId(id);
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -100,7 +119,9 @@ public class AuthorController {
             }
 
             // Get valid access token for downloading photos
-            String accessToken = googlePhotosService.getValidAccessToken("librarian");
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            String accessToken = googlePhotosService.getValidAccessToken(username);
 
             List<PhotoDto> savedPhotos = new ArrayList<>();
             List<Map<String, Object>> failedPhotos = new ArrayList<>();
@@ -184,6 +205,24 @@ public class AuthorController {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
             throw e;
+        }
+    }
+
+    @PostMapping("/delete-authors-with-no-books")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteAuthorsWithNoBooks() {
+        try {
+            int deletedCount = authorService.deleteAuthorsWithNoBooks();
+            logger.info("Deleted {} authors with no books", deletedCount);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Deleted " + deletedCount + " author(s) with no books",
+                    "deletedCount", deletedCount
+            ));
+        } catch (Exception e) {
+            logger.error("Failed to delete authors with no books: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", e.getMessage()
+            ));
         }
     }
 

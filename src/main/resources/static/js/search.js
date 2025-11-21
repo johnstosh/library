@@ -59,10 +59,11 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             const photoCell = document.createElement('td');
             if (book.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${book.firstPhotoId}/image`;
                 img.style.width = '50px';
                 img.style.height = 'auto';
                 img.setAttribute('data-test', 'book-thumbnail');
+                // Use cached thumbnail loading
+                window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
                 photoCell.appendChild(img);
             }
             row.appendChild(photoCell);
@@ -132,11 +133,12 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             // Add thumbnail if available
             if (author.firstPhotoId) {
                 const img = document.createElement('img');
-                img.src = `/api/photos/${author.firstPhotoId}/image`;
                 img.style.width = '50px';
                 img.style.height = 'auto';
                 img.style.marginRight = '10px';
                 img.setAttribute('data-test', 'author-thumbnail');
+                // Use cached thumbnail loading
+                window.loadCachedThumbnail(img, author.firstPhotoId, author.firstPhotoChecksum);
                 li.appendChild(img);
             }
 
@@ -195,7 +197,8 @@ async function viewBook(id) {
     document.getElementById('new-book-summary').value = data.plotSummary || '';
     document.getElementById('new-book-related').value = data.relatedWorks || '';
     document.getElementById('new-book-description').value = data.detailedDescription || '';
-    document.getElementById('new-book-added').value = data.dateAddedToLibrary || '';
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    document.getElementById('new-book-added').value = data.dateAddedToLibrary ? data.dateAddedToLibrary.substring(0, 16) : '';
     document.getElementById('new-book-status').value = data.status || 'ACTIVE';
     document.getElementById('new-book-loc').value = data.locNumber || '';
     document.getElementById('new-book-status-reason').value = data.statusReason || '';

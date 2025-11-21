@@ -72,9 +72,17 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     @Query("SELECT p.id FROM Photo p WHERE p.book.id = :bookId ORDER BY p.photoOrder ASC LIMIT 1")
     Long findFirstPhotoIdByBookId(@Param("bookId") Long bookId);
 
+    // Get first photo checksum for a book without loading the photos collection
+    @Query("SELECT p.imageChecksum FROM Photo p WHERE p.book.id = :bookId ORDER BY p.photoOrder ASC LIMIT 1")
+    String findFirstPhotoChecksumByBookId(@Param("bookId") Long bookId);
+
     // Get first photo ID for an author without loading the photos collection
     @Query("SELECT p.id FROM Photo p WHERE p.author.id = :authorId AND p.book IS NULL ORDER BY p.photoOrder ASC LIMIT 1")
     Long findFirstPhotoIdByAuthorId(@Param("authorId") Long authorId);
+
+    // Get first photo checksum for an author without loading the photos collection
+    @Query("SELECT p.imageChecksum FROM Photo p WHERE p.author.id = :authorId AND p.book IS NULL ORDER BY p.photoOrder ASC LIMIT 1")
+    String findFirstPhotoChecksumByAuthorId(@Param("authorId") Long authorId);
 
     // Projection query that returns only metadata without image bytes - for export operations
     List<PhotoMetadataProjection> findAllProjectedBy();

@@ -467,17 +467,17 @@ public class PhotoExportService {
 
     /**
      * Get all photos with their export status
-     * Uses imageChecksum as a proxy for hasImage to avoid loading image bytes
+     * Uses PhotoMetadataProjection to avoid loading image bytes and prevent OutOfMemory errors
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllPhotosWithExportStatus() {
-        logger.debug("Fetching all photos with book and author, sorted by ID");
-        List<Photo> allPhotos = photoRepository.findAllWithBookAndAuthorOrderById();
+        logger.debug("Fetching all photo metadata (without image bytes)");
+        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findAllProjectedBy();
         logger.info("Found {} photos in database", allPhotos.size());
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        for (Photo photo : allPhotos) {
+        for (com.muczynski.library.repository.PhotoMetadataProjection photo : allPhotos) {
             // Skip soft-deleted photos
             if (photo.getDeletedAt() != null) {
                 continue;

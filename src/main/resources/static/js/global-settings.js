@@ -177,6 +177,9 @@ async function saveGlobalSettings(event) {
         return;
     }
 
+    const btn = document.querySelector('#global-settings-form button[type="submit"]');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         const body = {};
         if (newClientId) body.googleClientId = newClientId;
@@ -209,6 +212,8 @@ async function saveGlobalSettings(event) {
     } catch (error) {
         console.error('Error saving global settings:', error);
         showGlobalSettingsError('Error saving global settings. Please try again.');
+    } finally {
+        hideButtonSpinner(btn, 'Update Photos OAuth');
     }
 }
 
@@ -248,6 +253,9 @@ async function saveGlobalSsoSettings(event) {
         return;
     }
 
+    const btn = document.querySelector('#global-sso-settings-form button[type="submit"]');
+    showButtonSpinner(btn, 'Updating...');
+
     try {
         const body = {};
         if (clientId) body.googleSsoClientId = clientId;
@@ -280,6 +288,8 @@ async function saveGlobalSsoSettings(event) {
     } catch (error) {
         console.error('Error saving SSO settings:', error);
         showGlobalSsoSettingsError('Error saving SSO credentials. Please try again.');
+    } finally {
+        hideButtonSpinner(btn, 'Update SSO OAuth');
     }
 }
 
@@ -301,7 +311,9 @@ function showGlobalSsoSettingsError(message) {
     }
 }
 
-// Expose functions globally for HTML onclick handlers
+// Expose functions globally for HTML onclick handlers and sections.js
+window.loadGlobalSettings = loadGlobalSettings;
+window.saveGlobalSettings = saveGlobalSettings;
 window.saveGlobalSsoSettings = saveGlobalSsoSettings;
 
 // Format relative time (e.g., "5 minutes ago", "2 hours ago")

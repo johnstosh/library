@@ -4,13 +4,27 @@
 import { fetchData } from './utils.js';
 
 /**
+ * Load Labels section - auto-loads books from most recent day
+ */
+export async function loadLabelsSection() {
+    console.log('[Labels] Loading labels section');
+    // Auto-load books from most recent day
+    await loadBooksForLabels('most-recent');
+}
+
+/**
  * Initialize event listeners when DOM is ready
  */
 document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to buttons
-    const loadBooksBtn = document.getElementById('load-books-for-labels-btn');
-    if (loadBooksBtn) {
-        loadBooksBtn.addEventListener('click', () => loadBooksForLabels());
+    const viewMostRecentBtn = document.getElementById('view-most-recent-day-btn');
+    if (viewMostRecentBtn) {
+        viewMostRecentBtn.addEventListener('click', () => loadBooksForLabels('most-recent'));
+    }
+
+    const viewAllBooksBtn = document.getElementById('view-all-books-btn');
+    if (viewAllBooksBtn) {
+        viewAllBooksBtn.addEventListener('click', () => loadBooksForLabels('all'));
     }
 
     const generateAllBtn = document.getElementById('generate-all-labels-btn');
@@ -33,14 +47,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Load books for labels, sorted by date added
+ * Load books for labels
+ * @param {string} mode - 'most-recent' or 'all'
  */
-async function loadBooksForLabels() {
+async function loadBooksForLabels(mode) {
     try {
         clearError('labels');
         clearSuccess('labels');
 
-        const books = await fetchData('/api/labels/books');
+        const endpoint = mode === 'all' ? '/api/labels/books/all' : '/api/labels/books';
+        const books = await fetchData(endpoint);
 
         const tableBody = document.getElementById('labels-table-body');
         tableBody.innerHTML = '';
@@ -57,7 +73,8 @@ async function loadBooksForLabels() {
             tableBody.appendChild(row);
         });
 
-        showSuccess('labels', `Loaded ${books.length} book(s)`);
+        const modeText = mode === 'all' ? ' (all books)' : ' (most recent day)';
+        showSuccess('labels', `Loaded ${books.length} book(s)${modeText}`);
     } catch (error) {
         showError('labels', 'Failed to load books: ' + error.message);
     }
@@ -85,9 +102,10 @@ function createBookRow(book) {
     const photoCell = document.createElement('td');
     if (book.firstPhotoId) {
         const img = document.createElement('img');
-        img.src = `/api/photos/${book.firstPhotoId}/image`;
         img.style.width = '50px';
         img.style.height = 'auto';
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
         photoCell.appendChild(img);
     } else {
         photoCell.textContent = '-';
@@ -140,6 +158,9 @@ function createBookRow(book) {
  * @param {string} mode - 'all' or 'selected'
  */
 async function generateLabels(mode) {
+    const btnId = mode === 'selected' ? 'generate-selected-labels-btn' : 'generate-all-labels-btn';
+    const btn = document.getElementById(btnId);
+
     try {
         clearError('labels');
         clearSuccess('labels');
@@ -162,6 +183,8 @@ async function generateLabels(mode) {
             }
             bookIds = Array.from(allCheckboxes).map(cb => parseInt(cb.getAttribute('data-book-id')));
         }
+
+        showButtonSpinner(btn, 'Generating...');
 
         // Build URL with book IDs as query parameters
         const params = new URLSearchParams();
@@ -192,6 +215,9 @@ async function generateLabels(mode) {
         showSuccess('labels', `Generated labels for ${bookIds.length} book(s)`);
     } catch (error) {
         showError('labels', 'Failed to generate labels: ' + error.message);
+    } finally {
+        const originalText = mode === 'selected' ? 'Generate Selected Labels' : 'Generate All Labels';
+        hideButtonSpinner(btn, originalText);
     }
 }
 

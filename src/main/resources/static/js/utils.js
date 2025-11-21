@@ -565,5 +565,64 @@ function splitAtLetterPeriods(part, parts) {
     }
 }
 
-// Expose formatLocForSpine globally for non-module scripts
+// Expose functions globally for non-module scripts
 window.formatLocForSpine = formatLocForSpine;
+window.showButtonSpinner = showButtonSpinner;
+window.hideButtonSpinner = hideButtonSpinner;
+
+/**
+ * Shows a spinner on a button and disables it during async operations.
+ * Stores the original button text and disabled state for later restoration.
+ * @param {HTMLButtonElement|string} button - The button element or button ID
+ * @param {string} spinnerText - Optional text to show next to spinner (e.g., "Loading...")
+ */
+function showButtonSpinner(button, spinnerText = null) {
+    const btn = typeof button === 'string' ? document.getElementById(button) : button;
+    if (!btn) return;
+
+    // Store original state if not already stored
+    if (!btn.dataset.originalText) {
+        btn.dataset.originalText = btn.textContent || btn.innerHTML;
+    }
+    if (!btn.dataset.originalDisabled) {
+        btn.dataset.originalDisabled = btn.disabled ? 'true' : 'false';
+    }
+
+    // Create spinner element
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner-border spinner-border-sm me-1';
+    spinner.setAttribute('role', 'status');
+    spinner.setAttribute('aria-hidden', 'true');
+
+    // Clear button content and add spinner
+    btn.innerHTML = '';
+    btn.appendChild(spinner);
+    if (spinnerText) {
+        btn.appendChild(document.createTextNode(spinnerText));
+    }
+
+    // Disable the button
+    btn.disabled = true;
+}
+
+/**
+ * Hides the spinner on a button and restores it to its original state.
+ * @param {HTMLButtonElement|string} button - The button element or button ID
+ * @param {string} text - Optional text to set (if not provided, uses stored original text)
+ */
+function hideButtonSpinner(button, text = null) {
+    const btn = typeof button === 'string' ? document.getElementById(button) : button;
+    if (!btn) return;
+
+    // Restore original text
+    const originalText = text || btn.dataset.originalText || '';
+    btn.innerHTML = originalText;
+
+    // Restore original disabled state
+    const wasDisabled = btn.dataset.originalDisabled === 'true';
+    btn.disabled = wasDisabled;
+
+    // Clean up stored data
+    delete btn.dataset.originalText;
+    delete btn.dataset.originalDisabled;
+}

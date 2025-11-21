@@ -20,5 +20,6 @@ public class BookLocStatusDto {
     private boolean hasLocNumber;
     private Integer publicationYear;
     private Long firstPhotoId;
+    private String firstPhotoChecksum;
     private String dateAdded;
 }

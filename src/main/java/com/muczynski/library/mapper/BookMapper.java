@@ -45,10 +45,14 @@ public class BookMapper {
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
         }
-        // Use efficient query to get first photo ID without loading photos collection
+        // Use efficient queries to get first photo ID and checksum without loading photos collection
         Long firstPhotoId = photoRepository.findFirstPhotoIdByBookId(book.getId());
         if (firstPhotoId != null) {
             bookDto.setFirstPhotoId(firstPhotoId);
+            String firstPhotoChecksum = photoRepository.findFirstPhotoChecksumByBookId(book.getId());
+            if (firstPhotoChecksum != null) {
+                bookDto.setFirstPhotoChecksum(firstPhotoChecksum);
+            }
         }
 
         bookDto.setLoanCount(loanRepository.countByBookIdAndReturnDateIsNull(book.getId()));

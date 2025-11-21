@@ -50,6 +50,22 @@ public class GooglePhotosService {
         this.restTemplate = new RestTemplate();
     }
 
+    /**
+     * Find user by username, handling duplicates by using the one with lowest ID
+     */
+    private User findUserByUsername(String username) {
+        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
+        if (users.isEmpty()) {
+            throw new LibraryException("User not found");
+        }
+        User user = users.get(0);
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
+                       users.size(), username, user.getId());
+        }
+        return user;
+    }
+
 
     /**
      * Download a photo's content from Google Photos
@@ -188,8 +204,7 @@ public class GooglePhotosService {
     public String getValidAccessToken(String username) {
         logger.debug("Getting valid access token for user: {}", username);
 
-        User user = userRepository.findByUsernameIgnoreCase(username)
-                .orElseThrow(() -> new LibraryException("User not found"));
+        User user = findUserByUsername(username);
 
         String accessToken = user.getGooglePhotosApiKey();
         String tokenExpiry = user.getGooglePhotosTokenExpiry();

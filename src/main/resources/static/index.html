@@ -35,9 +35,6 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('books-from-feed', event)" data-test="menu-books-from-feed">Books-from-Feed</button>
                 </li>
-                <li class="nav-item librarian-only">
-                    <button class="nav-link" onclick="showSection('photos', event)" data-test="menu-photos">Photos</button>
-                </li>
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
@@ -57,7 +54,7 @@
                     <button class="nav-link" onclick="showSection('global-settings', event)" data-test="menu-global-settings">Global Settings</button>
                 </li>
                 <li class="nav-item librarian-only">
-                    <button class="nav-link" onclick="showSection('loc-bulk-lookup', event)" data-test="menu-loc-bulk-lookup">LOC Bulk Lookup</button>
+                    <button class="nav-link" onclick="showSection('loc-bulk-lookup', event)" data-test="menu-loc-bulk-lookup">LOC Lookup</button>
                 </li>
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('labels', event)" data-test="menu-labels">Labels</button>
@@ -119,22 +116,128 @@
                     <button id="add-library-btn" class="btn btn-primary" onclick="addLibrary()" data-test="add-library-btn">Add Library</button>
                 </div>
             </div>
+
+            <!-- Photo Import/Export Status -->
+            <div class="librarian-only mt-4" data-test="photo-export-section">
+                <h3 data-test="photos-header">Photo Import/Export Status</h3>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p>This section shows the import/export status of all photos in the library with Google Photos.</p>
+                        <p><strong>How it works:</strong></p>
+                        <ul>
+                            <li>Photos are exported to Google Photos and assigned a permanent ID</li>
+                            <li>Photos can be imported from Google Photos using their permanent ID</li>
+                            <li>An album is created to hold the photos, named after this library</li>
+                            <li>You can manually trigger import/export for all pending photos or individual photos</li>
+                        </ul>
+                        <p id="album-info" class="mb-2"><strong>Google Photos Album:</strong> <span id="album-name" class="font-monospace text-primary">Loading...</span></p>
+                        <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
+
+                        <div class="d-flex gap-2 mb-3">
+                            <button id="export-all-photos-btn" class="btn btn-primary" onclick="exportAllPhotos()" data-test="export-all-photos-btn">Export All Pending Photos</button>
+                            <button id="import-all-photos-btn" class="btn btn-success" onclick="importAllPhotos()" data-test="import-all-photos-btn">Import All Pending Photos</button>
+                            <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoExportStatus()" data-test="refresh-photos-btn">Refresh Status</button>
+                        </div>
+
+                        <div id="export-stats" class="row mb-3" data-test="export-stats">
+                            <div class="col-md-2">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Total Photos</h6>
+                                        <p class="card-text fs-4" id="stats-total">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-center bg-success text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Exported</h6>
+                                        <p class="card-text fs-4" id="stats-exported">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-center bg-info text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Imported</h6>
+                                        <p class="card-text fs-4" id="stats-imported">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-center bg-warning">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Pending Export</h6>
+                                        <p class="card-text fs-4" id="stats-pending-export">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-center bg-secondary text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Pending Import</h6>
+                                        <p class="card-text fs-4" id="stats-pending-import">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-center bg-danger text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Failed</h6>
+                                        <p class="card-text fs-4" id="stats-failed">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Photo Details</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped" data-test="photos-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Title/Author</th>
+                                        <th scope="col">LOC Call Number</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Exported At</th>
+                                        <th scope="col">Permanent ID</th>
+                                        <th scope="col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="photos-table-body" data-test="photos-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="authors-section" class="section" data-test="authors-section">
             <h2 data-test="authors-header">Authors</h2>
-            <table class="table" data-test="author-table">
-                <thead>
-                <tr>
-                    <th scope="col">Photo</th>
-                    <th scope="col">Author</th>
-                    <th scope="col">Books</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="author-list-body" data-test="author-list-body">
-                </tbody>
-            </table>
+            <div class="mb-3 librarian-only">
+                <button type="button" class="btn btn-danger" id="delete-authors-no-books-btn" onclick="deleteAuthorsWithNoBooks()" data-test="delete-authors-no-books-btn">
+                    Delete All Authors Who Have No Books
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table" data-test="author-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Author</th>
+                        <th scope="col">Books</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="author-list-body" data-test="author-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="authors-form">
                 <input type="hidden" id="current-author-id">
                 <input type="file" id="author-photo-upload" style="display: none;" accept="image/*" capture="environment"/>
@@ -182,6 +285,10 @@
                             <h3 data-test="author-photos-header">Author Photos</h3>
                             <div id="author-photos" data-test="author-photos"></div>
                         </div>
+                        <div id="author-books-container" class="mb-3" style="display: none;" data-test="author-books-container">
+                            <h3 data-test="author-books-header">Books by this Author</h3>
+                            <div id="author-books" data-test="author-books"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -189,19 +296,21 @@
 
         <div id="books-section" class="section" data-test="books-section">
             <h2 data-test="books-header">Books</h2>
-            <table class="table" data-test="book-table">
-                <thead>
-                <tr>
-                    <th scope="col">Photo</th>
-                    <th scope="col">Book</th>
-                    <th scope="col">LOC Call Number</th>
-                    <th scope="col">Loans</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="book-list-body" data-test="book-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="book-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Book</th>
+                        <th scope="col">LOC Call Number</th>
+                        <th scope="col">Loans</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="book-list-body" data-test="book-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="books-form">
                 <input type="hidden" id="current-book-id">
                 <input type="file" id="photo-upload" style="display: none;" accept="image/*" capture="environment"/>
@@ -242,8 +351,8 @@
                             <textarea id="new-book-description" class="form-control" placeholder="Detailed Description" autocomplete="off" data-test="new-book-description"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="new-book-added" class="form-label">Date Added to Library:</label>
-                            <input type="date" id="new-book-added" class="form-control" autocomplete="off" data-test="new-book-added">
+                            <label for="new-book-added" class="form-label">Date/Time Added to Library:</label>
+                            <input type="datetime-local" id="new-book-added" class="form-control" autocomplete="off" data-test="new-book-added">
                         </div>
                         <div class="mb-3">
                             <label for="new-book-status" class="form-label">Status:</label>
@@ -315,8 +424,11 @@
                         <button id="view-saved-books-btn" class="btn btn-sm btn-secondary" onclick="loadSavedBooks()" data-test="view-saved-books-btn">
                             View Saved Books
                         </button>
-                        <button id="process-all-btn" class="btn btn-sm btn-success" onclick="processAllBooks()" data-test="process-all-btn">
-                            Process All
+                        <button id="process-pending-btn" class="btn btn-sm btn-warning" onclick="processPendingBooks()" data-test="process-pending-btn">
+                            Process Pending
+                        </button>
+                        <button id="process-selected-btn" class="btn btn-sm btn-primary" onclick="processSelectedBooks()" data-test="process-selected-btn">
+                            Process Selected
                         </button>
                     </div>
                 </div>
@@ -325,6 +437,7 @@
                         <table class="table table-striped" id="saved-books-table" data-test="saved-books-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="select-all-books" onchange="toggleAllBookSelections(this.checked)" title="Select/Deselect All"></th>
                                     <th>Photo</th>
                                     <th>Title/Author</th>
                                     <th>LOC Call Number</th>
@@ -335,7 +448,7 @@
                             </thead>
                             <tbody id="saved-books-table-body" data-test="saved-books-table-body">
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
+                                    <td colspan="7" class="text-center text-muted">No saved books to display. Click "View Saved Books" to load.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -344,104 +457,6 @@
             </div>
 
             <div id="processing-results" data-test="processing-results"></div>
-        </div>
-
-        <div id="photos-section" class="section" data-test="photos-section">
-            <h2 data-test="photos-header">Photo Import/Export Status</h2>
-            <div class="card mb-3">
-                <div class="card-body">
-                    <p>This page shows the import/export status of all photos in the library with Google Photos.</p>
-                    <p><strong>How it works:</strong></p>
-                    <ul>
-                        <li>Photos are exported to Google Photos and assigned a permanent ID</li>
-                        <li>Photos can be imported from Google Photos using their permanent ID</li>
-                        <li>An album is created to hold the photos, named after this library</li>
-                        <li>You can manually trigger import/export for all pending photos or individual photos</li>
-                    </ul>
-                    <p id="album-info" class="mb-2"><strong>Google Photos Album:</strong> <span id="album-name" class="font-monospace text-primary">Loading...</span></p>
-                    <p><strong>Note:</strong> Make sure Google Photos API is configured in Settings.</p>
-
-                    <div class="d-flex gap-2 mb-3">
-                        <button id="export-all-photos-btn" class="btn btn-primary" onclick="exportAllPhotos()" data-test="export-all-photos-btn">Export All Pending Photos</button>
-                        <button id="import-all-photos-btn" class="btn btn-success" onclick="importAllPhotos()" data-test="import-all-photos-btn">Import All Pending Photos</button>
-                        <button id="refresh-photos-btn" class="btn btn-secondary" onclick="loadPhotoExportStatus()" data-test="refresh-photos-btn">Refresh Status</button>
-                    </div>
-
-                    <div id="export-stats" class="row mb-3" data-test="export-stats">
-                        <div class="col-md-2">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h6 class="card-title">Total Photos</h6>
-                                    <p class="card-text fs-4" id="stats-total">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card text-center bg-success text-white">
-                                <div class="card-body">
-                                    <h6 class="card-title">Exported</h6>
-                                    <p class="card-text fs-4" id="stats-exported">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card text-center bg-info text-white">
-                                <div class="card-body">
-                                    <h6 class="card-title">Imported</h6>
-                                    <p class="card-text fs-4" id="stats-imported">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card text-center bg-warning">
-                                <div class="card-body">
-                                    <h6 class="card-title">Pending Export</h6>
-                                    <p class="card-text fs-4" id="stats-pending-export">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card text-center bg-secondary text-white">
-                                <div class="card-body">
-                                    <h6 class="card-title">Pending Import</h6>
-                                    <p class="card-text fs-4" id="stats-pending-import">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="card text-center bg-danger text-white">
-                                <div class="card-body">
-                                    <h6 class="card-title">Failed</h6>
-                                    <p class="card-text fs-4" id="stats-failed">0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Photo Details</h5>
-                    <div class="table-responsive">
-                        <table class="table table-striped" data-test="photos-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">ID</th>
-                                    <th scope="col">Title/Author</th>
-                                    <th scope="col">LOC Call Number</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col">Backed Up At</th>
-                                    <th scope="col">Permanent ID</th>
-                                    <th scope="col">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="photos-table-body" data-test="photos-table-body">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div id="search-section" class="section" data-test="search-section">
@@ -520,17 +535,19 @@
 
             <div id="applied-section" class="librarian-only mt-5" data-test="applied-section">
                 <h2 data-test="applied-header">Library Card Applications</h2>
-                <table class="table" data-test="applied-table">
-                    <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="applied-list-body" data-test="applied-list-body">
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table" data-test="applied-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="applied-list-body" data-test="applied-list-body">
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="apply-for-card-section" class="mt-5" data-test="apply-for-card-section">
@@ -553,18 +570,20 @@
 
         <div id="users-section" class="section librarian-only" data-test="users-section">
             <h2 data-test="users-header">Users</h2>
-            <table class="table" data-test="user-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Name</th>
-                        <th scope="col">Books on Loan</th>
-                        <th scope="col">SSO</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="user-list-body" data-test="user-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="user-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Books on Loan</th>
+                            <th scope="col">SSO</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list-body" data-test="user-list-body">
+                    </tbody>
+                </table>
+            </div>
             <form data-test="users-form">
                 <div class="mb-3">
                     <label for="new-user-username" class="form-label">Name:</label>
@@ -593,20 +612,22 @@
                     Show returned loans
                 </label>
             </div>
-            <table class="table" data-test="loan-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Book Title</th>
-                        <th scope="col">Name</th>
-                        <th scope="col">Loan Date</th>
-                        <th scope="col">Due Date</th>
-                        <th scope="col">Return Date</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="loan-list-body" data-test="loan-list-body">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table" data-test="loan-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Book Title</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Loan Date</th>
+                            <th scope="col">Due Date</th>
+                            <th scope="col">Return Date</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loan-list-body" data-test="loan-list-body">
+                    </tbody>
+                </table>
+            </div>
             <div class="librarian-only" data-test="loans-form">
                 <div class="mb-3">
                     <label for="loan-book" class="form-label">Book:</label>
@@ -755,9 +776,9 @@
             </div>
         </div>
 
-        <!-- LOC Bulk Lookup Section (Librarian-only) -->
+        <!-- LOC Lookup Section (Librarian-only) -->
         <div id="loc-bulk-lookup-section" class="section librarian-only" data-test="loc-bulk-lookup-section">
-            <h2 data-test="loc-bulk-lookup-header">LOC Bulk Lookup</h2>
+            <h2 data-test="loc-bulk-lookup-header">LOC Lookup</h2>
             <p class="text-muted">Lookup Library of Congress call numbers for books in bulk.</p>
 
             <div class="mb-3">
@@ -769,8 +790,13 @@
                         View Books Missing LOC
                     </button>
                 </div>
-                <button type="button" class="btn btn-success ms-3" id="lookup-all-missing-btn" data-test="lookup-all-missing-btn">
-                    Lookup All Missing LOC Call Numbers
+                <button type="button" class="btn btn-info ms-3" id="lookup-table-missing-btn" data-test="lookup-table-missing-btn">
+                    <span class="btn-text">Lookup Missing LOC Call Numbers</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="btn btn-success ms-2" id="lookup-all-missing-btn" data-test="lookup-all-missing-btn">
+                    <span class="btn-text">Lookup All Missing LOC Call Numbers</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>
             </div>
 
@@ -781,21 +807,23 @@
             <div id="loc-lookup-results" class="alert alert-success" style="display: none;" data-test="loc-lookup-results"></div>
             <div id="loc-lookup-error" class="alert alert-danger" style="display: none;" data-test="loc-lookup-error"></div>
 
-            <table class="table table-striped" data-test="loc-lookup-table">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Book</th>
-                        <th>LOC Call Number</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
-                    <tr>
-                        <td colspan="4" class="text-center">Click a button above to load books</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped" data-test="loc-lookup-table">
+                    <thead>
+                        <tr>
+                            <th>Photo</th>
+                            <th>Book</th>
+                            <th>LOC Call Number</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
+                        <tr>
+                            <td colspan="4" class="text-center">Click a button above to load books</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="labels-section" class="section librarian-only" data-test="labels-section">
@@ -803,8 +831,11 @@
             <p class="text-muted">Generate Avery 6572 labels (2" x 2-5/8") for books with LOC call numbers.</p>
 
             <div class="mb-3">
-                <button type="button" class="btn btn-primary" id="load-books-for-labels-btn" data-test="load-books-for-labels-btn">
-                    Load Books for Labels
+                <button type="button" class="btn btn-primary" id="view-most-recent-day-btn" data-test="view-most-recent-day-btn">
+                    View Most Recent Day
+                </button>
+                <button type="button" class="btn btn-secondary ms-2" id="view-all-books-btn" data-test="view-all-books-btn">
+                    View All Books
                 </button>
                 <button type="button" class="btn btn-success ms-3" id="generate-all-labels-btn" data-test="generate-all-labels-btn">
                     Generate PDF for All Books
@@ -817,22 +848,24 @@
             <div id="labels-results" class="alert alert-success" style="display: none;" data-test="labels-results"></div>
             <div id="labels-error" class="alert alert-danger" style="display: none;" data-test="labels-error"></div>
 
-            <table class="table table-striped" data-test="labels-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
-                        <th>Photo</th>
-                        <th>Title/Author</th>
-                        <th>LOC Call Number</th>
-                        <th>Date Added</th>
-                    </tr>
-                </thead>
-                <tbody id="labels-table-body" data-test="labels-table-body">
-                    <tr>
-                        <td colspan="5" class="text-center">Click "Load Books for Labels" to see books</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped" data-test="labels-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-labels" data-test="select-all-labels"></th>
+                            <th>Photo</th>
+                            <th>Title/Author</th>
+                            <th>LOC Call Number</th>
+                            <th>Date Added</th>
+                        </tr>
+                    </thead>
+                    <tbody id="labels-table-body" data-test="labels-table-body">
+                        <tr>
+                            <td colspan="5" class="text-center">Click "Load Books for Labels" to see books</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="settings-section" class="section" data-test="settings-section">
@@ -928,6 +961,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/smartcrop@2.0.5/smartcrop.min.js"></script>
+<script src="js/thumbnail-cache.js"></script>
 <script src="js/photo-crop.js"></script>
 <script src="js/books-table.js"></script>
 <script src="js/books-edit.js"></script>

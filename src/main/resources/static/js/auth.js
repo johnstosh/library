@@ -2,6 +2,90 @@
 
 import { fetchData } from './utils.js';
 
+// Inactivity timeout configuration
+const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+let inactivityTimer = null;
+let activityListenersActive = false;
+
+/**
+ * Handles inactivity timeout by logging out the user and redirecting to login
+ * Does not timeout if any buttons are currently processing (have spinners)
+ */
+function handleInactivityTimeout() {
+    // Check if any buttons are currently processing
+    const activeSpinners = document.querySelectorAll('.spinner-border');
+    if (activeSpinners.length > 0) {
+        console.log('[Auth] Inactivity timeout deferred - buttons are processing');
+        // Reset timer to check again later
+        resetInactivityTimer();
+        return;
+    }
+
+    console.log('[Auth] Inactivity timeout reached, logging out user');
+    stopInactivityTimeout();
+    logout();
+}
+
+/**
+ * Resets the inactivity timer when user activity is detected
+ */
+function resetInactivityTimer() {
+    // Clear existing timer
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+
+    // Set new timer
+    inactivityTimer = setTimeout(handleInactivityTimeout, INACTIVITY_TIMEOUT_MS);
+}
+
+/**
+ * Initializes inactivity timeout tracking for authenticated users
+ */
+function initInactivityTimeout() {
+    // Don't re-initialize if already active
+    if (activityListenersActive) {
+        return;
+    }
+
+    console.log('[Auth] Initializing inactivity timeout (5 minutes)');
+
+    // List of events that indicate user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+
+    // Add event listeners for user activity
+    activityEvents.forEach(eventName => {
+        document.addEventListener(eventName, resetInactivityTimer, true);
+    });
+
+    activityListenersActive = true;
+
+    // Start the initial timer
+    resetInactivityTimer();
+}
+
+/**
+ * Stops inactivity timeout tracking and clears all listeners
+ */
+function stopInactivityTimeout() {
+    console.log('[Auth] Stopping inactivity timeout');
+
+    // Clear the timer
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+    }
+
+    // Remove event listeners
+    if (activityListenersActive) {
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        activityEvents.forEach(eventName => {
+            document.removeEventListener(eventName, resetInactivityTimer, true);
+        });
+        activityListenersActive = false;
+    }
+}
+
 /**
  * Check SSO configuration and update the Google SSO button visibility
  */
@@ -62,6 +146,9 @@ export async function checkAuthentication() {
 }
 
 export function showPublicSearchPage() {
+    // Stop inactivity timeout for public pages
+    stopInactivityTimeout();
+
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.style.display = 'none';
     const mainContent = document.getElementById('main-content');
@@ -91,6 +178,9 @@ export function showPublicSearchPage() {
 }
 
 export async function showLoginForm() {
+    // Stop inactivity timeout when showing login form
+    stopInactivityTimeout();
+
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.style.display = 'block';
     const mainContent = document.getElementById('main-content');
@@ -197,9 +287,15 @@ export function showMainContent(roles) {
         // Regular users start with search section (they now have access to Authors, Books, and Loans too)
         showSection('search');
     }
+
+    // Start inactivity timeout for authenticated users
+    initInactivityTimeout();
 }
 
 export async function logout() {
+    // Stop inactivity timeout
+    stopInactivityTimeout();
+
     document.body.classList.remove('user-is-librarian');
     try {
         const response = await fetch('/logout', { method: 'POST' });

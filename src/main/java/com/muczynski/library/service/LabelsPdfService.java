@@ -7,9 +7,11 @@ import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
@@ -30,18 +32,19 @@ import java.util.List;
 @Slf4j
 public class LabelsPdfService {
 
-    // Avery 6572 specifications (approximation for 2" H x 2.625" W)
-    private static final float LABEL_WIDTH = 2.625f * 72;  // 189 points
-    private static final float LABEL_HEIGHT = 2.0f * 72;   // 144 points
+    // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
+    // Reduced height by 1/8" to account for printing/spacing
+    private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
+    private static final float LABEL_HEIGHT = 1.875f * 72;  // 135 points (1.875" = 2.0" - 0.125")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
 
-    // Page margins
-    private static final float TOP_MARGIN = 0.5f * 72;
-    private static final float BOTTOM_MARGIN = 0.5f * 72;
-    private static final float LEFT_MARGIN = 0.3125f * 72;
-    private static final float RIGHT_MARGIN = 0.3125f * 72;
+    // Avery 6572 page margins (official specs)
+    private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
+    private static final float BOTTOM_MARGIN = 0.5f * 72;    // 36 points (0.5")
+    private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
+    private static final float RIGHT_MARGIN = 0.1875f * 72;  // 13.5 points (0.1875")
 
     // Font sizes (configurable via application.properties)
     @Value("${app.labels.font-size.title:11}")
@@ -80,6 +83,9 @@ public class LabelsPdfService {
                             colIndex++;
                         }
                         document.add(currentTable);
+
+                        // Force page break before starting next page of labels
+                        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
                     }
 
                     // Create table with fixed column widths matching label dimensions
@@ -89,6 +95,13 @@ public class LabelsPdfService {
                     }
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
+                    // Remove all table spacing to prevent overflow
+                    currentTable.setMargin(0);
+                    currentTable.setPadding(0);
+                    currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
+                    // Account for 1/8" horizontal dead zone between labels on physical sheet
+                    currentTable.setHorizontalBorderSpacing(0.125f * 72);  // 9 points (1/8")
+                    currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
                 }
@@ -106,11 +119,14 @@ public class LabelsPdfService {
                 labelIndex++;
             }
 
-            // Add the last table and fill remaining cells
+            // Add the last table and fill remaining cells in the current row only
             if (currentTable != null) {
-                while (colIndex < LABELS_PER_ROW) {
-                    currentTable.addCell(createEmptyCell());
-                    colIndex++;
+                // Only fill remaining cells in the current row if we started a row
+                if (colIndex > 0) {
+                    while (colIndex < LABELS_PER_ROW) {
+                        currentTable.addCell(createEmptyCell());
+                        colIndex++;
+                    }
                 }
                 document.add(currentTable);
             }
@@ -134,8 +150,9 @@ public class LabelsPdfService {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
+        cell.setMargin(0);  // No margin to prevent overflow
         cell.setPadding(5);
-        cell.setBorder(new com.itextpdf.layout.borders.SolidBorder(1));
+        cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
         // Ratio 3:1 to give more space to title/author, less to LOC
@@ -201,6 +218,8 @@ public class LabelsPdfService {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
+        cell.setMargin(0);  // No margin to prevent overflow
+        cell.setPadding(0);
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
         return cell;
     }
