@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
@@ -199,7 +200,7 @@
                             <table class="table table-striped" data-test="photos-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col">ID</th>
+                                        <th scope="col">Photo</th>
                                         <th scope="col">Title/Author</th>
                                         <th scope="col">LOC Call Number</th>
                                         <th scope="col">Status</th>
@@ -828,13 +829,13 @@
 
         <div id="labels-section" class="section librarian-only" data-test="labels-section">
             <h2 data-test="labels-header">Labels</h2>
-            <p class="text-muted">Generate Avery 6572 labels (2" x 2-5/8") for books with LOC call numbers.</p>
+            <p class="text-muted">Generate Avery 6572 labels (2" x 2-5/8") for books.</p>
 
             <div class="mb-3">
                 <button type="button" class="btn btn-primary" id="view-most-recent-day-btn" data-test="view-most-recent-day-btn">
                     View Most Recent Day
                 </button>
-                <button type="button" class="btn btn-secondary ms-2" id="view-all-books-btn" data-test="view-all-books-btn">
+                <button type="button" class="btn btn-secondary ms-2" id="view-all-labels-books-btn" data-test="view-all-labels-books-btn">
                     View All Books
                 </button>
                 <button type="button" class="btn btn-success ms-3" id="generate-all-labels-btn" data-test="generate-all-labels-btn">

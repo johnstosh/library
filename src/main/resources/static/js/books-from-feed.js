@@ -155,6 +155,7 @@ function createSavedBookRow(book) {
 
 /**
  * Process a single book by ID
+ * After askGrok processing, automatically performs LOC lookup if LOC number is missing
  */
 async function processSingleBook(bookId) {
     const row = document.querySelector(`tr[data-book-id="${bookId}"]`);
@@ -166,6 +167,7 @@ async function processSingleBook(bookId) {
     const statusCell = row.querySelector('[data-test="book-status"]');
     const resultCell = row.querySelector('[data-test="book-result"]');
     const actionsCell = row.querySelector('td:last-child');
+    const locCell = row.querySelectorAll('td')[3]; // LOC is the 4th column (index 3)
 
     try {
         // Update status to processing
@@ -178,6 +180,52 @@ async function processSingleBook(bookId) {
             // Update status to success
             statusCell.innerHTML = '<span class="badge bg-success">Completed</span>';
             resultCell.innerHTML = `<strong>${escapeHtml(result.title)}</strong><br><small>by ${escapeHtml(result.author)}</small>`;
+
+            // Check if LOC number is missing and automatically lookup
+            // Fetch the updated book data to check LOC status
+            const bookData = await fetchData(`/api/books/${bookId}`);
+
+            if (!bookData.locNumber || bookData.locNumber.trim() === '') {
+                console.log('[BooksFromFeed] LOC number missing for book', bookId, '- performing automatic lookup');
+
+                // Update status to show LOC lookup in progress
+                statusCell.innerHTML = '<span class="badge bg-info">Looking up LOC...</span>';
+
+                try {
+                    // Call LOC lookup endpoint
+                    const locResult = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
+                        method: 'POST'
+                    });
+
+                    if (locResult.success && locResult.locNumber) {
+                        // Update LOC cell with the found LOC number
+                        locCell.innerHTML = '';
+                        const code = document.createElement('code');
+                        code.innerHTML = window.formatLocForSpine(locResult.locNumber);
+                        code.className = 'text-success';
+                        locCell.appendChild(code);
+
+                        console.log('[BooksFromFeed] LOC lookup successful:', locResult.locNumber);
+                        statusCell.innerHTML = '<span class="badge bg-success">Completed + LOC</span>';
+                    } else {
+                        console.log('[BooksFromFeed] LOC lookup failed or not found');
+                        statusCell.innerHTML = '<span class="badge bg-success">Completed (no LOC)</span>';
+                    }
+                } catch (locError) {
+                    console.error('[BooksFromFeed] LOC lookup error:', locError);
+                    // Don't fail the whole process if LOC lookup fails
+                    statusCell.innerHTML = '<span class="badge bg-success">Completed (LOC error)</span>';
+                }
+            } else {
+                // Book already has LOC number
+                console.log('[BooksFromFeed] Book already has LOC number:', bookData.locNumber);
+                locCell.innerHTML = '';
+                const code = document.createElement('code');
+                code.innerHTML = window.formatLocForSpine(bookData.locNumber);
+                code.className = 'text-success';
+                locCell.appendChild(code);
+            }
+
             actionsCell.innerHTML = '<span class="text-success">✓</span>';
         } else {
             // Update status to error

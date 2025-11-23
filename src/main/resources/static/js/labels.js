@@ -14,6 +14,8 @@ export async function loadLabelsSection() {
 
 /**
  * Initialize event listeners when DOM is ready
+ * NOTE: Button IDs must be unique across the entire application.
+ * This section uses 'view-all-labels-books-btn' to avoid conflicts with the LOC section.
  */
 document.addEventListener('DOMContentLoaded', function() {
     // Attach event listeners to buttons
@@ -22,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         viewMostRecentBtn.addEventListener('click', () => loadBooksForLabels('most-recent'));
     }
 
-    const viewAllBooksBtn = document.getElementById('view-all-books-btn');
+    const viewAllBooksBtn = document.getElementById('view-all-labels-books-btn');
     if (viewAllBooksBtn) {
         viewAllBooksBtn.addEventListener('click', () => loadBooksForLabels('all'));
     }
@@ -63,7 +65,7 @@ async function loadBooksForLabels(mode) {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="5" class="text-center">No books found with LOC numbers</td>';
+            row.innerHTML = '<td colspan="5" class="text-center">No books found</td>';
             tableBody.appendChild(row);
             return;
         }

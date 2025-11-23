@@ -101,12 +101,35 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
             row.appendChild(locCell);
 
             const actionsCell = document.createElement('td');
+
+            // View button (icon-only) - always visible
             const viewBtn = document.createElement('button');
-            viewBtn.className = 'btn btn-sm btn-outline-primary';
-            viewBtn.textContent = 'View';
+            viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            viewBtn.title = 'View';
             viewBtn.setAttribute('data-test', 'view-search-book-btn');
             viewBtn.onclick = () => viewBook(book.id);
             actionsCell.appendChild(viewBtn);
+
+            // Edit and Delete buttons (icon-only) - only for librarians
+            if (window.isLibrarian) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-search-book-btn');
+                editBtn.onclick = () => editBook(book.id);
+                actionsCell.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'Delete';
+                deleteBtn.setAttribute('data-test', 'delete-search-book-btn');
+                deleteBtn.onclick = () => deleteBook(book.id);
+                actionsCell.appendChild(deleteBtn);
+            }
+
             row.appendChild(actionsCell);
 
             tableBody.appendChild(row);
@@ -144,14 +167,36 @@ function displaySearchResults(books, authors, query, bookPage, authorPage) {
 
             const span = document.createElement('span');
             span.textContent = `${startAuthor + index}. ${author.name}`;
+            span.className = 'flex-grow-1';
             li.appendChild(span);
 
+            // View button (icon-only) - always visible
             const viewBtn = document.createElement('button');
-            viewBtn.className = 'btn btn-sm btn-outline-primary ms-2';
-            viewBtn.textContent = 'View';
+            viewBtn.className = 'btn btn-sm btn-outline-primary ms-2 me-1';
+            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            viewBtn.title = 'View';
             viewBtn.setAttribute('data-test', 'view-search-author-btn');
             viewBtn.onclick = () => viewAuthor(author.id);
             li.appendChild(viewBtn);
+
+            // Edit and Delete buttons (icon-only) - only for librarians
+            if (window.isLibrarian) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-search-author-btn');
+                editBtn.onclick = () => editAuthor(author.id);
+                li.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'Delete';
+                deleteBtn.setAttribute('data-test', 'delete-search-author-btn');
+                deleteBtn.onclick = () => deleteAuthor(author.id);
+                li.appendChild(deleteBtn);
+            }
 
             authorsList.appendChild(li);
         });

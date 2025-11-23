@@ -1,11 +1,19 @@
 // (c) Copyright 2025 by Muczynski - Main App Entry Point
 
+/*
+ * NOTE: This file uses ES6 module imports with named exports.
+ * All imported functions must be properly exported from their source modules.
+ * Functions are also attached to the window object for compatibility with
+ * legacy inline HTML event handlers (onclick, etc.) that cannot use ES6 imports.
+ */
+
 import { getCookie, fetchData, postData, putData, deleteData, showError, clearError, showBulkSuccess, formatDate, shouldResetForSection, showButtonSpinner, hideButtonSpinner } from './utils.js';
 import { checkAuthentication, showPublicSearchPage, showLoginForm, showLoginError, showMainContent, logout } from './auth.js';
 import { sectionConfig, showSection } from './sections.js';
 import { initApp } from './init.js';
 
 // Attach global functions and variables for HTML onclick and other scripts
+// This provides backward compatibility for non-module code
 window.isLibrarian = false;
 window.getCookie = getCookie;
 window.fetchData = fetchData;

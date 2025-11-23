@@ -75,8 +75,22 @@ public class BookService {
 
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
-        book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
-        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
+
+        // Set author - allow null for temporary books that will be enriched later
+        if (bookDto.getAuthorId() != null) {
+            book.setAuthor(authorRepository.findById(bookDto.getAuthorId())
+                    .orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
+        } else {
+            book.setAuthor(null);
+        }
+
+        // Set library - required field
+        if (bookDto.getLibraryId() == null) {
+            throw new LibraryException("Library ID is required");
+        }
+        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId())
+                .orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
+
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
