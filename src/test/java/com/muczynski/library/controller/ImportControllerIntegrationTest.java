@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -87,7 +88,7 @@ class ImportControllerIntegrationTest {
         testBook.setPublicationYear(2020);
         testBook.setPublisher("Test Publisher");
         testBook.setPlotSummary("A test book summary");
-        testBook.setDateAddedToLibrary(LocalDate.now());
+        testBook.setDateAddedToLibrary(LocalDateTime.now());
         testBook.setStatus(BookStatus.ACTIVE);
         testBook.setLocNumber("PS3000.T47");
         testBook.setAuthor(testAuthor);
@@ -194,7 +195,7 @@ class ImportControllerIntegrationTest {
             Book book = new Book();
             book.setTitle("Book " + i);
             book.setPublicationYear(2020 + i);
-            book.setDateAddedToLibrary(LocalDate.now());
+            book.setDateAddedToLibrary(LocalDateTime.now());
             book.setStatus(BookStatus.ACTIVE);
             book.setAuthor(author);
             book.setLibrary(testLibrary);
@@ -244,7 +245,7 @@ class ImportControllerIntegrationTest {
         Book bookNoAuthor = new Book();
         bookNoAuthor.setTitle("Anonymous Book");
         bookNoAuthor.setPublicationYear(2021);
-        bookNoAuthor.setDateAddedToLibrary(LocalDate.now());
+        bookNoAuthor.setDateAddedToLibrary(LocalDateTime.now());
         bookNoAuthor.setStatus(BookStatus.ACTIVE);
         bookNoAuthor.setLibrary(testLibrary);
         // No author set

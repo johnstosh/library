@@ -250,14 +250,23 @@ async function viewBook(id) {
 
     // Set author name and ID
     document.getElementById('book-author-id').value = data.authorId || '';
-    if (data.authorId) {
-        const author = allAuthors.find(a => a.id == data.authorId);
-        document.getElementById('book-author').value = author ? author.name : '';
-    } else {
-        document.getElementById('book-author').value = '';
-    }
+    // Use author name from DTO (works for all users, including unauthenticated)
+    document.getElementById('book-author').value = data.author || '';
 
-    document.getElementById('book-library').value = data.libraryId || '';
+    // Set library - for non-librarians, populate the select with library name from DTO
+    const librarySelect = document.getElementById('book-library');
+    if (!window.isLibrarian && data.library) {
+        // Clear existing options and add just this library
+        librarySelect.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = data.libraryId;
+        option.textContent = data.library;
+        option.selected = true;
+        librarySelect.appendChild(option);
+    } else {
+        // For librarians, the select is already populated by populateBookDropdowns
+        librarySelect.value = data.libraryId || '';
+    }
     document.getElementById('current-book-id').value = id;
 
     // For non-librarians, make fields read-only and hide action buttons

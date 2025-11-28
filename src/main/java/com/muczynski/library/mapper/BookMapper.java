@@ -44,6 +44,7 @@ public class BookMapper {
         }
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
+            bookDto.setLibrary(book.getLibrary().getName()); // Set library name for display
         }
         // Use efficient queries to get first photo ID and checksum without loading photos collection
         Long firstPhotoId = photoRepository.findFirstPhotoIdByBookId(book.getId());
