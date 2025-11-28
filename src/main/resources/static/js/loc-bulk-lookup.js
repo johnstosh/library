@@ -1,7 +1,7 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData } from './utils.js';
+
 
 /**
  * Initialize event listeners when DOM is ready
@@ -75,7 +75,7 @@ async function loadLocLookupBooks(mode) {
  * Load books from the most recent date added to the library
  * This is called when the LOC Bulk Lookup section is shown
  */
-export async function loadLocBulkLookupSection() {
+async function loadLocBulkLookupSection() {
     await loadLocLookupBooks('most-recent');
 }
 
@@ -522,4 +522,8 @@ function clearSuccess(section) {
         successDiv.style.display = 'none';
     }
 }
+
+// Expose functions globally
+window.loadLocBulkLookupSection = loadLocBulkLookupSection;
+window.lookupTableMissing = lookupTableMissing;
 

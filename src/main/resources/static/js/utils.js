@@ -2,7 +2,7 @@
 
 let isLibrarian = false; // Global variable, accessible via window.isLibrarian
 
-export function getCookie(name) {
+function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         const cookies = document.cookie.split(';');
@@ -17,7 +17,7 @@ export function getCookie(name) {
     return cookieValue;
 }
 
-export async function fetchData(url, options = {}) {
+async function fetchData(url, options = {}) {
     const { suppress401Redirect = false, method = 'GET', body = null } = options;
     const token = getCookie('XSRF-TOKEN');
     const headers = {
@@ -118,7 +118,7 @@ export async function fetchData(url, options = {}) {
     }
 }
 
-export async function postData(url, data, isFormData = false, includeCsrf = true) {
+async function postData(url, data, isFormData = false, includeCsrf = true) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {};
     if (!isFormData) {
@@ -211,7 +211,7 @@ export async function postData(url, data, isFormData = false, includeCsrf = true
     }
 }
 
-export async function putData(url, data, includeCsrf = true) {
+async function putData(url, data, includeCsrf = true) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {
         'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ export async function putData(url, data, includeCsrf = true) {
     }
 }
 
-export async function deleteData(url) {
+async function deleteData(url) {
     const token = getCookie('XSRF-TOKEN');
     const headers = {};
     if (token) {
@@ -387,7 +387,7 @@ export async function deleteData(url) {
     }
 }
 
-export function showError(sectionId, message) {
+function showError(sectionId, message) {
     let errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
     if (!errorDiv) {
         errorDiv = document.createElement('div');
@@ -404,14 +404,14 @@ export function showError(sectionId, message) {
     errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-export function clearError(sectionId) {
+function clearError(sectionId) {
     const errorDiv = document.querySelector(`#${sectionId}-section [data-test="form-error"]`);
     if (errorDiv) {
         errorDiv.remove();
     }
 }
 
-export function showBulkSuccess(textareaId) {
+function showBulkSuccess(textareaId) {
     let successDiv = document.querySelector(`#${textareaId} + [data-test="bulk-import-success"]`);
     if (!successDiv) {
         successDiv = document.createElement('div');
@@ -429,7 +429,7 @@ export function showBulkSuccess(textareaId) {
     }, 3000);
 }
 
-export function formatDate(dateString) {
+function formatDate(dateString) {
     if (!dateString) return '';
 
     // The dateString from the backend is 'YYYY-MM-DD'.
@@ -448,7 +448,7 @@ export function formatDate(dateString) {
     return `${displayMonth}/${displayDay}/${displayYear}`;
 }
 
-export function shouldResetForSection(sectionId) {
+function shouldResetForSection(sectionId) {
     return sectionId !== 'books' && sectionId !== 'authors' || window.isLibrarian;
 }
 
@@ -458,7 +458,7 @@ export function shouldResetForSection(sectionId) {
  * @param {string} password - The plaintext password
  * @returns {Promise<string>} - The SHA-256 hex hash of the password
  */
-export async function hashPassword(password) {
+async function hashPassword(password) {
     if (!password) {
         return password; // Return empty/null as-is
     }
@@ -495,7 +495,7 @@ export async function hashPassword(password) {
  * @param {string} locNumber - The LOC call number to format
  * @returns {string} The formatted call number with HTML <br> tags between components
  */
-export function formatLocForSpine(locNumber) {
+function formatLocForSpine(locNumber) {
     if (!locNumber || locNumber.trim() === '') {
         return '';
     }
@@ -575,7 +575,7 @@ function splitAtLetterPeriods(part, parts) {
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} spinnerText - Optional text to show next to spinner (e.g., "Loading...")
  */
-export function showButtonSpinner(button, spinnerText = null) {
+function showButtonSpinner(button, spinnerText = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 
@@ -609,7 +609,7 @@ export function showButtonSpinner(button, spinnerText = null) {
  * @param {HTMLButtonElement|string} button - The button element or button ID
  * @param {string} text - Optional text to set (if not provided, uses stored original text)
  */
-export function hideButtonSpinner(button, text = null) {
+function hideButtonSpinner(button, text = null) {
     const btn = typeof button === 'string' ? document.getElementById(button) : button;
     if (!btn) return;
 
@@ -626,8 +626,18 @@ export function hideButtonSpinner(button, text = null) {
     delete btn.dataset.originalDisabled;
 }
 
-// Expose functions globally for non-module scripts (e.g., inline onclick handlers)
-// These are needed because not all parts of the application use ES6 modules
+// Expose all functions globally
+window.getCookie = getCookie;
+window.fetchData = fetchData;
+window.postData = postData;
+window.putData = putData;
+window.deleteData = deleteData;
+window.showError = showError;
+window.clearError = clearError;
+window.showBulkSuccess = showBulkSuccess;
+window.formatDate = formatDate;
+window.shouldResetForSection = shouldResetForSection;
+window.hashPassword = hashPassword;
 window.formatLocForSpine = formatLocForSpine;
 window.showButtonSpinner = showButtonSpinner;
 window.hideButtonSpinner = hideButtonSpinner;

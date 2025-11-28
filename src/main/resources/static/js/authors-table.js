@@ -93,3 +93,7 @@ async function deleteAuthor(id) {
         showError('authors', 'Failed to delete author: ' + error.message);
     }
 }
+
+// Expose functions globally for access from other scripts
+window.loadAuthors = loadAuthors;
+window.showAuthorList = showAuthorList;

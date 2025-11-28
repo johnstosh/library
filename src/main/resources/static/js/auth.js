@@ -1,7 +1,5 @@
 // (c) Copyright 2025 by Muczynski - Authentication Module
 
-import { fetchData } from './utils.js';
-
 // Inactivity timeout configuration
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 let inactivityTimer = null;
@@ -134,18 +132,59 @@ async function checkAndUpdateSsoButton() {
     }
 }
 
-export async function checkAuthentication() {
-    console.log('Checking authentication...');
+/**
+ * Check test data page visibility setting and update the Test Data menu item visibility
+ */
+async function checkAndUpdateTestDataPageVisibility() {
     try {
-        const user = await fetchData('/api/users/me', { suppress401Redirect: true });
-        showMainContent(user.roles);
+        const response = await fetch('/api/global-properties/test-data-page-visibility', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const visibility = await response.json();
+            const testDataMenuItem = document.querySelector('[data-test="menu-test-data-item"]');
+
+            if (testDataMenuItem) {
+                if (visibility.showTestDataPage) {
+                    testDataMenuItem.style.display = 'list-item';
+                } else {
+                    testDataMenuItem.style.display = 'none';
+                }
+            }
+        } else {
+            console.error('Failed to check test data page visibility:', response.status);
+            // If we can't check, show the test data page by default for backward compatibility
+            const testDataMenuItem = document.querySelector('[data-test="menu-test-data-item"]');
+            if (testDataMenuItem) {
+                testDataMenuItem.style.display = 'list-item';
+            }
+        }
     } catch (error) {
-        console.log('Authentication check failed:', error);
-        showPublicSearchPage();
+        console.error('Error checking test data page visibility:', error);
+        // If we can't check, show the test data page by default for backward compatibility
+        const testDataMenuItem = document.querySelector('[data-test="menu-test-data-item"]');
+        if (testDataMenuItem) {
+            testDataMenuItem.style.display = 'list-item';
+        }
     }
 }
 
-export function showPublicSearchPage() {
+async function checkAuthentication() {
+    console.log('Checking authentication...');
+    try {
+        const user = await fetchData('/api/users/me', { suppress401Redirect: true });
+        await showMainContent(user.roles);
+    } catch (error) {
+        console.log('Authentication check failed:', error);
+        await showPublicSearchPage();
+    }
+}
+
+async function showPublicSearchPage() {
     // Stop inactivity timeout for public pages
     stopInactivityTimeout();
 
@@ -175,9 +214,12 @@ export function showPublicSearchPage() {
             }
         });
     }
+
+    // Check and update test data page visibility based on global settings
+    await checkAndUpdateTestDataPageVisibility();
 }
 
-export async function showLoginForm() {
+async function showLoginForm() {
     // Stop inactivity timeout when showing login form
     stopInactivityTimeout();
 
@@ -209,9 +251,12 @@ export async function showLoginForm() {
 
     // Check SSO configuration and show/hide Google SSO button
     await checkAndUpdateSsoButton();
+
+    // Check and update test data page visibility based on global settings
+    await checkAndUpdateTestDataPageVisibility();
 }
 
-export async function showLoginError() {
+async function showLoginError() {
     console.log('Showing login error');
 
     // Show login form elements
@@ -240,6 +285,9 @@ export async function showLoginError() {
     // Check SSO configuration and show/hide Google SSO button
     await checkAndUpdateSsoButton();
 
+    // Check and update test data page visibility based on global settings
+    await checkAndUpdateTestDataPageVisibility();
+
     // Show error message (don't hide it like showLoginForm does)
     const errorEl = document.getElementById('login-error');
     console.log('Login error element found:', !!errorEl);
@@ -254,7 +302,7 @@ export async function showLoginError() {
     }
 }
 
-export function showMainContent(roles) {
+async function showMainContent(roles) {
     console.log('Showing main content for roles:', roles);
     window.isLibrarian = roles.includes('LIBRARIAN');
     const loginForm = document.getElementById('login-form');
@@ -284,15 +332,24 @@ export function showMainContent(roles) {
         document.querySelectorAll('.librarian-only').forEach(item => {
             item.style.display = 'none';
         });
+        // Hide items that should only be visible to librarians or unauthenticated users (not regular users)
+        document.querySelectorAll('.librarian-or-unauthenticated').forEach(item => {
+            item.style.display = 'none';
+        });
         // Regular users start with search section (they now have access to Authors, Books, and Loans too)
         showSection('search');
+        // Populate book dropdowns for regular users too (they need to view books)
+        populateBookDropdowns();
     }
+
+    // Check and update test data page visibility based on global settings
+    await checkAndUpdateTestDataPageVisibility();
 
     // Start inactivity timeout for authenticated users
     initInactivityTimeout();
 }
 
-export async function logout() {
+async function logout() {
     // Stop inactivity timeout
     stopInactivityTimeout();
 
@@ -309,6 +366,10 @@ export async function logout() {
     }
 }
 
-// Expose functions globally for HTML onclick handlers
+// Expose all functions globally
+window.checkAuthentication = checkAuthentication;
+window.showPublicSearchPage = showPublicSearchPage;
 window.showLoginForm = showLoginForm;
+window.showLoginError = showLoginError;
+window.showMainContent = showMainContent;
 window.logout = logout;

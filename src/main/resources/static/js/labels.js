@@ -1,12 +1,12 @@
 /*
  * (c) Copyright 2025 by Muczynski
  */
-import { fetchData } from './utils.js';
+
 
 /**
  * Load Labels section - auto-loads books from most recent day
  */
-export async function loadLabelsSection() {
+async function loadLabelsSection() {
     console.log('[Labels] Loading labels section');
     // Auto-load books from most recent day
     await loadBooksForLabels('most-recent');
@@ -255,3 +255,7 @@ function clearSuccess(section) {
         successDiv.style.display = 'none';
     }
 }
+
+// Expose functions globally
+window.loadLabelsSection = loadLabelsSection;
+window.generateLabels = generateLabels;

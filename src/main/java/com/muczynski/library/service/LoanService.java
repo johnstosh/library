@@ -77,6 +77,18 @@ public class LoanService {
 
     public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
         List<User> users = userRepository.findAllByUsernameOrderByIdAsc(username);
+
+        // If no users found by username, check if this is an OAuth subject ID
+        if (users.isEmpty()) {
+            // Try to find by SSO subject ID (for OAuth users like Google)
+            // OAuth subject IDs are typically numeric strings
+            List<User> ssoUsers = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc("google", username);
+            if (!ssoUsers.isEmpty()) {
+                users = ssoUsers;
+                logger.debug("Found user by SSO subject ID: {}", username);
+            }
+        }
+
         if (users.isEmpty()) {
             throw new LibraryException("User not found: " + username);
         }

@@ -39,7 +39,7 @@
                 <li class="nav-item public-item">
                     <button class="nav-link" onclick="showSection('search', event)" data-test="menu-search">Search</button>
                 </li>
-                <li class="nav-item public-item" data-test="menu-library-card-item">
+                <li class="nav-item public-item librarian-or-unauthenticated" data-test="menu-library-card-item">
                     <button class="nav-link" onclick="showSection('library-card', event)" data-test="menu-library-card">Library Card</button>
                 </li>
                 <li class="nav-item librarian-only">
@@ -48,7 +48,7 @@
                 <li class="nav-item">
                     <button class="nav-link" onclick="showSection('loans', event)" data-test="menu-loans">Loans</button>
                 </li>
-                <li class="nav-item public-item" data-test="menu-test-data-item">
+                <li class="nav-item" data-test="menu-test-data-item">
                     <button class="nav-link" onclick="showSection('test-data', event)" data-test="menu-test-data">Test Data</button>
                 </li>
                 <li class="nav-item librarian-only">
@@ -902,7 +902,7 @@
                     <input type="password" id="user-password" class="form-control" autocomplete="new-password" data-test="user-password">
                     <div class="form-text">Leave blank to keep your current password.</div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 librarian-only">
                     <label for="xai-api-key" class="form-label">XAI API Key (for AI features)</label>
                     <input type="text" id="xai-api-key" class="form-control" autocomplete="off" placeholder="Enter your xAI API key" data-test="xai-api-key">
                     <div class="form-text">This key enables AI-powered search and recommendations. Get one from x.ai.</div>
@@ -994,20 +994,20 @@
 <script src="js/authors-table.js"></script>
 <script src="js/authors-edit.js"></script>
 <script src="js/authors-photo.js"></script>
-<script src="js/users.js" type="module"></script>
+<script src="js/users.js"></script>
 <script src="js/loans.js"></script>
-<script src="js/librarycard.js" type="module"></script>
+<script src="js/librarycard.js"></script>
 <script src="js/search.js"></script>
-<script src="js/settings.js" type="module"></script>
+<script src="js/settings.js"></script>
 <script src="js/global-settings.js"></script>
-<script src="js/loc-bulk-lookup.js" type="module"></script>
-<script src="js/labels.js" type="module"></script>
+<script src="js/loc-bulk-lookup.js"></script>
+<script src="js/labels.js"></script>
 <script src="js/test-data.js"></script>
-<script src="js/utils.js" type="module"></script>
-<script src="js/auth.js" type="module"></script>
-<script src="js/sections.js" type="module"></script>
-<script src="js/init.js" type="module"></script>
-<script src="js/app.js" type="module"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sections.js"></script>
+<script src="js/init.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>

@@ -122,3 +122,6 @@ async function deleteBook(id) {
         showError('books', 'Failed to delete book: ' + error.message);
     }
 }
+
+// Expose functions globally for access from other scripts
+window.loadBooks = loadBooks;

@@ -101,6 +101,15 @@ function resetAuthorForm() {
     document.getElementById('new-author-bio').value = '';
     document.getElementById('current-author-id').value = '';
 
+    // Remove readonly attributes (in case they were set for viewing)
+    document.getElementById('new-author-name').readOnly = false;
+    document.getElementById('new-author-dob').readOnly = false;
+    document.getElementById('new-author-dod').readOnly = false;
+    document.getElementById('new-author-religion').readOnly = false;
+    document.getElementById('new-author-country').readOnly = false;
+    document.getElementById('new-author-nationality').readOnly = false;
+    document.getElementById('new-author-bio').readOnly = false;
+
     const btn = document.getElementById('add-author-btn');
     btn.textContent = 'Add Author';
     btn.onclick = addAuthor;
@@ -110,6 +119,14 @@ function resetAuthorForm() {
     document.getElementById('add-author-photo-google-btn').style.display = 'none';
     document.getElementById('author-photos-container').style.display = 'none';
     document.getElementById('author-books-container').style.display = 'none';
+
+    // Hide the form for non-librarians (it was shown by viewAuthor)
+    if (!window.isLibrarian) {
+        const authorForm = document.querySelector('[data-test="authors-form"]');
+        if (authorForm) {
+            authorForm.style.display = 'none';
+        }
+    }
 
     showAuthorList(true);
     clearError('authors');
@@ -215,3 +232,7 @@ async function deleteAuthorsWithNoBooks() {
         hideButtonSpinner(btn);
     }
 }
+
+// Expose functions globally for access from other scripts
+window.resetAuthorForm = resetAuthorForm;
+window.updateAuthor = updateAuthor;

@@ -353,3 +353,6 @@ async function handleAuthorPhotoUpload(event) {
 }
 
 document.getElementById('author-photo-upload').addEventListener('change', handleAuthorPhotoUpload);
+
+// Expose functions globally for access from other scripts
+window.displayAuthorPhotos = displayAuthorPhotos;

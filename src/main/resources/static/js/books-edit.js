@@ -49,7 +49,14 @@ async function resetBookForm() {
     document.getElementById('new-book-summary').value = '';
     document.getElementById('new-book-related').value = '';
     document.getElementById('new-book-description').value = '';
-    document.getElementById('new-book-added').value = '';
+    // Initialize date added to current date/time in datetime-local format (YYYY-MM-DDTHH:mm)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('new-book-added').value = `${year}-${month}-${day}T${hours}:${minutes}`;
     document.getElementById('new-book-status').value = 'ACTIVE';
     document.getElementById('new-book-loc').value = '';
     document.getElementById('new-book-status-reason').value = '';
@@ -113,6 +120,16 @@ async function prepareNewBookForPhoto(title) {
     // Scroll to bottom
     window.scrollTo(0, document.body.scrollHeight);
 
+    // Initialize date added to current date/time
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    document.getElementById('new-book-added').value = currentDateTime;
+
     // Save initial data to backend (minimal, just title and library, no author)
     const initialData = {
         title: title,
@@ -123,7 +140,7 @@ async function prepareNewBookForPhoto(title) {
         plotSummary: '',
         relatedWorks: '',
         detailedDescription: '',
-        dateAddedToLibrary: '',
+        dateAddedToLibrary: currentDateTime,
         status: 'ACTIVE',
         locNumber: '',
         statusReason: ''
@@ -573,3 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Expose functions globally for access from other scripts
+window.populateBookDropdowns = populateBookDropdowns;
+window.resetBookForm = resetBookForm;

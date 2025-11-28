@@ -1,10 +1,10 @@
 // (c) Copyright 2025 by Muczynski - Initialization Module
 
-import { checkAuthentication, showLoginError } from './auth.js';
-import { showSection } from './sections.js';
-import { showBulkSuccess, hashPassword } from './utils.js';
 
-export function initApp() {
+
+
+
+function initApp() {
     console.log('DOM loaded');
     // Add submit event listener to login form to hash password before submission
     const loginForm = document.getElementById('login-form');

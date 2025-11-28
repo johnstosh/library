@@ -312,6 +312,12 @@ async function viewAuthor(id) {
     showSection('authors');
     showAuthorList(false);
 
+    // Show the form (it's hidden by librarian-only class for non-librarians)
+    const authorForm = document.querySelector('[data-test="authors-form"]');
+    if (authorForm) {
+        authorForm.style.display = 'block';
+    }
+
     const data = await fetchData(`/api/authors/${id}`);
 
     // Populate form fields with author data

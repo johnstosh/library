@@ -1,8 +1,8 @@
 // (c) Copyright 2025 by Muczynski - Sections Module
 
-import { shouldResetForSection } from './utils.js';
-import { loadLocBulkLookupSection } from './loc-bulk-lookup.js';
-import { loadLabelsSection } from './labels.js';
+
+
+
 
 // Combined loader for library-card section
 function loadLibraryCardSectionCombined() {
@@ -23,7 +23,7 @@ function loadLibrariesSectionCombined() {
     }
 }
 
-export const sectionConfig = {
+const sectionConfig = {
     'libraries': { load: loadLibrariesSectionCombined, reset: null },
     'authors': { load: loadAuthors, reset: resetAuthorForm },
     'books': { load: loadBooks, reset: resetBookForm },
@@ -39,7 +39,7 @@ export const sectionConfig = {
     'settings': { load: loadSettings, reset: null }
 };
 
-export function showSection(sectionId, event) {
+function showSection(sectionId, event) {
     console.log(`[Sections] Showing section: ${sectionId}`);
     const currentActiveButton = document.querySelector('#section-menu button.active');
     const newActiveButton = event ? event.target.closest('button') : document.querySelector(`#section-menu button[onclick*="'${sectionId}'"]`);
@@ -105,3 +105,7 @@ export function showSection(sectionId, event) {
         bsCollapse.hide();
     }
 }
+
+// Expose all functions globally
+window.sectionConfig = sectionConfig;
+window.showSection = showSection;
