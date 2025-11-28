@@ -374,3 +374,24 @@ html, body {
 [data-test="author-photo-cell"] {
     vertical-align: middle;
 }
+
+/* Login page split layout */
+#login-form .row {
+    margin: 0;
+}
+
+#login-form .col-md-6 {
+    padding: 0;
+}
+
+/* Mobile responsiveness for login page */
+@media (max-width: 767.98px) {
+    #login-form .col-md-6:first-child {
+        min-height: 200px !important;
+    }
+
+    #login-form .col-md-6:last-child {
+        min-height: auto !important;
+        padding: 2rem 1rem !important;
+    }
+}
