@@ -813,11 +813,11 @@
                     </button>
                 </div>
                 <button type="button" class="btn btn-info ms-3" id="lookup-table-missing-btn" data-test="lookup-table-missing-btn">
-                    <span class="btn-text">Lookup Missing LOC Call Numbers</span>
+                    <span class="btn-text">Lookup Selected Books</span>
                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>
                 <button type="button" class="btn btn-success ms-2" id="lookup-all-missing-btn" data-test="lookup-all-missing-btn">
-                    <span class="btn-text">Lookup All Missing LOC Call Numbers</span>
+                    <span class="btn-text">Lookup All Missing in Database</span>
                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                 </button>
             </div>
@@ -833,15 +833,16 @@
                 <table class="table table-striped" data-test="loc-lookup-table">
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="select-all-loc-lookup" data-test="select-all-loc-lookup"></th>
                             <th>Photo</th>
-                            <th>Book</th>
+                            <th>Title/Author</th>
                             <th>LOC Call Number</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="loc-lookup-table-body" data-test="loc-lookup-table-body">
                         <tr>
-                            <td colspan="4" class="text-center">Click a button above to load books</td>
+                            <td colspan="5" class="text-center">Click a button above to load books</td>
                         </tr>
                     </tbody>
                 </table>

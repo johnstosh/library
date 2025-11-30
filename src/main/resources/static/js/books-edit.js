@@ -594,3 +594,4 @@ document.addEventListener('DOMContentLoaded', function() {
 // Expose functions globally for access from other scripts
 window.populateBookDropdowns = populateBookDropdowns;
 window.resetBookForm = resetBookForm;
+window.editBook = editBook;

@@ -27,6 +27,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (lookupAllBtn) {
         lookupAllBtn.addEventListener('click', () => lookupAllMissing());
     }
+
+    const selectAllCheckbox = document.getElementById('select-all-loc-lookup');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.book-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
 });
 
 /**
@@ -54,7 +62,7 @@ async function loadLocLookupBooks(mode) {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="4" class="text-center">No books found</td>';
+            row.innerHTML = '<td colspan="5" class="text-center">No books found</td>';
             tableBody.appendChild(row);
             return;
         }
@@ -86,6 +94,16 @@ function createBookRow(book) {
     const row = document.createElement('tr');
     row.setAttribute('data-test', 'loc-lookup-book-row');
     row.setAttribute('data-book-id', book.id);
+
+    // Checkbox cell
+    const checkboxCell = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'book-checkbox';
+    checkbox.setAttribute('data-book-id', book.id);
+    checkbox.setAttribute('data-test', 'book-checkbox');
+    checkboxCell.appendChild(checkbox);
+    row.appendChild(checkboxCell);
 
     // Photo cell
     const photoCell = document.createElement('td');
@@ -332,29 +350,24 @@ async function lookupSingleBook(bookId) {
 };
 
 /**
- * Lookup LOC numbers for books missing LOC in the current table
+ * Lookup LOC numbers for selected books in the current table
  */
 async function lookupTableMissing() {
     try {
         clearError('loc-lookup');
         clearSuccess('loc-lookup');
 
-        // Get all book IDs from the current table that don't have LOC numbers
-        const tableBody = document.getElementById('loc-lookup-table-body');
-        const rows = tableBody.querySelectorAll('tr[data-book-id]');
+        // Get all selected book IDs from the current table
+        const selectedCheckboxes = document.querySelectorAll('.book-checkbox:checked');
 
-        const missingBookIds = [];
-        rows.forEach(row => {
-            const locCell = row.querySelector('[data-test="loc-number"]');
-            // Check if LOC cell shows "Not set"
-            if (locCell && locCell.textContent.includes('Not set')) {
-                const bookId = row.getAttribute('data-book-id');
-                missingBookIds.push(bookId);
-            }
+        const selectedBookIds = [];
+        selectedCheckboxes.forEach(checkbox => {
+            const bookId = checkbox.getAttribute('data-book-id');
+            selectedBookIds.push(bookId);
         });
 
-        if (missingBookIds.length === 0) {
-            showSuccess('loc-lookup', 'No books in table are missing LOC numbers');
+        if (selectedBookIds.length === 0) {
+            showError('loc-lookup', 'No books selected. Please select books to lookup.');
             return;
         }
 
@@ -366,13 +379,13 @@ async function lookupTableMissing() {
         const progressDiv = document.getElementById('loc-lookup-progress');
         const progressText = document.getElementById('loc-lookup-progress-text');
         progressDiv.style.display = 'block';
-        progressText.textContent = `Looking up ${missingBookIds.length} book(s) from table...`;
+        progressText.textContent = `Looking up ${selectedBookIds.length} selected book(s)...`;
 
         // Lookup each book
         let successCount = 0;
         let failureCount = 0;
 
-        for (const bookId of missingBookIds) {
+        for (const bookId of selectedBookIds) {
             try {
                 const result = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
                     method: 'POST'
@@ -401,13 +414,13 @@ async function lookupTableMissing() {
             }
 
             // Update progress
-            progressText.textContent = `Looked up ${successCount + failureCount}/${missingBookIds.length} book(s)...`;
+            progressText.textContent = `Looked up ${successCount + failureCount}/${selectedBookIds.length} book(s)...`;
         }
 
         // Hide progress
         progressDiv.style.display = 'none';
 
-        let message = `Table lookup completed: ${successCount} success, ${failureCount} failed`;
+        let message = `Selected book lookup completed: ${successCount} success, ${failureCount} failed`;
         if (successCount > 0) {
             showSuccess('loc-lookup', message);
         } else {
@@ -417,10 +430,10 @@ async function lookupTableMissing() {
     } catch (error) {
         const progressDiv = document.getElementById('loc-lookup-progress');
         progressDiv.style.display = 'none';
-        showError('loc-lookup', 'Table lookup failed: ' + error.message);
+        showError('loc-lookup', 'Selected book lookup failed: ' + error.message);
     } finally {
         const btn = document.getElementById('lookup-table-missing-btn');
-        hideButtonSpinner(btn, 'Lookup Table Missing');
+        hideButtonSpinner(btn, 'Lookup Selected Books');
     }
 }
 
@@ -486,7 +499,7 @@ async function lookupAllMissing() {
         showError('loc-lookup', 'Bulk lookup failed: ' + error.message);
     } finally {
         const btn = document.getElementById('lookup-all-missing-btn');
-        hideButtonSpinner(btn, 'Lookup All Missing');
+        hideButtonSpinner(btn, 'Lookup All Missing in Database');
     }
 };
 

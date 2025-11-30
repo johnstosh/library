@@ -125,3 +125,4 @@ async function deleteBook(id) {
 
 // Expose functions globally for access from other scripts
 window.loadBooks = loadBooks;
+window.deleteBook = deleteBook;
