@@ -66,16 +66,27 @@ public class MenuColorUITest {
     }
 
     private void login() {
+        // Enable console logging to debug login issues
+        page.onConsoleMessage(msg -> System.out.println("BROWSER CONSOLE: " + msg.text()));
+
         page.navigate("http://localhost:" + port);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(5000L));
         page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
         page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+
+        System.out.println("Filling in login credentials...");
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
+
+        System.out.println("Clicking login submit button...");
         page.click("[data-test='login-submit']");
+
+        System.out.println("Waiting for main-content to be visible...");
         page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        System.out.println("Waiting for menu-authors to be visible...");
         page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(5000L).setState(WaitForSelectorState.VISIBLE));
+        System.out.println("Login successful!");
     }
 
     @Test

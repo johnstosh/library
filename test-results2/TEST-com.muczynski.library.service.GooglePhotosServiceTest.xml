@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.service.GooglePhotosServiceTest" tests="4" skipped="0" failures="4" errors="0" timestamp="2025-11-30T03:06:09.555Z" hostname="cs-913025961294-default" time="0.976">
+  <properties/>
+  <testcase name="updatePhotoDescription_withValidPhotoId_updatesSuccessfully()" classname="com.muczynski.library.service.GooglePhotosServiceTest" time="0.92">
+    <failure message="org.opentest4j.AssertionFailedError: Unexpected exception thrown: com.muczynski.library.exception.LibraryException: User not found" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Unexpected exception thrown: com.muczynski.library.exception.LibraryException: User not found
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+	at app//org.junit.jupiter.api.AssertDoesNotThrow.createAssertionFailedError(AssertDoesNotThrow.java:84)
+	at app//org.junit.jupiter.api.AssertDoesNotThrow.assertDoesNotThrow(AssertDoesNotThrow.java:53)
+	at app//org.junit.jupiter.api.AssertDoesNotThrow.assertDoesNotThrow(AssertDoesNotThrow.java:36)
+	at app//org.junit.jupiter.api.Assertions.assertDoesNotThrow(Assertions.java:3199)
+	at app//com.muczynski.library.service.GooglePhotosServiceTest.updatePhotoDescription_withValidPhotoId_updatesSuccessfully(GooglePhotosServiceTest.java:155)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: com.muczynski.library.exception.LibraryException: User not found
+	at app//com.muczynski.library.service.GooglePhotosService.findUserByUsername(GooglePhotosService.java:59)
+	at app//com.muczynski.library.service.GooglePhotosService.getValidAccessToken(GooglePhotosService.java:207)
+	at app//com.muczynski.library.service.GooglePhotosService.updatePhotoDescription(GooglePhotosService.java:147)
+	at app//com.muczynski.library.service.GooglePhotosServiceTest.lambda$updatePhotoDescription_withValidPhotoId_updatesSuccessfully$1(GooglePhotosServiceTest.java:156)
+	at app//org.junit.jupiter.api.AssertDoesNotThrow.assertDoesNotThrow(AssertDoesNotThrow.java:49)
+	... 6 more
+</failure>
+  </testcase>
+  <testcase name="downloadPhoto_withoutApiKey_throwsException()" classname="com.muczynski.library.service.GooglePhotosServiceTest" time="0.011">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:31)
+	at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:183)
+	at app//com.muczynski.library.service.GooglePhotosServiceTest.downloadPhoto_withoutApiKey_throwsException(GooglePhotosServiceTest.java:136)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="updatePhotoDescription_withException_throwsRuntimeException()" classname="com.muczynski.library.service.GooglePhotosServiceTest" time="0.028">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:31)
+	at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:183)
+	at app//com.muczynski.library.service.GooglePhotosServiceTest.updatePhotoDescription_withException_throwsRuntimeException(GooglePhotosServiceTest.java:185)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="downloadPhoto_withValidUrl_returnsBytes()" classname="com.muczynski.library.service.GooglePhotosServiceTest" time="0.013">
+    <failure message="com.muczynski.library.exception.LibraryException: User not found" type="com.muczynski.library.exception.LibraryException">com.muczynski.library.exception.LibraryException: User not found
+	at app//com.muczynski.library.service.GooglePhotosService.findUserByUsername(GooglePhotosService.java:59)
+	at app//com.muczynski.library.service.GooglePhotosService.getValidAccessToken(GooglePhotosService.java:207)
+	at app//com.muczynski.library.service.GooglePhotosService.downloadPhoto(GooglePhotosService.java:86)
+	at app//com.muczynski.library.service.GooglePhotosServiceTest.downloadPhoto_withValidUrl_returnsBytes(GooglePhotosServiceTest.java:110)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[2025-11-30T03:06:10.471Z  INFO 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Updating photo description for photo ID: photo123
+2025-11-30T03:06:10.471Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : New description: Title: Test Book
+Author: Test Author
+2025-11-30T03:06:10.471Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Getting valid access token for user: testuser
+2025-11-30T03:06:10.485Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Downloading photo from base URL: https://example.com/photo
+2025-11-30T03:06:10.485Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Getting valid access token for user: testuser
+2025-11-30T03:06:10.504Z  INFO 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Updating photo description for photo ID: photo123
+2025-11-30T03:06:10.505Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : New description: Title: Test Book
+Author: Test Author
+2025-11-30T03:06:10.505Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Getting valid access token for user: testuser
+2025-11-30T03:06:10.526Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Downloading photo from base URL: https://example.com/photo
+2025-11-30T03:06:10.527Z DEBUG 26936 --- [    Test worker] c.m.library.service.GooglePhotosService  : Getting valid access token for user: testuser
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

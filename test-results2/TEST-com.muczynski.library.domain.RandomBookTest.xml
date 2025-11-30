@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.domain.RandomBookTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:06:09.010Z" hostname="cs-913025961294-default" time="0.026">
+  <properties/>
+  <testcase name="testRandomBookCreation()" classname="com.muczynski.library.domain.RandomBookTest" time="0.026"/>
+  <system-out><![CDATA[2025-11-30T03:06:07.039Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.domain.RandomBookTest]: RandomBookTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-30T03:06:07.053Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.domain.RandomBookTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:06:07.108Z  INFO 26936 --- [    Test worker] c.m.library.domain.RandomBookTest        : Starting RandomBookTest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:06:07.108Z DEBUG 26936 --- [    Test worker] c.m.library.domain.RandomBookTest        : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:06:07.112Z  INFO 26936 --- [    Test worker] c.m.library.domain.RandomBookTest        : No active profile set, falling back to 1 default profile: "default"
+2025-11-30T03:06:07.451Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:06:07.480Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 27 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:06:07.670Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:06:07.673Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:06:07.685Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:06:07.687Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-21 - Starting...
+2025-11-30T03:06:07.816Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-21 - Added connection conn200: url=jdbc:h2:file:./data/library user=SA
+2025-11-30T03:06:07.816Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-21 - Start completed.
+2025-11-30T03:06:07.872Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-21)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:06:08.021Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:06:08.130Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:06:08.569Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:06:08.667Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:06:08.907Z  INFO 26936 --- [    Test worker] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:file:./data/library'
+2025-11-30T03:06:08.984Z  INFO 26936 --- [    Test worker] c.m.library.domain.RandomBookTest        : Started RandomBookTest in 1.904 seconds (process running for 258.096)
+2025-11-30T03:06:08.992Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:06:09.002Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : No users need userIdentifier migration
+2025-11-30T03:06:09.007Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

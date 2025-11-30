@@ -1,0 +1,755 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.controller.GoogleOAuthControllerTest" tests="8" skipped="0" failures="7" errors="0" timestamp="2025-11-30T03:05:43.331Z" hostname="cs-913025961294-default" time="0.472">
+  <properties/>
+  <testcase name="testAuthorize_Unauthorized()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.13">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;401&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;401&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallConstructor(CallSiteArray.java:57)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:263)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testAuthorize_Unauthorized(GoogleOAuthControllerTest.java:115)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testRevoke_Success()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.04">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testRevoke_Success(GoogleOAuthControllerTest.java:158)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testAuthorize_ContainsAllRequiredScopes()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.052">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;302&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;302&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testAuthorize_ContainsAllRequiredScopes(GoogleOAuthControllerTest.java:81)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testAuthorize_MissingOriginParameter()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.059">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;400&gt; but was &lt;500&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;400&gt; but was &lt;500&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testAuthorize_MissingOriginParameter(GoogleOAuthControllerTest.java:127)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testAuthorize_Success()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.027">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;302&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;302&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testAuthorize_Success(GoogleOAuthControllerTest.java:67)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testRevoke_Unauthorized()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.044"/>
+  <testcase name="testRevoke_UserNotFound()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.053">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;500&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;500&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testRevoke_UserNotFound(GoogleOAuthControllerTest.java:192)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testRevoke_AlreadyRevoked()" classname="com.muczynski.library.controller.GoogleOAuthControllerTest" time="0.031">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;422&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;422&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testRevoke_AlreadyRevoked(GoogleOAuthControllerTest.java:215)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[2025-11-30T03:05:39.953Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.controller.GoogleOAuthControllerTest]: GoogleOAuthControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-30T03:05:39.958Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.controller.GoogleOAuthControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:05:40.006Z  INFO 26936 --- [    Test worker] c.m.l.c.GoogleOAuthControllerTest        : Starting GoogleOAuthControllerTest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:05:40.007Z DEBUG 26936 --- [    Test worker] c.m.l.c.GoogleOAuthControllerTest        : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:05:40.007Z  INFO 26936 --- [    Test worker] c.m.l.c.GoogleOAuthControllerTest        : The following 1 profile is active: "test"
+2025-11-30T03:05:40.359Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:05:40.403Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 41 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:05:41.029Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:05:41.032Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:05:41.045Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:05:41.046Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-13 - Starting...
+2025-11-30T03:05:41.049Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-13 - Added connection conn120: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:05:41.050Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-13 - Start completed.
+2025-11-30T03:05:41.051Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:05:41.051Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-13)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:05:41.331Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:05:41.362Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:05:42.068Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:05:42.319Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:05:42.684Z  INFO 26936 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2025-11-30T03:05:42.684Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2025-11-30T03:05:42.686Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2025-11-30T03:05:42.715Z  INFO 26936 --- [    Test worker] c.m.l.c.GoogleOAuthControllerTest        : Started GoogleOAuthControllerTest in 2.744 seconds (process running for 231.828)
+2025-11-30T03:05:43.315Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:05:43.318Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : No users need userIdentifier migration
+2025-11-30T03:05:43.326Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:05:43.372Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : OAuth authorization initiated from origin: http://localhost:8080
+2025-11-30T03:05:43.375Z DEBUG 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:05:43.388Z  INFO 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:05:43.395Z  WARN 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : No Client ID configured in database, environment variable, or config file
+2025-11-30T03:05:43.398Z ERROR 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Client ID not configured. Librarian must set Client ID in Global Settings.
+2025-11-30T03:05:43.400Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/authorize: Google Client ID not configured. Contact your librarian to configure it in Global Settings.
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/oauth/google/authorize
+       Parameters = {origin=[http://localhost:8080]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#authorize(String)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"Google Client ID not configured. Contact your librarian to configure it in Global Settings.","timestamp":"2025-11-30T03:05:43.400962388"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.487Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoke Google Photos access requested
+2025-11-30T03:05:43.488Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoking Google Photos access for user: testuser
+2025-11-30T03:05:43.489Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/revoke: User not found
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/oauth/google/revoke
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=testuser, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#revoke()
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"User not found","timestamp":"2025-11-30T03:05:43.490259427"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.524Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : OAuth authorization initiated from origin: http://localhost:8080
+2025-11-30T03:05:43.525Z DEBUG 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:05:43.535Z  WARN 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : No Client ID configured in database, environment variable, or config file
+2025-11-30T03:05:43.536Z ERROR 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Client ID not configured. Librarian must set Client ID in Global Settings.
+2025-11-30T03:05:43.537Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/authorize: Google Client ID not configured. Contact your librarian to configure it in Global Settings.
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/oauth/google/authorize
+       Parameters = {origin=[http://localhost:8080]}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=testuser, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#authorize(String)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"Google Client ID not configured. Contact your librarian to configure it in Global Settings.","timestamp":"2025-11-30T03:05:43.537545523"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.603Z ERROR 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Unexpected exception on path uri=/api/oauth/google/authorize: Required request parameter 'origin' for method parameter type String is not present
+
+org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'origin' for method parameter type String is not present
+	at org.springframework.web.method.annotation.RequestParamMethodArgumentResolver.handleMissingValueInternal(RequestParamMethodArgumentResolver.java:220) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.method.annotation.RequestParamMethodArgumentResolver.handleMissingValue(RequestParamMethodArgumentResolver.java:196) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.method.annotation.AbstractNamedValueMethodArgumentResolver.resolveArgument(AbstractNamedValueMethodArgumentResolver.java:125) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:227) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:181) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.TestDispatcherServlet.service(TestDispatcherServlet.java:72) ~[spring-test-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.springframework.mock.web.MockFilterChain$ServletFilterProxy.doFilter(MockFilterChain.java:165) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:235) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:229) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:235) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:229) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.doFilterInternal(OAuth2AuthorizationRequestRedirectFilter.java:198) ~[spring-security-oauth2-client-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:162) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:162) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:162) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:162) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:132) ~[spring-test-6.2.14.jar:6.2.14]
+	at org.springframework.test.web.servlet.MockMvc.perform(MockMvc.java:201) ~[spring-test-6.2.14.jar:6.2.14]
+	at io.restassured.module.mockmvc.internal.MockMvcRequestSenderImpl.performRequest(MockMvcRequestSenderImpl.java:257) ~[spring-mock-mvc-5.5.6.jar:na]
+	at io.restassured.module.mockmvc.internal.MockMvcRequestSenderImpl.sendRequest(MockMvcRequestSenderImpl.java:369) ~[spring-mock-mvc-5.5.6.jar:na]
+	at io.restassured.module.mockmvc.internal.MockMvcRequestSenderImpl.get(MockMvcRequestSenderImpl.java:636) ~[spring-mock-mvc-5.5.6.jar:na]
+	at io.restassured.module.mockmvc.internal.MockMvcRequestSenderImpl.get(MockMvcRequestSenderImpl.java:105) ~[spring-mock-mvc-5.5.6.jar:na]
+	at com.muczynski.library.controller.GoogleOAuthControllerTest.testAuthorize_MissingOriginParameter(GoogleOAuthControllerTest.java:125) ~[test/:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[na:na]
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569) ~[na:na]
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:775) ~[junit-platform-commons-1.12.2.jar:1.12.2]
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479) ~[junit-platform-commons-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:152) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:91) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:216) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:212) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:137) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69) ~[junit-jupiter-engine-5.12.2.jar:5.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54) ~[junit-platform-engine-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:201) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:170) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:94) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:59) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:142) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:58) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47) ~[junit-platform-launcher-1.12.2.jar:1.12.2]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.processAllTestClasses(JUnitPlatformTestClassProcessor.java:124) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor$CollectAllTestClassesExecutor.access$000(JUnitPlatformTestClassProcessor.java:99) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.junitplatform.JUnitPlatformTestClassProcessor.stop(JUnitPlatformTestClassProcessor.java:94) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.SuiteTestClassProcessor.stop(SuiteTestClassProcessor.java:63) ~[na:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[na:na]
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569) ~[na:na]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:36) ~[na:na]
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:24) ~[na:na]
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33) ~[na:na]
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:92) ~[na:na]
+	at jdk.proxy1/jdk.proxy1.$Proxy4.stop(Unknown Source) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$3.run(TestWorker.java:200) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:132) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103) ~[na:na]
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63) ~[na:na]
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56) ~[na:na]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122) ~[na:na]
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72) ~[na:na]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69) ~[gradle-worker.jar:na]
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74) ~[gradle-worker.jar:na]
+
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/oauth/google/authorize
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=testuser, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#authorize(String)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.bind.MissingServletRequestParameterException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 500
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"INTERNAL_ERROR","message":"An unexpected error occurred","timestamp":"2025-11-30T03:05:43.615895299"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.643Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : OAuth authorization initiated from origin: http://localhost:8080
+2025-11-30T03:05:43.644Z DEBUG 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:05:43.649Z  WARN 26936 --- [    Test worker] c.m.l.service.GlobalSettingsService      : No Client ID configured in database, environment variable, or config file
+2025-11-30T03:05:43.650Z ERROR 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Client ID not configured. Librarian must set Client ID in Global Settings.
+2025-11-30T03:05:43.651Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/authorize: Google Client ID not configured. Contact your librarian to configure it in Global Settings.
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/oauth/google/authorize
+       Parameters = {origin=[http://localhost:8080]}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=testuser, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#authorize(String)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"Google Client ID not configured. Contact your librarian to configure it in Global Settings.","timestamp":"2025-11-30T03:05:43.65177871"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.741Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoke Google Photos access requested
+2025-11-30T03:05:43.743Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoking Google Photos access for user: nonexistent
+2025-11-30T03:05:43.747Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/revoke: User not found
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/oauth/google/revoke
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=nonexistent, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#revoke()
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"User not found","timestamp":"2025-11-30T03:05:43.747359368"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+2025-11-30T03:05:43.783Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoke Google Photos access requested
+2025-11-30T03:05:43.783Z  INFO 26936 --- [    Test worker] c.m.l.controller.GoogleOAuthController   : Revoking Google Photos access for user: testuser
+2025-11-30T03:05:43.785Z  WARN 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Library exception on path uri=/api/oauth/google/revoke: User not found
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/oauth/google/revoke
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=testuser, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_USER]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_USER]]]}
+
+Handler:
+             Type = com.muczynski.library.controller.GoogleOAuthController
+           Method = com.muczynski.library.controller.GoogleOAuthController#revoke()
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = com.muczynski.library.exception.LibraryException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 422
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"error":"BUSINESS_RULE_VIOLATION","message":"User not found","timestamp":"2025-11-30T03:05:43.786332455"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

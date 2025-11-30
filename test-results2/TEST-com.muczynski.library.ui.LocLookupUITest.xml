@@ -1,0 +1,701 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.ui.LocLookupUITest" tests="7" skipped="0" failures="7" errors="0" timestamp="2025-11-30T03:02:16.317Z" hostname="cs-913025961294-default" time="168.611">
+  <properties/>
+  <testcase name="testViewAllBooks()" classname="com.muczynski.library.ui.LocLookupUITest" time="23.124">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testViewAllBooks(LocLookupUITest.java:112)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testNavigateToLocLookupSection()" classname="com.muczynski.library.ui.LocLookupUITest" time="25.209">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testNavigateToLocLookupSection(LocLookupUITest.java:88)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testViewEditDeleteButtons()" classname="com.muczynski.library.ui.LocLookupUITest" time="24.536">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testViewEditDeleteButtons(LocLookupUITest.java:207)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testViewBooksMissingLoc()" classname="com.muczynski.library.ui.LocLookupUITest" time="24.279">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testViewBooksMissingLoc(LocLookupUITest.java:141)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testLocNumberDisplay()" classname="com.muczynski.library.ui.LocLookupUITest" time="24.015">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testLocNumberDisplay(LocLookupUITest.java:261)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testSelectAllCheckbox()" classname="com.muczynski.library.ui.LocLookupUITest" time="23.767">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testSelectAllCheckbox(LocLookupUITest.java:171)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testBookTitleAndAuthorDisplay()" classname="com.muczynski.library.ui.LocLookupUITest" time="23.669">
+    <failure message="com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded" type="com.microsoft.playwright.TimeoutError">com.microsoft.playwright.TimeoutError: Timeout 20000ms exceeded
+	at app//com.microsoft.playwright.impl.WaitableTimeout.get(WaitableTimeout.java:41)
+	at app//com.microsoft.playwright.impl.WaitableRace.get(WaitableRace.java:46)
+	at app//com.microsoft.playwright.impl.ChannelOwner.runUntil(ChannelOwner.java:138)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:835)
+	at app//com.microsoft.playwright.impl.FrameImpl.waitForLoadStateImpl(FrameImpl.java:820)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$11(PageImpl.java:1399)
+	at app//com.microsoft.playwright.impl.WaitForEventLogger.get(WaitForEventLogger.java:49)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withWaitLogging(ChannelOwner.java:84)
+	at app//com.microsoft.playwright.impl.PageImpl.lambda$waitForLoadState$12(PageImpl.java:1398)
+	at app//com.microsoft.playwright.impl.ChannelOwner.lambda$withTitle$0(ChannelOwner.java:90)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:98)
+	at app//com.microsoft.playwright.impl.ChannelOwner.withTitle(ChannelOwner.java:89)
+	at app//com.microsoft.playwright.impl.PageImpl.waitForLoadState(PageImpl.java:1397)
+	at app//com.muczynski.library.ui.LocLookupUITest.login(LocLookupUITest.java:72)
+	at app//com.muczynski.library.ui.LocLookupUITest.testBookTitleAndAuthorDisplay(LocLookupUITest.java:233)
+	at java.base@17.0.16/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base@17.0.16/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <system-out><![CDATA[
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:01:54.714Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:01:54.719Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:01:54.722Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:01:57.854Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:01:58.112Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 241 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:01:59.876Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:01:59.908Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:01:59.911Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:02:00.067Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:02:00.069Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4647 ms
+2025-11-30T03:02:00.537Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:02:00.622Z  INFO 26936 --- [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.36.Final
+2025-11-30T03:02:00.685Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:02:01.421Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:02:01.541Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-11-30T03:02:01.892Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:02:01.896Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-11-30T03:02:01.963Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:02:02.023Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:02:04.825Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:02:04.970Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:02:06.337Z  INFO 26936 --- [    Test worker] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-30T03:02:10.239Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:02:10.739Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:02:12.521Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 46681 (http) with context path '/'
+2025-11-30T03:02:12.543Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 18.667 seconds (process running for 21.655)
+2025-11-30T03:02:12.811Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:02:12.962Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:02:12.970Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:02:12.974Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:02:13.170Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:02:17.191Z  INFO 26936 --- [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:02:17.194Z  INFO 26936 --- [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:02:17.204Z  INFO 26936 --- [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 10 ms
+2025-11-30T03:02:18.139Z  INFO 26936 --- [o-auto-1-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:18.422Z  INFO 26936 --- [o-auto-1-exec-9] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:18.650Z  INFO 26936 --- [o-auto-1-exec-4] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:02:18.656Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:02:18.658Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:18.707Z  INFO 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:02:18.855Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:18.860Z  WARN 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:02:18.871Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:18.880Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:02:18.884Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:18.902Z DEBUG 26936 --- [o-auto-1-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:02:18.947Z  INFO 26936 --- [o-auto-1-exec-2] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:19.970Z  INFO 26936 --- [o-auto-1-exec-1] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:02:19.974Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:02:19.975Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:19.983Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:19.988Z  WARN 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:02:19.988Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:19.991Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:02:19.992Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:19.995Z DEBUG 26936 --- [o-auto-1-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:02:20.015Z  INFO 26936 --- [o-auto-1-exec-5] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:39.372Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:02:39.379Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:02:39.393Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:02:39.412Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-11-30T03:02:39.417Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:02:39.547Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:02:39.548Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:02:39.549Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:02:39.955Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:02:40.013Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 55 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:02:40.481Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:02:40.486Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:02:40.486Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:02:40.544Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:02:40.547Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 974 ms
+2025-11-30T03:02:40.688Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:02:40.696Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:02:40.718Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:02:40.721Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2025-11-30T03:02:40.726Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection conn10: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:02:40.726Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2025-11-30T03:02:40.727Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:02:40.729Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-2)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:02:41.069Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:02:41.140Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:02:41.968Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:02:42.191Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:02:42.589Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 41499 (http) with context path '/'
+2025-11-30T03:02:42.612Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 3.158 seconds (process running for 51.725)
+2025-11-30T03:02:42.624Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:02:42.634Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:02:42.636Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:02:42.637Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:02:42.652Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:02:42.940Z  INFO 26936 --- [o-auto-2-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:02:42.941Z  INFO 26936 --- [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:02:42.948Z  INFO 26936 --- [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 6 ms
+2025-11-30T03:02:43.591Z  INFO 26936 --- [o-auto-2-exec-3] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:43.922Z  INFO 26936 --- [o-auto-2-exec-7] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:44.135Z  INFO 26936 --- [o-auto-2-exec-3] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:02:44.138Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:02:44.138Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.144Z  INFO 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:02:44.149Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.161Z  WARN 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:02:44.162Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.168Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:02:44.168Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.175Z DEBUG 26936 --- [o-auto-2-exec-3] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:02:44.242Z  INFO 26936 --- [o-auto-2-exec-4] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:02:44.958Z  INFO 26936 --- [o-auto-2-exec-5] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:02:44.962Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:02:44.962Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.966Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.969Z  WARN 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:02:44.970Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.974Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:02:44.975Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:02:44.980Z DEBUG 26936 --- [o-auto-2-exec-5] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:02:44.992Z  INFO 26936 --- [o-auto-2-exec-1] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:04.611Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:03:04.615Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:03:04.623Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:04.641Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2025-11-30T03:03:04.647Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:03:04.755Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:03:04.756Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:03:04.756Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:03:05.203Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:03:05.242Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 37 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:03:05.457Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:03:05.459Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:03:05.460Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:03:05.499Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:03:05.501Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 742 ms
+2025-11-30T03:03:05.630Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:03:05.638Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:03:05.657Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:03:05.659Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2025-11-30T03:03:05.672Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection conn20: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:03:05.673Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2025-11-30T03:03:05.674Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:03:05.674Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-3)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:03:05.983Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:03:06.113Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:06.877Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:03:07.041Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:03:07.297Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 40117 (http) with context path '/'
+2025-11-30T03:03:07.307Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 2.631 seconds (process running for 76.419)
+2025-11-30T03:03:07.317Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:03:07.327Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:03:07.328Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:03:07.328Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:03:07.341Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:03:07.494Z  INFO 26936 --- [o-auto-3-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:03:07.496Z  INFO 26936 --- [o-auto-3-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:03:07.501Z  INFO 26936 --- [o-auto-3-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
+2025-11-30T03:03:07.984Z  INFO 26936 --- [o-auto-3-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:08.306Z  INFO 26936 --- [o-auto-3-exec-5] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:08.482Z  INFO 26936 --- [o-auto-3-exec-2] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:08.495Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:08.495Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:08.517Z  INFO 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:03:08.533Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:08.541Z  WARN 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:08.542Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:08.547Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:08.547Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:08.550Z DEBUG 26936 --- [o-auto-3-exec-2] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:08.621Z  INFO 26936 --- [o-auto-3-exec-3] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:09.421Z  INFO 26936 --- [o-auto-3-exec-8] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:09.424Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:09.424Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:09.429Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:09.435Z  WARN 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:09.436Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:09.439Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:09.440Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:09.443Z DEBUG 26936 --- [o-auto-3-exec-8] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:09.454Z  INFO 26936 --- [o-auto-3-exec-1] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:29.153Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:03:29.155Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:03:29.171Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:29.184Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2025-11-30T03:03:29.189Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:03:29.256Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:03:29.256Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:03:29.256Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:03:29.571Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:03:29.615Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 40 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:03:29.830Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:03:29.832Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:03:29.833Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:03:29.860Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:03:29.861Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 603 ms
+2025-11-30T03:03:29.966Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:03:29.970Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:03:29.981Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:03:29.983Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2025-11-30T03:03:30.002Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection conn30: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:03:30.002Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2025-11-30T03:03:30.003Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:03:30.004Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-4)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:03:30.221Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:03:30.265Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:31.106Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:03:31.209Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:03:31.495Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 37079 (http) with context path '/'
+2025-11-30T03:03:31.507Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 2.296 seconds (process running for 100.619)
+2025-11-30T03:03:31.520Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:03:31.533Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:03:31.536Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:03:31.537Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:03:31.554Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:03:31.725Z  INFO 26936 --- [o-auto-4-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:03:31.726Z  INFO 26936 --- [o-auto-4-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:03:31.729Z  INFO 26936 --- [o-auto-4-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2025-11-30T03:03:32.154Z  INFO 26936 --- [o-auto-4-exec-6] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:32.625Z  INFO 26936 --- [o-auto-4-exec-2] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:32.824Z  INFO 26936 --- [o-auto-4-exec-4] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:32.828Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:32.829Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:32.838Z  INFO 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:03:32.852Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:32.865Z  WARN 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:32.867Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:32.878Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:32.890Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:32.913Z DEBUG 26936 --- [o-auto-4-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:33.038Z  INFO 26936 --- [-auto-4-exec-10] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:33.702Z  INFO 26936 --- [o-auto-4-exec-9] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:33.704Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:33.704Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:33.708Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:33.713Z  WARN 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:33.713Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:33.715Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:33.716Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:33.718Z DEBUG 26936 --- [o-auto-4-exec-9] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:33.726Z  INFO 26936 --- [o-auto-4-exec-6] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:53.427Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:03:53.436Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:03:53.446Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:53.460Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown initiated...
+2025-11-30T03:03:53.467Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:03:53.533Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:03:53.533Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:03:53.534Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:03:53.888Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:03:53.934Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 43 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:03:54.184Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:03:54.188Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:03:54.189Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:03:54.232Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:03:54.234Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 696 ms
+2025-11-30T03:03:54.323Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:03:54.330Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:03:54.345Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:03:54.350Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Starting...
+2025-11-30T03:03:54.358Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-5 - Added connection conn40: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:03:54.359Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Start completed.
+2025-11-30T03:03:54.360Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:03:54.361Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-5)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:03:54.581Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:03:54.665Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:03:55.454Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:03:55.573Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:03:55.825Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 41967 (http) with context path '/'
+2025-11-30T03:03:55.836Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 2.352 seconds (process running for 124.948)
+2025-11-30T03:03:55.852Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:03:55.872Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:03:55.873Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:03:55.876Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:03:55.894Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:03:56.015Z  INFO 26936 --- [o-auto-5-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:03:56.016Z  INFO 26936 --- [o-auto-5-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:03:56.021Z  INFO 26936 --- [o-auto-5-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2025-11-30T03:03:56.409Z  INFO 26936 --- [o-auto-5-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:56.791Z  INFO 26936 --- [o-auto-5-exec-5] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:57.040Z  INFO 26936 --- [o-auto-5-exec-9] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:57.045Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:57.046Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.054Z  INFO 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:03:57.058Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.080Z  WARN 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:57.080Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.085Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:57.085Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.087Z DEBUG 26936 --- [o-auto-5-exec-9] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:57.125Z  INFO 26936 --- [o-auto-5-exec-3] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:03:57.727Z  INFO 26936 --- [o-auto-5-exec-2] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:03:57.728Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:03:57.732Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.735Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.742Z  WARN 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:03:57.742Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.745Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:03:57.745Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:03:57.747Z DEBUG 26936 --- [o-auto-5-exec-2] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:03:57.755Z  INFO 26936 --- [-auto-5-exec-10] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:17.467Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:04:17.469Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:04:17.477Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:04:17.484Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown initiated...
+2025-11-30T03:04:17.485Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:04:17.542Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:04:17.542Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:04:17.542Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:04:17.866Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:04:17.897Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 29 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:04:18.104Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:04:18.105Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:04:18.106Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:04:18.128Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:04:18.134Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 588 ms
+2025-11-30T03:04:18.251Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:04:18.255Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:04:18.271Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:04:18.273Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Starting...
+2025-11-30T03:04:18.280Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-6 - Added connection conn50: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:04:18.281Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Start completed.
+2025-11-30T03:04:18.282Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:04:18.283Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-6)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:04:18.506Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:04:18.550Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:04:19.256Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:04:19.366Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:04:19.633Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 44915 (http) with context path '/'
+2025-11-30T03:04:19.648Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 2.154 seconds (process running for 148.76)
+2025-11-30T03:04:19.674Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:04:19.705Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:04:19.706Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:04:19.707Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:04:19.734Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:04:19.932Z  INFO 26936 --- [o-auto-6-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:04:19.932Z  INFO 26936 --- [o-auto-6-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:04:19.938Z  INFO 26936 --- [o-auto-6-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2025-11-30T03:04:20.408Z  INFO 26936 --- [o-auto-6-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:20.662Z  INFO 26936 --- [o-auto-6-exec-7] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:20.803Z  INFO 26936 --- [o-auto-6-exec-1] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:04:20.804Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:04:20.804Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:20.811Z  INFO 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:04:20.817Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:20.827Z  WARN 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:04:20.829Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:20.834Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:04:20.834Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:20.838Z DEBUG 26936 --- [o-auto-6-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:04:20.888Z  INFO 26936 --- [o-auto-6-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:21.496Z  INFO 26936 --- [o-auto-6-exec-4] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:04:21.497Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:04:21.497Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:21.500Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:21.502Z  WARN 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:04:21.502Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:21.505Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:04:21.505Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:21.507Z DEBUG 26936 --- [o-auto-6-exec-4] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:04:21.514Z  INFO 26936 --- [o-auto-6-exec-2] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:41.238Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:04:41.241Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:04:41.247Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:04:41.252Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown initiated...
+2025-11-30T03:04:41.254Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:04:41.307Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Starting LocLookupUITest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:04:41.307Z DEBUG 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:04:41.308Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : The following 1 profile is active: "test"
+2025-11-30T03:04:41.568Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:04:41.611Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 40 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:04:41.786Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2025-11-30T03:04:41.790Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-30T03:04:41.791Z  INFO 26936 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2025-11-30T03:04:41.817Z  INFO 26936 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-11-30T03:04:41.817Z  INFO 26936 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 506 ms
+2025-11-30T03:04:41.914Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:04:41.918Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:04:41.931Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:04:41.933Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Starting...
+2025-11-30T03:04:41.938Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-7 - Added connection conn60: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:04:41.938Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Start completed.
+2025-11-30T03:04:41.939Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:04:41.940Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-7)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:04:42.152Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:04:42.198Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:04:42.755Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:04:42.879Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:04:43.358Z  INFO 26936 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 38237 (http) with context path '/'
+2025-11-30T03:04:43.382Z  INFO 26936 --- [    Test worker] c.muczynski.library.ui.LocLookupUITest   : Started LocLookupUITest in 2.116 seconds (process running for 172.494)
+2025-11-30T03:04:43.407Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:04:43.428Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:04:43.430Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:04:43.430Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:04:43.446Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:04:43.662Z  INFO 26936 --- [o-auto-7-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-30T03:04:43.662Z  INFO 26936 --- [o-auto-7-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-11-30T03:04:43.675Z  INFO 26936 --- [o-auto-7-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 13 ms
+2025-11-30T03:04:44.111Z  INFO 26936 --- [o-auto-7-exec-8] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:44.379Z  INFO 26936 --- [o-auto-7-exec-3] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:44.503Z  INFO 26936 --- [o-auto-7-exec-6] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:04:44.504Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:04:44.504Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:44.510Z  INFO 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : No global settings found, creating default settings
+2025-11-30T03:04:44.515Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:44.519Z  WARN 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:04:44.519Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:44.528Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:04:44.529Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:44.537Z DEBUG 26936 --- [o-auto-7-exec-6] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:04:44.574Z  INFO 26936 --- [o-auto-7-exec-9] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:04:45.123Z  INFO 26936 --- [o-auto-7-exec-1] c.m.l.c.GlobalSettingsController         : Checking SSO configuration status
+2025-11-30T03:04:45.124Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings DTO
+2025-11-30T03:04:45.124Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:45.127Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:45.130Z  WARN 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : No Client Secret configured in database or environment variable
+2025-11-30T03:04:45.130Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:45.132Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client ID configured
+2025-11-30T03:04:45.132Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : Fetching global settings
+2025-11-30T03:04:45.134Z DEBUG 26936 --- [o-auto-7-exec-1] c.m.l.service.GlobalSettingsService      : No SSO Client Secret configured
+2025-11-30T03:04:45.142Z  INFO 26936 --- [o-auto-7-exec-5] c.m.l.c.GlobalPropertiesController       : Checking test data page visibility property
+2025-11-30T03:05:04.907Z  INFO 26936 --- [    Test worker] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-30T03:05:04.909Z  INFO 26936 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-11-30T03:05:04.914Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:05:04.922Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown initiated...
+2025-11-30T03:05:04.925Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown completed.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

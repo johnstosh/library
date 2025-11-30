@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.controller.ImportControllerTest" tests="8" skipped="0" failures="6" errors="0" timestamp="2025-11-30T03:05:47.428Z" hostname="cs-913025961294-default" time="0.365">
+  <properties/>
+  <testcase name="testExportJson_Success()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.042">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testExportJson_Success(ImportControllerTest.java:152)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testImportJson_Unauthorized()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.048"/>
+  <testcase name="testImportJson_EmptyRequest()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.046">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testImportJson_EmptyRequest(ImportControllerTest.java:130)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testExportJson_WithData()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.026">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testExportJson_WithData(ImportControllerTest.java:189)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testImportJson_Success()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.04">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;200&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;200&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testImportJson_Success(ImportControllerTest.java:69)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testExportJson_ServiceException()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.035">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;500&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;500&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testExportJson_ServiceException(ImportControllerTest.java:208)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testImportJson_InvalidData()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.068">
+    <failure message="java.lang.AssertionError: 1 expectation failed.&#10;Expected status code &lt;500&gt; but was &lt;403&gt;.&#10;" type="java.lang.AssertionError">java.lang.AssertionError: 1 expectation failed.
+Expected status code &lt;500&gt; but was &lt;403&gt;.
+
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.codehaus.groovy.reflection.CachedConstructor.invoke(CachedConstructor.java:73)
+	at org.codehaus.groovy.runtime.callsite.ConstructorSite$ConstructorSiteNoUnwrapNoCoerce.callConstructor(ConstructorSite.java:108)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callConstructor(AbstractCallSite.java:277)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure.validate(ResponseSpecificationImpl.groovy:512)
+	at io.restassured.internal.ResponseSpecificationImpl$HamcrestAssertionClosure$validate.call(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.validateResponseIfRequired(ResponseSpecificationImpl.groovy:696)
+	at io.restassured.internal.ResponseSpecificationImpl.this$2$validateResponseIfRequired(ResponseSpecificationImpl.groovy)
+	at jdk.internal.reflect.GeneratedMethodAccessor104.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.codehaus.groovy.runtime.callsite.PlainObjectMetaMethodSite.doInvoke(PlainObjectMetaMethodSite.java:43)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite$PogoCachedMethodSiteNoUnwrapNoCoerce.invoke(PogoMetaMethodSite.java:198)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaMethodSite.callCurrent(PogoMetaMethodSite.java:62)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:185)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:135)
+	at io.restassured.specification.ResponseSpecification$statusCode$0.callCurrent(Unknown Source)
+	at io.restassured.internal.ResponseSpecificationImpl.statusCode(ResponseSpecificationImpl.groovy:143)
+	at io.restassured.internal.ValidatableResponseOptionsImpl.statusCode(ValidatableResponseOptionsImpl.java:89)
+	at com.muczynski.library.controller.ImportControllerTest.testImportJson_InvalidData(ImportControllerTest.java:108)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="testExportJson_Unauthorized()" classname="com.muczynski.library.controller.ImportControllerTest" time="0.041"/>
+  <system-out><![CDATA[2025-11-30T03:05:44.869Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.controller.ImportControllerTest]: ImportControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-30T03:05:44.875Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.controller.ImportControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:05:44.917Z  INFO 26936 --- [    Test worker] c.m.l.controller.ImportControllerTest    : Starting ImportControllerTest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:05:44.917Z DEBUG 26936 --- [    Test worker] c.m.l.controller.ImportControllerTest    : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:05:44.917Z  INFO 26936 --- [    Test worker] c.m.l.controller.ImportControllerTest    : The following 1 profile is active: "test"
+2025-11-30T03:05:45.276Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:05:45.321Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 41 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:05:45.878Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:05:45.882Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:05:45.896Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:05:45.898Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-14 - Starting...
+2025-11-30T03:05:45.901Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-14 - Added connection conn130: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:05:45.901Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-14 - Start completed.
+2025-11-30T03:05:45.902Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:05:45.903Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-14)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:05:46.079Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:05:46.116Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:05:46.825Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:05:46.949Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:05:47.324Z  INFO 26936 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2025-11-30T03:05:47.328Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2025-11-30T03:05:47.331Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2025-11-30T03:05:47.368Z  INFO 26936 --- [    Test worker] c.m.l.controller.ImportControllerTest    : Started ImportControllerTest in 2.487 seconds (process running for 236.48)
+2025-11-30T03:05:47.386Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:05:47.404Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:05:47.405Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:05:47.406Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:05:47.419Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"80"]
+             Body = {"libraries":[],"authors":[],"users":null,"books":[],"loans":null,"photos":null}
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"80"]
+             Body = {"libraries":[],"authors":[],"users":null,"books":[],"loans":null,"photos":null}
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/import/json
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"86"]
+             Body = {"libraries":null,"authors":null,"users":null,"books":null,"loans":null,"photos":null}
+    Session Attrs = {SPRING_SECURITY_CONTEXT=SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_LIBRARIAN]], Credentials=[PROTECTED], Authenticated=true, Details=null, Granted Authorities=[ROLE_LIBRARIAN]]]}
+
+Handler:
+             Type = null
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 403
+    Error message = Forbidden
+          Headers = [X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

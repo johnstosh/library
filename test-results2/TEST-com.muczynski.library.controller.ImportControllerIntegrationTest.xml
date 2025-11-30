@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.controller.ImportControllerIntegrationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:05:43.847Z" hostname="cs-913025961294-default" time="1.014">
+  <properties/>
+  <testcase name="testExportJson_WithLoans()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.247"/>
+  <testcase name="testExportJson_WithCompleteData()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.126"/>
+  <testcase name="testExportJson_Forbidden()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.038"/>
+  <testcase name="testExportJson_UserWithMultipleRoles()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.146"/>
+  <testcase name="testExportJson_BookWithoutAuthor()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.087"/>
+  <testcase name="testExportJson_Unauthorized()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.04"/>
+  <testcase name="testExportJson_WithPhotos()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.125"/>
+  <testcase name="testExportJson_WithMultipleBooks()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.102"/>
+  <testcase name="testExportJson_WithMultipleLoans()" classname="com.muczynski.library.controller.ImportControllerIntegrationTest" time="0.091"/>
+  <system-out><![CDATA[2025-11-30T03:05:43.809Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.controller.ImportControllerIntegrationTest]: ImportControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-30T03:05:43.825Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.controller.ImportControllerIntegrationTest
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -61,16 +61,20 @@ public class LocLookupUITest {
     }
 
     private void login() {
+        // Enable console logging to debug login issues
+        page.onConsoleMessage(msg -> System.out.println("BROWSER CONSOLE: " + msg.text()));
+
         page.navigate("http://localhost:" + port);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(20000L));
         page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='menu-login']");
         page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+
+        // Fill plaintext password - JavaScript in init.js will hash it with SHA-256 before submission
         page.fill("[data-test='login-username']", "librarian");
-        // Password must be SHA-256 hashed before submission (client-side hashing in auth.js)
-        // SHA-256("password") = 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
-        page.fill("[data-test='login-password']", "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8");
+        page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
+
         page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }

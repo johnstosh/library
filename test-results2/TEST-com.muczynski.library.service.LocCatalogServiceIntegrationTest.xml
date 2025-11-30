@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.service.LocCatalogServiceIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:06:13.605Z" hostname="cs-913025961294-default" time="1.553">
+  <properties/>
+  <testcase name="testGetLocCallNumber_TheGreatGatsby()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.525"/>
+  <testcase name="testGetLocCallNumber_CatholicStudyBible_FullTitle()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.136"/>
+  <testcase name="testGetLocCallNumber_CatholicStudyBible()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.259"/>
+  <testcase name="testGetLocCallNumber_EmptyTitle()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.012"/>
+  <testcase name="testGetLocCallNumber_CatholicStudyBible_ShortTitle()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.258"/>
+  <testcase name="testGetLocCallNumber_BookNotFound()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.135"/>
+  <testcase name="testGetLocCallNumber_CatholicStudyBible_WithEditor()" classname="com.muczynski.library.service.LocCatalogServiceIntegrationTest" time="0.22"/>
+  <system-out><![CDATA[2025-11-30T03:06:13.611Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="The Great Gatsby" AND dc.creator="Fitzgerald"
+2025-11-30T03:06:14.012Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>88</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>marcxml</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><record xmlns="http://www.loc.gov/MARC21/slim">
+  <leader>01434cam a22002775i 4500</leader>
+  <controlfield tag="001">22353162</controlfield>
+  <controlfield tag="005">20250607111944.9</controlfield>
+  <controlfield tag=
+2025-11-30T03:06:14.115Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 88 records
+2025-11-30T03:06:14.125Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Found LOC call number: PZ3.F5754 Gr20PS3511.I9
+Found LOC Call Number: PZ3.F5754 Gr20PS3511.I9
+Match count: 2
+2025-11-30T03:06:14.134Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="The Catholic Study Bible New American Bible Revised Edition Third Edition"
+2025-11-30T03:06:14.258Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>0</zs:numberOfRecords><zs:echoedSearchRetrieveRequest><zs:version>1.1</zs:version><zs:query>dc.title="The Catholic Study Bible New American Bible Revised Edition Third Edition"</zs:query><zs:maximumRecords>5</zs:maximumRecords><zs:recordPacking>xml</zs:recordPacking><zs:recordSchema>marcxml</zs:recordSchema></zs:echoedSearchRetrieveRequest></zs:searchRetrieveRe
+2025-11-30T03:06:14.263Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 0 records
+2025-11-30T03:06:14.264Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : No LOC call numbers found for title='The Catholic Study Bible New American Bible Revised Edition Third Edition', author='null'
+Very specific edition not found - this is expected
+Note: Use broader search terms or the LOC web catalog for specific editions
+2025-11-30T03:06:14.272Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="Bible"
+2025-11-30T03:06:14.486Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>42144</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>marcxml</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><record xmlns="http://www.loc.gov/MARC21/slim">
+  <leader>01416cam a2200373 a 4500</leader>
+  <controlfield tag="001">1039336</controlfield>
+  <controlfield tag="005">20250606161503.0</controlfield>
+  <controlfield ta
+2025-11-30T03:06:14.516Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 42144 records
+2025-11-30T03:06:14.517Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Found LOC call number: BS511.2 .M365 1990
+Found LOC Call Number for Bible search: BS511.2 .M365 1990
+Match count: 3
+Note: Catholic Study Bible expected: BS 192.3 .A1 2020 G73
+For exact edition, try web search at: https://catalog.loc.gov/
+2025-11-30T03:06:14.548Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="Catholic Study Bible"
+2025-11-30T03:06:14.772Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>51</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>marcxml</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><record xmlns="http://www.loc.gov/MARC21/slim">
+  <leader>01428cam a2200337 a 4500</leader>
+  <controlfield tag="001">590602</controlfield>
+  <controlfield tag="005">20250607225840.8</controlfield>
+  <controlfield tag="0
+2025-11-30T03:06:14.787Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 51 records
+2025-11-30T03:06:14.788Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Found LOC call number: BS192.3.A1 1990 .N49
+Short title search - LOC Call Number: BS192.3.A1 1990 .N49
+Match count: 5
+2025-11-30T03:06:14.805Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="This Book Title Definitely Does Not Exist In LOC Database 123456789" AND dc.creator="Nonexistent Author Name"
+2025-11-30T03:06:14.931Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>0</zs:numberOfRecords><zs:echoedSearchRetrieveRequest><zs:version>1.1</zs:version><zs:query>dc.title="This Book Title Definitely Does Not Exist In LOC Database 123456789" AND dc.creator="Nonexistent Author Name"</zs:query><zs:maximumRecords>5</zs:maximumRecords><zs:recordPacking>xml</zs:recordPacking><zs:recordSchema>marcxml</zs:recordSchema></zs:echoedSearchRe
+2025-11-30T03:06:14.934Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 0 records
+2025-11-30T03:06:14.934Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : No LOC call numbers found for title='This Book Title Definitely Does Not Exist In LOC Database 123456789', author='Nonexistent Author Name'
+2025-11-30T03:06:14.944Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Querying LOC SRU API: http://lx2.loc.gov:210/LCDB?operation=searchRetrieve&version=1.1&recordSchema=marcxml&maximumRecords=5&query=dc.title="Catholic Study Bible" AND dc.creator="Senior"
+2025-11-30T03:06:15.142Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Parsing SRU response (first 500 chars): <?xml version="1.0"?>
+<zs:searchRetrieveResponse xmlns:zs="http://www.loc.gov/zing/srw/"><zs:version>1.1</zs:version><zs:numberOfRecords>2</zs:numberOfRecords><zs:records><zs:record><zs:recordSchema>marcxml</zs:recordSchema><zs:recordPacking>xml</zs:recordPacking><zs:recordData><record xmlns="http://www.loc.gov/MARC21/slim">
+  <leader>01428cam a2200337 a 4500</leader>
+  <controlfield tag="001">590602</controlfield>
+  <controlfield tag="005">20250607225840.8</controlfield>
+  <controlfield tag="00
+2025-11-30T03:06:15.150Z DEBUG 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : SRU response contains 2 records
+2025-11-30T03:06:15.151Z  INFO 26936 --- [    Test worker] c.m.library.service.LocCatalogService    : Found LOC call number: BS192.3.A1 1990 .N49
+Title + Author search - LOC Call Number: BS192.3.A1 1990 .N49
+Match count: 2
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

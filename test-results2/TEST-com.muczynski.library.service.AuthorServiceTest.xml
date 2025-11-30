@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.service.AuthorServiceTest" tests="3" skipped="0" failures="2" errors="0" timestamp="2025-11-30T03:06:09.050Z" hostname="cs-913025961294-default" time="0.503">
+  <properties/>
+  <testcase name="getAuthorById()" classname="com.muczynski.library.service.AuthorServiceTest" time="0.462">
+    <failure message="java.lang.NullPointerException: Cannot invoke &quot;com.muczynski.library.repository.BookRepository.countByAuthorId(java.lang.Long)&quot; because &quot;this.bookRepository&quot; is null" type="java.lang.NullPointerException">java.lang.NullPointerException: Cannot invoke &quot;com.muczynski.library.repository.BookRepository.countByAuthorId(java.lang.Long)&quot; because &quot;this.bookRepository&quot; is null
+	at com.muczynski.library.service.AuthorService.lambda$getAuthorById$2(AuthorService.java:60)
+	at java.base/java.util.Optional.map(Optional.java:260)
+	at com.muczynski.library.service.AuthorService.getAuthorById(AuthorService.java:58)
+	at com.muczynski.library.service.AuthorServiceTest.getAuthorById(AuthorServiceTest.java:65)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="getAllAuthors()" classname="com.muczynski.library.service.AuthorServiceTest" time="0.015">
+    <failure message="java.lang.NullPointerException: Cannot invoke &quot;com.muczynski.library.repository.BookRepository.countByAuthorId(java.lang.Long)&quot; because &quot;this.bookRepository&quot; is null" type="java.lang.NullPointerException">java.lang.NullPointerException: Cannot invoke &quot;com.muczynski.library.repository.BookRepository.countByAuthorId(java.lang.Long)&quot; because &quot;this.bookRepository&quot; is null
+	at com.muczynski.library.service.AuthorService.lambda$getAllAuthors$0(AuthorService.java:43)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.Collections$2.tryAdvance(Collections.java:4854)
+	at java.base/java.util.Collections$2.forEachRemaining(Collections.java:4862)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682)
+	at com.muczynski.library.service.AuthorService.getAllAuthors(AuthorService.java:53)
+	at com.muczynski.library.service.AuthorServiceTest.getAllAuthors(AuthorServiceTest.java:55)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+</failure>
+  </testcase>
+  <testcase name="createAuthor()" classname="com.muczynski.library.service.AuthorServiceTest" time="0.024"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

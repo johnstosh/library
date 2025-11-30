@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.muczynski.library.controller.UserSettingsControllerTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:06:06.878Z" hostname="cs-913025961294-default" time="0.15">
+  <properties/>
+  <testcase name="testGetUserSettings_Unauthorized()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.013"/>
+  <testcase name="testUpdateUserSettings_Unauthorized()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.013"/>
+  <testcase name="testDeleteUser_Success()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.017"/>
+  <testcase name="testUpdateUserSettings_AllFieldsUpdated()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.018"/>
+  <testcase name="testDeleteUser_AsLibrarian()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.01"/>
+  <testcase name="testGetUserSettings_Success()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.012"/>
+  <testcase name="testUpdateUserSettings_Success()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.019"/>
+  <testcase name="testUpdateUserSettings_InvalidInput_EmptyUsername()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.028"/>
+  <testcase name="testDeleteUser_Unauthorized()" classname="com.muczynski.library.controller.UserSettingsControllerTest" time="0.007"/>
+  <system-out><![CDATA[2025-11-30T03:06:04.856Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.controller.UserSettingsControllerTest]: UserSettingsControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-11-30T03:06:04.859Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.controller.UserSettingsControllerTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2025-11-30T03:06:04.902Z  INFO 26936 --- [    Test worker] c.m.l.c.UserSettingsControllerTest       : Starting UserSettingsControllerTest using Java 17.0.16 with PID 26936 (started by johnstosh in /home/johnstosh/library)
+2025-11-30T03:06:04.902Z DEBUG 26936 --- [    Test worker] c.m.l.c.UserSettingsControllerTest       : Running with Spring Boot v3.5.8, Spring v6.2.14
+2025-11-30T03:06:04.902Z  INFO 26936 --- [    Test worker] c.m.l.c.UserSettingsControllerTest       : The following 1 profile is active: "test"
+2025-11-30T03:06:05.223Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30T03:06:05.249Z  INFO 26936 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 24 ms. Found 9 JPA repository interfaces.
+2025-11-30T03:06:05.567Z  INFO 26936 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30T03:06:05.578Z  INFO 26936 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-30T03:06:05.594Z  INFO 26936 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30T03:06:05.595Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-20 - Starting...
+2025-11-30T03:06:05.601Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-20 - Added connection conn190: url=jdbc:h2:mem:testdb user=SA
+2025-11-30T03:06:05.604Z  INFO 26936 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-20 - Start completed.
+2025-11-30T03:06:05.604Z  WARN 26936 --- [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30T03:06:05.605Z  INFO 26936 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-20)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30T03:06:05.756Z  INFO 26936 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30T03:06:05.807Z  INFO 26936 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30T03:06:06.310Z  INFO 26936 --- [    Test worker] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-11-30T03:06:06.421Z  INFO 26936 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-11-30T03:06:06.831Z  INFO 26936 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2025-11-30T03:06:06.832Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2025-11-30T03:06:06.833Z  INFO 26936 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2025-11-30T03:06:06.850Z  INFO 26936 --- [    Test worker] c.m.l.c.UserSettingsControllerTest       : Started UserSettingsControllerTest in 1.986 seconds (process running for 255.962)
+2025-11-30T03:06:06.861Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Checking for users without userIdentifier...
+2025-11-30T03:06:06.867Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: librarian (ID: 1)
+2025-11-30T03:06:06.868Z DEBUG 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Generated userIdentifier for user: testuser (ID: 2)
+2025-11-30T03:06:06.869Z  INFO 26936 --- [    Test worker] c.m.library.config.DatabaseMigration     : Migration complete: Generated userIdentifier for 2 users
+2025-11-30T03:06:06.875Z  INFO 26936 --- [    Test worker] c.m.library.service.PhotoService         : Checksum migration: No photos without checksum found
+2025-11-30T03:06:07.008Z DEBUG 26936 --- [    Test worker] c.m.l.exception.GlobalExceptionHandler   : Illegal argument on path uri=/api/user-settings: Username cannot be empty
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
