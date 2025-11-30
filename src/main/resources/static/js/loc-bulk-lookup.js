@@ -185,7 +185,7 @@ function createBookRow(book) {
     editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
     editBtn.title = 'Edit';
     editBtn.setAttribute('data-test', 'edit-loc-book-btn');
-    editBtn.onclick = () => editBook(book.id);
+    editBtn.onclick = () => window.editBook(book.id);
     actionsCell.appendChild(editBtn);
 
     // Delete button (icon-only)
@@ -194,7 +194,7 @@ function createBookRow(book) {
     deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
     deleteBtn.title = 'Delete';
     deleteBtn.setAttribute('data-test', 'delete-loc-book-btn');
-    deleteBtn.onclick = () => deleteBook(book.id);
+    deleteBtn.onclick = () => window.deleteBook(book.id);
     actionsCell.appendChild(deleteBtn);
 
     row.appendChild(actionsCell);
