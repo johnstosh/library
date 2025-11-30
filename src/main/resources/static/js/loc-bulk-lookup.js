@@ -62,7 +62,7 @@ async function loadLocLookupBooks(mode) {
 
         if (books.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="5" class="text-center">No books found</td>';
+            row.innerHTML = '<td colspan="6" class="text-center">No books found</td>';
             tableBody.appendChild(row);
             return;
         }
@@ -155,6 +155,11 @@ function createBookRow(book) {
         locCell.appendChild(span);
     }
     row.appendChild(locCell);
+
+    // Date Added cell
+    const dateCell = document.createElement('td');
+    dateCell.textContent = book.dateAdded || '-';
+    row.appendChild(dateCell);
 
     // Actions cell - Lookup button followed by view/edit/delete icons
     const actionsCell = document.createElement('td');
