@@ -68,7 +68,7 @@ async function loadLocLookupBooks(mode) {
         }
 
         books.forEach(book => {
-            const row = createBookRow(book);
+            const row = createLocLookupBookRow(book);
             tableBody.appendChild(row);
         });
 
@@ -88,9 +88,9 @@ async function loadLocBulkLookupSection() {
 }
 
 /**
- * Create a table row for a book
+ * Create a table row for a book in the LOC lookup table
  */
-function createBookRow(book) {
+function createLocLookupBookRow(book) {
     const row = document.createElement('tr');
     row.setAttribute('data-test', 'loc-lookup-book-row');
     row.setAttribute('data-book-id', book.id);
