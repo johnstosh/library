@@ -256,7 +256,7 @@ async function lookupSingleBook(bookId) {
                     editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
                     editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                     editBtn.title = 'Edit';
-                    editBtn.onclick = () => editBook(bookId);
+                    editBtn.onclick = () => window.editBook(bookId);
                     currentActionsCell.appendChild(editBtn);
 
                     // Delete button
@@ -264,7 +264,7 @@ async function lookupSingleBook(bookId) {
                     deleteBtn.className = 'btn btn-sm btn-outline-danger';
                     deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
                     deleteBtn.title = 'Delete';
-                    deleteBtn.onclick = () => deleteBook(bookId);
+                    deleteBtn.onclick = () => window.deleteBook(bookId);
                     currentActionsCell.appendChild(deleteBtn);
                 }
             }
@@ -297,7 +297,7 @@ async function lookupSingleBook(bookId) {
                     editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
                     editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                     editBtn.title = 'Edit';
-                    editBtn.onclick = () => editBook(bookId);
+                    editBtn.onclick = () => window.editBook(bookId);
                     currentActionsCell.appendChild(editBtn);
 
                     // Delete button
@@ -305,7 +305,7 @@ async function lookupSingleBook(bookId) {
                     deleteBtn.className = 'btn btn-sm btn-outline-danger';
                     deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
                     deleteBtn.title = 'Delete';
-                    deleteBtn.onclick = () => deleteBook(bookId);
+                    deleteBtn.onclick = () => window.deleteBook(bookId);
                     currentActionsCell.appendChild(deleteBtn);
                 }
             }
