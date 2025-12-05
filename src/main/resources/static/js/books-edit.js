@@ -393,11 +393,12 @@ async function cloneBook() {
         document.body.style.cursor = 'wait';
         const clonedBook = await postData(`/api/books/${bookId}/clone`);
 
-        // Reload the books list
-        await loadBooks();
+        // Update loan dropdowns (books list will be refreshed when user cancels edit mode)
         await populateLoanDropdowns();
 
         // Open the cloned book in edit mode
+        // NOTE: We skip loadBooks() here to avoid duplicate API calls
+        // The book list is hidden during edit mode anyway, and will refresh when user exits edit mode
         await editBook(clonedBook.id);
 
         showSuccess('books', `Book cloned successfully as "${clonedBook.title}"`);
