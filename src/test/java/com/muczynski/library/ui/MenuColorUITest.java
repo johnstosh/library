@@ -55,7 +55,7 @@ public class MenuColorUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(5000L);
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach

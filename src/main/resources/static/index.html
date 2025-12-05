@@ -139,6 +139,35 @@
                 </div>
             </div>
 
+            <!--
+                IMPORTANT: JSON Import/Export Section
+                This section provides database-wide JSON import/export functionality.
+                DO NOT REMOVE - Essential for backup/restore operations.
+                Pattern: All CRUD sections should have JSON import/export capabilities.
+            -->
+            <div class="librarian-only mt-4" data-test="import-section">
+                <h3>Import/Export Database</h3>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5>Export JSON Data</h5>
+                        <p>Export all data (libraries, authors, books, loans, users, photo metadata) to a JSON file.</p>
+                        <p><small class="text-muted">Note: Photo image bytes are not exported, only metadata (caption, contentType, Google Photos permanentId, exportStatus, etc.)</small></p>
+                        <button id="export-json-btn" class="btn btn-primary" data-test="export-json-btn" onclick="exportJson()">Export Database to JSON</button>
+                    </div>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5>Import JSON Data</h5>
+                        <p>Import libraries, authors, books, loans, users, and photo metadata from JSON.</p>
+                        <p><small class="text-muted">Note: Photo image bytes are not imported. Photos must be re-downloaded from Google Photos using their permanentId.</small></p>
+                        <div class="mb-2">
+                            <input type="file" id="import-json-file" class="form-control" accept=".json,application/json" data-test="import-json-file">
+                        </div>
+                        <button id="import-json-btn" class="btn btn-warning" data-test="import-json-btn" onclick="importJson()">Import JSON to Database</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Photo Import/Export Status -->
             <div class="librarian-only mt-4" data-test="photo-export-section">
                 <h3 data-test="photos-header">Photo Import/Export Status</h3>

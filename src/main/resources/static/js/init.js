@@ -33,6 +33,7 @@ function initApp() {
 
                 // Hash password with SHA-256 before sending
                 const hashedPassword = await hashPassword(password);
+                console.log('[Login] Password hashed with SHA-256, length:', hashedPassword.length);
 
                 // Create form data with hashed password
                 const formData = new FormData();
@@ -43,28 +44,31 @@ function initApp() {
                 // Note: Custom success handler returns 200 OK with JSON (no redirect)
                 // Failure still redirects to /?error
                 try {
+                    console.log('[Login] Sending login request to /login');
                     const response = await fetch('/login', {
                         method: 'POST',
                         body: formData,
                         credentials: 'same-origin' // Ensure cookies are sent/received
                     });
 
+                    console.log('[Login] Response received - status:', response.status, 'redirected:', response.redirected, 'url:', response.url);
+
                     if (response.ok && !response.redirected) {
                         // Login successful - got 200 OK with JSON
-                        console.log('Login successful');
+                        console.log('[Login] ✓ Login successful - credentials accepted');
                         // Reload page to check authentication and show appropriate content
                         window.location.href = '/';
                     } else if (response.redirected && response.url.includes('error')) {
                         // Login failed - Spring Security redirected to /?error
-                        console.log('Login failed, redirected to error page');
+                        console.log('[Login] ✗ Login failed - credentials rejected (redirected to error page)');
                         showLoginError();
                     } else {
                         // Unexpected response
-                        console.log('Unexpected login response:', response.status, response.redirected);
+                        console.log('[Login] ✗ Unexpected login response - status:', response.status, 'redirected:', response.redirected);
                         showLoginError();
                     }
                 } catch (error) {
-                    console.error('Login error:', error);
+                    console.error('[Login] ✗ Login error:', error);
                     showLoginError();
                 }
             });

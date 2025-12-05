@@ -27,11 +27,16 @@ async function resetBookForm() {
     // If there's a current book being edited, check if it should be deleted
     if (currentBookId) {
         try {
+            // Get the current book title to check if it's a temporary book
+            const currentTitle = document.getElementById('new-book-title').value;
+            // Temporary books have titles matching pattern: YYYY-MM-DD-HH-mm-ss
+            const isTempTitle = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/.test(currentTitle);
+
             // Get the book's photos to check if it has any
             const photos = await fetchData(`/api/books/${currentBookId}/photos`);
 
-            // If no photos attached, delete the temporary book
-            if (!photos || photos.length === 0) {
+            // Only delete if it's a temporary book (matching timestamp pattern) AND has no photos
+            if (isTempTitle && (!photos || photos.length === 0)) {
                 await deleteData(`/api/books/${currentBookId}`);
                 console.log(`[Books] Deleted temporary book ${currentBookId} with no photos`);
                 // Reload books list to reflect deletion

@@ -63,7 +63,8 @@ async function loadLibraries() {
         } else {
             pageTitle.textContent = 'Library Management';
         }
-        await setupImportUI(); // Set up import/export UI
+        // NOTE: JSON Import/Export UI is now in index.html (lines 142-169)
+        // Previously used setupImportUI() to dynamically inject, but static HTML is clearer
         clearError('libraries');
     } catch (error) {
         showError('libraries', 'Failed to load libraries: ' + error.message);
@@ -229,39 +230,7 @@ async function exportJson() {
     }
 }
 
-async function setupImportUI() {
-    if (!isLibrarian) return;
-
-    // Check if import section already exists
-    const existing = document.querySelector('[data-test="import-section"]');
-    if (existing) {
-        return; // Already set up
-    }
-
-    const list = document.getElementById('library-list');
-    const importSection = document.createElement('div');
-    importSection.setAttribute('data-test', 'import-section');
-    importSection.innerHTML = `
-        <h3>Import/Export Database</h3>
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5>Export JSON Data</h5>
-                <p>Export all data (libraries, authors, books, loans, users, photo metadata) to a JSON file.</p>
-                <p><small class="text-muted">Note: Photo image bytes are not exported, only metadata (caption, contentType, Google Photos permanentId, exportStatus, etc.)</small></p>
-                <button id="export-json-btn" class="btn btn-primary" data-test="export-json-btn" onclick="exportJson()">Export Database to JSON</button>
-            </div>
-        </div>
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5>Import JSON Data</h5>
-                <p>Import libraries, authors, books, loans, users, and photo metadata from JSON.</p>
-                <p><small class="text-muted">Note: Photo image bytes are not imported. Photos must be re-downloaded from Google Photos using their permanentId.</small></p>
-                <div class="mb-2">
-                    <input type="file" id="import-json-file" class="form-control" accept=".json,application/json" data-test="import-json-file">
-                </div>
-                <button id="import-json-btn" class="btn btn-warning" data-test="import-json-btn" onclick="importJson()">Import JSON to Database</button>
-            </div>
-        </div>
-    `;
-    list.parentNode.insertBefore(importSection, list.nextSibling);
-}
+// NOTE: setupImportUI() function has been removed (2025-12-05)
+// The JSON Import/Export UI is now statically defined in index.html (lines 142-169)
+// This makes it easier to maintain and ensures it's not accidentally omitted.
+// IMPORTANT: Do not remove the JSON Import/Export section from index.html - it's essential for backups!
