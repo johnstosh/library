@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.muczynski.library.service.PhotoServiceTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:06:15.160Z" hostname="cs-913025961294-default" time="0.682">
-  <properties/>
-  <testcase name="testAddPhoto()" classname="com.muczynski.library.service.PhotoServiceTest" time="0.682"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

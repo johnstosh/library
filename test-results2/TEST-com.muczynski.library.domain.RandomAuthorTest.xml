@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.muczynski.library.domain.RandomAuthorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:06:07.032Z" hostname="cs-913025961294-default" time="0.002">
-  <properties/>
-  <testcase name="testRandomAuthorCreation()" classname="com.muczynski.library.domain.RandomAuthorTest" time="0.002"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

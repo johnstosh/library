@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.muczynski.library.controller.PhotoControllerTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-11-30T03:05:53.948Z" hostname="cs-913025961294-default" time="0.324">
-  <properties/>
-  <testcase name="getThumbnail()" classname="com.muczynski.library.controller.PhotoControllerTest" time="0.324"/>
-  <system-out><![CDATA[2025-11-30T03:05:53.934Z  INFO 26936 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.muczynski.library.controller.PhotoControllerTest]: PhotoControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2025-11-30T03:05:53.941Z  INFO 26936 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.muczynski.library.LibraryApplication for test class com.muczynski.library.controller.PhotoControllerTest
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
