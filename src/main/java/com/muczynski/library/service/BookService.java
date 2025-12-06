@@ -12,6 +12,7 @@ import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -91,6 +92,9 @@ public class BookService {
         book.setLibrary(libraryRepository.findById(bookDto.getLibraryId())
                 .orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
 
+        // Set lastModified to current time
+        book.setLastModified(LocalDateTime.now());
+
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -135,6 +139,8 @@ public class BookService {
         if (bookDto.getLibraryId() != null) {
             book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
         }
+        // Update lastModified to current time
+        book.setLastModified(LocalDateTime.now());
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -166,6 +172,7 @@ public class BookService {
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setDetailedDescription(original.getDetailedDescription());
         clone.setDateAddedToLibrary(LocalDateTime.now());
+        clone.setLastModified(LocalDateTime.now());
         clone.setStatus(original.getStatus());
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
@@ -768,6 +775,23 @@ public class BookService {
         }
 
         return updateBook(id, dto);
+    }
+
+    public List<BookSummaryDto> getAllBookSummaries() {
+        return bookRepository.findAll().stream()
+                .map(bookMapper::toSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return bookRepository.findAllById(ids).stream()
+                .map(bookMapper::toDto)
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
     }
 
 }

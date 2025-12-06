@@ -4,6 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
@@ -311,6 +312,30 @@ public class BookController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/summaries")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAllBookSummaries() {
+        try {
+            List<BookSummaryDto> summaries = bookService.getAllBookSummaries();
+            return ResponseEntity.ok(summaries);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve book summaries: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/by-ids")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksByIds(@RequestBody List<Long> ids) {
+        try {
+            List<BookDto> books = bookService.getBooksByIds(ids);
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

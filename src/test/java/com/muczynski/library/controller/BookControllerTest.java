@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.PhotoService;
@@ -20,6 +21,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -154,6 +157,54 @@ class BookControllerTest {
         doNothing().when(photoService).rotatePhoto(eq(1L), eq(false));
 
         mockMvc.perform(put("/api/books/1/photos/1/rotate-ccw"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getAllBookSummaries() throws Exception {
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        summary1.setLastModified(LocalDateTime.of(2025, 1, 1, 12, 0));
+
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+        summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
+
+        when(bookService.getAllBookSummaries()).thenReturn(Arrays.asList(summary1, summary2));
+
+        mockMvc.perform(get("/api/books/summaries"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksByIds() throws Exception {
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("Test Book 1");
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("Test Book 2");
+
+        List<Long> ids = Arrays.asList(1L, 2L);
+        when(bookService.getBooksByIds(any(List.class))).thenReturn(Arrays.asList(book1, book2));
+
+        mockMvc.perform(post("/api/books/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(ids)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksByIdsEmptyList() throws Exception {
+        when(bookService.getBooksByIds(any(List.class))).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(post("/api/books/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Collections.emptyList())))
                 .andExpect(status().isOk());
     }
 }

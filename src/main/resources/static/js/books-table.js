@@ -1,7 +1,8 @@
 // (c) Copyright 2025 by Muczynski
 async function loadBooks() {
     try {
-        const books = await fetchData('/api/books');
+        // Use cached book loading for better performance
+        const books = await window.loadBooksWithCache();
         const tableBody = document.getElementById('book-list-body');
         tableBody.innerHTML = '';
         books.forEach(book => {

@@ -58,4 +58,44 @@ public ResponseEntity<String> adminEndpoint() { }
 
 ---
 
+## New Endpoints for Book Caching
+
+### GET /api/books/summaries
+Returns lightweight book summaries (ID and lastModified timestamp) for browser caching.
+
+**Authentication:** Public (permitAll)
+
+**Response:** Array of BookSummaryDto
+```json
+[
+  {
+    "id": 1,
+    "lastModified": "2025-01-01T12:00:00"
+  },
+  {
+    "id": 2,
+    "lastModified": "2025-01-02T12:00:00"
+  }
+]
+```
+
+### POST /api/books/by-ids
+Fetches full book data for a list of book IDs.
+
+**Authentication:** Public (permitAll)
+
+**Request Body:** Array of Long (book IDs)
+```json
+[1, 2, 3]
+```
+
+**Response:** Array of BookDto (full book objects)
+
+**Use Case:**
+- Frontend fetches summaries to check what's changed
+- Only requests full data for books that are new or modified
+- Reduces bandwidth and improves performance
+
+---
+
 **Related:** SecurityConfig.java, CustomUserDetailsService.java, Photo.java (@Lob fields)

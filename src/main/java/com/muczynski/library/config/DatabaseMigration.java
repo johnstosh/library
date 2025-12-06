@@ -3,7 +3,9 @@
  */
 package com.muczynski.library.config;
 
+import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -23,6 +26,7 @@ import java.util.UUID;
 public class DatabaseMigration {
 
     private final UserRepository userRepository;
+    private final BookRepository bookRepository;
 
     /**
      * Generate UUIDs for existing users that don't have a userIdentifier.
@@ -47,6 +51,35 @@ public class DatabaseMigration {
             log.info("Migration complete: Generated userIdentifier for {} users", migratedCount);
         } else {
             log.info("No users need userIdentifier migration");
+        }
+    }
+
+    /**
+     * Populate lastModified for existing books that don't have this field set.
+     * This migration runs once at application startup.
+     * For existing books, we set lastModified to the current datetime.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void migrateBookLastModified() {
+        log.info("Checking for books without lastModified timestamp...");
+
+        int migratedCount = 0;
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Book book : bookRepository.findAll()) {
+            if (book.getLastModified() == null) {
+                book.setLastModified(now);
+                bookRepository.save(book);
+                migratedCount++;
+                log.debug("Set lastModified for book: {} (ID: {})", book.getTitle(), book.getId());
+            }
+        }
+
+        if (migratedCount > 0) {
+            log.info("Migration complete: Set lastModified for {} books", migratedCount);
+        } else {
+            log.info("No books need lastModified migration");
         }
     }
 }

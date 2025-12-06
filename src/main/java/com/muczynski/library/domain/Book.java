@@ -34,6 +34,8 @@ public class Book {
 
     private LocalDateTime dateAddedToLibrary;
 
+    private LocalDateTime lastModified;
+
     @Enumerated(EnumType.STRING)
     private BookStatus status;
 

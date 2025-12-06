@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.muczynski.library.repository.LoanRepository;
@@ -35,6 +36,7 @@ public class BookMapper {
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
+        bookDto.setLastModified(book.getLastModified());
         bookDto.setStatus(book.getStatus());
         bookDto.setLocNumber(book.getLocNumber());
         bookDto.setStatusReason(book.getStatusReason());
@@ -75,6 +77,7 @@ public class BookMapper {
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        book.setLastModified(bookDto.getLastModified());
         book.setStatus(bookDto.getStatus());
         book.setLocNumber(bookDto.getLocNumber());
         book.setStatusReason(bookDto.getStatusReason());
@@ -92,5 +95,16 @@ public class BookMapper {
         }
 
         return book;
+    }
+
+    public BookSummaryDto toSummaryDto(Book book) {
+        if (book == null) {
+            return null;
+        }
+
+        BookSummaryDto summaryDto = new BookSummaryDto();
+        summaryDto.setId(book.getId());
+        summaryDto.setLastModified(book.getLastModified());
+        return summaryDto;
     }
 }
