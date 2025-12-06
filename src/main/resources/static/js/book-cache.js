@@ -190,10 +190,7 @@ async function loadBooksWithCache() {
         if (idsToFetch.length > 0) {
             fetchedBooks = await fetchData('/api/books/by-ids', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(idsToFetch)
+                body: idsToFetch
             });
 
             // Cache the newly fetched books
