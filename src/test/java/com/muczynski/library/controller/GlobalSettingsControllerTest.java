@@ -71,7 +71,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientId").value("test-client-id-123.apps.googleusercontent.com"))
                 .andExpect(jsonPath("$.redirectUri").value("https://library.muczynskifamily.com/api/oauth/google/callback"))
@@ -96,7 +96,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert - Regular users can GET (view only)
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientId").exists())
                 .andExpect(jsonPath("$.googleClientSecretPartial").value("...XXXX"));
@@ -116,7 +116,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientSecretPartial").value("(not configured)"))
                 .andExpect(jsonPath("$.googleClientSecretConfigured").value(false))
@@ -152,7 +152,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN")))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -181,7 +181,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN")))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -196,7 +196,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert - Regular users should get 403 Forbidden
         mockMvc.perform(put("/api/global-settings")
-                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isForbidden());
@@ -236,7 +236,7 @@ class GlobalSettingsControllerTest {
         when(globalSettingsService.getGlobalSettingsDto()).thenReturn(initialDto);
 
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientSecretPartial").value("...oldValue"));
 
@@ -257,7 +257,7 @@ class GlobalSettingsControllerTest {
                 .thenReturn(updatedDto);
 
         mockMvc.perform(put("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN")))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -268,7 +268,7 @@ class GlobalSettingsControllerTest {
         when(globalSettingsService.getGlobalSettingsDto()).thenReturn(updatedDto);
 
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientSecretPartial").value("...789"))
                 .andExpect(jsonPath("$.googleClientSecretConfigured").value(true))
@@ -291,7 +291,7 @@ class GlobalSettingsControllerTest {
         when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientSecretPartial").value("...XXXX"));
 
@@ -300,7 +300,7 @@ class GlobalSettingsControllerTest {
         updateDto.setGoogleClientSecret("GOCSPX-attemptedUpdate123456789");
 
         mockMvc.perform(put("/api/global-settings")
-                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
@@ -321,7 +321,7 @@ class GlobalSettingsControllerTest {
 
         // Act & Assert - Verify googleClientSecret field is not in response (or is null)
         mockMvc.perform(get("/api/global-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.googleClientSecretPartial").exists())
                 .andExpect(jsonPath("$.googleClientSecret").doesNotExist()); // Full secret should not be in response

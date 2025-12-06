@@ -370,9 +370,9 @@ To enable Google SSO, administrators must:
 ## Acceptance Criteria
 
 - [ ] Users can click "Sign in with Google" on login page
-- [ ] Successful Google authentication creates new user account with USER role
+- [ ] Successful Google authentication creates new user account with USER authority
 - [ ] SSO users appear in Users admin page with "Google" badge
-- [ ] Librarians can change roles for SSO users
+- [ ] Librarians can change authorities for SSO users
 - [ ] Traditional username/password login still works
 - [ ] SSO users cannot login with username/password
 - [ ] Existing users are not affected by changes
@@ -389,8 +389,8 @@ To enable Google SSO, administrators must:
 3. Should we sync user information (email, name) on each login?
    - **Recommendation**: Yes, update email on each login to keep data current
 
-4. Should the first Google SSO user be automatically granted LIBRARIAN role?
-   - **Recommendation**: No, require manual role assignment for security
+4. Should the first Google SSO user be automatically granted LIBRARIAN authority?
+   - **Recommendation**: No, require manual authority assignment for security
 
 5. Should we prevent librarians from deleting SSO users?
    - **Recommendation**: No, librarians should be able to delete any user for account management

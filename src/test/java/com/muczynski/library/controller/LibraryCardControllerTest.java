@@ -65,7 +65,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "form-data; name=\"attachment\"; filename=\"library-card.pdf\""))
@@ -91,7 +91,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user1").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user1").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andReturn();
@@ -110,7 +110,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user2").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user2").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -124,7 +124,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user3").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user3").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -138,7 +138,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user4").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user4").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -152,7 +152,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user5").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("user5").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -187,7 +187,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("nonexistent").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("nonexistent").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().is4xxClientError());
     }
 
@@ -200,7 +200,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("testnull").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("testnull").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andReturn();
@@ -219,7 +219,7 @@ class LibraryCardControllerTest {
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("sizetest").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("sizetest").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -242,7 +242,7 @@ class LibraryCardControllerTest {
                     .thenReturn(Optional.of(testUser));
 
             MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                            .with(user("designtest" + i).authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                            .with(user("designtest" + i).authorities(new SimpleGrantedAuthority("USER"))))
                     .andExpect(status().isOk())
                     .andReturn();
 

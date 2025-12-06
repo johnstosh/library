@@ -68,7 +68,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("testuser"))
@@ -109,7 +109,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -145,7 +145,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().is4xxClientError());
@@ -174,7 +174,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN")))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
@@ -193,7 +193,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isNoContent());
     }
 
@@ -211,7 +211,7 @@ class UserSettingsControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/user-settings")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isNoContent());
     }
 }

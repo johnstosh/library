@@ -54,7 +54,7 @@ class UserControllerTest {
         when(userService.getUserByUsername("testuser")).thenReturn(fullUserDto);
 
         mockMvc.perform(get("/api/users/me")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("testuser"))

@@ -74,9 +74,14 @@ The build.gradle test configuration only shows detailed output for failed tests 
 ## Architecture Overview
 
 ### Security & Authentication
-- **Two-tier role system**: `USER` and `LIBRARIAN`
-- **LIBRARIAN role**: Has full CRUD access to all resources (books, authors, libraries, users, settings, etc.)
-- **USER role**: Can view books/authors/libraries, check out books to themselves, view their own loans
+- **Two-tier authority system**: `USER` and `LIBRARIAN`
+  - **CRITICAL**: We use **authorities**, NOT roles
+  - Use `hasAuthority('LIBRARIAN')` or `hasAuthority('USER')` in `@PreAuthorize` annotations
+  - **NEVER** use `hasRole()` - it expects a `ROLE_` prefix which we don't use
+  - In tests: use `@WithMockUser(authorities = "LIBRARIAN")` without `ROLE_` prefix
+  - In tests: use `new SimpleGrantedAuthority("LIBRARIAN")` without `ROLE_` prefix
+- **LIBRARIAN authority**: Has full CRUD access to all resources (books, authors, libraries, users, settings, etc.)
+- **USER authority**: Can view books/authors/libraries, check out books to themselves, view their own loans
   - Users cannot create/edit/delete books, authors, or libraries
   - Users cannot view other users' data or access admin features
 - **Public endpoints**: Test data generation, book/author/library listings, search are unauthenticated
