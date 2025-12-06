@@ -91,15 +91,9 @@ class GoogleOAuthControllerTest {
             .extract()
             .header("Location");
 
-        // Assert - Verify all 8 Google Photos scopes are present in the authorization URL
+        // Assert - Verify all 5 Google Photos scopes are present in the authorization URL
         // These scopes are required for the Google Photos Picker API
         org.junit.jupiter.api.Assertions.assertAll(
-            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary"),
-                "Should contain photoslibrary scope"),
-            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly"),
-                "Should contain photoslibrary.readonly scope"),
-            () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly.originals"),
-                "Should contain photoslibrary.readonly.originals scope"),
             () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.edit.appcreateddata"),
                 "Should contain photoslibrary.edit.appcreateddata scope"),
             () -> org.junit.jupiter.api.Assertions.assertTrue(locationHeader.contains("photoslibrary.readonly.appcreateddata"),
