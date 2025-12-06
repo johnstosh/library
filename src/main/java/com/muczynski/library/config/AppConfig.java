@@ -3,8 +3,12 @@
  */
 package com.muczynski.library.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
@@ -30,5 +34,25 @@ public class AppConfig {
         restTemplate.setInterceptors(Collections.singletonList(interceptor));
 
         return restTemplate;
+    }
+
+    /**
+     * Configure ObjectMapper to serialize all datetime types as ISO-8601 strings
+     * instead of arrays. This ensures consistent datetime serialization across
+     * the application and makes frontend caching comparisons reliable.
+     */
+    @Bean
+    @Primary
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Register JavaTimeModule for Java 8+ date/time types (LocalDateTime, etc.)
+        mapper.registerModule(new JavaTimeModule());
+
+        // Disable writing dates as timestamps (arrays)
+        // This makes LocalDateTime serialize as "2025-12-06T14:30:00" instead of [2025,12,6,14,30,0]
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        return mapper;
     }
 }

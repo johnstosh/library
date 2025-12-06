@@ -53,6 +53,30 @@ public class BookController {
         }
     }
 
+    @GetMapping("/without-loc")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksWithoutLocNumber() {
+        try {
+            List<BookDto> books = bookService.getBooksWithoutLocNumber();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books without LOC number: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/most-recent-day")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksFromMostRecentDay() {
+        try {
+            List<BookDto> books = bookService.getBooksFromMostRecentDay();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books from most recent day: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBookById(@PathVariable Long id) {

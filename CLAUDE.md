@@ -221,7 +221,14 @@ CRUD operations in the UI follow a consistent pattern:
 - **IMPORTANT**: Test data records should be distinguishable from real data in the database
 
 ### Import/Export System
-- Photo metadata export at `/api/photo-export/**` (authenticated users)
+- **JSON Database Export/Import** at `/api/import/json` (librarian only)
+  - Exports: libraries, authors, users, books, loans
+  - **IMPORTANT**: Photos are NOT included in JSON export (too large)
+  - Photos should be managed separately via Photo Export feature
+  - Import merges data with existing records (doesn't delete)
+- **Photo Export** at `/api/photo-export/**` (authenticated users)
+  - Separate system for backing up photos to Google Photos
+  - Photos contain large binary data (image bytes) that are too big for JSON export
 - LOC bulk lookup import/export functionality
 - Import books from Google Photos feed
 
@@ -249,6 +256,14 @@ CRUD operations in the UI follow a consistent pattern:
 - Client-side SHA-256 hashing before transmission (avoids BCrypt 72-byte limit)
 - Hashed passwords stored with BCrypt in database
 - Implementation in `utils.js` `hashPassword()` function
+
+### Jackson / JSON Serialization
+- Custom `ObjectMapper` bean configured in `AppConfig.java`
+- All datetime types (`LocalDateTime`, etc.) serialized as ISO-8601 strings
+  - Example: `"2025-12-06T14:30:00"` instead of `[2025,12,6,14,30,0]`
+- This ensures consistent datetime format for frontend caching and comparisons
+- `JavaTimeModule` registered for Java 8+ date/time support
+- `WRITE_DATES_AS_TIMESTAMPS` disabled to prevent array serialization
 
 ## Git Workflow
 

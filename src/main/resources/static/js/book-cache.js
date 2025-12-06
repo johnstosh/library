@@ -174,12 +174,23 @@ async function loadBooksWithCache() {
             if (!cached) {
                 // Book not in cache - need to fetch
                 idsToFetch.push(summary.id);
-            } else if (cached.lastModified !== summary.lastModified) {
-                // Book modified since cached - need to fetch
-                idsToFetch.push(summary.id);
             } else {
-                // Book unchanged - use cached version
-                cachedResults.push(cached);
+                // Compare lastModified timestamps
+                // Convert to strings for comparison (handles both ISO strings and legacy array format)
+                const cachedTime = typeof cached.lastModified === 'string'
+                    ? cached.lastModified
+                    : JSON.stringify(cached.lastModified);
+                const summaryTime = typeof summary.lastModified === 'string'
+                    ? summary.lastModified
+                    : JSON.stringify(summary.lastModified);
+
+                if (cachedTime !== summaryTime) {
+                    // Book modified since cached - need to fetch
+                    idsToFetch.push(summary.id);
+                } else {
+                    // Book unchanged - use cached version
+                    cachedResults.push(cached);
+                }
             }
         }
 

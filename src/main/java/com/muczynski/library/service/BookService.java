@@ -107,6 +107,28 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    public List<BookDto> getBooksWithoutLocNumber() {
+        return bookRepository.findBooksWithoutLocNumber().stream()
+                .map(bookMapper::toDto)
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksFromMostRecentDay() {
+        LocalDateTime maxDateTime = bookRepository.findMaxDateAddedToLibrary();
+        if (maxDateTime == null) {
+            return List.of();
+        }
+        // Get the date portion only (start of day)
+        LocalDateTime startOfDay = maxDateTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        return bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay).stream()
+                .map(bookMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public BookDto getBookById(Long id) {
         return bookRepository.findById(id)
                 .map(bookMapper::toDto)

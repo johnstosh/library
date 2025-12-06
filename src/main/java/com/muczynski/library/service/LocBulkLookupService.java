@@ -178,6 +178,7 @@ public class LocBulkLookupService {
 
             // Update the book with the found LOC number
             book.setLocNumber(response.getCallNumber());
+            book.setLastModified(LocalDateTime.now());
             bookRepository.save(book);
 
             log.info("Successfully updated LOC number for book {}: {}", book.getId(), response.getCallNumber());
@@ -202,6 +203,7 @@ public class LocBulkLookupService {
 
                     // Update the book with the found LOC number
                     book.setLocNumber(response.getCallNumber());
+                    book.setLastModified(LocalDateTime.now());
                     bookRepository.save(book);
 
                     log.info("Successfully updated LOC number for book {} using title-only fallback: {}", book.getId(), response.getCallNumber());
@@ -235,6 +237,7 @@ public class LocBulkLookupService {
 
                         // Update the book with the found LOC number
                         book.setLocNumber(response.getCallNumber());
+                        book.setLastModified(LocalDateTime.now());
                         bookRepository.save(book);
 
                         log.info("Successfully updated LOC number for book {} using truncated title + author: {}", book.getId(), response.getCallNumber());
@@ -261,6 +264,7 @@ public class LocBulkLookupService {
 
                     // Update the book with the found LOC number
                     book.setLocNumber(response.getCallNumber());
+                    book.setLastModified(LocalDateTime.now());
                     bookRepository.save(book);
 
                     log.info("Successfully updated LOC number for book {} using truncated title-only: {}", book.getId(), response.getCallNumber());

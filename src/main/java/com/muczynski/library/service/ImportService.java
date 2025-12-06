@@ -494,37 +494,11 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // Export photos (metadata only, no image bytes - using projection to avoid OOM)
-        List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
-            ImportPhotoDto pDto = new ImportPhotoDto();
-            pDto.setContentType(photo.getContentType());
-            pDto.setCaption(photo.getCaption());
-            pDto.setPhotoOrder(photo.getPhotoOrder());
-            pDto.setPermanentId(photo.getPermanentId());
-            pDto.setExportedAt(photo.getExportedAt());
-            pDto.setExportStatus(photo.getExportStatus());
-            pDto.setExportErrorMessage(photo.getExportErrorMessage());
-
-            // Reference book by title and author name
-            PhotoMetadataProjection.BookProjection book = photo.getBook();
-            if (book != null) {
-                pDto.setBookTitle(book.getTitle());
-                PhotoMetadataProjection.AuthorProjection bookAuthor = book.getAuthor();
-                if (bookAuthor != null) {
-                    pDto.setBookAuthorName(bookAuthor.getName());
-                }
-            }
-
-            // Reference author by name (for author photos)
-            PhotoMetadataProjection.AuthorProjection author = photo.getAuthor();
-            if (author != null) {
-                pDto.setAuthorName(author.getName());
-            }
-
-            photoDtos.add(pDto);
-        }
-        dto.setPhotos(photoDtos);
+        // IMPORTANT: Photos are NOT exported in JSON export
+        // Photos are too large and should be managed separately via Google Photos export
+        // The photo export/import functionality is available at /api/photo-export
+        // Setting photos to null ensures they are not included in the JSON export
+        dto.setPhotos(null);
 
         return dto;
     }

@@ -172,15 +172,12 @@ class ImportControllerIntegrationTest {
         authorPhoto.setPhotoOrder(1);
         photoRepository.save(authorPhoto);
 
-        // This test verifies that photos with book and author associations work
+        // IMPORTANT: Photos are NOT exported in JSON export (too large)
+        // Photos should be managed separately via Photo Export feature
+        // This test verifies that photos field is null in the export
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.photos", hasSize(greaterThanOrEqualTo(2))))
-                // Verify photo has book reference loaded
-                .andExpect(jsonPath("$.photos[?(@.caption=='Test book cover')].bookTitle", hasItem("Test Book")))
-                .andExpect(jsonPath("$.photos[?(@.caption=='Test book cover')].bookAuthorName", hasItem("Test Author")))
-                // Verify author photo has author reference
-                .andExpect(jsonPath("$.photos[?(@.caption=='Author portrait')].authorName", hasItem("Test Author")));
+                .andExpect(jsonPath("$.photos").doesNotExist());
     }
 
     @Test

@@ -54,9 +54,10 @@
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('global-settings', event)" data-test="menu-global-settings">Global Settings</button>
                 </li>
-                <li class="nav-item librarian-only">
+                <!-- LOC Lookup menu item hidden - functionality replaced by individual Lookup buttons in Books table -->
+                <!-- <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('loc-bulk-lookup', event)" data-test="menu-loc-bulk-lookup">LOC Lookup</button>
-                </li>
+                </li> -->
                 <li class="nav-item librarian-only">
                     <button class="nav-link" onclick="showSection('labels', event)" data-test="menu-labels">Labels</button>
                 </li>
@@ -347,6 +348,19 @@
 
         <div id="books-section" class="section" data-test="books-section">
             <h2 data-test="books-header">Books</h2>
+            <div class="mb-3">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-primary" id="books-most-recent-day-btn" data-test="books-most-recent-day-btn">
+                        Books from Most Recent Day
+                    </button>
+                    <button type="button" class="btn btn-warning" id="books-without-loc-btn" data-test="books-without-loc-btn">
+                        Books Without LOC
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="books-all-btn" data-test="books-all-btn">
+                        All Books
+                    </button>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table" data-test="book-table">
                     <thead>

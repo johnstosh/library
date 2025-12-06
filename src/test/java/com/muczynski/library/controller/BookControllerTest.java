@@ -173,8 +173,18 @@ class BookControllerTest {
 
         when(bookService.getAllBookSummaries()).thenReturn(Arrays.asList(summary1, summary2));
 
-        mockMvc.perform(get("/api/books/summaries"))
-                .andExpect(status().isOk());
+        String response = mockMvc.perform(get("/api/books/summaries"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // Verify that lastModified is serialized as ISO string, not array
+        // Should be "2025-01-01T12:00:00" not [2025,1,1,12,0]
+        assert response.contains("\"lastModified\":\"2025-01-01T12:00:00\"")
+            : "Expected lastModified to be serialized as ISO string, but got: " + response;
+        assert !response.contains("\"lastModified\":[2025")
+            : "lastModified should not be serialized as array: " + response;
     }
 
     @Test
@@ -205,6 +215,49 @@ class BookControllerTest {
         mockMvc.perform(post("/api/books/by-ids")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Collections.emptyList())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksWithoutLocNumber() throws Exception {
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("Book Without LOC");
+        book1.setLocNumber(null);
+        book1.setDateAddedToLibrary(LocalDateTime.now());
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("Another Book Without LOC");
+        book2.setLocNumber("");
+        book2.setDateAddedToLibrary(LocalDateTime.now());
+
+        when(bookService.getBooksWithoutLocNumber()).thenReturn(Arrays.asList(book1, book2));
+
+        mockMvc.perform(get("/api/books/without-loc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksFromMostRecentDay() throws Exception {
+        LocalDateTime recentDate = LocalDateTime.now();
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("Recent Book 1");
+        book1.setLocNumber("PS3566.O5");
+        book1.setDateAddedToLibrary(recentDate);
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("Recent Book 2");
+        book2.setLocNumber("BX1378.2");
+        book2.setDateAddedToLibrary(recentDate);
+
+        when(bookService.getBooksFromMostRecentDay()).thenReturn(Arrays.asList(book1, book2));
+
+        mockMvc.perform(get("/api/books/most-recent-day"))
                 .andExpect(status().isOk());
     }
 }

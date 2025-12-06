@@ -1,5 +1,26 @@
 // (c) Copyright 2025 by Muczynski
 
+/**
+ * Initialize event listeners when DOM is ready
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listeners to filter buttons
+    const mostRecentBtn = document.getElementById('books-most-recent-day-btn');
+    if (mostRecentBtn) {
+        mostRecentBtn.addEventListener('click', () => loadBooksFiltered('most-recent'));
+    }
+
+    const withoutLocBtn = document.getElementById('books-without-loc-btn');
+    if (withoutLocBtn) {
+        withoutLocBtn.addEventListener('click', () => loadBooksFiltered('missing-loc'));
+    }
+
+    const allBooksBtn = document.getElementById('books-all-btn');
+    if (allBooksBtn) {
+        allBooksBtn.addEventListener('click', () => loadBooksFiltered('all'));
+    }
+});
+
 function showSuccess(sectionId, message) {
     let successDiv = document.querySelector(`#${sectionId}-section [data-test="form-success"]`);
     if (!successDiv) {
@@ -22,6 +43,159 @@ function clearSuccess(sectionId) {
     }
 }
 
+/**
+ * Load books with filter applied
+ * @param {string} mode - 'all', 'missing-loc', or 'most-recent'
+ */
+async function loadBooksFiltered(mode) {
+    try {
+        clearError('books');
+        clearSuccess('books');
+
+        let endpoint;
+        if (mode === 'missing-loc') {
+            endpoint = '/api/books/without-loc';
+        } else if (mode === 'most-recent') {
+            endpoint = '/api/books/most-recent-day';
+        } else {
+            endpoint = '/api/books';
+        }
+
+        const books = await fetchData(endpoint);
+
+        const tableBody = document.getElementById('book-list-body');
+        tableBody.innerHTML = '';
+
+        if (books.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="5" class="text-center">No books found</td>';
+            tableBody.appendChild(row);
+            showSuccess('books', 'No books found for this filter');
+            return;
+        }
+
+        books.forEach(book => {
+            const row = createBookTableRow(book);
+            tableBody.appendChild(row);
+        });
+
+        const modeText = mode === 'most-recent' ? ' from most recent date' : (mode === 'missing-loc' ? ' without LOC call numbers' : '');
+        showSuccess('books', `Loaded ${books.length} book(s)${modeText}`);
+    } catch (error) {
+        showError('books', 'Failed to load books: ' + error.message);
+    }
+}
+
+/**
+ * Create a table row for a book
+ */
+function createBookTableRow(book) {
+    const row = document.createElement('tr');
+    row.setAttribute('data-test', 'book-item');
+    row.setAttribute('data-entity-id', book.id);
+
+    const photoCell = document.createElement('td');
+    if (book.firstPhotoId) {
+        const img = document.createElement('img');
+        img.style.width = '50px';
+        img.style.height = 'auto';
+        img.setAttribute('data-test', 'book-thumbnail');
+        // Use cached thumbnail loading
+        window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
+        photoCell.appendChild(img);
+    }
+    row.appendChild(photoCell);
+
+    const titleCell = document.createElement('td');
+
+    // Title on first line
+    const titleSpan = document.createElement('span');
+    titleSpan.setAttribute('data-test', 'book-title');
+    titleSpan.textContent = book.title;
+    titleSpan.style.fontWeight = 'bold';
+    titleCell.appendChild(titleSpan);
+
+    // Author on second line
+    if (book.author && book.author.trim() !== '') {
+        titleCell.appendChild(document.createElement('br'));
+        const authorSpan = document.createElement('span');
+        authorSpan.setAttribute('data-test', 'book-author');
+        authorSpan.textContent = book.author;
+        authorSpan.style.fontSize = '0.9em';
+        authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
+        titleCell.appendChild(authorSpan);
+    }
+
+    row.appendChild(titleCell);
+
+    const locCell = document.createElement('td');
+    locCell.setAttribute('data-test', 'book-loc-number');
+    if (book.locNumber) {
+        const locCode = document.createElement('code');
+        locCode.innerHTML = window.formatLocForSpine(book.locNumber);
+        locCode.className = 'text-success';
+        locCell.appendChild(locCode);
+    } else {
+        const locSpan = document.createElement('span');
+        locSpan.textContent = '-';
+        locSpan.className = 'text-muted';
+        locCell.appendChild(locSpan);
+    }
+    row.appendChild(locCell);
+
+    const loansCell = document.createElement('td');
+    if (book.status === 'WITHDRAWN' || book.status === 'LOST') {
+        loansCell.textContent = book.status.toLowerCase();
+    } else if (book.loanCount > 0) {
+        loansCell.textContent = book.loanCount;
+    }
+    row.appendChild(loansCell);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.setAttribute('data-test', 'book-actions');
+
+    // Lookup button - only for librarians
+    if (window.isLibrarian) {
+        const lookupBtn = document.createElement('button');
+        lookupBtn.className = 'btn btn-sm btn-primary me-2';
+        lookupBtn.textContent = 'Lookup';
+        lookupBtn.setAttribute('data-test', 'lookup-book-btn');
+        lookupBtn.onclick = () => lookupSingleBookFromTable(book.id);
+        actionsCell.appendChild(lookupBtn);
+    }
+
+    // View button (icon-only) - always visible
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+    viewBtn.title = 'View';
+    viewBtn.setAttribute('data-test', 'view-book-btn');
+    viewBtn.onclick = () => viewBook(book.id);
+    actionsCell.appendChild(viewBtn);
+
+    // Edit and Delete buttons (icon-only) - only for librarians
+    if (window.isLibrarian) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+        editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+        editBtn.title = 'Edit';
+        editBtn.setAttribute('data-test', 'edit-book-btn');
+        editBtn.onclick = () => editBook(book.id);
+        actionsCell.appendChild(editBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        delBtn.title = 'Delete';
+        delBtn.setAttribute('data-test', 'delete-book-btn');
+        delBtn.onclick = () => deleteBook(book.id);
+        actionsCell.appendChild(delBtn);
+    }
+    row.appendChild(actionsCell);
+
+    return row;
+}
+
 async function loadBooks() {
     try {
         // Use cached book loading for better performance
@@ -29,108 +203,7 @@ async function loadBooks() {
         const tableBody = document.getElementById('book-list-body');
         tableBody.innerHTML = '';
         books.forEach(book => {
-            const row = document.createElement('tr');
-            row.setAttribute('data-test', 'book-item');
-            row.setAttribute('data-entity-id', book.id);
-
-            const photoCell = document.createElement('td');
-            if (book.firstPhotoId) {
-                const img = document.createElement('img');
-                img.style.width = '50px';
-                img.style.height = 'auto';
-                img.setAttribute('data-test', 'book-thumbnail');
-                // Use cached thumbnail loading
-                window.loadCachedThumbnail(img, book.firstPhotoId, book.firstPhotoChecksum);
-                photoCell.appendChild(img);
-            }
-            row.appendChild(photoCell);
-
-            const titleCell = document.createElement('td');
-
-            // Title on first line
-            const titleSpan = document.createElement('span');
-            titleSpan.setAttribute('data-test', 'book-title');
-            titleSpan.textContent = book.title;
-            titleSpan.style.fontWeight = 'bold';
-            titleCell.appendChild(titleSpan);
-
-            // Author on second line
-            if (book.author && book.author.trim() !== '') {
-                titleCell.appendChild(document.createElement('br'));
-                const authorSpan = document.createElement('span');
-                authorSpan.setAttribute('data-test', 'book-author');
-                authorSpan.textContent = book.author;
-                authorSpan.style.fontSize = '0.9em';
-                authorSpan.style.color = '#6c757d'; // Bootstrap's text-muted color
-                titleCell.appendChild(authorSpan);
-            }
-
-            row.appendChild(titleCell);
-
-            const locCell = document.createElement('td');
-            locCell.setAttribute('data-test', 'book-loc-number');
-            if (book.locNumber) {
-                const locCode = document.createElement('code');
-                locCode.innerHTML = window.formatLocForSpine(book.locNumber);
-                locCode.className = 'text-success';
-                locCell.appendChild(locCode);
-            } else {
-                const locSpan = document.createElement('span');
-                locSpan.textContent = '-';
-                locSpan.className = 'text-muted';
-                locCell.appendChild(locSpan);
-            }
-            row.appendChild(locCell);
-
-            const loansCell = document.createElement('td');
-            if (book.status === 'WITHDRAWN' || book.status === 'LOST') {
-                loansCell.textContent = book.status.toLowerCase();
-            } else if (book.loanCount > 0) {
-                loansCell.textContent = book.loanCount;
-            }
-            row.appendChild(loansCell);
-
-            const actionsCell = document.createElement('td');
-            actionsCell.setAttribute('data-test', 'book-actions');
-
-            // Lookup button - only for librarians
-            if (window.isLibrarian) {
-                const lookupBtn = document.createElement('button');
-                lookupBtn.className = 'btn btn-sm btn-primary me-2';
-                lookupBtn.textContent = 'Lookup';
-                lookupBtn.setAttribute('data-test', 'lookup-book-btn');
-                lookupBtn.onclick = () => lookupSingleBookFromTable(book.id);
-                actionsCell.appendChild(lookupBtn);
-            }
-
-            // View button (icon-only) - always visible
-            const viewBtn = document.createElement('button');
-            viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
-            viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
-            viewBtn.title = 'View';
-            viewBtn.setAttribute('data-test', 'view-book-btn');
-            viewBtn.onclick = () => viewBook(book.id);
-            actionsCell.appendChild(viewBtn);
-
-            // Edit and Delete buttons (icon-only) - only for librarians
-            if (window.isLibrarian) {
-                const editBtn = document.createElement('button');
-                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
-                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
-                editBtn.title = 'Edit';
-                editBtn.setAttribute('data-test', 'edit-book-btn');
-                editBtn.onclick = () => editBook(book.id);
-                actionsCell.appendChild(editBtn);
-
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn btn-sm btn-outline-danger';
-                delBtn.innerHTML = '<i class="bi bi-trash"></i>';
-                delBtn.title = 'Delete';
-                delBtn.setAttribute('data-test', 'delete-book-btn');
-                delBtn.onclick = () => deleteBook(book.id);
-                actionsCell.appendChild(delBtn);
-            }
-            row.appendChild(actionsCell);
+            const row = createBookTableRow(book);
             tableBody.appendChild(row);
         });
         clearError('books');
