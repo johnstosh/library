@@ -1,4 +1,27 @@
 // (c) Copyright 2025 by Muczynski
+
+function showSuccess(sectionId, message) {
+    let successDiv = document.querySelector(`#${sectionId}-section [data-test="form-success"]`);
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.setAttribute('data-test', 'form-success');
+        successDiv.style.color = 'green';
+        successDiv.style.display = 'block';
+        const section = document.getElementById(`${sectionId}-section`);
+        if (section) {
+            section.insertBefore(successDiv, section.firstChild.nextSibling);
+        }
+    }
+    successDiv.textContent = message;
+}
+
+function clearSuccess(sectionId) {
+    const successDiv = document.querySelector(`#${sectionId}-section [data-test="form-success"]`);
+    if (successDiv) {
+        successDiv.remove();
+    }
+}
+
 async function loadBooks() {
     try {
         // Use cached book loading for better performance
@@ -70,6 +93,16 @@ async function loadBooks() {
             const actionsCell = document.createElement('td');
             actionsCell.setAttribute('data-test', 'book-actions');
 
+            // Lookup button - only for librarians
+            if (window.isLibrarian) {
+                const lookupBtn = document.createElement('button');
+                lookupBtn.className = 'btn btn-sm btn-primary me-2';
+                lookupBtn.textContent = 'Lookup';
+                lookupBtn.setAttribute('data-test', 'lookup-book-btn');
+                lookupBtn.onclick = () => lookupSingleBookFromTable(book.id);
+                actionsCell.appendChild(lookupBtn);
+            }
+
             // View button (icon-only) - always visible
             const viewBtn = document.createElement('button');
             viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
@@ -124,6 +157,186 @@ async function deleteBook(id) {
     }
 }
 
+/**
+ * Lookup LOC number for a single book from the books table
+ */
+async function lookupSingleBookFromTable(bookId) {
+    try {
+        clearError('books');
+        clearSuccess('books');
+
+        // Show progress indicator on the row
+        const row = document.querySelector(`tr[data-entity-id="${bookId}"]`);
+        if (!row) {
+            showError('books', 'Book row not found');
+            return;
+        }
+
+        const actionsCell = row.querySelector('[data-test="book-actions"]');
+        if (!actionsCell) {
+            showError('books', 'Actions cell not found');
+            return;
+        }
+
+        actionsCell.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Looking up...';
+
+        const result = await fetchData(`/api/loc-bulk-lookup/lookup/${bookId}`, {
+            method: 'POST'
+        });
+
+        if (result.success) {
+            // Update the LOC number cell (check if row still exists in DOM)
+            const currentRow = document.querySelector(`tr[data-entity-id="${bookId}"]`);
+            if (currentRow) {
+                const locCell = currentRow.querySelector('[data-test="book-loc-number"]');
+                if (locCell) {
+                    locCell.innerHTML = '';
+                    const code = document.createElement('code');
+                    code.innerHTML = window.formatLocForSpine(result.locNumber);
+                    code.className = 'text-success fw-bold';
+                    locCell.appendChild(code);
+                }
+
+                // Restore the actions cell with buttons
+                const currentActionsCell = currentRow.querySelector('[data-test="book-actions"]');
+                if (currentActionsCell) {
+                    currentActionsCell.innerHTML = '';
+
+                    // Lookup button
+                    const lookupBtn = document.createElement('button');
+                    lookupBtn.className = 'btn btn-sm btn-primary me-2';
+                    lookupBtn.textContent = 'Lookup';
+                    lookupBtn.setAttribute('data-test', 'lookup-book-btn');
+                    lookupBtn.onclick = () => lookupSingleBookFromTable(bookId);
+                    currentActionsCell.appendChild(lookupBtn);
+
+                    // View button
+                    const viewBtn = document.createElement('button');
+                    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+                    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                    viewBtn.title = 'View';
+                    viewBtn.setAttribute('data-test', 'view-book-btn');
+                    viewBtn.onclick = () => viewBook(bookId);
+                    currentActionsCell.appendChild(viewBtn);
+
+                    // Edit button
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.setAttribute('data-test', 'edit-book-btn');
+                    editBtn.onclick = () => editBook(bookId);
+                    currentActionsCell.appendChild(editBtn);
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.setAttribute('data-test', 'delete-book-btn');
+                    deleteBtn.onclick = () => deleteBook(bookId);
+                    currentActionsCell.appendChild(deleteBtn);
+                }
+            }
+
+            showSuccess('books', `Found LOC number: ${result.locNumber}`);
+        } else {
+            // Restore the actions cell with buttons
+            const currentRow = document.querySelector(`tr[data-entity-id="${bookId}"]`);
+            if (currentRow) {
+                const currentActionsCell = currentRow.querySelector('[data-test="book-actions"]');
+                if (currentActionsCell) {
+                    currentActionsCell.innerHTML = '';
+
+                    // Lookup button
+                    const lookupBtn = document.createElement('button');
+                    lookupBtn.className = 'btn btn-sm btn-primary me-2';
+                    lookupBtn.textContent = 'Lookup';
+                    lookupBtn.setAttribute('data-test', 'lookup-book-btn');
+                    lookupBtn.onclick = () => lookupSingleBookFromTable(bookId);
+                    currentActionsCell.appendChild(lookupBtn);
+
+                    // View button
+                    const viewBtn = document.createElement('button');
+                    viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+                    viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                    viewBtn.title = 'View';
+                    viewBtn.setAttribute('data-test', 'view-book-btn');
+                    viewBtn.onclick = () => viewBook(bookId);
+                    currentActionsCell.appendChild(viewBtn);
+
+                    // Edit button
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.setAttribute('data-test', 'edit-book-btn');
+                    editBtn.onclick = () => editBook(bookId);
+                    currentActionsCell.appendChild(editBtn);
+
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.setAttribute('data-test', 'delete-book-btn');
+                    deleteBtn.onclick = () => deleteBook(bookId);
+                    currentActionsCell.appendChild(deleteBtn);
+                }
+            }
+            showError('books', `Lookup failed: ${result.errorMessage}`);
+        }
+
+    } catch (error) {
+        showError('books', 'Lookup failed: ' + error.message);
+
+        // Restore the actions cell on error
+        const row = document.querySelector(`tr[data-entity-id="${bookId}"]`);
+        if (row) {
+            const actionsCell = row.querySelector('[data-test="book-actions"]');
+            if (actionsCell) {
+                actionsCell.innerHTML = '';
+
+                // Lookup button
+                const lookupBtn = document.createElement('button');
+                lookupBtn.className = 'btn btn-sm btn-primary me-2';
+                lookupBtn.textContent = 'Lookup';
+                lookupBtn.setAttribute('data-test', 'lookup-book-btn');
+                lookupBtn.onclick = () => lookupSingleBookFromTable(bookId);
+                actionsCell.appendChild(lookupBtn);
+
+                // View button
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'btn btn-sm btn-outline-primary me-1';
+                viewBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                viewBtn.title = 'View';
+                viewBtn.setAttribute('data-test', 'view-book-btn');
+                viewBtn.onclick = () => viewBook(bookId);
+                actionsCell.appendChild(viewBtn);
+
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-sm btn-outline-secondary me-1';
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                editBtn.title = 'Edit';
+                editBtn.setAttribute('data-test', 'edit-book-btn');
+                editBtn.onclick = () => editBook(bookId);
+                actionsCell.appendChild(editBtn);
+
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'Delete';
+                deleteBtn.setAttribute('data-test', 'delete-book-btn');
+                deleteBtn.onclick = () => deleteBook(bookId);
+                actionsCell.appendChild(deleteBtn);
+            }
+        }
+    }
+}
+
 // Expose functions globally for access from other scripts
 window.loadBooks = loadBooks;
 window.deleteBook = deleteBook;
+window.lookupSingleBookFromTable = lookupSingleBookFromTable;

@@ -145,7 +145,7 @@ The frontend is a single-page application in `/src/main/resources/static/`:
 - `js/auth.js` - Login/logout handling, role-based UI visibility
 
 **Feature Modules** (each manages a specific domain):
-- `js/books-table.js` - Book listing
+- `js/books-table.js` - Book listing with LOC lookup functionality
 - `js/books-edit.js` - Book CRUD operations
 - `js/books-photo.js` - Book photo management
 - `js/books-from-feed.js` - Import books from Google Photos feed
