@@ -15,6 +15,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.security.MessageDigest;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = LibraryApplication.class)
@@ -28,6 +30,23 @@ public class UserSettingsServiceTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    /**
+     * Helper method to hash passwords with SHA-256 (matching frontend behavior)
+     */
+    private String hashPassword(String plainPassword) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(plainPassword.getBytes());
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
 
     @Test
     void testGooglePhotosApiKeyPersistence() {
@@ -130,14 +149,15 @@ public class UserSettingsServiceTest {
     }
 
     @Test
-    void testPasswordUpdate() {
+    void testPasswordUpdate() throws Exception {
         // Test that password can be updated
         String username = "librarian";
         String newPassword = "newSecurePassword123";
+        String hashedPassword = hashPassword(newPassword);
 
         UserSettingsDto updateDto = new UserSettingsDto();
         updateDto.setUsername(username);
-        updateDto.setPassword(newPassword);
+        updateDto.setPassword(hashedPassword);
         updateDto.setXaiApiKey("");
         updateDto.setGooglePhotosApiKey("");
 
@@ -147,8 +167,8 @@ public class UserSettingsServiceTest {
         User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
         // Password should be encoded, not plain text
         assertNotNull(userEntity.getPassword());
-        assertNotEquals(newPassword, userEntity.getPassword()); // Should be hashed
-        assertTrue(userEntity.getPassword().length() > newPassword.length()); // BCrypt hash is longer
+        assertNotEquals(hashedPassword, userEntity.getPassword()); // Should be BCrypt hashed
+        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash starts with $2a, $2b, or $2y
     }
 
     @Test
@@ -221,17 +241,18 @@ public class UserSettingsServiceTest {
     }
 
     @Test
-    void testUpdateMultipleFieldsTogether() {
+    void testUpdateMultipleFieldsTogether() throws Exception {
         // Test updating multiple fields at once
         String username = "librarian";
         String newPassword = "newPass123";
+        String hashedPassword = hashPassword(newPassword);
         String xaiKey = "xai-key-123";
         String googlePhotosKey = "gp-key-456";
         String googleClientSecret = "client-secret-789";
 
         UserSettingsDto updateDto = new UserSettingsDto();
         updateDto.setUsername(username);
-        updateDto.setPassword(newPassword);
+        updateDto.setPassword(hashedPassword);
         updateDto.setXaiApiKey(xaiKey);
         updateDto.setGooglePhotosApiKey(googlePhotosKey);
         updateDto.setGoogleClientSecret(googleClientSecret);
@@ -246,7 +267,8 @@ public class UserSettingsServiceTest {
 
         // Verify password updated
         User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertNotEquals(newPassword, userEntity.getPassword()); // Should be hashed
+        assertNotEquals(hashedPassword, userEntity.getPassword()); // Should be BCrypt hashed
+        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash starts with $2a, $2b, or $2y
     }
 
     @Test

@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
@@ -40,6 +41,19 @@ public class GlobalExceptionHandler {
             response.addFieldError(error.getField(), error.getDefaultMessage());
         }
 
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle missing request parameters
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException ex, WebRequest request) {
+        logger.debug("Missing request parameter on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("MISSING_PARAMETER",
+            "Required parameter '" + ex.getParameterName() + "' is missing");
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 

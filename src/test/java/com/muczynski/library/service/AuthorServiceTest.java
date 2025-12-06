@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +31,9 @@ class AuthorServiceTest {
     @Mock
     private AuthorMapper authorMapper;
 
+    @Mock
+    private BookRepository bookRepository;
+
     @InjectMocks
     private AuthorService authorService;
 
@@ -49,8 +53,12 @@ class AuthorServiceTest {
 
     @Test
     void getAllAuthors() {
-        when(authorRepository.findAll()).thenReturn(Collections.singletonList(new Author()));
-        when(authorMapper.toDto(any(Author.class))).thenReturn(new AuthorDto());
+        Author author = new Author();
+        author.setId(1L);
+        AuthorDto authorDto = new AuthorDto();
+        when(authorRepository.findAll()).thenReturn(Collections.singletonList(author));
+        when(authorMapper.toDto(any(Author.class))).thenReturn(authorDto);
+        when(bookRepository.countByAuthorId(1L)).thenReturn(0L);
 
         assertEquals(1, authorService.getAllAuthors().size());
     }
@@ -58,9 +66,11 @@ class AuthorServiceTest {
     @Test
     void getAuthorById() {
         Author author = new Author();
+        author.setId(1L);
         AuthorDto authorDto = new AuthorDto();
         when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
         when(authorMapper.toDto(author)).thenReturn(authorDto);
+        when(bookRepository.countByAuthorId(1L)).thenReturn(0L);
 
         assertEquals(authorDto, authorService.getAuthorById(1L));
     }

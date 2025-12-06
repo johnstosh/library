@@ -308,4 +308,4 @@ For any request to be considered complete, ALL of the following steps must be ac
 - **OAuth user handling**: Services must check both username and SSO subject ID for user lookups
 - **Password hashing**: Always use SHA-256 client-side hashing via `hashPassword()` before sending passwords to server
 - **LOC formatting**: Use `formatLocForSpine()` in utils.js for displaying LOC call numbers on spine labels
-- Don't run all the tests because it takes too long
+- Don't run all the tests because it takes too long. Instead, run the fast-tests.sh script.

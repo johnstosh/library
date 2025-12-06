@@ -15,6 +15,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
+import java.security.MessageDigest;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -24,6 +26,23 @@ class DeletionConflictTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    /**
+     * Helper method to hash passwords with SHA-256 (matching frontend behavior)
+     */
+    private String hashPassword(String plainPassword) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(plainPassword.getBytes());
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
@@ -113,15 +132,16 @@ class DeletionConflictTest {
         Long bookId = Long.valueOf(bookResult.getResponse().getContentAsString().split("\"id\":")[1].split(",")[0]);
 
         // Create user with unique username
+        String hashedPassword = hashPassword("password");
         MvcResult userResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                     "username": "integration_test_user",
-                                    "password": "password",
+                                    "password": "%s",
                                     "role": "USER"
                                 }
-                                """))
+                                """.formatted(hashedPassword)))
                 .andExpect(status().isCreated())
                 .andReturn();
         Long userId = Long.valueOf(userResult.getResponse().getContentAsString().split("\"id\":")[1].split(",")[0]);

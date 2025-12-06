@@ -76,6 +76,8 @@ class GooglePhotosServiceTest {
 
         lenient().when(userRepository.findByUsernameIgnoreCase("testuser"))
                 .thenReturn(Optional.of(userEntity));
+        lenient().when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
+                .thenReturn(Collections.singletonList(userEntity));
         lenient().when(userRepository.save(any(User.class))).thenReturn(userEntity);
 
         // Inject mock RestTemplate into service
@@ -126,7 +128,8 @@ class GooglePhotosServiceTest {
         User userEntity = new User();
         userEntity.setUsername("testuser");
         userEntity.setGooglePhotosApiKey(null);
-        when(userRepository.findByUsernameIgnoreCase("testuser")).thenReturn(Optional.of(userEntity));
+        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
+                .thenReturn(Collections.singletonList(userEntity));
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
