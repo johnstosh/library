@@ -93,6 +93,11 @@ public class ImportService {
                     user.setUsername(uDto.getUsername());
                 }
 
+                // Update userIdentifier if provided (but don't overwrite existing)
+                if (uDto.getUserIdentifier() != null && !uDto.getUserIdentifier().isEmpty() && user.getUserIdentifier() == null) {
+                    user.setUserIdentifier(uDto.getUserIdentifier());
+                }
+
                 // Update password if provided
                 String password = uDto.getPassword();
                 if (password != null && !password.isEmpty()) {
@@ -111,8 +116,35 @@ public class ImportService {
                 if (uDto.getXaiApiKey() != null) {
                     user.setXaiApiKey(uDto.getXaiApiKey());
                 }
+                if (uDto.getGooglePhotosApiKey() != null) {
+                    user.setGooglePhotosApiKey(uDto.getGooglePhotosApiKey());
+                }
+                if (uDto.getGooglePhotosRefreshToken() != null) {
+                    user.setGooglePhotosRefreshToken(uDto.getGooglePhotosRefreshToken());
+                }
+                if (uDto.getGooglePhotosTokenExpiry() != null) {
+                    user.setGooglePhotosTokenExpiry(uDto.getGooglePhotosTokenExpiry());
+                }
+                if (uDto.getGoogleClientSecret() != null) {
+                    user.setGoogleClientSecret(uDto.getGoogleClientSecret());
+                }
                 if (uDto.getGooglePhotosAlbumId() != null) {
                     user.setGooglePhotosAlbumId(uDto.getGooglePhotosAlbumId());
+                }
+                if (uDto.getLastPhotoTimestamp() != null) {
+                    user.setLastPhotoTimestamp(uDto.getLastPhotoTimestamp());
+                }
+                if (uDto.getSsoProvider() != null) {
+                    user.setSsoProvider(uDto.getSsoProvider());
+                }
+                if (uDto.getSsoSubjectId() != null) {
+                    user.setSsoSubjectId(uDto.getSsoSubjectId());
+                }
+                if (uDto.getEmail() != null) {
+                    user.setEmail(uDto.getEmail());
+                }
+                if (uDto.getLibraryCardDesign() != null) {
+                    user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
                 Set<Role> roles = new HashSet<>();
                 if (uDto.getRoles() != null) {
@@ -196,6 +228,9 @@ public class ImportService {
                     book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
                 } else if (book.getDateAddedToLibrary() == null) {
                     book.setDateAddedToLibrary(LocalDateTime.now());
+                }
+                if (bDto.getLastModified() != null) {
+                    book.setLastModified(bDto.getLastModified());
                 }
                 book.setStatus(bDto.getStatus() != null ? bDto.getStatus() : BookStatus.ACTIVE);
                 book.setLocNumber(bDto.getLocNumber());
@@ -338,10 +373,20 @@ public class ImportService {
         List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
             ImportUserDto uDto = new ImportUserDto();
+            uDto.setUserIdentifier(user.getUserIdentifier());
             uDto.setUsername(user.getUsername());
             uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
             uDto.setXaiApiKey(user.getXaiApiKey());
+            uDto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
+            uDto.setGooglePhotosRefreshToken(user.getGooglePhotosRefreshToken());
+            uDto.setGooglePhotosTokenExpiry(user.getGooglePhotosTokenExpiry());
+            uDto.setGoogleClientSecret(user.getGoogleClientSecret());
             uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
+            uDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
+            uDto.setSsoProvider(user.getSsoProvider());
+            uDto.setSsoSubjectId(user.getSsoSubjectId());
+            uDto.setEmail(user.getEmail());
+            uDto.setLibraryCardDesign(user.getLibraryCardDesign());
             if (user.getRoles() != null) {
                 List<String> roles = user.getRoles().stream()
                         .map(Role::getName)
@@ -363,6 +408,7 @@ public class ImportService {
             bDto.setRelatedWorks(book.getRelatedWorks());
             bDto.setDetailedDescription(book.getDetailedDescription());
             bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
+            bDto.setLastModified(book.getLastModified());
             bDto.setStatus(book.getStatus());
             bDto.setLocNumber(book.getLocNumber());
             bDto.setStatusReason(book.getStatusReason());
@@ -397,6 +443,7 @@ public class ImportService {
                 bookDto.setRelatedWorks(loan.getBook().getRelatedWorks());
                 bookDto.setDetailedDescription(loan.getBook().getDetailedDescription());
                 bookDto.setDateAddedToLibrary(loan.getBook().getDateAddedToLibrary());
+                bookDto.setLastModified(loan.getBook().getLastModified());
                 bookDto.setStatus(loan.getBook().getStatus());
                 bookDto.setLocNumber(loan.getBook().getLocNumber());
                 bookDto.setStatusReason(loan.getBook().getStatusReason());
@@ -418,10 +465,20 @@ public class ImportService {
             }
             if (loan.getUser() != null) {
                 ImportUserDto userDto = new ImportUserDto();
+                userDto.setUserIdentifier(loan.getUser().getUserIdentifier());
                 userDto.setUsername(loan.getUser().getUsername());
                 userDto.setPassword(loan.getUser().getPassword()); // Export BCrypt hashed password (60 chars)
                 userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
+                userDto.setGooglePhotosApiKey(loan.getUser().getGooglePhotosApiKey());
+                userDto.setGooglePhotosRefreshToken(loan.getUser().getGooglePhotosRefreshToken());
+                userDto.setGooglePhotosTokenExpiry(loan.getUser().getGooglePhotosTokenExpiry());
+                userDto.setGoogleClientSecret(loan.getUser().getGoogleClientSecret());
                 userDto.setGooglePhotosAlbumId(loan.getUser().getGooglePhotosAlbumId());
+                userDto.setLastPhotoTimestamp(loan.getUser().getLastPhotoTimestamp());
+                userDto.setSsoProvider(loan.getUser().getSsoProvider());
+                userDto.setSsoSubjectId(loan.getUser().getSsoSubjectId());
+                userDto.setEmail(loan.getUser().getEmail());
+                userDto.setLibraryCardDesign(loan.getUser().getLibraryCardDesign());
                 if (loan.getUser().getRoles() != null) {
                     List<String> roles = loan.getUser().getRoles().stream()
                             .map(Role::getName)

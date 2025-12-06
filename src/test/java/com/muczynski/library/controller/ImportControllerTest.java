@@ -48,7 +48,7 @@ class ImportControllerTest {
     // ==================== POST /api/import/json Tests ====================
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testImportJson_Success() {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
@@ -89,7 +89,7 @@ class ImportControllerTest {
     // The important test is unauthorized (401) which verifies authentication is required
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testImportJson_InvalidData() {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
@@ -109,7 +109,7 @@ class ImportControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testImportJson_EmptyRequest() {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
@@ -133,7 +133,7 @@ class ImportControllerTest {
     // ==================== GET /api/import/json Tests ====================
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_Success() {
         // Arrange
         ImportRequestDto exportDto = new ImportRequestDto();
@@ -170,7 +170,7 @@ class ImportControllerTest {
     // The important test is unauthorized (401) which verifies authentication is required
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_WithData() {
         // Arrange
         ImportRequestDto exportDto = new ImportRequestDto();
@@ -193,7 +193,7 @@ class ImportControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "ROLE_LIBRARIAN")
+    @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_ServiceException() {
         // Arrange
         when(importService.exportData())

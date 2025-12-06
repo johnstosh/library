@@ -14,6 +14,7 @@ public class ImportBookDto {
     private String relatedWorks;
     private String detailedDescription;
     private LocalDateTime dateAddedToLibrary;
+    private LocalDateTime lastModified;
     private BookStatus status;
     private String locNumber;
     private String statusReason;
