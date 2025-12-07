@@ -511,8 +511,9 @@ public class ImportService {
 
         // Export photo METADATA (without image bytes)
         // This allows permanent IDs, captions, and ordering to be preserved across imports
+        // Use projection to avoid loading photo bytes which can cause OutOfMemoryError
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (Photo photo : photoRepository.findAll()) {
+        for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
             // Skip soft-deleted photos
             if (photo.getDeletedAt() != null) {
                 continue;
