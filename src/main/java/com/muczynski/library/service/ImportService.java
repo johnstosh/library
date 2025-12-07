@@ -6,7 +6,6 @@ import com.muczynski.library.dto.LibraryDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
 import com.muczynski.library.repository.*;
-import com.muczynski.library.repository.PhotoMetadataProjection;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -285,7 +284,9 @@ public class ImportService {
         }
 
         // Import photos
+        logger.info("Ready to import photos.");
         if (dto.getPhotos() != null) {
+            logger.info("Importing {} photos", dto.getPhotos().size()); 
             for (ImportPhotoDto pDto : dto.getPhotos()) {
                 // First resolve book and author references
                 Book book = null;
@@ -305,28 +306,42 @@ public class ImportService {
                     }
                 }
 
-                // Try to find existing photo by book/author + photoOrder
+                // Try to find existing photo by permanentId first, then book/author + photoOrder
                 Photo photo = null;
 
-                // 1. If it's a book photo, match by book + photoOrder
-                if (book != null && pDto.getPhotoOrder() != null) {
-                    List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
-                    if (!photos.isEmpty()) {
-                        photo = photos.get(0); // Use the one with lowest ID
+                // 1. If photo has a permanentId, try to find existing photo with same permanentId
+                if (pDto.getPermanentId() != null && !pDto.getPermanentId().trim().isEmpty()) {
+                    photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
+                    if (photo != null) {
+                        logger.info("Found existing photo with permanentId: {} (Photo ID: {})", pDto.getPermanentId(), photo.getId());
                     }
                 }
 
-                // 2. If it's an author-only photo, match by author + photoOrder
+                // 2. If it's a book photo and not found by permanentId, match by book + photoOrder
+                if (photo == null && book != null && pDto.getPhotoOrder() != null) {
+                    List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
+                    if (!photos.isEmpty()) {
+                        photo = photos.get(0); // Use the one with lowest ID
+                        logger.info("Found existing photo with bookId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})", 
+                            book.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
+                    }
+                }
+
+                // 3. If it's an author-only photo, match by author + photoOrder
                 if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
                     List<Photo> photos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), pDto.getPhotoOrder());
                     if (!photos.isEmpty()) {
                         photo = photos.get(0); // Use the one with lowest ID
+                        logger.info("Found existing photo with authorId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})", 
+                            author.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
                     }
                 }
 
-                // 3. Create new photo if not found
+                // 4. Create new photo if not found
                 if (photo == null) {
                     photo = new Photo();
+                    logger.info("Existing photo not found for bookId: {}. Starting new photo. Perm ID: {}", 
+                        book.getId(), pDto.getPermanentId());
                 }
 
                 // Update fields (merge)
@@ -494,11 +509,40 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // IMPORTANT: Photos are NOT exported in JSON export
-        // Photos are too large and should be managed separately via Google Photos export
-        // The photo export/import functionality is available at /api/photo-export
-        // Setting photos to null ensures they are not included in the JSON export
-        dto.setPhotos(null);
+        // Export photo METADATA (without image bytes)
+        // This allows permanent IDs, captions, and ordering to be preserved across imports
+        List<ImportPhotoDto> photoDtos = new ArrayList<>();
+        for (Photo photo : photoRepository.findAll()) {
+            // Skip soft-deleted photos
+            if (photo.getDeletedAt() != null) {
+                continue;
+            }
+
+            ImportPhotoDto pDto = new ImportPhotoDto();
+            pDto.setContentType(photo.getContentType());
+            pDto.setCaption(photo.getCaption());
+            pDto.setPhotoOrder(photo.getPhotoOrder());
+            pDto.setPermanentId(photo.getPermanentId());
+            pDto.setExportedAt(photo.getExportedAt());
+            pDto.setExportStatus(photo.getExportStatus());
+            pDto.setExportErrorMessage(photo.getExportErrorMessage());
+
+            // Set book reference if exists
+            if (photo.getBook() != null) {
+                pDto.setBookTitle(photo.getBook().getTitle());
+                if (photo.getBook().getAuthor() != null) {
+                    pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+                }
+            }
+
+            // Set author reference if exists (for author-only photos)
+            if (photo.getAuthor() != null && photo.getBook() == null) {
+                pDto.setAuthorName(photo.getAuthor().getName());
+            }
+
+            photoDtos.add(pDto);
+        }
+        dto.setPhotos(photoDtos);
 
         return dto;
     }
