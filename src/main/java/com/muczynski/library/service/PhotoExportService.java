@@ -42,6 +42,9 @@ public class PhotoExportService {
     private LibraryRepository libraryRepository;
 
     @Autowired
+    private com.muczynski.library.repository.BookRepository bookRepository;
+
+    @Autowired
     private GooglePhotosService googlePhotosService;
 
     @Autowired
@@ -493,11 +496,16 @@ public class PhotoExportService {
                 photoInfo.put("contentType", photo.getContentType());
                 // Use imageChecksum as proxy for hasImage to avoid loading image bytes
                 photoInfo.put("hasImage", photo.getImageChecksum() != null);
+                photoInfo.put("checksum", photo.getImageChecksum());
 
                 if (photo.getBook() != null) {
                     photoInfo.put("bookTitle", photo.getBook().getTitle());
                     photoInfo.put("bookId", photo.getBook().getId());
                     photoInfo.put("bookLocNumber", photo.getBook().getLocNumber());
+                    // Fetch dateAddedToLibrary separately since it's not in the projection
+                    bookRepository.findById(photo.getBook().getId()).ifPresent(book -> {
+                        photoInfo.put("bookDateAdded", book.getDateAddedToLibrary());
+                    });
                     // Include book's author if available
                     if (photo.getBook().getAuthor() != null) {
                         photoInfo.put("bookAuthorName", photo.getBook().getAuthor().getName());
@@ -515,6 +523,21 @@ public class PhotoExportService {
                 // Continue processing other photos even if one fails
             }
         }
+
+        // Sort by book dateAdded (descending, most recent first) to group photos of the same book together
+        // Photos without books will appear at the end
+        result.sort((p1, p2) -> {
+            Object date1 = p1.get("bookDateAdded");
+            Object date2 = p2.get("bookDateAdded");
+
+            // Handle null values - put photos without books at the end
+            if (date1 == null && date2 == null) return 0;
+            if (date1 == null) return 1;  // p1 goes after p2
+            if (date2 == null) return -1; // p1 goes before p2
+
+            // Both dates exist - compare in descending order (most recent first)
+            return ((LocalDateTime) date2).compareTo((LocalDateTime) date1);
+        });
 
         logger.info("Successfully processed {} photos for display", result.size());
         return result;
