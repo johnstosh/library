@@ -54,6 +54,31 @@ async function loadPhotoExportStatus() {
 }
 
 /**
+ * Refresh just the statistics without reloading the entire photo table
+ */
+async function refreshPhotoStatistics() {
+    try {
+        console.log('[Photos] Refreshing statistics...');
+
+        // Fetch updated statistics
+        const stats = await fetchData('/api/photo-export/stats');
+        console.log('[Photos] Updated Stats:', stats);
+
+        // Update statistics display
+        document.getElementById('stats-total').textContent = stats.total || 0;
+        document.getElementById('stats-exported').textContent = stats.exported || 0;
+        document.getElementById('stats-imported').textContent = stats.imported || 0;
+        document.getElementById('stats-pending-export').textContent = stats.pendingExport || 0;
+        document.getElementById('stats-pending-import').textContent = stats.pendingImport || 0;
+        document.getElementById('stats-failed').textContent = stats.failed || 0;
+
+        console.log('[Photos] Statistics refreshed');
+    } catch (error) {
+        console.error('[Photos] Failed to refresh statistics:', error);
+    }
+}
+
+/**
  * Render the photos table with export status
  */
 function renderPhotosTable(photos) {
@@ -367,6 +392,9 @@ async function exportAllPhotos() {
             showError('photos', `Export completed: ${successCount} succeeded, ${failureCount} failed.`);
         }
 
+        // Refresh statistics to update the counts
+        await refreshPhotoStatistics();
+
     } catch (error) {
         console.error('[Photos] Failed to export photos:', error);
         showError('photos', 'Failed to export photos: ' + error.message);
@@ -397,6 +425,9 @@ async function exportSinglePhoto(photoId) {
 
         // Update just this row instead of reloading the entire table
         await updatePhotoRow(photoId);
+
+        // Refresh statistics to update the counts
+        await refreshPhotoStatistics();
 
     } catch (error) {
         console.error('[Photos] Failed to export photo:', error);
@@ -479,6 +510,9 @@ async function importAllPhotos() {
             showError('photos', `Import completed: ${successCount} succeeded, ${failureCount} failed.`);
         }
 
+        // Refresh statistics to update the counts
+        await refreshPhotoStatistics();
+
     } catch (error) {
         console.error('[Photos] Failed to import photos:', error);
         showError('photos', 'Failed to import photos: ' + error.message);
@@ -509,6 +543,9 @@ async function importSinglePhoto(photoId) {
 
         // Update just this row instead of reloading the entire table
         await updatePhotoRow(photoId);
+
+        // Refresh statistics to update the counts
+        await refreshPhotoStatistics();
 
     } catch (error) {
         console.error('[Photos] Failed to import photo:', error);
