@@ -26,7 +26,7 @@ function loadLibrariesSectionCombined() {
 const sectionConfig = {
     'libraries': { load: loadLibrariesSectionCombined, reset: null },
     'authors': { load: loadAuthors, reset: resetAuthorForm },
-    'books': { load: loadBooks, reset: resetBookForm },
+    'books': { load: () => loadBooksFiltered('most-recent'), reset: resetBookForm },
     'books-from-feed': { load: loadBooksFromFeedSection, reset: null },
     'search': { load: null, reset: null },
     'library-card': { load: loadLibraryCardSectionCombined, reset: null },
