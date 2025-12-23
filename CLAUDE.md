@@ -194,22 +194,22 @@ See `feature-design-import-export.md` for complete details.
 
 ## Git Workflow
 
-**This project uses direct commits to the `main` branch - no feature branches.**
+**This project uses direct commits to the `dev` branch - no feature branches.**
 
 ```bash
 # Before starting work
-git checkout main
+git checkout dev
 git pull
 
 # After completing work
-git push origin main
+git push origin dev
 ```
 
 ## Definition of Done
 
 For any request to be considered complete, ALL of these steps must be accomplished:
 
-1. **Checkout main branch**: `git checkout main`
+1. **Checkout dev branch**: `git checkout dev`
 2. **Complete the requested work**: Implement the feature/fix
 3. **Update documentation**:
    - Update .md files in root directory if architecture or APIs changed
@@ -224,7 +224,7 @@ For any request to be considered complete, ALL of these steps must be accomplish
    - **Why all three?** Other programmers make errors that need to be caught
 5. **Run verifier**: Use the appropriate verifier to confirm the request was accomplished
    - **IMPORTANT**: If you don't know what verifier to use, don't start work
-6. **Push to main**: `git push origin main`
+6. **Push to dev**: `git push origin dev`
 
 ## Development Workflow
 
