@@ -1,0 +1,72 @@
+// (c) Copyright 2025 by Muczynski
+import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useDeleteBooks } from '@/api/books'
+
+interface BulkActionsToolbarProps {
+  selectedIds: Set<number>
+  onClearSelection: () => void
+}
+
+export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const deleteBooks = useDeleteBooks()
+
+  const handleBulkDelete = async () => {
+    try {
+      await deleteBooks.mutateAsync(Array.from(selectedIds))
+      onClearSelection()
+      setShowDeleteConfirm(false)
+    } catch (error) {
+      console.error('Failed to delete books:', error)
+    }
+  }
+
+  if (selectedIds.size === 0) return null
+
+  return (
+    <>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-blue-900">
+              {selectedIds.size} {selectedIds.size === 1 ? 'book' : 'books'} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearSelection}
+              data-test="clear-selection"
+            >
+              Clear Selection
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              data-test="bulk-delete"
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Books"
+        message={`Are you sure you want to delete ${selectedIds.size} ${
+          selectedIds.size === 1 ? 'book' : 'books'
+        }? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteBooks.isPending}
+      />
+    </>
+  )
+}
