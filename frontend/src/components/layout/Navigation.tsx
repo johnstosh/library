@@ -67,6 +67,9 @@ export function Navigation() {
               <NavLink to="/my-card" data-test="nav-my-card">
                 My Card
               </NavLink>
+              <NavLink to="/settings" data-test="nav-settings">
+                Settings
+              </NavLink>
 
               {/* Librarian-only items */}
               {isLibrarian && (
@@ -84,8 +87,17 @@ export function Navigation() {
                   <NavLink to="/labels" data-test="nav-labels">
                     Labels
                   </NavLink>
+                  <NavLink to="/books-from-feed" data-test="nav-books-from-feed">
+                    Books from Feed
+                  </NavLink>
                   <NavLink to="/data-management" data-test="nav-data">
                     Data
+                  </NavLink>
+                  <NavLink to="/global-settings" data-test="nav-global-settings">
+                    Global Settings
+                  </NavLink>
+                  <NavLink to="/test-data" data-test="nav-test-data">
+                    Test Data
                   </NavLink>
                 </>
               )}
@@ -140,6 +152,9 @@ export function Navigation() {
           <NavLink to="/my-card" data-test="nav-my-card-mobile">
             My Card
           </NavLink>
+          <NavLink to="/settings" data-test="nav-settings-mobile">
+            Settings
+          </NavLink>
 
           {isLibrarian && (
             <>
@@ -156,8 +171,17 @@ export function Navigation() {
               <NavLink to="/labels" data-test="nav-labels-mobile">
                 Labels
               </NavLink>
+              <NavLink to="/books-from-feed" data-test="nav-books-from-feed-mobile">
+                Books from Feed
+              </NavLink>
               <NavLink to="/data-management" data-test="nav-data-mobile">
                 Data Management
+              </NavLink>
+              <NavLink to="/global-settings" data-test="nav-global-settings-mobile">
+                Global Settings
+              </NavLink>
+              <NavLink to="/test-data" data-test="nav-test-data-mobile">
+                Test Data
               </NavLink>
             </>
           )}

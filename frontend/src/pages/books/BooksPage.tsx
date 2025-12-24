@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { BookFilters } from './components/BookFilters'
 import { BookTable } from './components/BookTable'
 import { BookForm } from './components/BookForm'
+import { BookDetailModal } from './components/BookDetailModal'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBooks } from '@/api/books'
 import { useUiStore, useBooksFilter, useBooksTableSelection } from '@/stores/uiStore'
@@ -12,6 +13,7 @@ import type { BookDto } from '@/types/dtos'
 export function BooksPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingBook, setEditingBook] = useState<BookDto | null>(null)
+  const [viewingBookId, setViewingBookId] = useState<number | null>(null)
 
   const filter = useBooksFilter()
   const { selectedIds, selectAll } = useBooksTableSelection()
@@ -50,9 +52,7 @@ export function BooksPage() {
   }
 
   const handleViewBook = (book: BookDto) => {
-    // For now, just open edit form in view mode
-    // Later this can navigate to a dedicated view page
-    console.log('View book:', book)
+    setViewingBookId(book.id)
   }
 
   const handleCloseForm = () => {
@@ -102,6 +102,11 @@ export function BooksPage() {
       </div>
 
       <BookForm isOpen={showForm} onClose={handleCloseForm} book={editingBook} />
+      <BookDetailModal
+        isOpen={viewingBookId !== null}
+        onClose={() => setViewingBookId(null)}
+        bookId={viewingBookId}
+      />
     </div>
   )
 }

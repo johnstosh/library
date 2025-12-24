@@ -50,6 +50,8 @@ export const queryKeys = {
   },
   photos: {
     all: ['photos'] as const,
+    book: (bookId: number) => [...queryKeys.photos.all, 'book', bookId] as const,
+    author: (authorId: number) => [...queryKeys.photos.all, 'author', authorId] as const,
     image: (id: number, checksum: string) =>
       [...queryKeys.photos.all, 'image', id, checksum] as const,
     thumbnail: (id: number, checksum: string, width: number) =>

@@ -35,14 +35,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - BYU CallNumber library for LOC sorting
 
 **Frontend:**
-- Single-page application (SPA) using vanilla JavaScript
-- Bootstrap 5.3.8 for UI
-- Cropper.js for image manipulation
-- **CRITICAL: Hybrid module system** (see `feature-design-frontend.md`)
-  - Core files use ES6 modules (auth.js, sections.js, utils.js, init.js)
-  - Feature modules may use global scope
-  - Check existing patterns before modifying
-  - Script load order in index.html is critical
+- Modern React 18+ SPA with TypeScript (migrated Dec 2024)
+- Tailwind CSS v4 for utility-first styling
+- TanStack Query v5 for server state management
+- React Router v6 for client-side routing
+- Zustand for client state
+- Vite for fast builds and dev server
+- **See `feature-design-frontend.md` for complete architecture**
+- **See `FRONTEND_PROGRESS.md` for migration status**
 
 **Testing:**
 - JUnit 5 with Spring Boot Test
@@ -122,12 +122,16 @@ The build.gradle test configuration only shows detailed output for failed tests 
 See `feature-design-frontend.md` for complete details.
 
 **Key Points:**
-- Single-page application with section-based navigation
-- `showSection(sectionId)` controls visibility
-- Access control via CSS classes: `librarian-only`, `public-item`, `librarian-or-unauthenticated`
-- All API calls use `fetch()` with utilities in `utils.js`
+- React 18 single-page application with React Router
+- TypeScript strict mode for type safety
+- TanStack Query for server state management and caching
+- Tailwind CSS for styling
+- Protected routes with role-based access control
+- All API calls use TanStack Query hooks
 - `data-test` attributes on all interactive elements for Playwright tests
-- Consistent CRUD pattern: Add button, View, Edit icon (✏️), Delete icon (🗑️)
+- Consistent CRUD pattern across all features
+- Code splitting with lazy-loaded page components (49% bundle reduction)
+- Error boundaries for graceful error handling
 
 ## Key Configuration
 
@@ -228,11 +232,23 @@ For any request to be considered complete, ALL of these steps must be accomplish
 
 ## Development Workflow
 
-1. **Adding a new feature**: Create/modify entities → services → controllers → DTOs → mappers → frontend JS
-2. **UI changes**: Edit `index.html` for structure, `js/*.js` for behavior, `css/style.css` for styling
-3. **API changes**: Update controller, ensure `@PreAuthorize` is correct, update corresponding frontend JS
-4. **Tests**: Write controller tests with `@SpringBootTest`, UI tests with Playwright in `ui/` package
-5. **Security**: Always use `@PreAuthorize` for librarian-only operations, test with different authorities
+### Backend Development
+1. **Adding a new feature**: Create/modify entities → services → controllers → DTOs → mappers
+2. **API changes**: Update controller, ensure `@PreAuthorize` is correct, add/update DTO types
+3. **Tests**: Write controller tests with `@SpringBootTest`, integration tests
+4. **Security**: Always use `@PreAuthorize` for librarian-only operations, test with different authorities
+
+### Frontend Development (React)
+1. **Adding a new feature**:
+   - Create API functions in `frontend/src/api/`
+   - Add React Query hooks (useFeatures, useCreateFeature, etc.)
+   - Create page component in `frontend/src/pages/feature/`
+   - Add child components (filters, table, form, modals)
+   - Add route in `App.tsx` (lazy-loaded)
+   - Add navigation link in `Navigation.tsx`
+   - Add TypeScript interfaces in `frontend/src/types/dtos.ts`
+2. **UI changes**: Edit React components with Tailwind CSS classes
+3. **Tests**: Write Playwright UI tests with `data-test` attributes
 
 ## Important Patterns to Follow
 
@@ -243,14 +259,17 @@ For any request to be considered complete, ALL of these steps must be accomplish
 - OAuth user handling: Services must check both username and SSO subject ID
 - Password hashing: Always use SHA-256 client-side via `hashPassword()` before sending to server
 
-### Frontend
+### Frontend (React + TypeScript)
 - Use `data-test` attributes for all testable elements
-- Librarian-only UI elements must have `librarian-only` CSS class
-- Public UI elements must have `public-item` CSS class
-- JavaScript modules: Core uses ES6 modules, features may use global scope
-  - Check existing patterns before modifying
-  - Maintain consistency with the existing file's pattern
-- LOC formatting: Use `formatLocForSpine()` in utils.js for spine label display
+- TypeScript strict mode - all props and state must be typed
+- Use TanStack Query hooks for all API calls (never raw fetch)
+- Protected routes: Use `<ProtectedRoute />` and `<LibrarianRoute />` wrappers
+- Lazy load all page components for code splitting
+- Forms: Use controlled components with useState
+- State management: TanStack Query (server) + Zustand (client) + useState (local)
+- Styling: Use Tailwind CSS utility classes, not custom CSS
+- LOC formatting: Use `formatLocForSpine()` in `utils/formatters.ts`
+- Copyright header: `// (c) Copyright 2025 by Muczynski` on all new files
 
 ### General
 - **Copyright headers**: Every source file must have copyright at top

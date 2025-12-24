@@ -104,7 +104,18 @@ export interface ApplicationDto {
 
 // Settings DTOs
 export interface GlobalSettingsDto {
-  id: number
-  ssoEnabled: boolean
+  googleClientSecret?: string
+  googleClientSecretPartial?: string
+  googleClientSecretUpdatedAt?: string
   googleClientId?: string
+  redirectUri?: string
+  googleSsoClientId?: string
+  googleSsoClientSecret?: string
+  googleSsoClientSecretPartial?: string
+  googleSsoCredentialsUpdatedAt?: string
+  googleSsoClientSecretConfigured: boolean
+  googleSsoClientIdConfigured: boolean
+  lastUpdated?: string
+  googleClientSecretConfigured: boolean
+  googleClientSecretValidation?: string
 }

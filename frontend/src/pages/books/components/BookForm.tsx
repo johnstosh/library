@@ -5,11 +5,14 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useAuthors } from '@/api/authors'
 import { useLibraries } from '@/api/libraries'
 import { useCreateBook, useUpdateBook } from '@/api/books'
+import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 
 interface BookFormProps {
   isOpen: boolean
@@ -30,11 +33,13 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     libraryId: '',
   })
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const { data: authors, isLoading: authorsLoading } = useAuthors()
   const { data: libraries, isLoading: librariesLoading } = useLibraries()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
+  const lookupLoc = useLookupSingleBook()
 
   useEffect(() => {
     if (book) {
@@ -59,11 +64,32 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
       })
     }
     setError('')
+    setSuccessMessage('')
   }, [book, isOpen])
+
+  const handleLookupLoc = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupLoc.mutateAsync(book.id)
+      if (result.success && result.locCallNumber) {
+        setFormData({ ...formData, locCallNumber: result.locCallNumber })
+        setSuccessMessage(`LOC call number found: ${result.locCallNumber}`)
+      } else {
+        setError(result.message || 'LOC call number not found')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup LOC')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
 
     if (!formData.title || !formData.authorId || !formData.libraryId) {
       setError('Title, Author, and Library are required')
@@ -115,6 +141,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
   ]
 
   const isLoading = createBook.isPending || updateBook.isPending
+  const isLookingUp = lookupLoc.isPending
 
   return (
     <Modal
@@ -140,6 +167,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <ErrorMessage message={error} />}
+        {successMessage && <SuccessMessage message={successMessage} />}
 
         <Input
           label="Title"
@@ -189,12 +217,33 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="LOC Call Number"
-            value={formData.locCallNumber}
-            onChange={(e) => setFormData({ ...formData, locCallNumber: e.target.value })}
-            data-test="book-loc"
-          />
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="LOC Call Number"
+                  value={formData.locCallNumber}
+                  onChange={(e) => setFormData({ ...formData, locCallNumber: e.target.value })}
+                  data-test="book-loc"
+                />
+              </div>
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={handleLookupLoc}
+                  isLoading={isLookingUp}
+                  disabled={isLoading || isLookingUp}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="lookup-loc-button"
+                  className="mb-0"
+                >
+                  Lookup
+                </Button>
+              )}
+            </div>
+          </div>
 
           <Select
             label="Status"

@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorForm } from './components/AuthorForm'
+import { AuthorDetailModal } from './components/AuthorDetailModal'
 import { useAuthors, useDeleteAuthors } from '@/api/authors'
 import { useUiStore, useAuthorsFilter, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
@@ -12,6 +13,7 @@ import type { AuthorDto } from '@/types/dtos'
 export function AuthorsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingAuthor, setEditingAuthor] = useState<AuthorDto | null>(null)
+  const [viewingAuthorId, setViewingAuthorId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const filter = useAuthorsFilter()
@@ -50,7 +52,7 @@ export function AuthorsPage() {
   }
 
   const handleViewAuthor = (author: AuthorDto) => {
-    console.log('View author:', author)
+    setViewingAuthorId(author.id)
   }
 
   const handleCloseForm = () => {
@@ -135,6 +137,11 @@ export function AuthorsPage() {
       </div>
 
       <AuthorForm isOpen={showForm} onClose={handleCloseForm} author={editingAuthor} />
+      <AuthorDetailModal
+        isOpen={viewingAuthorId !== null}
+        onClose={() => setViewingAuthorId(null)}
+        authorId={viewingAuthorId}
+      />
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

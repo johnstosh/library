@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBooks } from '@/api/books'
+import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
+import { LocLookupResultsModal } from './LocLookupResultsModal'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -11,7 +14,11 @@ interface BulkActionsToolbarProps {
 
 export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
+
   const deleteBooks = useDeleteBooks()
+  const lookupBulk = useLookupBulkBooks()
 
   const handleBulkDelete = async () => {
     try {
@@ -20,6 +27,16 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowDeleteConfirm(false)
     } catch (error) {
       console.error('Failed to delete books:', error)
+    }
+  }
+
+  const handleBulkLookup = async () => {
+    try {
+      const results = await lookupBulk.mutateAsync(Array.from(selectedIds))
+      setLookupResults(results)
+      setShowResults(true)
+    } catch (error) {
+      console.error('Failed to lookup LOC:', error)
     }
   }
 
@@ -44,6 +61,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
           </div>
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkLookup}
+              isLoading={lookupBulk.isPending}
+              disabled={lookupBulk.isPending}
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="bulk-lookup-loc"
+            >
+              Lookup LOC
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -66,6 +94,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         confirmText="Delete"
         variant="danger"
         isLoading={deleteBooks.isPending}
+      />
+
+      <LocLookupResultsModal
+        isOpen={showResults}
+        onClose={() => setShowResults(false)}
+        results={lookupResults}
       />
     </>
   )
