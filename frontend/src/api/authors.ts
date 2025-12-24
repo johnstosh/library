@@ -4,21 +4,19 @@ import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorDto, BookDto } from '@/types/dtos'
 
-// Hook to get all authors
+// Hook to get all authors with server-side filtering
 export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books') {
   return useQuery({
     queryKey: queryKeys.authors.list(filter),
     queryFn: async () => {
-      const authors = await api.get<AuthorDto[]>('/authors')
-
-      // Client-side filtering until backend supports it
+      // Use backend filter endpoints for better performance
       if (filter === 'without-description') {
-        return authors.filter((a) => !a.briefBiography)
+        return api.get<AuthorDto[]>('/authors/without-description')
       } else if (filter === 'zero-books') {
-        return authors.filter((a) => a.bookCount === 0)
+        return api.get<AuthorDto[]>('/authors/zero-books')
       }
 
-      return authors
+      return api.get<AuthorDto[]>('/authors')
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   })

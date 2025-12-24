@@ -36,4 +36,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NULL OR b.locNumber = ''")
     List<Book> findBooksWithoutLocNumber();
+
+    long countByLibraryId(Long libraryId);
 }

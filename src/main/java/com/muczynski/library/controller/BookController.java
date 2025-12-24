@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.PhotoService;
@@ -40,6 +41,9 @@ public class BookController {
 
     @Autowired
     private GooglePhotosService googlePhotosService;
+
+    @Autowired
+    private AskGrok askGrok;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -361,6 +365,27 @@ public class BookController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/suggest-loc")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> suggestLocNumber(@RequestBody Map<String, String> request) {
+        try {
+            String title = request.get("title");
+            String author = request.get("author");
+
+            if (title == null || title.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Title is required"));
+            }
+
+            String suggestion = askGrok.suggestLocNumber(title, author);
+            return ResponseEntity.ok(Map.of("suggestion", suggestion));
+        } catch (Exception e) {
+            logger.warn("Failed to get LOC suggestion for title '{}': {}",
+                    request.get("title"), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

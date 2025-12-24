@@ -18,6 +18,13 @@ export interface LibraryDto {
   hostname: string
 }
 
+export interface LibraryStatisticsDto {
+  libraryId: number
+  libraryName: string
+  bookCount: number
+  activeLoansCount: number
+}
+
 // Author DTOs
 export interface AuthorDto {
   id: number
@@ -27,6 +34,7 @@ export interface AuthorDto {
   deathDate?: string
   briefBiography?: string
   bookCount?: number
+  lastModified: string
 }
 
 export interface AuthorSummaryDto {
@@ -72,6 +80,7 @@ export interface UserDto {
   username: string
   authority: UserAuthority
   ssoSubjectId?: string
+  lastModified: string
 }
 
 // Loan DTOs
@@ -84,6 +93,7 @@ export interface LoanDto {
   checkoutDate: string
   dueDate: string
   returnDate?: string
+  lastModified: string
 }
 
 // Library Card DTOs

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 @Entity
@@ -36,6 +37,14 @@ public class Author {
     @Lob
     private String briefBiography;
 
+    private LocalDateTime lastModified;
+
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Photo> photos = new ArrayList<>();
+
+    @PreUpdate
+    @PrePersist
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
 }

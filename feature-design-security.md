@@ -23,10 +23,11 @@
 ### Form-Based Login
 - Client-side SHA-256 password hashing before transmission
   - Avoids BCrypt 72-byte limit
-  - Implementation in `utils.js` `hashPassword()` function
+  - Implementation in `frontend/src/utils/auth.ts` `hashPassword()` function (React)
+  - Previously in `utils.js` (legacy vanilla JS)
 - Hashed passwords stored with BCrypt in database
 - Custom success handler returns 200 OK with JSON (no redirect)
-- Failure redirects to `/?error`
+- React implementation: LoginPage handles authentication via authStore
 
 ### Google OAuth2 SSO
 - Dynamically configured via database settings (`GlobalSettings`)
@@ -46,11 +47,22 @@
 
 ## UI Visibility Rules
 
-### CSS Classes for Access Control
-- **`librarian-only`**: Hidden for non-librarian users (USER authority and unauthenticated)
+### React Component-Based Access Control
+The frontend uses React components to control access based on authentication and authorization:
+
+- **`<ProtectedRoute />`**: Wraps routes that require authentication (any authority)
+- **`<LibrarianRoute />`**: Wraps routes that require LIBRARIAN authority
+- **Conditional rendering**: Components check `isLibrarian` from authStore for conditional UI
+  - Example: Bulk delete buttons only shown to librarians
+  - Example: "Apply for Library Card" shown only to unauthenticated users
+
+### Legacy CSS Classes (Vanilla JS - Deprecated)
+The old vanilla JavaScript implementation used CSS classes:
+- **`librarian-only`**: Hidden for non-librarian users
 - **`public-item`**: Visible to unauthenticated users
-- **`librarian-or-unauthenticated`**: Visible only to LIBRARIAN and unauthenticated users (hidden from USER)
-  - Example: "Apply for Library Card" section - users who already have cards (USER authority) don't need to see it
+- **`librarian-or-unauthenticated`**: Visible only to LIBRARIAN and unauthenticated users
+
+These classes are no longer used in the React implementation.
 
 ## Security Configuration
 - All REST controllers use `@RestController` with `/api/*` paths
@@ -61,8 +73,21 @@
 - Credentials allowed for authenticated requests
 
 ## Related Files
+
+### Backend
 - `SecurityConfig.java` - Spring Security configuration
 - `CustomUserDetailsService.java` - User details loading
-- `auth.js` - Frontend login/logout handling
-- `init.js` - Authentication check on app load
+- `GoogleOAuthController.java` - OAuth endpoints
 - `sso.md` - Google OAuth SSO configuration details
+
+### Frontend (React)
+- `frontend/src/stores/authStore.ts` - Authentication state management (Zustand)
+- `frontend/src/components/auth/ProtectedRoute.tsx` - Authenticated route wrapper
+- `frontend/src/components/auth/LibrarianRoute.tsx` - Librarian-only route wrapper
+- `frontend/src/pages/LoginPage.tsx` - Login page component
+- `frontend/src/utils/auth.ts` - Auth utilities (hashPassword)
+- `frontend/src/App.tsx` - Route configuration with protection
+
+### Legacy (Vanilla JS - Deprecated)
+- `auth.js` - Old login/logout handling (replaced by authStore.ts)
+- `init.js` - Old authentication check (replaced by App.tsx useEffect)

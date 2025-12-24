@@ -108,6 +108,15 @@ public class PhotoService {
      */
     @Transactional
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType) {
+        return addPhotoFromBytes(bookId, imageBytes, contentType, null);
+    }
+
+    /**
+     * Add photo to book using raw image bytes, content type, and optional date taken
+     * Used by books-from-feed when downloading photos from Google Photos with metadata
+     */
+    @Transactional
+    public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType, LocalDateTime dateTaken) {
         try {
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new LibraryException("Book not found"));
@@ -124,9 +133,13 @@ public class PhotoService {
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
             photo.setImageChecksum(computeChecksum(imageBytes));
+            if (dateTaken != null) {
+                photo.setDateTaken(dateTaken);
+            }
 
             Photo savedPhoto = photoRepository.save(photo);
-            logger.debug("Added photo to book ID {} with order {}", bookId, savedPhoto.getPhotoOrder());
+            logger.debug("Added photo to book ID {} with order {} (dateTaken: {})",
+                    bookId, savedPhoto.getPhotoOrder(), dateTaken);
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add photo from bytes to book ID {}: {}", bookId, e.getMessage(), e);
@@ -281,7 +294,10 @@ public class PhotoService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
             ImageIO.write(rotatedImage, formatName, baos);
-            photo.setImage(baos.toByteArray());
+            byte[] rotatedBytes = baos.toByteArray();
+            photo.setImage(rotatedBytes);
+            // Recalculate checksum after rotation since image bytes changed
+            photo.setImageChecksum(computeChecksum(rotatedBytes));
         } catch (IOException e) {
             logger.error("IO error rotating image: {}", e.getMessage(), e);
             throw new LibraryException("Failed to rotate image", e);

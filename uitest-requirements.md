@@ -5,6 +5,47 @@ The requirements in this file are requirements for this project/application.
 
 These tests demonstrate robust Playwright usage: launching a browser, navigating pages, interacting with elements (e.g., adding books, searching inventory), handling forms, and asserting UI states. They are designed for a full-stack Java/Spring application with dynamic SPA-like behavior.
 
+## ⚠️ IMPORTANT: React Migration (Dec 2024)
+
+**The frontend has been migrated from vanilla JavaScript to React + TypeScript.**
+
+### Key Changes for UI Tests:
+1. **Single Page Application**: The app now uses React Router for client-side routing
+   - All routes are handled client-side after initial load
+   - Navigation no longer requires `page.navigate()` for section changes
+   - Use `page.click()` on navigation links instead
+
+2. **Component-Based Architecture**: UI is now built with React components
+   - Elements may render asynchronously
+   - Always use `waitForSelector()` with `.setState(WaitForSelectorState.VISIBLE)`
+   - React state updates may cause re-renders
+
+3. **Data-Test Attributes**: All maintained from vanilla JS
+   - `data-test` attributes still present on all interactive elements
+   - Same selector patterns work (`[data-test='element-id']`)
+   - Form inputs may use `data-test-form` for disambiguation
+
+4. **Section-Based Navigation**: Now uses React Router routes
+   - `/books`, `/authors`, `/loans`, etc. are actual routes
+   - Navigation is instant (client-side)
+   - No CSS `display: none` section toggling
+
+5. **Modal Dialogs**: Now use Headless UI Dialog components
+   - Modals rendered with React portals
+   - May need updated selectors for modal content
+   - Still use `data-test="modal-*"` attributes
+
+6. **Forms**: Now use controlled components
+   - Form state managed by React (useState)
+   - Changes may trigger immediate re-renders
+   - Validation happens on client-side before submission
+
+### Migration Notes:
+- Legacy references below to `sections.js`, `init.js`, `auth.js` refer to the OLD vanilla JS implementation
+- These files are now replaced by React components in `frontend/src/`
+- Core functionality remains the same, but implementation differs
+- Test selectors and assertions should work unchanged if `data-test` attributes are maintained
+
 ## Required Patterns in the UITests
 The tests must follow consistent patterns reflecting best practices in Playwright-based UI testing:
 

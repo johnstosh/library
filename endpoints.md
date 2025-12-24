@@ -133,4 +133,108 @@ Imports database from JSON format.
 
 ---
 
-**Related:** SecurityConfig.java, CustomUserDetailsService.java, Photo.java (@Lob fields), ImportService.java
+## Phase 2 Backend Endpoints (Added Dec 2024)
+
+### GET /api/libraries/statistics
+Returns statistics for all libraries including book count and active loans.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Response:** Array of LibraryStatisticsDto
+```json
+[
+  {
+    "libraryId": 1,
+    "libraryName": "St. Martin de Porres",
+    "bookCount": 150,
+    "activeLoansCount": 12
+  }
+]
+```
+
+**Use Case:**
+- Powers Libraries page statistics display
+- Shows book inventory and circulation at a glance
+
+---
+
+### GET /api/authors/without-description
+Returns authors that are missing brief biographies.
+
+**Authentication:** Public (`permitAll()`)
+
+**Response:** Array of AuthorDto with `bookCount` and `lastModified`
+
+**Use Case:**
+- Filter to find authors needing biographical information
+- Matches Books page filtering functionality
+
+---
+
+### GET /api/authors/zero-books
+Returns authors that have no associated books.
+
+**Authentication:** Public (`permitAll()`)
+
+**Response:** Array of AuthorDto with `bookCount` set to 0
+
+**Use Case:**
+- Identify orphaned author records
+- Clean up database by removing unused authors
+
+---
+
+### POST /api/books/suggest-loc
+Uses Grok AI to suggest a Library of Congress call number for a book.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Request Body:**
+```json
+{
+  "title": "The Great Gatsby",
+  "author": "F. Scott Fitzgerald"
+}
+```
+
+**Response:**
+```json
+{
+  "suggestion": "PS3511.I9 G7"
+}
+```
+
+**Requirements:**
+- User must have xAI API key configured in user settings
+- Uses Grok-3-latest model
+- 10-minute timeout for API calls
+
+**Error Responses:**
+- 400: Title is required
+- 500: xAI API key not configured or API call failed
+
+**Use Case:**
+- AI-powered assistance for cataloging books
+- Suggests LOC call numbers when ISBN lookup fails
+
+---
+
+## lastModified Timestamps (Added Dec 2024)
+
+All DTOs now include `lastModified` timestamp for cache invalidation:
+- **AuthorDto** - `lastModified: LocalDateTime`
+- **UserDto** - `lastModified: LocalDateTime`
+- **LoanDto** - `lastModified: LocalDateTime`
+- **BookDto** - `lastModified: LocalDateTime` (already included)
+
+**Entities with @PreUpdate:**
+- Author, User, Loan, Book - automatically update `lastModified` on save
+
+**Use Case:**
+- Frontend cache invalidation strategy
+- `/api/books/summaries` returns minimal data for cache comparison
+- Only fetch full data for changed items
+
+---
+
+**Related:** SecurityConfig.java, CustomUserDetailsService.java, Photo.java (@Lob fields), ImportService.java, AskGrok.java, LibraryStatisticsDto.java

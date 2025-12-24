@@ -9,6 +9,7 @@ import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   useLibraries,
+  useLibraryStatistics,
   useCreateLibrary,
   useUpdateLibrary,
   useDeleteLibrary,
@@ -27,6 +28,7 @@ export function LibrariesPage() {
   const [error, setError] = useState('')
 
   const { data: libraries = [], isLoading } = useLibraries()
+  const { data: statistics = [] } = useLibraryStatistics()
   const createLibrary = useCreateLibrary()
   const updateLibrary = useUpdateLibrary()
   const deleteLibrary = useDeleteLibrary()
@@ -87,18 +89,49 @@ export function LibrariesPage() {
     }
   }
 
+  // Get statistics for a library
+  const getLibraryStats = (libraryId: number) => {
+    return statistics.find((s) => s.libraryId === libraryId)
+  }
+
   const columns: Column<LibraryDto>[] = [
     {
       key: 'name',
       header: 'Name',
       accessor: (library) => <div className="font-medium text-gray-900">{library.name}</div>,
-      width: '50%',
+      width: '30%',
     },
     {
       key: 'hostname',
       header: 'Hostname',
       accessor: (library) => <div className="text-gray-600">{library.hostname}</div>,
-      width: '50%',
+      width: '30%',
+    },
+    {
+      key: 'bookCount',
+      header: 'Books',
+      accessor: (library) => {
+        const stats = getLibraryStats(library.id)
+        return (
+          <div className="text-gray-900">
+            {stats?.bookCount !== undefined ? stats.bookCount.toLocaleString() : '-'}
+          </div>
+        )
+      },
+      width: '20%',
+    },
+    {
+      key: 'activeLoans',
+      header: 'Active Loans',
+      accessor: (library) => {
+        const stats = getLibraryStats(library.id)
+        return (
+          <div className="text-gray-900">
+            {stats?.activeLoansCount !== undefined ? stats.activeLoansCount.toLocaleString() : '-'}
+          </div>
+        )
+      },
+      width: '20%',
     },
   ]
 

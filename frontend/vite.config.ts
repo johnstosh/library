@@ -18,4 +18,15 @@ export default defineConfig({
       '@/config': path.resolve(__dirname, './src/config'),
     },
   },
+  server: {
+    port: 5173,
+    proxy: {
+      // Proxy API requests to Spring Boot backend
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

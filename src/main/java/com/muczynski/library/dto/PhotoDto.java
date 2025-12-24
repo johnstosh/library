@@ -5,6 +5,8 @@ package com.muczynski.library.dto;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class PhotoDto {
     private Long id;
@@ -13,4 +15,5 @@ public class PhotoDto {
     private Long bookId;
     private Long authorId;
     private String imageChecksum;
+    private LocalDateTime dateTaken;
 }

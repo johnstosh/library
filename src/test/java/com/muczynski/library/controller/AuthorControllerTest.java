@@ -103,4 +103,30 @@ class AuthorControllerTest {
         mockMvc.perform(delete("/api/authors/1/photos/1"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @WithMockUser
+    void getAuthorsWithoutDescription() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author Without Biography");
+        authorDto.setBookCount(5L);
+        when(authorService.getAuthorsWithoutDescription()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/without-description"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getAuthorsWithZeroBooks() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author With No Books");
+        authorDto.setBookCount(0L);
+        when(authorService.getAuthorsWithZeroBooks()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/zero-books"))
+                .andExpect(status().isOk());
+    }
 }

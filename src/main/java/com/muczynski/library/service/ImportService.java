@@ -509,9 +509,14 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // Export photo METADATA (without image bytes)
-        // This allows permanent IDs, captions, and ordering to be preserved across imports
-        // Use projection to avoid loading photo bytes which can cause OutOfMemoryError
+        // IMPORTANT: Photos are NOT exported in JSON export (too large, even metadata can be significant)
+        // Photos should be managed separately via the Photo Export feature
+        // This ensures JSON exports remain lightweight and fast
+        // Photo metadata including permanent IDs, captions, and ordering is preserved in the database
+        // and will be reconnected during import via book/author matching
+
+        // The following code was used to export photo metadata, but has been disabled per design spec:
+        /*
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
         for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
             // Skip soft-deleted photos
@@ -544,6 +549,10 @@ public class ImportService {
             photoDtos.add(pDto);
         }
         dto.setPhotos(photoDtos);
+        */
+
+        // Explicitly set photos to null to ensure they're not included in export
+        dto.setPhotos(null);
 
         return dto;
     }

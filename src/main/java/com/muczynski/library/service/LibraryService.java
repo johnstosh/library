@@ -6,12 +6,16 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.LibraryDto;
+import com.muczynski.library.dto.LibraryStatisticsDto;
 import com.muczynski.library.mapper.LibraryMapper;
+import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.LoanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +28,12 @@ public class LibraryService {
 
     @Autowired
     private LibraryMapper libraryMapper;
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private LoanRepository loanRepository;
 
     public LibraryDto createLibrary(LibraryDto libraryDto) {
         Library library = libraryMapper.toEntity(libraryDto);
@@ -73,5 +83,28 @@ public class LibraryService {
         library.setName("St. Martin de Porres");
         library.setHostname("library.muczynskifamily.com");
         return libraryRepository.save(library);
+    }
+
+    /**
+     * Get statistics for all libraries
+     */
+    public List<LibraryStatisticsDto> getLibraryStatistics() {
+        List<Library> libraries = libraryRepository.findAll();
+        List<LibraryStatisticsDto> statistics = new ArrayList<>();
+
+        for (Library library : libraries) {
+            Long bookCount = bookRepository.countByLibraryId(library.getId());
+            Long activeLoansCount = loanRepository.countByReturnDateIsNull();
+
+            LibraryStatisticsDto stats = new LibraryStatisticsDto(
+                library.getId(),
+                library.getName(),
+                bookCount,
+                activeLoansCount
+            );
+            statistics.add(stats);
+        }
+
+        return statistics;
     }
 }

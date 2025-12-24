@@ -4,6 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LibraryDto;
+import com.muczynski.library.dto.LibraryStatisticsDto;
 import com.muczynski.library.service.LibraryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,18 @@ public class LibraryController {
         } catch (RuntimeException e) {
             logger.warn("Failed to delete library ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/statistics")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> getLibraryStatistics() {
+        try {
+            List<LibraryStatisticsDto> statistics = libraryService.getLibraryStatistics();
+            return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve library statistics: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 }

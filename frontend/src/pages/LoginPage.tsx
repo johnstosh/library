@@ -37,7 +37,14 @@ export function LoginPage() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Library Management</h1>
+            <div className="flex justify-center mb-4">
+              <img
+                src="/images/marian-m.png"
+                alt="St. Martin de Porres"
+                className="w-32 h-32 object-contain"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">St. Martin de Porres Library</h1>
             <p className="text-gray-600">Sign in to your account</p>
           </div>
 

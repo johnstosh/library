@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,6 +46,8 @@ public class User {
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
     private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;
 
+    private LocalDateTime lastModified;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
@@ -52,4 +55,10 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles;
+
+    @PreUpdate
+    @PrePersist
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
 }

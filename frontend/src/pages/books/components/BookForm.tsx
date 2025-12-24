@@ -8,11 +8,11 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useAuthors } from '@/api/authors'
 import { useLibraries } from '@/api/libraries'
-import { useCreateBook, useUpdateBook } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiMagnifyingGlass } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiSparkle } from 'react-icons/pi'
 
 interface BookFormProps {
   isOpen: boolean
@@ -40,6 +40,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
+  const suggestLoc = useSuggestLocNumber()
 
   useEffect(() => {
     if (book) {
@@ -83,6 +84,37 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lookup LOC')
+    }
+  }
+
+  const handleSuggestLoc = async () => {
+    setError('')
+    setSuccessMessage('')
+
+    if (!formData.title) {
+      setError('Title is required to get LOC suggestion')
+      return
+    }
+
+    try {
+      // Get author name for better suggestions
+      const authorName = formData.authorId
+        ? authors?.find((a) => a.id === parseInt(formData.authorId))?.lastName
+        : undefined
+
+      const result = await suggestLoc.mutateAsync({
+        title: formData.title,
+        author: authorName,
+      })
+
+      if (result.suggestion) {
+        setFormData({ ...formData, locCallNumber: result.suggestion })
+        setSuccessMessage(`AI suggested LOC: ${result.suggestion}`)
+      } else {
+        setError('No LOC suggestion available')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get LOC suggestion')
     }
   }
 
@@ -142,6 +174,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
 
   const isLoading = createBook.isPending || updateBook.isPending
   const isLookingUp = lookupLoc.isPending
+  const isSuggesting = suggestLoc.isPending
 
   return (
     <Modal
@@ -216,33 +249,44 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  label="LOC Call Number"
-                  value={formData.locCallNumber}
-                  onChange={(e) => setFormData({ ...formData, locCallNumber: e.target.value })}
-                  data-test="book-loc"
-                />
-              </div>
-              {isEditing && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  onClick={handleLookupLoc}
-                  isLoading={isLookingUp}
-                  disabled={isLoading || isLookingUp}
-                  leftIcon={<PiMagnifyingGlass />}
-                  data-test="lookup-loc-button"
-                  className="mb-0"
-                >
-                  Lookup
-                </Button>
-              )}
+        <div className="space-y-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="LOC Call Number"
+                value={formData.locCallNumber}
+                onChange={(e) => setFormData({ ...formData, locCallNumber: e.target.value })}
+                data-test="book-loc"
+              />
             </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={handleSuggestLoc}
+              isLoading={isSuggesting}
+              disabled={isLoading || isSuggesting || isLookingUp}
+              leftIcon={<PiSparkle />}
+              data-test="suggest-loc-button"
+              className="mb-0"
+            >
+              AI Suggest
+            </Button>
+            {isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleLookupLoc}
+                isLoading={isLookingUp}
+                disabled={isLoading || isLookingUp || isSuggesting}
+                leftIcon={<PiMagnifyingGlass />}
+                data-test="lookup-loc-button"
+                className="mb-0"
+              >
+                Lookup
+              </Button>
+            )}
           </div>
 
           <Select

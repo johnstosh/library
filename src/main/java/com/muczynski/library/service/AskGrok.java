@@ -152,4 +152,22 @@ public class AskGrok {
             throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
         }
     }
+
+    /**
+     * Get Library of Congress call number suggestion for a book
+     * @param title Book title
+     * @param author Author name
+     * @return Suggested LOC call number
+     */
+    public String suggestLocNumber(String title, String author) {
+        String prompt = String.format(
+                "What is the Library of Congress call number for the book \"%s\" by %s? " +
+                "Please provide ONLY the call number in standard Library of Congress format. " +
+                "If you're not certain, provide your best estimate based on the subject matter and author. " +
+                "Do not include any explanation, just the call number.",
+                title,
+                author != null && !author.isEmpty() ? author : "Unknown Author"
+        );
+        return askTextOnly(prompt);
+    }
 }

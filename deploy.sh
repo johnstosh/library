@@ -72,6 +72,10 @@ gcloud sql users set-password postgres \
 echo "Configuring Docker for Artifact Registry..."
 gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
 
+# Build the frontend first
+echo "Building React frontend..."
+./build-frontend.sh
+
 # Build the Docker image without secrets (version tag for tracking)
 echo "Building Docker image... version $SERVICE_VERSION"
 ./gradlew clean build -x test

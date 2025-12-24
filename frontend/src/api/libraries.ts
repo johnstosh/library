@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { LibraryDto } from '@/types/dtos'
+import type { LibraryDto, LibraryStatisticsDto } from '@/types/dtos'
 
 // Hook to get all libraries
 export function useLibraries() {
@@ -10,6 +10,15 @@ export function useLibraries() {
     queryKey: queryKeys.libraries.list(),
     queryFn: () => api.get<LibraryDto[]>('/libraries'),
     staleTime: 1000 * 60 * 10, // 10 minutes - libraries don't change often
+  })
+}
+
+// Hook to get library statistics
+export function useLibraryStatistics() {
+  return useQuery({
+    queryKey: ['libraries', 'statistics'],
+    queryFn: () => api.get<LibraryStatisticsDto[]>('/libraries/statistics'),
+    staleTime: 1000 * 60 * 2, // 2 minutes - statistics change more frequently
   })
 }
 

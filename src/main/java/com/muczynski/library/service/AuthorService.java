@@ -118,4 +118,47 @@ public class AuthorService {
         return authorRepository.save(newAuthor);
     }
 
+    /**
+     * Get authors without a brief biography
+     */
+    public List<AuthorDto> getAuthorsWithoutDescription() {
+        return authorRepository.findAll().stream()
+                .filter(author -> author.getBriefBiography() == null || author.getBriefBiography().trim().isEmpty())
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get authors with zero books
+     */
+    public List<AuthorDto> getAuthorsWithZeroBooks() {
+        return authorRepository.findAll().stream()
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    long bookCount = bookRepository.countByAuthorId(author.getId());
+                    dto.setBookCount(bookCount);
+                    return dto;
+                })
+                .filter(dto -> dto.getBookCount() == 0)
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
 }

@@ -26,6 +26,7 @@ public class UserMapper {
         userDto.setSsoSubjectId(user.getSsoSubjectId());
         userDto.setEmail(user.getEmail());
         userDto.setLibraryCardDesign(user.getLibraryCardDesign());
+        userDto.setLastModified(user.getLastModified());
         userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
         return userDto;
     }
