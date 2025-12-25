@@ -165,7 +165,7 @@ public class LoginUITest {
         // Wait for error message to appear
         Locator errorMessage = page.locator(".bg-red-50");
         assertThat(errorMessage).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
-        assertThat(errorMessage).containsText("Login failed");
+        assertThat(errorMessage).containsText("Invalid username or password");
     }
 
     @Test

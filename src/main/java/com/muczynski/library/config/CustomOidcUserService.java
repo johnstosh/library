@@ -87,8 +87,9 @@ public class CustomOidcUserService extends OidcUserService {
         log.info("User authenticated successfully: {} with roles: {}", user.getUsername(),
                 user.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
 
-        // Return OidcUser with our database authorities
-        return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
+        // Create custom OidcUser that uses database user ID as the principal name
+        // This allows us to look up users by ID instead of username, avoiding duplicates
+        return new CustomOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), user.getId());
     }
 
     private User createNewSsoUser(String provider, String subjectId, String email, String name) {

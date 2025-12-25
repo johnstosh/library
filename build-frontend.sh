@@ -4,6 +4,8 @@
 
 set -e  # Exit on error
 
+./gradlew clean
+
 echo "================================="
 echo "Building React Frontend"
 echo "================================="
@@ -24,9 +26,9 @@ npm run build
 # Navigate back to root
 cd ..
 
-# Clear old static files (except favicon.ico and images/)
+# Clear old static files
 echo "Clearing old static files..."
-find src/main/resources/static -mindepth 1 ! -name 'favicon.ico' ! -path '*/images/*' -delete 2>/dev/null || true
+rm -rf src/main/resources/static/*
 
 # Copy new build to Spring Boot static resources
 echo "Copying build to Spring Boot static resources..."

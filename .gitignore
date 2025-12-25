@@ -23,5 +23,5 @@ data/
 *.trace.db
 
 
-# frontend
-src/main/resources/static/assets/
+# Frontend build output (copied from frontend/dist/)
+src/main/resources/static/

@@ -53,8 +53,19 @@ export async function apiClient<T>(
     // Handle other error responses
     if (!response.ok) {
       const errorText = await response.text()
+      let errorMessage = 'An error occurred'
+
+      // Try to parse JSON error response
+      try {
+        const errorData = JSON.parse(errorText)
+        errorMessage = errorData.message || errorText
+      } catch {
+        // If not JSON, use raw text
+        errorMessage = errorText || errorMessage
+      }
+
       throw new ApiError(
-        errorText || 'An error occurred',
+        errorMessage,
         response.status,
         response.statusText
       )

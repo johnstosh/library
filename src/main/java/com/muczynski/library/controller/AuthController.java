@@ -38,8 +38,8 @@ public class AuthController {
     public ResponseEntity<CurrentUserDto> login(@RequestBody LoginRequestDto loginRequest,
                                                  HttpServletRequest request,
                                                  HttpServletResponse response) {
-        // Find user by username
-        User user = userRepository.findByUsername(loginRequest.getUsername())
+        // Find user by username with local password (not SSO-only)
+        User user = userRepository.findByUsernameWithPassword(loginRequest.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
         // Verify password
@@ -48,10 +48,11 @@ public class AuthController {
             throw new RuntimeException("Invalid username or password");
         }
 
-        // Create authentication token
+        // Create authentication token using user ID as principal (not username)
+        // This makes user lookup by ID instead of username, avoiding duplicates
         UsernamePasswordAuthenticationToken authToken =
             new UsernamePasswordAuthenticationToken(
-                user.getUsername(),
+                user.getId().toString(),
                 null,
                 user.getAuthorities()
             );
@@ -88,6 +89,8 @@ public class AuthController {
 
     /**
      * Get current authenticated user info.
+     * Works for both local (username/password) and OAuth (Google SSO) authentication.
+     * The authentication principal name is always the database user ID.
      */
     @GetMapping("/me")
     public ResponseEntity<CurrentUserDto> getCurrentUser(Authentication authentication) {
@@ -95,8 +98,9 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
 
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
+        // The principal name is always the database user ID (set during login/OAuth)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         CurrentUserDto currentUser = new CurrentUserDto(

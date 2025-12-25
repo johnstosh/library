@@ -1,6 +1,6 @@
 -- (c) Copyright 2025 by Muczynski
--- Minimal base data for all tests - just roles for authentication
+-- Base data loaded for all tests - contains only roles
+-- Tests should use @Sql annotation to load additional test data as needed
 
--- Insert roles without specifying ID to avoid conflicts with auto-increment
 INSERT INTO role (name) VALUES ('USER');
 INSERT INTO role (name) VALUES ('LIBRARIAN');
