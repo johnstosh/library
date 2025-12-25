@@ -5,8 +5,8 @@ import { api } from './client'
 export interface SavedBookDto {
   id: number
   title: string
-  authorName?: string
-  libraryName?: string
+  author?: string
+  library?: string
   photoCount: number
   needsProcessing: boolean
 }

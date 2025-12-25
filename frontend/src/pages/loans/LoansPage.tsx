@@ -93,7 +93,7 @@ export function LoansPage() {
 
   const bookOptions = availableBooks.map((b) => ({
     value: b.id,
-    label: `${b.title} - ${b.authorName}`,
+    label: `${b.title} - ${b.author}`,
   }))
 
   const columns: Column<LoanDto>[] = [

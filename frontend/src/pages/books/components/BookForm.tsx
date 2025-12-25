@@ -49,9 +49,9 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         publicationYear: book.publicationYear?.toString() || '',
         publisher: book.publisher || '',
         status: book.status,
-        locCallNumber: book.locCallNumber || '',
-        authorId: book.authorId.toString(),
-        libraryId: book.libraryId.toString(),
+        locCallNumber: book.locNumber || '',
+        authorId: book.authorId?.toString() || '',
+        libraryId: book.libraryId?.toString() || '',
       })
     } else {
       setFormData({
@@ -99,7 +99,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     try {
       // Get author name for better suggestions
       const authorName = formData.authorId
-        ? authors?.find((a) => a.id === parseInt(formData.authorId))?.lastName
+        ? authors?.find((a) => a.id === parseInt(formData.authorId))?.name
         : undefined
 
       const result = await suggestLoc.mutateAsync({
@@ -154,7 +154,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
   const authorOptions = authors
     ? authors.map((a) => ({
         value: a.id,
-        label: `${a.lastName}, ${a.firstName}`,
+        label: a.name,
       }))
     : []
 

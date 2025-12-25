@@ -28,10 +28,12 @@ export interface LibraryStatisticsDto {
 // Author DTOs
 export interface AuthorDto {
   id: number
-  firstName: string
-  lastName: string
-  birthDate?: string
-  deathDate?: string
+  name: string
+  dateOfBirth?: string
+  dateOfDeath?: string
+  religiousAffiliation?: string
+  birthCountry?: string
+  nationality?: string
   briefBiography?: string
   bookCount?: number
   lastModified: string
@@ -49,11 +51,11 @@ export interface BookDto {
   publicationYear?: number
   publisher?: string
   status: BookStatus
-  locCallNumber?: string
-  libraryId: number
-  libraryName?: string
-  authorId: number
-  authorName?: string
+  locNumber?: string
+  libraryId?: number
+  library?: string
+  authorId?: number
+  author?: string
   photoCount?: number
   lastModified: string
 }

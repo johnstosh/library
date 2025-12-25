@@ -19,7 +19,7 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={author ? `${author.firstName} ${author.lastName}` : 'Author Details'}
+      title={author ? `${author.name}` : 'Author Details'}
       size="xl"
       footer={
         <div className="flex justify-end">
@@ -41,19 +41,19 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
               <div>
                 <p className="text-sm font-medium text-gray-500">Full Name</p>
                 <p className="text-gray-900">
-                  {author.firstName} {author.lastName}
+                  {author.name} {}
                 </p>
               </div>
-              {author.birthDate && (
+              {author.dateOfBirth && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Birth Date</p>
-                  <p className="text-gray-900">{formatDate(author.birthDate)}</p>
+                  <p className="text-gray-900">{formatDate(author.dateOfBirth)}</p>
                 </div>
               )}
-              {author.deathDate && (
+              {author.dateOfDeath && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Death Date</p>
-                  <p className="text-gray-900">{formatDate(author.deathDate)}</p>
+                  <p className="text-gray-900">{formatDate(author.dateOfDeath)}</p>
                 </div>
               )}
               {author.bookCount !== undefined && (
@@ -77,7 +77,7 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
           <PhotoSection
             entityType="author"
             entityId={author.id}
-            entityName={`${author.firstName} ${author.lastName}`}
+            entityName={`${author.name}`}
           />
         </div>
       ) : (

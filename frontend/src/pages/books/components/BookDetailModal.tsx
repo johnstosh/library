@@ -40,11 +40,11 @@ export function BookDetailModal({ isOpen, onClose, bookId }: BookDetailModalProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
-                <p className="text-gray-900">{book.authorName}</p>
+                <p className="text-gray-900">{book.author}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Library</p>
-                <p className="text-gray-900">{book.libraryName}</p>
+                <p className="text-gray-900">{book.library}</p>
               </div>
               {book.publicationYear && (
                 <div>
@@ -58,10 +58,10 @@ export function BookDetailModal({ isOpen, onClose, bookId }: BookDetailModalProp
                   <p className="text-gray-900">{book.publisher}</p>
                 </div>
               )}
-              {book.locCallNumber && (
+              {book.locNumber && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">LOC Call Number</p>
-                  <p className="text-gray-900 font-mono">{book.locCallNumber}</p>
+                  <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
               <div>

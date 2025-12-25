@@ -18,8 +18,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
   const isEditing = !!author
 
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     birthDate: '',
     deathDate: '',
     briefBiography: '',
@@ -32,16 +31,14 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
   useEffect(() => {
     if (author) {
       setFormData({
-        firstName: author.firstName,
-        lastName: author.lastName,
-        birthDate: author.birthDate || '',
-        deathDate: author.deathDate || '',
+        name: author.name,
+        birthDate: author.dateOfBirth || '',
+        deathDate: author.dateOfDeath || '',
         briefBiography: author.briefBiography || '',
       })
     } else {
       setFormData({
-        firstName: '',
-        lastName: '',
+        name: '',
         birthDate: '',
         deathDate: '',
         briefBiography: '',
@@ -54,17 +51,16 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
     e.preventDefault()
     setError('')
 
-    if (!formData.firstName || !formData.lastName) {
-      setError('First name and last name are required')
+    if (!formData.name || !formData.name.trim()) {
+      setError('Name is required')
       return
     }
 
     try {
       const authorData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        birthDate: formData.birthDate || undefined,
-        deathDate: formData.deathDate || undefined,
+        name: formData.name,
+        dateOfBirth: formData.birthDate || undefined,
+        dateOfDeath: formData.deathDate || undefined,
         briefBiography: formData.briefBiography || undefined,
       }
 
@@ -107,23 +103,13 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <ErrorMessage message={error} />}
 
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="First Name"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            required
-            data-test="author-first-name"
-          />
-
-          <Input
-            label="Last Name"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            required
-            data-test="author-last-name"
-          />
-        </div>
+        <Input
+          label="Name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+          data-test="author-name"
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <Input

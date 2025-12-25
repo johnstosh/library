@@ -6,7 +6,7 @@ import { queryKeys } from '@/config/queryClient'
 export interface BookLocStatusDto {
   id: number
   title: string
-  authorName: string
+  author: string
   publicationYear?: number
   locCallNumber?: string
   hasLoc: boolean

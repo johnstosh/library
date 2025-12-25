@@ -223,15 +223,15 @@ function BookResult({ book }: { book: BookDto }) {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900">{book.title}</h3>
-          <p className="text-gray-600 mt-1">by {book.authorName}</p>
+          <p className="text-gray-600 mt-1">by {book.author}</p>
           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
             {book.publicationYear && <span>{book.publicationYear}</span>}
             {book.publisher && <span>{book.publisher}</span>}
-            {book.libraryName && <span className="font-medium">{book.libraryName}</span>}
+            {book.library && <span className="font-medium">{book.library}</span>}
           </div>
-          {book.locCallNumber && (
+          {book.locNumber && (
             <div className="mt-2 text-sm text-gray-500">
-              <span className="font-medium">LOC:</span> {book.locCallNumber}
+              <span className="font-medium">LOC:</span> {book.locNumber}
             </div>
           )}
         </div>
@@ -256,13 +256,13 @@ function AuthorResult({ author }: { author: AuthorDto }) {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900">
-            {author.firstName} {author.lastName}
+            {author.name}
           </h3>
-          {(author.birthDate || author.deathDate) && (
+          {(author.dateOfBirth || author.dateOfDeath) && (
             <p className="text-gray-600 mt-1">
-              {author.birthDate && <span>{author.birthDate.split('-')[0]}</span>}
-              {author.birthDate && author.deathDate && <span> - </span>}
-              {author.deathDate && <span>{author.deathDate.split('-')[0]}</span>}
+              {author.dateOfBirth && <span>{author.dateOfBirth.split('-')[0]}</span>}
+              {author.dateOfBirth && author.dateOfDeath && <span> - </span>}
+              {author.dateOfDeath && <span>{author.dateOfDeath.split('-')[0]}</span>}
             </p>
           )}
           {author.briefBiography && (

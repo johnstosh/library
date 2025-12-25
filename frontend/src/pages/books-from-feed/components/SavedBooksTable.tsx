@@ -96,10 +96,10 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
                   <div className="text-sm font-medium text-gray-900">{book.title}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{book.authorName || '—'}</div>
+                  <div className="text-sm text-gray-900">{book.author || '—'}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{book.libraryName || '—'}</div>
+                  <div className="text-sm text-gray-900">{book.library || '—'}</div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900">{book.photoCount}</div>

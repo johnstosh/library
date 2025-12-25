@@ -67,7 +67,7 @@ export function LabelsPage() {
       accessor: (book) => (
         <div>
           <div className="font-medium text-gray-900">{book.title}</div>
-          <div className="text-sm text-gray-500">by {book.authorName}</div>
+          <div className="text-sm text-gray-500">by {book.author}</div>
         </div>
       ),
       width: '40%',

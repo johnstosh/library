@@ -5,7 +5,7 @@ import { api } from './client'
 export interface BookLocStatusDto {
   id: number
   title: string
-  authorName: string
+  author: string
   currentLocNumber?: string
   hasLocNumber: boolean
   publicationYear?: number

@@ -49,7 +49,7 @@ export function BookTable({
       accessor: (book) => (
         <div>
           <div className="font-medium text-gray-900">{book.title}</div>
-          {book.authorName && <div className="text-sm text-gray-500">{book.authorName}</div>}
+          {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
         </div>
       ),
       width: '30%',
@@ -69,13 +69,13 @@ export function BookTable({
     {
       key: 'library',
       header: 'Library',
-      accessor: (book) => book.libraryName || '—',
+      accessor: (book) => book.library || '—',
       width: '15%',
     },
     {
       key: 'locCallNumber',
       header: 'LOC',
-      accessor: (book) => book.locCallNumber || '—',
+      accessor: (book) => book.locNumber || '—',
       width: '12%',
     },
     {
