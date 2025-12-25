@@ -21,3 +21,7 @@ data/
 *.db
 *.mv.db
 *.trace.db
+
+
+# frontend
+src/main/resources/static/assets/

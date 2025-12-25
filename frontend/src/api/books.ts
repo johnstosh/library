@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
@@ -44,13 +44,14 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
       return []
     },
     enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || booksToFetch.length > 0),
-    onSuccess: (books) => {
-      // Populate individual book caches
-      books?.forEach((book) => {
-        queryClient.setQueryData(queryKeys.books.detail(book.id), book)
-      })
-    },
   })
+
+  // Populate individual book caches when books are fetched
+  React.useEffect(() => {
+    fetchedBooks?.forEach((book) => {
+      queryClient.setQueryData(queryKeys.books.detail(book.id), book)
+    })
+  }, [fetchedBooks, queryClient])
 
   // Step 4: Get all cached books for display
   const allBooks = useMemo(() => {

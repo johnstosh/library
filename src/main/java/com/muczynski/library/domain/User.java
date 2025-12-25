@@ -61,4 +61,25 @@ public class User {
     protected void onUpdate() {
         lastModified = LocalDateTime.now();
     }
+
+    /**
+     * Get the highest authority for this user.
+     * Returns "LIBRARIAN" if user has LIBRARIAN role, otherwise "USER".
+     */
+    public String getHighestAuthority() {
+        if (roles == null || roles.isEmpty()) {
+            return "USER";
+        }
+        return roles.stream()
+                .anyMatch(role -> "LIBRARIAN".equals(role.getName())) ? "LIBRARIAN" : "USER";
+    }
+
+    /**
+     * Get authorities as GrantedAuthority objects for Spring Security.
+     */
+    public java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> getAuthorities() {
+        return roles.stream()
+                .map(role -> (org.springframework.security.core.GrantedAuthority) () -> role.getName())
+                .collect(java.util.stream.Collectors.toList());
+    }
 }

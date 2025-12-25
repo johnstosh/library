@@ -95,10 +95,9 @@ class ImportControllerIntegrationTest {
         testBook.setLibrary(testLibrary);
         testBook = bookRepository.save(testBook);
 
-        // Create test role
-        testRole = new Role();
-        testRole.setName("LIBRARIAN");
-        testRole = roleRepository.save(testRole);
+        // Get existing LIBRARIAN role from data-base.sql
+        testRole = roleRepository.findByName("LIBRARIAN")
+                .orElseThrow(() -> new RuntimeException("LIBRARIAN role not found"));
 
         // Create test user with roles
         testUser = new User();
