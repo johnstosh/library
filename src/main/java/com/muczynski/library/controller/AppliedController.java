@@ -33,16 +33,20 @@ public class AppliedController {
     @Autowired
     private AppliedService appliedService;
 
-    @PostMapping("/public/register")
+    @PostMapping("/application/public/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
+        logger.info("=== APPLICATION PUBLIC REGISTER ENDPOINT CALLED ===");
+        logger.info("Received application registration request - username: {}, authority: {}",
+                    registrationRequest.getUsername(), registrationRequest.getAuthority());
         try {
             Applied applied = new Applied();
             applied.setName(registrationRequest.getUsername());
             applied.setPassword(registrationRequest.getPassword());
-            appliedService.createApplied(applied);
-            return ResponseEntity.ok().build();
+            Applied createdApplied = appliedService.createApplied(applied);
+            logger.info("Successfully created application with ID: {}", createdApplied.getId());
+            return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            logger.warn("Failed to register application with request {}: {}", registrationRequest, e.getMessage(), e);
+            logger.error("Failed to register application with request {}: {}", registrationRequest, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

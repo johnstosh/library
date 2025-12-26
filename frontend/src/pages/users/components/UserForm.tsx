@@ -43,7 +43,7 @@ export function UserForm({
       setFormData({
         username: initialData.username,
         password: '', // Password is optional for updates
-        authority: initialData.authority,
+        authority: initialData.authorities?.[0] || UserAuthority.USER,
       })
     } else {
       setFormData({

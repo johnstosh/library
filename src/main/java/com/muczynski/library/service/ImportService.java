@@ -32,7 +32,7 @@ public class ImportService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
-    private final RoleRepository roleRepository;
+    private final AuthorityRepository authorityRepository;
     private final PhotoRepository photoRepository;
     private final LibraryMapper libraryMapper;
     private final PasswordEncoder passwordEncoder;
@@ -145,27 +145,27 @@ public class ImportService {
                 if (uDto.getLibraryCardDesign() != null) {
                     user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
-                Set<Role> roles = new HashSet<>();
-                if (uDto.getRoles() != null) {
-                    for (String rName : uDto.getRoles()) {
+                Set<Authority> authorities = new HashSet<>();
+                if (uDto.getAuthorities() != null) {
+                    for (String rName : uDto.getAuthorities()) {
                         // Use list-based query to handle potential duplicates gracefully
-                        List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(rName);
-                        Role role;
-                        if (existingRoles.isEmpty()) {
-                            Role r = new Role();
+                        List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(rName);
+                        Authority authority;
+                        if (existingAuthorities.isEmpty()) {
+                            Authority r = new Authority();
                             r.setName(rName);
-                            role = roleRepository.save(r);
+                            authority = authorityRepository.save(r);
                         } else {
-                            role = existingRoles.get(0); // Select the one with the lowest ID
-                            if (existingRoles.size() > 1) {
-                                logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                            authority = existingAuthorities.get(0); // Select the one with the lowest ID
+                            if (existingAuthorities.size() > 1) {
+                                logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}. " +
                                            "Consider cleaning up duplicate entries in the database.",
-                                           existingRoles.size(), rName, role.getId());
+                                           existingAuthorities.size(), rName, authority.getId());
                             }
                         }
-                        roles.add(role);
+                        authorities.add(authority);
                     }
-                    user.setRoles(roles);
+                    user.setAuthorities(authorities);
                 }
                 user = userRepository.save(user);
                 userMap.put(uDto.getUsername(), user);
@@ -402,11 +402,11 @@ public class ImportService {
             uDto.setSsoSubjectId(user.getSsoSubjectId());
             uDto.setEmail(user.getEmail());
             uDto.setLibraryCardDesign(user.getLibraryCardDesign());
-            if (user.getRoles() != null) {
-                List<String> roles = user.getRoles().stream()
-                        .map(Role::getName)
+            if (user.getAuthorities() != null) {
+                java.util.List<String> authorityNames = user.getAuthorities().stream()
+                        .map(authority -> authority.getName())
                         .collect(Collectors.toList());
-                uDto.setRoles(roles);
+                uDto.setAuthorities(authorityNames);
             }
             userDtos.add(uDto);
         }
@@ -494,11 +494,11 @@ public class ImportService {
                 userDto.setSsoSubjectId(loan.getUser().getSsoSubjectId());
                 userDto.setEmail(loan.getUser().getEmail());
                 userDto.setLibraryCardDesign(loan.getUser().getLibraryCardDesign());
-                if (loan.getUser().getRoles() != null) {
-                    List<String> roles = loan.getUser().getRoles().stream()
-                            .map(Role::getName)
+                if (loan.getUser().getAuthorities() != null) {
+                    List<String> authorities = loan.getUser().getAuthorities().stream()
+                            .map(a -> a.getName())
                             .collect(Collectors.toList());
-                    userDto.setRoles(roles);
+                    userDto.setAuthorities(authorities);
                 }
                 lDto.setUser(userDto);
             }

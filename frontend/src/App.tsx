@@ -11,6 +11,7 @@ import { Spinner } from '@/components/progress/Spinner'
 // Eager-loaded pages (small and frequently accessed)
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { ApplyForCardPage } from '@/pages/library-cards/ApplyForCardPage'
 
 // Lazy-loaded pages (code splitting)
 const BooksPage = lazy(() => import('@/pages/books/BooksPage').then(m => ({ default: m.BooksPage })))
@@ -51,6 +52,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/apply" element={<ApplyForCardPage />} />
 
           {/* Protected routes (authenticated users) */}
           <Route element={<ProtectedRoute />}>

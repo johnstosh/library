@@ -52,7 +52,7 @@ class ImportControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private AuthorityRepository authorityRepository;
 
     @Autowired
     private LoanRepository loanRepository;
@@ -64,7 +64,7 @@ class ImportControllerIntegrationTest {
     private Author testAuthor;
     private Book testBook;
     private User testUser;
-    private Role testRole;
+    private Authority testAuthority;
 
     @BeforeEach
     void setUp() {
@@ -95,18 +95,18 @@ class ImportControllerIntegrationTest {
         testBook.setLibrary(testLibrary);
         testBook = bookRepository.save(testBook);
 
-        // Get existing LIBRARIAN role from data-base.sql
-        testRole = roleRepository.findByName("LIBRARIAN")
-                .orElseThrow(() -> new RuntimeException("LIBRARIAN role not found"));
+        // Get existing LIBRARIAN authority from data-base.sql
+        testAuthority = authorityRepository.findByName("LIBRARIAN")
+                .orElseThrow(() -> new RuntimeException("LIBRARIAN authority not found"));
 
-        // Create test user with roles
+        // Create test user with authorities
         testUser = new User();
         testUser.setUserIdentifier("test-user-id");
         testUser.setUsername("testuser");
         testUser.setPassword("$2a$10$hashedpassword");
-        Set<Role> roles = new HashSet<>();
-        roles.add(testRole);
-        testUser.setRoles(roles);
+        Set<Authority> authorities = new HashSet<>();
+        authorities.add(testAuthority);
+        testUser.setAuthorities(authorities);
         testUser = userRepository.save(testUser);
     }
 
@@ -145,9 +145,9 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.loans[0].book.title", notNullValue()))
                 .andExpect(jsonPath("$.loans[0].book.author.name", notNullValue()))
                 .andExpect(jsonPath("$.loans[0].book.libraryName", notNullValue()))
-                // Verify loan has user data with roles
+                // Verify loan has user data with authorities
                 .andExpect(jsonPath("$.loans[0].user.username", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].user.roles", notNullValue()));
+                .andExpect(jsonPath("$.loans[0].user.authorities", notNullValue()));
     }
 
     @Test
@@ -214,9 +214,9 @@ class ImportControllerIntegrationTest {
             user.setUserIdentifier("user-" + i);
             user.setUsername("user" + i);
             user.setPassword("$2a$10$hash" + i);
-            Set<Role> roles = new HashSet<>();
-            roles.add(testRole);
-            user.setRoles(roles);
+            Set<Authority> authorities = new HashSet<>();
+            authorities.add(testAuthority);
+            user.setAuthorities(authorities);
             user = userRepository.save(user);
 
             Loan loan = new Loan();
@@ -256,35 +256,35 @@ class ImportControllerIntegrationTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_UserWithMultipleRoles() throws Exception {
-        // Create additional role
-        Role adminRole = new Role();
-        adminRole.setName("ADMIN");
-        adminRole = roleRepository.save(adminRole);
+    void testExportJson_UserWithMultipleAuthorities() throws Exception {
+        // Create additional authority
+        Authority adminAuthority = new Authority();
+        adminAuthority.setName("ADMIN");
+        adminAuthority = authorityRepository.save(adminAuthority);
 
-        // Create user with multiple roles
-        User multiRoleUser = new User();
-        multiRoleUser.setUserIdentifier("multi-role-user");
-        multiRoleUser.setUsername("multiroleuser");
-        multiRoleUser.setPassword("$2a$10$hashedpw");
-        Set<Role> roles = new HashSet<>();
-        roles.add(testRole);
-        roles.add(adminRole);
-        multiRoleUser.setRoles(roles);
-        userRepository.save(multiRoleUser);
+        // Create user with multiple authorities
+        User multiAuthorityUser = new User();
+        multiAuthorityUser.setUserIdentifier("multi-authority-user");
+        multiAuthorityUser.setUsername("multiauthorityuser");
+        multiAuthorityUser.setPassword("$2a$10$hashedpw");
+        Set<Authority> authorities = new HashSet<>();
+        authorities.add(testAuthority);
+        authorities.add(adminAuthority);
+        multiAuthorityUser.setAuthorities(authorities);
+        userRepository.save(multiAuthorityUser);
 
         // Create a loan for this user
         Loan loan = new Loan();
         loan.setBook(testBook);
-        loan.setUser(multiRoleUser);
+        loan.setUser(multiAuthorityUser);
         loan.setLoanDate(LocalDate.now());
         loan.setDueDate(LocalDate.now().plusWeeks(2));
         loanRepository.save(loan);
 
-        // This test verifies that users with multiple roles are exported correctly
+        // This test verifies that users with multiple authorities are exported correctly
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.loans[?(@.user.username=='multiroleuser')].user.roles", hasItem(hasSize(2))));
+                .andExpect(jsonPath("$.loans[?(@.user.username=='multiauthorityuser')].user.authorities", hasItem(hasSize(2))));
     }
 
     @Test

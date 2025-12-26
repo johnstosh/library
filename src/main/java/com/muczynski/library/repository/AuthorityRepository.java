@@ -3,7 +3,7 @@
  */
 package com.muczynski.library.repository;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RoleRepository extends JpaRepository<Role, Long> {
-    Optional<Role> findByName(String name);
-    List<Role> findAllByNameOrderByIdAsc(String name);
+public interface AuthorityRepository extends JpaRepository<Authority, Long> {
+    Optional<Authority> findByName(String name);
+    List<Authority> findAllByNameOrderByIdAsc(String name);
 }

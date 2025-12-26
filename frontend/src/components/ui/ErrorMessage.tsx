@@ -4,9 +4,10 @@ import { clsx } from 'clsx'
 export interface ErrorMessageProps {
   message: string
   className?: string
+  'data-test'?: string
 }
 
-export function ErrorMessage({ message, className }: ErrorMessageProps) {
+export function ErrorMessage({ message, className, 'data-test': dataTest }: ErrorMessageProps) {
   return (
     <div
       className={clsx(
@@ -14,6 +15,7 @@ export function ErrorMessage({ message, className }: ErrorMessageProps) {
         className
       )}
       role="alert"
+      data-test={dataTest}
     >
       <div className="flex items-center">
         <svg

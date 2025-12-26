@@ -24,45 +24,61 @@ export function ApplyForCardPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    console.log('=== APPLY FOR CARD FORM SUBMITTED ===')
 
     // Validation
     if (!formData.username.trim()) {
+      console.log('Validation failed: Name is required')
       setError('Name is required')
       return
     }
 
     if (!formData.password) {
+      console.log('Validation failed: Password is required')
       setError('Password is required')
       return
     }
 
     if (formData.password.length < 6) {
+      console.log('Validation failed: Password too short')
       setError('Password must be at least 6 characters')
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
+      console.log('Validation failed: Passwords do not match')
       setError('Passwords do not match')
       return
     }
 
     try {
+      console.log('Validation passed, hashing password...')
       // Hash password client-side
       const hashedPassword = await hashPassword(formData.password)
+
+      console.log('Password hashed, submitting to API...')
+      console.log('Request data:', {
+        username: formData.username.trim(),
+        authority: 'USER',
+      })
 
       await applyForCard.mutateAsync({
         username: formData.username.trim(),
         password: hashedPassword,
+        authority: 'USER',
       })
 
+      console.log('Application submitted successfully!')
       setSuccess(true)
       setFormData({ username: '', password: '', confirmPassword: '' })
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
+        console.log('Redirecting to login...')
         navigate('/login')
       }, 3000)
     } catch (err) {
+      console.error('Application submission failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit application')
     }
   }
@@ -85,8 +101,8 @@ export function ApplyForCardPage() {
         </div>
 
         {success ? (
-          <div className="bg-white rounded-lg shadow p-6">
-            <SuccessMessage message="Application submitted successfully!" />
+          <div className="bg-white rounded-lg shadow p-6" data-test="success-container">
+            <SuccessMessage message="Application submitted successfully!" data-test="success-message" />
             <p className="mt-4 text-gray-700">
               A librarian will review your application. You will be notified when your
               card is approved.
@@ -97,8 +113,8 @@ export function ApplyForCardPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <ErrorMessage message={error} />}
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+              {error && <ErrorMessage message={error} data-test="error-message" />}
 
               <Input
                 label="Full Name"

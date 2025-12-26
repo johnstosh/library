@@ -139,7 +139,7 @@ class DeletionConflictTest {
                                 {
                                     "username": "integration_test_user",
                                     "password": "%s",
-                                    "role": "USER"
+                                    "authority": "USER"
                                 }
                                 """.formatted(hashedPassword)))
                 .andExpect(status().isCreated())

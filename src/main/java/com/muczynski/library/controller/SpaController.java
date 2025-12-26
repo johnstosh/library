@@ -50,7 +50,8 @@ public class SpaController {
             "/global-settings/**",
             "/test-data",
             "/test-data/**",
-            "/login"
+            "/login",
+            "/apply"
     })
     public String forward() {
         return "forward:/index.html";

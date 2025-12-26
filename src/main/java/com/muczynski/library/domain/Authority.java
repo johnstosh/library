@@ -3,19 +3,17 @@
  */
 package com.muczynski.library.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serializable;
 
 @Entity
+@Table(name = "role")
 @Getter
 @Setter
-public class Role implements Serializable {
+public class Authority implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id

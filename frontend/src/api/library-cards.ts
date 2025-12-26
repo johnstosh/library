@@ -11,6 +11,7 @@ export interface AppliedDto {
 export interface RegistrationRequest {
   username: string
   password: string
+  authority: string
 }
 
 // Hook to get all library card applications (librarian only)
@@ -26,7 +27,7 @@ export function useApplications() {
 export function useApplyForCard() {
   return useMutation({
     mutationFn: (data: RegistrationRequest) =>
-      api.post('/public/register', data, { requireAuth: false }),
+      api.post('/application/public/register', data, { requireAuth: false }),
   })
 }
 

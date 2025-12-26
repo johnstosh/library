@@ -63,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/application/public/**").permitAll()
+                        .requestMatchers("/api/users/public/**").permitAll()
                         .requestMatchers("/api/global-settings/sso-status").permitAll()
                         .requestMatchers("/api/global-properties/**").permitAll()
                         .requestMatchers("/api/photo-export/**").authenticated()

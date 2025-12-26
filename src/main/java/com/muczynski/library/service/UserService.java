@@ -5,13 +5,13 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.LoanRepository;
-import com.muczynski.library.repository.RoleRepository;
+import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class UserService {
     private UserMapper userMapper;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private AuthorityRepository authorityRepository;
 
     @Autowired
     private LoanRepository loanRepository;
@@ -101,21 +101,21 @@ public class UserService {
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
         // Use list-based query to handle potential duplicates gracefully
-        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(dto.getRole());
-        Role role;
-        if (existingRoles.isEmpty()) {
-            Role newRole = new Role();
-            newRole.setName(dto.getRole());
-            role = roleRepository.save(newRole);
+        java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(dto.getAuthority());
+        Authority authority;
+        if (existingAuthorities.isEmpty()) {
+            Authority newAuthority = new Authority();
+            newAuthority.setName(dto.getAuthority());
+            authority = authorityRepository.save(newAuthority);
         } else {
-            role = existingRoles.get(0); // Select the one with the lowest ID
-            if (existingRoles.size() > 1) {
-                logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+            authority = existingAuthorities.get(0); // Select the one with the lowest ID
+            if (existingAuthorities.size() > 1) {
+                logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}. " +
                            "Consider cleaning up duplicate entries in the database.",
-                           existingRoles.size(), dto.getRole(), role.getId());
+                           existingAuthorities.size(), dto.getAuthority(), authority.getId());
             }
         }
-        user.setRoles(Collections.singleton(role));
+        user.setAuthorities(Collections.singleton(authority));
 
         User savedUser = userRepository.save(user);
         UserDto dtoResponse = userMapper.toDto(savedUser);
@@ -135,21 +135,21 @@ public class UserService {
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
         // Use list-based query to handle potential duplicates gracefully
-        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("USER");
-        Role role;
-        if (existingRoles.isEmpty()) {
-            Role newRole = new Role();
-            newRole.setName("USER");
-            role = roleRepository.save(newRole);
+        java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("USER");
+        Authority authority;
+        if (existingAuthorities.isEmpty()) {
+            Authority newAuthority = new Authority();
+            newAuthority.setName("USER");
+            authority = authorityRepository.save(newAuthority);
         } else {
-            role = existingRoles.get(0); // Select the one with the lowest ID
-            if (existingRoles.size() > 1) {
-                logger.warn("Found {} duplicate roles with name 'USER'. Using role with lowest ID: {}. " +
+            authority = existingAuthorities.get(0); // Select the one with the lowest ID
+            if (existingAuthorities.size() > 1) {
+                logger.warn("Found {} duplicate authorities with name 'USER'. Using authority with lowest ID: {}. " +
                            "Consider cleaning up duplicate entries in the database.",
-                           existingRoles.size(), role.getId());
+                           existingAuthorities.size(), authority.getId());
             }
         }
-        user.setRoles(Collections.singleton(role));
+        user.setAuthorities(Collections.singleton(authority));
 
         User savedUser = userRepository.save(user);
         UserDto dtoResponse = userMapper.toDto(savedUser);
@@ -180,24 +180,23 @@ public class UserService {
             }
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        if (dto.getRole() != null && !dto.getRole().isEmpty()) {
+        if (dto.getAuthority() != null && !dto.getAuthority().isEmpty()) {
             // Use list-based query to handle potential duplicates gracefully
-            java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc(dto.getRole());
-            Role role;
-            if (existingRoles.isEmpty()) {
-                Role newRole = new Role();
-                newRole.setName(dto.getRole());
-                role = roleRepository.save(newRole);
+            java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(dto.getAuthority());
+            Authority authority;
+            if (existingAuthorities.isEmpty()) {
+                Authority newAuthority = new Authority();
+                newAuthority.setName(dto.getAuthority());
+                authority = authorityRepository.save(newAuthority);
             } else {
-                role = existingRoles.get(0); // Select the one with the lowest ID
-                if (existingRoles.size() > 1) {
-                    logger.warn("Found {} duplicate roles with name '{}'. Using role with lowest ID: {}. " +
+                authority = existingAuthorities.get(0); // Select the one with the lowest ID
+                if (existingAuthorities.size() > 1) {
+                    logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}. " +
                                "Consider cleaning up duplicate entries in the database.",
-                               existingRoles.size(), dto.getRole(), role.getId());
+                               existingAuthorities.size(), dto.getAuthority(), authority.getId());
                 }
             }
-            user.getRoles().clear();
-            user.getRoles().add(role);
+            user.setAuthorities(Collections.singleton(authority));
         }
         User savedUser = userRepository.save(user);
         UserDto dtoResponse = userMapper.toDto(savedUser);

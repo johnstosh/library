@@ -49,7 +49,7 @@ class UserControllerTest {
         UserDto fullUserDto = new UserDto();
         fullUserDto.setId(1L);
         fullUserDto.setUsername("testuser");
-        fullUserDto.setRoles(Collections.singleton("USER"));
+        fullUserDto.setAuthorities(Collections.singleton("USER"));
         fullUserDto.setXaiApiKey("test-key");
         when(userService.getUserByUsername("testuser")).thenReturn(fullUserDto);
 
@@ -58,7 +58,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("testuser"))
-                .andExpect(jsonPath("$.roles").value("USER"))
+                .andExpect(jsonPath("$.authorities").value("USER"))
                 .andExpect(jsonPath("$.xaiApiKey").value("test-key"));
     }
 
@@ -68,7 +68,7 @@ class UserControllerTest {
         UserDto dto = new UserDto();
         dto.setId(1L);
         dto.setUsername("Test User");
-        dto.setRoles(Collections.singleton("USER"));
+        dto.setAuthorities(Collections.singleton("USER"));
         when(userService.getAllUsers()).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/users"))
@@ -81,7 +81,7 @@ class UserControllerTest {
         UserDto userDto = new UserDto();
         userDto.setId(1L);
         userDto.setUsername("Test User");
-        userDto.setRoles(Collections.singleton("USER"));
+        userDto.setAuthorities(Collections.singleton("USER"));
         when(userService.getUserById(1L)).thenReturn(userDto);
 
         mockMvc.perform(get("/api/users/1"))
@@ -94,11 +94,11 @@ class UserControllerTest {
         CreateUserDto inputDto = new CreateUserDto();
         inputDto.setUsername("Test User");
         inputDto.setPassword("password");
-        inputDto.setRole("USER");
+        inputDto.setAuthority("USER");
         UserDto returnedDto = new UserDto();
         returnedDto.setId(1L);
         returnedDto.setUsername("Test User");
-        returnedDto.setRoles(Collections.singleton("USER"));
+        returnedDto.setAuthorities(Collections.singleton("USER"));
         when(userService.createUser(any(CreateUserDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/users")
@@ -113,11 +113,11 @@ class UserControllerTest {
         CreateUserDto inputDto = new CreateUserDto();
         inputDto.setUsername("Updated User");
         inputDto.setPassword("newpassword");
-        inputDto.setRole("LIBRARIAN");
+        inputDto.setAuthority("LIBRARIAN");
         UserDto returnedDto = new UserDto();
         returnedDto.setId(1L);
         returnedDto.setUsername("Updated User");
-        returnedDto.setRoles(Collections.singleton("LIBRARIAN"));
+        returnedDto.setAuthorities(Collections.singleton("LIBRARIAN"));
         when(userService.updateUser(eq(1L), any(CreateUserDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(put("/api/users/1")

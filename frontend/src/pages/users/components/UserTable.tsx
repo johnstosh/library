@@ -42,10 +42,11 @@ export function UserTable({
       width: '50%',
     },
     {
-      key: 'authority',
+      key: 'authorities',
       header: 'Authority',
       accessor: (user) => {
-        const isLibrarian = user.authority === 'LIBRARIAN'
+        const isLibrarian = user.authorities?.includes('LIBRARIAN')
+        const displayAuthority = user.authorities?.[0] || 'USER'
         return (
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -54,7 +55,7 @@ export function UserTable({
                 : 'bg-gray-100 text-gray-800'
             }`}
           >
-            {user.authority}
+            {displayAuthority}
           </span>
         )
       },

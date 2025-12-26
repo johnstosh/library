@@ -56,7 +56,7 @@ public class User implements Serializable {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private Set<Role> roles;
+    private Set<Authority> authorities;
 
     @PreUpdate
     @PrePersist
@@ -66,22 +66,13 @@ public class User implements Serializable {
 
     /**
      * Get the highest authority for this user.
-     * Returns "LIBRARIAN" if user has LIBRARIAN role, otherwise "USER".
+     * Returns "LIBRARIAN" if user has LIBRARIAN authority, otherwise "USER".
      */
     public String getHighestAuthority() {
-        if (roles == null || roles.isEmpty()) {
+        if (authorities == null || authorities.isEmpty()) {
             return "USER";
         }
-        return roles.stream()
-                .anyMatch(role -> "LIBRARIAN".equals(role.getName())) ? "LIBRARIAN" : "USER";
-    }
-
-    /**
-     * Get authorities as GrantedAuthority objects for Spring Security.
-     */
-    public java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> (org.springframework.security.core.GrantedAuthority) () -> role.getName())
-                .collect(java.util.stream.Collectors.toList());
+        return authorities.stream()
+                .anyMatch(authority -> "LIBRARIAN".equals(authority.getName())) ? "LIBRARIAN" : "USER";
     }
 }

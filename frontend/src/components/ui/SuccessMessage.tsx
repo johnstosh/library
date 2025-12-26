@@ -4,9 +4,10 @@ import { clsx } from 'clsx'
 export interface SuccessMessageProps {
   message: string
   className?: string
+  'data-test'?: string
 }
 
-export function SuccessMessage({ message, className }: SuccessMessageProps) {
+export function SuccessMessage({ message, className, 'data-test': dataTest }: SuccessMessageProps) {
   return (
     <div
       className={clsx(
@@ -14,6 +15,7 @@ export function SuccessMessage({ message, className }: SuccessMessageProps) {
         className
       )}
       role="alert"
+      data-test={dataTest}
     >
       <div className="flex items-center">
         <svg

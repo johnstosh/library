@@ -3,9 +3,9 @@
  */
 package com.muczynski.library;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
-import com.muczynski.library.repository.RoleRepository;
+import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.boot.CommandLineRunner;
@@ -25,18 +25,18 @@ public class LibraryApplication {
     }
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public CommandLineRunner initData(UserRepository userRepository, AuthorityRepository authorityRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             if (userRepository.count() == 0) {
                 // Use list-based query to handle potential duplicates gracefully
-                List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
-                Role librarianRole;
-                if (existingRoles.isEmpty()) {
-                    Role role = new Role();
-                    role.setName("LIBRARIAN");
-                    librarianRole = roleRepository.save(role);
+                List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
+                Authority librarianAuthority;
+                if (existingAuthorities.isEmpty()) {
+                    Authority authority = new Authority();
+                    authority.setName("LIBRARIAN");
+                    librarianAuthority = authorityRepository.save(authority);
                 } else {
-                    librarianRole = existingRoles.get(0); // Select the one with the lowest ID
+                    librarianAuthority = existingAuthorities.get(0); // Select the one with the lowest ID
                 }
 
                 User librarianUser = new User();
@@ -44,7 +44,7 @@ public class LibraryApplication {
                 // Hash with SHA-256 first (matching frontend), then BCrypt encode
                 String sha256Hash = PasswordHashingUtil.hashPasswordSHA256("divinemercy");
                 librarianUser.setPassword(passwordEncoder.encode(sha256Hash));
-                librarianUser.setRoles(Set.of(librarianRole));
+                librarianUser.setAuthorities(Set.of(librarianAuthority));
                 userRepository.save(librarianUser);
             }
         };

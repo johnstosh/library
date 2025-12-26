@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import type { BookStatus, UserAuthority } from './enums'
+import type { BookStatus } from './enums'
 
 // Common
 export interface IdDto {
@@ -80,7 +80,7 @@ export interface PhotoDto {
 export interface UserDto {
   id: number
   username: string
-  authority: UserAuthority
+  authorities: string[]
   ssoSubjectId?: string
   lastModified: string
 }
@@ -91,8 +91,8 @@ export interface LoanDto {
   bookId: number
   bookTitle?: string
   userId: number
-  username?: string
-  checkoutDate: string
+  userName?: string
+  loanDate: string
   dueDate: string
   returnDate?: string
   lastModified: string

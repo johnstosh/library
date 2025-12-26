@@ -14,7 +14,7 @@ public class UserDto {
     private Long id;
     private String username;
     private String password;
-    private Set<String> roles;
+    private Set<String> authorities;
     private String xaiApiKey;
     private String googlePhotosApiKey;
     private String googleClientSecret;

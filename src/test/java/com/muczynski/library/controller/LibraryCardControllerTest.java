@@ -4,7 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.LibraryCardDesign;
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.LibraryCardPdfService;
@@ -273,13 +273,13 @@ class LibraryCardControllerTest {
         user.setPassword("hashedpassword");
         user.setLibraryCardDesign(design);
 
-        // Add roles
-        Set<Role> roles = new HashSet<>();
-        Role userRole = new Role();
-        userRole.setId(1L);
-        userRole.setName("USER");
-        roles.add(userRole);
-        user.setRoles(roles);
+        // Add authorities
+        Set<Authority> authorities = new HashSet<>();
+        Authority userAuthority = new Authority();
+        userAuthority.setId(1L);
+        userAuthority.setName("USER");
+        authorities.add(userAuthority);
+        user.setAuthorities(authorities);
 
         return user;
     }

@@ -3,7 +3,7 @@
  */
 package com.muczynski.library.mapper;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
 import org.springframework.stereotype.Component;
@@ -27,7 +27,12 @@ public class UserMapper {
         userDto.setEmail(user.getEmail());
         userDto.setLibraryCardDesign(user.getLibraryCardDesign());
         userDto.setLastModified(user.getLastModified());
-        userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
+        if (user.getAuthorities() != null) {
+            java.util.Set<String> authorityNames = user.getAuthorities().stream()
+                .map(authority -> authority.getName())
+                .collect(Collectors.toSet());
+            userDto.setAuthorities(authorityNames);
+        }
         return userDto;
     }
 }

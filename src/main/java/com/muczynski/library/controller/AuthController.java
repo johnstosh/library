@@ -54,7 +54,9 @@ public class AuthController {
             new UsernamePasswordAuthenticationToken(
                 user.getId().toString(),
                 null,
-                user.getAuthorities()
+                user.getAuthorities().stream()
+                    .map(authority -> (org.springframework.security.core.GrantedAuthority) () -> authority.getName())
+                    .collect(java.util.stream.Collectors.toList())
             );
 
         // Set authentication in security context

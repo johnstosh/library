@@ -103,15 +103,15 @@ export function LoansPage() {
       accessor: (loan) => (
         <div>
           <div className="font-medium text-gray-900">{loan.bookTitle}</div>
-          {loan.username && <div className="text-sm text-gray-500">Borrowed by: {loan.username}</div>}
+          {loan.userName && <div className="text-sm text-gray-500">Borrowed by: {loan.userName}</div>}
         </div>
       ),
       width: '30%',
     },
     {
-      key: 'checkoutDate',
+      key: 'loanDate',
       header: 'Checkout Date',
-      accessor: (loan) => formatDate(loan.checkoutDate),
+      accessor: (loan) => formatDate(loan.loanDate),
       width: '20%',
     },
     {
