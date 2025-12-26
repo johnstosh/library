@@ -1,10 +1,10 @@
 // (c) Copyright 2025 by Muczynski
 
 export const BookStatus = {
-  AVAILABLE: 'AVAILABLE',
-  CHECKED_OUT: 'CHECKED_OUT',
+  ACTIVE: 'ACTIVE',
   LOST: 'LOST',
-  DAMAGED: 'DAMAGED',
+  WITHDRAWN: 'WITHDRAWN',
+  ON_ORDER: 'ON_ORDER',
 } as const
 
 export type BookStatus = (typeof BookStatus)[keyof typeof BookStatus]

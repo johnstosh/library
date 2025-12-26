@@ -23,7 +23,7 @@ export function BookDetailModal({ isOpen, onClose, bookId }: BookDetailModalProp
       size="xl"
       footer={
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-test="book-detail-close">
             Close
           </Button>
         </div>

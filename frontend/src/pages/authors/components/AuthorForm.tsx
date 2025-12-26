@@ -86,7 +86,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
       size="lg"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading} data-test="author-form-cancel">
             Cancel
           </Button>
           <Button

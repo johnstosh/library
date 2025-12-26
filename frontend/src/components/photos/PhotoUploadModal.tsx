@@ -116,7 +116,7 @@ export function PhotoUploadModal({
       size="xl"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={handleClose} disabled={isUploading}>
+          <Button variant="ghost" onClick={handleClose} disabled={isUploading} data-test="upload-photo-cancel">
             Cancel
           </Button>
           {image && (

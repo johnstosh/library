@@ -33,7 +33,7 @@ export function ConfirmDialog({
       size="sm"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading} data-test="confirm-dialog-cancel">
             {cancelText}
           </Button>
           <Button

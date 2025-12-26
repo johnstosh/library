@@ -23,7 +23,7 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
       size="xl"
       footer={
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-test="author-detail-close">
             Close
           </Button>
         </div>

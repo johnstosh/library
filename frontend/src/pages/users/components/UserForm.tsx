@@ -91,7 +91,7 @@ export function UserForm({
       size="md"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading} data-test="user-cancel">
             Cancel
           </Button>
           <Button

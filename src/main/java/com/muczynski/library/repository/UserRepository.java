@@ -18,6 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc(String ssoProvider, String ssoSubjectId);
 
     // Find user by username with a local password (for form login)
-    @Query("SELECT u FROM User u WHERE u.username = :username AND u.password IS NOT NULL")
-    Optional<User> findByUsernameWithPassword(@Param("username") String username);
+    @Query("SELECT u FROM User u WHERE u.username = :username AND u.password IS NOT NULL ORDER BY u.id ASC")
+    List<User> findAllByUsernameWithPasswordOrderByIdAsc(@Param("username") String username);
 }

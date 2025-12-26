@@ -89,7 +89,7 @@ export function LoansPage() {
     }
   }
 
-  const availableBooks = books.filter((b) => b.status === 'AVAILABLE')
+  const availableBooks = books.filter((b) => b.status === 'ACTIVE')
 
   const bookOptions = availableBooks.map((b) => ({
     value: b.id,
@@ -250,7 +250,7 @@ export function LoansPage() {
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting}>
+            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting} data-test="checkout-cancel">
               Cancel
             </Button>
             <Button

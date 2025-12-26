@@ -27,8 +27,11 @@ public class LibraryApplication {
     @Bean
     public CommandLineRunner initData(UserRepository userRepository, AuthorityRepository authorityRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if (userRepository.count() == 0) {
-                // Use list-based query to handle potential duplicates gracefully
+            // Check if the default "librarian" user already exists
+            List<User> existingLibrarians = userRepository.findAllByUsernameWithPasswordOrderByIdAsc("librarian");
+
+            if (existingLibrarians.isEmpty()) {
+                // Create LIBRARIAN authority if it doesn't exist
                 List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
                 Authority librarianAuthority;
                 if (existingAuthorities.isEmpty()) {
@@ -39,6 +42,7 @@ public class LibraryApplication {
                     librarianAuthority = existingAuthorities.get(0); // Select the one with the lowest ID
                 }
 
+                // Create the default librarian user
                 User librarianUser = new User();
                 librarianUser.setUsername("librarian");
                 // Hash with SHA-256 first (matching frontend), then BCrypt encode

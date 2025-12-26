@@ -149,6 +149,7 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
             variant="ghost"
             onClick={onClose}
             disabled={isProcessing}
+            data-test="photo-picker-cancel"
           >
             {step === 'complete' ? 'Close' : 'Cancel'}
           </Button>

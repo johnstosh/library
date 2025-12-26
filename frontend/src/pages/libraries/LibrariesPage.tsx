@@ -207,7 +207,7 @@ export function LibrariesPage() {
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting}>
+            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting} data-test="library-form-cancel">
               Cancel
             </Button>
             <Button

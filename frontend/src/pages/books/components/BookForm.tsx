@@ -27,7 +27,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     title: '',
     publicationYear: '',
     publisher: '',
-    status: BookStatus.AVAILABLE as string,
+    status: BookStatus.ACTIVE as string,
     locCallNumber: '',
     authorId: '',
     libraryId: '',
@@ -58,7 +58,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         title: '',
         publicationYear: '',
         publisher: '',
-        status: BookStatus.AVAILABLE,
+        status: BookStatus.ACTIVE,
         locCallNumber: '',
         authorId: '',
         libraryId: '',
@@ -166,10 +166,10 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     : []
 
   const statusOptions = [
-    { value: BookStatus.AVAILABLE, label: 'Available' },
-    { value: BookStatus.CHECKED_OUT, label: 'Checked Out' },
+    { value: BookStatus.ACTIVE, label: 'Active' },
     { value: BookStatus.LOST, label: 'Lost' },
-    { value: BookStatus.DAMAGED, label: 'Damaged' },
+    { value: BookStatus.WITHDRAWN, label: 'Withdrawn' },
+    { value: BookStatus.ON_ORDER, label: 'On Order' },
   ]
 
   const isLoading = createBook.isPending || updateBook.isPending
@@ -184,7 +184,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
       size="lg"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading} data-test="book-form-cancel">
             Cancel
           </Button>
           <Button

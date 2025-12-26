@@ -36,20 +36,21 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         </Transition.Child>
 
-        {/* Modal panel */}
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-          >
-            <Dialog.Panel className={`w-full ${sizeClasses[size]} bg-white rounded-lg shadow-xl`}>
+        {/* Modal panel - positioned at top with margin, fully scrollable container */}
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="min-h-full p-4 pt-20">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-white rounded-lg shadow-xl flex flex-col mb-20`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
                 <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
                 <button
                   onClick={onClose}
@@ -77,10 +78,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
 
               {/* Footer */}
               {footer && (
-                <div className="px-6 py-4 bg-gray-50 border-t rounded-b-lg">{footer}</div>
+                <div className="px-6 py-4 bg-gray-50 border-t rounded-b-lg flex-shrink-0">{footer}</div>
               )}
-            </Dialog.Panel>
-          </Transition.Child>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
         </div>
       </Dialog>
     </Transition>

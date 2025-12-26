@@ -7,6 +7,8 @@ import com.muczynski.library.dto.LoginRequestDto;
 import com.muczynski.library.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * Controller for authentication endpoints (login, logout, current user).
  * Handles form-based authentication for the React frontend.
@@ -23,6 +27,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -39,8 +45,19 @@ public class AuthController {
                                                  HttpServletRequest request,
                                                  HttpServletResponse response) {
         // Find user by username with local password (not SSO-only)
-        User user = userRepository.findByUsernameWithPassword(loginRequest.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+        // Use list-based query to handle potential duplicates gracefully
+        List<User> users = userRepository.findAllByUsernameWithPasswordOrderByIdAsc(loginRequest.getUsername());
+
+        if (users.isEmpty()) {
+            throw new RuntimeException("Invalid username or password");
+        }
+
+        User user = users.get(0); // Select the one with the lowest ID
+        if (users.size() > 1) {
+            logger.warn("Found {} duplicate users with username '{}' and local passwords. Using user with lowest ID: {}. " +
+                       "Consider cleaning up duplicate entries in the database.",
+                       users.size(), loginRequest.getUsername(), user.getId());
+        }
 
         // Verify password
         // Frontend sends SHA-256 hash, database stores BCrypt(SHA-256(password))
