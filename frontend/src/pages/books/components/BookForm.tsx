@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -27,8 +28,12 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     title: '',
     publicationYear: '',
     publisher: '',
+    plotSummary: '',
+    relatedWorks: '',
+    detailedDescription: '',
     status: BookStatus.ACTIVE as string,
-    locCallNumber: '',
+    statusReason: '',
+    locNumber: '',
     authorId: '',
     libraryId: '',
   })
@@ -48,8 +53,12 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         title: book.title,
         publicationYear: book.publicationYear?.toString() || '',
         publisher: book.publisher || '',
+        plotSummary: book.plotSummary || '',
+        relatedWorks: book.relatedWorks || '',
+        detailedDescription: book.detailedDescription || '',
         status: book.status,
-        locCallNumber: book.locNumber || '',
+        statusReason: book.statusReason || '',
+        locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         libraryId: book.libraryId?.toString() || '',
       })
@@ -58,8 +67,12 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         title: '',
         publicationYear: '',
         publisher: '',
+        plotSummary: '',
+        relatedWorks: '',
+        detailedDescription: '',
         status: BookStatus.ACTIVE,
-        locCallNumber: '',
+        statusReason: '',
+        locNumber: '',
         authorId: '',
         libraryId: '',
       })
@@ -77,7 +90,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     try {
       const result = await lookupLoc.mutateAsync(book.id)
       if (result.success && result.locNumber) {
-        setFormData({ ...formData, locCallNumber: result.locNumber })
+        setFormData({ ...formData, locNumber: result.locNumber })
         setSuccessMessage(`LOC call number found: ${result.locNumber}`)
       } else {
         setError(result.errorMessage || 'LOC call number not found')
@@ -108,7 +121,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
       })
 
       if (result.suggestion) {
-        setFormData({ ...formData, locCallNumber: result.suggestion })
+        setFormData({ ...formData, locNumber: result.suggestion })
         setSuccessMessage(`AI suggested LOC: ${result.suggestion}`)
       } else {
         setError('No LOC suggestion available')
@@ -133,8 +146,12 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         title: formData.title,
         publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
         publisher: formData.publisher || undefined,
+        plotSummary: formData.plotSummary || undefined,
+        relatedWorks: formData.relatedWorks || undefined,
+        detailedDescription: formData.detailedDescription || undefined,
         status: formData.status as BookDto['status'],
-        locCallNumber: formData.locCallNumber || undefined,
+        statusReason: formData.statusReason || undefined,
+        locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.libraryId),
       }
@@ -249,13 +266,37 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
           />
         </div>
 
+        <Textarea
+          label="Plot Summary"
+          value={formData.plotSummary}
+          onChange={(e) => setFormData({ ...formData, plotSummary: e.target.value })}
+          rows={3}
+          data-test="book-plot-summary"
+        />
+
+        <Textarea
+          label="Related Works"
+          value={formData.relatedWorks}
+          onChange={(e) => setFormData({ ...formData, relatedWorks: e.target.value })}
+          rows={2}
+          data-test="book-related-works"
+        />
+
+        <Textarea
+          label="Detailed Description"
+          value={formData.detailedDescription}
+          onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
+          rows={4}
+          data-test="book-detailed-description"
+        />
+
         <div className="space-y-4">
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <Input
                 label="LOC Call Number"
-                value={formData.locCallNumber}
-                onChange={(e) => setFormData({ ...formData, locCallNumber: e.target.value })}
+                value={formData.locNumber}
+                onChange={(e) => setFormData({ ...formData, locNumber: e.target.value })}
                 data-test="book-loc"
               />
             </div>
@@ -296,6 +337,15 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
             options={statusOptions}
             required
             data-test="book-status"
+          />
+
+          <Textarea
+            label="Status Reason"
+            value={formData.statusReason}
+            onChange={(e) => setFormData({ ...formData, statusReason: e.target.value })}
+            rows={2}
+            placeholder="Optional reason for status (e.g., why book is withdrawn)"
+            data-test="book-status-reason"
           />
         </div>
       </form>

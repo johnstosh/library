@@ -50,13 +50,20 @@ export interface BookDto {
   title: string
   publicationYear?: number
   publisher?: string
+  plotSummary?: string
+  relatedWorks?: string
+  detailedDescription?: string
+  dateAddedToLibrary?: string
   status: BookStatus
+  statusReason?: string
   locNumber?: string
   libraryId?: number
   library?: string
   authorId?: number
   author?: string
-  photoCount?: number
+  firstPhotoId?: number
+  firstPhotoChecksum?: string
+  loanCount?: number
   lastModified: string
 }
 

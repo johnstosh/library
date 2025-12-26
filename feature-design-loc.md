@@ -54,20 +54,26 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 ## Book Filtering
 
 ### Books Without LOC
-- Endpoint: `GET /api/loc-bulk-lookup/books/missing-loc`
+- Endpoint: `GET /api/books/without-loc`
+- Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
 - Shows all books missing LOC call numbers
+- Returns: Full `BookDto` objects
 - Query: `SELECT b WHERE b.locNumber IS NULL OR b.locNumber = ''`
 
 ### Most Recent Day
-- Endpoint: `GET /api/loc-bulk-lookup/books/most-recent`
+- Endpoint: `GET /api/books/most-recent-day`
+- Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
 - Shows books added on the most recent date
+- Returns: Full `BookDto` objects
 - Useful for processing newly imported books
 
 ### All Books with LOC Status
 - Endpoint: `GET /api/loc-bulk-lookup/books`
+- Authorization: LIBRARIAN only
 - Shows all books with their current LOC status
+- Returns: `BookLocStatusDto` objects (specialized for LOC bulk lookup operations)
 
 ## Implementation Details
 

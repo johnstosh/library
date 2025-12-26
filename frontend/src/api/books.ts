@@ -145,6 +145,20 @@ export function useDeleteBooks() {
   })
 }
 
+// Hook to clone a book
+export function useCloneBook() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.post<BookDto>(`/books/${id}/clone`),
+    onSuccess: () => {
+      // Invalidate summaries to trigger re-fetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
+  })
+}
+
 // Hook to suggest LOC call number using Grok AI
 export function useSuggestLocNumber() {
   return useMutation({

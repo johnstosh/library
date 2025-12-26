@@ -133,6 +133,18 @@ public class BookController {
         }
     }
 
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteBulkBooks(@RequestBody List<Long> bookIds) {
+        try {
+            bookService.deleteBulkBooks(bookIds);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to bulk delete books {}: {}", bookIds, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/clone")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> cloneBook(@PathVariable Long id) {

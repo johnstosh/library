@@ -32,24 +32,6 @@ export function useAllBooksWithLocStatus() {
   })
 }
 
-// Get books missing LOC numbers
-export function useBooksWithMissingLoc() {
-  return useQuery({
-    queryKey: ['loc-lookup', 'missing-loc'],
-    queryFn: () => api.get<BookLocStatusDto[]>('/loc-bulk-lookup/books/missing-loc'),
-    staleTime: 1000 * 60 * 5,
-  })
-}
-
-// Get books from most recent date
-export function useBooksFromMostRecent() {
-  return useQuery({
-    queryKey: ['loc-lookup', 'most-recent'],
-    queryFn: () => api.get<BookLocStatusDto[]>('/loc-bulk-lookup/books/most-recent'),
-    staleTime: 1000 * 60 * 5,
-  })
-}
-
 // Lookup LOC for a single book
 export function useLookupSingleBook() {
   const queryClient = useQueryClient()

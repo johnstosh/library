@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -46,6 +48,9 @@ class BookControllerTest {
 
     @MockitoBean
     private PhotoService photoService;
+
+    @MockitoBean
+    private AskGrok askGrok;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -127,6 +132,18 @@ class BookControllerTest {
 
         mockMvc.perform(delete("/api/books/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void deleteBulkBooks() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L, 3L);
+        doNothing().when(bookService).deleteBulkBooks(bookIds);
+
+        mockMvc.perform(post("/api/books/delete-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -258,6 +275,37 @@ class BookControllerTest {
         when(bookService.getBooksFromMostRecentDay()).thenReturn(Arrays.asList(book1, book2));
 
         mockMvc.perform(get("/api/books/most-recent-day"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void cloneBook() throws Exception {
+        BookDto clonedDto = new BookDto();
+        clonedDto.setId(2L);
+        clonedDto.setTitle("Test Book (Copy)");
+        clonedDto.setLocNumber(null);
+        clonedDto.setStatusReason(null);
+        when(bookService.cloneBook(1L)).thenReturn(clonedDto);
+
+        mockMvc.perform(post("/api/books/1/clone"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void suggestLocNumber() throws Exception {
+        when(askGrok.suggestLocNumber("Test Book", "Test Author"))
+                .thenReturn("PS3501.A1");
+
+        Map<String, String> request = Map.of(
+            "title", "Test Book",
+            "author", "Test Author"
+        );
+
+        mockMvc.perform(post("/api/books/suggest-loc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
     }
 }

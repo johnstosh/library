@@ -371,4 +371,74 @@ public class BooksUITest {
         assertThat(page.locator("text=Initial Author")).isVisible();
         assertThat(page.locator("text=2023")).isVisible();
     }
+
+    @Test
+    @DisplayName("Should display edit and clone buttons in book detail modal")
+    void testBookDetailModalButtons() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on the book title to open detail modal
+        page.click("text=Initial Book");
+
+        // Wait for modal to open
+        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Verify Edit and Clone buttons are visible for librarian
+        assertThat(page.locator("[data-test='book-detail-edit']")).isVisible();
+        assertThat(page.locator("[data-test='book-detail-clone']")).isVisible();
+
+        // Verify Close button is visible
+        assertThat(page.locator("[data-test='book-detail-close']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should open edit form from book detail modal")
+    void testEditFromDetailModal() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on the book title to open detail modal
+        page.click("text=Initial Book");
+
+        // Wait for modal to open
+        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click Edit button
+        page.click("[data-test='book-detail-edit']");
+
+        // Wait for edit form to open
+        page.waitForSelector("text=Edit Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Verify we're editing the right book
+        assertThat(page.locator("[data-test='book-title']")).hasValue("Initial Book");
+    }
+
+    @Test
+    @DisplayName("Should clone a book from detail modal")
+    void testCloneFromDetailModal() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on the book title to open detail modal
+        page.click("text=Initial Book");
+
+        // Wait for modal to open
+        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click Clone button
+        page.click("[data-test='book-detail-clone']");
+
+        // Wait for modal to close and page to refresh
+        page.waitForTimeout(2000);
+
+        // Verify cloned book appears (should have ", c. 1" suffix)
+        assertThat(page.locator("text=Initial Book, c. 1")).isVisible();
+    }
 }

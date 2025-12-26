@@ -178,6 +178,13 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    @Transactional
+    public void deleteBulkBooks(List<Long> bookIds) {
+        for (Long id : bookIds) {
+            deleteBook(id);  // Reuse existing delete logic with photo cleanup
+        }
+    }
+
     public BookDto cloneBook(Long id) {
         Book original = bookRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Book not found: " + id));

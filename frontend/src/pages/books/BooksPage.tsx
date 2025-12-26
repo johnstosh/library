@@ -55,6 +55,16 @@ export function BooksPage() {
     setViewingBookId(book.id)
   }
 
+  const handleEditFromDetail = (bookId: number) => {
+    // Find the book by ID
+    const book = books.find((b) => b.id === bookId)
+    if (book) {
+      setViewingBookId(null)
+      setEditingBook(book)
+      setShowForm(true)
+    }
+  }
+
   const handleCloseForm = () => {
     setShowForm(false)
     setEditingBook(null)
@@ -106,6 +116,7 @@ export function BooksPage() {
         isOpen={viewingBookId !== null}
         onClose={() => setViewingBookId(null)}
         bookId={viewingBookId}
+        onEdit={handleEditFromDetail}
       />
     </div>
   )
