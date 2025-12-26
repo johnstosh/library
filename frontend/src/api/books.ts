@@ -37,13 +37,16 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
         return api.get<BookDto[]>('/books/most-recent-day')
       } else if (filter === 'without-loc') {
         return api.get<BookDto[]>('/books/without-loc')
+      } else if (filter === 'all') {
+        // Fetch all books directly for 'all' filter
+        return api.get<BookDto[]>('/books')
       } else if (booksToFetch.length > 0) {
         // Only fetch books that changed
         return api.post<BookDto[]>('/books/by-ids', booksToFetch)
       }
       return []
     },
-    enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || booksToFetch.length > 0),
+    enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || filter === 'all' || booksToFetch.length > 0),
   })
 
   // Populate individual book caches when books are fetched
@@ -57,12 +60,12 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
   const allBooks = useMemo(() => {
     if (!summaries) return []
 
-    // For filtered views, return the fetched results directly
-    if (filter === 'most-recent' || filter === 'without-loc') {
+    // For filtered views (including 'all'), return the fetched results directly
+    if (filter === 'most-recent' || filter === 'without-loc' || filter === 'all') {
       return fetchedBooks || []
     }
 
-    // For 'all' view, get books from individual caches
+    // For other views, get books from individual caches
     return summaries
       .map((summary) => queryClient.getQueryData<BookDto>(queryKeys.books.detail(summary.id)))
       .filter((book): book is BookDto => book !== undefined)

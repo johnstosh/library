@@ -215,7 +215,7 @@ Uses Grok AI to suggest a Library of Congress call number for a book.
 
 **Use Case:**
 - AI-powered assistance for cataloging books
-- Suggests LOC call numbers when ISBN lookup fails
+- Suggests LOC call numbers when title/author lookup fails
 
 ---
 

@@ -4,8 +4,13 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBook } from '@/api/books'
+import { useLookupSingleBook } from '@/api/loc-lookup'
+import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
+import type { LocLookupResultDto } from '@/api/loc-lookup'
+import { PiMagnifyingGlass } from 'react-icons/pi'
+import { useAuthStore } from '@/stores/authStore'
 
 interface BookTableProps {
   books: BookDto[]
@@ -29,7 +34,12 @@ export function BookTable({
   onView,
 }: BookTableProps) {
   const [deleteBookId, setDeleteBookId] = useState<number | null>(null)
+  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
+  const [showLookupResults, setShowLookupResults] = useState(false)
   const deleteBook = useDeleteBook()
+  const lookupSingleBook = useLookupSingleBook()
+  const { user } = useAuthStore()
+  const isLibrarian = user?.authority === 'LIBRARIAN'
 
   const handleDelete = async () => {
     if (deleteBookId === null) return
@@ -39,6 +49,16 @@ export function BookTable({
       setDeleteBookId(null)
     } catch (error) {
       console.error('Failed to delete book:', error)
+    }
+  }
+
+  const handleLookupLoc = async (bookId: number) => {
+    try {
+      const result = await lookupSingleBook.mutateAsync(bookId)
+      setLookupResults([result])
+      setShowLookupResults(true)
+    } catch (error) {
+      console.error('Failed to lookup LOC:', error)
     }
   }
 
@@ -112,6 +132,20 @@ export function BookTable({
         onRowClick={onView}
         actions={(book) => (
           <>
+            {isLibrarian && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleLookupLoc(book.id)
+                }}
+                className="text-purple-600 hover:text-purple-900"
+                data-test={`lookup-loc-${book.id}`}
+                title="Lookup LOC"
+                disabled={lookupSingleBook.isPending}
+              >
+                <PiMagnifyingGlass className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -163,6 +197,12 @@ export function BookTable({
         confirmText="Delete"
         variant="danger"
         isLoading={deleteBook.isPending}
+      />
+
+      <LocLookupResultsModal
+        isOpen={showLookupResults}
+        onClose={() => setShowLookupResults(false)}
+        results={lookupResults}
       />
     </>
   )

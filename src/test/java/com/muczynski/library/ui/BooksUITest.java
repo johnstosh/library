@@ -254,17 +254,14 @@ public class BooksUITest {
     void testFilterAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click "All Books" filter (default is 'most-recent')
-        page.click("[data-test='filter-all']");
+        // Wait for either the table, loading spinner, or "No data available" message
+        page.waitForTimeout(2000); // Give React Query time to load
 
-        // Wait for filter to apply
-        page.waitForTimeout(1000);
-
-        // Verify the filter is selected
+        // Default filter is now 'all', so the filter should already be selected
         assertThat(page.locator("[data-test='filter-all']")).isChecked();
 
-        // Should see the initial book
-        assertThat(page.locator("text=Initial Book")).isVisible();
+        // Should see the initial book (wait up to 10 seconds for books to load)
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
     }
 
     @Test

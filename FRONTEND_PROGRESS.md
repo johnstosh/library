@@ -324,7 +324,7 @@ See previous summary
 - [x] Fetch selected media items
 - [x] Save photos from picker to database
 - [x] Saved books table with processing status indicators
-- [x] AI processing for book metadata extraction (title, author, ISBN)
+- [x] AI processing for book metadata extraction (title, author)
 - [x] Batch "Process All" functionality
 - [x] Individual book processing
 - [x] Processing results modal with success/failure statistics
