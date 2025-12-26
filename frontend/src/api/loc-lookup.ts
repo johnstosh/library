@@ -6,18 +6,21 @@ import { queryKeys } from '@/config/queryClient'
 export interface BookLocStatusDto {
   id: number
   title: string
-  author: string
+  authorName: string
+  currentLocNumber?: string
+  hasLocNumber: boolean
   publicationYear?: number
-  locCallNumber?: string
-  hasLoc: boolean
+  firstPhotoId?: number
+  firstPhotoChecksum?: string
+  dateAdded?: string
 }
 
 export interface LocLookupResultDto {
   bookId: number
-  bookTitle: string
   success: boolean
-  locCallNumber?: string
-  message: string
+  locNumber?: string
+  errorMessage: string
+  matchCount: number
 }
 
 // Get all books with LOC status
@@ -33,7 +36,7 @@ export function useAllBooksWithLocStatus() {
 export function useBooksWithMissingLoc() {
   return useQuery({
     queryKey: ['loc-lookup', 'missing-loc'],
-    queryFn: () => api.get<BookLocStatusDto[]>('/loc-bulk-lookup/books/missing'),
+    queryFn: () => api.get<BookLocStatusDto[]>('/loc-bulk-lookup/books/missing-loc'),
     staleTime: 1000 * 60 * 5,
   })
 }

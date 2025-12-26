@@ -80,11 +80,11 @@ export function LocLookupResultsModal({
                       <PiXCircle className="w-5 h-5 text-red-600" />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{result.bookTitle}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">Book ID: {result.bookId}</td>
                   <td className="px-4 py-3 text-sm font-mono text-gray-900">
-                    {result.locCallNumber || '—'}
+                    {result.locNumber || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{result.message}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{result.errorMessage}</td>
                 </tr>
               ))}
             </tbody>

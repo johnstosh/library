@@ -76,11 +76,11 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
 
     try {
       const result = await lookupLoc.mutateAsync(book.id)
-      if (result.success && result.locCallNumber) {
-        setFormData({ ...formData, locCallNumber: result.locCallNumber })
-        setSuccessMessage(`LOC call number found: ${result.locCallNumber}`)
+      if (result.success && result.locNumber) {
+        setFormData({ ...formData, locCallNumber: result.locNumber })
+        setSuccessMessage(`LOC call number found: ${result.locNumber}`)
       } else {
-        setError(result.message || 'LOC call number not found')
+        setError(result.errorMessage || 'LOC call number not found')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lookup LOC')
