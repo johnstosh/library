@@ -90,7 +90,16 @@ export interface UserDto {
   id: number
   username: string
   authorities: string[]
+  xaiApiKey?: string
+  ssoProvider?: string
   ssoSubjectId?: string
+  email?: string
+  libraryCardDesign?: string
+  activeLoansCount?: number
+  googlePhotosApiKey?: string
+  googleClientSecret?: string
+  googlePhotosAlbumId?: string
+  lastPhotoTimestamp?: string
   lastModified: string
 }
 

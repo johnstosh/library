@@ -59,7 +59,23 @@ export function UserTable({
           </span>
         )
       },
-      width: '30%',
+      width: '25%',
+    },
+    {
+      key: 'activeLoansCount',
+      header: 'Active Loans',
+      accessor: (user) => (
+        <span
+          className={`text-sm ${
+            (user.activeLoansCount ?? 0) > 0
+              ? 'text-blue-600 font-medium'
+              : 'text-gray-500'
+          }`}
+        >
+          {user.activeLoansCount ?? 0}
+        </span>
+      ),
+      width: '15%',
     },
     {
       key: 'id',
@@ -67,7 +83,7 @@ export function UserTable({
       accessor: (user) => (
         <span className="text-sm text-gray-500">{user.id}</span>
       ),
-      width: '20%',
+      width: '10%',
     },
   ]
 

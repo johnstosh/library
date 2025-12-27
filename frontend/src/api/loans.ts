@@ -31,7 +31,7 @@ export function useCheckoutBook() {
 
   return useMutation({
     mutationFn: (data: { bookId: number; userId: number }) =>
-      api.post<LoanDto>('/loans', data),
+      api.post<LoanDto>('/loans/checkout', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
@@ -44,7 +44,7 @@ export function useReturnBook() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (loanId: number) => api.put<LoanDto>(`/loans/${loanId}/return`, {}),
+    mutationFn: (loanId: number) => api.put<LoanDto>(`/loans/return/${loanId}`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })

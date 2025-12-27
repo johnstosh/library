@@ -228,4 +228,32 @@ public class UserService {
         loanRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
+
+    public void deleteBulkUsers(List<Long> ids) {
+        for (Long id : ids) {
+            deleteUser(id);
+        }
+    }
+
+    /**
+     * Gets the user ID by username or SSO subject ID.
+     * Handles both local users (by username) and OAuth users (by SSO subject ID).
+     *
+     * @param usernameOrSubject The username or SSO subject ID from authentication
+     * @return The user's ID, or null if not found
+     */
+    @Transactional(readOnly = true)
+    public Long getUserIdByUsernameOrSsoSubject(String usernameOrSubject) {
+        // First try to find by username
+        List<User> users = userRepository.findAllByUsernameOrderByIdAsc(usernameOrSubject);
+        if (!users.isEmpty()) {
+            return users.get(0).getId();
+        }
+        // Try to find by SSO subject ID (for OAuth users like Google)
+        List<User> ssoUsers = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc("google", usernameOrSubject);
+        if (!ssoUsers.isEmpty()) {
+            return ssoUsers.get(0).getId();
+        }
+        return null;
+    }
 }

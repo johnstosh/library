@@ -67,9 +67,7 @@ export function useDeleteUsers() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (ids: number[]) => {
-      await Promise.all(ids.map((id) => api.delete(`/users/${id}`)))
-    },
+    mutationFn: (ids: number[]) => api.post('/users/delete-bulk', ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
     },

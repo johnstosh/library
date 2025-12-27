@@ -34,6 +34,7 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         try {
             logger.info("GET /api/users/me called, authentication: {}", authentication != null ? authentication.getClass().getName() : "null");
@@ -191,6 +192,22 @@ public class UserController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             logger.warn("Failed to delete user ID {}: {}", id, e.getMessage(), e);
+            if (e.getMessage().contains("active loan")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", e.getMessage()));
+            }
+            throw e;
+        }
+    }
+
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteBulkUsers(@RequestBody List<Long> ids) {
+        try {
+            userService.deleteBulkUsers(ids);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            logger.warn("Failed to bulk delete users {}: {}", ids, e.getMessage(), e);
             if (e.getMessage().contains("active loan")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(Map.of("message", e.getMessage()));

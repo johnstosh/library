@@ -15,6 +15,8 @@
 - [x] Books - complete
 - [x] Authors - complete
 - [x] Libraries - complete
+- [x] Users - complete
+- [x] Loans - complete
 
 
 ## Features/Pages Checklist
@@ -62,19 +64,37 @@
     - ✅ Updated feature-design-libraries.md to reflect React implementation instead of obsolete vanilla JavaScript
     - ✅ Removed unused books field from Library entity (never referenced, better performance)
 
-- [ ] **Users** (`/users`)
+- [x] **Users** (`/users`) - **FIXES IMPLEMENTED**
   - User management (librarian only)
   - Add/Edit/Delete users
   - Authority assignment (LIBRARIAN vs USER)
   - Password hashing (SHA-256 client-side)
   - SSO user handling
+  - **Fixes Applied:**
+    - ✅ Converted UserMapper from manual @Component to MapStruct @Mapper interface
+    - ✅ Added copyright header to UserRepository
+    - ✅ Added bulk delete endpoint (POST /api/users/delete-bulk)
+    - ✅ Added @PreAuthorize("isAuthenticated()") to /api/users/me endpoint
+    - ✅ Added 8 missing controller tests (public register, API key, 404, active loans, bulk delete)
+    - ✅ Added missing fields to frontend UserDto (xaiApiKey, ssoProvider, email, activeLoansCount, etc.)
+    - ✅ Added activeLoansCount column to UserTable component
+    - ✅ Updated frontend useDeleteUsers hook to use bulk delete endpoint
+    - ✅ Documented all User endpoints in endpoints.md
 
-- [ ] **Loans** (`/loans`)
+- [x] **Loans** (`/loans`) - **FIXES IMPLEMENTED**
   - Book checkout tracking
   - Check out books
   - Return books
   - View active loans
   - Loan history
+  - **Fixes Applied:**
+    - ✅ Fixed frontend API endpoints to match backend (POST /loans/checkout, PUT /loans/return/{id})
+    - ✅ Fixed security vulnerability: regular users can now only checkout books to themselves
+    - ✅ Added book already loaned validation - throws BookAlreadyLoanedException (409 Conflict)
+    - ✅ Converted LoanMapper from manual @Service to MapStruct @Mapper interface
+    - ✅ Added copyright header to ImportLoanDto.java
+    - ✅ Added 5 missing controller tests (404 on get/return, 400 on invalid input, 403 on checkout to other user)
+    - ✅ Documented all Loan endpoints in endpoints.md
 
 ### Library Card Features
 - [ ] **My Library Card** (`/my-card`)
