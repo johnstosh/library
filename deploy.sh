@@ -31,11 +31,14 @@ if [ -z "$GCP_REGION" ]; then
 fi
 
 # Extract SERVICE_NAME from settings.gradle
-SERVICE_NAME=$(grep "rootProject.name" settings.gradle | sed "s/.*rootProject.name = '\(.*\)'.*/\1/")
-if [ -z "$SERVICE_NAME" ]; then
+BASE_SERVICE_NAME=$(grep "rootProject.name" settings.gradle | sed "s/.*rootProject.name = '\(.*\)'.*/\1/")
+if [ -z "$BASE_SERVICE_NAME" ]; then
   echo "Error: Could not extract service name from settings.gradle"
   exit 1
 fi
+
+SERVICE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"
+DB_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"
 
 gcloud config set project "$GCP_PROJECT_ID" --quiet
 
@@ -59,7 +62,7 @@ gcloud sql instances create $CLOUD_SQL_INSTANCE_NAME \
 
 # Create the database
 echo "Creating database..."
-gcloud sql databases create ${SERVICE_NAME} --instance=$CLOUD_SQL_INSTANCE_NAME --quiet || echo "Database already exists?"
+gcloud sql databases create ${DB_NAME} --instance=$CLOUD_SQL_INSTANCE_NAME --quiet || echo "Database already exists?"
 
 # Set the database password
 echo "Setting database password..."
@@ -108,7 +111,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory 512Mi \
   --cpu 1 \
-  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://library.muczynskifamily.com" \
+  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
   $SERVICE_ACCOUNT_ARG \
   --quiet
