@@ -34,4 +34,5 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     void deleteByUserId(Long userId);
     Optional<Loan> findByBookIdAndUserIdAndLoanDate(Long bookId, Long userId, LocalDate loanDate);
     long countByReturnDateIsNull();
+    long countByBookLibraryIdAndReturnDateIsNull(Long libraryId);
 }

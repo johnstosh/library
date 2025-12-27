@@ -232,6 +232,18 @@ public class AuthorController {
         }
     }
 
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
+        try {
+            authorService.deleteBulkAuthors(authorIds);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/delete-authors-with-no-books")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> deleteAuthorsWithNoBooks() {

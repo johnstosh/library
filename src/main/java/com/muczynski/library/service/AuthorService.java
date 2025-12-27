@@ -82,6 +82,12 @@ public class AuthorService {
         authorRepository.deleteById(id);
     }
 
+    public void deleteBulkAuthors(List<Long> authorIds) {
+        for (Long id : authorIds) {
+            deleteAuthor(id);  // Reuse existing delete logic with book count validation
+        }
+    }
+
     public int deleteAuthorsWithNoBooks() {
         List<Author> allAuthors = authorRepository.findAll();
         int deletedCount = 0;

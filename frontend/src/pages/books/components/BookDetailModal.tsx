@@ -6,7 +6,7 @@ import { useBook, useCloneBook } from '@/api/books'
 import { formatBookStatus } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil } from 'react-icons/pi'
-import { useAuth } from '@/hooks/useAuth'
+import { useIsLibrarian } from '@/stores/authStore'
 
 interface BookDetailModalProps {
   isOpen: boolean
@@ -18,7 +18,7 @@ interface BookDetailModalProps {
 export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailModalProps) {
   const { data: book, isLoading } = useBook(bookId || 0)
   const cloneBook = useCloneBook()
-  const { isLibrarian } = useAuth()
+  const isLibrarian = useIsLibrarian()
 
   const handleClone = async () => {
     if (!bookId) return

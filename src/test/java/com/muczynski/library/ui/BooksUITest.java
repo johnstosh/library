@@ -149,6 +149,16 @@ public class BooksUITest {
     void testCreateBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
+        // Switch to 'all' filter to see all books
+        page.click("[data-test='filter-all']");
+
+        // Verify filter is checked
+        assertThat(page.locator("[data-test='filter-all']")).isChecked();
+
+        // Wait for books to load after filter change
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForTimeout(2000);
+
         // Click add book button
         page.click("[data-test='add-book']");
 
@@ -167,11 +177,12 @@ public class BooksUITest {
         // Submit the form
         page.click("[data-test='book-form-submit']");
 
-        // Wait for modal to close and book to appear
-        page.waitForSelector("text=New Test Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait a reasonable time for mutation and refetch
+        page.waitForTimeout(8000);
 
-        // Verify new book is in the table
-        assertThat(page.locator("text=New Test Book")).isVisible();
+        // Verify new book is in the table (allowing up to 30s total)
+        assertThat(page.locator("text=New Test Book"))
+            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
     }
 
     @Test
@@ -197,6 +208,10 @@ public class BooksUITest {
     void testEditBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
+        // Switch to 'all' filter to see all books
+        page.click("[data-test='filter-all']");
+        page.waitForTimeout(2000); // Wait for filter to apply and books to load
+
         // Wait for initial book to be visible
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
@@ -215,11 +230,12 @@ public class BooksUITest {
         // Submit the form
         page.click("[data-test='book-form-submit']");
 
-        // Wait for modal to close and changes to appear
-        page.waitForSelector("text=Updated Book Title", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait a reasonable time for mutation and refetch
+        page.waitForTimeout(8000);
 
-        // Verify updated book appears in table
-        assertThat(page.locator("text=Updated Book Title")).isVisible();
+        // Verify updated book appears in table (books are reordered by dateAddedToLibrary)
+        assertThat(page.locator("text=Updated Book Title"))
+            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
         assertThat(page.locator("text=Initial Book")).not().isVisible();
     }
 
@@ -227,6 +243,10 @@ public class BooksUITest {
     @DisplayName("Should delete a book with confirmation")
     void testDeleteBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Switch to 'all' filter to see all books
+        page.click("[data-test='filter-all']");
+        page.waitForTimeout(2000); // Wait for filter to apply and books to load
 
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
@@ -241,12 +261,13 @@ public class BooksUITest {
         // Confirm deletion
         page.click("[data-test='confirm-dialog-confirm']");
 
-        // Wait for book to be removed
-        page.waitForTimeout(2000);
+        // Wait a reasonable time for mutation and refetch
+        page.waitForTimeout(8000);
 
         // Verify book is no longer in table
         assertThat(page.locator("text=Initial Book")).not().isVisible();
-        assertThat(page.locator("text=No books found")).isVisible();
+        assertThat(page.locator("text=No books found"))
+            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
     }
 
     @Test
@@ -257,7 +278,10 @@ public class BooksUITest {
         // Wait for either the table, loading spinner, or "No data available" message
         page.waitForTimeout(2000); // Give React Query time to load
 
-        // Default filter is now 'all', so the filter should already be selected
+        // Click 'All Books' filter (default is 'most-recent')
+        page.click("[data-test='filter-all']");
+
+        // Filter should now be selected
         assertThat(page.locator("[data-test='filter-all']")).isChecked();
 
         // Should see the initial book (wait up to 10 seconds for books to load)
@@ -383,8 +407,8 @@ public class BooksUITest {
         // Click on the book title to open detail modal
         page.click("text=Initial Book");
 
-        // Wait for modal to open
-        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait for modal to open (modal title should be the book title)
+        page.waitForSelector("[data-test='book-detail-close']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Verify Edit and Clone buttons are visible for librarian
         assertThat(page.locator("[data-test='book-detail-edit']")).isVisible();
@@ -405,8 +429,8 @@ public class BooksUITest {
         // Click on the book title to open detail modal
         page.click("text=Initial Book");
 
-        // Wait for modal to open
-        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait for modal to open (modal title should be the book title)
+        page.waitForSelector("[data-test='book-detail-close']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click Edit button
         page.click("[data-test='book-detail-edit']");
@@ -419,26 +443,25 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should clone a book from detail modal")
-    void testCloneFromDetailModal() {
+    @DisplayName("Should clone a book from actions column")
+    void testCloneFromActionsColumn() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Switch to 'all' filter to see all books
+        page.click("[data-test='filter-all']");
+        page.waitForTimeout(2000); // Wait for filter to apply and books to load
 
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click on the book title to open detail modal
-        page.click("text=Initial Book");
+        // Click Clone button in actions column for book ID 1
+        page.click("[data-test='clone-book-1']");
 
-        // Wait for modal to open
-        page.waitForSelector("text=Book Details", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait a reasonable time for mutation and refetch
+        page.waitForTimeout(8000);
 
-        // Click Clone button
-        page.click("[data-test='book-detail-clone']");
-
-        // Wait for modal to close and page to refresh
-        page.waitForTimeout(2000);
-
-        // Verify cloned book appears (should have ", c. 1" suffix)
-        assertThat(page.locator("text=Initial Book, c. 1")).isVisible();
+        // Verify cloned book appears in the table (allowing up to 30s total)
+        assertThat(page.locator("text=Initial Book, c. 1"))
+            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
     }
 }

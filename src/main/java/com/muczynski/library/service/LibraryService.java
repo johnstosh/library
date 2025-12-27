@@ -94,7 +94,7 @@ public class LibraryService {
 
         for (Library library : libraries) {
             Long bookCount = bookRepository.countByLibraryId(library.getId());
-            Long activeLoansCount = loanRepository.countByReturnDateIsNull();
+            Long activeLoansCount = loanRepository.countByBookLibraryIdAndReturnDateIsNull(library.getId());
 
             LibraryStatisticsDto stats = new LibraryStatisticsDto(
                 library.getId(),

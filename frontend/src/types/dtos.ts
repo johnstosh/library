@@ -35,6 +35,8 @@ export interface AuthorDto {
   birthCountry?: string
   nationality?: string
   briefBiography?: string
+  firstPhotoId?: number
+  firstPhotoChecksum?: string
   bookCount?: number
   lastModified: string
 }

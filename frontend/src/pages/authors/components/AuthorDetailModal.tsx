@@ -64,7 +64,25 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
                   </p>
                 </div>
               )}
+              {author.birthCountry && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Birth Country</p>
+                  <p className="text-gray-900">{author.birthCountry}</p>
+                </div>
+              )}
+              {author.nationality && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Nationality</p>
+                  <p className="text-gray-900">{author.nationality}</p>
+                </div>
+              )}
             </div>
+            {author.religiousAffiliation && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-500 mb-2">Religious Affiliation</p>
+                <p className="text-gray-900">{author.religiousAffiliation}</p>
+              </div>
+            )}
             {author.briefBiography && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-500 mb-2">Biography</p>

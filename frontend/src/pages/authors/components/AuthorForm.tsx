@@ -21,6 +21,9 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
     name: '',
     birthDate: '',
     deathDate: '',
+    religiousAffiliation: '',
+    birthCountry: '',
+    nationality: '',
     briefBiography: '',
   })
   const [error, setError] = useState('')
@@ -34,6 +37,9 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         name: author.name,
         birthDate: author.dateOfBirth || '',
         deathDate: author.dateOfDeath || '',
+        religiousAffiliation: author.religiousAffiliation || '',
+        birthCountry: author.birthCountry || '',
+        nationality: author.nationality || '',
         briefBiography: author.briefBiography || '',
       })
     } else {
@@ -41,6 +47,9 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         name: '',
         birthDate: '',
         deathDate: '',
+        religiousAffiliation: '',
+        birthCountry: '',
+        nationality: '',
         briefBiography: '',
       })
     }
@@ -61,6 +70,9 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         name: formData.name,
         dateOfBirth: formData.birthDate || undefined,
         dateOfDeath: formData.deathDate || undefined,
+        religiousAffiliation: formData.religiousAffiliation || undefined,
+        birthCountry: formData.birthCountry || undefined,
+        nationality: formData.nationality || undefined,
         briefBiography: formData.briefBiography || undefined,
       }
 
@@ -126,6 +138,32 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
             value={formData.deathDate}
             onChange={(e) => setFormData({ ...formData, deathDate: e.target.value })}
             data-test="author-death-date"
+          />
+        </div>
+
+        <Textarea
+          label="Religious Affiliation"
+          value={formData.religiousAffiliation}
+          onChange={(e) => setFormData({ ...formData, religiousAffiliation: e.target.value })}
+          rows={3}
+          data-test="author-religious-affiliation"
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <Textarea
+            label="Birth Country"
+            value={formData.birthCountry}
+            onChange={(e) => setFormData({ ...formData, birthCountry: e.target.value })}
+            rows={3}
+            data-test="author-birth-country"
+          />
+
+          <Textarea
+            label="Nationality"
+            value={formData.nationality}
+            onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+            rows={3}
+            data-test="author-nationality"
           />
         </div>
 
