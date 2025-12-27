@@ -409,20 +409,46 @@ public class BooksFromFeedService {
                 // Create temporary book with timestamp title for processing later
                 String tempTitle = generateTemporaryTitle();
 
+                // Try to get photo creation time from mediaMetadata, otherwise use current time
+                LocalDateTime dateAdded = LocalDateTime.now();
+                try {
+                    // First try to get from mediaMetadata.creationTime (Google Photos Picker API format)
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
+                    String creationTime = null;
+
+                    if (mediaMetadata != null) {
+                        creationTime = (String) mediaMetadata.get("creationTime");
+                    }
+
+                    // Fallback to root level creationTime if mediaMetadata doesn't have it
+                    if (creationTime == null || creationTime.isEmpty()) {
+                        creationTime = (String) photo.get("creationTime");
+                    }
+
+                    if (creationTime != null && !creationTime.isEmpty()) {
+                        // Google Photos API returns ISO 8601 format: "2024-12-15T10:30:00Z"
+                        dateAdded = LocalDateTime.parse(creationTime.replace("Z", ""));
+                        logger.debug("Using photo creation time for book: {}", dateAdded);
+                    }
+                } catch (Exception e) {
+                    logger.debug("Could not parse photo creation time, using current time: {}", e.getMessage());
+                }
+
                 BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
                 tempBook.setAuthorId(null);  // Author will be set during AI processing
                 tempBook.setLibraryId(libraryId);
                 tempBook.setStatus(BookStatus.ACTIVE);
-                tempBook.setDateAddedToLibrary(LocalDateTime.now());
+                tempBook.setDateAddedToLibrary(dateAdded);
 
                 BookDto savedBook = bookService.createBook(tempBook);
                 Long bookId = savedBook.getId();
                 logger.info("Created temporary book with ID: {} (title: {})", bookId, tempTitle);
 
-                // Save photo to database with actual MIME type
-                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType);
-                logger.info("Saved photo to database for book {}", bookId);
+                // Save photo to database with actual MIME type and creation time
+                photoService.addPhotoFromBytes(bookId, photoBytes, mimeType, dateAdded);
+                logger.info("Saved photo to database for book {} (dateTaken: {})", bookId, dateAdded);
 
                 savedPhotos.add(Map.of(
                         "photoId", photoId,

@@ -51,4 +51,18 @@ public class Book {
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Photo> photos;
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (dateAddedToLibrary == null) {
+            dateAddedToLibrary = now;
+        }
+        lastModified = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
 }

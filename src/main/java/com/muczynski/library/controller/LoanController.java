@@ -4,7 +4,9 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.exception.InsufficientPermissionsException;
 import com.muczynski.library.service.LoanService;
+import com.muczynski.library.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +29,9 @@ public class LoanController {
     @Autowired
     private LoanService loanService;
 
+    @Autowired
+    private UserService userService;
+
     @PostMapping("/checkout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> checkoutBook(@Valid @RequestBody LoanDto loanDto, Authentication authentication) {
@@ -36,7 +41,12 @@ public class LoanController {
             // For non-librarians, verify they're checking out to themselves
             String username = authentication.getName();
             logger.debug("Regular user {} attempting to checkout book", username);
-            // The frontend should set the userId correctly, but we trust the service layer to validate
+            // Look up the user's ID from their username/SSO subject
+            Long authenticatedUserId = userService.getUserIdByUsernameOrSsoSubject(username);
+            if (authenticatedUserId == null || !authenticatedUserId.equals(loanDto.getUserId())) {
+                logger.warn("User {} attempted to checkout book to different user ID {}", username, loanDto.getUserId());
+                throw new InsufficientPermissionsException("You can only checkout books to yourself");
+            }
         }
         LoanDto created = loanService.checkoutBook(loanDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);

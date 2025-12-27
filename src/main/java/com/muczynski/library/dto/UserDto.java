@@ -6,6 +6,7 @@ package com.muczynski.library.dto;
 import com.muczynski.library.domain.LibraryCardDesign;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
@@ -13,7 +14,7 @@ public class UserDto {
     private Long id;
     private String username;
     private String password;
-    private Set<String> roles;
+    private Set<String> authorities;
     private String xaiApiKey;
     private String googlePhotosApiKey;
     private String googleClientSecret;
@@ -24,4 +25,5 @@ public class UserDto {
     private String email;
     private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
+    private LocalDateTime lastModified;
 }

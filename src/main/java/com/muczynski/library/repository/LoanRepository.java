@@ -21,7 +21,7 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
            "LEFT JOIN FETCH b.author " +
            "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
-           "LEFT JOIN FETCH u.roles")
+           "LEFT JOIN FETCH u.authorities")
     List<Loan> findAllWithBookAndUser();
     void deleteByLoanDate(LocalDate loanDate);
     List<Loan> findAllByReturnDateIsNullOrderByDueDateAsc();
@@ -33,4 +33,6 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     long countByUserIdAndReturnDateIsNull(Long userId);
     void deleteByUserId(Long userId);
     Optional<Loan> findByBookIdAndUserIdAndLoanDate(Long bookId, Long userId, LocalDate loanDate);
+    long countByReturnDateIsNull();
+    long countByBookLibraryIdAndReturnDateIsNull(Long libraryId);
 }

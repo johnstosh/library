@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.service.LoanService;
+import com.muczynski.library.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -50,6 +51,9 @@ class LoanControllerTest {
     @MockitoBean
     private LoanService loanService;
 
+    @MockitoBean
+    private UserService userService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -84,6 +88,7 @@ class LoanControllerTest {
         returnedDto.setId(1L);
         returnedDto.setBookId(1L);
         returnedDto.setUserId(2L);
+        when(userService.getUserIdByUsernameOrSsoSubject("testuser")).thenReturn(2L);
         when(loanService.checkoutBook(any(LoanDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/loans/checkout")
@@ -289,5 +294,66 @@ class LoanControllerTest {
     void testReturnBook_Unauthorized() throws Exception {
         mockMvc.perform(put("/api/loans/return/1"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ==================== Additional Tests for Coverage ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetLoanById_NotFound() throws Exception {
+        when(loanService.getLoanById(999L)).thenReturn(null);
+
+        mockMvc.perform(get("/api/loans/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testReturnBook_NotFound() throws Exception {
+        when(loanService.returnBook(999L)).thenReturn(null);
+
+        mockMvc.perform(put("/api/loans/return/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testCheckoutBook_InvalidInput_MissingBookId() throws Exception {
+        LoanDto inputDto = new LoanDto();
+        inputDto.setUserId(1L);
+        // bookId is null - should fail validation
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testCheckoutBook_InvalidInput_MissingUserId() throws Exception {
+        LoanDto inputDto = new LoanDto();
+        inputDto.setBookId(1L);
+        // userId is null - should fail validation
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = "USER")
+    void testCheckoutBook_Forbidden_CheckoutToDifferentUser() throws Exception {
+        // Regular user attempting to checkout a book to a different user
+        LoanDto inputDto = new LoanDto();
+        inputDto.setBookId(1L);
+        inputDto.setUserId(999L);  // Different user ID
+        when(userService.getUserIdByUsernameOrSsoSubject("testuser")).thenReturn(2L);
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isForbidden());
     }
 }

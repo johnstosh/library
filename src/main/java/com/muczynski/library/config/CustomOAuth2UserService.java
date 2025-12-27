@@ -3,9 +3,9 @@
  */
 package com.muczynski.library.config;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
-import com.muczynski.library.repository.RoleRepository;
+import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
+    private final AuthorityRepository authorityRepository;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -72,16 +72,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             log.info("Updated email for user: {} (ID: {})", user.getUsername(), user.getId());
         }
 
-        // Convert user roles to Spring Security authorities
-        Set<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+        // Convert user authorities to Spring Security authorities
+        Set<GrantedAuthority> grantedAuthorities = user.getAuthorities().stream()
+                .map(authority -> new SimpleGrantedAuthority(authority.getName()))
                 .collect(Collectors.toSet());
 
-        log.info("User authenticated successfully: {} with roles: {}", user.getUsername(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
+        log.info("User authenticated successfully: {} with authorities: {}", user.getUsername(),
+                user.getAuthorities().stream().map(a -> a.getName()).collect(Collectors.joining(", ")));
 
         // Return OAuth2User with authorities
-        return new DefaultOAuth2User(authorities, attributes, "sub");
+        return new DefaultOAuth2User(grantedAuthorities, attributes, "sub");
     }
 
     private User createNewSsoUser(String provider, String subjectId, String email, String name) {
@@ -112,27 +112,27 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         user.setGooglePhotosAlbumId("");
         user.setLastPhotoTimestamp("");
 
-        // Assign default USER role (create if doesn't exist)
+        // Assign default USER authority (create if doesn't exist)
         // Use list-based query to handle potential duplicates gracefully
-        java.util.List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("USER");
-        Role userRole;
-        if (existingRoles.isEmpty()) {
-            log.info("USER role not found, creating it");
-            Role newRole = new Role();
-            newRole.setName("USER");
-            userRole = roleRepository.save(newRole);
+        java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("USER");
+        Authority userAuthority;
+        if (existingAuthorities.isEmpty()) {
+            log.info("USER authority not found, creating it");
+            Authority newAuthority = new Authority();
+            newAuthority.setName("USER");
+            userAuthority = authorityRepository.save(newAuthority);
         } else {
-            userRole = existingRoles.get(0); // Select the one with the lowest ID
-            if (existingRoles.size() > 1) {
-                log.warn("Found {} duplicate roles with name 'USER'. Using role with lowest ID: {}. " +
+            userAuthority = existingAuthorities.get(0); // Select the one with the lowest ID
+            if (existingAuthorities.size() > 1) {
+                log.warn("Found {} duplicate authorities with name 'USER'. Using authority with lowest ID: {}. " +
                          "Consider cleaning up duplicate entries in the database.",
-                         existingRoles.size(), userRole.getId());
+                         existingAuthorities.size(), userAuthority.getId());
             }
         }
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(userRole);
-        user.setRoles(roles);
+        Set<Authority> authorities = new HashSet<>();
+        authorities.add(userAuthority);
+        user.setAuthorities(authorities);
 
         // Save new user
         userRepository.save(user);

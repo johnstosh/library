@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.BookAlreadyLoanedException;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Book;
@@ -43,6 +44,13 @@ public class LoanService {
     public LoanDto checkoutBook(LoanDto loanDto) {
         Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
         User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
+
+        // Check if book is already on loan (has an active loan with no return date)
+        long activeLoans = loanRepository.countByBookIdAndReturnDateIsNull(book.getId());
+        if (activeLoans > 0) {
+            throw new BookAlreadyLoanedException(book.getId());
+        }
+
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);

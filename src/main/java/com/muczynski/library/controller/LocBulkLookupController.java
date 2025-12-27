@@ -1,3 +1,6 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookLocStatusDto;
@@ -30,28 +33,6 @@ public class LocBulkLookupController {
     public ResponseEntity<List<BookLocStatusDto>> getAllBooksWithLocStatus() {
         log.info("Getting all books with LOC status");
         List<BookLocStatusDto> books = locBulkLookupService.getAllBooksWithLocStatus();
-        return ResponseEntity.ok(books);
-    }
-
-    /**
-     * Get books that are missing LOC numbers
-     */
-    @GetMapping("/books/missing-loc")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<BookLocStatusDto>> getBooksWithMissingLoc() {
-        log.info("Getting books with missing LOC numbers");
-        List<BookLocStatusDto> books = locBulkLookupService.getBooksWithMissingLoc();
-        return ResponseEntity.ok(books);
-    }
-
-    /**
-     * Get books added on the most recent date
-     */
-    @GetMapping("/books/most-recent")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<BookLocStatusDto>> getBooksFromMostRecentDate() {
-        log.info("Getting books from most recent date added");
-        List<BookLocStatusDto> books = locBulkLookupService.getBooksFromMostRecentDate();
         return ResponseEntity.ok(books);
     }
 

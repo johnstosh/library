@@ -59,7 +59,7 @@ class UserSettingsControllerTest {
         UserDto userDto = new UserDto();
         userDto.setId(1L);
         userDto.setUsername("testuser");
-        userDto.setRoles(Collections.singleton("USER"));
+        userDto.setAuthorities(Collections.singleton("USER"));
         userDto.setXaiApiKey("test-xai-key");
         userDto.setGooglePhotosApiKey("test-gp-key");
         userDto.setGoogleClientSecret("test-client-secret");
@@ -99,7 +99,7 @@ class UserSettingsControllerTest {
         UserDto responseDto = new UserDto();
         responseDto.setId(1L);
         responseDto.setUsername("testuser");
-        responseDto.setRoles(Collections.singleton("USER"));
+        responseDto.setAuthorities(Collections.singleton("USER"));
         responseDto.setXaiApiKey("new-xai-key");
         responseDto.setGooglePhotosApiKey("new-gp-key");
         responseDto.setGoogleClientSecret("new-client-secret");
@@ -164,7 +164,7 @@ class UserSettingsControllerTest {
         UserDto responseDto = new UserDto();
         responseDto.setId(2L);
         responseDto.setUsername("librarian");
-        responseDto.setRoles(Collections.singleton("LIBRARIAN"));
+        responseDto.setAuthorities(Collections.singleton("LIBRARIAN"));
         responseDto.setXaiApiKey("updated-xai-key");
         responseDto.setGooglePhotosApiKey("updated-gp-key");
         responseDto.setGoogleClientSecret("updated-client-secret");

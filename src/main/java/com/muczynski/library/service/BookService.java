@@ -178,6 +178,13 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    @Transactional
+    public void deleteBulkBooks(List<Long> bookIds) {
+        for (Long id : bookIds) {
+            deleteBook(id);  // Reuse existing delete logic with photo cleanup
+        }
+    }
+
     public BookDto cloneBook(Long id) {
         Book original = bookRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Book not found: " + id));
@@ -220,14 +227,14 @@ public class BookService {
 
         // Find all existing books with the same base title
         List<Book> allBooks = bookRepository.findAll();
-        int maxCopyNumber = 1;
+        int maxCopyNumber = 0;
 
         for (Book book : allBooks) {
             String bookTitle = book.getTitle();
 
-            // Check if this book's title matches the base title exactly
+            // Check if this book's title matches the base title exactly (the original)
             if (bookTitle.equals(baseTitle)) {
-                maxCopyNumber = Math.max(maxCopyNumber, 1);
+                maxCopyNumber = Math.max(maxCopyNumber, 0);
             }
 
             // Check if this book's title matches the pattern "baseTitle, c. N"

@@ -1,0 +1,184 @@
+// (c) Copyright 2025 by Muczynski
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { SuccessMessage } from '@/components/ui/SuccessMessage'
+import { useChangePassword } from '@/api/settings'
+import { hashPassword } from '@/utils/auth'
+import { useAuthStore } from '@/stores/authStore'
+
+interface PasswordChangeForm {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export function UserSettingsPage() {
+  const { user } = useAuthStore()
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<PasswordChangeForm>()
+
+  const changePassword = useChangePassword()
+
+  const onSubmit = async (data: PasswordChangeForm) => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    // Validate passwords match
+    if (data.newPassword !== data.confirmPassword) {
+      setErrorMessage('New passwords do not match')
+      return
+    }
+
+    // Hash passwords before sending
+    const currentPasswordHashed = await hashPassword(data.currentPassword)
+    const newPasswordHashed = await hashPassword(data.newPassword)
+
+    try {
+      await changePassword.mutateAsync({
+        currentPassword: currentPasswordHashed,
+        newPassword: newPasswordHashed,
+      })
+      setSuccessMessage('Password changed successfully')
+      reset()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to change password')
+    }
+  }
+
+  // If user is SSO user, they cannot change password
+  if (user?.ssoSubjectId) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">User Settings</h1>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Information</h2>
+            <div className="space-y-2">
+              <div>
+                <span className="text-sm font-medium text-gray-500">Username:</span>
+                <span className="ml-2 text-gray-900">{user?.username}</span>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">Account Type:</span>
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Google SSO
+                </span>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">Authority:</span>
+                <span className="ml-2 text-gray-900">{user?.authority}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900">
+              You are signed in with Google. Password changes are managed through your Google account.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">User Settings</h1>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        {/* Account Information */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
+          <div className="space-y-2">
+            <div>
+              <span className="text-sm font-medium text-gray-500">Username:</span>
+              <span className="ml-2 text-gray-900">{user?.username}</span>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Authority:</span>
+              <span className="ml-2 text-gray-900">{user?.authority}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Change Password Form */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h2>
+
+          {successMessage && <SuccessMessage message={successMessage} className="mb-4" />}
+          {errorMessage && <ErrorMessage message={errorMessage} className="mb-4" />}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Input
+              label="Current Password"
+              type="password"
+              {...register('currentPassword', { required: 'Current password is required' })}
+              error={errors.currentPassword?.message}
+              data-test="current-password"
+              required
+            />
+
+            <Input
+              label="New Password"
+              type="password"
+              {...register('newPassword', {
+                required: 'New password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters',
+                },
+              })}
+              error={errors.newPassword?.message}
+              data-test="new-password"
+              helpText="Password must be at least 8 characters"
+              required
+            />
+
+            <Input
+              label="Confirm New Password"
+              type="password"
+              {...register('confirmPassword', { required: 'Please confirm your new password' })}
+              error={errors.confirmPassword?.message}
+              data-test="confirm-password"
+              required
+            />
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  reset()
+                  setSuccessMessage('')
+                  setErrorMessage('')
+                }}
+                data-test="cancel-password-change"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={changePassword.isPending}
+                data-test="change-password-submit"
+              >
+                Change Password
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -28,4 +29,12 @@ public class Loan {
     private LocalDate dueDate = LocalDate.now().plusWeeks(2);
 
     private LocalDate returnDate;
+
+    private LocalDateTime lastModified;
+
+    @PreUpdate
+    @PrePersist
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
 }

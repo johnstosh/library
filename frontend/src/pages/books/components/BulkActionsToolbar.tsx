@@ -1,0 +1,106 @@
+// (c) Copyright 2025 by Muczynski
+import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useDeleteBooks } from '@/api/books'
+import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
+import { LocLookupResultsModal } from './LocLookupResultsModal'
+import { PiMagnifyingGlass } from 'react-icons/pi'
+
+interface BulkActionsToolbarProps {
+  selectedIds: Set<number>
+  onClearSelection: () => void
+}
+
+export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
+
+  const deleteBooks = useDeleteBooks()
+  const lookupBulk = useLookupBulkBooks()
+
+  const handleBulkDelete = async () => {
+    try {
+      await deleteBooks.mutateAsync(Array.from(selectedIds))
+      onClearSelection()
+      setShowDeleteConfirm(false)
+    } catch (error) {
+      console.error('Failed to delete books:', error)
+    }
+  }
+
+  const handleBulkLookup = async () => {
+    try {
+      const results = await lookupBulk.mutateAsync(Array.from(selectedIds))
+      setLookupResults(results)
+      setShowResults(true)
+    } catch (error) {
+      console.error('Failed to lookup LOC:', error)
+    }
+  }
+
+  if (selectedIds.size === 0) return null
+
+  return (
+    <>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-blue-900">
+              {selectedIds.size} {selectedIds.size === 1 ? 'book' : 'books'} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearSelection}
+              data-test="clear-selection"
+            >
+              Clear Selection
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkLookup}
+              isLoading={lookupBulk.isPending}
+              disabled={lookupBulk.isPending}
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="bulk-lookup-loc"
+            >
+              Lookup LOC
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              data-test="bulk-delete"
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Books"
+        message={`Are you sure you want to delete ${selectedIds.size} ${
+          selectedIds.size === 1 ? 'book' : 'books'
+        }? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteBooks.isPending}
+      />
+
+      <LocLookupResultsModal
+        isOpen={showResults}
+        onClose={() => setShowResults(false)}
+        results={lookupResults}
+      />
+    </>
+  )
+}

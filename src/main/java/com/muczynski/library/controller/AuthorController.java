@@ -56,6 +56,30 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/without-description")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAuthorsWithoutDescription() {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsWithoutDescription();
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors without description: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/zero-books")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAuthorsWithZeroBooks() {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsWithZeroBooks();
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors with zero books: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}/photos")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getPhotosByAuthorId(@PathVariable Long id) {
@@ -205,6 +229,18 @@ public class AuthorController {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
             throw e;
+        }
+    }
+
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
+        try {
+            authorService.deleteBulkAuthors(authorIds);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 

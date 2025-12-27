@@ -92,10 +92,11 @@ public class LabelsPdfService {
                     }
 
                     // Create table with fixed column widths matching label dimensions
+                    // Column 3 needs 0.1" additional spacing to align with physical labels
                     float[] columnWidths = new float[LABELS_PER_ROW];
-                    for (int i = 0; i < LABELS_PER_ROW; i++) {
-                        columnWidths[i] = LABEL_WIDTH;
-                    }
+                    columnWidths[0] = LABEL_WIDTH;  // Column 1
+                    columnWidths[1] = LABEL_WIDTH;  // Column 2
+                    columnWidths[2] = LABEL_WIDTH + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     // Remove all table spacing to prevent overflow

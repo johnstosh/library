@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.LibraryDto;
+import com.muczynski.library.dto.LibraryStatisticsDto;
 import com.muczynski.library.service.LibraryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,5 +108,28 @@ class LibraryControllerTest {
 
         mockMvc.perform(delete("/api/libraries/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getLibraryStatistics() throws Exception {
+        LibraryStatisticsDto statsDto = new LibraryStatisticsDto(
+                1L,
+                "St. Martin de Porres",
+                150L,
+                12L
+        );
+        when(libraryService.getLibraryStatistics()).thenReturn(Collections.singletonList(statsDto));
+
+        mockMvc.perform(get("/api/libraries/statistics"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void getLibraryStatistics_accessDeniedForNonLibrarian() throws Exception {
+        // USER authority should not be able to access statistics
+        mockMvc.perform(get("/api/libraries/statistics"))
+                .andExpect(status().isForbidden());
     }
 }

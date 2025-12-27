@@ -8,7 +8,7 @@ This document outlines the design for adding Google Single Sign-On (SSO) authent
 
 1. Add Google SSO as an authentication option on the login page
 2. Store SSO users in the existing `users` table alongside traditional users
-3. Allow librarians to manage authorities (roles) for SSO users
+3. Allow librarians to manage authorities for SSO users
 4. Display SSO provider information on the Users admin page
 5. Maintain existing username/password authentication
 6. Reuse existing Google OAuth infrastructure where possible
@@ -20,7 +20,7 @@ This document outlines the design for adding Google Single Sign-On (SSO) authent
 - **Current Auth Method**: Form-based username/password authentication
 - **Password Hashing**: SHA-256 on frontend, BCrypt on backend
 - **User Details Service**: `CustomUserDetailsService` loads users from database
-- **Roles**: Two roles exist - `LIBRARIAN` and `USER`
+- **Authorities**: Two authorities exist - `LIBRARIAN` and `USER`
 
 ### Existing Google OAuth Integration
 The application already has Google OAuth implemented for Google Photos integration:
@@ -42,7 +42,7 @@ The application already has Google OAuth implemented for Google Photos integrati
 - `googlePhotosAlbumId`
 - `lastPhotoTimestamp`
 
-**Role Table** (`role`):
+**Authority Table** (`role`):
 - `id` (PK)
 - `name` (USER or LIBRARIAN)
 
@@ -116,7 +116,7 @@ Create `CustomOAuth2UserService` to:
 1. Receive Google user information after successful OAuth2 authentication
 2. Extract user details (email, name, sub)
 3. Check if user exists by `ssoSubjectId`
-4. If new user, create account with default `USER` role
+4. If new user, create account with default `USER` authority
 5. Return Spring Security user principal
 
 **User Matching Logic**:
@@ -127,7 +127,7 @@ Create `CustomOAuth2UserService` to:
   - `ssoSubjectId` = Google "sub" claim
   - `email` = email from Google
   - `password` = null (not needed for SSO)
-  - Default role: `USER`
+  - Default authority: `USER`
 
 ### 4. Application Configuration
 
@@ -202,7 +202,7 @@ Add SSO provider column to the users table:
     <thead>
         <tr>
             <th>Name</th>
-            <th>Role</th>
+            <th>Authority</th>
             <th>SSO</th>  <!-- New column -->
             <th>Actions</th>
         </tr>
@@ -323,7 +323,7 @@ Update `UserService` to:
 1. Test traditional login (should still work)
 2. Test Google SSO login (new user creation)
 3. Test Google SSO login (returning user)
-4. Test librarian can modify roles for SSO users
+4. Test librarian can modify authorities for SSO users
 5. Update README with Google OAuth setup instructions
 6. Test error scenarios (OAuth failure, network issues, etc.)
 

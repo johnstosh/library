@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '1.1.2'
+version = '2.0.0'
 
 java {
     sourceCompatibility = '17'
@@ -27,16 +27,17 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.session:spring-session-jdbc'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2' // for development with file-based H2
     implementation 'com.google.cloud.sql:postgres-socket-factory:1.13.+'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'com.h2database:h2' // for JUnit testing
     testImplementation 'com.microsoft.playwright:playwright:1.+'
     testImplementation 'io.rest-assured:rest-assured:5.+'
     testImplementation 'io.rest-assured:spring-mock-mvc:5.+'

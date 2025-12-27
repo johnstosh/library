@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class AuthorDto {
@@ -24,4 +25,5 @@ public class AuthorDto {
     private Long firstPhotoId;
     private String firstPhotoChecksum;
     private Long bookCount;
+    private LocalDateTime lastModified;
 }
