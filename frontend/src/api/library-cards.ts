@@ -5,7 +5,7 @@ import { api } from './client'
 export interface AppliedDto {
   id: number
   name: string
-  password: string
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED'
 }
 
 export interface RegistrationRequest {

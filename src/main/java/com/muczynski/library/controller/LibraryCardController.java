@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +41,7 @@ public class LibraryCardController {
      * @return PDF file as byte array with appropriate headers
      */
     @GetMapping("/print")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> printLibraryCard() {
         try {
             // Get current authenticated user

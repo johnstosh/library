@@ -3,26 +3,21 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.controller.payload.RegistrationRequest;
 import com.muczynski.library.domain.Applied;
+import com.muczynski.library.dto.AppliedDto;
+import com.muczynski.library.mapper.AppliedMapper;
 import com.muczynski.library.service.AppliedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.muczynski.library.controller.payload.RegistrationRequest;
-import com.muczynski.library.domain.Applied;
-import com.muczynski.library.service.AppliedService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -32,6 +27,9 @@ public class AppliedController {
 
     @Autowired
     private AppliedService appliedService;
+
+    @Autowired
+    private AppliedMapper appliedMapper;
 
     @PostMapping("/application/public/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
@@ -56,7 +54,10 @@ public class AppliedController {
     public ResponseEntity<?> getAllApplied() {
         try {
             List<Applied> applied = appliedService.getAllApplied();
-            return ResponseEntity.ok(applied);
+            List<AppliedDto> dtos = applied.stream()
+                    .map(appliedMapper::appliedToAppliedDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve all applied applications: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -68,7 +69,8 @@ public class AppliedController {
     public ResponseEntity<?> createApplied(@RequestBody Applied applied) {
         try {
             Applied createdApplied = appliedService.createApplied(applied);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdApplied);
+            AppliedDto dto = appliedMapper.appliedToAppliedDto(createdApplied);
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         } catch (Exception e) {
             logger.warn("Failed to create applied with entity {}: {}", applied, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -80,7 +82,8 @@ public class AppliedController {
     public ResponseEntity<?> updateApplied(@PathVariable Long id, @RequestBody Applied applied) {
         try {
             Applied updatedApplied = appliedService.updateApplied(id, applied);
-            return ResponseEntity.ok(updatedApplied);
+            AppliedDto dto = appliedMapper.appliedToAppliedDto(updatedApplied);
+            return ResponseEntity.ok(dto);
         } catch (Exception e) {
             logger.warn("Failed to update applied ID {} with entity {}: {}", id, applied, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

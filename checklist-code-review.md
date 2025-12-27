@@ -97,18 +97,35 @@
     - ✅ Documented all Loan endpoints in endpoints.md
 
 ### Library Card Features
-- [ ] **My Library Card** (`/my-card`)
+- [x] **My Library Card** (`/my-card`) - **FIXES IMPLEMENTED**
   - View personal library card
   - Download library card PDF
+  - **Fixes Applied:**
+    - ✅ Added @PreAuthorize("isAuthenticated()") to LibraryCardController.printLibraryCard()
+    - ✅ Created feature-design-library-cards.md documentation
+    - ✅ Added library card PDF endpoint to endpoints.md
 
-- [ ] **Apply for Card** (`/apply`)
+- [x] **Apply for Card** (`/apply`) - **FIXES IMPLEMENTED**
   - Library card application form
   - Application submission
+  - **Fixes Applied:**
+    - ✅ Fixed AppliedController to use AppliedDto instead of exposing Applied entities (Bugs #1, #2)
+    - ✅ Removed duplicate and unused imports from AppliedController (Bugs #4, #5)
+    - ✅ Fixed frontend AppliedDto interface to match backend (removed password, added status)
+    - ✅ Fixed AppliedService.getAppliedById to throw exception instead of returning null
+    - ✅ Created feature-design-library-cards.md documentation
+    - ✅ Added all application endpoints to endpoints.md
 
-- [ ] **Applications** (`/applications`, librarian only)
+- [x] **Applications** (`/applications`, librarian only) - **FIXES IMPLEMENTED**
   - Review card applications
   - Approve/Reject applications
   - View application details
+  - **Fixes Applied:**
+    - ✅ Fixed AppliedController to use DTOs (prevents password exposure)
+    - ✅ All endpoints properly return AppliedDto (id, name, status)
+    - ✅ MapStruct AppliedMapper properly utilized
+    - ✅ Created feature-design-library-cards.md documentation
+    - ✅ Added all application management endpoints to endpoints.md
 
 - [ ] **Library Card Design** (in Global Settings)
   - Customize library card PDF design
