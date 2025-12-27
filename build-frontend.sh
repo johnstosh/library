@@ -32,6 +32,7 @@ rm -rf src/main/resources/static/*
 
 # Copy new build to Spring Boot static resources
 echo "Copying build to Spring Boot static resources..."
+mkdir src/main/resources/static
 cp -r frontend/dist/* src/main/resources/static/
 
 echo "================================="
