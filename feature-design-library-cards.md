@@ -74,20 +74,28 @@ Management interface for reviewing and processing library card applications.
 3. Application status changed to `APPROVED`
 4. User can now log in with their credentials
 
-### 4. Library Card Design (Global Settings)
+### 4. Library Card Design (User Settings)
 
-**Access**: Librarian only
+**Access**: All authenticated users
 
-Configure the appearance of generated library card PDFs.
+Each user can select their preferred library card design from 5 predefined options.
 
 **Features**:
-- Logo upload
-- Primary and secondary color selection
-- Card text customization
-- Preview of card design
-- Applies to all generated cards
+- Selection from 5 predefined card designs
+- Design preference saved per-user
+- Applied when user generates their library card PDF
+- Accessible in User Settings page (`/settings`)
 
-**Location**: Part of `/global-settings` page
+**Available Designs**:
+1. **Classical Devotion** - Traditional design with classic typography (default)
+2. **Countryside Youth** - Fresh, youthful design with natural elements
+3. **Sacred Heart Portrait** - Portrait-oriented design with sacred imagery
+4. **Radiant Blessing** - Bright design with uplifting elements
+5. **Patron of Creatures** - Nature-focused design with animal motifs
+
+**Location**: Part of `/settings` page (User Settings)
+
+**Implementation**: Design preference stored on `User` entity as `libraryCardDesign` field (enum type)
 
 ## Domain Model
 
@@ -135,19 +143,22 @@ public class AppliedDto {
 
 **Security**: Password field intentionally excluded from DTO to prevent exposure in API responses.
 
-### LibraryCardDesign Entity
+### LibraryCardDesign Enum
 
 **File**: `src/main/java/com/muczynski/library/domain/LibraryCardDesign.java`
 
-Stores customization settings for library card PDFs.
+Enum defining the 5 predefined library card design options.
 
-**Fields**:
-- `id`: Primary key
-- `logoPath`: Path to uploaded logo image
-- `primaryColor`: Hex color code for card background
-- `secondaryColor`: Hex color code for text/accents
-- `libraryName`: Name displayed on card
-- `tagline`: Optional tagline text
+**Values**:
+- `CLASSICAL_DEVOTION` - Default design with traditional styling
+- `COUNTRYSIDE_YOUTH` - Youthful design with natural elements
+- `SACRED_HEART_PORTRAIT` - Portrait-oriented sacred design
+- `RADIANT_BLESSING` - Bright, uplifting design
+- `PATRON_OF_CREATURES` - Nature-themed design with animals
+
+**Usage**: Stored on `User` entity as `libraryCardDesign` field. Each user can select their preferred design, which is applied when generating their library card PDF.
+
+**Frontend Mapping**: TypeScript enum defined in `frontend/src/types/dtos.ts` with matching values for type safety.
 
 ## API Endpoints
 

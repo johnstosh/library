@@ -9,7 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `feature-design-photos.md` - Photo storage, Google Photos integration, caching
 - `feature-design-loc.md` - Library of Congress integration, call number lookup
 - `feature-design-import-export.md` - JSON import/export, photo backup
-- `feature-design-libraries.md` - Library card design, PDF generation, applications
+- `feature-design-libraries.md` - Library management, library statistics
+- `feature-design-library-cards.md` - Library card applications, PDF generation, card designs
 - `backend-requirements.md` - Backend development requirements and patterns
 - `backend-development-requirements.md` - Detailed backend guidelines
 - `uitest-requirements.md` - UI testing with Playwright
@@ -80,10 +81,10 @@ The build.gradle test configuration only shows detailed output for failed tests 
 - `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status
 - `Author` - Authors with biographical information
 - `Loan` - Book checkout tracking
-- `User` - Library patron/staff accounts with authority-based access
+- `User` - Library patron/staff accounts with authority-based access (includes `libraryCardDesign` enum field)
 - `Photo` - Book and author photos with Google Photos integration
 - `Applied` - Library card application tracking
-- `LibraryCardDesign` - Library card PDF design settings
+- `LibraryCardDesign` - Enum with 5 predefined card design options (per-user preference)
 - `GlobalSettings` - Application-wide settings (SSO, etc.)
 - `RandomBook`, `RandomAuthor`, `RandomLoan` - Test data generation templates
 

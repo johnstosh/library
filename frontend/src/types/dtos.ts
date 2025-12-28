@@ -1,6 +1,15 @@
 // (c) Copyright 2025 by Muczynski
 import type { BookStatus } from './enums'
 
+// Library Card Design Enum
+export enum LibraryCardDesign {
+  COUNTRYSIDE_YOUTH = 'COUNTRYSIDE_YOUTH',
+  SACRED_HEART_PORTRAIT = 'SACRED_HEART_PORTRAIT',
+  RADIANT_BLESSING = 'RADIANT_BLESSING',
+  PATRON_OF_CREATURES = 'PATRON_OF_CREATURES',
+  CLASSICAL_DEVOTION = 'CLASSICAL_DEVOTION'
+}
+
 // Common
 export interface IdDto {
   id: number
@@ -94,7 +103,7 @@ export interface UserDto {
   ssoProvider?: string
   ssoSubjectId?: string
   email?: string
-  libraryCardDesign?: string
+  libraryCardDesign?: LibraryCardDesign
   activeLoansCount?: number
   googlePhotosApiKey?: string
   googleClientSecret?: string
@@ -117,12 +126,6 @@ export interface LoanDto {
 }
 
 // Library Card DTOs
-export interface LibraryCardDesignDto {
-  id: number
-  name: string
-  description?: string
-}
-
 export interface ApplicationDto {
   id: number
   userId: number

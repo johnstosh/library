@@ -326,4 +326,63 @@ class GlobalSettingsControllerTest {
                 .andExpect(jsonPath("$.googleClientSecretPartial").exists())
                 .andExpect(jsonPath("$.googleClientSecret").doesNotExist()); // Full secret should not be in response
     }
+
+    // ==================== GET /api/global-settings/sso-status Tests ====================
+
+    @Test
+    void testGetSsoStatus_Configured() throws Exception {
+        // Arrange
+        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/global-settings/sso-status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ssoConfigured").value(true));
+    }
+
+    @Test
+    void testGetSsoStatus_NotConfigured() throws Exception {
+        // Arrange
+        when(globalSettingsService.isSsoConfigured()).thenReturn(false);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/global-settings/sso-status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ssoConfigured").value(false));
+    }
+
+    @Test
+    void testGetSsoStatus_PublicAccess_NoAuthRequired() throws Exception {
+        // Arrange
+        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+
+        // Act & Assert - No authentication required for SSO status endpoint
+        mockMvc.perform(get("/api/global-settings/sso-status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ssoConfigured").value(true));
+    }
+
+    @Test
+    void testGetSsoStatus_AsRegularUser() throws Exception {
+        // Arrange
+        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+
+        // Act & Assert - Regular users can check SSO status
+        mockMvc.perform(get("/api/global-settings/sso-status")
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ssoConfigured").value(true));
+    }
+
+    @Test
+    void testGetSsoStatus_AsLibrarian() throws Exception {
+        // Arrange
+        when(globalSettingsService.isSsoConfigured()).thenReturn(false);
+
+        // Act & Assert - Librarians can check SSO status
+        mockMvc.perform(get("/api/global-settings/sso-status")
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ssoConfigured").value(false));
+    }
 }

@@ -127,11 +127,25 @@
     - ✅ Created feature-design-library-cards.md documentation
     - ✅ Added all application management endpoints to endpoints.md
 
-- [ ] **Library Card Design** (in Global Settings)
+- [x] **Library Card Design** (in User Settings) - **ALL FIXES COMPLETE**
   - Customize library card PDF design
-  - Logo upload
-  - Color customization
+  - Select from 5 predefined card designs
   - PDF generation with iText 8
+  - **Findings & Fixes:**
+    - ✅ LibraryCardDesign is an enum (not an entity) with 5 predefined designs
+    - ✅ Stored per-user (not global), field on User entity
+    - ✅ **DOCUMENTATION FIXED**: Updated feature-design-library-cards.md to describe per-user design preference
+    - ✅ **DOCUMENTATION FIXED**: Removed incorrect references to customizable logo/colors
+    - ✅ **DOCUMENTATION FIXED**: Moved section from "Global Settings" to "User Settings"
+    - ✅ **DOCUMENTATION FIXED**: Updated LibraryCardDesign section to describe enum with 5 designs
+    - ✅ **DOCUMENTATION FIXED**: Updated CLAUDE.md to reflect per-user design preference
+    - ✅ **FIXED**: Added frontend UI in UserSettingsPage for library card design selection
+    - ✅ **FIXED**: Created LibraryCardDesign enum in frontend (TypeScript)
+    - ✅ **FIXED**: Updated UserDto.libraryCardDesign to use enum type instead of string
+    - ✅ **FIXED**: Removed unused LibraryCardDesignDto from frontend
+    - ✅ **FIXED**: Added copyright header to UserSettingsService
+    - ✅ **FIXED**: Created UserSettingsControllerTest.java with 14 comprehensive tests
+    - ✅ **FIXED**: Added 5 SSO status tests to GlobalSettingsControllerTest
 
 ### Search & Discovery
 - [ ] **Search** (`/search`)

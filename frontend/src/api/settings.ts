@@ -1,7 +1,18 @@
 // (c) Copyright 2025 by Muczynski
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { GlobalSettingsDto } from '@/types/dtos'
+import type { GlobalSettingsDto, UserDto, LibraryCardDesign } from '@/types/dtos'
+
+export interface UserSettingsDto {
+  username?: string
+  password?: string
+  xaiApiKey?: string
+  googlePhotosApiKey?: string
+  googleClientSecret?: string
+  googlePhotosAlbumId?: string
+  lastPhotoTimestamp?: string
+  libraryCardDesign?: LibraryCardDesign
+}
 
 // Global Settings API
 
@@ -31,7 +42,27 @@ export function useSsoStatus() {
   })
 }
 
-// User Settings API (password change)
+// User Settings API
+
+export function useUserSettings() {
+  return useQuery({
+    queryKey: ['user-settings'],
+    queryFn: () => api.get<UserDto>('/user-settings'),
+  })
+}
+
+export function useUpdateUserSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (settings: UserSettingsDto) =>
+      api.put<UserDto>('/user-settings', settings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-settings'] })
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] })
+    },
+  })
+}
 
 export function useChangePassword() {
   return useMutation({

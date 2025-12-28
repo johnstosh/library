@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
-import { useChangePassword } from '@/api/settings'
+import { useChangePassword, useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
+import { LibraryCardDesign } from '@/types/dtos'
 
 interface PasswordChangeForm {
   currentPassword: string
@@ -15,10 +16,43 @@ interface PasswordChangeForm {
   confirmPassword: string
 }
 
+const LIBRARY_CARD_DESIGN_OPTIONS = [
+  {
+    value: LibraryCardDesign.CLASSICAL_DEVOTION,
+    label: 'Classical Devotion',
+    description: 'Traditional design with classic typography'
+  },
+  {
+    value: LibraryCardDesign.COUNTRYSIDE_YOUTH,
+    label: 'Countryside Youth',
+    description: 'Fresh, youthful design with natural elements'
+  },
+  {
+    value: LibraryCardDesign.SACRED_HEART_PORTRAIT,
+    label: 'Sacred Heart Portrait',
+    description: 'Portrait-oriented design with sacred imagery'
+  },
+  {
+    value: LibraryCardDesign.RADIANT_BLESSING,
+    label: 'Radiant Blessing',
+    description: 'Bright design with uplifting elements'
+  },
+  {
+    value: LibraryCardDesign.PATRON_OF_CREATURES,
+    label: 'Patron of Creatures',
+    description: 'Nature-focused design with animal motifs'
+  }
+]
+
 export function UserSettingsPage() {
   const { user } = useAuthStore()
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [cardDesignSuccess, setCardDesignSuccess] = useState('')
+  const [cardDesignError, setCardDesignError] = useState('')
+
+  const { data: userSettings } = useUserSettings()
+  const updateUserSettings = useUpdateUserSettings()
 
   const {
     register,
@@ -28,6 +62,18 @@ export function UserSettingsPage() {
   } = useForm<PasswordChangeForm>()
 
   const changePassword = useChangePassword()
+
+  const handleLibraryCardDesignChange = async (design: LibraryCardDesign) => {
+    setCardDesignSuccess('')
+    setCardDesignError('')
+
+    try {
+      await updateUserSettings.mutateAsync({ libraryCardDesign: design })
+      setCardDesignSuccess('Library card design updated successfully')
+    } catch (error) {
+      setCardDesignError(error instanceof Error ? error.message : 'Failed to update library card design')
+    }
+  }
 
   const onSubmit = async (data: PasswordChangeForm) => {
     setSuccessMessage('')
@@ -82,10 +128,48 @@ export function UserSettingsPage() {
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-900">
               You are signed in with Google. Password changes are managed through your Google account.
             </p>
+          </div>
+
+          {/* Library Card Design Section */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
+
+            {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
+            {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
+
+            <div className="space-y-3">
+              {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
+                <div
+                  key={option.value}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    userSettings?.libraryCardDesign === option.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => handleLibraryCardDesignChange(option.value)}
+                  data-test={`library-card-design-${option.value}`}
+                >
+                  <div className="flex items-start">
+                    <input
+                      type="radio"
+                      name="libraryCardDesign"
+                      value={option.value}
+                      checked={userSettings?.libraryCardDesign === option.value}
+                      onChange={() => handleLibraryCardDesignChange(option.value)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">{option.label}</div>
+                      <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -109,6 +193,44 @@ export function UserSettingsPage() {
               <span className="text-sm font-medium text-gray-500">Authority:</span>
               <span className="ml-2 text-gray-900">{user?.authority}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Library Card Design Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
+
+          {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
+          {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
+
+          <div className="space-y-3">
+            {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
+              <div
+                key={option.value}
+                className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                  userSettings?.libraryCardDesign === option.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => handleLibraryCardDesignChange(option.value)}
+                data-test={`library-card-design-${option.value}`}
+              >
+                <div className="flex items-start">
+                  <input
+                    type="radio"
+                    name="libraryCardDesign"
+                    value={option.value}
+                    checked={userSettings?.libraryCardDesign === option.value}
+                    onChange={() => handleLibraryCardDesignChange(option.value)}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">{option.label}</div>
+                    <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
