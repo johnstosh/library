@@ -34,6 +34,7 @@ export function Navigation() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
+  const isAuthenticated = !!user
 
   const handleLogout = () => {
     logout()
@@ -51,7 +52,7 @@ export function Navigation() {
             </Link>
 
             <div className="hidden md:flex items-center space-x-2">
-              {/* User navigation items */}
+              {/* Public navigation items (always visible) */}
               <NavLink to="/books" data-test="nav-books">
                 Books
               </NavLink>
@@ -61,14 +62,22 @@ export function Navigation() {
               <NavLink to="/search" data-test="nav-search">
                 Search
               </NavLink>
-              <NavLink to="/loans" data-test="nav-loans">
-                Loans
-              </NavLink>
+
+              {/* Authenticated user navigation items */}
+              {isAuthenticated && (
+                <>
+                  <NavLink to="/loans" data-test="nav-loans">
+                    Loans
+                  </NavLink>
+                  <NavLink to="/settings" data-test="nav-settings">
+                    Settings
+                  </NavLink>
+                </>
+              )}
+
+              {/* My Card - visible to all (public can apply for card) */}
               <NavLink to="/my-card" data-test="nav-my-card">
                 My Card
-              </NavLink>
-              <NavLink to="/settings" data-test="nav-settings">
-                Settings
               </NavLink>
 
               {/* Librarian-only items */}
@@ -83,9 +92,6 @@ export function Navigation() {
                   </NavLink>
                   <NavLink to="/applications" data-test="nav-applications">
                     Applications
-                  </NavLink>
-                  <NavLink to="/labels" data-test="nav-labels">
-                    Labels
                   </NavLink>
                   <NavLink to="/books-from-feed" data-test="nav-books-from-feed">
                     Books from Feed
@@ -106,30 +112,40 @@ export function Navigation() {
 
           {/* Right side - User menu */}
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">
-                {user?.username}
-                {user?.ssoSubjectId && (
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    SSO
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">
+                    {user?.username}
+                    {user?.ssoSubjectId && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        SSO
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              {isLibrarian && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                  Librarian
-                </span>
-              )}
-            </div>
+                  {isLibrarian && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                      Librarian
+                    </span>
+                  )}
+                </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              data-test="nav-logout"
-            >
-              Logout
-            </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  data-test="nav-logout"
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Link to="/login">
+                <Button variant="primary" size="sm" data-test="nav-login">
+                  Login
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -137,6 +153,7 @@ export function Navigation() {
       {/* Mobile menu */}
       <div className="md:hidden border-t border-gray-200">
         <div className="px-2 pt-2 pb-3 space-y-1">
+          {/* Public navigation items (always visible) */}
           <NavLink to="/books" data-test="nav-books-mobile">
             Books
           </NavLink>
@@ -146,15 +163,30 @@ export function Navigation() {
           <NavLink to="/search" data-test="nav-search-mobile">
             Search
           </NavLink>
-          <NavLink to="/loans" data-test="nav-loans-mobile">
-            Loans
-          </NavLink>
+
+          {/* Authenticated user navigation items */}
+          {isAuthenticated && (
+            <>
+              <NavLink to="/loans" data-test="nav-loans-mobile">
+                Loans
+              </NavLink>
+              <NavLink to="/settings" data-test="nav-settings-mobile">
+                Settings
+              </NavLink>
+            </>
+          )}
+
+          {/* My Card - visible to all (public can apply for card) */}
           <NavLink to="/my-card" data-test="nav-my-card-mobile">
             My Card
           </NavLink>
-          <NavLink to="/settings" data-test="nav-settings-mobile">
-            Settings
-          </NavLink>
+
+          {/* Login/Logout for mobile */}
+          {!isAuthenticated && (
+            <NavLink to="/login" data-test="nav-login-mobile">
+              Login
+            </NavLink>
+          )}
 
           {isLibrarian && (
             <>
@@ -167,9 +199,6 @@ export function Navigation() {
               </NavLink>
               <NavLink to="/applications" data-test="nav-applications-mobile">
                 Applications
-              </NavLink>
-              <NavLink to="/labels" data-test="nav-labels-mobile">
-                Labels
               </NavLink>
               <NavLink to="/books-from-feed" data-test="nav-books-from-feed-mobile">
                 Books from Feed

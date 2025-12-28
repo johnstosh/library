@@ -247,12 +247,15 @@ Protected routes with authentication and role-based access:
   {/* Public routes */}
   <Route path="/login" element={<LoginPage />} />
   <Route path="/search" element={<SearchPage />} />
+  <Route path="/books" element={<BooksPage />} />
+  <Route path="/authors" element={<AuthorsPage />} />
+  <Route path="/my-card" element={<MyLibraryCardPage />} />
 
   {/* Protected routes (authenticated users) */}
   <Route element={<ProtectedRoute />}>
     <Route element={<AppLayout />}>
-      <Route path="/books" element={<BooksPage />} />
-      <Route path="/authors" element={<AuthorsPage />} />
+      <Route path="/loans" element={<LoansPage />} />
+      <Route path="/settings" element={<UserSettingsPage />} />
 
       {/* Librarian-only routes */}
       <Route element={<LibrarianRoute />}>
@@ -263,6 +266,29 @@ Protected routes with authentication and role-based access:
   </Route>
 </Routes>
 ```
+
+### Navigation Menu Access
+
+The navigation menu shows different items based on authentication status:
+
+**Unauthenticated Users (Public):**
+- Books (browse catalog)
+- Authors (browse authors)
+- Search (search library)
+- My Card (view/apply for library card)
+- Login (sign in button)
+
+**Authenticated Users:**
+- Books, Authors, Search, My Card (same as public)
+- Loans (view checkout history)
+- Settings (manage account)
+- Logout (sign out button)
+
+**Librarians Only:**
+- All authenticated user items, plus:
+- Libraries, Users, Applications
+- Books from Feed, Data Management
+- Global Settings, Test Data
 
 ### 4. State Management Pattern
 
@@ -380,8 +406,11 @@ Photo thumbnails cached in IndexedDB (planned enhancement).
 
 ### Authorization Levels
 
-- **USER**: Access to Books, Authors, Search, Loans, My Library Card, Settings
-- **LIBRARIAN**: Full access including Users, Libraries, Data Management, Test Data
+- **PUBLIC (Unauthenticated)**: Access to Books, Authors, Search, My Card (apply for card)
+- **USER**: Public access + Loans, Settings, My Card (download card)
+- **LIBRARIAN**: Full access including Users, Libraries, Applications, Books from Feed, Data Management, Global Settings, Test Data
+
+Note: Books and Authors pages are publicly accessible to allow browsing the catalog without login.
 
 ### Access Control
 

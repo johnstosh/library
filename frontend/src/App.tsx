@@ -23,7 +23,6 @@ const UsersPage = lazy(() => import('@/pages/users/UsersPage').then(m => ({ defa
 const SearchPage = lazy(() => import('@/pages/search/SearchPage').then(m => ({ default: m.SearchPage })))
 const MyLibraryCardPage = lazy(() => import('@/pages/library-cards/MyLibraryCardPage').then(m => ({ default: m.MyLibraryCardPage })))
 const ApplicationsPage = lazy(() => import('@/pages/library-cards/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
-const LabelsPage = lazy(() => import('@/pages/labels/LabelsPage').then(m => ({ default: m.LabelsPage })))
 const UserSettingsPage = lazy(() => import('@/pages/settings/UserSettingsPage').then(m => ({ default: m.UserSettingsPage })))
 const GlobalSettingsPage = lazy(() => import('@/pages/settings/GlobalSettingsPage').then(m => ({ default: m.GlobalSettingsPage })))
 const TestDataPage = lazy(() => import('@/pages/test-data/TestDataPage').then(m => ({ default: m.TestDataPage })))
@@ -72,7 +71,6 @@ function App() {
                 <Route path="/data-management" element={<DataManagementPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
-                <Route path="/labels" element={<LabelsPage />} />
                 <Route path="/books-from-feed" element={<BooksFromFeedPage />} />
                 <Route path="/global-settings" element={<GlobalSettingsPage />} />
                 <Route path="/test-data" element={<TestDataPage />} />

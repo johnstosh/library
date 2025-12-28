@@ -154,10 +154,14 @@
     - ✅ **FIXED**: Added 5 SSO status tests to GlobalSettingsControllerTest
 
 ### Search & Discovery
-- [x] **Search** (`/search`) - **FIXES IMPLEMENTED**
+- [x] **Search** (`/search`) - **FIXES IMPLEMENTED + CRUD ACTIONS ADDED (Dec 2024)**
   - Global search across books and authors
   - Search by title and author name (publisher search not implemented)
   - **Navigation menu now visible** on Search page (Dec 2024)
+  - **Actions column with CRUD icons** for books and authors (Dec 2024):
+    - View (eye icon, gray) - All users can view details in modal
+    - Edit (pencil icon, blue) - Librarians can edit via form modal
+    - Delete (trash icon, red) - Librarians can delete with confirmation
   - **Fixes Applied:**
     - ✅ Bug #1: Created SearchResponseDto to replace Map<String, Object>
     - ✅ Bug #2: SearchService now returns SearchResponseDto
@@ -170,12 +174,17 @@
     - ⏭️ Bug #9: Playwright UI tests skipped per user request
     - ✅ Bug #10: Created reusable PageInfoDto class
     - ✅ Wrapped Search page in AppLayout to show navigation menu (Dec 2024)
+    - ✅ Added Actions column with CRUD icons to search results (Dec 2024)
+    - ✅ Reuses BookDetailModal, AuthorDetailModal for view operations
+    - ✅ Reuses BookForm, AuthorForm for edit operations
+    - ✅ data-test attributes on all action buttons
 
-- [ ] **Labels** (`/labels`, librarian only)
-  - Book spine label PDF generation
-  - Filter by most recent day or all books
-  - Bulk label generation
+- [x] **Labels** (integrated into Books page, librarian only) - **REVIEWED Dec 2024**
+  - Book pocket label PDF generation via "Generate Labels" button in Books page
+  - Standalone Labels page removed (redundant)
+  - Bulk label generation from Books page bulk actions toolbar
   - LOC call number formatting for labels
+  - **Code Review:** See `code-review-labels.md` for security and testing findings
 
 ### Data Management
 - [ ] **Data Management** (`/data-management`, librarian only)

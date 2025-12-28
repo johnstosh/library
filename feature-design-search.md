@@ -184,8 +184,12 @@ export const searchLibrary = async (query: string, page: number, size: number): 
 
 - **Public Access**: `/api/search` endpoint has `@PreAuthorize("permitAll()")`
 - **No Authentication Required**: Anyone can search the catalog
-- **Read-Only**: Search is a read-only operation with no side effects
+- **Read-Only**: Search endpoint is a read-only operation with no side effects
 - **No Sensitive Data**: Search results only include public book/author information
+- **Action-Based Security**:
+  - **View action** (eye icon) - Available to all users (public)
+  - **Edit action** (pencil icon) - Librarian only (checked via `useIsLibrarian()` hook)
+  - **Delete action** (trash icon) - Librarian only (checked via `useIsLibrarian()` hook)
 
 ## Testing
 
@@ -249,6 +253,51 @@ The following features are documented in code review but NOT implemented:
 - ❌ **Full-Text Search**: PostgreSQL `tsvector` for better relevance ranking
 - ❌ **Search Suggestions**: Autocomplete based on popular searches
 - ❌ **Search History**: User search history and recent searches
+
+## CRUD Operations in Search Results
+
+### Actions Column
+
+Each search result (book or author) includes an Actions column on the right side with the following icons:
+
+#### All Users
+- **View** (Eye icon, gray color)
+  - Opens read-only detail modal showing complete information
+  - `data-test="view-book-{id}"` or `data-test="view-author-{id}"`
+  - Reuses `BookDetailModal` or `AuthorDetailModal` from respective pages
+
+#### Librarian Only
+- **Edit** (Pencil icon, blue color)
+  - Opens edit form modal with pre-filled data
+  - `data-test="edit-book-{id}"` or `data-test="edit-author-{id}"`
+  - Reuses `BookForm` or `AuthorForm` from respective pages
+  - Only visible if `useIsLibrarian()` returns true
+
+- **Delete** (Trash icon, red color)
+  - Shows confirmation dialog before deletion
+  - `data-test="delete-book-{id}"` or `data-test="delete-author-{id}"`
+  - Calls `useDeleteBook()` or `useDeleteAuthor()` mutation
+  - Only visible if `useIsLibrarian()` returns true
+
+### Implementation Details
+
+**Search Results Display**:
+- Book results use `BookResult` component with actions
+- Author results use `AuthorResult` component with actions
+- Icons use inline SVG for consistency with Books and Authors pages
+- Hover effects change icon color for better UX
+
+**Modals Reused**:
+- `BookDetailModal` - View-only book details
+- `BookForm` - Edit book information
+- `AuthorDetailModal` - View-only author details
+- `AuthorForm` - Edit author information
+- `ConfirmDialog` - Delete confirmation
+
+**State Management**:
+- Modal visibility managed via local state (`useState`)
+- Delete confirmation uses `ConfirmDialog` component with variant="danger"
+- Form close handlers reset editing state
 
 ## Related Documentation
 

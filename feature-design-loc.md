@@ -37,7 +37,7 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 
 ### Display Format
 - Use `formatLocForSpine()` in `utils.js` for displaying LOC call numbers
-- Formats call numbers appropriately for spine labels
+- Formats call numbers appropriately for book pocket labels
 - Handles multi-line formatting for PDF labels
 
 ### Sorting
@@ -46,10 +46,11 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Example: "PS3545.H16" should sort correctly relative to "PS3545.A1"
 
 ## PDF Label Generation
-- Spine labels for books with LOC call numbers
+- Book pocket labels for books with LOC call numbers
 - Service: `LabelsPdfService` using iText 8
 - Custom formatting for LOC numbers on labels
-- Endpoint: `/api/labels/pdf` (librarian only)
+- Endpoint: `GET /api/labels/generate?bookIds={ids}` (librarian only)
+- Accessible via "Generate Labels" button in Books page bulk actions toolbar
 
 ## Book Filtering
 
@@ -88,8 +89,7 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 
 ### Frontend
 - `frontend/src/pages/books/components/BookTable.tsx` - Individual lookup buttons in table
-- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Bulk lookup UI
-- `frontend/src/pages/labels/LabelsPage.tsx` - PDF label generation UI
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Bulk lookup UI and "Generate Labels" button
 - `frontend/src/utils/formatters.ts` - `formatLocForSpine()` utility function
 
 ## UI Integration
@@ -103,12 +103,11 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 ### Menu Items
 - Individual LOC lookup buttons integrated into Books table (librarian only)
 - Bulk lookup functionality available in Books page bulk actions toolbar
-- Labels section visible in menu (for PDF generation)
+- "Generate Labels" button in Books page bulk actions toolbar (for PDF generation, librarian only)
 
 ## Related Files
 - `src/main/java/com/muczynski/library/service/LocBulkLookupService.java` - Core lookup logic
-- `src/main/java/com/muczynski/library/service/LabelsPdfService.java` - PDF generation for spine labels
+- `src/main/java/com/muczynski/library/service/LabelsPdfService.java` - PDF generation for book pocket labels
 - `src/main/java/com/muczynski/library/repository/BookRepository.java` - Queries for books without LOC
 - `frontend/src/pages/books/components/BookTable.tsx` - UI for individual lookup buttons
-- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - UI for bulk lookup
-- `frontend/src/pages/labels/LabelsPage.tsx` - UI for PDF label generation
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - UI for bulk lookup and "Generate Labels" button

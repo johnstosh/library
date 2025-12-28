@@ -197,7 +197,7 @@ See `feature-design-search.md` for complete details.
 
 ### PDF Generation
 - **Library Cards**: Wallet-sized PDF cards via `LibraryCardPdfService` using iText
-- **Book Labels**: Spine labels for books with LOC call numbers via `LabelsPdfService`
+- **Book Labels**: Spine labels for books with LOC call numbers via `LabelsPdfService` (accessible from Books page)
 
 ### Test Data Generation
 - `/api/test-data/**` endpoints (no auth required)

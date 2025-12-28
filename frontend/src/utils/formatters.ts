@@ -31,7 +31,10 @@ export function formatDateTime(
 }
 
 /**
- * Format Library of Congress call number for spine label display
+ * Format Library of Congress call number for book pocket label display
+ *
+ * Note: Function name references "spine" for historical reasons, but
+ * this formatting is actually used for book pocket labels.
  */
 export function formatLocForSpine(locNumber: string | undefined): string {
   if (!locNumber) return ''
