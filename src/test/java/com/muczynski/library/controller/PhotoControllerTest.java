@@ -24,9 +24,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -79,5 +79,104 @@ class PhotoControllerTest {
         BufferedImage thumbnailImage = ImageIO.read(new ByteArrayInputStream(thumbnailBytes));
         assertEquals(100, thumbnailImage.getWidth());
         assertEquals(150, thumbnailImage.getHeight());
+    }
+
+    @Test
+    @WithMockUser
+    void getImage_returnsFullImage() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        byte[] originalImage = createDummyImage(400, 600);
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(originalImage);
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        MvcResult result = mockMvc.perform(get("/api/photos/" + photo.getId() + "/image"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG_VALUE))
+                .andReturn();
+
+        byte[] imageBytes = result.getResponse().getContentAsByteArray();
+        assertTrue(imageBytes.length > 0);
+    }
+
+    @Test
+    @WithMockUser
+    void getImage_notFound() throws Exception {
+        mockMvc.perform(get("/api/photos/99999/image"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void deletePhoto_asLibrarian() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(createDummyImage(100, 100));
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        Long photoId = photo.getId();
+
+        mockMvc.perform(delete("/api/photos/" + photoId))
+                .andExpect(status().isOk());
+
+        // Verify soft delete (photo should still exist but marked as deleted)
+        Photo deletedPhoto = photoRepository.findById(photoId).orElse(null);
+        assertNotNull(deletedPhoto);
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void deletePhoto_asRegularUser_forbidden() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(createDummyImage(100, 100));
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        mockMvc.perform(delete("/api/photos/" + photo.getId()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void restorePhoto_asLibrarian() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(createDummyImage(100, 100));
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        mockMvc.perform(post("/api/photos/" + photo.getId() + "/restore"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void restorePhoto_asRegularUser_forbidden() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(createDummyImage(100, 100));
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        mockMvc.perform(post("/api/photos/" + photo.getId() + "/restore"))
+                .andExpect(status().isForbidden());
     }
 }

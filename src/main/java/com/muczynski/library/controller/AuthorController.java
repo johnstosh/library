@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -82,64 +84,66 @@ public class AuthorController {
 
     @GetMapping("/{id}/photos")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getPhotosByAuthorId(@PathVariable Long id) {
+    public ResponseEntity<List<PhotoDto>> getPhotosByAuthorId(@PathVariable Long id) {
         try {
             List<PhotoDto> photos = photoService.getPhotosByAuthorId(id);
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve photos for author ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/{id}/books")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getBooksByAuthorId(@PathVariable Long id) {
+    public ResponseEntity<List<BookDto>> getBooksByAuthorId(@PathVariable Long id) {
         try {
             List<BookDto> books = bookService.getBooksByAuthorId(id);
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getAuthorById(@PathVariable Long id) {
+    public ResponseEntity<AuthorDto> getAuthorById(@PathVariable Long id) {
         try {
             AuthorDto author = authorService.getAuthorById(id);
             return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.warn("Failed to retrieve author by ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/{id}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<PhotoDto> addPhotoToAuthor(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         try {
             PhotoDto newPhoto = photoService.addPhotoToAuthor(id, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(newPhoto);
         } catch (Exception e) {
             logger.warn("Failed to add photo to author ID {} with file {}: {}", id, file.getOriginalFilename(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/{authorId}/photos/from-google-photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotosFromGooglePhotos(@PathVariable Long authorId, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<PhotoAddFromGooglePhotosResponse> addPhotosFromGooglePhotos(@PathVariable Long authorId, @RequestBody Map<String, Object> request) {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
 
             if (photos == null || photos.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "No photos provided",
-                        "savedCount", 0
-                ));
+                PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+                response.setSavedCount(0);
+                response.setFailedCount(0);
+                response.setSavedPhotos(Collections.emptyList());
+                response.setFailedPhotos(Collections.singletonList(Map.of("error", "No photos provided")));
+                return ResponseEntity.badRequest().body(response);
             }
 
             // Get valid access token for downloading photos
@@ -177,43 +181,45 @@ public class AuthorController {
                 }
             }
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "savedCount", savedPhotos.size(),
-                    "failedCount", failedPhotos.size(),
-                    "savedPhotos", savedPhotos,
-                    "failedPhotos", failedPhotos
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(savedPhotos.size());
+            response.setFailedCount(failedPhotos.size());
+            response.setSavedPhotos(savedPhotos);
+            response.setFailedPhotos(failedPhotos);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (Exception e) {
             logger.error("Failed to add photos from Google Photos to author {}: {}", authorId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", e.getMessage(),
-                    "savedCount", 0
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(0);
+            response.setFailedCount(0);
+            response.setSavedPhotos(Collections.emptyList());
+            response.setFailedPhotos(Collections.singletonList(Map.of("error", e.getMessage())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createAuthor(@Valid @RequestBody AuthorDto authorDto) {
+    public ResponseEntity<AuthorDto> createAuthor(@Valid @RequestBody AuthorDto authorDto) {
         try {
             AuthorDto created = authorService.createAuthor(authorDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             logger.warn("Failed to create author with DTO {}: {}", authorDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updateAuthor(@PathVariable Long id, @Valid @RequestBody AuthorDto authorDto) {
+    public ResponseEntity<AuthorDto> updateAuthor(@PathVariable Long id, @Valid @RequestBody AuthorDto authorDto) {
         try {
             AuthorDto updated = authorService.updateAuthor(id, authorDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to update author ID {} with DTO {}: {}", id, authorDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -234,13 +240,13 @@ public class AuthorController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
+    public ResponseEntity<Void> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
         try {
             authorService.deleteBulkAuthors(authorIds);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -276,49 +282,49 @@ public class AuthorController {
 
     @PutMapping("/{authorId}/photos/{photoId}/rotate-cw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCW(@PathVariable Long authorId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCW(@PathVariable Long authorId, @PathVariable Long photoId) {
         try {
             photoService.rotateAuthorPhoto(authorId, photoId, true);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} clockwise for author ID {}: {}", photoId, authorId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{authorId}/photos/{photoId}/rotate-ccw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCCW(@PathVariable Long authorId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCCW(@PathVariable Long authorId, @PathVariable Long photoId) {
         try {
             photoService.rotateAuthorPhoto(authorId, photoId, false);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} counter-clockwise for author ID {}: {}", photoId, authorId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{authorId}/photos/{photoId}/move-left")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> moveAuthorPhotoLeft(@PathVariable Long authorId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> moveAuthorPhotoLeft(@PathVariable Long authorId, @PathVariable Long photoId) {
         try {
             photoService.moveAuthorPhotoLeft(authorId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{authorId}/photos/{photoId}/move-right")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> moveAuthorPhotoRight(@PathVariable Long authorId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> moveAuthorPhotoRight(@PathVariable Long authorId, @PathVariable Long photoId) {
         try {
             photoService.moveAuthorPhotoRight(authorId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

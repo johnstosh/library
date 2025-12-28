@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
@@ -159,28 +160,30 @@ public class BookController {
 
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
         try {
             PhotoDto created = photoService.addPhoto(bookId, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             logger.warn("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/{bookId}/photos/from-google-photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<PhotoAddFromGooglePhotosResponse> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
 
             if (photos == null || photos.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "No photos provided",
-                        "savedCount", 0
-                ));
+                PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+                response.setSavedCount(0);
+                response.setFailedCount(0);
+                response.setSavedPhotos(Collections.emptyList());
+                response.setFailedPhotos(Collections.singletonList(Map.of("error", "No photos provided")));
+                return ResponseEntity.badRequest().body(response);
             }
 
             // Get valid access token for downloading photos
@@ -218,109 +221,111 @@ public class BookController {
                 }
             }
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "savedCount", savedPhotos.size(),
-                    "failedCount", failedPhotos.size(),
-                    "savedPhotos", savedPhotos,
-                    "failedPhotos", failedPhotos
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(savedPhotos.size());
+            response.setFailedCount(failedPhotos.size());
+            response.setSavedPhotos(savedPhotos);
+            response.setFailedPhotos(failedPhotos);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (Exception e) {
             logger.error("Failed to add photos from Google Photos to book {}: {}", bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", e.getMessage(),
-                    "savedCount", 0
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(0);
+            response.setFailedCount(0);
+            response.setSavedPhotos(Collections.emptyList());
+            response.setFailedPhotos(Collections.singletonList(Map.of("error", e.getMessage())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @GetMapping("/{bookId}/photos")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getPhotosByBook(@PathVariable Long bookId) {
+    public ResponseEntity<List<PhotoDto>> getPhotosByBook(@PathVariable Long bookId) {
         try {
             List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve photos for book ID {}: {}", bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
+    public ResponseEntity<PhotoDto> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
         try {
             PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to update photo ID {} for book ID {} with DTO {}: {}", photoId, bookId, photoDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @DeleteMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.deletePhoto(photoId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             logger.warn("Failed to delete photo ID {} for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-cw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.rotatePhoto(photoId, true);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-ccw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.rotatePhoto(photoId, false);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} counter-clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{id}/book-by-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> generateBookByPhoto(@PathVariable Long id) {
+    public ResponseEntity<BookDto> generateBookByPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateTempBook(id);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to generate book by photo for ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getTitleAuthorFromPhoto(@PathVariable Long id) {
+    public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.getTitleAuthorFromPhoto(id);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{id}/book-from-title-author")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<BookDto> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
         try {
             String title = request.get("title");
             String authorName = request.get("authorName");
@@ -328,31 +333,31 @@ public class BookController {
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-left")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.movePhotoLeft(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-right")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.movePhotoRight(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

@@ -19,6 +19,7 @@
 - [x] Loans - complete
 - [x] Data Management - complete
 - [x] Books from Feed - complete
+- [x] Photo Upload - complete
 
 
 ## Features/Pages Checklist
@@ -227,13 +228,28 @@
   - BYU CallNumber for sorting
 
 ### Photo Management
-- [ ] **Photo Upload** (in Book/Author detail)
-  - Upload photos to Google Photos
-  - Photo cropping and rotation
-  - Photo ordering
-  - Photo deletion
-  - Browser-based caching (IndexedDB)
-  - Thumbnail generation
+- [x] **Photo Upload** (in Book/Author detail) - **FIXES IMPLEMENTED Dec 28, 2024**
+  - Upload photos to Google Photos ✅
+  - Photo cropping and rotation ✅
+  - Photo ordering ✅
+  - Photo deletion ✅
+  - Browser-based caching (IndexedDB) ❌ **NOT IMPLEMENTED** (uses TanStack Query instead)
+  - Thumbnail generation ✅
+  - **Code Review:** See `code-review-photos.md` for findings
+  - **Fixes Applied:**
+    - ✅ Bug #2: Added all photo endpoints to endpoints.md (book photos, author photos, direct access)
+    - ✅ Quality #1: Fixed ResponseEntity<?> to use specific types (PhotoDto, List<PhotoDto>, PhotoAddFromGooglePhotosResponse, Void)
+    - ✅ Quality #1: Created PhotoAddFromGooglePhotosResponse DTO for consistent error handling
+    - ✅ Quality #2: Standardized error responses to use DTOs instead of mixed Map/String
+    - ✅ Test Gap #1: Added 7 comprehensive tests to PhotoControllerTest (image, thumbnail, delete, restore, permissions)
+    - ✅ Test Gap #2: Added 6 comprehensive tests to PhotoServiceTest (upload, list, soft delete, restore, rotate, update, delete)
+  - **Known Issues (Not Fixed):**
+    - ⚠️ Quality #3: Photo delete method naming confusion (deletePhoto vs softDeletePhoto) - kept as-is for backward compatibility
+    - ⚠️ Photo entity schema may not match photos-design.md documentation
+    - ⚠️ May be using deprecated Google Photos API scopes (breaks March 2025)
+    - ⚠️ Missing caption edit UI
+    - ⚠️ Missing IndexedDB caching (uses TanStack Query instead)
+    - ⚠️ Test Gap #3: No frontend photo component tests
 
 - [ ] **Photo Storage**
   - Google Photos API integration
