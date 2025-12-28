@@ -27,11 +27,13 @@ class RandomBookTest {
 
     @Test
     void testRandomBookCreation() {
-        // Create a library first (required by RandomBook.create)
-        Library library = new Library();
-        library.setName("Test Library");
-        library.setHostname("test.library.com");
-        libraryRepository.save(library);
+        // Create a library if one doesn't exist (required by RandomBook.create)
+        if (libraryRepository.count() == 0) {
+            Library library = new Library();
+            library.setName("Test Library");
+            library.setHostname("test.library.com");
+            libraryRepository.save(library);
+        }
 
         Author author = new Author();
         author.setName("Test Author");
