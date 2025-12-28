@@ -7,6 +7,10 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.dto.PhotoExportInfoDto;
+import com.muczynski.library.dto.PhotoExportStatsDto;
+import com.muczynski.library.dto.PhotoImportResultDto;
+import com.muczynski.library.dto.PhotoVerifyResultDto;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
 import com.muczynski.library.photostorage.dto.AlbumResponse;
 import com.muczynski.library.photostorage.dto.BatchCreateRequest;
@@ -404,8 +408,8 @@ public class PhotoExportService {
      * Uses efficient COUNT queries to avoid loading image bytes into memory
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> getExportStats() {
-        Map<String, Object> stats = new HashMap<>();
+    public PhotoExportStatsDto getExportStats() {
+        PhotoExportStatsDto stats = new PhotoExportStatsDto();
 
         try {
             // Use efficient COUNT queries that don't load image bytes
@@ -417,38 +421,38 @@ public class PhotoExportService {
             long failed = photoRepository.countByExportStatus(Photo.ExportStatus.FAILED);
             long inProgress = photoRepository.countByExportStatus(Photo.ExportStatus.IN_PROGRESS);
 
-            stats.put("total", total);
-            stats.put("exported", exported);
-            stats.put("imported", imported);
-            stats.put("pendingExport", pendingExport);
-            stats.put("pendingImport", pendingImport);
-            stats.put("failed", failed);
-            stats.put("inProgress", inProgress);
+            stats.setTotal(total);
+            stats.setExported(exported);
+            stats.setImported(imported);
+            stats.setPendingExport(pendingExport);
+            stats.setPendingImport(pendingImport);
+            stats.setFailed(failed);
+            stats.setInProgress(inProgress);
 
             // Keep legacy fields for backwards compatibility
-            stats.put("completed", exported);
-            stats.put("pending", pendingExport);
+            stats.setCompleted(exported);
+            stats.setPending(pendingExport);
         } catch (Exception e) {
             logger.error("Failed to retrieve photo statistics from database", e);
             // Return safe defaults
-            stats.put("total", 0L);
-            stats.put("exported", 0L);
-            stats.put("imported", 0L);
-            stats.put("pendingExport", 0L);
-            stats.put("pendingImport", 0L);
-            stats.put("failed", 0L);
-            stats.put("inProgress", 0L);
-            stats.put("completed", 0L);
-            stats.put("pending", 0L);
+            stats.setTotal(0L);
+            stats.setExported(0L);
+            stats.setImported(0L);
+            stats.setPendingExport(0L);
+            stats.setPendingImport(0L);
+            stats.setFailed(0L);
+            stats.setInProgress(0L);
+            stats.setCompleted(0L);
+            stats.setPending(0L);
         }
 
         // Add album information
         try {
             String albumName = getAlbumName();
-            stats.put("albumName", albumName);
+            stats.setAlbumName(albumName);
         } catch (Exception e) {
             logger.error("Failed to retrieve album name", e);
-            stats.put("albumName", "Library");
+            stats.setAlbumName("Library");
         }
 
         // Get album ID from librarian user settings
@@ -456,13 +460,13 @@ public class PhotoExportService {
             Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
             if (librarianOpt.isPresent()) {
                 String albumId = librarianOpt.get().getGooglePhotosAlbumId();
-                stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
+                stats.setAlbumId(albumId != null && !albumId.trim().isEmpty() ? albumId : null);
             } else {
-                stats.put("albumId", null);
+                stats.setAlbumId(null);
             }
         } catch (Exception e) {
             logger.error("Failed to retrieve album ID from librarian user", e);
-            stats.put("albumId", null);
+            stats.setAlbumId(null);
         }
 
         return stats;
@@ -473,12 +477,12 @@ public class PhotoExportService {
      * Uses PhotoMetadataProjection to avoid loading image bytes and prevent OutOfMemory errors
      */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getAllPhotosWithExportStatus() {
+    public List<PhotoExportInfoDto> getAllPhotosWithExportStatus() {
         logger.debug("Fetching all photo metadata (without image bytes)");
         List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findAllProjectedBy();
         logger.info("Found {} photos in database", allPhotos.size());
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<PhotoExportInfoDto> result = new ArrayList<>();
 
         for (com.muczynski.library.repository.PhotoMetadataProjection photo : allPhotos) {
             // Skip soft-deleted photos
@@ -486,35 +490,35 @@ public class PhotoExportService {
                 continue;
             }
             try {
-                Map<String, Object> photoInfo = new HashMap<>();
-                photoInfo.put("id", photo.getId());
-                photoInfo.put("caption", photo.getCaption());
-                photoInfo.put("exportStatus", photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
-                photoInfo.put("exportedAt", photo.getExportedAt());
-                photoInfo.put("permanentId", photo.getPermanentId());
-                photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
-                photoInfo.put("contentType", photo.getContentType());
+                PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
+                photoInfo.setId(photo.getId());
+                photoInfo.setCaption(photo.getCaption());
+                photoInfo.setExportStatus(photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
+                photoInfo.setExportedAt(photo.getExportedAt());
+                photoInfo.setPermanentId(photo.getPermanentId());
+                photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
+                photoInfo.setContentType(photo.getContentType());
                 // Use imageChecksum as proxy for hasImage to avoid loading image bytes
-                photoInfo.put("hasImage", photo.getImageChecksum() != null);
-                photoInfo.put("checksum", photo.getImageChecksum());
+                photoInfo.setHasImage(photo.getImageChecksum() != null);
+                photoInfo.setChecksum(photo.getImageChecksum());
 
                 if (photo.getBook() != null) {
-                    photoInfo.put("bookTitle", photo.getBook().getTitle());
-                    photoInfo.put("bookId", photo.getBook().getId());
-                    photoInfo.put("bookLocNumber", photo.getBook().getLocNumber());
+                    photoInfo.setBookTitle(photo.getBook().getTitle());
+                    photoInfo.setBookId(photo.getBook().getId());
+                    photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
                     // Fetch dateAddedToLibrary separately since it's not in the projection
                     bookRepository.findById(photo.getBook().getId()).ifPresent(book -> {
-                        photoInfo.put("bookDateAdded", book.getDateAddedToLibrary());
+                        photoInfo.setBookDateAdded(book.getDateAddedToLibrary());
                     });
                     // Include book's author if available
                     if (photo.getBook().getAuthor() != null) {
-                        photoInfo.put("bookAuthorName", photo.getBook().getAuthor().getName());
+                        photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
                     }
                 }
 
                 if (photo.getAuthor() != null) {
-                    photoInfo.put("authorName", photo.getAuthor().getName());
-                    photoInfo.put("authorId", photo.getAuthor().getId());
+                    photoInfo.setAuthorName(photo.getAuthor().getName());
+                    photoInfo.setAuthorId(photo.getAuthor().getId());
                 }
 
                 result.add(photoInfo);
@@ -527,8 +531,8 @@ public class PhotoExportService {
         // Sort by book dateAdded (descending, most recent first) to group photos of the same book together
         // Photos without books will appear at the end
         result.sort((p1, p2) -> {
-            Object date1 = p1.get("bookDateAdded");
-            Object date2 = p2.get("bookDateAdded");
+            LocalDateTime date1 = p1.getBookDateAdded();
+            LocalDateTime date2 = p2.getBookDateAdded();
 
             // Handle null values - put photos without books at the end
             if (date1 == null && date2 == null) return 0;
@@ -536,7 +540,7 @@ public class PhotoExportService {
             if (date2 == null) return -1; // p1 goes before p2
 
             // Both dates exist - compare in descending order (most recent first)
-            return ((LocalDateTime) date2).compareTo((LocalDateTime) date1);
+            return date2.compareTo(date1);
         });
 
         logger.info("Successfully processed {} photos for display", result.size());
@@ -644,7 +648,7 @@ public class PhotoExportService {
      * Uses efficient ID-based query to avoid loading image bytes
      */
     @Transactional
-    public Map<String, Object> importAllPhotos() {
+    public PhotoImportResultDto importAllPhotos() {
         logger.info("Starting import of all pending photos...");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -657,10 +661,10 @@ public class PhotoExportService {
 
         if (photoIdsToImport.isEmpty()) {
             logger.info("No photos need import at this time");
-            Map<String, Object> result = new HashMap<>();
-            result.put("message", "No photos need import");
-            result.put("imported", 0);
-            result.put("failed", 0);
+            PhotoImportResultDto result = new PhotoImportResultDto();
+            result.setMessage("No photos need import");
+            result.setImported(0);
+            result.setFailed(0);
             return result;
         }
 
@@ -680,10 +684,10 @@ public class PhotoExportService {
 
         logger.info("Photo import complete. Success: {}, Failed: {}", successCount, failureCount);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("message", String.format("Import complete. %d succeeded, %d failed", successCount, failureCount));
-        result.put("imported", successCount);
-        result.put("failed", failureCount);
+        PhotoImportResultDto result = new PhotoImportResultDto();
+        result.setMessage(String.format("Import complete. %d succeeded, %d failed", successCount, failureCount));
+        result.setImported(successCount);
+        result.setFailed(failureCount);
         return result;
     }
 
@@ -691,7 +695,7 @@ public class PhotoExportService {
      * Verify that a photo's permanent ID still works in Google Photos
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> verifyPhotoById(Long photoId) {
+    public PhotoVerifyResultDto verifyPhotoById(Long photoId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
@@ -706,35 +710,35 @@ public class PhotoExportService {
         }
         String accessToken = googlePhotosService.getValidAccessToken(username);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("photoId", photoId);
-        result.put("permanentId", photo.getPermanentId());
+        PhotoVerifyResultDto result = new PhotoVerifyResultDto();
+        result.setPhotoId(photoId);
+        result.setPermanentId(photo.getPermanentId());
 
         try {
             // Try to get media item details from Google Photos
             var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
 
             if (mediaItem != null) {
-                result.put("valid", true);
-                result.put("message", "Permanent ID is valid");
-                result.put("filename", mediaItem.getFilename());
-                result.put("mimeType", mediaItem.getMimeType());
+                result.setValid(true);
+                result.setMessage("Permanent ID is valid");
+                result.setFilename(mediaItem.getFilename());
+                result.setMimeType(mediaItem.getMimeType());
             } else {
-                result.put("valid", false);
-                result.put("message", "Media item not found in Google Photos");
+                result.setValid(false);
+                result.setMessage("Media item not found in Google Photos");
             }
 
         } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
             logger.warn("Verification returned 404 for photo ID {}: permanent ID {} not found in Google Photos. " +
                     "This may indicate the photo was deleted, or was uploaded with a different OAuth client/authorization.",
                     photoId, photo.getPermanentId());
-            result.put("valid", false);
-            result.put("message", "Media item not found in Google Photos. The photo may have been deleted, " +
+            result.setValid(false);
+            result.setMessage("Media item not found in Google Photos. The photo may have been deleted, " +
                     "or the permanent ID was stored from a failed upload. Consider unlinking and re-exporting.");
         } catch (Exception e) {
             logger.warn("Verification failed for photo ID {}: {}", photoId, e.getMessage());
-            result.put("valid", false);
-            result.put("message", "Verification failed: " + e.getMessage());
+            result.setValid(false);
+            result.setMessage("Verification failed: " + e.getMessage());
         }
 
         return result;

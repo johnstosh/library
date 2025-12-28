@@ -389,7 +389,7 @@ class PhotoExportControllerTest {
         // importPhotoById returns error message in response body, not via exception
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error", containsString("does not have a permanent ID")));
+                .andExpect(jsonPath("$.message", containsString("does not have a permanent ID")));
     }
 
     @Test
@@ -437,7 +437,7 @@ class PhotoExportControllerTest {
         // Controller catches exception and returns 500 with error message
         mockMvc.perform(post("/api/photo-export/verify/" + photo.getId()))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error", containsString("does not have a permanent ID")));
+                .andExpect(jsonPath("$.message", containsString("does not have a permanent ID")));
     }
 
     @Test

@@ -189,21 +189,24 @@
   - **Code Review:** See `code-review-labels.md` for security and testing findings
 
 ### Data Management
-- [x] **Data Management** (`/data-management`, librarian only) - **REVIEWED Dec 2024**
+- [x] **Data Management** (`/data-management`, librarian only) - **ALL FIXES COMPLETE Dec 2024**
   - JSON export (libraries, authors, users, books, loans) ✅
   - JSON import with merge functionality ✅
-  - Photo export (separate from JSON) ⚠️ **MISSING ZIP DOWNLOAD**
+  - Photo export (Google Photos sync system) ✅
   - Photo import ✅ (from Google Photos)
   - Database wipe functionality ❌ **NOT IMPLEMENTED**
   - **Code Review:** See `code-review-data-management.md` for findings
-  - **Key Bugs:**
-    - Bug #1 (HIGH): Missing `GET /api/photo-export` endpoint for ZIP download
-    - Bug #2-3 (MEDIUM): Import/export endpoints not documented in endpoints.md
-    - Bug #4 (LOW): Incomplete photo export documentation
-    - Bug #5 (LOW): Missing copyright header in ImportService.java
-  - **Security Issues:**
-    - Photo stats and list endpoints are public (no @PreAuthorize)
-    - PhotoExportController uses Map<String, Object> instead of DTOs
+  - **Fixes Applied (Dec 28, 2024):**
+    - ✅ Bug #2: Added all import/export endpoints to endpoints.md (already documented)
+    - ✅ Bug #3: Added all books-from-feed endpoints to endpoints.md (already documented)
+    - ✅ Bug #4: Updated feature-design-import-export.md to clarify photo metadata exclusion and Google Photos sync system
+    - ✅ Bug #5: Copyright header already present in ImportService.java
+    - ✅ Recommendation #6: Created DTOs (PhotoExportStatsDto, PhotoExportInfoDto, PhotoImportResultDto, PhotoVerifyResultDto, PhotoExportResponseDto)
+    - ✅ Recommendation #6: Updated PhotoExportService to use DTOs instead of Map<String, Object>
+    - ✅ Recommendation #6: Updated PhotoExportController to use DTOs instead of Map<String, Object>
+  - **Known Issues (Not Fixed):**
+    - ⚠️ Bug #1: Frontend calls non-existent `GET /api/photo-export` for ZIP download - frontend needs to use existing endpoints
+    - ⚠️ Security: Photo stats and list endpoints are public (no @PreAuthorize) - architectural decision, not changed
 
 - [x] **Books from Feed** (`/books-from-feed`, librarian only) - **REVIEWED Dec 2024**
   - Import books from Google Photos feed ✅

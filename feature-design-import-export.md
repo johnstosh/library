@@ -19,9 +19,16 @@ The JSON export includes:
 - Loans
 
 ### What's NOT Included
-- **Photos are NOT included in JSON export**
-- Reason: Photos contain large binary data (image bytes) that would make the response too large
-- Photos should be managed separately via the Photo Export feature
+- **Photos are NOT included in JSON export (neither binary data nor metadata)**
+- **Why binary data is excluded**: Photos contain large binary data (image bytes) that would make the response too large
+- **Why metadata is excluded**: Even lightweight photo metadata (permanent IDs, captions, ordering) is excluded by design to keep exports "lightweight and fast" (per design spec in ImportService.java)
+- **Photo metadata locations**: Photo metadata is preserved in the database as sub-objects of Books and Authors with foreign keys
+- **Photo reconnection**: Photos can be reconnected during import via book/author matching using natural keys
+- **How to backup photos**: Use the separate Photo Export feature (Google Photos sync) to backup/restore photo binary data
+- **Complete backup workflow**:
+  1. Export JSON for metadata (libraries, authors, books, users, loans)
+  2. Export photos to Google Photos using `/api/photo-export/export-all` (creates cloud backup with permanent IDs)
+  3. To restore: Import JSON first, then import photos from Google Photos using `/api/photo-export/import-all`
 
 ### Export Format
 - DTO: `ImportRequestDto`
@@ -44,23 +51,46 @@ The JSON export includes:
 - `ImportService.importFromJson()` - Processes import DTO
 - Photos explicitly set to `null` in export to prevent inclusion
 
-## Photo Export (Separate System)
+## Photo Export (Google Photos Sync System)
 
-### Endpoint
-- `/api/photo-export/**` - Photo backup endpoints
-- **Authentication**: Authenticated users
+### Endpoints
+- `/api/photo-export/**` - Google Photos sync endpoints
+- **Authentication**: Mostly librarian-only (some endpoints currently public ⚠️ security issue)
+- See `endpoints.md` for complete endpoint documentation
 
 ### Purpose
-- Separate system for backing up photos to Google Photos
+- **Cloud sync system** for bidirectional photo synchronization with Google Photos
+- **NOT a local ZIP download system** - syncs with Google Photos cloud storage
 - Photos contain large binary data that cannot be included in JSON export
-- Allows incremental photo backup without exporting entire database
+- Allows incremental photo sync without exporting entire database
 
-### Implementation
-- Uploads photos to Google Photos
-- Tracks export status in Photo entity:
-  - `exportedAt` - Timestamp of last export
-  - `exportStatus` - Status of export (SUCCESS, FAILED, PENDING)
-  - `exportErrorMessage` - Error details if failed
+### Key Features
+1. **Upload to Google Photos** (`export-all`, `export/{id}`)
+   - Uploads local photos to Google Photos
+   - Stores permanent ID for each photo
+   - Enables cloud backup of photo binary data
+
+2. **Download from Google Photos** (`import-all`, `import/{id}`)
+   - Fetches photos from Google Photos using permanent IDs
+   - Updates local database with downloaded photo bytes
+   - Enables restore from cloud backup
+
+3. **Sync Management** (`verify/{id}`, `unlink/{id}`)
+   - Verify photo existence in Google Photos
+   - Unlink photos to prepare for re-upload
+   - Troubleshoot sync issues
+
+4. **Status Tracking** (`stats`, `photos`)
+   - View photo sync statistics
+   - Identify photos needing backup
+   - Monitor sync progress
+
+### Implementation Details
+- **No ZIP download endpoint** - photos are synced to/from Google Photos, not packaged as ZIP
+- **Permanent IDs**: Photos store Google Photos permanent IDs for cloud linking
+- **Bidirectional sync**: Can upload (export) and download (import)
+- **Per-photo operations**: Can sync individual photos or all photos in bulk
+- **Status tracking**: Photo entity tracks sync status with permanent ID field
 
 ## LOC Bulk Lookup Import/Export
 

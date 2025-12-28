@@ -3,6 +3,11 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.PhotoExportInfoDto;
+import com.muczynski.library.dto.PhotoExportResponseDto;
+import com.muczynski.library.dto.PhotoExportStatsDto;
+import com.muczynski.library.dto.PhotoImportResultDto;
+import com.muczynski.library.dto.PhotoVerifyResultDto;
 import com.muczynski.library.service.PhotoExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/photo-export")
@@ -31,16 +34,14 @@ public class PhotoExportController {
      */
     @GetMapping("/stats")
     @Transactional(readOnly = true)
-    public ResponseEntity<Map<String, Object>> getExportStats() {
+    public ResponseEntity<PhotoExportStatsDto> getExportStats() {
         try {
             logger.info("Getting export statistics");
-            Map<String, Object> stats = photoExportService.getExportStats();
+            PhotoExportStatsDto stats = photoExportService.getExportStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Failed to get export statistics", e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to get export statistics: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -49,10 +50,10 @@ public class PhotoExportController {
      */
     @GetMapping("/photos")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<Map<String, Object>>> getAllPhotosWithExportStatus() {
+    public ResponseEntity<List<PhotoExportInfoDto>> getAllPhotosWithExportStatus() {
         try {
             logger.info("Getting all photos with export status");
-            List<Map<String, Object>> photos = photoExportService.getAllPhotosWithExportStatus();
+            List<PhotoExportInfoDto> photos = photoExportService.getAllPhotosWithExportStatus();
             logger.info("Successfully retrieved {} photos with export status", photos.size());
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
@@ -69,21 +70,19 @@ public class PhotoExportController {
     @PostMapping("/export-all")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> exportAllPhotos() {
+    public ResponseEntity<PhotoExportResponseDto> exportAllPhotos() {
         try {
             logger.info("Manually triggering export for all photos");
             photoExportService.exportPhotos();
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Export process started");
-            response.put("stats", photoExportService.getExportStats());
+            PhotoExportResponseDto response = new PhotoExportResponseDto();
+            response.setMessage("Export process started");
+            response.setStats(photoExportService.getExportStats());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to export all photos", e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to export photos: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -93,21 +92,19 @@ public class PhotoExportController {
     @PostMapping("/export/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> exportPhoto(@PathVariable Long photoId) {
+    public ResponseEntity<PhotoExportResponseDto> exportPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Manually triggering export for photo ID: {}", photoId);
             photoExportService.exportPhotoById(photoId);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Photo export completed successfully");
-            response.put("photoId", photoId);
+            PhotoExportResponseDto response = new PhotoExportResponseDto();
+            response.setMessage("Photo export completed successfully");
+            response.setPhotoId(photoId);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to export photo ID: {}", photoId, e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to export photo: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -116,19 +113,27 @@ public class PhotoExportController {
      */
     @PostMapping("/import/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Map<String, Object>> importPhoto(@PathVariable Long photoId) {
-        logger.info("Importing photo ID: {} from Google Photos", photoId);
-        String errorMessage = photoExportService.importPhotoById(photoId);
+    public ResponseEntity<PhotoExportResponseDto> importPhoto(@PathVariable Long photoId) {
+        try {
+            logger.info("Importing photo ID: {} from Google Photos", photoId);
+            String errorMessage = photoExportService.importPhotoById(photoId);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("photoId", photoId);
+            PhotoExportResponseDto response = new PhotoExportResponseDto();
+            response.setPhotoId(photoId);
 
-        if (errorMessage == null) {
-            response.put("message", "Photo imported successfully");
-            return ResponseEntity.ok(response);
-        } else {
-            logger.error("Failed to import photo ID: {}: {}", photoId, errorMessage);
-            response.put("error", "Failed to import photo: " + errorMessage);
+            if (errorMessage == null) {
+                response.setMessage("Photo imported successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                logger.error("Failed to import photo ID: {}: {}", photoId, errorMessage);
+                response.setMessage(errorMessage);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to import photo ID: {}", photoId, e);
+            PhotoExportResponseDto response = new PhotoExportResponseDto();
+            response.setPhotoId(photoId);
+            response.setMessage(e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -139,16 +144,14 @@ public class PhotoExportController {
     @PostMapping("/import-all")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> importAllPhotos() {
+    public ResponseEntity<PhotoImportResultDto> importAllPhotos() {
         try {
             logger.info("Importing all pending photos from Google Photos");
-            Map<String, Object> result = photoExportService.importAllPhotos();
+            PhotoImportResultDto result = photoExportService.importAllPhotos();
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to import all photos", e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to import photos: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -157,16 +160,18 @@ public class PhotoExportController {
      */
     @PostMapping("/verify/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Map<String, Object>> verifyPhoto(@PathVariable Long photoId) {
+    public ResponseEntity<PhotoVerifyResultDto> verifyPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Verifying photo ID: {}", photoId);
-            Map<String, Object> result = photoExportService.verifyPhotoById(photoId);
+            PhotoVerifyResultDto result = photoExportService.verifyPhotoById(photoId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to verify photo ID: {}", photoId, e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to verify photo: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            PhotoVerifyResultDto result = new PhotoVerifyResultDto();
+            result.setPhotoId(photoId);
+            result.setValid(false);
+            result.setMessage(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
     }
 
@@ -176,21 +181,19 @@ public class PhotoExportController {
     @PostMapping("/unlink/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @Transactional
-    public ResponseEntity<Map<String, Object>> unlinkPhoto(@PathVariable Long photoId) {
+    public ResponseEntity<PhotoExportResponseDto> unlinkPhoto(@PathVariable Long photoId) {
         try {
             logger.info("Unlinking photo ID: {}", photoId);
             photoExportService.unlinkPhotoById(photoId);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Photo unlinked successfully");
-            response.put("photoId", photoId);
+            PhotoExportResponseDto response = new PhotoExportResponseDto();
+            response.setMessage("Photo unlinked successfully");
+            response.setPhotoId(photoId);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to unlink photo ID: {}", photoId, e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Failed to unlink photo: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
