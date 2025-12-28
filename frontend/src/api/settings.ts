@@ -5,6 +5,7 @@ import type { GlobalSettingsDto, UserDto, LibraryCardDesign } from '@/types/dtos
 
 export interface UserSettingsDto {
   username?: string
+  currentPassword?: string  // For password verification
   password?: string
   xaiApiKey?: string
   googlePhotosApiKey?: string
@@ -61,12 +62,5 @@ export function useUpdateUserSettings() {
       queryClient.invalidateQueries({ queryKey: ['user-settings'] })
       queryClient.invalidateQueries({ queryKey: ['users', 'me'] })
     },
-  })
-}
-
-export function useChangePassword() {
-  return useMutation({
-    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
-      api.put('/users/change-password', data),
   })
 }

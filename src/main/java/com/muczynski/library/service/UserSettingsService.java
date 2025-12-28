@@ -66,6 +66,18 @@ public class UserSettingsService {
             if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getPassword())) {
                 throw new LibraryException("Invalid password format - expected SHA-256 hash");
             }
+
+            // If changing password, verify current password if provided
+            if (StringUtils.hasText(userSettingsDto.getCurrentPassword())) {
+                if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getCurrentPassword())) {
+                    throw new LibraryException("Invalid current password format - expected SHA-256 hash");
+                }
+                // Verify current password matches
+                if (!passwordEncoder.matches(userSettingsDto.getCurrentPassword(), user.getPassword())) {
+                    throw new LibraryException("Current password is incorrect");
+                }
+            }
+
             user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
         }
 

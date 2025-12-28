@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -56,6 +57,7 @@ public class UserSettingsController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDto> getUserSettings(Principal principal) {
         String username = extractUsername(principal);
         UserDto userDto = userSettingsService.getUserSettings(username);
@@ -63,6 +65,7 @@ public class UserSettingsController {
     }
 
     @PutMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDto> updateUserSettings(Principal principal, @RequestBody UserSettingsDto userSettingsDto) {
         String username = extractUsername(principal);
         UserDto updatedUser = userSettingsService.updateUserSettings(username, userSettingsDto);
@@ -70,6 +73,7 @@ public class UserSettingsController {
     }
 
     @DeleteMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteUser(Principal principal) {
         String username = extractUsername(principal);
         userSettingsService.deleteUser(username);

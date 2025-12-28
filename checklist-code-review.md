@@ -270,10 +270,22 @@
     - ✅ Updated Login page layout to work with AppLayout (removed full-screen gradient)
     - ✅ Made marian-m image full width within login card (Dec 2024)
 
-- [ ] **User Settings** (`/settings`)
-  - Change password
-  - View profile information
-  - SSO account linking
+- [x] **User Settings** (`/settings`) - **REVIEWED Dec 2024**
+  - Change password ❌ **BROKEN** (missing backend endpoint)
+  - View profile information ✅ (limited implementation)
+  - SSO account linking ❌ **NOT IMPLEMENTED**
+  - **Code Review:** See `code-review-user-settings.md` for findings
+  - **Critical Bugs:**
+    - ❌ Bug #1: Missing `PUT /api/users/change-password` endpoint - password change completely broken
+    - ⚠️ Bug #2: Missing `@PreAuthorize("isAuthenticated()")` on all UserSettingsController endpoints
+    - 🔗 Bug #3: No navigation link to User Settings page (feature hidden from users)
+  - **Missing Features:**
+    - SSO account linking not implemented
+    - Limited profile information display
+    - Endpoints not documented in endpoints.md
+  - **Test Gaps:**
+    - No Playwright UI tests
+    - No UserSettingsService unit tests
 
 - [ ] **Global Settings** (`/global-settings`, librarian only)
   - SSO configuration (Client ID, Secret)

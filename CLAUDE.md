@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `uitest-requirements.md` - UI testing with Playwright
 - `backend-lessons-learned.md` - Important backend lessons
 - `lessons-learned.md` - General best practices
-- `endpoints.md` - API endpoint documentation
+- `endpoints/` - API endpoint documentation (organized by subsystem)
 - `sso.md` - Google OAuth SSO configuration
 - `photos-design.md` - Photo storage design details
 - `wipe-instructions.md` - Database reset instructions

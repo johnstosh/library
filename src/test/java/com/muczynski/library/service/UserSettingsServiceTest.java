@@ -313,4 +313,102 @@ public class UserSettingsServiceTest {
         // Verify behavior (depends on implementation - may preserve or clear)
         assertNotNull(result);
     }
+
+    @Test
+    void testPasswordChangeWithCurrentPasswordVerification() throws Exception {
+        // Arrange: Create a user with a known password
+        String username = "testuser";
+        String oldPassword = "oldPassword123";
+        String newPassword = "newPassword456";
+        String hashedOldPassword = hashPassword(oldPassword);
+        String hashedNewPassword = hashPassword(newPassword);
+
+        // First, set the initial password
+        UserSettingsDto initialDto = new UserSettingsDto();
+        initialDto.setUsername(username);
+        initialDto.setPassword(hashedOldPassword);
+        userSettingsService.updateUserSettings(username, initialDto);
+
+        // Act: Change password with current password verification
+        UserSettingsDto changeDto = new UserSettingsDto();
+        changeDto.setCurrentPassword(hashedOldPassword);
+        changeDto.setPassword(hashedNewPassword);
+
+        userSettingsService.updateUserSettings(username, changeDto);
+
+        // Assert: Verify password was updated
+        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        assertNotNull(userEntity.getPassword());
+        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash
+    }
+
+    @Test
+    void testPasswordChangeWithIncorrectCurrentPassword() throws Exception {
+        // Arrange: Create a user with a known password
+        String username = "testuser";
+        String oldPassword = "oldPassword123";
+        String wrongPassword = "wrongPassword999";
+        String newPassword = "newPassword456";
+        String hashedOldPassword = hashPassword(oldPassword);
+        String hashedWrongPassword = hashPassword(wrongPassword);
+        String hashedNewPassword = hashPassword(newPassword);
+
+        // First, set the initial password
+        UserSettingsDto initialDto = new UserSettingsDto();
+        initialDto.setUsername(username);
+        initialDto.setPassword(hashedOldPassword);
+        userSettingsService.updateUserSettings(username, initialDto);
+
+        // Act & Assert: Attempt to change password with wrong current password
+        UserSettingsDto changeDto = new UserSettingsDto();
+        changeDto.setCurrentPassword(hashedWrongPassword);
+        changeDto.setPassword(hashedNewPassword);
+
+        Exception exception = assertThrows(Exception.class, () ->
+            userSettingsService.updateUserSettings(username, changeDto)
+        );
+
+        assertTrue(exception.getMessage().contains("Current password is incorrect") ||
+                   exception.getMessage().contains("password"));
+    }
+
+    @Test
+    void testUsernameChangeWithExistingUsers() {
+        // Test using existing users from data-users.sql
+        // librarian and testuser should exist
+        String username1 = "librarian";
+        String username2 = "testuser";
+
+        // Act & Assert: Attempt to change librarian's username to testuser (should fail)
+        UserSettingsDto changeDto = new UserSettingsDto();
+        changeDto.setUsername(username2);
+
+        Exception exception = assertThrows(Exception.class, () ->
+            userSettingsService.updateUserSettings(username1, changeDto)
+        );
+
+        assertTrue(exception.getMessage().contains("Username already taken") ||
+                   exception.getMessage().contains("username"));
+    }
+
+    @Test
+    void testUsernameChangeToUniqueUsername() {
+        // Test using existing user from data-users.sql
+        String oldUsername = "librarian";
+        String newUsername = "librarian_updated";
+
+        // Act: Change to a new unique username
+        UserSettingsDto changeDto = new UserSettingsDto();
+        changeDto.setUsername(newUsername);
+
+        UserDto result = userSettingsService.updateUserSettings(oldUsername, changeDto);
+
+        // Assert: Username was changed
+        assertEquals(newUsername, result.getUsername());
+
+        // Verify in database
+        User userEntity = userRepository.findByUsernameIgnoreCase(newUsername).orElse(null);
+        assertNotNull(userEntity);
+        assertEquals(newUsername, userEntity.getUsername());
+    }
 }

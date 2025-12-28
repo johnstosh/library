@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
-import { useChangePassword, useUserSettings, useUpdateUserSettings } from '@/api/settings'
+import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
 import type { LibraryCardDesign } from '@/types/dtos'
@@ -61,8 +61,6 @@ export function UserSettingsPage() {
     reset,
   } = useForm<PasswordChangeForm>()
 
-  const changePassword = useChangePassword()
-
   const handleLibraryCardDesignChange = async (design: LibraryCardDesign) => {
     setCardDesignSuccess('')
     setCardDesignError('')
@@ -90,9 +88,9 @@ export function UserSettingsPage() {
     const newPasswordHashed = await hashPassword(data.newPassword)
 
     try {
-      await changePassword.mutateAsync({
+      await updateUserSettings.mutateAsync({
         currentPassword: currentPasswordHashed,
-        newPassword: newPasswordHashed,
+        password: newPasswordHashed,
       })
       setSuccessMessage('Password changed successfully')
       reset()
@@ -125,6 +123,18 @@ export function UserSettingsPage() {
                 <span className="text-sm font-medium text-gray-500">Authority:</span>
                 <span className="ml-2 text-gray-900">{user?.authority}</span>
               </div>
+              {userSettings?.email && (
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Email:</span>
+                  <span className="ml-2 text-gray-900">{userSettings.email}</span>
+                </div>
+              )}
+              {userSettings?.activeLoansCount !== undefined && (
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Active Loans:</span>
+                  <span className="ml-2 text-gray-900">{userSettings.activeLoansCount}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -193,6 +203,18 @@ export function UserSettingsPage() {
               <span className="text-sm font-medium text-gray-500">Authority:</span>
               <span className="ml-2 text-gray-900">{user?.authority}</span>
             </div>
+            {userSettings?.email && (
+              <div>
+                <span className="text-sm font-medium text-gray-500">Email:</span>
+                <span className="ml-2 text-gray-900">{userSettings.email}</span>
+              </div>
+            )}
+            {userSettings?.activeLoansCount !== undefined && (
+              <div>
+                <span className="text-sm font-medium text-gray-500">Active Loans:</span>
+                <span className="ml-2 text-gray-900">{userSettings.activeLoansCount}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -292,7 +314,7 @@ export function UserSettingsPage() {
               <Button
                 type="submit"
                 variant="primary"
-                isLoading={changePassword.isPending}
+                isLoading={updateUserSettings.isPending}
                 data-test="change-password-submit"
               >
                 Change Password
