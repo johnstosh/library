@@ -148,10 +148,20 @@
     - ✅ **FIXED**: Added 5 SSO status tests to GlobalSettingsControllerTest
 
 ### Search & Discovery
-- [ ] **Search** (`/search`)
+- [x] **Search** (`/search`) - **REVIEW COMPLETE**
   - Global search across books and authors
-  - Search by title, author, publisher
-  - Search filters
+  - Search by title and author name (NOT publisher - see Bug #7)
+  - **Bugs Found:**
+    - ❌ Bug #1: SearchController uses Map<String, Object> instead of DTO
+    - ❌ Bug #2: SearchService returns Map instead of DTO
+    - ❌ Bug #3: SearchController uses ResponseEntity<?> wildcard
+    - ❌ Bug #4: Missing endpoint documentation in endpoints.md
+    - ❌ Bug #5: Missing feature-design-search.md file
+    - ❌ Bug #6: CLAUDE.md doesn't mention Search feature
+    - ❌ Bug #7: Checklist mismatch - publisher search NOT implemented
+    - ❌ Bug #8: No SearchServiceTest
+    - ❌ Bug #9: No Playwright UI tests
+    - ❌ Bug #10: No PageInfoDto class (duplicated pagination Map code)
 
 - [ ] **Labels** (`/labels`, librarian only)
   - Book spine label PDF generation

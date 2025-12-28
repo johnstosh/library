@@ -1,14 +1,13 @@
 // (c) Copyright 2025 by Muczynski
 import type { BookStatus } from './enums'
 
-// Library Card Design Enum
-export enum LibraryCardDesign {
-  COUNTRYSIDE_YOUTH = 'COUNTRYSIDE_YOUTH',
-  SACRED_HEART_PORTRAIT = 'SACRED_HEART_PORTRAIT',
-  RADIANT_BLESSING = 'RADIANT_BLESSING',
-  PATRON_OF_CREATURES = 'PATRON_OF_CREATURES',
-  CLASSICAL_DEVOTION = 'CLASSICAL_DEVOTION'
-}
+// Library Card Design Type
+export type LibraryCardDesign =
+  | 'COUNTRYSIDE_YOUTH'
+  | 'SACRED_HEART_PORTRAIT'
+  | 'RADIANT_BLESSING'
+  | 'PATRON_OF_CREATURES'
+  | 'CLASSICAL_DEVOTION'
 
 // Common
 export interface IdDto {

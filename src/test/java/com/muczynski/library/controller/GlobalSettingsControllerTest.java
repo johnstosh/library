@@ -332,7 +332,10 @@ class GlobalSettingsControllerTest {
     @Test
     void testGetSsoStatus_Configured() throws Exception {
         // Arrange
-        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+        GlobalSettingsDto dto = new GlobalSettingsDto();
+        dto.setGoogleSsoClientIdConfigured(true);
+        dto.setGoogleSsoClientSecretConfigured(true);
+        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         // Act & Assert
         mockMvc.perform(get("/api/global-settings/sso-status"))
@@ -343,7 +346,10 @@ class GlobalSettingsControllerTest {
     @Test
     void testGetSsoStatus_NotConfigured() throws Exception {
         // Arrange
-        when(globalSettingsService.isSsoConfigured()).thenReturn(false);
+        GlobalSettingsDto dto = new GlobalSettingsDto();
+        dto.setGoogleSsoClientIdConfigured(false);
+        dto.setGoogleSsoClientSecretConfigured(false);
+        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         // Act & Assert
         mockMvc.perform(get("/api/global-settings/sso-status"))
@@ -354,7 +360,10 @@ class GlobalSettingsControllerTest {
     @Test
     void testGetSsoStatus_PublicAccess_NoAuthRequired() throws Exception {
         // Arrange
-        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+        GlobalSettingsDto dto = new GlobalSettingsDto();
+        dto.setGoogleSsoClientIdConfigured(true);
+        dto.setGoogleSsoClientSecretConfigured(true);
+        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         // Act & Assert - No authentication required for SSO status endpoint
         mockMvc.perform(get("/api/global-settings/sso-status"))
@@ -365,7 +374,10 @@ class GlobalSettingsControllerTest {
     @Test
     void testGetSsoStatus_AsRegularUser() throws Exception {
         // Arrange
-        when(globalSettingsService.isSsoConfigured()).thenReturn(true);
+        GlobalSettingsDto dto = new GlobalSettingsDto();
+        dto.setGoogleSsoClientIdConfigured(true);
+        dto.setGoogleSsoClientSecretConfigured(true);
+        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         // Act & Assert - Regular users can check SSO status
         mockMvc.perform(get("/api/global-settings/sso-status")
@@ -377,7 +389,10 @@ class GlobalSettingsControllerTest {
     @Test
     void testGetSsoStatus_AsLibrarian() throws Exception {
         // Arrange
-        when(globalSettingsService.isSsoConfigured()).thenReturn(false);
+        GlobalSettingsDto dto = new GlobalSettingsDto();
+        dto.setGoogleSsoClientIdConfigured(false);
+        dto.setGoogleSsoClientSecretConfigured(false);
+        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
 
         // Act & Assert - Librarians can check SSO status
         mockMvc.perform(get("/api/global-settings/sso-status")
