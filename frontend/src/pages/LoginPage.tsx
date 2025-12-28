@@ -33,15 +33,15 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md">
+    <div className="flex items-center justify-center py-12">
+      <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+            <div className="mb-4">
               <img
                 src="/images/marian-m.png"
                 alt="St. Martin de Porres"
-                className="w-32 h-32 object-contain"
+                className="w-full h-auto object-contain"
               />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">St. Martin de Porres Library</h1>

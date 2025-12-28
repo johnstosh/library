@@ -81,31 +81,13 @@ export function BookTable({
           {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
         </div>
       ),
-      width: '30%',
-    },
-    {
-      key: 'publicationYear',
-      header: 'Year',
-      accessor: (book) => book.publicationYear || '—',
-      width: '8%',
-    },
-    {
-      key: 'publisher',
-      header: 'Publisher',
-      accessor: (book) => book.publisher || '—',
-      width: '20%',
-    },
-    {
-      key: 'library',
-      header: 'Library',
-      accessor: (book) => book.library || '—',
-      width: '15%',
+      width: '60%',
     },
     {
       key: 'locCallNumber',
       header: 'LOC',
       accessor: (book) => book.locNumber || '—',
-      width: '12%',
+      width: '20%',
     },
     {
       key: 'status',
@@ -123,7 +105,7 @@ export function BookTable({
           {formatBookStatus(book.status)}
         </span>
       ),
-      width: '10%',
+      width: '20%',
     },
   ]
 

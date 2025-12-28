@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.service.SearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/search")
 public class SearchController {
@@ -28,13 +27,13 @@ public class SearchController {
 
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> search(@RequestParam String query, @RequestParam int page, @RequestParam int size) {
+    public ResponseEntity<SearchResponseDto> search(@RequestParam String query, @RequestParam int page, @RequestParam int size) {
         try {
-            Map<String, Object> results = searchService.search(query, page, size);
+            SearchResponseDto results = searchService.search(query, page, size);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', page {}, size {}: {}", query, page, size, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

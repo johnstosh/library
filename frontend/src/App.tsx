@@ -49,10 +49,12 @@ function App() {
     <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/apply" element={<ApplyForCardPage />} />
+          {/* Public routes with navigation */}
+          <Route element={<AppLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/apply" element={<ApplyForCardPage />} />
+          </Route>
 
           {/* Protected routes (authenticated users) */}
           <Route element={<ProtectedRoute />}>

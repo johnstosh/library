@@ -8,7 +8,7 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useChangePassword, useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { LibraryCardDesign } from '@/types/dtos'
+import type { LibraryCardDesign } from '@/types/dtos'
 
 interface PasswordChangeForm {
   currentPassword: string
@@ -16,29 +16,29 @@ interface PasswordChangeForm {
   confirmPassword: string
 }
 
-const LIBRARY_CARD_DESIGN_OPTIONS = [
+const LIBRARY_CARD_DESIGN_OPTIONS: Array<{ value: LibraryCardDesign; label: string; description: string }> = [
   {
-    value: LibraryCardDesign.CLASSICAL_DEVOTION,
+    value: 'CLASSICAL_DEVOTION',
     label: 'Classical Devotion',
     description: 'Traditional design with classic typography'
   },
   {
-    value: LibraryCardDesign.COUNTRYSIDE_YOUTH,
+    value: 'COUNTRYSIDE_YOUTH',
     label: 'Countryside Youth',
     description: 'Fresh, youthful design with natural elements'
   },
   {
-    value: LibraryCardDesign.SACRED_HEART_PORTRAIT,
+    value: 'SACRED_HEART_PORTRAIT',
     label: 'Sacred Heart Portrait',
     description: 'Portrait-oriented design with sacred imagery'
   },
   {
-    value: LibraryCardDesign.RADIANT_BLESSING,
+    value: 'RADIANT_BLESSING',
     label: 'Radiant Blessing',
     description: 'Bright design with uplifting elements'
   },
   {
-    value: LibraryCardDesign.PATRON_OF_CREATURES,
+    value: 'PATRON_OF_CREATURES',
     label: 'Patron of Creatures',
     description: 'Nature-focused design with animal motifs'
   }

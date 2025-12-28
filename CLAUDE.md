@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `feature-design-import-export.md` - JSON import/export, photo backup
 - `feature-design-libraries.md` - Library management, library statistics
 - `feature-design-library-cards.md` - Library card applications, PDF generation, card designs
+- `feature-design-search.md` - Search functionality, pagination, search algorithm
 - `backend-requirements.md` - Backend development requirements and patterns
 - `backend-development-requirements.md` - Detailed backend guidelines
 - `uitest-requirements.md` - UI testing with Playwright
@@ -186,6 +187,13 @@ See `feature-design-import-export.md` for complete details.
 - **Photos excluded from JSON export** - use separate Photo Export
 - Import merges data (doesn't delete existing)
 - Books can be imported from Google Photos feed
+
+### Search
+See `feature-design-search.md` for complete details.
+- Global search across books and authors
+- Case-insensitive partial matching on title and name
+- Paginated results (20 per page default)
+- Public access (no authentication required)
 
 ### PDF Generation
 - **Library Cards**: Wallet-sized PDF cards via `LibraryCardPdfService` using iText

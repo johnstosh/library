@@ -28,7 +28,8 @@
   - Book detail view with photos
   - LOC lookup integration
   - Book status management (ACTIVE, ON_ORDER, INACTIVE)
-  - Bulk operations (select, delete, LOC lookup)
+  - Bulk operations (select, delete, LOC lookup, generate labels)
+  - **Table Columns:** Title (with author subtitle), LOC, Status (removed: Year, Publisher, Library)
   - **Fixes Applied:**
     - ✅ Added missing copyright headers to LocBulkLookupController, ImportController, UserSettingsController
     - ✅ Removed duplicate filter endpoints from LocBulkLookupController (missing-loc, most-recent)
@@ -38,12 +39,15 @@
     - ✅ Added test for clone book endpoint
     - ✅ Added test for suggest LOC endpoint
     - ✅ Updated feature-design-loc.md to use correct /api/books endpoints
+    - ✅ Removed Year, Publisher, Library columns from BookTable (Dec 2024)
+    - ✅ Added "Generate Labels" bulk action button to BulkActionsToolbar (Dec 2024)
 
 - [x] **Authors** (`/authors`) - **FIXES IMPLEMENTED**
   - Authors table
   - Add/Edit/Delete authors
   - Author photos
   - Author biographical information
+  - **Table Columns:** Name, Religious Affiliation, Biography, Books (removed: Birth Date, Death Date)
   - **Fixes Applied:**
     - ✅ Added bulk delete endpoint to AuthorController (POST /api/authors/delete-bulk)
     - ✅ Added deleteBulkAuthors method to AuthorService
@@ -51,6 +55,8 @@
     - ✅ Added missing fields to AuthorForm (religiousAffiliation, birthCountry, nationality)
     - ✅ Added missing fields to AuthorDetailModal display
     - ✅ Added 11 missing controller tests (update, delete, bulk delete, photo operations, etc.)
+    - ✅ Removed Birth Date and Death Date columns from AuthorTable (Dec 2024)
+    - ✅ Added Religious Affiliation column to AuthorTable (Dec 2024)
 
 - [x] **Libraries** (`/libraries`) - **FIXES IMPLEMENTED**
   - Library branches management
@@ -148,20 +154,22 @@
     - ✅ **FIXED**: Added 5 SSO status tests to GlobalSettingsControllerTest
 
 ### Search & Discovery
-- [x] **Search** (`/search`) - **REVIEW COMPLETE**
+- [x] **Search** (`/search`) - **FIXES IMPLEMENTED**
   - Global search across books and authors
-  - Search by title and author name (NOT publisher - see Bug #7)
-  - **Bugs Found:**
-    - ❌ Bug #1: SearchController uses Map<String, Object> instead of DTO
-    - ❌ Bug #2: SearchService returns Map instead of DTO
-    - ❌ Bug #3: SearchController uses ResponseEntity<?> wildcard
-    - ❌ Bug #4: Missing endpoint documentation in endpoints.md
-    - ❌ Bug #5: Missing feature-design-search.md file
-    - ❌ Bug #6: CLAUDE.md doesn't mention Search feature
-    - ❌ Bug #7: Checklist mismatch - publisher search NOT implemented
-    - ❌ Bug #8: No SearchServiceTest
-    - ❌ Bug #9: No Playwright UI tests
-    - ❌ Bug #10: No PageInfoDto class (duplicated pagination Map code)
+  - Search by title and author name (publisher search not implemented)
+  - **Navigation menu now visible** on Search page (Dec 2024)
+  - **Fixes Applied:**
+    - ✅ Bug #1: Created SearchResponseDto to replace Map<String, Object>
+    - ✅ Bug #2: SearchService now returns SearchResponseDto
+    - ✅ Bug #3: SearchController uses ResponseEntity<SearchResponseDto>
+    - ✅ Bug #4: Added endpoint documentation to endpoints.md
+    - ✅ Bug #5: Created feature-design-search.md documentation
+    - ✅ Bug #6: Added Search to CLAUDE.md Major Features section
+    - ✅ Bug #7: Updated checklist to reflect actual implementation (title/name only)
+    - ✅ Bug #8: Created SearchServiceTest with 6 comprehensive tests
+    - ⏭️ Bug #9: Playwright UI tests skipped per user request
+    - ✅ Bug #10: Created reusable PageInfoDto class
+    - ✅ Wrapped Search page in AppLayout to show navigation menu (Dec 2024)
 
 - [ ] **Labels** (`/labels`, librarian only)
   - Book spine label PDF generation
@@ -209,11 +217,17 @@
   - Photo export/import
 
 ### Security & Authentication
-- [ ] **Login** (`/login`)
+- [x] **Login** (`/login`) - **UPDATED Dec 2024**
   - Form-based authentication
   - Client-side SHA-256 password hashing
   - Google OAuth SSO
   - Remember me functionality
+  - **Navigation menu now visible** on Login page
+  - **Full-width marian-m image** in login card
+  - **Updates Applied:**
+    - ✅ Wrapped Login page in AppLayout to show navigation menu (Dec 2024)
+    - ✅ Updated Login page layout to work with AppLayout (removed full-screen gradient)
+    - ✅ Made marian-m image full width within login card (Dec 2024)
 
 - [ ] **User Settings** (`/settings`)
   - Change password

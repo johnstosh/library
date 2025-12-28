@@ -3,6 +3,10 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.PageInfoDto;
+import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.service.SearchService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,8 +18,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
+import java.util.List;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
 import static org.hamcrest.Matchers.*;
@@ -49,11 +53,14 @@ class SearchControllerTest {
     @Test
     void testSearch_Success() {
         // Arrange
-        Map<String, Object> searchResults = new HashMap<>();
-        searchResults.put("totalResults", 10);
-        searchResults.put("page", 0);
-        searchResults.put("size", 10);
-        searchResults.put("results", java.util.List.of());
+        PageInfoDto bookPage = new PageInfoDto(0, 0, 0, 10);
+        PageInfoDto authorPage = new PageInfoDto(0, 0, 0, 10);
+        SearchResponseDto searchResults = new SearchResponseDto(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                bookPage,
+                authorPage
+        );
 
         when(searchService.search(anyString(), anyInt(), anyInt())).thenReturn(searchResults);
 
@@ -66,23 +73,27 @@ class SearchControllerTest {
             .get("/api/search")
         .then()
             .statusCode(200)
-            .body("totalResults", equalTo(10))
-            .body("page", equalTo(0))
-            .body("size", equalTo(10));
+            .body("books", hasSize(0))
+            .body("authors", hasSize(0))
+            .body("bookPage.currentPage", equalTo(0))
+            .body("bookPage.pageSize", equalTo(10));
     }
 
     @Test
     void testSearch_WithResults() {
         // Arrange
-        Map<String, Object> book = new HashMap<>();
-        book.put("id", 1);
-        book.put("title", "Test Book");
+        BookDto book = new BookDto();
+        book.setId(1L);
+        book.setTitle("Test Book");
 
-        Map<String, Object> searchResults = new HashMap<>();
-        searchResults.put("totalResults", 1);
-        searchResults.put("page", 0);
-        searchResults.put("size", 10);
-        searchResults.put("results", java.util.List.of(book));
+        PageInfoDto bookPage = new PageInfoDto(1, 1, 0, 10);
+        PageInfoDto authorPage = new PageInfoDto(0, 0, 0, 10);
+        SearchResponseDto searchResults = new SearchResponseDto(
+                List.of(book),
+                Collections.emptyList(),
+                bookPage,
+                authorPage
+        );
 
         when(searchService.search("Test Book", 0, 10)).thenReturn(searchResults);
 
@@ -95,19 +106,22 @@ class SearchControllerTest {
             .get("/api/search")
         .then()
             .statusCode(200)
-            .body("totalResults", equalTo(1))
-            .body("results", hasSize(1))
-            .body("results[0].title", equalTo("Test Book"));
+            .body("books", hasSize(1))
+            .body("books[0].title", equalTo("Test Book"))
+            .body("bookPage.totalElements", equalTo(1));
     }
 
     @Test
     void testSearch_Pagination() {
         // Test pagination works
-        Map<String, Object> searchResults = new HashMap<>();
-        searchResults.put("totalResults", 100);
-        searchResults.put("page", 2);
-        searchResults.put("size", 20);
-        searchResults.put("results", java.util.List.of());
+        PageInfoDto bookPage = new PageInfoDto(5, 100, 2, 20);
+        PageInfoDto authorPage = new PageInfoDto(0, 0, 2, 20);
+        SearchResponseDto searchResults = new SearchResponseDto(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                bookPage,
+                authorPage
+        );
 
         when(searchService.search("book", 2, 20)).thenReturn(searchResults);
 
@@ -120,9 +134,9 @@ class SearchControllerTest {
             .get("/api/search")
         .then()
             .statusCode(200)
-            .body("page", equalTo(2))
-            .body("size", equalTo(20))
-            .body("totalResults", equalTo(100));
+            .body("bookPage.currentPage", equalTo(2))
+            .body("bookPage.pageSize", equalTo(20))
+            .body("bookPage.totalElements", equalTo(100));
     }
 
     @Test
@@ -151,14 +165,9 @@ class SearchControllerTest {
 
     @Test
     void testSearch_EmptyQuery() {
-        // Test empty query string
-        Map<String, Object> searchResults = new HashMap<>();
-        searchResults.put("totalResults", 0);
-        searchResults.put("page", 0);
-        searchResults.put("size", 10);
-        searchResults.put("results", java.util.List.of());
-
-        when(searchService.search("", 0, 10)).thenReturn(searchResults);
+        // Test empty query string - should throw IllegalArgumentException
+        when(searchService.search("", 0, 10))
+                .thenThrow(new IllegalArgumentException("Query cannot be empty"));
 
         // Act & Assert
         given()
@@ -168,8 +177,7 @@ class SearchControllerTest {
         .when()
             .get("/api/search")
         .then()
-            .statusCode(200)
-            .body("totalResults", equalTo(0));
+            .statusCode(500); // Internal Server Error due to IllegalArgumentException
     }
 
     @Test

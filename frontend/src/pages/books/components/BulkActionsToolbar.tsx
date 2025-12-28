@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBooks } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
+import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { PiMagnifyingGlass } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiFilePdf } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -16,6 +17,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
+  const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
@@ -37,6 +39,30 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowResults(true)
     } catch (error) {
       console.error('Failed to lookup LOC:', error)
+    }
+  }
+
+  const handleGenerateLabels = async () => {
+    if (selectedIds.size === 0) return
+
+    setIsGeneratingLabels(true)
+    try {
+      const blob = await generateLabelsPdf(Array.from(selectedIds))
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'book-labels.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Failed to generate labels PDF:', error)
+      alert('Failed to generate labels PDF. Please try again.')
+    } finally {
+      setIsGeneratingLabels(false)
     }
   }
 
@@ -70,6 +96,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               data-test="bulk-lookup-loc"
             >
               Lookup LOC
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateLabels}
+              isLoading={isGeneratingLabels}
+              disabled={isGeneratingLabels}
+              leftIcon={<PiFilePdf />}
+              data-test="bulk-generate-labels"
+            >
+              Generate Labels
             </Button>
             <Button
               variant="danger"

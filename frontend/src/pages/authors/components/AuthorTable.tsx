@@ -4,7 +4,7 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteAuthor } from '@/api/authors'
-import { formatDate, truncate } from '@/utils/formatters'
+import { truncate } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
 
 interface AuthorTableProps {
@@ -54,16 +54,10 @@ export function AuthorTable({
       width: '25%',
     },
     {
-      key: 'birthDate',
-      header: 'Birth Date',
-      accessor: (author) => formatDate(author.dateOfBirth) || '—',
-      width: '15%',
-    },
-    {
-      key: 'deathDate',
-      header: 'Death Date',
-      accessor: (author) => formatDate(author.dateOfDeath) || '—',
-      width: '15%',
+      key: 'religiousAffiliation',
+      header: 'Religious Affiliation',
+      accessor: (author) => author.religiousAffiliation || '—',
+      width: '20%',
     },
     {
       key: 'biography',
@@ -71,7 +65,7 @@ export function AuthorTable({
       accessor: (author) => (
         <span className="text-gray-600">{truncate(author.briefBiography, 60) || '—'}</span>
       ),
-      width: '35%',
+      width: '45%',
     },
     {
       key: 'bookCount',
