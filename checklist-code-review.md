@@ -17,6 +17,8 @@
 - [x] Libraries - complete
 - [x] Users - complete
 - [x] Loans - complete
+- [x] Data Management - complete
+- [x] Books from Feed - complete
 
 
 ## Features/Pages Checklist
@@ -187,18 +189,29 @@
   - **Code Review:** See `code-review-labels.md` for security and testing findings
 
 ### Data Management
-- [ ] **Data Management** (`/data-management`, librarian only)
-  - JSON export (libraries, authors, users, books, loans)
-  - JSON import with merge functionality
-  - Photo export (separate from JSON)
-  - Photo import
-  - Database wipe functionality
+- [x] **Data Management** (`/data-management`, librarian only) - **REVIEWED Dec 2024**
+  - JSON export (libraries, authors, users, books, loans) ✅
+  - JSON import with merge functionality ✅
+  - Photo export (separate from JSON) ⚠️ **MISSING ZIP DOWNLOAD**
+  - Photo import ✅ (from Google Photos)
+  - Database wipe functionality ❌ **NOT IMPLEMENTED**
+  - **Code Review:** See `code-review-data-management.md` for findings
+  - **Key Bugs:**
+    - Bug #1 (HIGH): Missing `GET /api/photo-export` endpoint for ZIP download
+    - Bug #2-3 (MEDIUM): Import/export endpoints not documented in endpoints.md
+    - Bug #4 (LOW): Incomplete photo export documentation
+    - Bug #5 (LOW): Missing copyright header in ImportService.java
+  - **Security Issues:**
+    - Photo stats and list endpoints are public (no @PreAuthorize)
+    - PhotoExportController uses Map<String, Object> instead of DTOs
 
-- [ ] **Books from Feed** (`/books-from-feed`, librarian only)
-  - Import books from Google Photos feed
-  - Process photos with AI description
-  - Review and save books
-  - Photo cropping and rotation
+- [x] **Books from Feed** (`/books-from-feed`, librarian only) - **REVIEWED Dec 2024**
+  - Import books from Google Photos feed ✅
+  - Process photos with AI description ✅
+  - Review and save books ✅
+  - Photo cropping and rotation ✅
+  - **Code Review:** See `code-review-data-management.md` (combined review)
+  - **Issues:** Missing endpoint documentation in endpoints.md
 
 ### Library of Congress Integration
 - [x] **LOC Lookup** (integrated in Books page)
