@@ -4,6 +4,7 @@
 package com.muczynski.library.domain;
 
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.LibraryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,8 +22,17 @@ class RandomBookTest {
     @Autowired
     private AuthorRepository authorRepository;
 
+    @Autowired
+    private LibraryRepository libraryRepository;
+
     @Test
     void testRandomBookCreation() {
+        // Create a library first (required by RandomBook.create)
+        Library library = new Library();
+        library.setName("Test Library");
+        library.setHostname("test.library.com");
+        libraryRepository.save(library);
+
         Author author = new Author();
         author.setName("Test Author");
         authorRepository.save(author);
