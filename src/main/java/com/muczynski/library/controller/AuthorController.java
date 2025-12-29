@@ -88,6 +88,18 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/most-recent-day")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAuthorsFromMostRecentDay() {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsFromMostRecentDay();
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors from most recent day: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}/photos")
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<PhotoDto>> getPhotosByAuthorId(@PathVariable Long id) {

@@ -34,6 +34,9 @@ The JSON export includes:
 - DTO: `ImportRequestDto`
 - Contains collections of each entity type
 - References between entities use natural keys (e.g., library name, author name, book title+author)
+- **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{date}.json`
+  - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-2025-12-29.json`
+  - Library name is sanitized (lowercase, special chars replaced with hyphens)
 
 ### Import Behavior
 - **Merges** data with existing records (doesn't delete existing data)

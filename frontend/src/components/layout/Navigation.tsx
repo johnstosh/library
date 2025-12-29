@@ -4,6 +4,7 @@ import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { clsx } from 'clsx'
 import { useTestDataPageVisibility } from '@/api/global-properties'
+import { useLibraries } from '@/api/libraries'
 
 interface NavLinkProps {
   to: string
@@ -37,20 +38,29 @@ export function Navigation() {
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
   const { data: testDataVisibility } = useTestDataPageVisibility()
+  const { data: libraries = [] } = useLibraries()
 
   const handleLogout = () => {
     logout()
     window.location.href = '/login'
   }
 
+  // Get library name for display
+  const libraryName = libraries.length > 0 ? libraries[0].name : 'Library'
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-[2%]">
         <div className="flex justify-between h-16">
           {/* Left side - Main navigation */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center">
-              <span className="text-xl font-bold text-gray-900">Library</span>
+            <Link to="/" className="flex flex-col items-start" data-test="library-name">
+              <span className="text-base font-bold text-gray-900 leading-tight">
+                The {libraryName} Branch
+              </span>
+              <span className="text-xs text-gray-600 leading-tight">
+                of the Sacred Heart Library System
+              </span>
             </Link>
 
             <div className="hidden md:flex items-center space-x-2">

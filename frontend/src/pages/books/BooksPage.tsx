@@ -8,6 +8,7 @@ import { BookDetailModal } from './components/BookDetailModal'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBooks } from '@/api/books'
 import { useUiStore, useBooksFilter, useBooksTableSelection } from '@/stores/uiStore'
+import { useIsLibrarian } from '@/stores/authStore'
 import type { BookDto } from '@/types/dtos'
 
 export function BooksPage() {
@@ -18,6 +19,7 @@ export function BooksPage() {
   const filter = useBooksFilter()
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
+  const isLibrarian = useIsLibrarian()
 
   const { data: books = [], isLoading } = useBooks(filter)
 
@@ -74,9 +76,11 @@ export function BooksPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Books</h1>
-        <Button variant="primary" onClick={handleAddBook} data-test="add-book">
-          Add Book
-        </Button>
+        {isLibrarian && (
+          <Button variant="primary" onClick={handleAddBook} data-test="add-book">
+            Add Book
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow">

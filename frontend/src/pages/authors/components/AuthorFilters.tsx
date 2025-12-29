@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useUiStore, useAuthorsFilter } from '@/stores/uiStore'
 
-type FilterValue = 'all' | 'without-description' | 'zero-books'
+type FilterValue = 'all' | 'without-description' | 'zero-books' | 'most-recent'
 
 interface FilterOption {
   value: FilterValue
@@ -10,6 +10,7 @@ interface FilterOption {
 
 const filterOptions: FilterOption[] = [
   { value: 'all', label: 'All Authors' },
+  { value: 'most-recent', label: 'Most Recent Day' },
   { value: 'without-description', label: 'Without Description' },
   { value: 'zero-books', label: 'Zero Books' },
 ]

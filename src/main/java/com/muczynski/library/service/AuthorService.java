@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -157,6 +158,42 @@ public class AuthorService {
                     return dto;
                 })
                 .filter(dto -> dto.getBookCount() == 0)
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get authors who have books added on the most recent day
+     */
+    public List<AuthorDto> getAuthorsFromMostRecentDay() {
+        LocalDateTime maxDateTime = bookRepository.findMaxDateAddedToLibrary();
+        if (maxDateTime == null) {
+            return List.of();
+        }
+        // Get the date portion only (start of day)
+        LocalDateTime startOfDay = maxDateTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        // Get all books from the most recent day
+        List<Long> authorIds = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay).stream()
+                .map(book -> book.getAuthor() != null ? book.getAuthor().getId() : null)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Get authors for these IDs
+        return authorRepository.findAllById(authorIds).stream()
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
                 .sorted(Comparator.comparing(author -> {
                     if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
                         return null;

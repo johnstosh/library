@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { exportJsonData, exportPhotos, useImportJsonData } from '@/api/data-management'
+import { useLibraries } from '@/api/libraries'
+import { useBooks } from '@/api/books'
+import { useAuthors } from '@/api/authors'
+import { useUsers } from '@/api/users'
+import { useLoans } from '@/api/loans'
 import {
   PiDownload,
   PiUpload,
@@ -22,6 +27,13 @@ export function DataManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
 
+  // Fetch data for statistics
+  const { data: libraries = [] } = useLibraries()
+  const { data: books = [] } = useBooks()
+  const { data: authors = [] } = useAuthors()
+  const { data: users = [] } = useUsers()
+  const { data: loans = [] } = useLoans()
+
   const handleExportJson = async () => {
     setIsExportingJson(true)
     setSuccessMessage('')
@@ -30,11 +42,29 @@ export function DataManagementPage() {
     try {
       const blob = await exportJsonData()
 
+      // Generate filename with statistics (like main branch)
+      let libraryName = 'library'
+      if (libraries.length > 0) {
+        // Sanitize library name for use as filename
+        libraryName = libraries[0].name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
+
+      const bookCount = books.length
+      const authorCount = authors.length
+      const userCount = users.length
+      const loanCount = loans.length
+      const date = new Date().toISOString().split('T')[0]
+
+      const filename = `${libraryName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${date}.json`
+
       // Create download link
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `library-export-${new Date().toISOString().split('T')[0]}.json`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
