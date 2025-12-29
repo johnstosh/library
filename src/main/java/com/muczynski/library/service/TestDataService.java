@@ -7,16 +7,19 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
-import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.RandomBook;
 import com.muczynski.library.domain.RandomLoan;
+import com.muczynski.library.domain.RandomUser;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +68,13 @@ public class TestDataService {
     private RandomLoan randomLoan;
 
     @Autowired
+    private RandomUser randomUser;
+
+    @Autowired
     private LoanRepository loanRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public void generateTestData(int count) {
         if (libraryRepository.findAll().isEmpty()) {
@@ -91,11 +100,21 @@ public class TestDataService {
         }
     }
 
+    public void generateUserData(int count) {
+        for (int i = 0; i < count; i++) {
+            User user = randomUser.create();
+            userRepository.save(user);
+        }
+    }
+
     public void deleteTestData() {
+        // Delete test loans
         loanRepository.deleteByLoanDate(java.time.LocalDate.of(2099, 1, 1));
+
+        // Delete test books
         bookRepository.deleteByPublisher("test-data");
 
-        // Explicitly handle deletion of test authors, including their photos
+        // Delete test authors and their photos
         List<Author> allAuthors = authorRepository.findAll();
         List<Author> testAuthors = allAuthors.stream()
                 .filter(author -> "test-data".equals(author.getReligiousAffiliation()))
@@ -110,6 +129,16 @@ public class TestDataService {
 
         if (!testAuthors.isEmpty()) {
             authorRepository.deleteAll(testAuthors);
+        }
+
+        // Delete test users (username starts with "test-data-")
+        List<User> allUsers = userRepository.findAll();
+        List<User> testUsers = allUsers.stream()
+                .filter(user -> user.getUsername() != null && user.getUsername().startsWith("test-data-"))
+                .collect(Collectors.toList());
+
+        if (!testUsers.isEmpty()) {
+            userRepository.deleteAll(testUsers);
         }
     }
 

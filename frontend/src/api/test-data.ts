@@ -11,6 +11,7 @@ interface TestDataStats {
   books: number
   authors: number
   loans: number
+  users: number
 }
 
 export function useTestDataStats() {
@@ -48,6 +49,19 @@ export function useGenerateLoanData() {
   })
 }
 
+export function useGenerateUserData() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (numUsers: number) =>
+      api.post<TestDataResponse>('/test-data/generate-users', { numUsers }, { requireAuth: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['test-data-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+}
+
 export function useDeleteAllTestData() {
   const queryClient = useQueryClient()
 
@@ -58,6 +72,7 @@ export function useDeleteAllTestData() {
       queryClient.invalidateQueries({ queryKey: ['books'] })
       queryClient.invalidateQueries({ queryKey: ['authors'] })
       queryClient.invalidateQueries({ queryKey: ['loans'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
     },
   })
 }

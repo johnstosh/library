@@ -10,6 +10,7 @@ import {
   useTestDataStats,
   useGenerateTestData,
   useGenerateLoanData,
+  useGenerateUserData,
   useDeleteAllTestData,
   useTotalPurge,
 } from '@/api/test-data'
@@ -17,6 +18,7 @@ import {
 export function TestDataPage() {
   const [numBooks, setNumBooks] = useState(10)
   const [numLoans, setNumLoans] = useState(5)
+  const [numUsers, setNumUsers] = useState(5)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -25,6 +27,7 @@ export function TestDataPage() {
   const { data: stats, isLoading: statsLoading } = useTestDataStats()
   const generateBooks = useGenerateTestData()
   const generateLoans = useGenerateLoanData()
+  const generateUsers = useGenerateUserData()
   const deleteAll = useDeleteAllTestData()
   const totalPurge = useTotalPurge()
 
@@ -49,6 +52,18 @@ export function TestDataPage() {
       setSuccessMessage(result.message)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to generate loan data')
+    }
+  }
+
+  const handleGenerateUsers = async () => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      const result = await generateUsers.mutateAsync(numUsers)
+      setSuccessMessage(result.message)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to generate user data')
     }
   }
 
@@ -107,7 +122,7 @@ export function TestDataPage() {
               <Spinner />
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="bg-blue-50 rounded-lg p-4">
                 <p className="text-sm font-medium text-blue-900">Books</p>
                 <p className="text-3xl font-bold text-blue-600 mt-2" data-test="books-count">
@@ -124,6 +139,12 @@ export function TestDataPage() {
                 <p className="text-sm font-medium text-purple-900">Loans</p>
                 <p className="text-3xl font-bold text-purple-600 mt-2" data-test="loans-count">
                   {stats?.loans || 0}
+                </p>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-orange-900">Users</p>
+                <p className="text-3xl font-bold text-orange-600 mt-2" data-test="users-count">
+                  {stats?.users || 0}
                 </p>
               </div>
             </div>
@@ -190,6 +211,36 @@ export function TestDataPage() {
           </div>
         </div>
 
+        {/* Generate Users */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Generate Users</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Creates random test user accounts (20% librarians, 80% regular users).
+          </p>
+
+          <div className="flex items-end gap-4">
+            <div className="flex-1">
+              <Input
+                label="Number of Users"
+                type="number"
+                min="1"
+                max="1000"
+                value={numUsers}
+                onChange={(e) => setNumUsers(parseInt(e.target.value) || 0)}
+                data-test="num-users-input"
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleGenerateUsers}
+              isLoading={generateUsers.isPending}
+              data-test="generate-users"
+            >
+              Generate Users
+            </Button>
+          </div>
+        </div>
+
         {/* Delete Operations */}
         <div className="bg-white rounded-lg shadow p-6 border-2 border-red-200">
           <h2 className="text-xl font-semibold text-red-900 mb-4">Danger Zone</h2>
@@ -198,7 +249,7 @@ export function TestDataPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900">Delete All Test Data</p>
-                <p className="text-xs text-gray-500">Removes all generated test books, authors, and loans</p>
+                <p className="text-xs text-gray-500">Removes all generated test books, authors, loans, and users</p>
               </div>
               <Button
                 variant="danger"
@@ -234,7 +285,7 @@ export function TestDataPage() {
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteAll}
         title="Delete All Test Data"
-        message="Are you sure you want to delete all test data? This will remove all generated books, authors, and loans. This action cannot be undone."
+        message="Are you sure you want to delete all test data? This will remove all generated books, authors, loans, and users. This action cannot be undone."
         confirmText="Delete All"
         variant="danger"
         isLoading={deleteAll.isPending}

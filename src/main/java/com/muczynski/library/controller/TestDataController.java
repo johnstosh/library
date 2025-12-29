@@ -3,9 +3,12 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.TestDataResponseDto;
+import com.muczynski.library.dto.TestDataStatsDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.TestDataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -36,40 +38,53 @@ public class TestDataController {
     @Autowired
     private LoanRepository loanRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/generate")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<Map<String, Object>> generateTestData(@RequestBody Map<String, Integer> payload) {
+    public ResponseEntity<TestDataResponseDto> generateTestData(@RequestBody Map<String, Integer> payload) {
         try {
             int count = payload.getOrDefault("numBooks", 0);
             testDataService.generateTestData(count);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Test data generated successfully for " + count + " books");
+            TestDataResponseDto response = new TestDataResponseDto(true,
+                "Test data generated successfully for " + count + " books");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.warn("Failed to generate test data with payload {}: {}", payload, e.getMessage(), e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
+            TestDataResponseDto errorResponse = new TestDataResponseDto(false, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
     @PostMapping("/generate-loans")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<Map<String, Object>> generateLoanData(@RequestBody Map<String, Integer> payload) {
+    public ResponseEntity<TestDataResponseDto> generateLoanData(@RequestBody Map<String, Integer> payload) {
         try {
             int count = payload.getOrDefault("numLoans", 0);
             testDataService.generateLoanData(count);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Test data generated successfully for " + count + " loans");
+            TestDataResponseDto response = new TestDataResponseDto(true,
+                "Test data generated successfully for " + count + " loans");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.warn("Failed to generate loan test data with payload {}: {}", payload, e.getMessage(), e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
+            TestDataResponseDto errorResponse = new TestDataResponseDto(false, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/generate-users")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<TestDataResponseDto> generateUserData(@RequestBody Map<String, Integer> payload) {
+        try {
+            int count = payload.getOrDefault("numUsers", 0);
+            testDataService.generateUserData(count);
+            TestDataResponseDto response = new TestDataResponseDto(true,
+                "Test data generated successfully for " + count + " users");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.warn("Failed to generate user test data with payload {}: {}", payload, e.getMessage(), e);
+            TestDataResponseDto errorResponse = new TestDataResponseDto(false, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
@@ -88,25 +103,26 @@ public class TestDataController {
 
     @DeleteMapping("/total-purge")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<String> totalPurge() {
+    public ResponseEntity<Void> totalPurge() {
         try {
             testDataService.totalPurge();
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to perform total purge: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Failed to purge database: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/stats")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<Map<String, Long>> getStats() {
+    public ResponseEntity<TestDataStatsDto> getStats() {
         try {
-            Map<String, Long> stats = new HashMap<>();
-            stats.put("books", bookRepository.count());
-            stats.put("authors", authorRepository.count());
-            stats.put("loans", loanRepository.count());
+            TestDataStatsDto stats = new TestDataStatsDto(
+                bookRepository.count(),
+                authorRepository.count(),
+                loanRepository.count(),
+                userRepository.count()
+            );
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.warn("Failed to retrieve test data stats: {}", e.getMessage(), e);

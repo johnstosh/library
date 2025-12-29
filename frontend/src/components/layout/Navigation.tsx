@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { clsx } from 'clsx'
+import { useTestDataPageVisibility } from '@/api/global-properties'
 
 interface NavLinkProps {
   to: string
@@ -35,6 +36,7 @@ export function Navigation() {
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
+  const { data: testDataVisibility } = useTestDataPageVisibility()
 
   const handleLogout = () => {
     logout()
@@ -102,9 +104,11 @@ export function Navigation() {
                   <NavLink to="/global-settings" data-test="nav-global-settings">
                     Global Settings
                   </NavLink>
-                  <NavLink to="/test-data" data-test="nav-test-data">
-                    Test Data
-                  </NavLink>
+                  {testDataVisibility?.showTestDataPage && (
+                    <NavLink to="/test-data" data-test="nav-test-data">
+                      Test Data
+                    </NavLink>
+                  )}
                 </>
               )}
             </div>
@@ -209,9 +213,11 @@ export function Navigation() {
               <NavLink to="/global-settings" data-test="nav-global-settings-mobile">
                 Global Settings
               </NavLink>
-              <NavLink to="/test-data" data-test="nav-test-data-mobile">
-                Test Data
-              </NavLink>
+              {testDataVisibility?.showTestDataPage && (
+                <NavLink to="/test-data" data-test="nav-test-data-mobile">
+                  Test Data
+                </NavLink>
+              )}
             </>
           )}
         </div>

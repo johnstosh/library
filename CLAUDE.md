@@ -200,8 +200,9 @@ See `feature-design-search.md` for complete details.
 - **Book Labels**: Spine labels for books with LOC call numbers via `LabelsPdfService` (accessible from Books page)
 
 ### Test Data Generation
-- `/api/test-data/**` endpoints (no auth required)
-- Generates sample books, authors, libraries, users, loans
+- `/api/test-data/**` endpoints (**no auth required** - design decision for development convenience)
+- Generates sample books, authors, libraries, loans, and users
+- Test data is marked for easy identification and cleanup
 - Menu visibility controlled by `app.show-test-data-page` property
 - Default: hidden in production, visible in development
 

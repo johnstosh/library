@@ -21,6 +21,7 @@
 - [x] Books from Feed - complete
 - [x] Photo Upload - complete
 - [x] Global Settings - complete (Dec 28, 2024)
+- [x] Test Data - complete (Dec 29, 2024)
 
 
 ## Features/Pages Checklist
@@ -302,14 +303,28 @@
   - **Note:** Library card design settings are per-user (User entity), not in GlobalSettings
 
 ### Testing & Development
-- [ ] **Test Data** (`/test-data`)
-  - Generate sample books
-  - Generate sample authors
-  - Generate sample libraries
-  - Generate sample users
-  - Generate sample loans
-  - Menu visibility controlled by property
-  - No authentication required
+- [x] **Test Data** (`/test-data`) - **ALL FEATURES COMPLETE (Dec 29, 2024)**
+  - Generate sample books ✅
+  - Generate sample authors ✅
+  - Generate sample libraries ✅
+  - Generate sample loans ✅
+  - Generate sample users ✅ **(NEW)**
+  - Menu visibility controlled by property ✅
+  - No authentication required ✅ **(Intentional design decision)**
+  - **Code Review:** See `code-review-test-data.md` for findings
+  - **Fixes Applied:**
+    - ✅ Bug #1: Implemented frontend property check - Navigation now respects `app.show-test-data-page`
+    - ✅ Bug #2: Created TestDataResponseDto and TestDataStatsDto - controller now uses DTOs instead of Map
+    - ✅ Bug #3: Created comprehensive endpoints/endpoints-test-data.md documentation
+    - ✅ Bug #4: Created TestDataControllerTest.java with 16 comprehensive tests
+    - ✅ Bug #4: Created TestDataServiceTest.java with 17 comprehensive tests
+    - ✅ Bug #5: Fixed inconsistent return types across all endpoints
+    - ✅ Bug #7: Fixed totalPurge return type from ResponseEntity<String> to ResponseEntity<Void>
+    - ✅ Bug #8: **Implemented full user generation feature** - created RandomUser, added endpoint, tests, UI
+  - **Design Decisions Documented:**
+    - ⚠️ Bug #6: All endpoints use @PreAuthorize("permitAll()") - **intentional for development convenience**
+    - Documented in CLAUDE.md, endpoints-test-data.md, and code review
+  - **Implementation:** Generates books, authors, libraries, loans, and users with test-data markers for easy cleanup
 
 ### API Features (Backend)
 - [ ] **REST Controllers**
