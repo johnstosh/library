@@ -193,8 +193,12 @@ export function GlobalSettingsPage() {
                 <Input
                   {...register('googleClientId')}
                   data-test="photos-client-id"
-                  helpText={settings?.googleClientId || 'From application.properties'}
-                  disabled
+                  placeholder="Enter Google Photos OAuth Client ID"
+                  helpText={
+                    settings?.googleClientId
+                      ? `Current: ${settings.googleClientId}`
+                      : 'From application.properties'
+                  }
                   hideLabel
                 />
               </div>

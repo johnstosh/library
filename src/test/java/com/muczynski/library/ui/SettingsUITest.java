@@ -584,4 +584,50 @@ public class SettingsUITest {
         // Verify form is reset to original value
         assertThat(page.locator("[data-test='sso-client-id']")).hasValue(initialValue);
     }
+
+    @Test
+    @DisplayName("LIBRARIAN: Should update Google Photos Client ID")
+    void testLibrarianCanUpdatePhotosClientId() {
+        login("librarian", "password");
+
+        // Navigate to global settings
+        page.navigate(getBaseUrl() + "/global-settings");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for form to load
+        page.waitForSelector("[data-test='photos-client-id']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        // Verify Client ID field is NOT disabled (editable)
+        Locator clientIdInput = page.locator("[data-test='photos-client-id']");
+        assertThat(clientIdInput).isEditable(new LocatorAssertions.IsEditableOptions().setTimeout(20000L));
+
+        // Fill in new Client ID
+        String newClientId = "test-photos-client-id-" + System.currentTimeMillis();
+        page.fill("[data-test='photos-client-id']", newClientId);
+
+        // Click save button
+        page.click("[data-test='save-settings']");
+
+        // Wait for network to be idle
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+        // Verify success message
+        assertThat(page.locator("text=Settings updated successfully"))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+
+        // Reload page to verify persistence
+        page.reload();
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for form to load again
+        page.waitForSelector("[data-test='photos-client-id']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        // Verify the help text contains the new Client ID (it shows "Current: <value>")
+        Locator helpText = page.locator("[data-test='photos-client-id']").locator("xpath=following-sibling::*[contains(@class, 'text-sm')]");
+        assertThat(helpText).containsText(newClientId, new LocatorAssertions.ContainsTextOptions().setTimeout(20000L));
+    }
 }

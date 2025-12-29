@@ -232,6 +232,33 @@ See `endpoints.md` for complete API documentation including request/response for
 - Token refresh handled automatically
 - User must grant Google Photos permissions
 
+### Google Photos OAuth Configuration
+
+Librarians can configure Google Photos OAuth credentials through the Global Settings page (`/global-settings`).
+
+**Configuration Fields:**
+- **Client ID**: Editable text field for Google OAuth Client ID
+- **Client Secret**: Password field for Google OAuth Client Secret (starts with "GOCSPX-")
+
+**Priority Order (Fallback Logic):**
+1. Database (`GlobalSettings` entity) - highest priority
+2. Environment variable `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+3. `application.properties` - lowest priority (default/fallback)
+
+**How to Configure:**
+1. Navigate to Global Settings (`/global-settings`) as a librarian
+2. Scroll to "Google Photos API" section
+3. Enter Client ID and/or Client Secret
+4. Click "Update Settings"
+5. Leave a field blank to keep its existing value
+
+**Validation:**
+- Client Secret should start with "GOCSPX-" prefix
+- Minimum length of 20 characters
+- Validation messages displayed below the form
+
+**Note:** This is separate from Google SSO (user authentication), which has its own Client ID and Client Secret for login purposes.
+
 ## Performance Considerations
 
 ### Database
