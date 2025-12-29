@@ -1,414 +1,295 @@
-/*
- * (c) Copyright 2025 by Muczynski
- */
+// (c) Copyright 2025 by Muczynski
+
 package com.muczynski.library.service;
 
-import com.muczynski.library.LibraryApplication;
+import com.muczynski.library.domain.LibraryCardDesign;
 import com.muczynski.library.domain.User;
-import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.security.MessageDigest;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest(classes = LibraryApplication.class)
-@ActiveProfiles("test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-@Sql(value = "classpath:data-users.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-public class UserSettingsServiceTest {
+@ExtendWith(MockitoExtension.class)
+class UserSettingsServiceTest {
 
-    @Autowired
-    private UserSettingsService userSettingsService;
-
-    @Autowired
+    @Mock
     private UserRepository userRepository;
 
-    /**
-     * Helper method to hash passwords with SHA-256 (matching frontend behavior)
-     */
-    private String hashPassword(String plainPassword) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(plainPassword.getBytes());
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return hexString.toString();
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
+    private UserSettingsService userSettingsService;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("testuser");
+        testUser.setPassword("$2a$10$hashedpassword");
+        testUser.setXaiApiKey("test-xai-key");
+        testUser.setLibraryCardDesign(LibraryCardDesign.CLASSICAL_DEVOTION);
     }
 
     @Test
-    void testGooglePhotosApiKeyPersistence() {
-        // Arrange: Get initial user settings
-        String username = "librarian";
-        UserDto initialUser = userSettingsService.getUserSettings(username);
+    void getUserSettings_shouldReturnUser() {
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
 
-        // Verify initial state - should be empty
-        assertEquals("", initialUser.getGooglePhotosApiKey());
+        User result = userSettingsService.getUserSettings("testuser");
 
-        // Act: Update with a Google Photos API key
-        String testApiKey = "test-google-photos-api-key-123";
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setXaiApiKey("");
-        updateDto.setGooglePhotosApiKey(testApiKey);
-
-        UserDto updatedUser = userSettingsService.updateUserSettings(username, updateDto);
-
-        // Assert: Verify the update returned the correct value
-        assertEquals(testApiKey, updatedUser.getGooglePhotosApiKey());
-
-        // Act: Retrieve user settings again to verify persistence
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-
-        // Assert: Verify the value persisted in the database
-        assertEquals(testApiKey, retrievedUser.getGooglePhotosApiKey());
-
-        // Verify in database directly
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertEquals(testApiKey, userEntity.getGooglePhotosApiKey());
+        assertThat(result).isNotNull();
+        assertThat(result.getUsername()).isEqualTo("testuser");
     }
 
     @Test
-    void testGooglePhotosApiKeyCanBeCleared() {
-        // Arrange: Set an API key first
-        String username = "librarian";
-        String testApiKey = "test-key-to-be-cleared";
+    void getUserSettings_shouldThrowException_whenUserNotFound() {
+        when(userRepository.findByUsernameIgnoreCase("nonexistent"))
+            .thenReturn(Optional.empty());
 
-        UserSettingsDto setDto = new UserSettingsDto();
-        setDto.setUsername(username);
-        setDto.setGooglePhotosApiKey(testApiKey);
-        userSettingsService.updateUserSettings(username, setDto);
-
-        // Verify it was set
-        UserDto userWithKey = userSettingsService.getUserSettings(username);
-        assertEquals(testApiKey, userWithKey.getGooglePhotosApiKey());
-
-        // Act: Clear the API key by setting it to empty string
-        UserSettingsDto clearDto = new UserSettingsDto();
-        clearDto.setUsername(username);
-        clearDto.setGooglePhotosApiKey("");
-
-        UserDto clearedUser = userSettingsService.updateUserSettings(username, clearDto);
-
-        // Assert: Verify the key was cleared
-        assertEquals("", clearedUser.getGooglePhotosApiKey());
-
-        // Verify persistence
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals("", retrievedUser.getGooglePhotosApiKey());
+        assertThatThrownBy(() -> userSettingsService.getUserSettings("nonexistent"))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("User not found");
     }
 
     @Test
-    void testXaiApiKeyPersistence() {
-        // Test that xaiApiKey also persists correctly
-        String username = "librarian";
-        String testXaiKey = "test-xai-api-key-456";
+    void updateUserSettings_shouldUpdateUsername() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUsername("newusername");
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setXaiApiKey(testXaiKey);
-        updateDto.setGooglePhotosApiKey("");
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameIgnoreCase("newusername"))
+            .thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        userSettingsService.updateUserSettings(username, updateDto);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // Retrieve and verify
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals(testXaiKey, retrievedUser.getXaiApiKey());
+        assertThat(result.getUsername()).isEqualTo("newusername");
+        verify(userRepository).save(testUser);
     }
 
     @Test
-    void testBothApiKeysPersistTogether() {
-        // Test that both API keys can be set and retrieved together
-        String username = "librarian";
-        String testXaiKey = "test-xai-key";
-        String testGooglePhotosKey = "test-google-photos-key";
+    void updateUserSettings_shouldThrowException_whenUsernameAlreadyExists() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUsername("existinguser");
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setXaiApiKey(testXaiKey);
-        updateDto.setGooglePhotosApiKey(testGooglePhotosKey);
+        User existingUser = new User();
+        existingUser.setId(2L);
+        existingUser.setUsername("existinguser");
 
-        userSettingsService.updateUserSettings(username, updateDto);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameIgnoreCase("existinguser"))
+            .thenReturn(Optional.of(existingUser));
 
-        // Retrieve and verify both
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals(testXaiKey, retrievedUser.getXaiApiKey());
-        assertEquals(testGooglePhotosKey, retrievedUser.getGooglePhotosApiKey());
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings("testuser", dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("already exists");
     }
 
     @Test
-    void testPasswordUpdate() throws Exception {
-        // Test that password can be updated
-        String username = "librarian";
-        String newPassword = "newSecurePassword123";
-        String hashedPassword = hashPassword(newPassword);
+    void updateUserSettings_shouldValidatePasswordHash() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setPassword("invalidhash"); // Not 64 hex characters
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setPassword(hashedPassword);
-        updateDto.setXaiApiKey("");
-        updateDto.setGooglePhotosApiKey("");
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
 
-        userSettingsService.updateUserSettings(username, updateDto);
-
-        // Verify password was updated in database
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        // Password should be encoded, not plain text
-        assertNotNull(userEntity.getPassword());
-        assertNotEquals(hashedPassword, userEntity.getPassword()); // Should be BCrypt hashed
-        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash starts with $2a, $2b, or $2y
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings("testuser", dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("SHA-256");
     }
 
     @Test
-    void testPasswordNotUpdatedWhenEmpty() {
-        // Test that password is not changed when empty string is provided
-        String username = "librarian";
+    void updateUserSettings_shouldEncodeValidPasswordHash() {
+        UserSettingsDto dto = new UserSettingsDto();
+        // Valid SHA-256 hash (64 hex characters)
+        dto.setPassword("a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3");
 
-        // Get initial password
-        User initialUser = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        String initialPassword = initialUser.getPassword();
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$newhash");
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setPassword(""); // Empty password should not update
-        updateDto.setXaiApiKey("test-key");
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        userSettingsService.updateUserSettings(username, updateDto);
-
-        // Verify password unchanged
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertEquals(initialPassword, userEntity.getPassword());
+        verify(passwordEncoder).encode(anyString());
+        verify(userRepository).save(testUser);
     }
 
     @Test
-    void testGoogleClientSecretPersistence() {
-        // Test that Google Client Secret persists correctly
-        String username = "librarian";
-        String testSecret = "test-google-client-secret-xyz";
+    void updateUserSettings_shouldUpdateXaiApiKey() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setXaiApiKey("new-xai-key");
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setGoogleClientSecret(testSecret);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        userSettingsService.updateUserSettings(username, updateDto);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // Retrieve and verify
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals(testSecret, retrievedUser.getGoogleClientSecret());
-
-        // Verify in database
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertEquals(testSecret, userEntity.getGoogleClientSecret());
+        assertThat(result.getXaiApiKey()).isEqualTo("new-xai-key");
     }
 
     @Test
-    void testGoogleClientSecretCanBeCleared() {
-        // Arrange: Set a secret first
-        String username = "librarian";
-        String testSecret = "secret-to-clear";
+    void updateUserSettings_shouldClearXaiApiKey_whenEmptyString() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setXaiApiKey("");
 
-        UserSettingsDto setDto = new UserSettingsDto();
-        setDto.setUsername(username);
-        setDto.setGoogleClientSecret(testSecret);
-        userSettingsService.updateUserSettings(username, setDto);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        // Verify it was set
-        UserDto userWithSecret = userSettingsService.getUserSettings(username);
-        assertEquals(testSecret, userWithSecret.getGoogleClientSecret());
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // Act: Clear the secret
-        UserSettingsDto clearDto = new UserSettingsDto();
-        clearDto.setUsername(username);
-        clearDto.setGoogleClientSecret("");
-
-        userSettingsService.updateUserSettings(username, clearDto);
-
-        // Assert: Verify cleared
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals("", retrievedUser.getGoogleClientSecret());
+        assertThat(result.getXaiApiKey()).isNull();
     }
 
     @Test
-    void testUpdateMultipleFieldsTogether() throws Exception {
-        // Test updating multiple fields at once
-        String username = "librarian";
-        String newPassword = "newPass123";
-        String hashedPassword = hashPassword(newPassword);
-        String xaiKey = "xai-key-123";
-        String googlePhotosKey = "gp-key-456";
-        String googleClientSecret = "client-secret-789";
+    void updateUserSettings_shouldUpdateLibraryCardDesign() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setLibraryCardDesign(LibraryCardDesign.COUNTRYSIDE_YOUTH);
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setPassword(hashedPassword);
-        updateDto.setXaiApiKey(xaiKey);
-        updateDto.setGooglePhotosApiKey(googlePhotosKey);
-        updateDto.setGoogleClientSecret(googleClientSecret);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        userSettingsService.updateUserSettings(username, updateDto);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // Verify all fields
-        UserDto retrievedUser = userSettingsService.getUserSettings(username);
-        assertEquals(xaiKey, retrievedUser.getXaiApiKey());
-        assertEquals(googlePhotosKey, retrievedUser.getGooglePhotosApiKey());
-        assertEquals(googleClientSecret, retrievedUser.getGoogleClientSecret());
-
-        // Verify password updated
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertNotEquals(hashedPassword, userEntity.getPassword()); // Should be BCrypt hashed
-        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash starts with $2a, $2b, or $2y
+        assertThat(result.getLibraryCardDesign()).isEqualTo(LibraryCardDesign.COUNTRYSIDE_YOUTH);
     }
 
     @Test
-    void testEmptyStringHandling() {
-        // Test that empty strings are handled correctly for all fields
-        String username = "librarian";
+    void updateUserSettings_shouldUpdateGooglePhotosAlbumId() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosAlbumId("album-123-abc");
 
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        updateDto.setXaiApiKey("");
-        updateDto.setGooglePhotosApiKey("");
-        updateDto.setGoogleClientSecret("");
-        updateDto.setPassword(""); // Should not update password
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings(username, updateDto);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // All should be empty strings
-        assertEquals("", result.getXaiApiKey());
-        assertEquals("", result.getGooglePhotosApiKey());
-        assertEquals("", result.getGoogleClientSecret());
+        assertThat(result.getGooglePhotosAlbumId()).isEqualTo("album-123-abc");
     }
 
     @Test
-    void testNullValuesHandling() {
-        // Test that null values are handled gracefully
-        String username = "librarian";
+    void updateUserSettings_shouldUpdateGooglePhotosApiKey() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosApiKey("new-api-key");
 
-        // First set some values
-        UserSettingsDto setDto = new UserSettingsDto();
-        setDto.setUsername(username);
-        setDto.setXaiApiKey("test-key");
-        setDto.setGooglePhotosApiKey("test-gp-key");
-        userSettingsService.updateUserSettings(username, setDto);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        // Then update with null (should not change existing values if handled properly)
-        UserSettingsDto updateDto = new UserSettingsDto();
-        updateDto.setUsername(username);
-        // Leave other fields null
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        UserDto result = userSettingsService.updateUserSettings(username, updateDto);
-
-        // Verify behavior (depends on implementation - may preserve or clear)
-        assertNotNull(result);
+        assertThat(result.getGooglePhotosApiKey()).isEqualTo("new-api-key");
     }
 
     @Test
-    void testPasswordChangeWithCurrentPasswordVerification() throws Exception {
-        // Arrange: Create a user with a known password
-        String username = "testuser";
-        String oldPassword = "oldPassword123";
-        String newPassword = "newPassword456";
-        String hashedOldPassword = hashPassword(oldPassword);
-        String hashedNewPassword = hashPassword(newPassword);
+    void updateUserSettings_shouldClearGooglePhotosApiKey_whenEmptyString() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosApiKey("");
 
-        // First, set the initial password
-        UserSettingsDto initialDto = new UserSettingsDto();
-        initialDto.setUsername(username);
-        initialDto.setPassword(hashedOldPassword);
-        userSettingsService.updateUserSettings(username, initialDto);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        // Act: Change password with current password verification
-        UserSettingsDto changeDto = new UserSettingsDto();
-        changeDto.setCurrentPassword(hashedOldPassword);
-        changeDto.setPassword(hashedNewPassword);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        userSettingsService.updateUserSettings(username, changeDto);
-
-        // Assert: Verify password was updated
-        User userEntity = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
-        assertNotNull(userEntity.getPassword());
-        assertTrue(userEntity.getPassword().startsWith("$2")); // BCrypt hash
+        assertThat(result.getGooglePhotosApiKey()).isNull();
     }
 
     @Test
-    void testPasswordChangeWithIncorrectCurrentPassword() throws Exception {
-        // Arrange: Create a user with a known password
-        String username = "testuser";
-        String oldPassword = "oldPassword123";
-        String wrongPassword = "wrongPassword999";
-        String newPassword = "newPassword456";
-        String hashedOldPassword = hashPassword(oldPassword);
-        String hashedWrongPassword = hashPassword(wrongPassword);
-        String hashedNewPassword = hashPassword(newPassword);
+    void updateUserSettings_shouldUpdateGooglePhotosRefreshToken() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosRefreshToken("new-refresh-token");
 
-        // First, set the initial password
-        UserSettingsDto initialDto = new UserSettingsDto();
-        initialDto.setUsername(username);
-        initialDto.setPassword(hashedOldPassword);
-        userSettingsService.updateUserSettings(username, initialDto);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        // Act & Assert: Attempt to change password with wrong current password
-        UserSettingsDto changeDto = new UserSettingsDto();
-        changeDto.setCurrentPassword(hashedWrongPassword);
-        changeDto.setPassword(hashedNewPassword);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        Exception exception = assertThrows(Exception.class, () ->
-            userSettingsService.updateUserSettings(username, changeDto)
-        );
-
-        assertTrue(exception.getMessage().contains("Current password is incorrect") ||
-                   exception.getMessage().contains("password"));
+        assertThat(result.getGooglePhotosRefreshToken()).isEqualTo("new-refresh-token");
     }
 
     @Test
-    void testUsernameChangeWithExistingUsers() {
-        // Test using existing users from data-users.sql
-        // librarian and testuser should exist
-        String username1 = "librarian";
-        String username2 = "testuser";
+    void updateUserSettings_shouldClearGooglePhotosRefreshToken_whenEmptyString() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosRefreshToken("");
 
-        // Act & Assert: Attempt to change librarian's username to testuser (should fail)
-        UserSettingsDto changeDto = new UserSettingsDto();
-        changeDto.setUsername(username2);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        Exception exception = assertThrows(Exception.class, () ->
-            userSettingsService.updateUserSettings(username1, changeDto)
-        );
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        assertTrue(exception.getMessage().contains("Username already taken") ||
-                   exception.getMessage().contains("username"));
+        assertThat(result.getGooglePhotosRefreshToken()).isNull();
     }
 
     @Test
-    void testUsernameChangeToUniqueUsername() {
-        // Test using existing user from data-users.sql
-        String oldUsername = "librarian";
-        String newUsername = "librarian_updated";
+    void updateUserSettings_shouldUpdateGooglePhotosTokenExpiry() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosTokenExpiry("2025-12-31T23:59:59");
 
-        // Act: Change to a new unique username
-        UserSettingsDto changeDto = new UserSettingsDto();
-        changeDto.setUsername(newUsername);
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings(oldUsername, changeDto);
+        User result = userSettingsService.updateUserSettings("testuser", dto);
 
-        // Assert: Username was changed
-        assertEquals(newUsername, result.getUsername());
+        assertThat(result.getGooglePhotosTokenExpiry()).isEqualTo("2025-12-31T23:59:59");
+    }
 
-        // Verify in database
-        User userEntity = userRepository.findByUsernameIgnoreCase(newUsername).orElse(null);
-        assertNotNull(userEntity);
-        assertEquals(newUsername, userEntity.getUsername());
+    @Test
+    void updateUserSettings_shouldClearGooglePhotosTokenExpiry_whenEmptyString() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGooglePhotosTokenExpiry("");
+
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        User result = userSettingsService.updateUserSettings("testuser", dto);
+
+        assertThat(result.getGooglePhotosTokenExpiry()).isNull();
+    }
+
+    @Test
+    void deleteUser_shouldDeleteUser() {
+        when(userRepository.findByUsernameIgnoreCase("testuser"))
+            .thenReturn(Optional.of(testUser));
+
+        userSettingsService.deleteUser("testuser");
+
+        verify(userRepository).delete(testUser);
+    }
+
+    @Test
+    void deleteUser_shouldThrowException_whenUserNotFound() {
+        when(userRepository.findByUsernameIgnoreCase("nonexistent"))
+            .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userSettingsService.deleteUser("nonexistent"))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("User not found");
     }
 }

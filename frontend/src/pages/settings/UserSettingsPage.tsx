@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -50,8 +50,10 @@ export function UserSettingsPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [cardDesignSuccess, setCardDesignSuccess] = useState('')
   const [cardDesignError, setCardDesignError] = useState('')
+  const [xaiApiKey, setXaiApiKey] = useState('')
+  const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
 
-  const { data: userSettings } = useUserSettings()
+  const { data: userSettings, refetch } = useUserSettings()
   const updateUserSettings = useUpdateUserSettings()
 
   const {
@@ -99,6 +101,80 @@ export function UserSettingsPage() {
     }
   }
 
+  const handleAuthorizeGooglePhotos = () => {
+    window.location.href = '/authorize-google-photos'
+  }
+
+  const handleRevokeGooglePhotos = async () => {
+    if (!confirm('Are you sure you want to revoke Google Photos access?')) {
+      return
+    }
+
+    try {
+      await updateUserSettings.mutateAsync({
+        googlePhotosApiKey: '',
+        googlePhotosRefreshToken: '',
+        googlePhotosTokenExpiry: '',
+      })
+      setSuccessMessage('Google Photos access revoked')
+    } catch (error) {
+      setErrorMessage('Failed to revoke Google Photos access')
+    }
+  }
+
+  const handleSaveXaiApiKey = async () => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      await updateUserSettings.mutateAsync({
+        xaiApiKey: xaiApiKey || '',
+      })
+      setSuccessMessage('XAI API Key updated successfully')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to update XAI API Key')
+    }
+  }
+
+  const handleSaveGooglePhotosAlbumId = async () => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      await updateUserSettings.mutateAsync({
+        googlePhotosAlbumId: googlePhotosAlbumId || '',
+      })
+      setSuccessMessage('Google Photos Album ID updated successfully')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to update Album ID')
+    }
+  }
+
+  // Initialize form fields from userSettings
+  useEffect(() => {
+    if (userSettings) {
+      setXaiApiKey(userSettings.xaiApiKey || '')
+      setGooglePhotosAlbumId(userSettings.googlePhotosAlbumId || '')
+    }
+  }, [userSettings])
+
+  // Handle OAuth callback messages
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const oauthSuccess = params.get('oauth_success')
+    const oauthError = params.get('oauth_error')
+
+    if (oauthSuccess === 'true') {
+      setSuccessMessage('Google Photos authorized successfully')
+      refetch() // Reload user settings
+      // Clean URL
+      window.history.replaceState({}, '', '/settings')
+    } else if (oauthError) {
+      setErrorMessage(`OAuth error: ${oauthError}`)
+      window.history.replaceState({}, '', '/settings')
+    }
+  }, [refetch])
+
   // If user is SSO user, they cannot change password
   if (user?.ssoSubjectId) {
     return (
@@ -145,7 +221,7 @@ export function UserSettingsPage() {
           </div>
 
           {/* Library Card Design Section */}
-          <div>
+          <div className="border-t pt-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
 
             {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
@@ -181,6 +257,116 @@ export function UserSettingsPage() {
               ))}
             </div>
           </div>
+
+          {/* XAI API Configuration - Librarian Only */}
+          {user?.authorities?.includes('LIBRARIAN') && (
+            <div className="border-t pt-6">
+              <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="xai-api-key" className="block text-sm font-medium mb-1">
+                    XAI API Key
+                  </label>
+                  <div className="flex gap-3">
+                    <Input
+                      id="xai-api-key"
+                      type="password"
+                      placeholder="Enter XAI API key"
+                      value={xaiApiKey}
+                      onChange={(e) => setXaiApiKey(e.target.value)}
+                      data-test="xai-api-key-input"
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSaveXaiApiKey} data-test="save-xai-api-key-button">
+                      Save
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    API key for XAI integration (optional)
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Google Photos Configuration - Librarian Only */}
+          {user?.authorities?.includes('LIBRARIAN') && (
+            <div className="border-t pt-6">
+              <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Authorization Status
+                  </label>
+                  {userSettings?.googlePhotosApiKey ? (
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                        Authorized
+                      </span>
+                      <Button
+                        variant="secondary"
+                        onClick={handleRevokeGooglePhotos}
+                        data-test="revoke-google-photos-button"
+                      >
+                        Revoke Access
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                        Not Authorized
+                      </span>
+                      <Button
+                        onClick={handleAuthorizeGooglePhotos}
+                        data-test="authorize-google-photos-button"
+                      >
+                        Authorize Google Photos
+                      </Button>
+                    </div>
+                  )}
+                  {userSettings?.googlePhotosTokenExpiry && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Token expires: {new Date(userSettings.googlePhotosTokenExpiry).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="google-photos-album-id" className="block text-sm font-medium mb-1">
+                    Google Photos Album ID
+                  </label>
+                  <div className="flex gap-3">
+                    <Input
+                      id="google-photos-album-id"
+                      type="text"
+                      placeholder="Album ID from Google Photos"
+                      value={googlePhotosAlbumId}
+                      onChange={(e) => setGooglePhotosAlbumId(e.target.value)}
+                      className="font-mono flex-1"
+                      data-test="google-photos-album-id-input"
+                    />
+                    <Button onClick={handleSaveGooglePhotosAlbumId} data-test="save-album-id-button">
+                      Save
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Permanent album ID for photo exports
+                  </p>
+                </div>
+
+                {userSettings?.lastPhotoTimestamp && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Last Photo Sync
+                    </label>
+                    <p className="text-sm text-gray-700">
+                      {new Date(userSettings.lastPhotoTimestamp).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -257,7 +443,7 @@ export function UserSettingsPage() {
         </div>
 
         {/* Change Password Form */}
-        <div>
+        <div className="border-t pt-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h2>
 
           {successMessage && <SuccessMessage message={successMessage} className="mb-4" />}
@@ -322,6 +508,116 @@ export function UserSettingsPage() {
             </div>
           </form>
         </div>
+
+        {/* XAI API Configuration - Librarian Only */}
+        {user?.authorities?.includes('LIBRARIAN') && (
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="xai-api-key" className="block text-sm font-medium mb-1">
+                  XAI API Key
+                </label>
+                <div className="flex gap-3">
+                  <Input
+                    id="xai-api-key"
+                    type="password"
+                    placeholder="Enter XAI API key"
+                    value={xaiApiKey}
+                    onChange={(e) => setXaiApiKey(e.target.value)}
+                    data-test="xai-api-key-input"
+                    className="flex-1"
+                  />
+                  <Button onClick={handleSaveXaiApiKey} data-test="save-xai-api-key-button">
+                    Save
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  API key for XAI integration (optional)
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Google Photos Configuration - Librarian Only */}
+        {user?.authorities?.includes('LIBRARIAN') && (
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Authorization Status
+                </label>
+                {userSettings?.googlePhotosApiKey ? (
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                      Authorized
+                    </span>
+                    <Button
+                      variant="secondary"
+                      onClick={handleRevokeGooglePhotos}
+                      data-test="revoke-google-photos-button"
+                    >
+                      Revoke Access
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                      Not Authorized
+                    </span>
+                    <Button
+                      onClick={handleAuthorizeGooglePhotos}
+                      data-test="authorize-google-photos-button"
+                    >
+                      Authorize Google Photos
+                    </Button>
+                  </div>
+                )}
+                {userSettings?.googlePhotosTokenExpiry && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Token expires: {new Date(userSettings.googlePhotosTokenExpiry).toLocaleString()}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="google-photos-album-id" className="block text-sm font-medium mb-1">
+                  Google Photos Album ID
+                </label>
+                <div className="flex gap-3">
+                  <Input
+                    id="google-photos-album-id"
+                    type="text"
+                    placeholder="Album ID from Google Photos"
+                    value={googlePhotosAlbumId}
+                    onChange={(e) => setGooglePhotosAlbumId(e.target.value)}
+                    className="font-mono flex-1"
+                    data-test="google-photos-album-id-input"
+                  />
+                  <Button onClick={handleSaveGooglePhotosAlbumId} data-test="save-album-id-button">
+                    Save
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  Permanent album ID for photo exports
+                </p>
+              </div>
+
+              {userSettings?.lastPhotoTimestamp && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Last Photo Sync
+                  </label>
+                  <p className="text-sm text-gray-700">
+                    {new Date(userSettings.lastPhotoTimestamp).toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

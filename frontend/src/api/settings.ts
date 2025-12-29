@@ -9,6 +9,8 @@ export interface UserSettingsDto {
   password?: string
   xaiApiKey?: string
   googlePhotosApiKey?: string
+  googlePhotosRefreshToken?: string
+  googlePhotosTokenExpiry?: string
   googleClientSecret?: string
   googlePhotosAlbumId?: string
   lastPhotoTimestamp?: string

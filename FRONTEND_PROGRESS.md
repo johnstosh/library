@@ -317,7 +317,72 @@ See previous summary
 - [x] Search functionality (public access)
 - [x] Data Management page (Import/Export, Photo Export)
 
-### ✅ Phase 9: Books from Feed Feature (COMPLETE)
+### ✅ Phase 9: Settings Pages (COMPLETE)
+
+#### Global Settings Page
+**Status**: ✅ Complete
+**File**: `frontend/src/pages/settings/GlobalSettingsPage.tsx`
+**Route**: `/global-settings` (librarian-only)
+
+**Features**:
+- Google SSO credentials configuration (Client ID, Client Secret)
+- Google Photos API credentials configuration (Client ID, Client Secret)
+- Form validation with react-hook-form
+- Partial secret display (security)
+- Last updated timestamps
+- Success/error messaging
+- TanStack Query integration
+
+**API Integration**:
+- `useGlobalSettings()` hook
+- `useUpdateGlobalSettings()` mutation hook
+- Cache invalidation on updates
+
+**Tests**:
+- Backend: 81+ test cases in GlobalSettingsControllerTest.java
+
+---
+
+#### User Settings Page
+**Status**: ✅ Complete
+**File**: `frontend/src/pages/settings/UserSettingsPage.tsx`
+**Route**: `/settings` (authenticated users)
+
+**Features**:
+- Account information display (username, authority, email, active loans)
+- Library card design selector (5 options with radio buttons)
+- Password change form (form-based users only)
+  - Current password validation
+  - New password validation (min 8 chars)
+  - Confirmation match validation
+  - Client-side SHA-256 hashing
+- SSO user detection (hides password change for SSO users)
+- **XAI API key management** (librarian-only)
+- **Google Photos OAuth integration** (librarian-only)
+  - Authorization status badge (Authorized/Not Authorized)
+  - Authorize/Revoke buttons
+  - Token expiry display
+  - Album ID configuration
+  - Last photo sync timestamp
+- OAuth callback handler (success/error messages)
+- Success/error messaging
+- TanStack Query integration
+
+**API Integration**:
+- `useUserSettings()` hook
+- `useUpdateUserSettings()` mutation hook
+- Cache invalidation on updates
+
+**Tests**:
+- Backend: UserSettingsControllerTest.java, UserSettingsServiceTest.java
+
+**Files Added (2 files):**
+- frontend/src/pages/settings/GlobalSettingsPage.tsx
+- frontend/src/pages/settings/UserSettingsPage.tsx
+
+---
+
+### ✅ Phase 10: Books from Feed Feature (COMPLETE)
 - [x] Google Photos Picker integration with popup workflow
 - [x] Create picker session API
 - [x] Poll picker session status
@@ -342,9 +407,9 @@ See previous summary
 - frontend/src/pages/books-from-feed/components/ProcessingResultsModal.tsx
 - frontend/src/api/books-from-feed.ts
 
-## Remaining Work (Phase 10-11)
+## Remaining Work (Phase 11-12)
 
-### ✅ Phase 10a: Performance Optimization (COMPLETE)
+### ✅ Phase 11a: Performance Optimization (COMPLETE)
 - [x] Error boundaries with fallback UI
 - [x] Code splitting with React.lazy for all page components
 - [x] Lazy loading reduces initial bundle by 49%
@@ -354,12 +419,12 @@ See previous summary
 **Files Added (1 file):**
 - frontend/src/components/errors/ErrorBoundary.tsx
 
-### Phase 10b: Testing & Polish (In Progress)
+### Phase 11b: Testing & Polish (In Progress)
 - [ ] Update Playwright tests for new components
 - [ ] Toast notifications (optional)
 - [ ] Accessibility improvements (ARIA labels, keyboard navigation)
 
-### Phase 11: Deployment
+### Phase 12: Deployment
 - [ ] Production build optimization
 - [ ] Spring Boot integration (serve React from `/`)
 - [ ] Environment configuration

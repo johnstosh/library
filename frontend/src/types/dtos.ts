@@ -105,6 +105,8 @@ export interface UserDto {
   libraryCardDesign?: LibraryCardDesign
   activeLoansCount?: number
   googlePhotosApiKey?: string
+  googlePhotosRefreshToken?: string
+  googlePhotosTokenExpiry?: string
   googleClientSecret?: string
   googlePhotosAlbumId?: string
   lastPhotoTimestamp?: string
