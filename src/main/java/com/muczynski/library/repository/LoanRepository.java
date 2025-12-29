@@ -27,7 +27,9 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
            "WHERE l.returnDate IS NULL " +
            "ORDER BY l.dueDate ASC")
     List<Loan> findAllByReturnDateIsNullOrderByDueDateAsc();
@@ -35,14 +37,18 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
            "ORDER BY l.dueDate ASC")
     List<Loan> findAllByOrderByDueDateAsc();
 
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
            "WHERE l.user = :user " +
            "ORDER BY l.dueDate ASC")
     List<Loan> findAllByUserOrderByDueDateAsc(User user);
@@ -50,7 +56,9 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
            "WHERE l.user = :user AND l.returnDate IS NULL " +
            "ORDER BY l.dueDate ASC")
     List<Loan> findAllByUserAndReturnDateIsNullOrderByDueDateAsc(User user);
