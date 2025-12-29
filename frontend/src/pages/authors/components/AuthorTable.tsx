@@ -51,13 +51,13 @@ export function AuthorTable({
           {author.name}
         </div>
       ),
-      width: '25%',
+      width: '20%',
     },
     {
       key: 'religiousAffiliation',
       header: 'Religious Affiliation',
       accessor: (author) => author.religiousAffiliation || '—',
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'biography',
@@ -65,7 +65,7 @@ export function AuthorTable({
       accessor: (author) => (
         <span className="text-gray-600">{truncate(author.briefBiography, 60) || '—'}</span>
       ),
-      width: '45%',
+      width: '35%',
     },
     {
       key: 'bookCount',

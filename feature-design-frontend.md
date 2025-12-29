@@ -358,6 +358,55 @@ export function BookForm({ book, onSubmit }: BookFormProps) {
 }
 ```
 
+### 6. Table Pattern
+
+All tables use a consistent styling approach with fixed layout and percentage-based column widths:
+
+**Standard Table Configuration:**
+
+```typescript
+// Using DataTable component
+const columns: Column<BookDto>[] = [
+  {
+    key: 'title',
+    header: 'Title',
+    accessor: (book) => book.title,
+    width: '45%',  // Percentage-based width
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    accessor: (book) => book.status,
+    width: '15%',
+  },
+]
+```
+
+**Key Principles:**
+
+1. **Fixed Table Layout** - All tables use `table-fixed` class for consistent column widths
+2. **Percentage Widths** - Column widths defined as percentages, not content-based
+3. **Text Truncation** - Long text truncated with ellipsis (`overflow-hidden truncate`)
+4. **Standard Allocations:**
+   - Checkbox column (if present): 5%
+   - Actions column: 15%
+   - Content columns: Distribute remaining 75-80%
+   - Prioritize space for longer text fields (titles, names, biographies)
+
+**Implementation:**
+
+- `DataTable.tsx` uses `table-fixed` class and handles overflow automatically
+- Content cells use `overflow-hidden truncate` classes
+- Action cells use `whitespace-nowrap` to prevent button wrapping
+- Custom tables follow the same pattern
+
+**Benefits:**
+
+- Consistent column widths regardless of content length
+- No text wrapping (cleaner appearance)
+- Predictable table layout
+- Better performance (fixed layout is faster to render)
+
 ## Performance Optimizations
 
 ### 1. Code Splitting

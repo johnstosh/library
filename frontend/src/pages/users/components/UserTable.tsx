@@ -39,7 +39,7 @@ export function UserTable({
           )}
         </div>
       ),
-      width: '50%',
+      width: '35%',
     },
     {
       key: 'authorities',
@@ -59,7 +59,7 @@ export function UserTable({
           </span>
         )
       },
-      width: '25%',
+      width: '20%',
     },
     {
       key: 'activeLoansCount',

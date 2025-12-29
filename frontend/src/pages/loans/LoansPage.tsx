@@ -112,7 +112,7 @@ export function LoansPage() {
       key: 'loanDate',
       header: 'Checkout Date',
       accessor: (loan) => formatDate(loan.loanDate),
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'dueDate',
@@ -128,7 +128,7 @@ export function LoansPage() {
           {formatDate(loan.dueDate)}
         </span>
       ),
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'returnDate',
@@ -139,7 +139,7 @@ export function LoansPage() {
         ) : (
           <span className="text-gray-400">Not returned</span>
         ),
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'status',

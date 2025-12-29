@@ -81,7 +81,7 @@ export function BookTable({
           {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
         </div>
       ),
-      width: '60%',
+      width: '45%',
     },
     {
       key: 'locCallNumber',
@@ -105,7 +105,7 @@ export function BookTable({
           {formatBookStatus(book.status)}
         </span>
       ),
-      width: '20%',
+      width: '15%',
     },
   ]
 

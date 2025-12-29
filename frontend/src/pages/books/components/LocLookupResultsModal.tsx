@@ -53,19 +53,19 @@ export function LocLookupResultsModal({
 
         {/* Results Table */}
         <div className="max-h-96 overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full table-fixed divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
                   Book Title
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
                   LOC Call Number
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '40%' }}>
                   Message
                 </th>
               </tr>
@@ -80,11 +80,11 @@ export function LocLookupResultsModal({
                       <PiXCircle className="w-5 h-5 text-red-600" />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">Book ID: {result.bookId}</td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-900">Book ID: {result.bookId}</td>
+                  <td className="px-4 py-3 overflow-hidden truncate text-sm font-mono text-gray-900">
                     {result.locNumber || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{result.errorMessage}</td>
+                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-600">{result.errorMessage}</td>
                 </tr>
               ))}
             </tbody>

@@ -66,25 +66,25 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200" data-test="saved-books-table">
+        <table className="min-w-full table-fixed divide-y divide-gray-200" data-test="saved-books-table">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
                 Title
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
                 Author
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
                 Library
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
                 Photos
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                 Status
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
                 Actions
               </th>
             </tr>
@@ -92,19 +92,19 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
           <tbody className="bg-white divide-y divide-gray-200">
             {books.map((book) => (
               <tr key={book.id} className="hover:bg-gray-50" data-entity-id={book.id}>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 overflow-hidden truncate">
                   <div className="text-sm font-medium text-gray-900">{book.title}</div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 overflow-hidden truncate">
                   <div className="text-sm text-gray-900">{book.author || '—'}</div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 overflow-hidden truncate">
                   <div className="text-sm text-gray-900">{book.library || '—'}</div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 overflow-hidden truncate">
                   <div className="text-sm text-gray-900">{book.photoCount}</div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 overflow-hidden truncate">
                   {book.needsProcessing ? (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                       Needs Processing
@@ -115,7 +115,7 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end gap-2">
                     {book.needsProcessing && (
                       <Button

@@ -118,7 +118,7 @@ export function LibrariesPage() {
           </div>
         )
       },
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'activeLoans',
@@ -131,7 +131,7 @@ export function LibrariesPage() {
           </div>
         )
       },
-      width: '20%',
+      width: '10%',
     },
   ]
 

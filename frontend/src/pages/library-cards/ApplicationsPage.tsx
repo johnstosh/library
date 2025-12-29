@@ -51,7 +51,7 @@ export function ApplicationsPage() {
       accessor: (app) => (
         <span className="font-mono text-sm text-gray-500">{app.id}</span>
       ),
-      width: '10%',
+      width: '15%',
     },
     {
       key: 'name',
@@ -59,13 +59,7 @@ export function ApplicationsPage() {
       accessor: (app) => (
         <span className="font-medium text-gray-900">{app.name}</span>
       ),
-      width: '60%',
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      accessor: () => null,
-      width: '30%',
+      width: '70%',
     },
   ]
 

@@ -55,11 +55,11 @@ export function DataTable<T>({
 
   return (
     <div className={clsx('overflow-x-auto', className)}>
-      <table className="min-w-full divide-y divide-gray-200" data-test="data-table">
+      <table className="min-w-full table-fixed divide-y divide-gray-200" data-test="data-table">
         <thead className="bg-gray-50">
           <tr>
             {selectable && (
-              <th className="w-12 px-6 py-3 text-left">
+              <th className="px-6 py-3 text-left" style={{ width: '5%' }}>
                 <input
                   type="checkbox"
                   checked={selectAll}
@@ -79,7 +79,7 @@ export function DataTable<T>({
               </th>
             ))}
             {actions && (
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                 Actions
               </th>
             )}
@@ -114,7 +114,7 @@ export function DataTable<T>({
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 whitespace-nowrap">
+                  <td key={column.key} className="px-6 py-4 overflow-hidden truncate">
                     {column.accessor(item)}
                   </td>
                 ))}
