@@ -7,7 +7,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { Spinner } from '@/components/progress/Spinner'
 import { useGlobalSettings, useUpdateGlobalSettings } from '@/api/settings'
-import { formatDate } from '@/utils/formatters'
+import { formatRelativeTime } from '@/utils/formatters'
 
 interface GlobalSettingsForm {
   googleSsoClientId: string
@@ -102,36 +102,73 @@ export function GlobalSettingsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Google SSO (User Authentication)</h2>
 
             <div className="space-y-4">
-              <Input
-                label="Client ID"
-                {...register('googleSsoClientId', { required: 'Client ID is required' })}
-                error={errors.googleSsoClientId?.message}
-                data-test="sso-client-id"
-                helpText={
-                  settings?.googleSsoClientIdConfigured
-                    ? 'Currently configured'
-                    : 'Not configured'
-                }
-                required
-              />
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Client ID <span className="text-red-500">*</span>
+                  </label>
+                  {settings?.googleSsoClientIdConfigured ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Configured
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <Input
+                  {...register('googleSsoClientId', { required: 'Client ID is required' })}
+                  error={errors.googleSsoClientId?.message}
+                  data-test="sso-client-id"
+                  hideLabel
+                />
+              </div>
 
-              <Input
-                label="Client Secret"
-                type="password"
-                {...register('googleSsoClientSecret')}
-                error={errors.googleSsoClientSecret?.message}
-                data-test="sso-client-secret"
-                helpText={
-                  settings?.googleSsoClientSecretPartial
-                    ? `Current: ${settings.googleSsoClientSecretPartial}... (Updated: ${
-                        settings.googleSsoCredentialsUpdatedAt
-                          ? formatDate(settings.googleSsoCredentialsUpdatedAt)
-                          : 'Never'
-                      })`
-                    : 'Leave blank to keep existing value'
-                }
-                placeholder="Leave blank to keep existing value"
-              />
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Client Secret</label>
+                  {settings?.googleSsoClientSecretConfigured ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Configured
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <Input
+                  type="password"
+                  {...register('googleSsoClientSecret')}
+                  error={errors.googleSsoClientSecret?.message}
+                  data-test="sso-client-secret"
+                  helpText={
+                    settings?.googleSsoClientSecretPartial
+                      ? `Current: ${settings.googleSsoClientSecretPartial} (Updated: ${
+                          settings.googleSsoCredentialsUpdatedAt
+                            ? formatRelativeTime(settings.googleSsoCredentialsUpdatedAt)
+                            : 'Never'
+                        })`
+                      : 'Leave blank to keep existing value'
+                  }
+                  placeholder="Leave blank to keep existing value"
+                  hideLabel
+                />
+                {settings?.googleSsoClientSecretValidation && (
+                  <p
+                    className={`text-sm font-medium mt-1 ${
+                      settings.googleSsoClientSecretValidation === 'Valid'
+                        ? 'text-green-600'
+                        : settings.googleSsoClientSecretValidation.includes('Warning')
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {settings.googleSsoClientSecretValidation}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -140,35 +177,72 @@ export function GlobalSettingsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Google Photos API</h2>
 
             <div className="space-y-4">
-              <Input
-                label="Client ID"
-                {...register('googleClientId')}
-                data-test="photos-client-id"
-                helpText={settings?.googleClientId || 'From application.properties'}
-                disabled
-              />
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Client ID</label>
+                  {settings?.googleClientSecretConfigured ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Configured
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <Input
+                  {...register('googleClientId')}
+                  data-test="photos-client-id"
+                  helpText={settings?.googleClientId || 'From application.properties'}
+                  disabled
+                  hideLabel
+                />
+              </div>
 
-              <Input
-                label="Client Secret"
-                type="password"
-                {...register('googleClientSecret')}
-                error={errors.googleClientSecret?.message}
-                data-test="photos-client-secret"
-                helpText={
-                  settings?.googleClientSecretPartial
-                    ? `Current: ${settings.googleClientSecretPartial}... (Updated: ${
-                        settings.googleClientSecretUpdatedAt
-                          ? formatDate(settings.googleClientSecretUpdatedAt)
-                          : 'Never'
-                      })`
-                    : 'Leave blank to keep existing value'
-                }
-                placeholder="Leave blank to keep existing value"
-              />
-
-              {settings?.googleClientSecretValidation && (
-                <p className="text-sm text-gray-500">{settings.googleClientSecretValidation}</p>
-              )}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Client Secret</label>
+                  {settings?.googleClientSecretConfigured ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Configured
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <Input
+                  type="password"
+                  {...register('googleClientSecret')}
+                  error={errors.googleClientSecret?.message}
+                  data-test="photos-client-secret"
+                  helpText={
+                    settings?.googleClientSecretPartial
+                      ? `Current: ${settings.googleClientSecretPartial} (Updated: ${
+                          settings.googleClientSecretUpdatedAt
+                            ? formatRelativeTime(settings.googleClientSecretUpdatedAt)
+                            : 'Never'
+                        })`
+                      : 'Leave blank to keep existing value'
+                  }
+                  placeholder="Leave blank to keep existing value"
+                  hideLabel
+                />
+                {settings?.googleClientSecretValidation && (
+                  <p
+                    className={`text-sm font-medium mt-1 ${
+                      settings.googleClientSecretValidation === 'Valid'
+                        ? 'text-green-600'
+                        : settings.googleClientSecretValidation.includes('Warning')
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {settings.googleClientSecretValidation}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -213,7 +287,7 @@ export function GlobalSettingsPage() {
         {settings?.lastUpdated && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              Last updated: {formatDate(settings.lastUpdated)}
+              Last updated: {formatRelativeTime(settings.lastUpdated)}
             </p>
           </div>
         )}

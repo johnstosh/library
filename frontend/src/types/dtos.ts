@@ -149,6 +149,7 @@ export interface GlobalSettingsDto {
   googleSsoCredentialsUpdatedAt?: string
   googleSsoClientSecretConfigured: boolean
   googleSsoClientIdConfigured: boolean
+  googleSsoClientSecretValidation?: string
   lastUpdated?: string
   googleClientSecretConfigured: boolean
   googleClientSecretValidation?: string

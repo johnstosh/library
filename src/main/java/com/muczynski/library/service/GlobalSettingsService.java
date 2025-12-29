@@ -122,9 +122,14 @@ public class GlobalSettingsService {
             } else {
                 dto.setGoogleSsoClientSecretPartial("(too short)");
             }
+
+            // Validate SSO secret format
+            String ssoValidation = validateClientSecretFormat(effectiveSsoClientSecret);
+            dto.setGoogleSsoClientSecretValidation(ssoValidation);
         } else {
             dto.setGoogleSsoClientSecretConfigured(false);
             dto.setGoogleSsoClientSecretPartial("(not configured)");
+            dto.setGoogleSsoClientSecretValidation("SSO Client Secret not configured");
         }
 
         // Don't include the actual SSO secret in responses
@@ -187,7 +192,17 @@ public class GlobalSettingsService {
         // Update SSO Client Secret if provided
         if (dto.getGoogleSsoClientSecret() != null && !dto.getGoogleSsoClientSecret().trim().isEmpty()) {
             String newSecret = dto.getGoogleSsoClientSecret().trim();
+
+            // Validate format
+            String validation = validateClientSecretFormat(newSecret);
+            if (!validation.equals("Valid")) {
+                logger.warn("SSO Client Secret validation warning: {}", validation);
+            }
+
             logger.info("Updating Google SSO Client Secret (length: {} chars)", newSecret.length());
+            logger.debug("New SSO Client Secret starts with: {}...",
+                    newSecret.substring(0, Math.min(8, newSecret.length())));
+
             settings.setGoogleSsoClientSecret(newSecret);
             settings.setGoogleSsoCredentialsUpdatedAt(Instant.now());
             updated = true;

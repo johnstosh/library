@@ -28,5 +28,6 @@ public interface GlobalSettingsMapper {
     @Mapping(target = "googleSsoClientSecretPartial", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientSecretConfigured", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientIdConfigured", ignore = true) // Set by service
+    @Mapping(target = "googleSsoClientSecretValidation", ignore = true) // Set by service
     GlobalSettingsDto toDto(GlobalSettings globalSettings);
 }
