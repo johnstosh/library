@@ -85,7 +85,7 @@ public class PhotoServiceTest {
         PhotoDto photoDto2 = new PhotoDto();
         photoDto2.setId(2L);
 
-        when(photoRepository.findByBookIdOrderByDisplayOrderAsc(bookId)).thenReturn(photos);
+        when(photoRepository.findByBookIdOrderByPhotoOrder(bookId)).thenReturn(photos);
         when(photoMapper.toDto(photo1)).thenReturn(photoDto1);
         when(photoMapper.toDto(photo2)).thenReturn(photoDto2);
 
@@ -104,7 +104,7 @@ public class PhotoServiceTest {
         Long photoId = 1L;
         Photo photo = new Photo();
         photo.setId(photoId);
-        photo.setDeleted(false);
+        photo.setDeletedAt(null);
 
         when(photoRepository.findById(photoId)).thenReturn(Optional.of(photo));
 
@@ -113,7 +113,7 @@ public class PhotoServiceTest {
 
         // Then
         verify(photoRepository, times(1)).save(photo);
-        assertTrue(photo.isDeleted());
+        assertNotNull(photo.getDeletedAt());
     }
 
     @Test
@@ -122,7 +122,7 @@ public class PhotoServiceTest {
         Long photoId = 1L;
         Photo photo = new Photo();
         photo.setId(photoId);
-        photo.setDeleted(true);
+        photo.setDeletedAt(java.time.LocalDateTime.now());
 
         when(photoRepository.findById(photoId)).thenReturn(Optional.of(photo));
 
@@ -131,33 +131,7 @@ public class PhotoServiceTest {
 
         // Then
         verify(photoRepository, times(1)).save(photo);
-        assertFalse(photo.isDeleted());
-    }
-
-    @Test
-    public void testRotatePhoto() {
-        // Given
-        Long photoId = 1L;
-        Photo photo = new Photo();
-        photo.setId(photoId);
-        photo.setRotationDegrees(0);
-
-        when(photoRepository.findById(photoId)).thenReturn(Optional.of(photo));
-
-        // When - rotate clockwise
-        photoService.rotatePhoto(photoId, true);
-
-        // Then
-        verify(photoRepository, times(1)).save(photo);
-        assertEquals(90, photo.getRotationDegrees());
-
-        // When - rotate counter-clockwise
-        photo.setRotationDegrees(90);
-        photoService.rotatePhoto(photoId, false);
-
-        // Then
-        verify(photoRepository, times(2)).save(photo);
-        assertEquals(0, photo.getRotationDegrees());
+        assertNull(photo.getDeletedAt());
     }
 
     @Test

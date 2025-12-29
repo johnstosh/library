@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.mapper.GlobalSettingsMapper;
 import com.muczynski.library.repository.GlobalSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,9 @@ public class GlobalSettingsService {
 
     @Autowired
     private GlobalSettingsRepository globalSettingsRepository;
+
+    @Autowired
+    private GlobalSettingsMapper globalSettingsMapper;
 
     @Value("${google.oauth.client-id}")
     private String configuredClientId;
@@ -66,13 +70,13 @@ public class GlobalSettingsService {
         logger.debug("Fetching global settings DTO");
         GlobalSettings settings = getGlobalSettings();
 
-        GlobalSettingsDto dto = new GlobalSettingsDto();
+        // Use MapStruct mapper for basic field mapping
+        GlobalSettingsDto dto = globalSettingsMapper.toDto(settings);
+
+        // Override Client ID with fallback logic
         dto.setGoogleClientId(settings.getGoogleClientId() != null && !settings.getGoogleClientId().isEmpty()
                 ? settings.getGoogleClientId()
                 : configuredClientId);
-        dto.setRedirectUri(settings.getRedirectUri());
-        dto.setGoogleClientSecretUpdatedAt(settings.getGoogleClientSecretUpdatedAt());
-        dto.setLastUpdated(settings.getLastUpdated());
 
         // Determine effective Client Secret (database or environment variable)
         String effectiveSecret = getEffectiveClientSecret();

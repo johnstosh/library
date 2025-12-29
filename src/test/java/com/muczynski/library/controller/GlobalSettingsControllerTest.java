@@ -83,23 +83,11 @@ class GlobalSettingsControllerTest {
     }
 
     @Test
-    void testGetGlobalSettings_Success_AsRegularUser() throws Exception {
-        // Arrange - Regular users can view (read-only)
-        GlobalSettingsDto dto = new GlobalSettingsDto();
-        dto.setGoogleClientId("test-client-id.apps.googleusercontent.com");
-        dto.setRedirectUri("https://library.muczynskifamily.com/api/oauth/google/callback");
-        dto.setGoogleClientSecretPartial("...XXXX");
-        dto.setGoogleClientSecretConfigured(true);
-        dto.setGoogleClientSecretValidation("Valid");
-
-        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
-
-        // Act & Assert - Regular users can GET (view only)
+    void testGetGlobalSettings_Forbidden_AsRegularUser() throws Exception {
+        // Act & Assert - Regular users should get 403 Forbidden (librarian-only endpoint)
         mockMvc.perform(get("/api/global-settings")
                         .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.googleClientId").exists())
-                .andExpect(jsonPath("$.googleClientSecretPartial").value("...XXXX"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -277,25 +265,15 @@ class GlobalSettingsControllerTest {
     }
 
     @Test
-    void testUIWorkflowSequence_RegularUserCanViewButNotUpdate() throws Exception {
-        // This test verifies that regular users can view settings but cannot update them
+    void testUIWorkflowSequence_RegularUserCannotViewOrUpdate() throws Exception {
+        // This test verifies that regular users cannot view or update settings (librarian-only feature)
 
-        // Step 1: Regular user loads settings (should succeed)
-        GlobalSettingsDto dto = new GlobalSettingsDto();
-        dto.setGoogleClientId("test-client-id.apps.googleusercontent.com");
-        dto.setRedirectUri("https://library.muczynskifamily.com/api/oauth/google/callback");
-        dto.setGoogleClientSecretPartial("...XXXX");
-        dto.setGoogleClientSecretConfigured(true);
-        dto.setGoogleClientSecretValidation("Valid");
-
-        when(globalSettingsService.getGlobalSettingsDto()).thenReturn(dto);
-
+        // Step 1: Regular user attempts to load settings (should fail with 403)
         mockMvc.perform(get("/api/global-settings")
                         .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.googleClientSecretPartial").value("...XXXX"));
+                .andExpect(status().isForbidden());
 
-        // Step 2: Regular user attempts to update settings (should fail with 403)
+        // Step 2: Regular user attempts to update settings (should also fail with 403)
         GlobalSettingsDto updateDto = new GlobalSettingsDto();
         updateDto.setGoogleClientSecret("GOCSPX-attemptedUpdate123456789");
 

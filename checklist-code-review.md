@@ -20,6 +20,7 @@
 - [x] Data Management - complete
 - [x] Books from Feed - complete
 - [x] Photo Upload - complete
+- [x] Global Settings - complete (Dec 28, 2024)
 
 
 ## Features/Pages Checklist
@@ -287,10 +288,18 @@
     - No Playwright UI tests
     - No UserSettingsService unit tests
 
-- [ ] **Global Settings** (`/global-settings`, librarian only)
-  - SSO configuration (Client ID, Secret)
-  - Library card design settings
-  - Application-wide settings
+- [x] **Global Settings** (`/global-settings`, librarian only) - **FIXES IMPLEMENTED Dec 28, 2024**
+  - SSO configuration (Client ID, Secret) ✅
+  - Google Photos API credentials ✅
+  - Application-wide OAuth settings ✅
+  - **Code Review:** See `code-review-global-settings.md` for findings
+  - **Fixes Applied:**
+    - ✅ Bug #1: Created GlobalSettingsMapper using MapStruct for entity-DTO conversion
+    - ✅ Bug #2: Added @PreAuthorize("hasAuthority('LIBRARIAN')") to GET /api/global-settings endpoint
+    - ✅ Bug #3: Created GlobalSettingsServiceTest.java with 14 comprehensive tests
+    - ✅ Bug #4: Created endpoints/endpoints-global-settings.md documentation
+    - ⏭️ Bug #5: Playwright UI tests skipped per user request (no UITest classes)
+  - **Note:** Library card design settings are per-user (User entity), not in GlobalSettings
 
 ### Testing & Development
 - [ ] **Test Data** (`/test-data`)

@@ -17,7 +17,6 @@ The application uses Google Photos API for storing and managing book and author 
   - `image_checksum` - MD5 hash for change detection
   - `date_taken` - Timestamp when photo was taken
   - `deleted` - Soft delete flag
-  - `rotation_degrees` - Rotation angle (0, 90, 180, 270)
   - `display_order` - Photo ordering within book/author
   - `permanent_id` - Google Photos media item ID
 
@@ -38,7 +37,6 @@ The application uses Google Photos API for storing and managing book and author 
 - `PhotoService` contains core business logic:
   - Photo upload (from file or Google Photos)
   - Thumbnail generation (server-side resizing)
-  - Photo rotation (90° increments)
   - Photo ordering (move left/right)
   - Soft delete and restore
   - Checksum computation

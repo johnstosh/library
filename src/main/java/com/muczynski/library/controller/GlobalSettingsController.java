@@ -27,9 +27,10 @@ public class GlobalSettingsController {
 
     /**
      * Get global settings
-     * Available to all authenticated users (read-only for non-librarians)
+     * Only librarians can view global settings
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<GlobalSettingsDto> getGlobalSettings() {
         logger.info("Fetching global settings");
         GlobalSettingsDto settings = globalSettingsService.getGlobalSettingsDto();
