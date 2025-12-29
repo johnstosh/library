@@ -275,21 +275,12 @@ public class SettingsUITest {
         page.navigate(getBaseUrl() + "/global-settings");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Should be redirected or see access denied (depends on implementation)
-        // At minimum, should not see Global Settings content
+        // Should be redirected to /books (LibrarianRoute redirects non-librarians)
+        assertThat(page).hasURL(getBaseUrl() + "/books");
+
+        // Should not see Global Settings content
         Locator globalSettingsHeader = page.locator("h1:has-text('Global Settings')");
-
-        // Either the page doesn't exist (404) or access is denied
-        // Check if we were redirected away or see an error
-        boolean hasGlobalSettings = false;
-        try {
-            assertThat(globalSettingsHeader).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(2000L));
-            hasGlobalSettings = true;
-        } catch (AssertionError e) {
-            // Expected - user shouldn't see this page
-        }
-
-        Assertions.assertFalse(hasGlobalSettings, "USER should not have access to Global Settings");
+        assertThat(globalSettingsHeader).not().isVisible();
     }
 
     // ==================== LIBRARIAN AUTHORITY TESTS ====================
