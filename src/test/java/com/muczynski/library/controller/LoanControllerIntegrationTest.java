@@ -364,4 +364,50 @@ class LoanControllerIntegrationTest {
         // Response should be under 1 second (generous for CI environments)
         assert duration < 1000 : "Loan query took too long: " + duration + "ms";
     }
+
+    @Test
+    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
+    void testGetLoans_HandlesOrphanedLoanWithNullBook() throws Exception {
+        // Create a loan with a null book (orphaned/corrupted data)
+        Loan orphanedLoan = new Loan();
+        orphanedLoan.setBook(null);  // Simulate deleted book
+        orphanedLoan.setUser(testUser);
+        orphanedLoan.setLoanDate(LocalDate.now().minusDays(10));
+        orphanedLoan.setDueDate(LocalDate.now().plusDays(4));
+        orphanedLoan.setReturnDate(null);
+        orphanedLoan = loanRepository.save(orphanedLoan);
+
+        // Should not throw 500 error, should handle gracefully
+        mockMvc.perform(get("/api/loans")
+                        .param("showAll", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$[?(@.id == " + orphanedLoan.getId() + ")].bookTitle",
+                    hasItem("Unknown Book")))
+                .andExpect(jsonPath("$[?(@.id == " + orphanedLoan.getId() + ")].bookId",
+                    hasItem(nullValue())));
+    }
+
+    @Test
+    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
+    void testGetLoans_HandlesOrphanedLoanWithNullUser() throws Exception {
+        // Create a loan with a null user (orphaned/corrupted data)
+        Loan orphanedLoan = new Loan();
+        orphanedLoan.setBook(testBook1);
+        orphanedLoan.setUser(null);  // Simulate deleted user
+        orphanedLoan.setLoanDate(LocalDate.now().minusDays(10));
+        orphanedLoan.setDueDate(LocalDate.now().plusDays(4));
+        orphanedLoan.setReturnDate(null);
+        orphanedLoan = loanRepository.save(orphanedLoan);
+
+        // Should not throw 500 error, should handle gracefully
+        mockMvc.perform(get("/api/loans")
+                        .param("showAll", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$[?(@.id == " + orphanedLoan.getId() + ")].userName",
+                    hasItem("Unknown User")))
+                .andExpect(jsonPath("$[?(@.id == " + orphanedLoan.getId() + ")].userId",
+                    hasItem(nullValue())));
+    }
 }
