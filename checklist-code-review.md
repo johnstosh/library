@@ -22,6 +22,7 @@
 - [x] Photo Upload - complete
 - [x] Global Settings - complete (Dec 28, 2024)
 - [x] Test Data - complete (Dec 29, 2024)
+- [x] Photo Storage - complete (Dec 29, 2024)
 
 
 ## Features/Pages Checklist
@@ -253,11 +254,26 @@
     - ⚠️ Missing IndexedDB caching (uses TanStack Query instead)
     - ⚠️ Test Gap #3: No frontend photo component tests
 
-- [ ] **Photo Storage**
-  - Google Photos API integration
-  - Photo checksum for change detection
-  - Cascade delete with entities
-  - Photo export/import
+- [x] **Photo Storage** - **COMPLETE Dec 29, 2024**
+  - Google Photos API integration ✅
+  - Photo checksum for change detection ✅
+  - Cascade delete with entities ✅
+  - Photo export/import ✅
+  - **Code Review:** See `code-review-photo-storage.md` for comprehensive findings
+  - **Fixes Applied:**
+    - ✅ Bug #2: Security model documented - any librarian can modify anything (intentional design)
+    - ✅ Bug #3: Delete behavior standardized - hard delete only, documented
+    - ✅ Bugs #4-7: Documentation updated to match code (photoOrder, deletedAt, rotation, SHA-256)
+    - ✅ Bug #8: Caption endpoint documentation correctly omits unimplemented feature
+    - ✅ Bug #9: Added `dateTaken` field to frontend PhotoDto
+  - **Deferred Features:**
+    - 🔜 Bug #1: Caption editing for authors - deferred to future release
+    - 🔜 Bug #10: Caption editing UI - deferred to future release
+    - 🔜 Missing #1: Complete caption editing feature - planned for future
+  - **Design Decisions:**
+    - Librarians have full access to all content (no ownership validation)
+    - Hard delete only (no soft delete/restore)
+    - Caption editing intentionally skipped for current release
 
 ### Security & Authentication
 - [x] **Login** (`/login`) - **UPDATED Dec 2024**

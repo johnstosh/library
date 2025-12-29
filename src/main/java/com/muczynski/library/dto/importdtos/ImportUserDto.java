@@ -23,4 +23,5 @@ public class ImportUserDto {
     private String email;
     private LibraryCardDesign libraryCardDesign;
     private List<String> authorities = new ArrayList<>();
+    private List<String> roles = new ArrayList<>(); // For backwards compatibility with older exports
 }

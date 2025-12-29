@@ -19,6 +19,8 @@ The library card features enable patrons to apply for library cards, view their 
 
 Displays the current user's library card information and allows them to download a wallet-sized PDF version.
 
+**Navigation**: The "My Card" menu item is only visible in the navigation when the user is logged in. Unauthenticated users will not see this menu option.
+
 **Features**:
 - Display user's name and member ID
 - "Print Card" button to download PDF
@@ -449,6 +451,18 @@ const handlePrint = async () => {
 - ✅ Successful application submission
 - ✅ Error handling
 - ✅ Password hashing verification
+
+#### NavigationUITest
+
+**File**: `src/test/java/com/muczynski/library/ui/NavigationUITest.java`
+
+**Technology**: Playwright
+
+**Test Coverage**:
+- ✅ My Card menu item NOT visible when logged out (desktop and mobile)
+- ✅ My Card menu item visible when logged in (desktop and mobile)
+- ✅ All authenticated navigation items behave correctly
+- ✅ Public navigation items always visible
 
 **Missing UI Tests** (identified in code review):
 - ❌ My Library Card page UI tests

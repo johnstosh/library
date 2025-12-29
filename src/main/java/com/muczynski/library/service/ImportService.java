@@ -149,8 +149,17 @@ public class ImportService {
                     user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
                 Set<Authority> authorities = new HashSet<>();
+                // Merge both 'authorities' and 'roles' fields for backwards compatibility
+                List<String> authorityNames = new ArrayList<>();
                 if (uDto.getAuthorities() != null) {
-                    for (String rName : uDto.getAuthorities()) {
+                    authorityNames.addAll(uDto.getAuthorities());
+                }
+                if (uDto.getRoles() != null) {
+                    authorityNames.addAll(uDto.getRoles());
+                }
+
+                if (!authorityNames.isEmpty()) {
+                    for (String rName : authorityNames) {
                         // Use list-based query to handle potential duplicates gracefully
                         List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(rName);
                         Authority authority;

@@ -10,6 +10,7 @@ export interface PhotoDto {
   bookId?: number
   authorId?: number
   imageChecksum: string
+  dateTaken?: string // ISO-8601 datetime string
 }
 
 // Get photos for a book

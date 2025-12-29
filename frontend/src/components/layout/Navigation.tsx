@@ -74,13 +74,11 @@ export function Navigation() {
                   <NavLink to="/settings" data-test="nav-settings">
                     Settings
                   </NavLink>
+                  <NavLink to="/my-card" data-test="nav-my-card">
+                    My Card
+                  </NavLink>
                 </>
               )}
-
-              {/* My Card - visible to all (public can apply for card) */}
-              <NavLink to="/my-card" data-test="nav-my-card">
-                My Card
-              </NavLink>
 
               {/* Librarian-only items */}
               {isLibrarian && (
@@ -177,13 +175,11 @@ export function Navigation() {
               <NavLink to="/settings" data-test="nav-settings-mobile">
                 Settings
               </NavLink>
+              <NavLink to="/my-card" data-test="nav-my-card-mobile">
+                My Card
+              </NavLink>
             </>
           )}
-
-          {/* My Card - visible to all (public can apply for card) */}
-          <NavLink to="/my-card" data-test="nav-my-card-mobile">
-            My Card
-          </NavLink>
 
           {/* Login/Logout for mobile */}
           {!isAuthenticated && (
