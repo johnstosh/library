@@ -251,7 +251,9 @@ export function GlobalSettingsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">OAuth Redirect URI</h2>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-700 mb-2">Configured Redirect URI:</p>
-              <p className="text-sm text-gray-900 font-mono">{settings?.redirectUri || 'Not configured'}</p>
+              <p className="text-sm text-gray-900 font-mono" data-test="global-redirect-uri">
+                {settings?.redirectUri || 'Not configured'}
+              </p>
               <p className="text-xs text-gray-500 mt-2">
                 Use this URI when configuring OAuth apps in Google Cloud Console
               </p>

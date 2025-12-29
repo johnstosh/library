@@ -47,6 +47,9 @@ public class GlobalSettingsService {
     @Value("${GOOGLE_SSO_CLIENT_SECRET:}")
     private String envSsoClientSecret;
 
+    @Value("${app.external-base-url:https://library.muczynskifamily.com}")
+    private String externalBaseUrl;
+
     /**
      * Get the global settings singleton
      */
@@ -77,6 +80,10 @@ public class GlobalSettingsService {
         dto.setGoogleClientId(settings.getGoogleClientId() != null && !settings.getGoogleClientId().isEmpty()
                 ? settings.getGoogleClientId()
                 : configuredClientId);
+
+        // Compute redirect URI from external base URL (for Google Photos OAuth)
+        String computedRedirectUri = externalBaseUrl + "/api/oauth/google/callback";
+        dto.setRedirectUri(computedRedirectUri);
 
         // Determine effective Client Secret (database or environment variable)
         String effectiveSecret = getEffectiveClientSecret();

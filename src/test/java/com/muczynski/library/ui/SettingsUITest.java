@@ -522,6 +522,15 @@ public class SettingsUITest {
         // Verify redirect URI section exists
         assertThat(page.locator("text=Configured Redirect URI:")).isVisible();
         assertThat(page.locator("text=Use this URI when configuring OAuth apps")).isVisible();
+
+        // Verify redirect URI value is displayed (using data-test attribute)
+        Locator redirectUriElement = page.locator("[data-test='global-redirect-uri']");
+        redirectUriElement.waitFor(new Locator.WaitForOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+        assertThat(redirectUriElement).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+
+        // Verify it contains the expected redirect URI (for Google Photos OAuth)
+        assertThat(redirectUriElement).containsText("/api/oauth/google/callback");
+        assertThat(redirectUriElement).not().hasText("Not configured", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
     }
 
     @Test
