@@ -59,13 +59,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_DefaultDesign() throws Exception {
         // Arrange - User with default design (CLASSICAL_DEVOTION)
-        User testUser = createTestUser("testuser", LibraryCardDesign.CLASSICAL_DEVOTION);
-        when(userRepository.findByUsernameIgnoreCase("testuser"))
+        User testUser = createTestUser(1L, "testuser", LibraryCardDesign.CLASSICAL_DEVOTION);
+        when(userRepository.findById(1L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "form-data; name=\"attachment\"; filename=\"library-card.pdf\""))
@@ -85,13 +85,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_CountrysideYouth() throws Exception {
         // Arrange - User with COUNTRYSIDE_YOUTH design
-        User testUser = createTestUser("user1", LibraryCardDesign.COUNTRYSIDE_YOUTH);
-        when(userRepository.findByUsernameIgnoreCase("user1"))
+        User testUser = createTestUser(2L, "user1", LibraryCardDesign.COUNTRYSIDE_YOUTH);
+        when(userRepository.findById(2L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user1").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("2").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andReturn();
@@ -104,13 +104,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_SacredHeartPortrait() throws Exception {
         // Arrange - User with SACRED_HEART_PORTRAIT design
-        User testUser = createTestUser("user2", LibraryCardDesign.SACRED_HEART_PORTRAIT);
-        when(userRepository.findByUsernameIgnoreCase("user2"))
+        User testUser = createTestUser(3L, "user2", LibraryCardDesign.SACRED_HEART_PORTRAIT);
+        when(userRepository.findById(3L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user2").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("3").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -118,13 +118,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_RadiantBlessing() throws Exception {
         // Arrange - User with RADIANT_BLESSING design
-        User testUser = createTestUser("user3", LibraryCardDesign.RADIANT_BLESSING);
-        when(userRepository.findByUsernameIgnoreCase("user3"))
+        User testUser = createTestUser(4L, "user3", LibraryCardDesign.RADIANT_BLESSING);
+        when(userRepository.findById(4L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user3").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("4").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -132,13 +132,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_PatronOfCreatures() throws Exception {
         // Arrange - User with PATRON_OF_CREATURES design
-        User testUser = createTestUser("user4", LibraryCardDesign.PATRON_OF_CREATURES);
-        when(userRepository.findByUsernameIgnoreCase("user4"))
+        User testUser = createTestUser(5L, "user4", LibraryCardDesign.PATRON_OF_CREATURES);
+        when(userRepository.findById(5L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user4").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("5").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -146,13 +146,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_ClassicalDevotion() throws Exception {
         // Arrange - User with CLASSICAL_DEVOTION design (default)
-        User testUser = createTestUser("user5", LibraryCardDesign.CLASSICAL_DEVOTION);
-        when(userRepository.findByUsernameIgnoreCase("user5"))
+        User testUser = createTestUser(6L, "user5", LibraryCardDesign.CLASSICAL_DEVOTION);
+        when(userRepository.findById(6L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("user5").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("6").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }
@@ -160,13 +160,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_Success_AsLibrarian() throws Exception {
         // Arrange - Librarian user can also print cards
-        User librarian = createTestUser("librarian", LibraryCardDesign.CLASSICAL_DEVOTION);
-        when(userRepository.findByUsernameIgnoreCase("librarian"))
+        User librarian = createTestUser(7L, "librarian", LibraryCardDesign.CLASSICAL_DEVOTION);
+        when(userRepository.findById(7L))
                 .thenReturn(Optional.of(librarian));
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("librarian").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
+                        .with(user("7").authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "form-data; name=\"attachment\"; filename=\"library-card.pdf\""));
@@ -182,25 +182,25 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_UserNotFound() throws Exception {
         // Arrange - User not found in repository
-        when(userRepository.findByUsernameIgnoreCase("nonexistent"))
+        when(userRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
         // Act & Assert
         mockMvc.perform(get("/api/library-card/print")
-                        .with(user("nonexistent").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("999").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().is4xxClientError());
     }
 
     @Test
     void testPrintLibraryCard_WithNullDesign_UsesDefault() throws Exception {
         // Arrange - User with null design should use default
-        User testUser = createTestUser("testnull", null);
-        when(userRepository.findByUsernameIgnoreCase("testnull"))
+        User testUser = createTestUser(8L, "testnull", null);
+        when(userRepository.findById(8L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("testnull").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("8").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andReturn();
@@ -213,13 +213,13 @@ class LibraryCardControllerTest {
     @Test
     void testPrintLibraryCard_PDFSize_IsReasonable() throws Exception {
         // Arrange
-        User testUser = createTestUser("sizetest", LibraryCardDesign.CLASSICAL_DEVOTION);
-        when(userRepository.findByUsernameIgnoreCase("sizetest"))
+        User testUser = createTestUser(9L, "sizetest", LibraryCardDesign.CLASSICAL_DEVOTION);
+        when(userRepository.findById(9L))
                 .thenReturn(Optional.of(testUser));
 
         // Act & Assert
         MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                        .with(user("sizetest").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("9").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -237,12 +237,13 @@ class LibraryCardControllerTest {
         byte[][] pdfResults = new byte[designs.length][];
 
         for (int i = 0; i < designs.length; i++) {
-            User testUser = createTestUser("designtest" + i, designs[i]);
-            when(userRepository.findByUsernameIgnoreCase("designtest" + i))
+            Long userId = 10L + i;
+            User testUser = createTestUser(userId, "designtest" + i, designs[i]);
+            when(userRepository.findById(userId))
                     .thenReturn(Optional.of(testUser));
 
             MvcResult result = mockMvc.perform(get("/api/library-card/print")
-                            .with(user("designtest" + i).authorities(new SimpleGrantedAuthority("USER"))))
+                            .with(user(userId.toString()).authorities(new SimpleGrantedAuthority("USER"))))
                     .andExpect(status().isOk())
                     .andReturn();
 
@@ -266,9 +267,9 @@ class LibraryCardControllerTest {
     /**
      * Creates a test user with specified design preference
      */
-    private User createTestUser(String username, LibraryCardDesign design) {
+    private User createTestUser(Long userId, String username, LibraryCardDesign design) {
         User user = new User();
-        user.setId(1L);
+        user.setId(userId);
         user.setUsername(username);
         user.setPassword("hashedpassword");
         user.setLibraryCardDesign(design);

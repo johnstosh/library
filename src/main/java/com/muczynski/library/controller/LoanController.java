@@ -39,12 +39,11 @@ public class LoanController {
         boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
         if (!isLibrarian) {
             // For non-librarians, verify they're checking out to themselves
-            String username = authentication.getName();
-            logger.debug("Regular user {} attempting to checkout book", username);
-            // Look up the user's ID from their username/SSO subject
-            Long authenticatedUserId = userService.getUserIdByUsernameOrSsoSubject(username);
-            if (authenticatedUserId == null || !authenticatedUserId.equals(loanDto.getUserId())) {
-                logger.warn("User {} attempted to checkout book to different user ID {}", username, loanDto.getUserId());
+            // The principal name is the database user ID (not username)
+            Long authenticatedUserId = Long.parseLong(authentication.getName());
+            logger.debug("Regular user ID {} attempting to checkout book", authenticatedUserId);
+            if (!authenticatedUserId.equals(loanDto.getUserId())) {
+                logger.warn("User ID {} attempted to checkout book to different user ID {}", authenticatedUserId, loanDto.getUserId());
                 throw new InsufficientPermissionsException("You can only checkout books to yourself");
             }
         }
@@ -74,8 +73,9 @@ public class LoanController {
             if (isLibrarian) {
                 loans = loanService.getAllLoans(showAll);
             } else {
-                String username = authentication.getName();
-                loans = loanService.getLoansByUsername(username, showAll);
+                // The principal name is the database user ID (not username)
+                Long userId = Long.parseLong(authentication.getName());
+                loans = loanService.getLoansByUserId(userId, showAll);
             }
             return ResponseEntity.ok(loans);
         } catch (Exception e) {

@@ -50,8 +50,9 @@ public class LibraryCardController {
                 throw new LibraryException("User not authenticated");
             }
 
-            String username = authentication.getName();
-            User user = userRepository.findByUsernameIgnoreCase(username)
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new LibraryException("User not found"));
 
             // Generate PDF

@@ -64,16 +64,17 @@ class BooksFromFeedServiceTest {
         // Set up security context
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         lenient().when(authentication.isAuthenticated()).thenReturn(true);
-        lenient().when(authentication.getName()).thenReturn("testuser");
+        lenient().when(authentication.getName()).thenReturn("1");
         SecurityContextHolder.setContext(securityContext);
 
         // Set up test user
         testUser = new UserDto();
+        testUser.setId(1L);
         testUser.setUsername("testuser");
         testUser.setGooglePhotosApiKey("test-api-key");
         testUser.setLastPhotoTimestamp("2025-01-01T00:00:00Z");
 
-        lenient().when(userSettingsService.getUserSettings("testuser")).thenReturn(testUser);
+        lenient().when(userSettingsService.getUserSettings(1L)).thenReturn(testUser);
     }
 
     // TODO: Add tests for savePhotosFromPicker and processSavedPhotos methods

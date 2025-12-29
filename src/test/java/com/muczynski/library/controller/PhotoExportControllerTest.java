@@ -151,7 +151,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getExportStats_returnsCorrectCounts() throws Exception {
         // Create photos with different states
         createPhotoWithImage(testBook, "Pending export 1");
@@ -176,7 +176,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getExportStats_emptyDatabase_returnsZeros() throws Exception {
         mockMvc.perform(get("/api/photo-export/stats"))
                 .andExpect(status().isOk())
@@ -189,7 +189,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getExportStats_excludesSoftDeletedPhotos() throws Exception {
         // Create active photo
         createPhotoWithImage(testBook, "Active");
@@ -215,7 +215,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_returnsPhotoDetails() throws Exception {
         Photo photo = createPhotoWithImage(testBook, "Test caption");
 
@@ -231,7 +231,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_returnsEmptyListForEmptyDatabase() throws Exception {
         mockMvc.perform(get("/api/photo-export/photos"))
                 .andExpect(status().isOk())
@@ -239,7 +239,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_excludesSoftDeletedPhotos() throws Exception {
         createPhotoWithImage(testBook, "Active");
 
@@ -254,7 +254,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_usesChecksumForHasImage() throws Exception {
         // Photo with checksum (has image)
         createPhotoWithImage(testBook, "With image");
@@ -270,7 +270,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_includesAuthorPhotos() throws Exception {
         Photo authorPhoto = new Photo();
         authorPhoto.setAuthor(testAuthor);
@@ -300,7 +300,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void unlinkPhoto_removePermanentId() throws Exception {
         Photo photo = createPhotoWithPermanentId(testBook, "permanent-to-unlink");
 
@@ -316,7 +316,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void unlinkPhoto_notFound_returnsError() throws Exception {
         // Verify that attempting to unlink a non-existent photo returns an error
         mockMvc.perform(post("/api/photo-export/unlink/99999"))
@@ -325,7 +325,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void unlinkPhoto_noPermanentId_returnsError() throws Exception {
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
@@ -336,7 +336,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser  // Regular user, not librarian
+    @WithMockUser(username = "2")  // Regular user, not librarian
     void unlinkPhoto_requiresLibrarianAuthority() throws Exception {
         Photo photo = createPhotoWithPermanentId(testBook, "permanent-id");
 
@@ -349,7 +349,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void exportAllPhotos_requiresLibrarianAuthority() throws Exception {
         // This will fail because Google Photos isn't configured, but it tests authorization
         mockMvc.perform(post("/api/photo-export/export-all"))
@@ -358,7 +358,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser  // Regular user
+    @WithMockUser(username = "2")  // Regular user
     void exportAllPhotos_forbiddenForRegularUser() throws Exception {
         mockMvc.perform(post("/api/photo-export/export-all"))
                 .andExpect(status().isForbidden());
@@ -369,7 +369,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser  // Regular user
+    @WithMockUser(username = "2")  // Regular user
     void exportPhoto_forbiddenForRegularUser() throws Exception {
         Photo photo = createPhotoWithImage(testBook, "Test");
 
@@ -382,7 +382,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importPhoto_withoutPermanentId_returnsError() throws Exception {
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
@@ -393,7 +393,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser  // Regular user
+    @WithMockUser(username = "2")  // Regular user
     void importPhoto_forbiddenForRegularUser() throws Exception {
         Photo photo = createPhotoNeedingImport(testBook, "permanent-id");
 
@@ -406,7 +406,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importAllPhotos_noPhotosNeedImport_returnsMessage() throws Exception {
         // Create only photos with images (no photos needing import)
         createPhotoWithImage(testBook, "Has image");
@@ -419,7 +419,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser  // Regular user
+    @WithMockUser(username = "2")  // Regular user
     void importAllPhotos_forbiddenForRegularUser() throws Exception {
         mockMvc.perform(post("/api/photo-export/import-all"))
                 .andExpect(status().isForbidden());
@@ -430,7 +430,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void verifyPhoto_withoutPermanentId_returnsError() throws Exception {
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
@@ -441,7 +441,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser  // Regular user
+    @WithMockUser(username = "2")  // Regular user
     void verifyPhoto_forbiddenForRegularUser() throws Exception {
         Photo photo = createPhotoWithPermanentId(testBook, "permanent-id");
 
@@ -455,7 +455,7 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getExportStats_withManyPhotos_doesNotLoadImageBytes() throws Exception {
         // Create multiple photos to verify stats work without loading all images
         for (int i = 0; i < 10; i++) {
@@ -469,7 +469,7 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "1")
     void getAllPhotosWithExportStatus_correctlyReportsHasImage() throws Exception {
         // Mix of photos with and without images
         createPhotoWithImage(testBook, "With image 1");

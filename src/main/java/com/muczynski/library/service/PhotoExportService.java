@@ -103,7 +103,7 @@ public class PhotoExportService {
 
             for (Photo photo : photosToExport) {
                 try {
-                    exportPhoto(photo, librarian.getUsername());
+                    exportPhoto(photo, librarian);
                     successCount++;
                 } catch (Exception e) {
                     logger.error("Failed to export photo ID: {}", photo.getId(), e);
@@ -144,7 +144,7 @@ public class PhotoExportService {
      * Export a single photo to Google Photos
      */
     @Transactional
-    public void exportPhoto(Photo photo, String username) {
+    public void exportPhoto(Photo photo, User user) {
         logger.info("Backing up photo ID: {}", photo.getId());
 
         // Mark as in progress
@@ -153,10 +153,10 @@ public class PhotoExportService {
 
         try {
             // Step 1: Upload the raw bytes to get an upload token
-            String uploadToken = uploadPhotoBytes(photo.getImage(), photo.getContentType(), username);
+            String uploadToken = uploadPhotoBytes(photo.getImage(), photo.getContentType(), user);
 
             // Step 2: Create a media item with the upload token
-            String permanentId = createMediaItem(uploadToken, photo, username);
+            String permanentId = createMediaItem(uploadToken, photo, user);
 
             // Step 3: Mark as completed
             photo.setPermanentId(permanentId);
@@ -176,11 +176,11 @@ public class PhotoExportService {
     /**
      * Upload photo bytes to Google Photos and get an upload token
      */
-    private String uploadPhotoBytes(byte[] imageBytes, String contentType, String username) {
+    private String uploadPhotoBytes(byte[] imageBytes, String contentType, User user) {
         logger.debug("Uploading photo bytes ({} bytes) to Google Photos", imageBytes.length);
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before upload
         logger.info("Verifying token scopes before upload operation...");
@@ -193,18 +193,18 @@ public class PhotoExportService {
     /**
      * Create a media item in Google Photos using the upload token
      */
-    private String createMediaItem(String uploadToken, Photo photo, String username) {
+    private String createMediaItem(String uploadToken, Photo photo, User user) {
         logger.debug("Creating media item in Google Photos");
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before attempting batchCreate
         logger.info("Verifying token scopes before batchCreate operation...");
         googlePhotosService.verifyAccessTokenScopes(accessToken);
 
         // Get or create the library album
-        String albumId = getOrCreateAlbum(username);
+        String albumId = getOrCreateAlbum(user);
 
         // Build description from photo caption and associated book/author
         String description = buildPhotoDescription(photo);
@@ -287,15 +287,7 @@ public class PhotoExportService {
     /**
      * Get or create the library album in Google Photos
      */
-    private String getOrCreateAlbum(String username) {
-        // Get the user from database
-        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
-        if (userOpt.isEmpty()) {
-            throw new LibraryException("User not found: " + username);
-        }
-
-        User user = userOpt.get();
-
+    private String getOrCreateAlbum(User user) {
         // Check if user has a saved album ID
         if (user.getGooglePhotosAlbumId() != null && !user.getGooglePhotosAlbumId().trim().isEmpty()) {
             logger.info("Using saved album ID from user settings: {}", user.getGooglePhotosAlbumId());
@@ -307,7 +299,7 @@ public class PhotoExportService {
         logger.info("No saved album ID found. Creating new album: {}", albumName);
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before creating album
         logger.info("Verifying token scopes before album creation...");
@@ -556,12 +548,15 @@ public class PhotoExportService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
-        exportPhoto(photo, username);
+        exportPhoto(photo, user);
     }
 
     /**
@@ -574,7 +569,12 @@ public class PhotoExportService {
         if (authentication == null || !authentication.isAuthenticated()) {
             return "No authenticated user found";
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return "User not found";
+        }
 
         Photo photo = photoRepository.findById(photoId).orElse(null);
         if (photo == null) {
@@ -587,7 +587,7 @@ public class PhotoExportService {
 
         String accessToken;
         try {
-            accessToken = googlePhotosService.getValidAccessToken(username);
+            accessToken = googlePhotosService.getValidAccessToken(user);
         } catch (Exception e) {
             String errorMsg = "Failed to get access token: " + e.getMessage();
             markPhotoAsFailed(photo, "Import failed: " + errorMsg);
@@ -700,7 +700,10 @@ public class PhotoExportService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
@@ -708,7 +711,7 @@ public class PhotoExportService {
         if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
             throw new LibraryException("Photo does not have a permanent ID to verify");
         }
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         PhotoVerifyResultDto result = new PhotoVerifyResultDto();
         result.setPhotoId(photoId);

@@ -78,17 +78,16 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testCheckoutBook_Success_AsRegularUser() throws Exception {
         // Regular users can checkout books (to themselves)
         LoanDto inputDto = new LoanDto();
         inputDto.setBookId(1L);
-        inputDto.setUserId(2L);  // Their own user ID
+        inputDto.setUserId(1L);  // Their own user ID
         LoanDto returnedDto = new LoanDto();
         returnedDto.setId(1L);
         returnedDto.setBookId(1L);
-        returnedDto.setUserId(2L);
-        when(userService.getUserIdByUsernameOrSsoSubject("testuser")).thenReturn(2L);
+        returnedDto.setUserId(1L);
         when(loanService.checkoutBook(any(LoanDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/loans/checkout")
@@ -131,14 +130,14 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetAllLoans_Success_AsRegularUser() throws Exception {
         // Regular users see only their own loans
         LoanDto dto = new LoanDto();
         dto.setId(1L);
         dto.setBookId(1L);
         dto.setUserId(2L);
-        when(loanService.getLoansByUsername(eq("testuser"), eq(false)))
+        when(loanService.getLoansByUserId(eq(1L), eq(false)))
                 .thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/loans"))
@@ -146,7 +145,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetAllLoans_RegularUserSeesOnlyOwnLoans() throws Exception {
         // Verify regular user gets filtered results
         LoanDto ownLoan = new LoanDto();
@@ -154,7 +153,7 @@ class LoanControllerTest {
         ownLoan.setBookId(1L);
         ownLoan.setUserId(2L);
 
-        when(loanService.getLoansByUsername(eq("testuser"), eq(false)))
+        when(loanService.getLoansByUserId(eq(1L), eq(false)))
                 .thenReturn(Collections.singletonList(ownLoan));
 
         mockMvc.perform(get("/api/loans"))
@@ -185,7 +184,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetLoanById_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot get loans by ID (librarian-only)
         mockMvc.perform(get("/api/loans/1"))
@@ -219,7 +218,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testUpdateLoan_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot update loans
         LoanDto inputDto = new LoanDto();
@@ -256,7 +255,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testDeleteLoan_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot delete loans
         mockMvc.perform(delete("/api/loans/1"))
@@ -283,7 +282,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testReturnBook_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot return books (librarian-only)
         mockMvc.perform(put("/api/loans/return/1"))
@@ -343,13 +342,12 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testCheckoutBook_Forbidden_CheckoutToDifferentUser() throws Exception {
         // Regular user attempting to checkout a book to a different user
         LoanDto inputDto = new LoanDto();
         inputDto.setBookId(1L);
         inputDto.setUserId(999L);  // Different user ID
-        when(userService.getUserIdByUsernameOrSsoSubject("testuser")).thenReturn(2L);
 
         mockMvc.perform(post("/api/loans/checkout")
                         .contentType(MediaType.APPLICATION_JSON)

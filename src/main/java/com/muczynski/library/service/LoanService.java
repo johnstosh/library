@@ -83,28 +83,9 @@ public class LoanService {
                 .collect(Collectors.toList());
     }
 
-    public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
-        List<User> users = userRepository.findAllByUsernameOrderByIdAsc(username);
-
-        // If no users found by username, check if this is an OAuth subject ID
-        if (users.isEmpty()) {
-            // Try to find by SSO subject ID (for OAuth users like Google)
-            // OAuth subject IDs are typically numeric strings
-            List<User> ssoUsers = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc("google", username);
-            if (!ssoUsers.isEmpty()) {
-                users = ssoUsers;
-                logger.debug("Found user by SSO subject ID: {}", username);
-            }
-        }
-
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found: " + username);
-        }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
+    public List<LoanDto> getLoansByUserId(Long userId, boolean showAll) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found: " + userId));
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByUserOrderByDueDateAsc(user);

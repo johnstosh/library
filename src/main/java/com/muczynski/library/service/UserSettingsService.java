@@ -33,26 +33,15 @@ public class UserSettingsService {
     @Autowired
     private UserMapper userMapper;
 
-    private User findUserByUsername(String username) {
-        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found");
-        }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
-        return user;
-    }
-
-    public UserDto getUserSettings(String currentUsername) {
-        User user = findUserByUsername(currentUsername);
+    public UserDto getUserSettings(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
         return userMapper.toDto(user);
     }
 
-    public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
-        User user = findUserByUsername(currentUsername);
+    public UserDto updateUserSettings(Long userId, UserSettingsDto userSettingsDto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
             if (!userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(userSettingsDto.getUsername()).isEmpty()) {
@@ -118,8 +107,9 @@ public class UserSettingsService {
         return userMapper.toDto(savedUser);
     }
 
-    public void deleteUser(String currentUsername) {
-        User user = findUserByUsername(currentUsername);
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
         userRepository.delete(user);
     }
 }

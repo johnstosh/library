@@ -3,10 +3,13 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
@@ -45,6 +48,9 @@ public class AuthorController {
 
     @Autowired
     private GooglePhotosService googlePhotosService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -148,8 +154,11 @@ public class AuthorController {
 
             // Get valid access token for downloading photos
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            String accessToken = googlePhotosService.getValidAccessToken(username);
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new LibraryException("User not found"));
+            String accessToken = googlePhotosService.getValidAccessToken(user);
 
             List<PhotoDto> savedPhotos = new ArrayList<>();
             List<Map<String, Object>> failedPhotos = new ArrayList<>();

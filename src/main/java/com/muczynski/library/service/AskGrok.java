@@ -36,11 +36,12 @@ public class AskGrok {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        UserDto userDto = userSettingsService.getUserSettings(username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user: " + username);
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
         }
 
         Map<String, Object> textPart = new HashMap<>();
@@ -105,11 +106,12 @@ public class AskGrok {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        UserDto userDto = userSettingsService.getUserSettings(username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user: " + username);
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
         }
 
         Map<String, Object> message = new HashMap<>();

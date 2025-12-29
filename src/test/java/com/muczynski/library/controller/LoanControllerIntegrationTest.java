@@ -21,8 +21,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /**
  * Integration tests for LoanController.
@@ -177,10 +180,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
     void testGetLoansAsUser_OnlyActiveLoans() throws Exception {
         // Regular user should only see their own active loans (not returned, not other users')
         mockMvc.perform(get("/api/loans")
+                        .with(user(testUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER")))
                         .param("showAll", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -193,10 +196,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
     void testGetLoansAsUser_AllLoans() throws Exception {
         // Regular user should see their own loans (both active and returned)
         mockMvc.perform(get("/api/loans")
+                        .with(user(testUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER")))
                         .param("showAll", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -212,10 +215,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoansAsLibrarian_OnlyActiveLoans() throws Exception {
         // Librarian should see all active loans from all users
         mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .param("showAll", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -232,10 +235,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoansAsLibrarian_AllLoans() throws Exception {
         // Librarian should see all loans from all users (active and returned)
         mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .param("showAll", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
@@ -253,10 +256,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
     void testGetLoans_VerifyBookTitleNotNull() throws Exception {
         // Verify that bookTitle field is properly populated (tests JOIN FETCH)
         mockMvc.perform(get("/api/loans")
+                        .with(user(testUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER")))
                         .param("showAll", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].bookTitle", notNullValue()))
@@ -264,10 +267,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
     void testGetLoans_VerifyUserNameNotNull() throws Exception {
         // Verify that userName field is properly populated (tests JOIN FETCH)
         mockMvc.perform(get("/api/loans")
+                        .with(user(testUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER")))
                         .param("showAll", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].userName", notNullValue()))
@@ -275,10 +278,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoans_VerifyAllFieldsPresent() throws Exception {
         // Comprehensive verification of all loan DTO fields
         mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .param("showAll", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].id", everyItem(notNullValue())))
@@ -291,10 +294,10 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "otheruser", authorities = "USER")
     void testGetLoansAsOtherUser_OnlySeesOwnLoans() throws Exception {
         // otherUser should only see their own loan, not testuser's loans
         mockMvc.perform(get("/api/loans")
+                        .with(user(otherUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER")))
                         .param("showAll", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -311,27 +314,26 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "nonexistentuser", authorities = "USER")
     void testGetLoans_UserNotFound() throws Exception {
         // Request for a user that doesn't exist should return error
-        mockMvc.perform(get("/api/loans"))
+        mockMvc.perform(get("/api/loans")
+                        .with(user("999").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().is5xxServerError());
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoans_EmptyDatabase() throws Exception {
         // Delete all loans first
         loanRepository.deleteAll();
 
         // Librarian viewing empty database should get empty array, not error
-        mockMvc.perform(get("/api/loans"))
+        mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    @WithMockUser(username = "userwithnoloans", authorities = "USER")
     void testGetLoans_UserWithNoLoans() throws Exception {
         // Create a new user with no loans
         User newUser = new User();
@@ -345,18 +347,19 @@ class LoanControllerIntegrationTest {
         newUser = userRepository.save(newUser);
 
         // Request loans for user with no loans should return empty array
-        mockMvc.perform(get("/api/loans"))
+        mockMvc.perform(get("/api/loans")
+                        .with(user(newUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
     void testGetLoans_ResponseTimeIsReasonable() throws Exception {
         // Verify the response is fast (no N+1 query problems)
         long startTime = System.currentTimeMillis();
 
-        mockMvc.perform(get("/api/loans"))
+        mockMvc.perform(get("/api/loans")
+                        .with(user(testUser.getId().toString()).authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk());
 
         long duration = System.currentTimeMillis() - startTime;
@@ -366,7 +369,6 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoans_HandlesOrphanedLoanWithNullBook() throws Exception {
         // Create a loan with a null book (orphaned/corrupted data)
         Loan orphanedLoan = new Loan();
@@ -379,6 +381,7 @@ class LoanControllerIntegrationTest {
 
         // Should not throw 500 error, should handle gracefully
         mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .param("showAll", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThan(0))))
@@ -389,7 +392,6 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "librarian", authorities = "LIBRARIAN")
     void testGetLoans_HandlesOrphanedLoanWithNullUser() throws Exception {
         // Create a loan with a null user (orphaned/corrupted data)
         Loan orphanedLoan = new Loan();
@@ -402,6 +404,7 @@ class LoanControllerIntegrationTest {
 
         // Should not throw 500 error, should handle gracefully
         mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
                         .param("showAll", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThan(0))))

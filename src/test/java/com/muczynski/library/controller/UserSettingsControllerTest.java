@@ -52,10 +52,10 @@ class UserSettingsControllerTest {
         userDto.setXaiApiKey("test-xai-key");
         userDto.setLibraryCardDesign(LibraryCardDesign.CLASSICAL_DEVOTION);
 
-        when(userSettingsService.getUserSettings("testuser")).thenReturn(userDto);
+        when(userSettingsService.getUserSettings(1L)).thenReturn(userDto);
 
         mockMvc.perform(get("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("testuser"))
@@ -79,11 +79,11 @@ class UserSettingsControllerTest {
         updatedUser.setUsername("newusername");
         updatedUser.setAuthorities(Collections.singleton("USER"));
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -100,11 +100,11 @@ class UserSettingsControllerTest {
         updatedUser.setUsername("testuser");
         updatedUser.setAuthorities(Collections.singleton("USER"));
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk());
@@ -121,11 +121,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setXaiApiKey("new-xai-api-key");
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -143,11 +143,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setLibraryCardDesign(LibraryCardDesign.CLASSICAL_DEVOTION);
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -165,11 +165,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setLibraryCardDesign(LibraryCardDesign.COUNTRYSIDE_YOUTH);
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -187,11 +187,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setLibraryCardDesign(LibraryCardDesign.SACRED_HEART_PORTRAIT);
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -209,11 +209,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setLibraryCardDesign(LibraryCardDesign.RADIANT_BLESSING);
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -231,11 +231,11 @@ class UserSettingsControllerTest {
         updatedUser.setAuthorities(Collections.singleton("USER"));
         updatedUser.setLibraryCardDesign(LibraryCardDesign.PATRON_OF_CREATURES);
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -257,11 +257,11 @@ class UserSettingsControllerTest {
         updatedUser.setGoogleClientSecret("new-client-secret");
         updatedUser.setGooglePhotosAlbumId("album-123");
 
-        when(userSettingsService.updateUserSettings(eq("testuser"), any(UserSettingsDto.class)))
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
                 .thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(settingsDto)))
                 .andExpect(status().isOk())
@@ -283,10 +283,10 @@ class UserSettingsControllerTest {
 
     @Test
     void deleteUser_authenticatedUser_deletesAccount() throws Exception {
-        doNothing().when(userSettingsService).deleteUser("testuser");
+        doNothing().when(userSettingsService).deleteUser(1L);
 
         mockMvc.perform(delete("/api/user-settings")
-                        .with(user("testuser").authorities(new SimpleGrantedAuthority("USER"))))
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isNoContent());
     }
 

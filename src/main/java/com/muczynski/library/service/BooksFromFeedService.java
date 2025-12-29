@@ -8,12 +8,14 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.LibraryRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -64,6 +66,9 @@ public class BooksFromFeedService {
 
     @Autowired
     private LibraryService libraryService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * Generate a temporary title for a book from feed.
@@ -252,8 +257,9 @@ public class BooksFromFeedService {
             logger.error("Attempted to process photos without authentication");
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        logger.info("Processing photos for user: {}", username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        logger.info("Processing photos for user ID: {}", userId);
 
         // Find all temporary books from feed (those with temporary titles)
         List<BookDto> allBooks = bookService.getAllBooks();
@@ -336,11 +342,14 @@ public class BooksFromFeedService {
             logger.error("Attempted to save photos without authentication");
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        logger.info("Saving photos for user: {}", username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
+        logger.info("Saving photos for user ID: {}", userId);
 
         // Get valid access token for downloading photos from Picker baseUrl
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         List<Map<String, Object>> savedPhotos = new ArrayList<>();
         List<Map<String, Object>> skippedPhotos = new ArrayList<>();

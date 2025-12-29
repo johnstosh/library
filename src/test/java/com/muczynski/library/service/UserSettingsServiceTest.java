@@ -76,10 +76,10 @@ class UserSettingsServiceTest {
 
     @Test
     void getUserSettings_shouldReturnUser() {
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
 
-        UserDto result = userSettingsService.getUserSettings("testuser");
+        UserDto result = userSettingsService.getUserSettings(1L);
 
         assertThat(result).isNotNull();
         assertThat(result.getUsername()).isEqualTo("testuser");
@@ -87,10 +87,10 @@ class UserSettingsServiceTest {
 
     @Test
     void getUserSettings_shouldThrowException_whenUserNotFound() {
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("nonexistent"))
-            .thenReturn(java.util.List.of());
+        when(userRepository.findById(999L))
+            .thenReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> userSettingsService.getUserSettings("nonexistent"))
+        assertThatThrownBy(() -> userSettingsService.getUserSettings(999L))
             .isInstanceOf(LibraryException.class)
             .hasMessageContaining("User not found");
     }
@@ -100,13 +100,13 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setUsername("newusername");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("newusername"))
             .thenReturn(java.util.List.of());
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getUsername()).isEqualTo("newusername");
         verify(userRepository).save(testUser);
@@ -121,12 +121,12 @@ class UserSettingsServiceTest {
         existingUser.setId(2L);
         existingUser.setUsername("existinguser");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("existinguser"))
             .thenReturn(java.util.List.of(existingUser));
 
-        assertThatThrownBy(() -> userSettingsService.updateUserSettings("testuser", dto))
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
             .isInstanceOf(LibraryException.class)
             .hasMessageContaining("Username already taken");
     }
@@ -136,10 +136,10 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setPassword("invalidhash"); // Not 64 hex characters
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
 
-        assertThatThrownBy(() -> userSettingsService.updateUserSettings("testuser", dto))
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
             .isInstanceOf(LibraryException.class)
             .hasMessageContaining("SHA-256");
     }
@@ -150,12 +150,12 @@ class UserSettingsServiceTest {
         // Valid SHA-256 hash (64 hex characters)
         dto.setPassword("a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$newhash");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         verify(passwordEncoder).encode(anyString());
         verify(userRepository).save(testUser);
@@ -166,11 +166,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setXaiApiKey("new-xai-key");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getXaiApiKey()).isEqualTo("new-xai-key");
     }
@@ -180,11 +180,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setXaiApiKey("");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getXaiApiKey()).isEmpty();
     }
@@ -194,11 +194,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setLibraryCardDesign(LibraryCardDesign.COUNTRYSIDE_YOUTH);
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getLibraryCardDesign()).isEqualTo(LibraryCardDesign.COUNTRYSIDE_YOUTH);
     }
@@ -208,11 +208,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosAlbumId("album-123-abc");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosAlbumId()).isEqualTo("album-123-abc");
     }
@@ -222,11 +222,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosApiKey("new-api-key");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosApiKey()).isEqualTo("new-api-key");
     }
@@ -236,11 +236,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosApiKey("");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosApiKey()).isEmpty();
     }
@@ -250,11 +250,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosRefreshToken("new-refresh-token");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosRefreshToken()).isEqualTo("new-refresh-token");
     }
@@ -264,11 +264,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosRefreshToken("");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosRefreshToken()).isEmpty();
     }
@@ -278,11 +278,11 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosTokenExpiry("2025-12-31T23:59:59");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosTokenExpiry()).isEqualTo("2025-12-31T23:59:59");
     }
@@ -292,31 +292,31 @@ class UserSettingsServiceTest {
         UserSettingsDto dto = new UserSettingsDto();
         dto.setGooglePhotosTokenExpiry("");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
-        UserDto result = userSettingsService.updateUserSettings("testuser", dto);
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosTokenExpiry()).isEmpty();
     }
 
     @Test
     void deleteUser_shouldDeleteUser() {
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(java.util.List.of(testUser));
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
 
-        userSettingsService.deleteUser("testuser");
+        userSettingsService.deleteUser(1L);
 
         verify(userRepository).delete(testUser);
     }
 
     @Test
     void deleteUser_shouldThrowException_whenUserNotFound() {
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("nonexistent"))
-            .thenReturn(java.util.List.of());
+        when(userRepository.findById(999L))
+            .thenReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> userSettingsService.deleteUser("nonexistent"))
+        assertThatThrownBy(() -> userSettingsService.deleteUser(999L))
             .isInstanceOf(LibraryException.class)
             .hasMessageContaining("User not found");
     }
