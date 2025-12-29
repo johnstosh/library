@@ -102,7 +102,8 @@ export function UserSettingsPage() {
   }
 
   const handleAuthorizeGooglePhotos = () => {
-    window.location.href = '/authorize-google-photos'
+    const origin = window.location.origin
+    window.location.href = `/api/oauth/google/authorize?origin=${encodeURIComponent(origin)}`
   }
 
   const handleRevokeGooglePhotos = async () => {
@@ -111,11 +112,17 @@ export function UserSettingsPage() {
     }
 
     try {
-      await updateUserSettings.mutateAsync({
-        googlePhotosApiKey: '',
-        googlePhotosRefreshToken: '',
-        googlePhotosTokenExpiry: '',
+      const response = await fetch('/api/oauth/google/revoke', {
+        method: 'POST',
+        credentials: 'include',
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to revoke access')
+      }
+
+      // Refresh user settings to reflect the change
+      await refetch()
       setSuccessMessage('Google Photos access revoked')
     } catch (error) {
       setErrorMessage('Failed to revoke Google Photos access')

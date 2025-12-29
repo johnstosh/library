@@ -243,8 +243,9 @@ public class GoogleOAuthController {
 
         User user = findUserByUsername(username);
 
-        boolean hadAccessToken = !user.getGooglePhotosApiKey().isEmpty();
-        boolean hadRefreshToken = !user.getGooglePhotosRefreshToken().isEmpty();
+        // Null-safe checks for token presence
+        boolean hadAccessToken = user.getGooglePhotosApiKey() != null && !user.getGooglePhotosApiKey().isEmpty();
+        boolean hadRefreshToken = user.getGooglePhotosRefreshToken() != null && !user.getGooglePhotosRefreshToken().isEmpty();
 
         // Clear OAuth tokens
         user.setGooglePhotosApiKey("");
