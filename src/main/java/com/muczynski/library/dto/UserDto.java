@@ -13,10 +13,11 @@ import java.util.Set;
 public class UserDto {
     private Long id;
     private String username;
-    private String password;
     private Set<String> authorities;
     private String xaiApiKey;
     private String googlePhotosApiKey;
+    private String googlePhotosRefreshToken;
+    private String googlePhotosTokenExpiry;
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;

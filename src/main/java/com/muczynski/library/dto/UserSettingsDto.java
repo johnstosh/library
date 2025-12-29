@@ -15,6 +15,8 @@ public class UserSettingsDto {
     private String password;
     private String xaiApiKey;
     private String googlePhotosApiKey;
+    private String googlePhotosRefreshToken;
+    private String googlePhotosTokenExpiry;
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;

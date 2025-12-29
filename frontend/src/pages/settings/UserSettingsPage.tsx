@@ -259,7 +259,7 @@ export function UserSettingsPage() {
           </div>
 
           {/* XAI API Configuration - Librarian Only */}
-          {user?.authorities?.includes('LIBRARIAN') && (
+          {user?.authority === 'LIBRARIAN' && (
             <div className="border-t pt-6">
               <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
               <div className="space-y-4">
@@ -290,7 +290,7 @@ export function UserSettingsPage() {
           )}
 
           {/* Google Photos Configuration - Librarian Only */}
-          {user?.authorities?.includes('LIBRARIAN') && (
+          {user?.authority === 'LIBRARIAN' && (
             <div className="border-t pt-6">
               <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
               <div className="space-y-4">
@@ -510,7 +510,7 @@ export function UserSettingsPage() {
         </div>
 
         {/* XAI API Configuration - Librarian Only */}
-        {user?.authorities?.includes('LIBRARIAN') && (
+        {user?.authority === 'LIBRARIAN' && (
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
             <div className="space-y-4">
@@ -541,7 +541,7 @@ export function UserSettingsPage() {
         )}
 
         {/* Google Photos Configuration - Librarian Only */}
-        {user?.authorities?.includes('LIBRARIAN') && (
+        {user?.authority === 'LIBRARIAN' && (
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
             <div className="space-y-4">

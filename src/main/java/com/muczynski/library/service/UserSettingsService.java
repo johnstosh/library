@@ -90,6 +90,14 @@ public class UserSettingsService {
             user.setGooglePhotosApiKey(userSettingsDto.getGooglePhotosApiKey());
         }
 
+        if (userSettingsDto.getGooglePhotosRefreshToken() != null) {
+            user.setGooglePhotosRefreshToken(userSettingsDto.getGooglePhotosRefreshToken());
+        }
+
+        if (userSettingsDto.getGooglePhotosTokenExpiry() != null) {
+            user.setGooglePhotosTokenExpiry(userSettingsDto.getGooglePhotosTokenExpiry());
+        }
+
         if (userSettingsDto.getGoogleClientSecret() != null) {
             user.setGoogleClientSecret(userSettingsDto.getGoogleClientSecret());
         }

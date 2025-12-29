@@ -18,7 +18,6 @@ public interface UserMapper {
 
     @Mapping(target = "authorities", source = "authorities", qualifiedByName = "authoritiesToStrings")
     @Mapping(target = "activeLoansCount", ignore = true) // Set by service
-    @Mapping(target = "password", ignore = true) // Never expose password in DTO
     UserDto toDto(User user);
 
     @Named("authoritiesToStrings")
