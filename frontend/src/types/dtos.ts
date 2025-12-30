@@ -47,6 +47,7 @@ export interface AuthorDto {
   firstPhotoChecksum?: string
   bookCount?: number
   lastModified: string
+  books?: BookDto[]
 }
 
 export interface AuthorSummaryDto {

@@ -42,6 +42,9 @@ public class Author {
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Photo> photos = new ArrayList<>();
 
+    @OneToMany(mappedBy = "author")
+    private java.util.List<Book> books = new ArrayList<>();
+
     @PreUpdate
     @PrePersist
     protected void onUpdate() {

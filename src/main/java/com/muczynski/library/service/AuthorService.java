@@ -55,9 +55,9 @@ public class AuthorService {
     }
 
     public AuthorDto getAuthorById(Long id) {
-        return authorRepository.findById(id)
+        return authorRepository.findByIdWithBooks(id)
                 .map(author -> {
-                    AuthorDto dto = authorMapper.toDto(author);
+                    AuthorDto dto = authorMapper.toDto(author, true);
                     dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
                     return dto;
                 })

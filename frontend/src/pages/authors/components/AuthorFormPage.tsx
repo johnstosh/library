@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { AuthorBooksTable } from './AuthorBooksTable'
 import { useCreateAuthor, useUpdateAuthor } from '@/api/authors'
 import type { AuthorDto } from '@/types/dtos'
 
@@ -179,6 +180,16 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
           rows={4}
           data-test="author-biography"
         />
+
+        {/* Books Section - Only show when editing */}
+        {isEditing && author && (
+          <div className="pt-6 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4" data-test="author-books-heading">
+              Books by {author.name}
+            </h2>
+            <AuthorBooksTable books={author.books || []} />
+          </div>
+        )}
       </form>
 
       {/* Footer */}

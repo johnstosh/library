@@ -2,6 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
+import { AuthorBooksTable } from './components/AuthorBooksTable'
 import { useAuthor, useDeleteAuthor } from '@/api/authors'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
@@ -181,6 +182,14 @@ export function AuthorViewPage() {
             entityId={author.id}
             entityName={author.name}
           />
+
+          {/* Books */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4" data-test="author-books-heading">
+              Books by {author.name}
+            </h2>
+            <AuthorBooksTable books={author.books || []} />
+          </div>
         </div>
       </div>
     </div>

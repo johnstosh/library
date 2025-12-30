@@ -9,13 +9,22 @@ import com.muczynski.library.repository.PhotoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.stream.Collectors;
+
 @Service
 public class AuthorMapper {
 
     @Autowired
     private PhotoRepository photoRepository;
 
+    @Autowired
+    private BookMapper bookMapper;
+
     public AuthorDto toDto(Author author) {
+        return toDto(author, false);
+    }
+
+    public AuthorDto toDto(Author author, boolean includeBooks) {
         if (author == null) {
             return null;
         }
@@ -39,6 +48,13 @@ public class AuthorMapper {
             if (firstPhotoChecksum != null) {
                 dto.setFirstPhotoChecksum(firstPhotoChecksum);
             }
+        }
+
+        // Map books if requested and collection is initialized
+        if (includeBooks && author.getBooks() != null) {
+            dto.setBooks(author.getBooks().stream()
+                    .map(bookMapper::toDto)
+                    .collect(Collectors.toList()));
         }
 
         return dto;

@@ -87,9 +87,14 @@ class AuthorControllerTest {
     @Test
     @WithMockUser
     void getAuthorById() throws Exception {
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Test Book");
+
         AuthorDto authorDto = new AuthorDto();
         authorDto.setId(1L);
         authorDto.setName("Test Author");
+        authorDto.setBooks(Collections.singletonList(bookDto));
         when(authorService.getAuthorById(1L)).thenReturn(authorDto);
 
         mockMvc.perform(get("/api/authors/1"))

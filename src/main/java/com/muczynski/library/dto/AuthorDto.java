@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AuthorDto {
@@ -26,4 +27,5 @@ public class AuthorDto {
     private String firstPhotoChecksum;
     private Long bookCount;
     private LocalDateTime lastModified;
+    private List<BookDto> books;
 }

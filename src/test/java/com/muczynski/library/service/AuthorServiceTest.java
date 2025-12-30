@@ -68,8 +68,8 @@ class AuthorServiceTest {
         Author author = new Author();
         author.setId(1L);
         AuthorDto authorDto = new AuthorDto();
-        when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
-        when(authorMapper.toDto(author)).thenReturn(authorDto);
+        when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));
+        when(authorMapper.toDto(author, true)).thenReturn(authorDto);
         when(bookRepository.countByAuthorId(1L)).thenReturn(0L);
 
         assertEquals(authorDto, authorService.getAuthorById(1L));
