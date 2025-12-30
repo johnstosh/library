@@ -1,70 +1,34 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { Select } from '@/components/ui/Select'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useLoans, useCheckoutBook, useReturnBook, useDeleteLoan } from '@/api/loans'
-import { useBooks } from '@/api/books'
-import { useAuthStore } from '@/stores/authStore'
+import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
 import { formatDate } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
 
 export function LoansPage() {
-  const [showCheckoutForm, setShowCheckoutForm] = useState(false)
+  const navigate = useNavigate()
   const [returnLoanId, setReturnLoanId] = useState<number | null>(null)
   const [deleteLoanId, setDeleteLoanId] = useState<number | null>(null)
 
-  const [formData, setFormData] = useState({
-    bookId: '',
-  })
-  const [error, setError] = useState('')
-
-  const user = useAuthStore((state) => state.user)
   const showAll = useLoansShowAll()
   const setLoansShowAll = useUiStore((state) => state.setLoansShowAll)
 
   const { data: loans = [], isLoading } = useLoans(showAll)
-  const { data: books = [] } = useBooks('all')
-  const checkoutBook = useCheckoutBook()
   const returnBook = useReturnBook()
   const deleteLoan = useDeleteLoan()
 
   const handleCheckout = () => {
-    setFormData({ bookId: '' })
-    setError('')
-    setShowCheckoutForm(true)
+    navigate('/loans/new')
   }
 
-  const handleCloseForm = () => {
-    setShowCheckoutForm(false)
-    setFormData({ bookId: '' })
-    setError('')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!formData.bookId || !user) {
-      setError('Please select a book')
-      return
-    }
-
-    try {
-      await checkoutBook.mutateAsync({
-        bookId: parseInt(formData.bookId),
-        userId: user.id,
-      })
-      handleCloseForm()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    }
+  const handleViewLoan = (loan: LoanDto) => {
+    navigate(`/loans/${loan.id}`)
   }
 
   const handleReturn = async () => {
@@ -89,20 +53,19 @@ export function LoansPage() {
     }
   }
 
-  const availableBooks = books.filter((b) => b.status === 'ACTIVE')
-
-  const bookOptions = availableBooks.map((b) => ({
-    value: b.id,
-    label: `${b.title} - ${b.author}`,
-  }))
-
   const columns: Column<LoanDto>[] = [
     {
       key: 'bookTitle',
       header: 'Book',
       accessor: (loan) => (
         <div>
-          <div className="font-medium text-gray-900">{loan.bookTitle}</div>
+          <button
+            onClick={() => handleViewLoan(loan)}
+            className="font-medium text-blue-600 hover:text-blue-800 text-left"
+            data-test={`view-loan-${loan.id}`}
+          >
+            {loan.bookTitle}
+          </button>
           {loan.userName && <div className="text-sm text-gray-500">Borrowed by: {loan.userName}</div>}
         </div>
       ),
@@ -166,8 +129,6 @@ export function LoansPage() {
       width: '10%',
     },
   ]
-
-  const isSubmitting = checkoutBook.isPending
 
   return (
     <div>
@@ -242,51 +203,6 @@ export function LoansPage() {
           </div>
         )}
       </div>
-
-      <Modal
-        isOpen={showCheckoutForm}
-        onClose={handleCloseForm}
-        title="Checkout Book"
-        size="md"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting} data-test="checkout-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              isLoading={isSubmitting}
-              data-test="checkout-submit"
-            >
-              Checkout
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <ErrorMessage message={error} />}
-
-          <Select
-            label="Book"
-            value={formData.bookId}
-            onChange={(e) => setFormData({ ...formData, bookId: e.target.value })}
-            options={[{ value: '', label: 'Select a book' }, ...bookOptions]}
-            required
-            helpText="Only available books are shown"
-            data-test="checkout-book-select"
-          />
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900">
-              <strong>Borrower:</strong> {user?.username}
-            </p>
-            <p className="text-sm text-blue-900 mt-1">
-              <strong>Due Date:</strong> 14 days from checkout
-            </p>
-          </div>
-        </form>
-      </Modal>
 
       <ConfirmDialog
         isOpen={returnLoanId !== null}

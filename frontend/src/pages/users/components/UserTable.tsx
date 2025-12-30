@@ -7,7 +7,7 @@ import { PiPencil, PiTrash } from 'react-icons/pi'
 interface UserTableProps {
   users: UserDto[]
   isLoading: boolean
-  onEdit: (user: UserDto) => void
+  onView: (user: UserDto) => void
   onDelete: (user: UserDto) => void
   selectedIds: Set<number>
   onSelectToggle: (id: number) => void
@@ -18,7 +18,7 @@ interface UserTableProps {
 export function UserTable({
   users,
   isLoading,
-  onEdit,
+  onView,
   onDelete,
   selectedIds,
   onSelectToggle,
@@ -97,18 +97,25 @@ export function UserTable({
       onSelectToggle={onSelectToggle}
       onSelectAll={onSelectAll}
       selectAll={selectAll}
+      onRowClick={onView}
       actions={(user) => (
         <>
           <button
-            onClick={() => onEdit(user)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onView(user)
+            }}
             className="text-blue-600 hover:text-blue-900 transition-colors"
-            data-test={`edit-user-${user.id}`}
-            title="Edit"
+            data-test={`view-user-${user.id}`}
+            title="View"
           >
             <PiPencil className="w-5 h-5" />
           </button>
           <button
-            onClick={() => onDelete(user)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(user)
+            }}
             className="text-red-600 hover:text-red-900 transition-colors"
             data-test={`delete-user-${user.id}`}
             title="Delete"

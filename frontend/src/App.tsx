@@ -15,11 +15,26 @@ import { ApplyForCardPage } from '@/pages/library-cards/ApplyForCardPage'
 
 // Lazy-loaded pages (code splitting)
 const BooksPage = lazy(() => import('@/pages/books/BooksPage').then(m => ({ default: m.BooksPage })))
+const BookNewPage = lazy(() => import('@/pages/books/BookNewPage').then(m => ({ default: m.BookNewPage })))
+const BookEditPage = lazy(() => import('@/pages/books/BookEditPage').then(m => ({ default: m.BookEditPage })))
+const BookViewPage = lazy(() => import('@/pages/books/BookViewPage').then(m => ({ default: m.BookViewPage })))
 const AuthorsPage = lazy(() => import('@/pages/authors/AuthorsPage').then(m => ({ default: m.AuthorsPage })))
+const AuthorNewPage = lazy(() => import('@/pages/authors/AuthorNewPage').then(m => ({ default: m.AuthorNewPage })))
+const AuthorEditPage = lazy(() => import('@/pages/authors/AuthorEditPage').then(m => ({ default: m.AuthorEditPage })))
+const AuthorViewPage = lazy(() => import('@/pages/authors/AuthorViewPage').then(m => ({ default: m.AuthorViewPage })))
 const LibrariesPage = lazy(() => import('@/pages/libraries/LibrariesPage').then(m => ({ default: m.LibrariesPage })))
+const LibraryNewPage = lazy(() => import('@/pages/libraries/LibraryNewPage').then(m => ({ default: m.LibraryNewPage })))
+const LibraryEditPage = lazy(() => import('@/pages/libraries/LibraryEditPage').then(m => ({ default: m.LibraryEditPage })))
+const LibraryViewPage = lazy(() => import('@/pages/libraries/LibraryViewPage').then(m => ({ default: m.LibraryViewPage })))
 const DataManagementPage = lazy(() => import('@/pages/libraries/DataManagementPage').then(m => ({ default: m.DataManagementPage })))
 const LoansPage = lazy(() => import('@/pages/loans/LoansPage').then(m => ({ default: m.LoansPage })))
+const LoanNewPage = lazy(() => import('@/pages/loans/LoanNewPage').then(m => ({ default: m.LoanNewPage })))
+const LoanEditPage = lazy(() => import('@/pages/loans/LoanEditPage').then(m => ({ default: m.LoanEditPage })))
+const LoanViewPage = lazy(() => import('@/pages/loans/LoanViewPage').then(m => ({ default: m.LoanViewPage })))
 const UsersPage = lazy(() => import('@/pages/users/UsersPage').then(m => ({ default: m.UsersPage })))
+const UserNewPage = lazy(() => import('@/pages/users/UserNewPage').then(m => ({ default: m.UserNewPage })))
+const UserEditPage = lazy(() => import('@/pages/users/UserEditPage').then(m => ({ default: m.UserEditPage })))
+const UserViewPage = lazy(() => import('@/pages/users/UserViewPage').then(m => ({ default: m.UserViewPage })))
 const SearchPage = lazy(() => import('@/pages/search/SearchPage').then(m => ({ default: m.SearchPage })))
 const MyLibraryCardPage = lazy(() => import('@/pages/library-cards/MyLibraryCardPage').then(m => ({ default: m.MyLibraryCardPage })))
 const ApplicationsPage = lazy(() => import('@/pages/library-cards/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
@@ -60,16 +75,31 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/books" replace />} />
               <Route path="/books" element={<BooksPage />} />
+              <Route path="/books/new" element={<BookNewPage />} />
+              <Route path="/books/:id" element={<BookViewPage />} />
+              <Route path="/books/:id/edit" element={<BookEditPage />} />
               <Route path="/authors" element={<AuthorsPage />} />
+              <Route path="/authors/new" element={<AuthorNewPage />} />
+              <Route path="/authors/:id" element={<AuthorViewPage />} />
+              <Route path="/authors/:id/edit" element={<AuthorEditPage />} />
               <Route path="/loans" element={<LoansPage />} />
+              <Route path="/loans/new" element={<LoanNewPage />} />
+              <Route path="/loans/:id" element={<LoanViewPage />} />
+              <Route path="/loans/:id/edit" element={<LoanEditPage />} />
               <Route path="/my-card" element={<MyLibraryCardPage />} />
               <Route path="/settings" element={<UserSettingsPage />} />
 
               {/* Librarian-only routes */}
               <Route element={<LibrarianRoute />}>
                 <Route path="/libraries" element={<LibrariesPage />} />
+                <Route path="/libraries/new" element={<LibraryNewPage />} />
+                <Route path="/libraries/:id" element={<LibraryViewPage />} />
+                <Route path="/libraries/:id/edit" element={<LibraryEditPage />} />
                 <Route path="/data-management" element={<DataManagementPage />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/users/new" element={<UserNewPage />} />
+                <Route path="/users/:id" element={<UserViewPage />} />
+                <Route path="/users/:id/edit" element={<UserEditPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/books-from-feed" element={<BooksFromFeedPage />} />
                 <Route path="/global-settings" element={<GlobalSettingsPage />} />

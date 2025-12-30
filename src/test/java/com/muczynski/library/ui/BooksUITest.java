@@ -120,17 +120,17 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should open add book form when clicking Add Book button")
+    @DisplayName("Should navigate to add book page when clicking Add Book button")
     void testOpenAddBookForm() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Click add book button
         page.click("[data-test='add-book']");
 
-        // Wait for modal to open
-        page.waitForSelector("text=Add New Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait for navigation to /books/new
+        page.waitForURL("**/books/new", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify modal is visible
+        // Verify we're on the add book page
         assertThat(page.locator("text=Add New Book")).isVisible();
 
         // Verify all form fields are present
@@ -149,20 +149,13 @@ public class BooksUITest {
     void testCreateBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Switch to 'all' filter to see all books
-        page.click("[data-test='filter-all']");
-
-        // Verify filter is checked
-        assertThat(page.locator("[data-test='filter-all']")).isChecked();
-
-        // Wait for books to load after filter change
-        page.waitForLoadState(LoadState.NETWORKIDLE);
-        page.waitForTimeout(2000);
-
         // Click add book button
         page.click("[data-test='add-book']");
 
-        // Wait for modal
+        // Wait for navigation to /books/new
+        page.waitForURL("**/books/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
         page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Fill in the form
@@ -177,8 +170,14 @@ public class BooksUITest {
         // Submit the form
         page.click("[data-test='book-form-submit']");
 
-        // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(8000);
+        // Should navigate back to /books after successful creation
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Switch to 'all' filter to see all books
+        page.click("[data-test='filter-all']");
+
+        // Wait for books to load after filter change
+        page.waitForTimeout(2000);
 
         // Verify new book is in the table (allowing up to 30s total)
         assertThat(page.locator("text=New Test Book"))
@@ -193,7 +192,10 @@ public class BooksUITest {
         // Click add book button
         page.click("[data-test='add-book']");
 
-        // Wait for modal
+        // Wait for navigation to /books/new
+        page.waitForURL("**/books/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
         page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Try to submit without filling required fields
@@ -215,10 +217,19 @@ public class BooksUITest {
         // Wait for initial book to be visible
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click edit button for first book (ID 1)
-        page.click("[data-test='edit-book-1']");
+        // Click on book title to view it
+        page.click("text=Initial Book");
 
-        // Wait for edit modal
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click edit button
+        page.click("[data-test='book-view-edit']");
+
+        // Wait for navigation to /books/1/edit
+        page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
         page.waitForSelector("text=Edit Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Verify we're editing the right book
@@ -230,13 +241,11 @@ public class BooksUITest {
         // Submit the form
         page.click("[data-test='book-form-submit']");
 
-        // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(8000);
+        // Should navigate back to /books/1 (view page) after successful edit
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify updated book appears in table (books are reordered by dateAddedToLibrary)
-        assertThat(page.locator("text=Updated Book Title"))
-            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
-        assertThat(page.locator("text=Initial Book")).not().isVisible();
+        // Verify updated title on view page
+        assertThat(page.locator("[data-test='book-title']")).containsText("Updated Book Title");
     }
 
     @Test
@@ -251,23 +260,29 @@ public class BooksUITest {
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click delete button for first book
-        page.click("[data-test='delete-book-1']");
+        // Click on book title to view it
+        page.click("text=Initial Book");
 
-        // Wait for confirmation dialog
-        page.waitForSelector("text=Delete Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
-        assertThat(page.locator("text=Are you sure you want to delete this book")).isVisible();
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click delete button
+        page.click("[data-test='book-view-delete']");
+
+        // Wait for confirmation to appear (inline on page, not a modal)
+        page.waitForSelector("text=Are you sure you want to delete this book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Confirm deletion
-        page.click("[data-test='confirm-dialog-confirm']");
+        page.click("[data-test='confirm-delete-book']");
+
+        // Should navigate back to /books after successful deletion
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(8000);
+        page.waitForTimeout(2000);
 
         // Verify book is no longer in table
         assertThat(page.locator("text=Initial Book")).not().isVisible();
-        assertThat(page.locator("text=No books found"))
-            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
     }
 
     @Test
@@ -325,10 +340,22 @@ public class BooksUITest {
     void testLocLookupButtonVisible() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click edit on first book
-        page.click("[data-test='edit-book-1']");
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Wait for modal
+        // Click on book title to view it
+        page.click("text=Initial Book");
+
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click edit button
+        page.click("[data-test='book-view-edit']");
+
+        // Wait for navigation to /books/1/edit
+        page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for edit page to load
         page.waitForSelector("text=Edit Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Verify LOC lookup button is visible (only for editing)
@@ -344,7 +371,10 @@ public class BooksUITest {
         // Open add book form
         page.click("[data-test='add-book']");
 
-        // Wait for modal
+        // Wait for navigation to /books/new
+        page.waitForURL("**/books/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
         page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Verify AI Suggest button is visible
@@ -353,24 +383,27 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should close form when clicking Cancel button")
+    @DisplayName("Should navigate back when clicking Cancel button")
     void testCancelBookForm() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Open add book form
         page.click("[data-test='add-book']");
 
-        // Wait for modal
+        // Wait for navigation to /books/new
+        page.waitForURL("**/books/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
         page.waitForSelector("text=Add New Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click cancel button
         page.click("[data-test='book-form-cancel']");
 
-        // Wait for modal to close
-        page.waitForTimeout(1000);
+        // Should navigate back to /books
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify modal is closed
-        assertThat(page.locator("text=Add New Book")).not().isVisible();
+        // Verify we're back on books list page
+        assertThat(page.locator("h1")).containsText("Books");
     }
 
     @Test
@@ -397,45 +430,49 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should display edit and clone buttons in book detail modal")
-    void testBookDetailModalButtons() {
+    @DisplayName("Should display edit, clone, and delete buttons on book view page")
+    void testBookViewPageButtons() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click on the book title to open detail modal
+        // Click on the book title to navigate to view page
         page.click("text=Initial Book");
 
-        // Wait for modal to open (modal title should be the book title)
-        page.waitForSelector("[data-test='book-detail-close']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify Edit and Clone buttons are visible for librarian
-        assertThat(page.locator("[data-test='book-detail-edit']")).isVisible();
-        assertThat(page.locator("[data-test='book-detail-clone']")).isVisible();
+        // Verify Edit, Clone, and Delete buttons are visible for librarian
+        assertThat(page.locator("[data-test='book-view-edit']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-clone']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-delete']")).isVisible();
 
-        // Verify Close button is visible
-        assertThat(page.locator("[data-test='book-detail-close']")).isVisible();
+        // Verify Back button is visible
+        assertThat(page.locator("[data-test='back-to-books']")).isVisible();
     }
 
     @Test
-    @DisplayName("Should open edit form from book detail modal")
-    void testEditFromDetailModal() {
+    @DisplayName("Should navigate to edit form from book view page")
+    void testEditFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click on the book title to open detail modal
+        // Click on the book title to navigate to view page
         page.click("text=Initial Book");
 
-        // Wait for modal to open (modal title should be the book title)
-        page.waitForSelector("[data-test='book-detail-close']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Click Edit button
-        page.click("[data-test='book-detail-edit']");
+        page.click("[data-test='book-view-edit']");
 
-        // Wait for edit form to open
+        // Wait for navigation to /books/1/edit
+        page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for edit form to load
         page.waitForSelector("text=Edit Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Verify we're editing the right book
@@ -443,8 +480,8 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should clone a book from actions column")
-    void testCloneFromActionsColumn() {
+    @DisplayName("Should clone a book from view page")
+    void testCloneFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Switch to 'all' filter to see all books
@@ -454,11 +491,20 @@ public class BooksUITest {
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click Clone button in actions column for book ID 1
-        page.click("[data-test='clone-book-1']");
+        // Click on book title to navigate to view page
+        page.click("text=Initial Book");
+
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click Clone button
+        page.click("[data-test='book-view-clone']");
+
+        // Should navigate back to /books after successful clone
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(8000);
+        page.waitForTimeout(2000);
 
         // Verify cloned book appears in the table (allowing up to 30s total)
         assertThat(page.locator("text=Initial Book, c. 1"))

@@ -1,81 +1,35 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   useLibraries,
   useLibraryStatistics,
-  useCreateLibrary,
-  useUpdateLibrary,
   useDeleteLibrary,
 } from '@/api/libraries'
 import type { LibraryDto } from '@/types/dtos'
 
 export function LibrariesPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editingLibrary, setEditingLibrary] = useState<LibraryDto | null>(null)
+  const navigate = useNavigate()
   const [deleteLibraryId, setDeleteLibraryId] = useState<number | null>(null)
-
-  const [formData, setFormData] = useState({
-    name: '',
-    hostname: '',
-  })
-  const [error, setError] = useState('')
 
   const { data: libraries = [], isLoading } = useLibraries()
   const { data: statistics = [] } = useLibraryStatistics()
-  const createLibrary = useCreateLibrary()
-  const updateLibrary = useUpdateLibrary()
   const deleteLibrary = useDeleteLibrary()
 
   const handleAdd = () => {
-    setEditingLibrary(null)
-    setFormData({ name: '', hostname: '' })
-    setError('')
-    setShowForm(true)
+    navigate('/libraries/new')
   }
 
   const handleEdit = (library: LibraryDto) => {
-    setEditingLibrary(library)
-    setFormData({
-      name: library.name,
-      hostname: library.hostname,
-    })
-    setError('')
-    setShowForm(true)
+    navigate(`/libraries/${library.id}/edit`)
   }
 
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditingLibrary(null)
-    setFormData({ name: '', hostname: '' })
-    setError('')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!formData.name || !formData.hostname) {
-      setError('Name and hostname are required')
-      return
-    }
-
-    try {
-      if (editingLibrary) {
-        await updateLibrary.mutateAsync({ id: editingLibrary.id, library: formData })
-      } else {
-        await createLibrary.mutateAsync(formData)
-      }
-      handleCloseForm()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    }
+  const handleView = (library: LibraryDto) => {
+    navigate(`/libraries/${library.id}`)
   }
 
   const handleDelete = async () => {
@@ -98,7 +52,15 @@ export function LibrariesPage() {
     {
       key: 'name',
       header: 'Name',
-      accessor: (library) => <div className="font-medium text-gray-900">{library.name}</div>,
+      accessor: (library) => (
+        <button
+          onClick={() => handleView(library)}
+          className="font-medium text-blue-600 hover:text-blue-900 text-left"
+          data-test={`view-library-${library.id}`}
+        >
+          {library.name}
+        </button>
+      ),
       width: '30%',
     },
     {
@@ -134,8 +96,6 @@ export function LibrariesPage() {
       width: '10%',
     },
   ]
-
-  const isSubmitting = createLibrary.isPending || updateLibrary.isPending
 
   return (
     <div>
@@ -199,49 +159,6 @@ export function LibrariesPage() {
           </div>
         )}
       </div>
-
-      <Modal
-        isOpen={showForm}
-        onClose={handleCloseForm}
-        title={editingLibrary ? 'Edit Library' : 'Add New Library'}
-        size="md"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={handleCloseForm} disabled={isSubmitting} data-test="library-form-cancel">
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              isLoading={isSubmitting}
-              data-test="library-form-submit"
-            >
-              {editingLibrary ? 'Update' : 'Create'}
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <ErrorMessage message={error} />}
-
-          <Input
-            label="Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            data-test="library-name"
-          />
-
-          <Input
-            label="Hostname"
-            value={formData.hostname}
-            onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
-            required
-            helpText="The domain name for this library (e.g., mylibrary.com)"
-            data-test="library-hostname"
-          />
-        </form>
-      </Modal>
 
       <ConfirmDialog
         isOpen={deleteLibraryId !== null}

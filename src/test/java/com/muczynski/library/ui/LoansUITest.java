@@ -152,7 +152,7 @@ public class LoansUITest {
     }
 
     @Test
-    @DisplayName("USER: Should open checkout form when clicking Checkout Book")
+    @DisplayName("USER: Should navigate to checkout form when clicking Checkout Book")
     void testUserCanOpenCheckoutForm() {
         login("testuser", "password");
         navigateToLoans();
@@ -160,10 +160,11 @@ public class LoansUITest {
         // Click checkout button
         page.click("[data-test='checkout-book']");
 
-        // Modal should appear
-        page.waitForSelector("text=Checkout Book", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Wait for navigation to /loans/new
+        page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify we're on the checkout page
+        assertThat(page.locator("text=Checkout Book")).isVisible();
 
         // Verify form fields
         assertThat(page.locator("[data-test='checkout-book-select']")).isVisible();
@@ -182,10 +183,11 @@ public class LoansUITest {
         // Click checkout button
         page.click("[data-test='checkout-book']");
 
-        // Wait for modal
-        page.waitForSelector("[data-test='checkout-book-select']", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Wait for navigation to /loans/new
+        page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
+        page.waitForSelector("[data-test='checkout-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Select a book (Available Book 1 - book ID 1)
         page.selectOption("[data-test='checkout-book-select']", "1");
@@ -193,8 +195,11 @@ public class LoansUITest {
         // Submit checkout
         page.click("[data-test='checkout-submit']");
 
-        // Wait for modal to close and data to refresh
-        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        // Should navigate back to /loans after successful checkout
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for data to refresh
+        page.waitForTimeout(2000);
 
         // Verify the new loan appears in the table
         assertThat(page.locator("text=Available Book 1"))
@@ -210,21 +215,50 @@ public class LoansUITest {
         // Click checkout button
         page.click("[data-test='checkout-book']");
 
-        // Wait for modal
-        page.waitForSelector("[data-test='checkout-cancel']", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Wait for navigation to /loans/new
+        page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for cancel button to be visible
+        page.waitForSelector("[data-test='checkout-cancel']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click cancel
         page.click("[data-test='checkout-cancel']");
 
-        // Modal should close
-        page.waitForTimeout(1000);
-        assertThat(page.locator("text=Checkout Book")).not().isVisible();
+        // Should navigate back to /loans
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify we're back on loans list page
+        assertThat(page.locator("h1")).containsText("Loans");
     }
 
     @Test
-    @DisplayName("USER: Should NOT see return button (only librarians can return)")
+    @DisplayName("USER: Should navigate to loan view page when clicking on loan")
+    void testUserCanViewOwnLoan() {
+        login("testuser", "password");
+        navigateToLoans();
+
+        // Wait for table to load
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/:id
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify loan details are visible
+        assertThat(page.locator("text=Loan Details")).isVisible();
+        assertThat(page.locator("text=Loaned Book")).isVisible();
+
+        // Should see back button
+        assertThat(page.locator("[data-test='back-to-loans']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("USER: Should NOT see return button on view page (only librarians can return)")
     void testUserCannotReturnBooks() {
         login("testuser", "password");
         navigateToLoans();
@@ -232,14 +266,21 @@ public class LoansUITest {
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Return buttons should NOT be visible for regular users
-        // Note: Return button has icon with path containing "9 12l2 2 4-4m6"
-        Locator returnButton = page.locator("button[title='Return Book']");
-        assertThat(returnButton).not().isVisible();
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/3
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Return button should NOT be visible for regular users
+        assertThat(page.locator("[data-test='loan-view-return']")).not().isVisible();
     }
 
     @Test
-    @DisplayName("USER: Should NOT see delete button (only librarians can delete)")
+    @DisplayName("USER: Should NOT see delete button on view page (only librarians can delete)")
     void testUserCannotDeleteLoans() {
         login("testuser", "password");
         navigateToLoans();
@@ -247,9 +288,17 @@ public class LoansUITest {
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Delete buttons should NOT be visible for regular users
-        Locator deleteButton = page.locator("button[title='Delete']");
-        assertThat(deleteButton).not().isVisible();
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/3
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Delete button should NOT be visible for regular users
+        assertThat(page.locator("[data-test='loan-view-delete']")).not().isVisible();
     }
 
     @Test
@@ -339,31 +388,52 @@ public class LoansUITest {
     }
 
     @Test
-    @DisplayName("LIBRARIAN: Should see return buttons on active loans")
-    void testLibrarianSeesReturnButtons() {
+    @DisplayName("LIBRARIAN: Should navigate to loan view page when clicking on loan")
+    void testLibrarianCanViewLoan() {
         login("librarian", "password");
         navigateToLoans();
 
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Should see return buttons (check for the specific loan ID)
-        assertThat(page.locator("[data-test='return-loan-1']")).isVisible();
-        assertThat(page.locator("[data-test='return-loan-3']")).isVisible();
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/1
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify loan details are visible
+        assertThat(page.locator("text=Loan Details")).isVisible();
+        assertThat(page.locator("text=Loaned Book")).isVisible();
     }
 
     @Test
-    @DisplayName("LIBRARIAN: Should see delete buttons on all loans")
-    void testLibrarianSeesDeleteButtons() {
+    @DisplayName("LIBRARIAN: Should see return and delete buttons on loan view page")
+    void testLibrarianSeesActionButtonsOnViewPage() {
         login("librarian", "password");
         navigateToLoans();
 
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Should see delete buttons
-        assertThat(page.locator("[data-test='delete-loan-1']")).isVisible();
-        assertThat(page.locator("[data-test='delete-loan-3']")).isVisible();
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/1
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Should see return and delete buttons on view page
+        assertThat(page.locator("[data-test='loan-view-return']")).isVisible();
+        assertThat(page.locator("[data-test='loan-view-delete']")).isVisible();
+
+        // Should also see back button
+        assertThat(page.locator("[data-test='back-to-loans']")).isVisible();
     }
 
     @Test
@@ -375,24 +445,30 @@ public class LoansUITest {
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click return button for loan ID 1
-        page.click("[data-test='return-loan-1']");
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Confirm dialog should appear
-        page.waitForSelector("text=Return Book", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Click on loan to view it
+        page.click("text=Loaned Book");
 
-        assertThat(page.locator("text=Mark this book as returned?")).isVisible();
+        // Wait for navigation to /loans/1
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click return button
+        page.click("[data-test='loan-view-return']");
+
+        // Confirm dialog should appear (inline on page)
+        page.waitForSelector("text=Mark this book as returned?", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click confirm
-        Locator confirmButton = page.locator("button:has-text('Return')");
-        confirmButton.click();
+        page.click("[data-test='confirm-return-loan']");
 
-        // Wait for operation to complete
-        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        // Should navigate back to /loans after successful return
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // The loan should now be marked as returned
+        // Wait for data to refresh
+        page.waitForTimeout(2000);
+
         // Check "Show returned loans" to verify
         page.click("[data-test='show-all-loans']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
@@ -414,22 +490,29 @@ public class LoansUITest {
         // Initially should show 2 active loans
         assertThat(page.locator("text=Showing 2 loans")).isVisible();
 
-        // Click delete button for loan ID 3
-        page.click("[data-test='delete-loan-3']");
+        // Wait for loan to be visible
+        page.waitForSelector("text=Available Book 2", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Confirm dialog should appear
-        page.waitForSelector("text=Delete Loan", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Click on loan to view it (loan ID 3)
+        page.click("text=Available Book 2");
 
-        assertThat(page.locator("text=Are you sure you want to delete this loan record?")).isVisible();
+        // Wait for navigation to /loans/3
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click delete button
+        page.click("[data-test='loan-view-delete']");
+
+        // Confirm dialog should appear (inline on page)
+        page.waitForSelector("text=Are you sure you want to delete this loan", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click confirm
-        Locator confirmButton = page.locator("button:has-text('Delete')");
-        confirmButton.click();
+        page.click("[data-test='confirm-delete-loan']");
 
-        // Wait for operation to complete
-        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        // Should navigate back to /loans after successful deletion
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for data to refresh
+        page.waitForTimeout(2000);
 
         // Should now show 1 loan
         assertThat(page.locator("text=Showing 1 loan"))
@@ -448,21 +531,33 @@ public class LoansUITest {
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click return button
-        page.click("[data-test='return-loan-1']");
+        // Wait for loan to be visible
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Wait for confirm dialog
-        page.waitForSelector("text=Return Book", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Click on loan to view it
+        page.click("text=Loaned Book");
+
+        // Wait for navigation to /loans/1
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click return button
+        page.click("[data-test='loan-view-return']");
+
+        // Wait for confirm dialog (inline on page)
+        page.waitForSelector("text=Mark this book as returned?", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click cancel
-        Locator cancelButton = page.locator("button:has-text('Cancel')");
-        cancelButton.click();
+        page.click("[data-test='cancel-return-loan']");
 
-        // Dialog should close
+        // Confirmation should disappear
         page.waitForTimeout(1000);
         assertThat(page.locator("text=Mark this book as returned?")).not().isVisible();
+
+        // Navigate back to loans page
+        page.click("[data-test='back-to-loans']");
+
+        // Wait for navigation to /loans
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Loan should still be active (not returned)
         assertThat(page.locator("text=Showing 2 loans")).isVisible();
@@ -477,21 +572,33 @@ public class LoansUITest {
         // Wait for table to load
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click delete button
-        page.click("[data-test='delete-loan-3']");
+        // Wait for loan to be visible
+        page.waitForSelector("text=Available Book 2", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Wait for confirm dialog
-        page.waitForSelector("text=Delete Loan", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Click on loan to view it
+        page.click("text=Available Book 2");
+
+        // Wait for navigation to /loans/3
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Click delete button
+        page.click("[data-test='loan-view-delete']");
+
+        // Wait for confirm dialog (inline on page)
+        page.waitForSelector("text=Are you sure you want to delete this loan", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click cancel
-        Locator cancelButton = page.locator("button:has-text('Cancel')");
-        cancelButton.click();
+        page.click("[data-test='cancel-delete-loan']");
 
-        // Dialog should close
+        // Confirmation should disappear
         page.waitForTimeout(1000);
-        assertThat(page.locator("text=Are you sure you want to delete this loan record?")).not().isVisible();
+        assertThat(page.locator("text=Are you sure you want to delete this loan")).not().isVisible();
+
+        // Navigate back to loans page
+        page.click("[data-test='back-to-loans']");
+
+        // Wait for navigation to /loans
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Should still show 2 loans
         assertThat(page.locator("text=Showing 2 loans")).isVisible();
@@ -506,10 +613,11 @@ public class LoansUITest {
         // Click checkout button
         page.click("[data-test='checkout-book']");
 
-        // Wait for modal
-        page.waitForSelector("[data-test='checkout-book-select']", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
+        // Wait for navigation to /loans/new
+        page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for form to load
+        page.waitForSelector("[data-test='checkout-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Select a book (Available Book 1 - book ID 1)
         page.selectOption("[data-test='checkout-book-select']", "1");
@@ -517,8 +625,11 @@ public class LoansUITest {
         // Submit checkout (will checkout to librarian user)
         page.click("[data-test='checkout-submit']");
 
-        // Wait for modal to close and data to refresh
-        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        // Should navigate back to /loans after successful checkout
+        page.waitForURL("**/loans", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Wait for data to refresh
+        page.waitForTimeout(2000);
 
         // Verify the new loan appears
         assertThat(page.locator("text=Available Book 1"))

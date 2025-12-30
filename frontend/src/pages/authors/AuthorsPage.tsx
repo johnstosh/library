@@ -1,19 +1,16 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
-import { AuthorForm } from './components/AuthorForm'
-import { AuthorDetailModal } from './components/AuthorDetailModal'
 import { useAuthors, useDeleteAuthors } from '@/api/authors'
 import { useUiStore, useAuthorsFilter, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
 export function AuthorsPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editingAuthor, setEditingAuthor] = useState<AuthorDto | null>(null)
-  const [viewingAuthorId, setViewingAuthorId] = useState<number | null>(null)
+  const navigate = useNavigate()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const filter = useAuthorsFilter()
@@ -42,22 +39,15 @@ export function AuthorsPage() {
   }
 
   const handleAddAuthor = () => {
-    setEditingAuthor(null)
-    setShowForm(true)
+    navigate('/authors/new')
   }
 
   const handleEditAuthor = (author: AuthorDto) => {
-    setEditingAuthor(author)
-    setShowForm(true)
+    navigate(`/authors/${author.id}/edit`)
   }
 
   const handleViewAuthor = (author: AuthorDto) => {
-    setViewingAuthorId(author.id)
-  }
-
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditingAuthor(null)
+    navigate(`/authors/${author.id}`)
   }
 
   const handleBulkDelete = async () => {
@@ -135,13 +125,6 @@ export function AuthorsPage() {
           </div>
         )}
       </div>
-
-      <AuthorForm isOpen={showForm} onClose={handleCloseForm} author={editingAuthor} />
-      <AuthorDetailModal
-        isOpen={viewingAuthorId !== null}
-        onClose={() => setViewingAuthorId(null)}
-        authorId={viewingAuthorId}
-      />
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

@@ -1,10 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { BookFilters } from './components/BookFilters'
 import { BookTable } from './components/BookTable'
-import { BookForm } from './components/BookForm'
-import { BookDetailModal } from './components/BookDetailModal'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBooks } from '@/api/books'
 import { useUiStore, useBooksFilter, useBooksTableSelection } from '@/stores/uiStore'
@@ -12,10 +10,7 @@ import { useIsLibrarian } from '@/stores/authStore'
 import type { BookDto } from '@/types/dtos'
 
 export function BooksPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editingBook, setEditingBook] = useState<BookDto | null>(null)
-  const [viewingBookId, setViewingBookId] = useState<number | null>(null)
-
+  const navigate = useNavigate()
   const filter = useBooksFilter()
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
@@ -44,32 +39,15 @@ export function BooksPage() {
   }
 
   const handleAddBook = () => {
-    setEditingBook(null)
-    setShowForm(true)
+    navigate('/books/new')
   }
 
   const handleEditBook = (book: BookDto) => {
-    setEditingBook(book)
-    setShowForm(true)
+    navigate(`/books/${book.id}/edit`)
   }
 
   const handleViewBook = (book: BookDto) => {
-    setViewingBookId(book.id)
-  }
-
-  const handleEditFromDetail = (bookId: number) => {
-    // Find the book by ID
-    const book = books.find((b) => b.id === bookId)
-    if (book) {
-      setViewingBookId(null)
-      setEditingBook(book)
-      setShowForm(true)
-    }
-  }
-
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditingBook(null)
+    navigate(`/books/${book.id}`)
   }
 
   return (
@@ -115,13 +93,6 @@ export function BooksPage() {
         )}
       </div>
 
-      <BookForm isOpen={showForm} onClose={handleCloseForm} book={editingBook} />
-      <BookDetailModal
-        isOpen={viewingBookId !== null}
-        onClose={() => setViewingBookId(null)}
-        bookId={viewingBookId}
-        onEdit={handleEditFromDetail}
-      />
     </div>
   )
 }

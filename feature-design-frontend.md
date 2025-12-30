@@ -102,35 +102,52 @@ frontend/src/
 │   ├── NotFoundPage.tsx     # 404 page
 │   │
 │   ├── books/               # Books feature
-│   │   ├── BooksPage.tsx    # Main books page
+│   │   ├── BooksPage.tsx    # Books list page
+│   │   ├── BookNewPage.tsx  # Create book page
+│   │   ├── BookEditPage.tsx # Edit book page
+│   │   ├── BookViewPage.tsx # View book details page
 │   │   └── components/
 │   │       ├── BookFilters.tsx          # Filter radio buttons
 │   │       ├── BookTable.tsx            # Books table
-│   │       ├── BookForm.tsx             # Create/Edit form
-│   │       ├── BookDetailModal.tsx      # View modal
+│   │       ├── BookFormPage.tsx         # Create/Edit form (page-based)
 │   │       ├── BulkActionsToolbar.tsx   # Bulk operations
 │   │       └── LocLookupResultsModal.tsx # LOC lookup results
 │   │
 │   ├── authors/             # Authors feature
-│   │   ├── AuthorsPage.tsx
+│   │   ├── AuthorsPage.tsx   # Authors list page
+│   │   ├── AuthorNewPage.tsx # Create author page
+│   │   ├── AuthorEditPage.tsx # Edit author page
+│   │   ├── AuthorViewPage.tsx # View author details page
 │   │   └── components/
 │   │       ├── AuthorFilters.tsx
 │   │       ├── AuthorTable.tsx
-│   │       ├── AuthorForm.tsx
-│   │       └── AuthorDetailModal.tsx
+│   │       └── AuthorFormPage.tsx       # Create/Edit form (page-based)
 │   │
 │   ├── libraries/           # Libraries feature
-│   │   ├── LibrariesPage.tsx
-│   │   └── DataManagementPage.tsx
+│   │   ├── LibrariesPage.tsx  # Libraries list page
+│   │   ├── LibraryNewPage.tsx # Create library page
+│   │   ├── LibraryEditPage.tsx # Edit library page
+│   │   ├── LibraryViewPage.tsx # View library details page
+│   │   ├── DataManagementPage.tsx
+│   │   └── components/
+│   │       └── LibraryFormPage.tsx      # Create/Edit form (page-based)
 │   │
 │   ├── loans/               # Loans feature
-│   │   └── LoansPage.tsx
+│   │   ├── LoansPage.tsx     # Loans list page
+│   │   ├── LoanNewPage.tsx   # Checkout book page
+│   │   ├── LoanEditPage.tsx  # View loan (read-only)
+│   │   ├── LoanViewPage.tsx  # View loan details page
+│   │   └── components/
+│   │       └── LoanFormPage.tsx         # Checkout form (page-based)
 │   │
 │   ├── users/               # Users feature
-│   │   ├── UsersPage.tsx
+│   │   ├── UsersPage.tsx     # Users list page
+│   │   ├── UserNewPage.tsx   # Create user page
+│   │   ├── UserEditPage.tsx  # Edit user page
+│   │   ├── UserViewPage.tsx  # View user details page
 │   │   └── components/
 │   │       ├── UserTable.tsx
-│   │       └── UserForm.tsx
+│   │       └── UserFormPage.tsx         # Create/Edit form (page-based)
 │   │
 │   ├── library-cards/       # Library card feature
 │   │   ├── MyLibraryCardPage.tsx
@@ -201,28 +218,55 @@ export function useCreateBook() {
 
 ### 2. Component Pattern
 
-**Smart (Container) Components:**
-- Handle data fetching with React Query hooks
-- Manage local state (modals, forms)
-- Pass data to presentational components
+**Page Components:**
+- Handle routing and navigation
+- Fetch data with React Query hooks
+- Render child components
+- Manage page-level state
 
 **Presentational Components:**
 - Receive data via props
-- Render UI
+- Render UI elements
 - Emit events via callbacks
 
 Example:
 ```typescript
-// BooksPage.tsx (Smart Component)
+// BooksPage.tsx (Page Component - List View)
 export function BooksPage() {
+  const navigate = useNavigate()
   const { data: books, isLoading } = useBooks(filter)
-  const [showModal, setShowModal] = useState(false)
+
+  const handleAddBook = () => navigate('/books/new')
+  const handleViewBook = (book: BookDto) => navigate(`/books/${book.id}`)
 
   return (
     <div>
+      <h1>Books</h1>
+      <Button onClick={handleAddBook}>Add Book</Button>
       <BookFilters />
-      <BookTable books={books} isLoading={isLoading} />
-      <BookForm isOpen={showModal} onClose={() => setShowModal(false)} />
+      <BookTable books={books} isLoading={isLoading} onView={handleViewBook} />
+    </div>
+  )
+}
+
+// BookViewPage.tsx (Page Component - Detail View)
+export function BookViewPage() {
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const { data: book, isLoading } = useBook(parseInt(id))
+
+  const handleEdit = () => navigate(`/books/${id}/edit`)
+  const handleBack = () => navigate('/books')
+
+  if (isLoading) return <Spinner />
+  if (!book) return <NotFound />
+
+  return (
+    <div>
+      <Button onClick={handleBack}>Back</Button>
+      <h1>{book.title}</h1>
+      <Button onClick={handleEdit}>Edit</Button>
+      {/* Book details */}
     </div>
   )
 }
@@ -231,41 +275,93 @@ export function BooksPage() {
 interface BookTableProps {
   books: BookDto[]
   isLoading: boolean
+  onView: (book: BookDto) => void
 }
 
-export function BookTable({ books, isLoading }: BookTableProps) {
-  return <DataTable data={books} columns={columns} />
+export function BookTable({ books, isLoading, onView }: BookTableProps) {
+  return (
+    <DataTable
+      data={books}
+      columns={columns}
+      onRowClick={onView}
+    />
+  )
 }
 ```
 
 ### 3. Routing Pattern
 
-Protected routes with authentication and role-based access:
+Protected routes with authentication and role-based access. All CRUD operations use URL-based routing (not modals):
 
 ```typescript
 <Routes>
   {/* Public routes */}
   <Route path="/login" element={<LoginPage />} />
   <Route path="/search" element={<SearchPage />} />
-  <Route path="/books" element={<BooksPage />} />
-  <Route path="/authors" element={<AuthorsPage />} />
-  <Route path="/my-card" element={<MyLibraryCardPage />} />
 
   {/* Protected routes (authenticated users) */}
   <Route element={<ProtectedRoute />}>
     <Route element={<AppLayout />}>
+      <Route path="/" element={<Navigate to="/books" replace />} />
+
+      {/* Books - URL-based CRUD */}
+      <Route path="/books" element={<BooksPage />} />
+      <Route path="/books/new" element={<BookNewPage />} />
+      <Route path="/books/:id" element={<BookViewPage />} />
+      <Route path="/books/:id/edit" element={<BookEditPage />} />
+
+      {/* Authors - URL-based CRUD */}
+      <Route path="/authors" element={<AuthorsPage />} />
+      <Route path="/authors/new" element={<AuthorNewPage />} />
+      <Route path="/authors/:id" element={<AuthorViewPage />} />
+      <Route path="/authors/:id/edit" element={<AuthorEditPage />} />
+
+      {/* Loans - URL-based CRUD */}
       <Route path="/loans" element={<LoansPage />} />
+      <Route path="/loans/new" element={<LoanNewPage />} />
+      <Route path="/loans/:id" element={<LoanViewPage />} />
+      <Route path="/loans/:id/edit" element={<LoanEditPage />} />
+
+      <Route path="/my-card" element={<MyLibraryCardPage />} />
       <Route path="/settings" element={<UserSettingsPage />} />
 
       {/* Librarian-only routes */}
       <Route element={<LibrarianRoute />}>
+        {/* Users - URL-based CRUD */}
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/new" element={<UserNewPage />} />
+        <Route path="/users/:id" element={<UserViewPage />} />
+        <Route path="/users/:id/edit" element={<UserEditPage />} />
+
+        {/* Libraries - URL-based CRUD */}
         <Route path="/libraries" element={<LibrariesPage />} />
+        <Route path="/libraries/new" element={<LibraryNewPage />} />
+        <Route path="/libraries/:id" element={<LibraryViewPage />} />
+        <Route path="/libraries/:id/edit" element={<LibraryEditPage />} />
+
+        <Route path="/data-management" element={<DataManagementPage />} />
+        <Route path="/applications" element={<ApplicationsPage />} />
+        <Route path="/books-from-feed" element={<BooksFromFeedPage />} />
+        <Route path="/global-settings" element={<GlobalSettingsPage />} />
+        <Route path="/test-data" element={<TestDataPage />} />
       </Route>
     </Route>
   </Route>
 </Routes>
 ```
+
+**URL-Based CRUD Pattern:**
+- List: `/entity` - Table view with filters
+- Create: `/entity/new` - Form to create new entity
+- View: `/entity/:id` - Read-only view with action buttons
+- Edit: `/entity/:id/edit` - Form to edit existing entity
+
+Benefits of URL-based routing:
+- Bookmarkable URLs for specific items
+- Browser back/forward navigation works naturally
+- Deep linking support
+- Better accessibility
+- Clearer navigation history
 
 ### Navigation Menu Access
 
@@ -323,30 +419,70 @@ const [showModal, setShowModal] = useState(false)
 
 ### 5. Form Pattern
 
-Forms use controlled components with TypeScript interfaces:
+Forms are now page-based (not modals) with unsaved changes warnings:
 
 ```typescript
-interface BookFormData {
+interface BookFormPageProps {
   title: string
-  authorId: number
-  libraryId: number
-  publicationYear?: number
-  publisher?: string
+  book?: BookDto
+  onSuccess: () => void
+  onCancel: () => void
 }
 
-export function BookForm({ book, onSubmit }: BookFormProps) {
-  const [formData, setFormData] = useState<BookFormData>(
-    book || { title: '', authorId: 0, libraryId: 0 }
-  )
+export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageProps) {
+  const isEditing = !!book
+  const [formData, setFormData] = useState({
+    title: '',
+    authorId: '',
+    libraryId: '',
+  })
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const createBook = useCreateBook()
+  const updateBook = useUpdateBook()
+
+  // Warn user about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value })
+    setHasUnsavedChanges(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    const mutation = isEditing ? updateBook : createBook
+    await mutation.mutateAsync(formData)
+    setHasUnsavedChanges(false)
+    onSuccess()
+  }
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        onCancel()
+      }
+    } else {
+      onCancel()
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Input
+    <div className="bg-white rounded-lg shadow">
+      <div className="px-6 py-4 border-b">
+        <h1>{title}</h1>
+      </div>
+      <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
+        <Input
         label="Title"
         value={formData.title}
         onChange={(e) => setFormData({ ...formData, title: e.target.value })}

@@ -41,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Tailwind CSS v4 for utility-first styling
 - TanStack Query v5 for server state management
 - React Router v6 for client-side routing
+  - **URL-based CRUD pattern** (not modals): `/entity`, `/entity/new`, `/entity/:id`, `/entity/:id/edit`
 - Zustand for client state
 - Vite for fast builds and dev server
 - **See `feature-design-frontend.md` for complete architecture**
@@ -249,16 +250,22 @@ For any request to be considered complete, ALL of these steps must be accomplish
 4. **Security**: Always use `@PreAuthorize` for librarian-only operations, test with different authorities
 
 ### Frontend Development (React)
-1. **Adding a new feature**:
+1. **Adding a new CRUD feature**:
    - Create API functions in `frontend/src/api/`
    - Add React Query hooks (useFeatures, useCreateFeature, etc.)
-   - Create page component in `frontend/src/pages/feature/`
-   - Add child components (filters, table, form, modals)
-   - Add route in `App.tsx` (lazy-loaded)
+   - Create page components following URL-based pattern:
+     - `FeaturePage.tsx` - List view at `/features`
+     - `FeatureNewPage.tsx` - Create form at `/features/new`
+     - `FeatureViewPage.tsx` - Detail view at `/features/:id`
+     - `FeatureEditPage.tsx` - Edit form at `/features/:id/edit`
+   - Add child components (filters, table, FeatureFormPage)
+   - Add routes in `App.tsx` (lazy-loaded) for all 4 pages
    - Add navigation link in `Navigation.tsx`
    - Add TypeScript interfaces in `frontend/src/types/dtos.ts`
 2. **UI changes**: Edit React components with Tailwind CSS classes
 3. **Tests**: Write Playwright UI tests with `data-test` attributes
+   - Tests should use `page.waitForURL()` instead of modal expectations
+   - Update data-test attributes (e.g., `feature-view-edit`, `feature-view-delete`, `back-to-features`)
 
 ## Important Patterns to Follow
 
@@ -270,12 +277,20 @@ For any request to be considered complete, ALL of these steps must be accomplish
 - Password hashing: Always use SHA-256 client-side via `hashPassword()` before sending to server
 
 ### Frontend (React + TypeScript)
+- **URL-based CRUD pattern**: All create/edit/view operations use dedicated routes (NOT modals)
+  - List: `/entity` - Table view with filters
+  - Create: `/entity/new` - Form page to create new entity
+  - View: `/entity/:id` - Read-only view with action buttons (Edit, Delete, etc.)
+  - Edit: `/entity/:id/edit` - Form page to edit existing entity
+- **Unsaved changes warning**: Form pages must warn users before navigation with unsaved changes
+  - Use `beforeunload` event listener
+  - Show confirmation dialog on Cancel button click if changes exist
 - Use `data-test` attributes for all testable elements
 - TypeScript strict mode - all props and state must be typed
 - Use TanStack Query hooks for all API calls (never raw fetch)
 - Protected routes: Use `<ProtectedRoute />` and `<LibrarianRoute />` wrappers
 - Lazy load all page components for code splitting
-- Forms: Use controlled components with useState
+- Forms: Use controlled components with useState, track `hasUnsavedChanges` state
 - State management: TanStack Query (server) + Zustand (client) + useState (local)
 - Styling: Use Tailwind CSS utility classes, not custom CSS
 - LOC formatting: Use `formatLocForSpine()` in `utils/formatters.ts`

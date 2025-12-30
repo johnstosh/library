@@ -1,29 +1,23 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { UserTable } from './components/UserTable'
-import { UserForm, type UserFormData } from './components/UserForm'
 import {
   useUsers,
-  useCreateUser,
-  useUpdateUser,
   useDeleteUser,
   useDeleteUsers,
 } from '@/api/users'
 import { useUiStore } from '@/stores/uiStore'
 import type { UserDto } from '@/types/dtos'
-import { hashPassword } from '@/utils/auth'
 
 export function UsersPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [editingUser, setEditingUser] = useState<UserDto | undefined>()
+  const navigate = useNavigate()
   const [deletingUser, setDeletingUser] = useState<UserDto | null>(null)
   const [showBulkDelete, setShowBulkDelete] = useState(false)
 
   const { data: users = [], isLoading } = useUsers()
-  const createUser = useCreateUser()
-  const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
   const deleteUsers = useDeleteUsers()
 
@@ -34,46 +28,11 @@ export function UsersPage() {
   const clearSelection = useUiStore((state) => state.clearSelection)
 
   const handleCreate = () => {
-    setEditingUser(undefined)
-    setShowForm(true)
+    navigate('/users/new')
   }
 
-  const handleEdit = (user: UserDto) => {
-    setEditingUser(user)
-    setShowForm(true)
-  }
-
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditingUser(undefined)
-  }
-
-  const handleSubmit = async (data: UserFormData) => {
-    // Hash password if provided
-    const hashedPassword = data.password ? await hashPassword(data.password) : undefined
-
-    if (editingUser) {
-      // Update existing user
-      const updateData = {
-        username: data.username,
-        authority: data.authority,
-        ...(hashedPassword && { password: hashedPassword }),
-      }
-      await updateUser.mutateAsync({
-        id: editingUser.id,
-        user: updateData,
-      })
-    } else {
-      // Create new user
-      if (!hashedPassword) {
-        throw new Error('Password is required for new users')
-      }
-      await createUser.mutateAsync({
-        username: data.username,
-        password: hashedPassword,
-        authority: data.authority,
-      })
-    }
+  const handleView = (user: UserDto) => {
+    navigate(`/users/${user.id}`)
   }
 
   const handleDelete = (user: UserDto) => {
@@ -116,8 +75,6 @@ export function UsersPage() {
       toggleSelectAll('usersTable')
     }
   }
-
-  const isFormLoading = createUser.isPending || updateUser.isPending
 
   return (
     <div>
@@ -164,7 +121,7 @@ export function UsersPage() {
           <UserTable
             users={users}
             isLoading={isLoading}
-            onEdit={handleEdit}
+            onView={handleView}
             onDelete={handleDelete}
             selectedIds={selectedIds}
             onSelectToggle={handleSelectToggle}
@@ -181,15 +138,6 @@ export function UsersPage() {
           </div>
         )}
       </div>
-
-      {/* Create/Edit Form */}
-      <UserForm
-        isOpen={showForm}
-        onClose={handleCloseForm}
-        onSubmit={handleSubmit}
-        initialData={editingUser}
-        isLoading={isFormLoading}
-      />
 
       {/* Delete Confirmation */}
       <ConfirmDialog
