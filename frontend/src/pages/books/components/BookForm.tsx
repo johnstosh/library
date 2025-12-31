@@ -31,6 +31,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     plotSummary: '',
     relatedWorks: '',
     detailedDescription: '',
+    grokipediaUrl: '',
     status: BookStatus.ACTIVE as string,
     statusReason: '',
     locNumber: '',
@@ -56,6 +57,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         plotSummary: book.plotSummary || '',
         relatedWorks: book.relatedWorks || '',
         detailedDescription: book.detailedDescription || '',
+        grokipediaUrl: book.grokipediaUrl || '',
         status: book.status,
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
@@ -70,6 +72,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         plotSummary: '',
         relatedWorks: '',
         detailedDescription: '',
+        grokipediaUrl: '',
         status: BookStatus.ACTIVE,
         statusReason: '',
         locNumber: '',
@@ -149,6 +152,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         plotSummary: formData.plotSummary || undefined,
         relatedWorks: formData.relatedWorks || undefined,
         detailedDescription: formData.detailedDescription || undefined,
+        grokipediaUrl: formData.grokipediaUrl || undefined,
         status: formData.status as BookDto['status'],
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
@@ -288,6 +292,14 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
           onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
           rows={4}
           data-test="book-detailed-description"
+        />
+
+        <Input
+          label="Grokipedia URL"
+          value={formData.grokipediaUrl}
+          onChange={(e) => setFormData({ ...formData, grokipediaUrl: e.target.value })}
+          placeholder="https://grokipedia.example.com/book/123"
+          data-test="book-grokipedia-url"
         />
 
         <div className="space-y-4">

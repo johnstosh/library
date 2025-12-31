@@ -25,6 +25,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
     birthCountry: '',
     nationality: '',
     briefBiography: '',
+    grokipediaUrl: '',
   })
   const [error, setError] = useState('')
 
@@ -41,6 +42,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         birthCountry: author.birthCountry || '',
         nationality: author.nationality || '',
         briefBiography: author.briefBiography || '',
+        grokipediaUrl: author.grokipediaUrl || '',
       })
     } else {
       setFormData({
@@ -51,6 +53,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         birthCountry: '',
         nationality: '',
         briefBiography: '',
+        grokipediaUrl: '',
       })
     }
     setError('')
@@ -74,10 +77,11 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
         birthCountry: formData.birthCountry || undefined,
         nationality: formData.nationality || undefined,
         briefBiography: formData.briefBiography || undefined,
+        grokipediaUrl: formData.grokipediaUrl || undefined,
       }
 
       if (isEditing) {
-        await updateAuthor.mutateAsync({ id: author.id, author: authorData })
+        await updateAuthor.mutateAsync({ id: author!.id, author: authorData })
       } else {
         await createAuthor.mutateAsync(authorData)
       }
@@ -173,6 +177,14 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
           onChange={(e) => setFormData({ ...formData, briefBiography: e.target.value })}
           rows={4}
           data-test="author-biography"
+        />
+
+        <Input
+          label="Grokipedia URL"
+          value={formData.grokipediaUrl}
+          onChange={(e) => setFormData({ ...formData, grokipediaUrl: e.target.value })}
+          placeholder="https://grokipedia.example.com/author/123"
+          data-test="author-grokipedia-url"
         />
       </form>
     </Modal>

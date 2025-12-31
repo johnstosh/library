@@ -31,6 +31,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     plotSummary: '',
     relatedWorks: '',
     detailedDescription: '',
+    grokipediaUrl: '',
     status: BookStatus.ACTIVE as string,
     statusReason: '',
     locNumber: '',
@@ -57,11 +58,27 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         plotSummary: book.plotSummary || '',
         relatedWorks: book.relatedWorks || '',
         detailedDescription: book.detailedDescription || '',
+        grokipediaUrl: book.grokipediaUrl || '',
         status: book.status,
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         libraryId: book.libraryId?.toString() || '',
+      })
+    } else {
+      setFormData({
+        title: '',
+        publicationYear: '',
+        publisher: '',
+        plotSummary: '',
+        relatedWorks: '',
+        detailedDescription: '',
+        grokipediaUrl: '',
+        status: BookStatus.ACTIVE,
+        statusReason: '',
+        locNumber: '',
+        authorId: '',
+        libraryId: '',
       })
     }
   }, [book])
@@ -154,6 +171,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         plotSummary: formData.plotSummary || undefined,
         relatedWorks: formData.relatedWorks || undefined,
         detailedDescription: formData.detailedDescription || undefined,
+        grokipediaUrl: formData.grokipediaUrl || undefined,
         status: formData.status as BookDto['status'],
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
@@ -290,6 +308,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           onChange={(e) => handleFieldChange('detailedDescription', e.target.value)}
           rows={4}
           data-test="book-detailed-description"
+        />
+
+        <Input
+          label="Grokipedia URL"
+          value={formData.grokipediaUrl}
+          onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
+          placeholder="https://grokipedia.example.com/book/123"
+          data-test="book-grokipedia-url"
         />
 
         <div className="space-y-4">

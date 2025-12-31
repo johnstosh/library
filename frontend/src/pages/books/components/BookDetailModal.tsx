@@ -108,6 +108,20 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                   <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
+              {book.grokipediaUrl && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Grokipedia</p>
+                  <a
+                    href={book.grokipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    data-test="book-grokipedia-link"
+                  >
+                    View on Grokipedia
+                  </a>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-gray-500">Status</p>
                 <p className="text-gray-900">{formatBookStatus(book.status)}</p>

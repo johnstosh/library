@@ -76,6 +76,20 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
                   <p className="text-gray-900">{author.nationality}</p>
                 </div>
               )}
+              {author.grokipediaUrl && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Grokipedia</p>
+                  <a
+                    href={author.grokipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    data-test="author-grokipedia-link"
+                  >
+                    View on Grokipedia
+                  </a>
+                </div>
+              )}
             </div>
             {author.religiousAffiliation && (
               <div className="mt-4">

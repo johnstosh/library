@@ -17,5 +17,5 @@ if ! command -v aider >/dev/null 2>&1; then
     fi
 fi
 
-$AIDER_CMD --model xai/grok-4-fast-reasoning --no-auto-commits --no-dirty-commits --auto-test  --dark-mode --pretty --no-auto-lint
+$AIDER_CMD --model xai/grok-4-fast-reasoning --no-auto-commits --no-dirty-commits --auto-test  --dark-mode --pretty --no-auto-lint --edit-format diff
 # --test-cmd "./gradlew clean test" 

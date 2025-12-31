@@ -6,53 +6,53 @@ Add a `grokipediaUrl` field to both Author and Book entities to store links to g
 ## Backend Changes
 
 ### Database Schema & Entities
-- [ ] Add `grokipediaUrl` column to `Author` entity (String, nullable)
-- [ ] Add `grokipediaUrl` column to `Book` entity (String, nullable)
+- [x] Add `grokipediaUrl` column to `Author` entity (String, nullable)
+- [x] Add `grokipediaUrl` column to `Book` entity (String, nullable)
 
 ### DTOs
-- [ ] Add `grokipediaUrl` field to `AuthorDto`
-- [ ] Add `grokipediaUrl` field to `BookDto`
-- [ ] Add `grokipediaUrl` field to `RandomAuthor` (test data entity)
-- [ ] Add `grokipediaUrl` field to `RandomBook` (test data entity)
+- [x] Add `grokipediaUrl` field to `AuthorDto`
+- [x] Add `grokipediaUrl` field to `BookDto`
+- [x] Add `grokipediaUrl` field to `RandomAuthor` (test data entity)
+- [x] Add `grokipediaUrl` field to `RandomBook` (test data entity)
 
 ### Mappers
-- [ ] Verify `AuthorMapper` includes `grokipediaUrl` mapping (MapStruct should auto-handle)
-- [ ] Verify `BookMapper` includes `grokipediaUrl` mapping (MapStruct should auto-handle)
+- [x] Verify `AuthorMapper` includes `grokipediaUrl` mapping (MapStruct should auto-handle)
+- [x] Verify `BookMapper` includes `grokipediaUrl` mapping (MapStruct should auto-handle)
 
 ### Services
-- [ ] Update `AuthorService` create/update operations to handle `grokipediaUrl`
-- [ ] Update `BookService` create/update operations to handle `grokipediaUrl`
-- [ ] Update test data generation services to populate `grokipediaUrl` with sample data
+- [x] Update `AuthorService` create/update operations to handle `grokipediaUrl`
+- [x] Update `BookService` create/update operations to handle `grokipediaUrl`
+- [x] Update test data generation services to populate `grokipediaUrl` with sample data
 
 ### Import/Export
-- [ ] Verify JSON export includes `grokipediaUrl` for Authors
-- [ ] Verify JSON export includes `grokipediaUrl` for Books
-- [ ] Verify JSON import handles `grokipediaUrl` for Authors
-- [ ] Verify JSON import handles `grokipediaUrl` for Books
+- [x] Verify JSON export includes `grokipediaUrl` for Authors
+- [x] Verify JSON export includes `grokipediaUrl` for Books
+- [x] Verify JSON import handles `grokipediaUrl` for Authors
+- [x] Verify JSON import handles `grokipediaUrl` for Books
 
 ## Frontend Changes
 
 ### TypeScript Types
-- [ ] Add `grokipediaUrl?: string` to `Author` interface in `types/dtos.ts`
-- [ ] Add `grokipediaUrl?: string` to `Book` interface in `types/dtos.ts`
+- [x] Add `grokipediaUrl?: string` to `Author` interface in `types/dtos.ts`
+- [x] Add `grokipediaUrl?: string` to `Book` interface in `types/dtos.ts`
 
 ### Author Pages
-- [ ] Add `grokipediaUrl` input field to `AuthorFormPage.tsx` (used by New and Edit)
-- [ ] Display `grokipediaUrl` as clickable link in `AuthorViewPage.tsx`
+- [x] Add `grokipediaUrl` input field to `AuthorFormPage.tsx` (used by New and Edit)
+- [x] Display `grokipediaUrl` as clickable link in `AuthorViewPage.tsx`
 - [ ] Add `grokipediaUrl` column to authors table (optional - may be too wide)
 
 ### Book Pages
-- [ ] Add `grokipediaUrl` input field to `BookFormPage.tsx` (used by New and Edit)
-- [ ] Display `grokipediaUrl` as clickable link in `BookViewPage.tsx`
+- [x] Add `grokipediaUrl` input field to `BookFormPage.tsx` (used by New and Edit)
+- [x] Display `grokipediaUrl` as clickable link in `BookViewPage.tsx`
 - [ ] Add `grokipediaUrl` column to books table (optional - may be too wide)
 
 ## Testing
 
 ### Backend Unit Tests
-- [ ] Update `AuthorControllerTest` to test `grokipediaUrl` in create/update
-- [ ] Update `BookControllerTest` to test `grokipediaUrl` in create/update
-- [ ] Update `AuthorServiceTest` (if exists) to test `grokipediaUrl` handling
-- [ ] Update `BookServiceTest` (if exists) to test `grokipediaUrl` handling
+- [x] Update `AuthorControllerTest` to test `grokipediaUrl` in create/update
+- [x] Update `BookControllerTest` to test `grokipediaUrl` in create/update
+- [x] Update `AuthorServiceTest` (if exists) to test `grokipediaUrl` handling
+- [x] Update `BookServiceTest` (if exists) to test `grokipediaUrl` handling
 
 ### Backend Integration Tests
 - [ ] Test Author API endpoints with `grokipediaUrl` field
@@ -69,19 +69,19 @@ Add a `grokipediaUrl` field to both Author and Book entities to store links to g
 - [ ] Update `feature-design-frontend.md` if CRUD patterns are affected
 - [ ] Update `endpoints/` documentation for Author and Book endpoints
 - [ ] Update `backend-requirements.md` or `backend-development-requirements.md` if needed
-- [ ] Add copyright headers to any new files created
+- [x] Add copyright headers to any new files created
 
 ## Verification
-- [ ] Run backend tests: `./gradlew test`
-- [ ] Run frontend build: `cd frontend && npm run build`
+- [x] Run backend tests: `./gradlew test`
+- [x] Run frontend build: `cd frontend && npm run build`
 - [ ] Run Playwright tests: `cd frontend && npm run test:ui`
-- [ ] Manual testing:
-  - [ ] Create new Author with grokipedia URL
-  - [ ] Edit existing Author to add grokipedia URL
-  - [ ] Verify URL displays as clickable link in Author view
-  - [ ] Create new Book with grokipedia URL
-  - [ ] Edit existing Book to add grokipedia URL
-  - [ ] Verify URL displays as clickable link in Book view
+- [x] Manual testing:
+  - [x] Create new Author with grokipedia URL
+  - [x] Edit existing Author to add grokipedia URL
+  - [x] Verify URL displays as clickable link in Author view
+  - [x] Create new Book with grokipedia URL
+  - [x] Edit existing Book to add grokipedia URL
+  - [x] Verify URL displays as clickable link in Book view
   - [ ] Export database to JSON and verify `grokipediaUrl` is included
   - [ ] Import JSON and verify `grokipediaUrl` is restored
 

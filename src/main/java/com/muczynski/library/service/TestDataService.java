@@ -86,9 +86,11 @@ public class TestDataService {
 
         for (int i = 0; i < count; i++) {
             Author author = randomAuthor.create();
+            author.setGrokipediaUrl("https://grokipedia.example.com/author/" + author.getId());
             authorRepository.save(author);
 
             Book book = randomBook.create(author);
+            book.setGrokipediaUrl("https://grokipedia.example.com/book/" + book.getId());
             bookRepository.save(book);
         }
     }

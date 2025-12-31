@@ -62,11 +62,13 @@ class BookControllerTest {
         inputDto.setTitle("Test Book");
         inputDto.setAuthorId(1L);
         inputDto.setLibraryId(1L);
+        inputDto.setGrokipediaUrl("https://grokipedia.example.com/book/1");
         inputDto.setLocNumber(null);
         inputDto.setStatusReason(null);
         BookDto returnedDto = new BookDto();
         returnedDto.setId(1L);
         returnedDto.setTitle("Test Book");
+        returnedDto.setGrokipediaUrl("https://grokipedia.example.com/book/1");
         returnedDto.setLocNumber(null);
         returnedDto.setStatusReason(null);
         when(bookService.createBook(any(BookDto.class))).thenReturn(returnedDto);
@@ -110,11 +112,13 @@ class BookControllerTest {
     void updateBook() throws Exception {
         BookDto inputDto = new BookDto();
         inputDto.setTitle("Updated Book");
+        inputDto.setGrokipediaUrl("https://grokipedia.example.com/book/1/updated");
         inputDto.setLocNumber("Test LOC");
         inputDto.setStatusReason("Test reason");
         BookDto returnedDto = new BookDto();
         returnedDto.setId(1L);
         returnedDto.setTitle("Updated Book");
+        returnedDto.setGrokipediaUrl("https://grokipedia.example.com/book/1/updated");
         returnedDto.setLocNumber("Test LOC");
         returnedDto.setStatusReason("Test reason");
         when(bookService.updateBook(eq(1L), any(BookDto.class))).thenReturn(returnedDto);
@@ -284,6 +288,7 @@ class BookControllerTest {
         BookDto clonedDto = new BookDto();
         clonedDto.setId(2L);
         clonedDto.setTitle("Test Book (Copy)");
+        clonedDto.setGrokipediaUrl("https://grokipedia.example.com/book/2");
         clonedDto.setLocNumber(null);
         clonedDto.setStatusReason(null);
         when(bookService.cloneBook(1L)).thenReturn(clonedDto);

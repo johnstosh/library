@@ -38,6 +38,7 @@ public class AuthorMapper {
         dto.setBirthCountry(author.getBirthCountry());
         dto.setNationality(author.getNationality());
         dto.setBriefBiography(author.getBriefBiography());
+        dto.setGrokipediaUrl(author.getGrokipediaUrl());
         dto.setLastModified(author.getLastModified());
 
         // Use efficient queries to get first photo ID and checksum without loading photos collection
@@ -74,6 +75,7 @@ public class AuthorMapper {
         author.setBirthCountry(authorDto.getBirthCountry());
         author.setNationality(authorDto.getNationality());
         author.setBriefBiography(authorDto.getBriefBiography());
+        author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
 
         return author;
     }

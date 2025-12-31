@@ -35,6 +35,7 @@ public class BookMapper {
         bookDto.setPlotSummary(book.getPlotSummary());
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
+        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bookDto.setLastModified(book.getLastModified());
         bookDto.setStatus(book.getStatus());
@@ -76,6 +77,7 @@ public class BookMapper {
         book.setPlotSummary(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
+        book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
         book.setLastModified(bookDto.getLastModified());
         book.setStatus(bookDto.getStatus());

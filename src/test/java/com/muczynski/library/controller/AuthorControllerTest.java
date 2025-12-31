@@ -61,9 +61,11 @@ class AuthorControllerTest {
     void createAuthor() throws Exception {
         AuthorDto inputDto = new AuthorDto();
         inputDto.setName("Test Author");
+        inputDto.setGrokipediaUrl("https://grokipedia.example.com/author/1");
         AuthorDto returnedDto = new AuthorDto();
         returnedDto.setId(1L);
         returnedDto.setName("Test Author");
+        returnedDto.setGrokipediaUrl("https://grokipedia.example.com/author/1");
         when(authorService.createAuthor(any(AuthorDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/authors")
@@ -150,9 +152,11 @@ class AuthorControllerTest {
     void updateAuthor() throws Exception {
         AuthorDto inputDto = new AuthorDto();
         inputDto.setName("Updated Author");
+        inputDto.setGrokipediaUrl("https://grokipedia.example.com/author/1/updated");
         AuthorDto returnedDto = new AuthorDto();
         returnedDto.setId(1L);
         returnedDto.setName("Updated Author");
+        returnedDto.setGrokipediaUrl("https://grokipedia.example.com/author/1/updated");
         when(authorService.updateAuthor(eq(1L), any(AuthorDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(put("/api/authors/1")
