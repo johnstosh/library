@@ -43,6 +43,7 @@ export interface AuthorDto {
   birthCountry?: string
   nationality?: string
   briefBiography?: string
+  grokipediaUrl?: string
   firstPhotoId?: number
   firstPhotoChecksum?: string
   bookCount?: number
@@ -64,6 +65,7 @@ export interface BookDto {
   plotSummary?: string
   relatedWorks?: string
   detailedDescription?: string
+  grokipediaUrl?: string
   dateAddedToLibrary?: string
   status: BookStatus
   statusReason?: string

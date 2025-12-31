@@ -37,6 +37,8 @@ public class Author {
     @Lob
     private String briefBiography;
 
+    private String grokipediaUrl;
+
     private LocalDateTime lastModified;
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)

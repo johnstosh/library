@@ -22,6 +22,7 @@ public class BookDto {
     private String plotSummary;
     private String relatedWorks;
     private String detailedDescription;
+    private String grokipediaUrl;
     private LocalDateTime dateAddedToLibrary;
     private LocalDateTime lastModified;
     private BookStatus status;

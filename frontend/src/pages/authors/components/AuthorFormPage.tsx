@@ -26,6 +26,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
     birthCountry: '',
     nationality: '',
     briefBiography: '',
+    grokipediaUrl: '',
   })
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -43,6 +44,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
         birthCountry: author.birthCountry || '',
         nationality: author.nationality || '',
         briefBiography: author.briefBiography || '',
+        grokipediaUrl: author.grokipediaUrl || '',
       })
     }
   }, [author])
@@ -83,6 +85,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
         birthCountry: formData.birthCountry || undefined,
         nationality: formData.nationality || undefined,
         briefBiography: formData.briefBiography || undefined,
+        grokipediaUrl: formData.grokipediaUrl || undefined,
       }
 
       if (isEditing) {
@@ -179,6 +182,15 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
           onChange={(e) => handleFieldChange('briefBiography', e.target.value)}
           rows={4}
           data-test="author-biography"
+        />
+
+        <Input
+          label="Grokipedia URL"
+          type="url"
+          value={formData.grokipediaUrl}
+          onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
+          placeholder="https://grokipedia.example.com/..."
+          data-test="author-grokipedia-url"
         />
 
         {/* Books Section - Only show when editing */}

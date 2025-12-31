@@ -23,6 +23,7 @@ public class AuthorDto {
     private String birthCountry;
     private String nationality;
     private String briefBiography;
+    private String grokipediaUrl;
     private Long firstPhotoId;
     private String firstPhotoChecksum;
     private Long bookCount;

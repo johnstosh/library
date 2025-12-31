@@ -41,6 +41,7 @@ public class RandomBook {
         book.setPublisher("test-data");
         book.setLocNumber(null);
         book.setStatusReason(null);
+        book.setGrokipediaUrl("https://grokipedia.example.com/book/" + RANDOM.nextInt(1000));
         return book;
     }
 

@@ -32,6 +32,8 @@ public class Book {
     @Lob
     private String detailedDescription;
 
+    private String grokipediaUrl;
+
     private LocalDateTime dateAddedToLibrary;
 
     private LocalDateTime lastModified;
