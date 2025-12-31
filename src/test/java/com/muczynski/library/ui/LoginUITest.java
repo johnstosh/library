@@ -102,26 +102,38 @@ public class LoginUITest {
                 .setTimeout(30000L)
                 .setState(WaitForSelectorState.VISIBLE));
 
-        // Verify page title and header
+        // Verify left panel (form side) exists
+        Locator leftPanel = page.locator(".lg\\:w-1\\/2:first-child");
+        assertThat(leftPanel).isVisible();
+
+        // Verify right panel (branding side) exists
+        Locator rightPanel = page.locator(".lg\\:w-1\\/2:last-child");
+        assertThat(rightPanel).isVisible();
+
+        // Verify page title and header in right panel
         assertThat(page.locator("h1")).containsText("St. Martin de Porres Library");
 
-        // Verify username field
+        // Verify logo in right panel
+        Locator logoImage = page.locator("[data-test='login-logo']");
+        assertThat(logoImage).isVisible();
+
+        // Verify username field in left panel
         Locator usernameField = page.locator("[data-test='login-username']");
         assertThat(usernameField).isVisible();
         assertThat(usernameField).hasAttribute("type", "text");
 
-        // Verify password field
+        // Verify password field in left panel
         Locator passwordField = page.locator("[data-test='login-password']");
         assertThat(passwordField).isVisible();
         assertThat(passwordField).hasAttribute("type", "password");
 
-        // Verify submit button
+        // Verify submit button in left panel
         Locator submitButton = page.locator("[data-test='login-submit']");
         assertThat(submitButton).isVisible();
         assertThat(submitButton).isEnabled();
         assertThat(submitButton).containsText("Sign In");
 
-        // Verify Google OAuth button exists
+        // Verify Google OAuth button exists in left panel
         Locator googleButton = page.locator("[data-test='google-login']");
         assertThat(googleButton).isVisible();
     }
@@ -256,8 +268,8 @@ public class LoginUITest {
         page.navigate(getBaseUrl() + "/login");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Verify Marian M image is displayed
-        Locator logoImage = page.locator("img[alt*='Martin']");
+        // Verify Marian M image is displayed in right panel
+        Locator logoImage = page.locator("[data-test='login-logo']");
         assertThat(logoImage).isVisible();
 
         // Verify image source includes marian-m

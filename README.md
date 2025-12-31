@@ -358,6 +358,7 @@ Browser → http://localhost:8080
 - **Styling**: Tailwind CSS utility classes
 - **API**: TanStack Query hooks with automatic caching
 - **Code Splitting**: Lazy-loaded page components (49% bundle reduction)
+- **Login Page**: Split layout with left form panel and right branding panel for improved UX (responsive on mobile)
 
 ### Backend Architecture
 - **Controller Layer**: REST endpoints with DTOs
