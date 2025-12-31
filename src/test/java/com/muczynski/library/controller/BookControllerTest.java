@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -279,6 +280,40 @@ class BookControllerTest {
         when(bookService.getBooksFromMostRecentDay()).thenReturn(Arrays.asList(book1, book2));
 
         mockMvc.perform(get("/api/books/most-recent-day"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksWith3LetterLocStart() throws Exception {
+        LocalDateTime recentDate = LocalDateTime.now();
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("Book with ABC LOC");
+        book1.setLocNumber("ABC 123.45");
+        book1.setDateAddedToLibrary(recentDate);
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("Book with XYZ LOC");
+        book2.setLocNumber("XYZ .A1");
+        book2.setDateAddedToLibrary(recentDate);
+
+        when(bookService.getBooksWith3LetterLocStart()).thenReturn(Arrays.asList(book2, book1));
+
+        mockMvc.perform(get("/api/books/by-3letter-loc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Book with XYZ LOC"))
+                .andExpect(jsonPath("$[1].title").value("Book with ABC LOC"));
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksWith3LetterLocStartEmpty() throws Exception {
+        when(bookService.getBooksWith3LetterLocStart()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk());
     }
 

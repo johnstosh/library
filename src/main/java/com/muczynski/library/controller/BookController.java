@@ -88,6 +88,18 @@ public class BookController {
         }
     }
 
+    @GetMapping("/by-3letter-loc")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksWith3LetterLocStart() {
+        try {
+            List<BookDto> books = bookService.getBooksWith3LetterLocStart();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBookById(@PathVariable Long id) {

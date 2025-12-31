@@ -34,6 +34,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE b.dateAddedToLibrary >= :startOfDay AND b.dateAddedToLibrary < :endOfDay ORDER BY b.dateAddedToLibrary DESC")
     List<Book> findByDateAddedToLibraryBetweenOrderByDateAddedDesc(LocalDateTime startOfDay, LocalDateTime endOfDay);
 
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NOT NULL AND b.locNumber != '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z' ORDER BY b.dateAddedToLibrary DESC")
+    List<Book> findBooksWith3LetterLocStart();
+
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NULL OR b.locNumber = ''")
     List<Book> findBooksWithoutLocNumber();
 

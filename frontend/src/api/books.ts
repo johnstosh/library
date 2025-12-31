@@ -6,7 +6,7 @@ import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto } from '@/types/dtos'
 
 // Hook to get all books with optimized lastModified caching
-export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
+export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc') {
   const queryClient = useQueryClient()
 
   // Step 1: Fetch summaries (ID + lastModified)
@@ -37,6 +37,8 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
         return api.get<BookDto[]>('/books/most-recent-day')
       } else if (filter === 'without-loc') {
         return api.get<BookDto[]>('/books/without-loc')
+      } else if (filter === '3-letter-loc') {
+        return api.get<BookDto[]>('/books/by-3letter-loc')
       } else if (filter === 'all') {
         // Fetch all books directly for 'all' filter
         return api.get<BookDto[]>('/books')
@@ -46,7 +48,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
       }
       return []
     },
-    enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || filter === 'all' || booksToFetch.length > 0),
+    enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || filter === '3-letter-loc' || filter === 'all' || booksToFetch.length > 0),
   })
 
   // Populate individual book caches when books are fetched
@@ -61,7 +63,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc') {
     if (!summaries) return []
 
     // For filtered views (including 'all'), return the fetched results directly
-    if (filter === 'most-recent' || filter === 'without-loc' || filter === 'all') {
+    if (filter === 'most-recent' || filter === 'without-loc' || filter === '3-letter-loc' || filter === 'all') {
       return fetchedBooks || []
     }
 
@@ -96,6 +98,7 @@ export function useCreateBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
     },
   })
 }
@@ -112,6 +115,7 @@ export function useUpdateBook() {
       queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
     },
   })
 }
@@ -127,6 +131,7 @@ export function useDeleteBook() {
       queryClient.removeQueries({ queryKey: queryKeys.books.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
     },
   })
 }
@@ -141,6 +146,7 @@ export function useDeleteBooks() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
     },
   })
 }
@@ -155,6 +161,7 @@ export function useCloneBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
     },
   })
 }

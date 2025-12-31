@@ -12,8 +12,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -25,8 +27,13 @@ public class LibraryApplication {
     }
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, AuthorityRepository authorityRepository, PasswordEncoder passwordEncoder) {
+    public CommandLineRunner initData(UserRepository userRepository, AuthorityRepository authorityRepository, PasswordEncoder passwordEncoder, Environment environment) {
         return args -> {
+            // Skip initialization in test profile
+            if (Arrays.stream(environment.getActiveProfiles()).anyMatch("test"::equals)) {
+                return;
+            }
+
             // Check if the default "librarian" user already exists
             List<User> existingLibrarians = userRepository.findAllByUsernameWithPasswordOrderByIdAsc("librarian");
 

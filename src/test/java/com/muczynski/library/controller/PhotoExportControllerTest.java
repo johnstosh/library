@@ -4,12 +4,16 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
 import org.junit.jupiter.api.AfterEach;
@@ -29,6 +33,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -54,6 +59,12 @@ class PhotoExportControllerTest {
     @Autowired
     private LoanRepository loanRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private AuthorityRepository authorityRepository;
+
     // Mock external Google Photos services
     @MockitoBean
     private GooglePhotosService googlePhotosService;
@@ -63,9 +74,22 @@ class PhotoExportControllerTest {
 
     private Book testBook;
     private Author testAuthor;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
+        // Create test authority
+        Authority librarianAuth = new Authority();
+        librarianAuth.setName("LIBRARIAN");
+        librarianAuth = authorityRepository.save(librarianAuth);
+
+        // Create test user (JPA will assign ID 1, matches @WithMockUser(username = "1"))
+        testUser = new User();
+        testUser.setUsername("testuser");
+        testUser.setPassword("{bcrypt}$2a$10$..."); // Dummy encoded password
+        testUser.setAuthorities(Set.of(librarianAuth));
+        testUser = userRepository.save(testUser);
+
         // Create test author
         testAuthor = new Author();
         testAuthor.setName("Test Author");
