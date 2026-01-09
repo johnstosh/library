@@ -106,15 +106,37 @@ Returns paginated search results for books and authors.
 **Location**: `frontend/src/pages/search/SearchPage.tsx`
 **Technology**: React 18+ with TypeScript, TanStack Query, Tailwind CSS
 
+### URL-Based Search State
+
+Search state is persisted in the URL for better UX and shareability:
+
+**URL Pattern**: `/search?q=<query>&page=<page>`
+
+**Parameters**:
+- `q` (string) - Search query text
+- `page` (number, optional) - Zero-based page number (omitted when 0)
+
+**Examples**:
+- `/search?q=Augustine` - Search for "Augustine" on page 1
+- `/search?q=City%20of%20God&page=2` - Search for "City of God" on page 3
+
+**Benefits**:
+- Bookmarkable search URLs
+- Browser back/forward navigation works correctly
+- Shareable search links
+- Page refresh preserves search state
+
+**Implementation**:
+- Uses `useSearchParams` hook from React Router
+- Input field syncs with URL on browser navigation
+- Search button updates URL instead of local state
+
 ### Page Structure
 
 #### 1. Search Input
-- Text input field with real-time search
-- Clear button to reset search
-- Search executes on:
-  - Enter key press
-  - Clear button click
-  - Manual search button click
+- Text input field synced with URL `q` parameter
+- Clear button resets search and clears URL parameters
+- Search executes on form submit (Enter key or Search button click)
 
 #### 2. Results Display
 
@@ -217,15 +239,23 @@ TanStack Query integration tests verify:
 
 ### UI Tests
 
-**Note**: Playwright UI tests are recommended but not yet implemented (Bug #9 from code review).
+**Location**: `src/test/java/com/muczynski/library/ui/SearchUITest.java`
 
-Suggested test coverage:
-- Search form submission
-- Results display for books
-- Results display for authors
-- No results state
-- Pagination controls
-- Clear search functionality
+Playwright UI test coverage:
+- `testSearchPageLayout()` - Search form displays correctly
+- `testSearchForBooks()` - Search returns book results
+- `testSearchForAuthors()` - Search returns author results
+- `testSearchForBooksAndAuthors()` - Search returns both types
+- `testNoResultsFound()` - No results message displayed
+- `testClearSearch()` - Clear button works correctly
+- `testSearchButtonState()` - Button enabled/disabled state
+- `testBookResultDetails()` - Book details display correctly
+- `testAuthorResultDetails()` - Author details display correctly
+- `testSearchUpdatesUrl()` - Search updates URL with `?q=` parameter
+- `testSearchFromUrlParameter()` - URL with `?q=` loads search results
+- `testClearSearchUpdatesUrl()` - Clear search clears URL parameter
+- `testViewBookNavigatesToPage()` - View navigates to `/books/{id}`
+- `testViewAuthorNavigatesToPage()` - View navigates to `/authors/{id}`
 
 ## Performance Considerations
 
@@ -258,46 +288,36 @@ The following features are documented in code review but NOT implemented:
 
 ### Actions Column
 
-Each search result (book or author) includes an Actions column on the right side with the following icons:
+Each search result (book or author) includes an Actions column on the right side with navigation links:
 
 #### All Users
 - **View** (Eye icon, gray color)
-  - Opens read-only detail modal showing complete information
-  - `data-test="view-book-{id}"` or `data-test="view-author-{id}"`
-  - Reuses `BookDetailModal` or `AuthorDetailModal` from respective pages
+  - Navigates to book/author view page (`/books/{id}` or `/authors/{id}`)
+  - `data-test="book-result-view-{id}"` or `data-test="author-result-view-{id}"`
+  - Uses React Router `Link` component for client-side navigation
 
 #### Librarian Only
 - **Edit** (Pencil icon, blue color)
-  - Opens edit form modal with pre-filled data
-  - `data-test="edit-book-{id}"` or `data-test="edit-author-{id}"`
-  - Reuses `BookForm` or `AuthorForm` from respective pages
+  - Navigates to book/author edit page (`/books/{id}/edit` or `/authors/{id}/edit`)
+  - `data-test="book-result-edit-{id}"` or `data-test="author-result-edit-{id}"`
+  - Uses React Router `Link` component for client-side navigation
   - Only visible if `useIsLibrarian()` returns true
 
-- **Delete** (Trash icon, red color)
-  - Shows confirmation dialog before deletion
-  - `data-test="delete-book-{id}"` or `data-test="delete-author-{id}"`
-  - Calls `useDeleteBook()` or `useDeleteAuthor()` mutation
-  - Only visible if `useIsLibrarian()` returns true
+**Note**: Delete functionality is intentionally NOT available from search results. Users should navigate to the respective Books or Authors pages for delete operations.
 
 ### Implementation Details
 
 **Search Results Display**:
-- Book results use `BookResult` component with actions
-- Author results use `AuthorResult` component with actions
+- Book results use `BookResult` component with navigation links
+- Author results use `AuthorResult` component with navigation links
 - Icons use inline SVG for consistency with Books and Authors pages
 - Hover effects change icon color for better UX
 
-**Modals Reused**:
-- `BookDetailModal` - View-only book details
-- `BookForm` - Edit book information
-- `AuthorDetailModal` - View-only author details
-- `AuthorForm` - Edit author information
-- `ConfirmDialog` - Delete confirmation
-
-**State Management**:
-- Modal visibility managed via local state (`useState`)
-- Delete confirmation uses `ConfirmDialog` component with variant="danger"
-- Form close handlers reset editing state
+**Page-Based Navigation (not modals)**:
+- View actions navigate to `/books/{id}` or `/authors/{id}`
+- Edit actions navigate to `/books/{id}/edit` or `/authors/{id}/edit`
+- Uses React Router `Link` component for declarative navigation
+- Browser back button returns to search results (preserves search URL state)
 
 ## Related Documentation
 

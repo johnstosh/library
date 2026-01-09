@@ -285,4 +285,109 @@ public class SearchUITest {
         // Author may have birth/death dates, biography, book count
         // These should be visible if present in the data
     }
+
+    @Test
+    @DisplayName("Should update URL when searching")
+    void testSearchUpdatesUrl() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Perform a search
+        page.fill("[data-test='search-input']", "Augustine");
+        page.click("[data-test='search-button']");
+
+        // Wait for results
+        page.waitForSelector("[data-test^='author-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Verify URL contains search query parameter
+        String currentUrl = page.url();
+        Assertions.assertTrue(currentUrl.contains("q=Augustine"), "URL should contain search query parameter");
+    }
+
+    @Test
+    @DisplayName("Should load search results from URL with query parameter")
+    void testSearchFromUrlParameter() {
+        // Navigate directly to search URL with query parameter
+        page.navigate(getBaseUrl() + "/search?q=Augustine");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for results to appear
+        page.waitForSelector("[data-test^='author-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Verify search input has the query value
+        Locator searchInput = page.locator("[data-test='search-input']");
+        assertThat(searchInput).hasValue("Augustine");
+
+        // Verify results are displayed
+        Locator authorResults = page.locator("[data-test^='author-result-']");
+        assertThat(authorResults.first()).isVisible();
+        assertThat(authorResults.first()).containsText("Augustine");
+    }
+
+    @Test
+    @DisplayName("Should clear URL when clearing search")
+    void testClearSearchUpdatesUrl() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Perform a search
+        page.fill("[data-test='search-input']", "Augustine");
+        page.click("[data-test='search-button']");
+
+        // Wait for results and verify URL
+        page.waitForSelector("[data-test^='author-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        Assertions.assertTrue(page.url().contains("q=Augustine"), "URL should contain search query");
+
+        // Click clear button
+        page.click("[data-test='clear-search']");
+
+        // Verify URL no longer contains query parameter
+        Assertions.assertFalse(page.url().contains("q="), "URL should not contain search query after clear");
+    }
+
+    @Test
+    @DisplayName("Should navigate to book view page when clicking view button")
+    void testViewBookNavigatesToPage() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Search for a book
+        page.fill("[data-test='search-input']", "City of God");
+        page.click("[data-test='search-button']");
+
+        // Wait for results
+        page.waitForSelector("[data-test^='book-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click the view button for the first book
+        Locator viewButton = page.locator("[data-test^='book-result-view-']").first();
+        viewButton.click();
+
+        // Wait for navigation and verify URL
+        page.waitForURL("**/books/**", new Page.WaitForURLOptions().setTimeout(10000L));
+        String currentUrl = page.url();
+        Assertions.assertTrue(currentUrl.matches(".*/books/\\d+$"), "URL should be /books/{id}");
+    }
+
+    @Test
+    @DisplayName("Should navigate to author view page when clicking view button")
+    void testViewAuthorNavigatesToPage() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Search for an author
+        page.fill("[data-test='search-input']", "Augustine");
+        page.click("[data-test='search-button']");
+
+        // Wait for results
+        page.waitForSelector("[data-test^='author-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click the view button for the first author
+        Locator viewButton = page.locator("[data-test^='author-result-view-']").first();
+        viewButton.click();
+
+        // Wait for navigation and verify URL
+        page.waitForURL("**/authors/**", new Page.WaitForURLOptions().setTimeout(10000L));
+        String currentUrl = page.url();
+        Assertions.assertTrue(currentUrl.matches(".*/authors/\\d+$"), "URL should be /authors/{id}");
+    }
 }
