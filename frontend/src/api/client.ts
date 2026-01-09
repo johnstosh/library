@@ -71,14 +71,25 @@ export async function apiClient<T>(
       )
     }
 
-    // Handle empty responses (204 No Content)
+    // Handle empty responses (204 No Content or 200 with empty body)
     if (response.status === 204) {
       return null as T
     }
 
-    // Parse JSON response
-    const data = await response.json()
-    return data as T
+    // Check for empty body before parsing JSON
+    const contentLength = response.headers.get('Content-Length')
+    if (contentLength === '0') {
+      return null as T
+    }
+
+    // Parse JSON response, handling empty body gracefully
+    const text = await response.text()
+    if (!text) {
+      return null as T
+    }
+
+    const data = JSON.parse(text) as T
+    return data
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
