@@ -49,7 +49,7 @@ Public-facing form where prospective patrons can submit library card application
 2. Password is hashed client-side using SHA-256
 3. Application submitted to `/api/application/public/register`
 4. Application status set to `PENDING`
-5. User receives confirmation message
+5. User receives confirmation message (page remains on success screen permanently - no redirect)
 6. Librarian reviews application in Applications page
 
 ### 3. Applications (`/applications`)
@@ -508,7 +508,7 @@ User → /apply page
   → POST /api/application/public/register
   → AppliedService validates & saves
   → Applied entity created (status: PENDING)
-  → User sees success message
+  → User sees success message (remains on page indefinitely)
 ```
 
 ### 2. Librarian Reviews Application

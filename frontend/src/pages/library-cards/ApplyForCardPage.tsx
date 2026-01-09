@@ -1,6 +1,5 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -10,7 +9,6 @@ import { hashPassword } from '@/utils/auth'
 import { PiIdentificationCard } from 'react-icons/pi'
 
 export function ApplyForCardPage() {
-  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -71,12 +69,6 @@ export function ApplyForCardPage() {
       console.log('Application submitted successfully!')
       setSuccess(true)
       setFormData({ username: '', password: '', confirmPassword: '' })
-
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        console.log('Redirecting to login...')
-        navigate('/login')
-      }, 3000)
     } catch (err) {
       console.error('Application submission failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit application')
@@ -106,9 +98,6 @@ export function ApplyForCardPage() {
             <p className="mt-4 text-gray-700">
               A librarian will review your application. You will be notified when your
               card is approved.
-            </p>
-            <p className="mt-2 text-sm text-gray-600">
-              Redirecting to login page...
             </p>
           </div>
         ) : (
