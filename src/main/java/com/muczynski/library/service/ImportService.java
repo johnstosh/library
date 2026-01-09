@@ -76,6 +76,7 @@ public class ImportService {
                 auth.setBirthCountry(aDto.getBirthCountry());
                 auth.setNationality(aDto.getNationality());
                 auth.setBriefBiography(aDto.getBriefBiography());
+                auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
                 auth = authorRepository.save(auth);
                 authMap.put(aDto.getName(), auth);
             }
@@ -235,6 +236,7 @@ public class ImportService {
                 book.setPlotSummary(bDto.getPlotSummary());
                 book.setRelatedWorks(bDto.getRelatedWorks());
                 book.setDetailedDescription(bDto.getDetailedDescription());
+                book.setGrokipediaUrl(bDto.getGrokipediaUrl());
                 if (bDto.getDateAddedToLibrary() != null) {
                     book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
                 } else if (book.getDateAddedToLibrary() == null) {
@@ -392,6 +394,7 @@ public class ImportService {
             aDto.setBirthCountry(author.getBirthCountry());
             aDto.setNationality(author.getNationality());
             aDto.setBriefBiography(author.getBriefBiography());
+            aDto.setGrokipediaUrl(author.getGrokipediaUrl());
             authDtos.add(aDto);
         }
         dto.setAuthors(authDtos);
@@ -434,6 +437,7 @@ public class ImportService {
             bDto.setPlotSummary(book.getPlotSummary());
             bDto.setRelatedWorks(book.getRelatedWorks());
             bDto.setDetailedDescription(book.getDetailedDescription());
+            bDto.setGrokipediaUrl(book.getGrokipediaUrl());
             bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
             bDto.setLastModified(book.getLastModified());
             bDto.setStatus(book.getStatus());
@@ -448,6 +452,7 @@ public class ImportService {
                 authorDto.setBirthCountry(book.getAuthor().getBirthCountry());
                 authorDto.setNationality(book.getAuthor().getNationality());
                 authorDto.setBriefBiography(book.getAuthor().getBriefBiography());
+                authorDto.setGrokipediaUrl(book.getAuthor().getGrokipediaUrl());
                 bDto.setAuthor(authorDto);
             }
             if (book.getLibrary() != null) {
@@ -469,6 +474,7 @@ public class ImportService {
                 bookDto.setPlotSummary(loan.getBook().getPlotSummary());
                 bookDto.setRelatedWorks(loan.getBook().getRelatedWorks());
                 bookDto.setDetailedDescription(loan.getBook().getDetailedDescription());
+                bookDto.setGrokipediaUrl(loan.getBook().getGrokipediaUrl());
                 bookDto.setDateAddedToLibrary(loan.getBook().getDateAddedToLibrary());
                 bookDto.setLastModified(loan.getBook().getLastModified());
                 bookDto.setStatus(loan.getBook().getStatus());
@@ -483,6 +489,7 @@ public class ImportService {
                     authorDto.setBirthCountry(loan.getBook().getAuthor().getBirthCountry());
                     authorDto.setNationality(loan.getBook().getAuthor().getNationality());
                     authorDto.setBriefBiography(loan.getBook().getAuthor().getBriefBiography());
+                    authorDto.setGrokipediaUrl(loan.getBook().getAuthor().getGrokipediaUrl());
                     bookDto.setAuthor(authorDto);
                 }
                 if (loan.getBook().getLibrary() != null) {

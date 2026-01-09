@@ -1,3 +1,6 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.dto.importdtos;
 
 import com.muczynski.library.domain.BookStatus;
@@ -13,6 +16,7 @@ public class ImportBookDto {
     private String plotSummary;
     private String relatedWorks;
     private String detailedDescription;
+    private String grokipediaUrl;
     private LocalDateTime dateAddedToLibrary;
     private LocalDateTime lastModified;
     private BookStatus status;

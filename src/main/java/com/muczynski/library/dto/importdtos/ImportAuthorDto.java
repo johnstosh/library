@@ -1,3 +1,6 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.dto.importdtos;
 
 import lombok.Data;
@@ -13,4 +16,5 @@ public class ImportAuthorDto {
     private String birthCountry;
     private String nationality;
     private String briefBiography;
+    private String grokipediaUrl;
 }
