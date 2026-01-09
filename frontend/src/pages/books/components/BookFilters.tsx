@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useUiStore, useBooksFilter } from '@/stores/uiStore'
 
-type FilterValue = 'all' | 'most-recent' | 'without-loc' | '3-letter-loc'
+type FilterValue = 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia'
 
 interface FilterOption {
   value: FilterValue
@@ -13,6 +13,7 @@ const filterOptions: FilterOption[] = [
   { value: 'most-recent', label: 'Most Recent Day' },
   { value: 'without-loc', label: 'Without LOC' },
   { value: '3-letter-loc', label: '3-Letter Call Numbers' },
+  { value: 'without-grokipedia', label: 'Without Grokipedia' },
 ]
 
 export function BookFilters() {

@@ -50,4 +50,28 @@ class BookIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
+
+    @Test
+    @WithMockUser
+    @Sql(scripts = "/data-integration-without-grokipedia.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void getBooksWithoutGrokipediaUrl_returnsFilteredBooks() throws Exception {
+        mockMvc.perform(get("/api/books/without-grokipedia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Book Without Grokipedia URL"))
+                .andExpect(jsonPath("$[0].grokipediaUrl").isEmpty())
+                .andExpect(jsonPath("$[1].title").value("Book With Empty Grokipedia URL"))
+                .andExpect(jsonPath("$[1].grokipediaUrl").value(""));
+    }
+
+    @Test
+    @WithMockUser
+    @Sql(scripts = "/data-integration-with-grokipedia.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void getBooksWithoutGrokipediaUrl_returnsEmpty_whenAllBooksHaveGrokipedia() throws Exception {
+        mockMvc.perform(get("/api/books/without-grokipedia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
 }

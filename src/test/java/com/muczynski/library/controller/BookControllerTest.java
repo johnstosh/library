@@ -318,6 +318,40 @@ class BookControllerTest {
     }
 
     @Test
+    @WithMockUser
+    void getBooksWithoutGrokipediaUrl() throws Exception {
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("Book Without Grokipedia URL");
+        book1.setGrokipediaUrl(null);
+        book1.setDateAddedToLibrary(LocalDateTime.now());
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("Another Book Without Grokipedia URL");
+        book2.setGrokipediaUrl("");
+        book2.setDateAddedToLibrary(LocalDateTime.now());
+
+        when(bookService.getBooksWithoutGrokipediaUrl()).thenReturn(Arrays.asList(book1, book2));
+
+        mockMvc.perform(get("/api/books/without-grokipedia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Book Without Grokipedia URL"))
+                .andExpect(jsonPath("$[1].title").value("Another Book Without Grokipedia URL"));
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksWithoutGrokipediaUrlEmpty() throws Exception {
+        when(bookService.getBooksWithoutGrokipediaUrl()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/books/without-grokipedia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void cloneBook() throws Exception {
         BookDto clonedDto = new BookDto();

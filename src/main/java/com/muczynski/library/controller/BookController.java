@@ -100,6 +100,18 @@ public class BookController {
         }
     }
 
+    @GetMapping("/without-grokipedia")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksWithoutGrokipediaUrl() {
+        try {
+            List<BookDto> books = bookService.getBooksWithoutGrokipediaUrl();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books without Grokipedia URL: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBookById(@PathVariable Long id) {

@@ -137,6 +137,14 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    public List<BookDto> getBooksWithoutGrokipediaUrl() {
+        return bookRepository.findBooksWithoutGrokipediaUrl().stream()
+                .map(bookMapper::toDto)
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
     public BookDto getBookById(Long id) {
         return bookRepository.findById(id)
                 .map(bookMapper::toDto)

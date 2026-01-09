@@ -70,6 +70,15 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Returns: Full `BookDto` objects
 - Useful for processing newly imported books
 
+### Books Without Grokipedia URL
+- Endpoint: `GET /api/books/without-grokipedia`
+- Authorization: Public (permitAll)
+- Radio button filter in Books page
+- Shows all books missing Grokipedia URL
+- Returns: Full `BookDto` objects
+- Query: `SELECT b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''`
+- Useful for identifying books that need Grokipedia article links
+
 ### All Books with LOC Status
 - Endpoint: `GET /api/loc-bulk-lookup/books`
 - Authorization: LIBRARIAN only
@@ -85,6 +94,7 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 
 ### Repository Layer
 - `BookRepository.findBooksWithoutLocNumber()` - Find books needing LOC numbers
+- `BookRepository.findBooksWithoutGrokipediaUrl()` - Find books without Grokipedia URL
 - Uses LEFT JOIN FETCH for performance
 
 ### Frontend
