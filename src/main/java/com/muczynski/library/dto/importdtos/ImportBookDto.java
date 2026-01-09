@@ -17,6 +17,7 @@ public class ImportBookDto {
     private String relatedWorks;
     private String detailedDescription;
     private String grokipediaUrl;
+    private String freeTextUrl;
     private LocalDateTime dateAddedToLibrary;
     private LocalDateTime lastModified;
     private BookStatus status;

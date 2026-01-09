@@ -34,6 +34,8 @@ public class Book {
 
     private String grokipediaUrl;
 
+    private String freeTextUrl;
+
     private LocalDateTime dateAddedToLibrary;
 
     private LocalDateTime lastModified;

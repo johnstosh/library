@@ -32,6 +32,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     relatedWorks: '',
     detailedDescription: '',
     grokipediaUrl: '',
+    freeTextUrl: '',
     status: BookStatus.ACTIVE as string,
     statusReason: '',
     locNumber: '',
@@ -59,6 +60,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         relatedWorks: book.relatedWorks || '',
         detailedDescription: book.detailedDescription || '',
         grokipediaUrl: book.grokipediaUrl || '',
+        freeTextUrl: book.freeTextUrl || '',
         status: book.status,
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
@@ -74,6 +76,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         relatedWorks: '',
         detailedDescription: '',
         grokipediaUrl: '',
+        freeTextUrl: '',
         status: BookStatus.ACTIVE,
         statusReason: '',
         locNumber: '',
@@ -172,6 +175,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         relatedWorks: formData.relatedWorks || undefined,
         detailedDescription: formData.detailedDescription || undefined,
         grokipediaUrl: formData.grokipediaUrl || undefined,
+        freeTextUrl: formData.freeTextUrl || undefined,
         status: formData.status as BookDto['status'],
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
@@ -316,6 +320,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
           placeholder="https://grokipedia.example.com/book/123"
           data-test="book-grokipedia-url"
+        />
+
+        <Input
+          label="Free Text URL"
+          value={formData.freeTextUrl}
+          onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
+          placeholder="https://www.gutenberg.org/ebooks/123"
+          data-test="book-free-text-url"
         />
 
         <div className="space-y-4">

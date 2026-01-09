@@ -199,6 +199,20 @@ export function BookViewPage() {
                   </a>
                 </div>
               )}
+              {book.freeTextUrl && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Free Online Text</p>
+                  <a
+                    href={book.freeTextUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    data-test="book-free-text-link"
+                  >
+                    Read Online
+                  </a>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-gray-500">Status</p>
                 <p className="text-gray-900">{formatBookStatus(book.status)}</p>

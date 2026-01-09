@@ -237,6 +237,7 @@ public class ImportService {
                 book.setRelatedWorks(bDto.getRelatedWorks());
                 book.setDetailedDescription(bDto.getDetailedDescription());
                 book.setGrokipediaUrl(bDto.getGrokipediaUrl());
+                book.setFreeTextUrl(bDto.getFreeTextUrl());
                 if (bDto.getDateAddedToLibrary() != null) {
                     book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
                 } else if (book.getDateAddedToLibrary() == null) {
@@ -438,6 +439,7 @@ public class ImportService {
             bDto.setRelatedWorks(book.getRelatedWorks());
             bDto.setDetailedDescription(book.getDetailedDescription());
             bDto.setGrokipediaUrl(book.getGrokipediaUrl());
+            bDto.setFreeTextUrl(book.getFreeTextUrl());
             bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
             bDto.setLastModified(book.getLastModified());
             bDto.setStatus(book.getStatus());
@@ -475,6 +477,7 @@ public class ImportService {
                 bookDto.setRelatedWorks(loan.getBook().getRelatedWorks());
                 bookDto.setDetailedDescription(loan.getBook().getDetailedDescription());
                 bookDto.setGrokipediaUrl(loan.getBook().getGrokipediaUrl());
+                bookDto.setFreeTextUrl(loan.getBook().getFreeTextUrl());
                 bookDto.setDateAddedToLibrary(loan.getBook().getDateAddedToLibrary());
                 bookDto.setLastModified(loan.getBook().getLastModified());
                 bookDto.setStatus(loan.getBook().getStatus());

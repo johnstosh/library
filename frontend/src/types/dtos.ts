@@ -66,6 +66,7 @@ export interface BookDto {
   relatedWorks?: string
   detailedDescription?: string
   grokipediaUrl?: string
+  freeTextUrl?: string
   dateAddedToLibrary?: string
   status: BookStatus
   statusReason?: string

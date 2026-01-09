@@ -80,7 +80,7 @@ The build.gradle test configuration only shows detailed output for failed tests 
 ### Domain Model
 **Core Entities:**
 - `Library` - Library branch information (name, hostname)
-- `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status
+- `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status, freeTextUrl
 - `Author` - Authors with biographical information
 - `Loan` - Book checkout tracking
 - `User` - Library patron/staff accounts with authority-based access (includes `libraryCardDesign` enum field)
