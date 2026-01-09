@@ -368,16 +368,16 @@ Benefits of URL-based routing:
 The navigation menu shows different items based on authentication status:
 
 **Unauthenticated Users (Public):**
-- Books (browse catalog)
-- Authors (browse authors)
 - Search (search library)
-- My Card (view/apply for library card)
 - Login (sign in button)
 
 **Authenticated Users:**
-- Books, Authors, Search, My Card (same as public)
+- Search (same as public)
+- Books (browse catalog)
+- Authors (browse authors)
 - Loans (view checkout history)
 - Settings (manage account)
+- My Card (view library card)
 - User info and Logout (right side of header)
 
 **Librarians Only:**
@@ -601,11 +601,11 @@ Photo thumbnails cached in IndexedDB (planned enhancement).
 
 ### Authorization Levels
 
-- **PUBLIC (Unauthenticated)**: Access to Books, Authors, Search, My Card (apply for card)
-- **USER**: Public access + Loans, Settings, My Card (download card)
+- **PUBLIC (Unauthenticated)**: Access to Search, Apply for Card
+- **USER**: Public access + Books, Authors, Loans, Settings, My Card (download card)
 - **LIBRARIAN**: Full access including Users, Libraries, Applications, Books from Feed, Data Management, Global Settings, Test Data
 
-Note: Books and Authors pages are publicly accessible to allow browsing the catalog without login.
+Note: Books and Authors menu items are only visible to authenticated users. Unauthenticated users see only Search and Login.
 
 ### Access Control
 

@@ -65,12 +65,6 @@ export function Navigation() {
 
             <div className="hidden md:flex items-center space-x-2">
               {/* Public navigation items (always visible) */}
-              <NavLink to="/books" data-test="nav-books">
-                Books
-              </NavLink>
-              <NavLink to="/authors" data-test="nav-authors">
-                Authors
-              </NavLink>
               <NavLink to="/search" data-test="nav-search">
                 Search
               </NavLink>
@@ -78,6 +72,12 @@ export function Navigation() {
               {/* Authenticated user navigation items */}
               {isAuthenticated && (
                 <>
+                  <NavLink to="/books" data-test="nav-books">
+                    Books
+                  </NavLink>
+                  <NavLink to="/authors" data-test="nav-authors">
+                    Authors
+                  </NavLink>
                   <NavLink to="/loans" data-test="nav-loans">
                     Loans
                   </NavLink>
@@ -165,12 +165,6 @@ export function Navigation() {
       <div className="md:hidden border-t border-gray-200">
         <div className="px-2 pt-2 pb-3 space-y-1">
           {/* Public navigation items (always visible) */}
-          <NavLink to="/books" data-test="nav-books-mobile">
-            Books
-          </NavLink>
-          <NavLink to="/authors" data-test="nav-authors-mobile">
-            Authors
-          </NavLink>
           <NavLink to="/search" data-test="nav-search-mobile">
             Search
           </NavLink>
@@ -178,6 +172,12 @@ export function Navigation() {
           {/* Authenticated user navigation items */}
           {isAuthenticated && (
             <>
+              <NavLink to="/books" data-test="nav-books-mobile">
+                Books
+              </NavLink>
+              <NavLink to="/authors" data-test="nav-authors-mobile">
+                Authors
+              </NavLink>
               <NavLink to="/loans" data-test="nav-loans-mobile">
                 Loans
               </NavLink>
