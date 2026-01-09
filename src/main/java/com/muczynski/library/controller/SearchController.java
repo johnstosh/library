@@ -27,12 +27,16 @@ public class SearchController {
 
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<SearchResponseDto> search(@RequestParam String query, @RequestParam int page, @RequestParam int size) {
+    public ResponseEntity<SearchResponseDto> search(
+            @RequestParam String query,
+            @RequestParam int page,
+            @RequestParam int size,
+            @RequestParam(defaultValue = "IN_LIBRARY") String searchType) {
         try {
-            SearchResponseDto results = searchService.search(query, page, size);
+            SearchResponseDto results = searchService.search(query, page, size, searchType);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
-            logger.warn("Failed to perform search with query '{}', page {}, size {}: {}", query, page, size, e.getMessage(), e);
+            logger.warn("Failed to perform search with query '{}', page {}, size {}, searchType {}: {}", query, page, size, searchType, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }

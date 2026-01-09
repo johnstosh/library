@@ -77,13 +77,13 @@ class SearchServiceTest {
         authorDto.setId(1L);
         authorDto.setName("Test Author");
 
-        when(bookRepository.findByTitleContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
         // Act
-        SearchResponseDto result = searchService.search(query, page, size);
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
 
         // Assert
         assertNotNull(result);
@@ -114,11 +114,11 @@ class SearchServiceTest {
         Page<Book> emptyBookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
         Page<Author> emptyAuthorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
 
-        when(bookRepository.findByTitleContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(emptyBookPage);
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(emptyBookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(emptyAuthorPage);
 
         // Act
-        SearchResponseDto result = searchService.search(query, page, size);
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
 
         // Assert
         assertNotNull(result);
@@ -131,19 +131,19 @@ class SearchServiceTest {
     @Test
     void searchWithEmptyQueryThrowsException() {
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search("", 0, 20));
+        assertThrows(IllegalArgumentException.class, () -> searchService.search("", 0, 20, "IN_LIBRARY"));
     }
 
     @Test
     void searchWithNullQueryThrowsException() {
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search(null, 0, 20));
+        assertThrows(IllegalArgumentException.class, () -> searchService.search(null, 0, 20, "IN_LIBRARY"));
     }
 
     @Test
     void searchWithWhitespaceQueryThrowsException() {
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search("   ", 0, 20));
+        assertThrows(IllegalArgumentException.class, () -> searchService.search("   ", 0, 20, "IN_LIBRARY"));
     }
 
     @Test
@@ -160,13 +160,13 @@ class SearchServiceTest {
         List<Author> authorList = Arrays.asList(new Author());
         Page<Author> authorPage = new PageImpl<>(authorList, pageable, 11); // 11 total, 2 pages
 
-        when(bookRepository.findByTitleContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(any(Book.class))).thenReturn(new BookDto());
         when(authorMapper.toDto(any(Author.class))).thenReturn(new AuthorDto());
 
         // Act
-        SearchResponseDto result = searchService.search(query, page, size);
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
 
         // Assert
         assertNotNull(result);
@@ -179,5 +179,103 @@ class SearchServiceTest {
         assertEquals(11, result.getAuthorPage().getTotalElements());
         assertEquals(1, result.getAuthorPage().getCurrentPage());
         assertEquals(10, result.getAuthorPage().getPageSize());
+    }
+
+    @Test
+    void searchWithSearchTypeOnline() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Online Book");
+        book.setFreeTextUrl("https://example.com/book");
+        List<Book> bookList = Arrays.asList(book);
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Online Book");
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "ONLINE");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Online Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithSearchTypeAll() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Any Book");
+        List<Book> bookList = Arrays.asList(book);
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Any Book");
+
+        when(bookRepository.findByTitleContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "ALL");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Any Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithSearchTypeInLibrary() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Library Book");
+        book.setLocNumber("PS3511.I9 G7");
+        List<Book> bookList = Arrays.asList(book);
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Library Book");
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Library Book", result.getBooks().get(0).getTitle());
     }
 }

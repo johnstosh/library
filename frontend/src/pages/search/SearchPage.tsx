@@ -4,7 +4,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
-import { useSearch } from '@/api/search'
+import { useSearch, SearchType } from '@/api/search'
 import { formatBookStatus } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -14,35 +14,60 @@ export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') || ''
   const urlPage = parseInt(searchParams.get('page') || '0', 10)
+  const urlSearchType = (searchParams.get('type') || 'IN_LIBRARY') as SearchType
 
   // Local input state (for typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
+  const [searchType, setSearchType] = useState<SearchType>(urlSearchType)
   const pageSize = 20
 
-  // Sync input value when URL changes (e.g., browser back/forward)
+  // Sync input value and searchType when URL changes (e.g., browser back/forward)
   useEffect(() => {
     setInputValue(urlQuery)
   }, [urlQuery])
 
-  const { data, isLoading, error } = useSearch(urlQuery, urlPage, pageSize)
+  useEffect(() => {
+    setSearchType(urlSearchType)
+  }, [urlSearchType])
+
+  const { data, isLoading, error } = useSearch(urlQuery, urlPage, pageSize, urlSearchType)
   const isLibrarian = useIsLibrarian()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (inputValue.trim()) {
-      setSearchParams({ q: inputValue.trim() })
+      const params: Record<string, string> = { q: inputValue.trim() }
+      if (searchType !== 'IN_LIBRARY') {
+        params.type = searchType
+      }
+      setSearchParams(params)
     }
   }
 
   const handleClear = () => {
     setInputValue('')
+    setSearchType('IN_LIBRARY')
     setSearchParams({})
+  }
+
+  const handleSearchTypeChange = (newType: SearchType) => {
+    setSearchType(newType)
+    if (urlQuery) {
+      const params: Record<string, string> = { q: urlQuery }
+      if (newType !== 'IN_LIBRARY') {
+        params.type = newType
+      }
+      setSearchParams(params)
+    }
   }
 
   const handlePageChange = (newPage: number) => {
     const params: Record<string, string> = { q: urlQuery }
     if (newPage > 0) {
       params.page = String(newPage)
+    }
+    if (urlSearchType !== 'IN_LIBRARY') {
+      params.type = urlSearchType
     }
     setSearchParams(params)
   }
@@ -91,6 +116,46 @@ export function SearchPage() {
               Clear
             </Button>
           )}
+        </div>
+
+        {/* Search Type Radio Buttons */}
+        <div className="flex gap-6 mt-4" data-test="search-type-options">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="searchType"
+              value="ONLINE"
+              checked={searchType === 'ONLINE'}
+              onChange={() => handleSearchTypeChange('ONLINE')}
+              className="w-4 h-4 text-blue-600"
+              data-test="search-type-online"
+            />
+            <span className="text-gray-700">Online books only</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="searchType"
+              value="ALL"
+              checked={searchType === 'ALL'}
+              onChange={() => handleSearchTypeChange('ALL')}
+              className="w-4 h-4 text-blue-600"
+              data-test="search-type-all"
+            />
+            <span className="text-gray-700">Search all</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="searchType"
+              value="IN_LIBRARY"
+              checked={searchType === 'IN_LIBRARY'}
+              onChange={() => handleSearchTypeChange('IN_LIBRARY')}
+              className="w-4 h-4 text-blue-600"
+              data-test="search-type-in-library"
+            />
+            <span className="text-gray-700">In-library materials</span>
+          </label>
         </div>
       </form>
 

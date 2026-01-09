@@ -9,6 +9,10 @@ Returns search results for books and authors matching the query.
 - `query` (string, required) - Search term to match against book titles and author names
 - `page` (int, required) - Zero-based page number
 - `size` (int, required) - Number of results per page
+- `searchType` (string, optional) - Filter for book search scope (default: `IN_LIBRARY`):
+  - `ONLINE` - Only books with a free text URL
+  - `ALL` - All books (no filtering)
+  - `IN_LIBRARY` - Only books with a LOC call number
 
 **Response:** SearchResponseDto containing:
 ```json
@@ -46,8 +50,9 @@ Returns search results for books and authors matching the query.
 **Use Case:**
 - Public search across library catalog
 - Case-insensitive partial matching on book titles and author names
+- Filter books by availability: online only, all, or in-library materials (default)
 - Paginated results for both books and authors
-- Powers `/search` page with real-time search
+- Powers `/search` page with real-time search and search type radio buttons
 
 ---
 

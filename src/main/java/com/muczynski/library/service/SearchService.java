@@ -39,12 +39,24 @@ public class SearchService {
     private AuthorMapper authorMapper;
 
     @Transactional(readOnly = true)
-    public SearchResponseDto search(String query, int page, int size) {
+    public SearchResponseDto search(String query, int page, int size, String searchType) {
         if (query == null || query.trim().isEmpty()) {
             throw new IllegalArgumentException("Query cannot be empty");
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<Book> bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+        Page<Book> bookPage;
+        switch (searchType) {
+            case "ONLINE":
+                bookPage = bookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(query, pageable);
+                break;
+            case "IN_LIBRARY":
+                bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable);
+                break;
+            case "ALL":
+            default:
+                bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+                break;
+        }
         Page<Author> authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);
 
         List<BookDto> books = bookPage.getContent().stream()

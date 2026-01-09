@@ -56,6 +56,10 @@ Returns paginated search results for books and authors.
 - `query` (string, required) - Search term to match against book titles and author names
 - `page` (int, required) - Zero-based page number
 - `size` (int, required) - Number of results per page (default: 20)
+- `searchType` (string, optional) - Filter for book search scope:
+  - `ONLINE` - Only books with a free text URL (online books)
+  - `ALL` - All books (no filtering)
+  - `IN_LIBRARY` - Only books with a LOC call number (in-library materials) - **default**
 
 **Response**: `SearchResponseDto` containing books, authors, and pagination info for each
 
@@ -77,8 +81,14 @@ Returns paginated search results for books and authors.
 1. **Case-Insensitive Matching**: Uses SQL `ILIKE` (PostgreSQL) or case-insensitive matching (H2)
 2. **Partial Matching**: Searches for the query string anywhere within the field
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
-4. **Repository Methods**:
-   - `BookRepository.findByTitleContainingIgnoreCase(query, pageable)`
+4. **Search Type Filtering**: Books can be filtered by availability type:
+   - `ONLINE` - Books with `freeTextUrl` IS NOT NULL (online books with free text URL)
+   - `ALL` - No filtering (all books)
+   - `IN_LIBRARY` - Books with `locNumber` IS NOT NULL (in-library materials with LOC call number) - **default**
+5. **Repository Methods**:
+   - `BookRepository.findByTitleContainingIgnoreCase(query, pageable)` - for ALL
+   - `BookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(query, pageable)` - for ONLINE
+   - `BookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable)` - for IN_LIBRARY
    - `AuthorRepository.findByNameContainingIgnoreCase(query, pageable)`
 
 ### Fields Searched
@@ -110,15 +120,18 @@ Returns paginated search results for books and authors.
 
 Search state is persisted in the URL for better UX and shareability:
 
-**URL Pattern**: `/search?q=<query>&page=<page>`
+**URL Pattern**: `/search?q=<query>&page=<page>&type=<searchType>`
 
 **Parameters**:
 - `q` (string) - Search query text
 - `page` (number, optional) - Zero-based page number (omitted when 0)
+- `type` (string, optional) - Search type filter: `ONLINE`, `ALL`, or `IN_LIBRARY` (omitted when `IN_LIBRARY`, the default)
 
 **Examples**:
-- `/search?q=Augustine` - Search for "Augustine" on page 1
-- `/search?q=City%20of%20God&page=2` - Search for "City of God" on page 3
+- `/search?q=Augustine` - Search for "Augustine" in in-library materials
+- `/search?q=City%20of%20God&page=2` - Search for "City of God" on page 3 in in-library materials
+- `/search?q=Bible&type=ONLINE` - Search for "Bible" in online books only
+- `/search?q=Shakespeare&type=ALL` - Search for "Shakespeare" in all books
 
 **Benefits**:
 - Bookmarkable search URLs
@@ -138,7 +151,15 @@ Search state is persisted in the URL for better UX and shareability:
 - Clear button resets search and clears URL parameters
 - Search executes on form submit (Enter key or Search button click)
 
-#### 2. Results Display
+#### 2. Search Type Radio Buttons
+Radio buttons below the search input to filter book search results:
+- **Online books only** - Books with a free text URL (`freeTextUrl IS NOT NULL`)
+- **Search all** - All books (no filtering)
+- **In-library materials** - Books with a LOC call number (`locNumber IS NOT NULL`) - **default**
+
+Note: The search type filter only affects book results; author search is unaffected.
+
+#### 3. Results Display
 
 **Books Section**:
 - Table showing matching books with columns:
@@ -161,7 +182,7 @@ Search state is persisted in the URL for better UX and shareability:
 - Click on author name to view author details
 - "No authors found" message when empty
 
-#### 3. Empty State
+#### 4. Empty State
 - Displayed when no query has been entered yet
 - Prompts user to enter a search term
 - No API calls until user searches

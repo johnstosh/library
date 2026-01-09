@@ -20,11 +20,13 @@ export interface SearchResponse {
   }
 }
 
-export function useSearch(query: string, page = 0, size = 20) {
+export type SearchType = 'ONLINE' | 'ALL' | 'IN_LIBRARY'
+
+export function useSearch(query: string, page = 0, size = 20, searchType: SearchType = 'IN_LIBRARY') {
   return useQuery({
-    queryKey: ['search', query, page, size],
+    queryKey: ['search', query, page, size, searchType],
     queryFn: () =>
-      api.get<SearchResponse>(`/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`, {
+      api.get<SearchResponse>(`/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}`, {
         requireAuth: false,
       }),
     enabled: query.trim().length > 0,
