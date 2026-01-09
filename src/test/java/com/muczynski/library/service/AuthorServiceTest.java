@@ -14,10 +14,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -101,6 +104,45 @@ class AuthorServiceTest {
 
         assertEquals(authorDto, result);
         verify(authorRepository).save(author);
+    }
+
+    @Test
+    void getAuthorsWithoutGrokipedia() {
+        Author authorWithUrl = new Author();
+        authorWithUrl.setId(1L);
+        authorWithUrl.setName("Author With Url");
+        authorWithUrl.setGrokipediaUrl("https://grokipedia.example.com/author/1");
+
+        Author authorWithoutUrl = new Author();
+        authorWithoutUrl.setId(2L);
+        authorWithoutUrl.setName("Author Without Url");
+        authorWithoutUrl.setGrokipediaUrl(null);
+
+        Author authorWithEmptyUrl = new Author();
+        authorWithEmptyUrl.setId(3L);
+        authorWithEmptyUrl.setName("Author Empty Url");
+        authorWithEmptyUrl.setGrokipediaUrl("  ");
+
+        when(authorRepository.findAll()).thenReturn(Arrays.asList(authorWithUrl, authorWithoutUrl, authorWithEmptyUrl));
+
+        AuthorDto dtoWithoutUrl = new AuthorDto();
+        dtoWithoutUrl.setId(2L);
+        dtoWithoutUrl.setName("Author Without Url");
+
+        AuthorDto dtoWithEmptyUrl = new AuthorDto();
+        dtoWithEmptyUrl.setId(3L);
+        dtoWithEmptyUrl.setName("Author Empty Url");
+
+        when(authorMapper.toDto(authorWithoutUrl)).thenReturn(dtoWithoutUrl);
+        when(authorMapper.toDto(authorWithEmptyUrl)).thenReturn(dtoWithEmptyUrl);
+        when(bookRepository.countByAuthorId(2L)).thenReturn(3L);
+        when(bookRepository.countByAuthorId(3L)).thenReturn(1L);
+
+        List<AuthorDto> result = authorService.getAuthorsWithoutGrokipedia();
+
+        assertEquals(2, result.size());
+        assertTrue(result.stream().anyMatch(a -> a.getId() == 2L));
+        assertTrue(result.stream().anyMatch(a -> a.getId() == 3L));
     }
 
 }

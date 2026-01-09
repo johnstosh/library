@@ -180,4 +180,22 @@ public class AuthorsUITest {
             }
         }
     }
+
+    @Test
+    @DisplayName("Should filter authors without Grokipedia URL")
+    void shouldFilterAuthorsWithoutGrokipediaUrl() {
+        // Click on "Without Grokipedia URL" filter radio button
+        page.click("[data-test='filter-without-grokipedia']");
+
+        // Wait for filter to be applied and list to reload
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Verify the filter is selected
+        Locator filterRadio = page.locator("[data-test='filter-without-grokipedia']");
+        assertThat(filterRadio).isChecked();
+
+        // The authors table should be visible (may have rows or be empty)
+        Locator authorsTable = page.locator("table");
+        assertThat(authorsTable).isVisible();
+    }
 }

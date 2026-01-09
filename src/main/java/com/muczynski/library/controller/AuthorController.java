@@ -100,6 +100,18 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/without-grokipedia")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAuthorsWithoutGrokipedia() {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsWithoutGrokipedia();
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors without grokipedia: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}/photos")
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<PhotoDto>> getPhotosByAuthorId(@PathVariable Long id) {

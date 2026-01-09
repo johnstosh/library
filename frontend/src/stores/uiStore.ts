@@ -18,7 +18,7 @@ interface UiState {
 
   // Filter state per feature
   booksFilter: 'all' | 'most-recent' | 'without-loc'
-  authorsFilter: 'all' | 'without-description' | 'zero-books'
+  authorsFilter: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent'
   loansShowAll: boolean
 
   // Actions

@@ -26,4 +26,17 @@ Returns authors that have no associated books.
 
 ---
 
+## GET /api/authors/without-grokipedia
+Returns authors that are missing a Grokipedia URL.
+
+**Authentication:** Public (`permitAll()`)
+
+**Response:** Array of AuthorDto with `bookCount`
+
+**Use Case:**
+- Filter to find authors needing Grokipedia links
+- Systematic data enrichment workflow
+
+---
+
 **Related:** AuthorController.java, AuthorService.java, AuthorDto.java

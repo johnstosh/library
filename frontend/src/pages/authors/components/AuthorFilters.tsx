@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useUiStore, useAuthorsFilter } from '@/stores/uiStore'
 
-type FilterValue = 'all' | 'without-description' | 'zero-books' | 'most-recent'
+type FilterValue = 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent'
 
 interface FilterOption {
   value: FilterValue
@@ -12,6 +12,7 @@ const filterOptions: FilterOption[] = [
   { value: 'all', label: 'All Authors' },
   { value: 'most-recent', label: 'Most Recent Day' },
   { value: 'without-description', label: 'Without Description' },
+  { value: 'without-grokipedia', label: 'Without Grokipedia URL' },
   { value: 'zero-books', label: 'Zero Books' },
 ]
 

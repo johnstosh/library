@@ -5,7 +5,7 @@ import { queryKeys } from '@/config/queryClient'
 import type { AuthorDto, BookDto } from '@/types/dtos'
 
 // Hook to get all authors with server-side filtering
-export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'most-recent') {
+export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
   return useQuery({
     queryKey: queryKeys.authors.list(filter),
     queryFn: async () => {
@@ -14,6 +14,8 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
         return api.get<AuthorDto[]>('/authors/without-description')
       } else if (filter === 'zero-books') {
         return api.get<AuthorDto[]>('/authors/zero-books')
+      } else if (filter === 'without-grokipedia') {
+        return api.get<AuthorDto[]>('/authors/without-grokipedia')
       } else if (filter === 'most-recent') {
         return api.get<AuthorDto[]>('/authors/most-recent-day')
       }

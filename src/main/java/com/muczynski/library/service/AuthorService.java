@@ -169,6 +169,27 @@ public class AuthorService {
     }
 
     /**
+     * Get authors without a Grokipedia URL
+     */
+    public List<AuthorDto> getAuthorsWithoutGrokipedia() {
+        return authorRepository.findAll().stream()
+                .filter(author -> author.getGrokipediaUrl() == null || author.getGrokipediaUrl().trim().isEmpty())
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Get authors who have books added on the most recent day
      */
     public List<AuthorDto> getAuthorsFromMostRecentDay() {

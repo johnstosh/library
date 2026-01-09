@@ -148,6 +148,19 @@ class AuthorControllerTest {
     }
 
     @Test
+    @WithMockUser
+    void getAuthorsWithoutGrokipedia() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author Without Grokipedia URL");
+        authorDto.setBookCount(3L);
+        when(authorService.getAuthorsWithoutGrokipedia()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/without-grokipedia"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void updateAuthor() throws Exception {
         AuthorDto inputDto = new AuthorDto();
