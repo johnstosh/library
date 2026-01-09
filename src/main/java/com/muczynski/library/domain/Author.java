@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 @Entity
+@Table(indexes = {
+    @Index(name = "idx_author_name", columnList = "name")
+})
 @Getter
 @Setter
 public class Author {

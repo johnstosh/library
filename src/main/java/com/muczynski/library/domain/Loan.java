@@ -11,6 +11,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(indexes = {
+    @Index(name = "idx_loan_book_return", columnList = "book_id, return_date"),
+    @Index(name = "idx_loan_user_return", columnList = "user_id, return_date"),
+    @Index(name = "idx_loan_due_date", columnList = "due_date")
+})
 @Getter
 @Setter
 public class Loan {

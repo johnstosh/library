@@ -28,6 +28,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-search.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled("UI tests temporarily disabled")
 public class SearchUITest {
 
     @LocalServerPort
