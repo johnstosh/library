@@ -295,4 +295,93 @@ class AuthorControllerTest {
                         .file(file))
                 .andExpect(status().isCreated());
     }
+
+    // Tests for unauthenticated access (no @WithMockUser annotation)
+
+    @Test
+    void getAuthorById_unauthenticated_returnsOk() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Test Author");
+        when(authorService.getAuthorById(1L)).thenReturn(authorDto);
+
+        mockMvc.perform(get("/api/authors/1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAllAuthors_unauthenticated_returnsOk() throws Exception {
+        AuthorDto dto = new AuthorDto();
+        dto.setId(1L);
+        dto.setName("Test Author");
+        when(authorService.getAllAuthors()).thenReturn(Collections.singletonList(dto));
+
+        mockMvc.perform(get("/api/authors"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getPhotosByAuthorId_unauthenticated_returnsOk() throws Exception {
+        PhotoDto photoDto = new PhotoDto();
+        photoDto.setId(1L);
+        when(photoService.getPhotosByAuthorId(1L)).thenReturn(Collections.singletonList(photoDto));
+
+        mockMvc.perform(get("/api/authors/1/photos"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getBooksByAuthorId_unauthenticated_returnsOk() throws Exception {
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Test Book");
+        when(bookService.getBooksByAuthorId(1L)).thenReturn(Collections.singletonList(bookDto));
+
+        mockMvc.perform(get("/api/authors/1/books"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorsWithoutDescription_unauthenticated_returnsOk() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author Without Biography");
+        when(authorService.getAuthorsWithoutDescription()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/without-description"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorsWithZeroBooks_unauthenticated_returnsOk() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author With No Books");
+        when(authorService.getAuthorsWithZeroBooks()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/zero-books"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorsFromMostRecentDay_unauthenticated_returnsOk() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Recent Author");
+        when(authorService.getAuthorsFromMostRecentDay()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/most-recent-day"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorsWithoutGrokipedia_unauthenticated_returnsOk() throws Exception {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Author Without Grokipedia");
+        when(authorService.getAuthorsWithoutGrokipedia()).thenReturn(Collections.singletonList(authorDto));
+
+        mockMvc.perform(get("/api/authors/without-grokipedia"))
+                .andExpect(status().isOk());
+    }
 }
