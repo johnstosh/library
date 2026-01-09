@@ -378,13 +378,23 @@ The navigation menu shows different items based on authentication status:
 - Books, Authors, Search, My Card (same as public)
 - Loans (view checkout history)
 - Settings (manage account)
-- Logout (sign out button)
+- User info and Logout (right side of header)
 
 **Librarians Only:**
 - All authenticated user items, plus:
 - Libraries, Users, Applications
 - Books from Feed, Data Management
 - Global Settings, Test Data
+
+**User Menu Layout (Desktop):**
+The user menu is positioned on the right side of the navigation header. User information (username, SSO badge, Librarian badge) is displayed above the Logout button in a vertical stack, right-aligned:
+```
+        [username] [SSO] [Librarian]
+                          [Logout]
+```
+
+**User Menu Layout (Mobile):**
+On mobile, the user info and Logout button appear in the expandable mobile menu, with username and badges displayed above the Logout button, separated by a border from the navigation links.
 
 ### 4. State Management Pattern
 

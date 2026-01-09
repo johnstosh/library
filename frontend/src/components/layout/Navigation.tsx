@@ -123,25 +123,24 @@ export function Navigation() {
           </div>
 
           {/* Right side - User menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center">
             {isAuthenticated ? (
-              <>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700" data-test="nav-username">
                     {user?.username}
-                    {user?.ssoSubjectId && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        SSO
-                      </span>
-                    )}
                   </span>
+                  {user?.ssoSubjectId && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      SSO
+                    </span>
+                  )}
                   {isLibrarian && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                       Librarian
                     </span>
                   )}
                 </div>
-
                 <Button
                   variant="ghost"
                   size="sm"
@@ -150,7 +149,7 @@ export function Navigation() {
                 >
                   Logout
                 </Button>
-              </>
+              </div>
             ) : (
               <Link to="/login">
                 <Button variant="primary" size="sm" data-test="nav-login">
@@ -196,6 +195,34 @@ export function Navigation() {
             <NavLink to="/login" data-test="nav-login-mobile">
               Login
             </NavLink>
+          )}
+          {isAuthenticated && (
+            <div className="border-t border-gray-200 mt-2 pt-2">
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 text-sm text-gray-700" data-test="nav-username-mobile">
+                  <span>{user?.username}</span>
+                  {user?.ssoSubjectId && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      SSO
+                    </span>
+                  )}
+                  {isLibrarian && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                      Librarian
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="w-full justify-start px-3"
+                data-test="nav-logout-mobile"
+              >
+                Logout
+              </Button>
+            </div>
           )}
 
           {isLibrarian && (
