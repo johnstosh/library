@@ -5,7 +5,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Spinner } from '@/components/progress/Spinner'
 import { useProcessSingleBook, type SavedBookDto } from '@/api/books-from-feed'
 import { useDeleteBook } from '@/api/books'
-import { PiMagicWand, PiTrash } from 'react-icons/pi'
+import { PiEye, PiMagicWand, PiTrash } from 'react-icons/pi'
+import { useNavigate } from 'react-router-dom'
 
 interface SavedBooksTableProps {
   books: SavedBookDto[]
@@ -14,6 +15,7 @@ interface SavedBooksTableProps {
 }
 
 export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTableProps) {
+  const navigate = useNavigate()
   const [processingBookId, setProcessingBookId] = useState<number | null>(null)
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null)
 
@@ -117,6 +119,15 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/books/${book.id}`)}
+                      data-test={`view-book-${book.id}`}
+                      title="View Details"
+                    >
+                      <PiEye className="w-4 h-4 text-gray-600" />
+                    </Button>
                     {book.needsProcessing && (
                       <Button
                         variant="outline"

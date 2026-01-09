@@ -10,9 +10,11 @@ import {
   useDeleteApplication,
   type AppliedDto,
 } from '@/api/library-cards'
-import { PiCheckCircle, PiTrash } from 'react-icons/pi'
+import { PiCheckCircle, PiEye, PiTrash } from 'react-icons/pi'
+import { useNavigate } from 'react-router-dom'
 
 export function ApplicationsPage() {
+  const navigate = useNavigate()
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
@@ -84,6 +86,14 @@ export function ApplicationsPage() {
             keyExtractor={(app) => app.id}
             actions={(app) => (
               <>
+                <button
+                  onClick={() => navigate(`/library-cards/applications/${app.id}`)}
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  data-test={`view-application-${app.id}`}
+                  title="View Details"
+                >
+                  <PiEye className="w-5 h-5" />
+                </button>
                 <Button
                   variant="primary"
                   size="sm"

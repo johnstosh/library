@@ -9,7 +9,7 @@ import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
-import { PiCopy } from 'react-icons/pi'
+import { PiCopy, PiEye } from 'react-icons/pi'
 import { useAuthStore } from '@/stores/authStore'
 
 interface BookTableProps {
@@ -123,6 +123,17 @@ export function BookTable({
         onRowClick={onView}
         actions={(book) => (
           <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onView(book)
+              }}
+              className="text-gray-600 hover:text-gray-900"
+              data-test={`view-book-${book.id}`}
+              title="View Details"
+            >
+              <PiEye className="w-5 h-5" />
+            </button>
             {isLibrarian && (
               <>
                 <button

@@ -2,7 +2,7 @@
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import type { UserDto } from '@/types/dtos'
-import { PiPencil, PiTrash } from 'react-icons/pi'
+import { PiEye, PiTrash } from 'react-icons/pi'
 
 interface UserTableProps {
   users: UserDto[]
@@ -105,11 +105,11 @@ export function UserTable({
               e.stopPropagation()
               onView(user)
             }}
-            className="text-blue-600 hover:text-blue-900 transition-colors"
+            className="text-gray-600 hover:text-gray-900 transition-colors"
             data-test={`view-user-${user.id}`}
-            title="View"
+            title="View Details"
           >
-            <PiPencil className="w-5 h-5" />
+            <PiEye className="w-5 h-5" />
           </button>
           <button
             onClick={(e) => {

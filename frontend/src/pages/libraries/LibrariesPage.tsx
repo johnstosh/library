@@ -11,6 +11,7 @@ import {
   useDeleteLibrary,
 } from '@/api/libraries'
 import type { LibraryDto } from '@/types/dtos'
+import { PiEye } from 'react-icons/pi'
 
 export function LibrariesPage() {
   const navigate = useNavigate()
@@ -114,6 +115,14 @@ export function LibrariesPage() {
             keyExtractor={(library) => library.id}
             actions={(library) => (
               <>
+                <button
+                  onClick={() => handleView(library)}
+                  className="text-gray-600 hover:text-gray-900"
+                  data-test={`view-library-details-${library.id}`}
+                  title="View Details"
+                >
+                  <PiEye className="w-5 h-5" />
+                </button>
                 <button
                   onClick={() => handleEdit(library)}
                   className="text-blue-600 hover:text-blue-900"

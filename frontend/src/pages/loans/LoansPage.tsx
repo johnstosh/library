@@ -10,6 +10,7 @@ import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
 import { formatDate } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
+import { PiEye } from 'react-icons/pi'
 
 export function LoansPage() {
   const navigate = useNavigate()
@@ -156,6 +157,14 @@ export function LoansPage() {
             keyExtractor={(loan) => loan.id}
             actions={(loan) => (
               <>
+                <button
+                  onClick={() => handleViewLoan(loan)}
+                  className="text-gray-600 hover:text-gray-900"
+                  data-test={`view-loan-details-${loan.id}`}
+                  title="View Details"
+                >
+                  <PiEye className="w-5 h-5" />
+                </button>
                 {!loan.returnDate && (
                   <button
                     onClick={() => setReturnLoanId(loan.id)}

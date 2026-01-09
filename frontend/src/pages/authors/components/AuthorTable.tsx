@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteAuthor } from '@/api/authors'
 import { truncate } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
+import { PiEye } from 'react-icons/pi'
 
 interface AuthorTableProps {
   authors: AuthorDto[]
@@ -93,6 +94,17 @@ export function AuthorTable({
         onRowClick={onView}
         actions={(author) => (
           <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onView(author)
+              }}
+              className="text-gray-600 hover:text-gray-900"
+              data-test={`view-author-${author.id}`}
+              title="View Details"
+            >
+              <PiEye className="w-5 h-5" />
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation()
