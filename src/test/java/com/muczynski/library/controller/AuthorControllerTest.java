@@ -189,6 +189,16 @@ class AuthorControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
+    void deleteAuthor_WithAssociatedBooks_ReturnsConflict() throws Exception {
+        doThrow(new RuntimeException("Cannot delete author because it has 3 associated books."))
+                .when(authorService).deleteAuthor(1L);
+
+        mockMvc.perform(delete("/api/authors/1"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
     void deleteBulkAuthors() throws Exception {
         List<Long> authorIds = List.of(1L, 2L, 3L);
         doNothing().when(authorService).deleteBulkAuthors(authorIds);

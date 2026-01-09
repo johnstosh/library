@@ -258,14 +258,15 @@ public class AuthorController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteAuthor(@PathVariable Long id) {
+    public ResponseEntity<?> deleteAuthor(@PathVariable Long id) {
         try {
             authorService.deleteAuthor(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             logger.warn("Failed to delete author ID {}: {}", id, e.getMessage(), e);
             if (e.getMessage().contains("associated books")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Collections.singletonMap("message", e.getMessage()));
             }
             throw e;
         }

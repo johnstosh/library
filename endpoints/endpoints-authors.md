@@ -39,4 +39,23 @@ Returns authors that are missing a Grokipedia URL.
 
 ---
 
+## DELETE /api/authors/{id}
+Deletes an author by ID.
+
+**Authentication:** Requires `LIBRARIAN` authority
+
+**Path Parameters:**
+- `id` - Author ID to delete
+
+**Response:**
+- `204 No Content` - Author deleted successfully
+- `409 Conflict` - Author has associated books and cannot be deleted
+  - Body: `{ "message": "Cannot delete author because it has N associated books." }`
+
+**Use Case:**
+- Remove authors from the system
+- Authors with books must have their books reassigned or deleted first
+
+---
+
 **Related:** AuthorController.java, AuthorService.java, AuthorDto.java
