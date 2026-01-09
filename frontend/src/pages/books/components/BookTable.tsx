@@ -9,7 +9,7 @@ import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
-import { PiMagnifyingGlass, PiCopy } from 'react-icons/pi'
+import { PiCopy } from 'react-icons/pi'
 import { useAuthStore } from '@/stores/authStore'
 
 interface BookTableProps {
@@ -135,7 +135,7 @@ export function BookTable({
                   title="Lookup LOC"
                   disabled={lookupSingleBook.isPending}
                 >
-                  <PiMagnifyingGlass className="w-5 h-5" />
+                  <span className="text-lg">🗃️</span>
                 </button>
                 <button
                   onClick={(e) => {

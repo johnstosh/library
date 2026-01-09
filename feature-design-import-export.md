@@ -30,6 +30,16 @@ The JSON export includes:
   2. Export photos to Google Photos using `/api/photo-export/export-all` (creates cloud backup with permanent IDs)
   3. To restore: Import JSON first, then import photos from Google Photos using `/api/photo-export/import-all`
 
+### Database Statistics Display
+The Data Management page displays real-time database statistics showing:
+- **Libraries** - Total number of library branches
+- **Books** - Total number of books in the catalog
+- **Authors** - Total number of authors
+- **Users** - Total number of user accounts
+- **Loans** - Total number of loan records
+
+These statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
+
 ### Export Format
 - DTO: `ImportRequestDto`
 - Contains collections of each entity type

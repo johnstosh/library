@@ -13,7 +13,7 @@ import { useCreateBook, useUpdateBook, useSuggestLocNumber } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiMagnifyingGlass, PiSparkle } from 'react-icons/pi'
+import { PiSparkle } from 'react-icons/pi'
 
 interface BookFormProps {
   isOpen: boolean
@@ -333,7 +333,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
                 onClick={handleLookupLoc}
                 isLoading={isLookingUp}
                 disabled={isLoading || isLookingUp || isSuggesting}
-                leftIcon={<PiMagnifyingGlass />}
+                leftIcon={<span>🗃️</span>}
                 data-test="lookup-loc-button"
                 className="mb-0"
               >

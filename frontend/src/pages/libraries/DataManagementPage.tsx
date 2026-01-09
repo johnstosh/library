@@ -166,6 +166,32 @@ export function DataManagementPage() {
           </div>
         </div>
 
+        {/* Database Statistics */}
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-5 gap-4 text-center">
+            <div data-test="stat-libraries">
+              <div className="text-2xl font-bold text-gray-900">{libraries.length}</div>
+              <div className="text-sm text-gray-600">Libraries</div>
+            </div>
+            <div data-test="stat-books">
+              <div className="text-2xl font-bold text-gray-900">{books.length}</div>
+              <div className="text-sm text-gray-600">Books</div>
+            </div>
+            <div data-test="stat-authors">
+              <div className="text-2xl font-bold text-gray-900">{authors.length}</div>
+              <div className="text-sm text-gray-600">Authors</div>
+            </div>
+            <div data-test="stat-users">
+              <div className="text-2xl font-bold text-gray-900">{users.length}</div>
+              <div className="text-sm text-gray-600">Users</div>
+            </div>
+            <div data-test="stat-loans">
+              <div className="text-2xl font-bold text-gray-900">{loans.length}</div>
+              <div className="text-sm text-gray-600">Loans</div>
+            </div>
+          </div>
+        </div>
+
         <div className="p-6 grid md:grid-cols-2 gap-6">
           {/* Export JSON */}
           <div className="border border-gray-200 rounded-lg p-6">

@@ -6,7 +6,7 @@ import { useDeleteBooks } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { PiMagnifyingGlass, PiFilePdf } from 'react-icons/pi'
+import { PiFilePdf } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -92,7 +92,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleBulkLookup}
               isLoading={lookupBulk.isPending}
               disabled={lookupBulk.isPending}
-              leftIcon={<PiMagnifyingGlass />}
+              leftIcon={<span>🗃️</span>}
               data-test="bulk-lookup-loc"
             >
               Lookup LOC
