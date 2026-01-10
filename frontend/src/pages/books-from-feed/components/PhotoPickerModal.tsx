@@ -29,7 +29,9 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
 
   const createSession = useCreatePickerSession()
   const { data: sessionStatus } = usePickerSessionStatus(sessionId)
-  const { data: mediaItemsData, refetch: refetchMediaItems } = usePickerMediaItems(sessionId)
+  // Only fetch media items after user has finished selecting (mediaItemsSet === true)
+  const mediaItemsReady = sessionStatus?.mediaItemsSet === true
+  const { data: mediaItemsData } = usePickerMediaItems(sessionId, mediaItemsReady)
   const savePhotos = useSavePhotosFromPicker()
 
   // Reset state when modal closes
@@ -42,7 +44,7 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
     }
   }, [isOpen])
 
-  // Handle session status updates
+  // Handle session status updates - when user finishes selecting photos
   useEffect(() => {
     if (sessionStatus?.mediaItemsSet && step === 'waiting-for-selection') {
       // Close the picker window if it's still open
@@ -50,14 +52,26 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
         pickerWindow.close()
       }
       setStep('fetching-photos')
-      refetchMediaItems()
+      // Note: mediaItemsData will automatically fetch now that mediaItemsReady is true
     }
-  }, [sessionStatus, step, pickerWindow, refetchMediaItems])
+  }, [sessionStatus, step, pickerWindow])
 
-  // Handle fetched media items
+  // Handle fetched media items - transform Picker API format to backend format
   useEffect(() => {
     if (mediaItemsData && step === 'fetching-photos') {
-      handleSavePhotos(mediaItemsData.mediaItems)
+      // Transform Picker API response to match backend expectations
+      // Picker API returns: {id, createTime, type, mediaFile: {baseUrl, filename, mimeType}}
+      // Backend expects: {id, name, url, thumbnailUrl, mimeType, lastEditedUtc}
+      const transformedPhotos = mediaItemsData.mediaItems.map((item: any) => ({
+        id: item.id,
+        name: item.mediaFile?.filename || item.id,
+        url: item.mediaFile?.baseUrl,
+        thumbnailUrl: item.mediaFile?.baseUrl,
+        description: '',
+        mimeType: item.mediaFile?.mimeType,
+        lastEditedUtc: item.createTime || new Date().toISOString(),
+      }))
+      handleSavePhotos(transformedPhotos)
     }
   }, [mediaItemsData, step])
 
@@ -75,8 +89,11 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
       const left = (window.screen.width - width) / 2
       const top = (window.screen.height - height) / 2
 
+      // Append /autoclose to automatically close the picker window after selection (web best practice)
+      const pickerUriWithAutoClose = session.pickerUri + '/autoclose'
+
       const popup = window.open(
-        session.pickerUri,
+        pickerUriWithAutoClose,
         'GooglePhotosPicker',
         `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,menubar=no`
       )

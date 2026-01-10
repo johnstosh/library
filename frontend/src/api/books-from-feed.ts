@@ -90,14 +90,16 @@ export function usePickerSessionStatus(sessionId: string | null) {
 }
 
 // Get media items from picker session
-export function usePickerMediaItems(sessionId: string | null) {
+// Note: mediaItemsReady should be true only after the user has finished selecting photos
+// (i.e., when session status shows mediaItemsSet === true)
+export function usePickerMediaItems(sessionId: string | null, mediaItemsReady: boolean = false) {
   return useQuery({
     queryKey: ['books-from-feed', 'picker-media', sessionId],
     queryFn: () =>
       api.get<{ mediaItems: PhotoFromPickerDto[]; count: number }>(
         `/books-from-feed/picker-session/${sessionId}/media-items`
       ),
-    enabled: !!sessionId,
+    enabled: !!sessionId && mediaItemsReady,
   })
 }
 
