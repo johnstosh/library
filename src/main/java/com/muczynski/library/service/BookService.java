@@ -13,6 +13,7 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -115,16 +116,51 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
-    public List<BookDto> getBooksFromMostRecentDay() {
-        LocalDateTime maxDateTime = bookRepository.findMaxDateAddedToLibrary();
-        if (maxDateTime == null) {
+    /**
+     * Get books from most recent day OR with temporary titles (date-pattern titles).
+     * Uses efficient projection query - no N+1 queries.
+     * Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start of title.
+     *
+     * @return List of SavedBookDto with all fields needed by both Books page and Books from Feed page
+     */
+    public List<SavedBookDto> getBooksFromMostRecentDay() {
+        return bookRepository.findSavedBooksWithProjection().stream()
+                .map(projection -> SavedBookDto.builder()
+                        .id(projection.getId())
+                        .title(projection.getTitle())
+                        .author(projection.getAuthorName())
+                        .library(projection.getLibraryName())
+                        .photoCount(projection.getPhotoCount())
+                        .needsProcessing(isTemporaryTitle(projection.getTitle()))
+                        .locNumber(projection.getLocNumber())
+                        .status(projection.getStatus())
+                        .grokipediaUrl(projection.getGrokipediaUrl())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Check if a title is a temporary title (starts with date pattern YYYY-M-D or YYYY-MM-DD).
+     */
+    public static boolean isTemporaryTitle(String title) {
+        if (title == null || title.isEmpty()) {
+            return false;
+        }
+        return title.matches("^\\d{4}-\\d{1,2}-\\d{1,2}.*");
+    }
+
+    /**
+     * Get books with temporary titles (date-pattern titles) for batch processing.
+     * Uses efficient query to find IDs first, then loads full DTOs only for matching books.
+     *
+     * @return List of BookDto for books with temporary titles
+     */
+    public List<BookDto> getBooksWithTemporaryTitles() {
+        List<Long> ids = bookRepository.findBookIdsWithTemporaryTitles();
+        if (ids.isEmpty()) {
             return List.of();
         }
-        // Get the date portion only (start of day)
-        LocalDateTime startOfDay = maxDateTime.toLocalDate().atStartOfDay();
-        LocalDateTime endOfDay = startOfDay.plusDays(1);
-
-        return bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay).stream()
+        return bookRepository.findAllById(ids).stream()
                 .map(bookMapper::toDto)
                 .collect(Collectors.toList());
     }

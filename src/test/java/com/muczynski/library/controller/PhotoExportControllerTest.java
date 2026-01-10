@@ -507,4 +507,70 @@ class PhotoExportControllerTest {
                 .andExpect(jsonPath("$[?(@.hasImage == true)]", hasSize(2)))
                 .andExpect(jsonPath("$[?(@.hasImage == false)]", hasSize(2)));
     }
+
+    // ===========================================
+    // Status Derivation Tests
+    // Verify that status shown in list matches stats counts
+    // ===========================================
+
+    @Test
+    @WithMockUser(username = "1")
+    void getAllPhotosWithExportStatus_derivesStatusFromActualData() throws Exception {
+        // Photo with checksum but no permanentId (and stored status null) -> should show PENDING
+        Photo pendingPhoto = createPhotoWithImage(testBook, "Pending export");
+        pendingPhoto.setExportStatus(null);  // Clear stored status to test derivation
+        photoRepository.save(pendingPhoto);
+
+        // Photo with permanentId (even if stored status is null) -> should show COMPLETED
+        Photo exportedPhoto = createPhotoWithImage(testBook, "Exported");
+        exportedPhoto.setPermanentId("permanent-id-derived");
+        exportedPhoto.setExportStatus(null);  // Clear stored status to test derivation
+        photoRepository.save(exportedPhoto);
+
+        // Photo with no checksum and no permanentId -> should show NO_IMAGE
+        Photo noImagePhoto = new Photo();
+        noImagePhoto.setBook(testBook);
+        noImagePhoto.setCaption("No image");
+        noImagePhoto.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        noImagePhoto.setPhotoOrder(0);
+        photoRepository.save(noImagePhoto);
+
+        // Photo with FAILED status -> should preserve FAILED
+        Photo failedPhoto = createPhotoWithImage(testBook, "Failed");
+        failedPhoto.setExportStatus(Photo.ExportStatus.FAILED);
+        failedPhoto.setExportErrorMessage("Test failure");
+        photoRepository.save(failedPhoto);
+
+        mockMvc.perform(get("/api/photo-export/photos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[?(@.caption == 'Pending export')].exportStatus", contains("PENDING")))
+                .andExpect(jsonPath("$[?(@.caption == 'Exported')].exportStatus", contains("COMPLETED")))
+                .andExpect(jsonPath("$[?(@.caption == 'No image')].exportStatus", contains("NO_IMAGE")))
+                .andExpect(jsonPath("$[?(@.caption == 'Failed')].exportStatus", contains("FAILED")));
+    }
+
+    @Test
+    @WithMockUser(username = "1")
+    void getAllPhotosWithExportStatus_statusMatchesStatsCount() throws Exception {
+        // Create 2 pending export photos (have checksum, no permanentId)
+        createPhotoWithImage(testBook, "Pending 1");
+        createPhotoWithImage(testBook, "Pending 2");
+
+        // Create 1 exported photo (has permanentId)
+        createPhotoWithPermanentId(testBook, "permanent-1");
+
+        // Get stats and list
+        mockMvc.perform(get("/api/photo-export/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendingExport", is(2)))
+                .andExpect(jsonPath("$.exported", is(1)));
+
+        // Verify list status matches: 2 PENDING, 1 COMPLETED
+        mockMvc.perform(get("/api/photo-export/photos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[?(@.exportStatus == 'PENDING')]", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.exportStatus == 'COMPLETED')]", hasSize(1)));
+    }
 }

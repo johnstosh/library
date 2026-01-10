@@ -9,6 +9,10 @@ export interface SavedBookDto {
   library?: string
   photoCount: number
   needsProcessing: boolean
+  // Additional fields for Books page table
+  locNumber?: string
+  status?: string
+  grokipediaUrl?: string
 }
 
 export interface PickerSessionDto {

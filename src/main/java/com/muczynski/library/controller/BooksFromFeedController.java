@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.SavedBookDto;
+import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.BooksFromFeedService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,16 +23,22 @@ public class BooksFromFeedController {
     private BooksFromFeedService booksFromFeedService;
 
     @Autowired
+    private BookService bookService;
+
+    @Autowired
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
 
     /**
-     * Get saved books that need processing (those with temporary timestamp titles)
-     * @return List of books that need processing
+     * Get books from most recent day OR with temporary titles (date-pattern titles).
+     * Uses efficient projection query - no N+1 queries.
+     * Delegates to BookService.getBooksFromMostRecentDay().
+     *
+     * @return List of SavedBookDto with id, title, author, library, photoCount, needsProcessing
      */
     @GetMapping("/saved-books")
-    public ResponseEntity<List<Map<String, Object>>> getSavedBooks() {
+    public ResponseEntity<List<SavedBookDto>> getSavedBooks() {
         try {
-            List<Map<String, Object>> books = booksFromFeedService.getSavedBooks();
+            List<SavedBookDto> books = bookService.getBooksFromMostRecentDay();
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(List.of());

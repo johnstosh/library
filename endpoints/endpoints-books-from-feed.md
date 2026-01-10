@@ -1,18 +1,42 @@
 # Books from Feed Endpoints
 
 ## GET /api/books-from-feed/saved-books
-Returns books saved from Google Photos that need processing.
+Returns books from the most recent day OR books with temporary titles (date-pattern titles like "2025-01-10_14:30:00").
+
+**Note:** This endpoint delegates to `BookService.getBooksFromMostRecentDay()` and returns the same data as `/api/books/most-recent-day`. Both endpoints use efficient database projections to avoid N+1 query issues.
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
-**Response:** Array of saved book data including:
-- Photo information
-- Processing status
-- AI-generated metadata (if processed)
+**Response:** Array of `SavedBookDto`:
+```json
+{
+  "id": 123,
+  "title": "Book Title",
+  "author": "Author Name",
+  "library": "Library Name",
+  "photoCount": 2,
+  "needsProcessing": false,
+  "locNumber": "PS3566.O5",
+  "status": "ACTIVE",
+  "grokipediaUrl": "https://..."
+}
+```
+
+**Fields:**
+- `id` - Book ID
+- `title` - Book title (temporary titles start with date pattern YYYY-MM-DD)
+- `author` - Author name (optional)
+- `library` - Library name (optional)
+- `photoCount` - Number of photos associated with book
+- `needsProcessing` - true if title matches temporary date pattern
+- `locNumber` - Library of Congress call number (optional)
+- `status` - Book status (ACTIVE, ON_ORDER, LOST)
+- `grokipediaUrl` - Grokipedia URL (optional)
 
 **Use Case:**
 - View books imported from Google Photos feed
-- Identify books needing AI processing
+- Identify books needing AI processing (needsProcessing=true)
+- View recently added books
 
 ---
 

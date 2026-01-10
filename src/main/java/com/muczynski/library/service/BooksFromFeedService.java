@@ -82,16 +82,10 @@ public class BooksFromFeedService {
 
     /**
      * Check if a title is a temporary title from feed.
-     * Recognizes titles starting with date pattern: NNNN-NN-NN or NNNN-N-N (variable digits for month/day)
-     * Examples: 2025-01-15_14:30:45, 2025-1-5_08:00:00
+     * Delegates to BookService.isTemporaryTitle() for consistent behavior.
      */
     public static boolean isTemporaryTitle(String title) {
-        if (title == null || title.isEmpty()) {
-            return false;
-        }
-        // Pattern: starts with YYYY-M-D or YYYY-MM-DD (variable digits for month and day)
-        // Regex: ^\d{4}-\d{1,2}-\d{1,2}
-        return title.matches("^\\d{4}-\\d{1,2}-\\d{1,2}.*");
+        return BookService.isTemporaryTitle(title);
     }
 
     /**
@@ -117,82 +111,6 @@ public class BooksFromFeedService {
             logger.error("SHA-256 algorithm not available", e);
             return null;
         }
-    }
-
-    /**
-     * Determine book status based on whether it has been enriched with data
-     * This is advisory only and doesn't affect available actions
-     */
-    private String determineBookStatus(BookDto book) {
-        // Check if book has been enriched with data
-        boolean hasPlotSummary = book.getPlotSummary() != null && !book.getPlotSummary().trim().isEmpty();
-        boolean hasDetailedDescription = book.getDetailedDescription() != null && !book.getDetailedDescription().trim().isEmpty();
-        boolean hasPublicationYear = book.getPublicationYear() != null;
-        boolean hasPublisher = book.getPublisher() != null && !book.getPublisher().trim().isEmpty();
-
-        // If book has any enriched data, consider it processed
-        if (hasPlotSummary || hasDetailedDescription || hasPublicationYear || hasPublisher) {
-            return "processed";
-        }
-
-        // Otherwise, it's pending
-        return "pending";
-    }
-
-
-    /**
-     * Get saved books: books from most recent datetime plus books with temporary titles,
-     * sorted by datetime (most recent first)
-     * @return List of books with basic info (id, title, firstPhotoId)
-     */
-    public List<Map<String, Object>> getSavedBooks() {
-        logger.info("Getting saved books: most recent datetime plus temporary titles");
-
-        List<BookDto> allBooks = bookService.getAllBooks();
-        List<Map<String, Object>> savedBooks = new ArrayList<>();
-
-        // Find the most recent datetime
-        LocalDateTime mostRecentDateTime = null;
-        for (BookDto book : allBooks) {
-            if (book.getDateAddedToLibrary() != null) {
-                if (mostRecentDateTime == null || book.getDateAddedToLibrary().isAfter(mostRecentDateTime)) {
-                    mostRecentDateTime = book.getDateAddedToLibrary();
-                }
-            }
-        }
-
-        // Get the date part of most recent datetime for comparison
-        java.time.LocalDate mostRecentDate = mostRecentDateTime != null ? mostRecentDateTime.toLocalDate() : null;
-
-        // Filter books: temporary title OR from most recent date
-        for (BookDto book : allBooks) {
-            boolean isTemporary = isTemporaryTitle(book.getTitle());
-            boolean isFromMostRecentDate = mostRecentDate != null
-                    && book.getDateAddedToLibrary() != null
-                    && book.getDateAddedToLibrary().toLocalDate().equals(mostRecentDate);
-
-            if (isTemporary || isFromMostRecentDate) {
-                Map<String, Object> bookInfo = new HashMap<>();
-                bookInfo.put("id", book.getId());
-                bookInfo.put("title", book.getTitle());
-                bookInfo.put("author", book.getAuthor()); // Author name for display
-                bookInfo.put("firstPhotoId", book.getFirstPhotoId());
-                bookInfo.put("firstPhotoChecksum", book.getFirstPhotoChecksum()); // For thumbnail caching
-                bookInfo.put("locNumber", book.getLocNumber()); // LOC number for display
-
-                // Determine status based on whether book has been enriched with data (advisory only)
-                String status = determineBookStatus(book);
-                bookInfo.put("status", status);
-
-                bookInfo.put("dateAdded", book.getDateAddedToLibrary() != null
-                        ? book.getDateAddedToLibrary().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                        : null);
-                savedBooks.add(bookInfo);
-            }
-        }
-
-        logger.info("Found {} books (most recent date + temporary titles)", savedBooks.size());
-        return savedBooks;
     }
 
     /**
@@ -262,10 +180,8 @@ public class BooksFromFeedService {
         logger.info("Processing photos for user ID: {}", userId);
 
         // Find all temporary books from feed (those with temporary titles)
-        List<BookDto> allBooks = bookService.getAllBooks();
-        List<BookDto> tempBooks = allBooks.stream()
-                .filter(book -> isTemporaryTitle(book.getTitle()))
-                .toList();
+        // Uses efficient database query instead of loading all books
+        List<BookDto> tempBooks = bookService.getBooksWithTemporaryTitles();
 
         logger.info("Found {} temporary books to process", tempBooks.size());
 

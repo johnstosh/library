@@ -31,7 +31,7 @@ public class User implements Serializable {
 
     private String username;
 
-    @Column(length = 60)
+    @Column(length = 64)
     private String password;
 
     private String xaiApiKey = "";

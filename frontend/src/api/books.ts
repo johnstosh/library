@@ -4,6 +4,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto } from '@/types/dtos'
+import type { SavedBookDto } from './books-from-feed'
+import type { BookStatus } from '@/types/enums'
+
+/**
+ * Convert SavedBookDto to BookDto for display in the Books table.
+ * The most-recent-day endpoint returns SavedBookDto (efficient projection).
+ */
+function savedBookToBookDto(saved: SavedBookDto): BookDto {
+  return {
+    id: saved.id,
+    title: saved.title,
+    author: saved.author,
+    library: saved.library,
+    locNumber: saved.locNumber,
+    status: (saved.status as BookStatus) || 'ACTIVE',
+    grokipediaUrl: saved.grokipediaUrl,
+    lastModified: '', // Not needed for table display
+  }
+}
 
 // Hook to get all books with optimized lastModified caching
 export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia') {
@@ -34,7 +53,9 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
     queryFn: async () => {
       // Apply filter on backend for special filters
       if (filter === 'most-recent') {
-        return api.get<BookDto[]>('/books/most-recent-day')
+        // most-recent-day returns SavedBookDto (efficient projection), convert to BookDto
+        const savedBooks = await api.get<SavedBookDto[]>('/books/most-recent-day')
+        return savedBooks.map(savedBookToBookDto)
       } else if (filter === 'without-loc') {
         return api.get<BookDto[]>('/books/without-loc')
       } else if (filter === '3-letter-loc') {

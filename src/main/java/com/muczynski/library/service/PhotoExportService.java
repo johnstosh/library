@@ -485,7 +485,24 @@ public class PhotoExportService {
                 PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
                 photoInfo.setId(photo.getId());
                 photoInfo.setCaption(photo.getCaption());
-                photoInfo.setExportStatus(photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
+                // Derive status from actual data to match stats counts exactly
+                // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
+                String derivedStatus;
+                if (photo.getExportStatus() == Photo.ExportStatus.FAILED) {
+                    derivedStatus = "FAILED";
+                } else if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
+                    derivedStatus = "IN_PROGRESS";
+                } else if (photo.getPermanentId() != null && !photo.getPermanentId().isEmpty()) {
+                    // Has permanentId = exported (regardless of stored exportStatus)
+                    derivedStatus = "COMPLETED";
+                } else if (photo.getImageChecksum() != null) {
+                    // Has image but no permanentId = pending export
+                    derivedStatus = "PENDING";
+                } else {
+                    // No image and no permanentId = no data to export
+                    derivedStatus = "NO_IMAGE";
+                }
+                photoInfo.setExportStatus(derivedStatus);
                 photoInfo.setExportedAt(photo.getExportedAt());
                 photoInfo.setPermanentId(photo.getPermanentId());
                 photoInfo.setExportErrorMessage(photo.getExportErrorMessage());

@@ -350,6 +350,8 @@ export function DataManagementPage() {
         return 'bg-red-100 text-red-800'
       case 'IN_PROGRESS':
         return 'bg-blue-100 text-blue-800'
+      case 'NO_IMAGE':
+        return 'bg-gray-100 text-gray-800'
       case 'PENDING':
       default:
         return 'bg-yellow-100 text-yellow-800'
@@ -365,6 +367,8 @@ export function DataManagementPage() {
         return 'Failed'
       case 'IN_PROGRESS':
         return 'In Progress'
+      case 'NO_IMAGE':
+        return 'No Image'
       case 'PENDING':
       default:
         return 'Pending'

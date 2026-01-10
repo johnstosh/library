@@ -62,13 +62,17 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Returns: Full `BookDto` objects
 - Query: `SELECT b WHERE b.locNumber IS NULL OR b.locNumber = ''`
 
-### Most Recent Day
+### Most Recent Day (+ Temporary Titles)
 - Endpoint: `GET /api/books/most-recent-day`
+- Also accessible via: `GET /api/books-from-feed/saved-books` (requires LIBRARIAN)
 - Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
-- Shows books added on the most recent date
-- Returns: Full `BookDto` objects
-- Useful for processing newly imported books
+- Shows books added on the most recent date OR books with temporary titles
+- Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start (e.g., "2025-01-10_14:30:00")
+- Returns: `SavedBookDto` objects (efficient projection, no N+1 queries)
+  - Includes: id, title, author, library, photoCount, needsProcessing, locNumber, status, grokipediaUrl
+  - `needsProcessing` is true for temporary title books
+- Useful for processing newly imported books from Google Photos feed
 
 ### Books Without Grokipedia URL
 - Endpoint: `GET /api/books/without-grokipedia`

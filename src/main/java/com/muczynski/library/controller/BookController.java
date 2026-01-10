@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
@@ -81,11 +82,16 @@ public class BookController {
         }
     }
 
+    /**
+     * Get books from most recent day OR with temporary titles (date-pattern titles).
+     * Uses efficient projection query - no N+1 queries.
+     * Returns SavedBookDto with id, title, author, library, photoCount, needsProcessing.
+     */
     @GetMapping("/most-recent-day")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksFromMostRecentDay() {
         try {
-            List<BookDto> books = bookService.getBooksFromMostRecentDay();
+            List<SavedBookDto> books = bookService.getBooksFromMostRecentDay();
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books from most recent day: {}", e.getMessage(), e);

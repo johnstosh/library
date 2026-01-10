@@ -129,6 +129,14 @@ The Data Management page includes a "Photo Import/Export Status" section with:
 - Pending Import - photos with permanentId but no local data (gray)
 - Failed - photos with export errors (red)
 
+**Status Derivation Logic**:
+The photo status displayed in the list is derived from actual data to ensure it matches the statistics counts exactly:
+1. **FAILED** - if `exportStatus == FAILED` (preserves failure for troubleshooting)
+2. **IN_PROGRESS** - if `exportStatus == IN_PROGRESS` (preserves in-progress state)
+3. **COMPLETED** - if photo has `permanentId` (regardless of stored exportStatus)
+4. **PENDING** - if photo has `imageChecksum` but no `permanentId` (has image, needs export)
+5. **NO_IMAGE** - if photo has neither `imageChecksum` nor `permanentId` (no data to export)
+
 **Action Buttons**:
 - **Export All Pending Photos** - batch upload pending photos to Google Photos
 - **Import All Pending Photos** - batch download photos from Google Photos
@@ -138,7 +146,7 @@ The Data Management page includes a "Photo Import/Export Status" section with:
 - Photo thumbnail
 - Title/Author (book title + author OR author name)
 - LOC Call Number (formatted for spine display)
-- Status badge (Completed/Failed/In Progress/Pending)
+- Status badge (Completed/Failed/In Progress/Pending/No Image)
 - Exported At timestamp
 - Permanent ID (truncated with tooltip)
 - Actions per photo:

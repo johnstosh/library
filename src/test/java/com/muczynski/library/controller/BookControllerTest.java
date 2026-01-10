@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AskGrok;
@@ -274,23 +275,38 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksFromMostRecentDay() throws Exception {
-        LocalDateTime recentDate = LocalDateTime.now();
-        BookDto book1 = new BookDto();
-        book1.setId(1L);
-        book1.setTitle("Recent Book 1");
-        book1.setLocNumber("PS3566.O5");
-        book1.setDateAddedToLibrary(recentDate);
+        // getBooksFromMostRecentDay now returns SavedBookDto (efficient projection)
+        // and includes both most recent day books AND temporary title books
+        SavedBookDto book1 = SavedBookDto.builder()
+                .id(1L)
+                .title("Recent Book 1")
+                .author("Author 1")
+                .library("Library 1")
+                .photoCount(2L)
+                .needsProcessing(false)
+                .locNumber("PS3566.O5")
+                .status("ACTIVE")
+                .build();
 
-        BookDto book2 = new BookDto();
-        book2.setId(2L);
-        book2.setTitle("Recent Book 2");
-        book2.setLocNumber("BX1378.2");
-        book2.setDateAddedToLibrary(recentDate);
+        SavedBookDto book2 = SavedBookDto.builder()
+                .id(2L)
+                .title("2025-01-10_14:30:00") // Temporary title - needsProcessing
+                .author(null)
+                .library("Library 1")
+                .photoCount(1L)
+                .needsProcessing(true)
+                .locNumber(null)
+                .status("ACTIVE")
+                .build();
 
         when(bookService.getBooksFromMostRecentDay()).thenReturn(Arrays.asList(book1, book2));
 
         mockMvc.perform(get("/api/books/most-recent-day"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].needsProcessing").value(false))
+                .andExpect(jsonPath("$[1].id").value(2))
+                .andExpect(jsonPath("$[1].needsProcessing").value(true));
     }
 
     @Test
