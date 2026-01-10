@@ -105,6 +105,45 @@ These statistics are displayed in a grid format below the "Database Export/Impor
 - **Per-photo operations**: Can sync individual photos or all photos in bulk
 - **Status tracking**: Photo entity tracks sync status with permanent ID field
 
+### React UI (Photo Import/Export Status Section)
+The Data Management page includes a "Photo Import/Export Status" section with:
+
+**Statistics Cards** (6-column grid):
+- Total Photos - total count
+- Exported - photos uploaded to Google Photos (green)
+- Imported - photos downloaded from Google Photos (blue)
+- Pending Export - photos with local data but no permanentId (yellow)
+- Pending Import - photos with permanentId but no local data (gray)
+- Failed - photos with export errors (red)
+
+**Action Buttons**:
+- **Export All Pending Photos** - batch upload pending photos to Google Photos
+- **Import All Pending Photos** - batch download photos from Google Photos
+- **Refresh Status** - reload statistics and photo list
+
+**Photo Details Table** with columns:
+- Photo thumbnail
+- Title/Author (book title + author OR author name)
+- LOC Call Number (formatted for spine display)
+- Status badge (Completed/Failed/In Progress/Pending)
+- Exported At timestamp
+- Permanent ID (truncated with tooltip)
+- Actions per photo:
+  - Export (if hasImage && !permanentId)
+  - Import (if permanentId && !hasImage)
+  - View in Google Photos (if permanentId)
+  - Verify (if permanentId)
+  - Unlink (if permanentId)
+  - Delete
+
+**Data-test Attributes**:
+- `photo-export-section` - main section wrapper
+- `photos-header` - section title
+- `export-all-photos-btn`, `import-all-photos-btn`, `refresh-photos-btn`
+- `export-stats` - statistics grid
+- `stats-total`, `stats-exported`, `stats-imported`, `stats-pending-export`, `stats-pending-import`, `stats-failed`
+- `photos-table`, `photos-table-body`
+
 ## LOC Bulk Lookup Import/Export
 
 ### Purpose
