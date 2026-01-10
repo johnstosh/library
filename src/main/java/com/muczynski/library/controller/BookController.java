@@ -347,13 +347,13 @@ public class BookController {
 
     @PutMapping("/{id}/book-by-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<BookDto> generateBookByPhoto(@PathVariable Long id) {
+    public ResponseEntity<?> generateBookByPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateTempBook(id);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to generate book by photo for ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 

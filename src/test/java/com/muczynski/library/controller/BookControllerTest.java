@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -434,5 +435,38 @@ class BookControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bookIds)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookByPhoto() throws Exception {
+        BookDto updatedBook = new BookDto();
+        updatedBook.setId(1L);
+        updatedBook.setTitle("AI Generated Title");
+        updatedBook.setAuthorId(1L);
+
+        when(bookService.generateTempBook(1L)).thenReturn(updatedBook);
+
+        mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("AI Generated Title"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void bookByPhoto_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookByPhoto_returnsErrorMessage() throws Exception {
+        when(bookService.generateTempBook(1L))
+                .thenThrow(new RuntimeException("xAI API key not configured for user ID: 1"));
+
+        mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("xAI API key not configured for user ID: 1"));
     }
 }

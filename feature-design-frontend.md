@@ -110,8 +110,9 @@ frontend/src/
 │   │       ├── BookFilters.tsx          # Filter radio buttons
 │   │       ├── BookTable.tsx            # Books table
 │   │       ├── BookFormPage.tsx         # Create/Edit form (page-based)
-│   │       ├── BulkActionsToolbar.tsx   # Bulk operations
-│   │       └── LocLookupResultsModal.tsx # LOC lookup results
+│   │       ├── BulkActionsToolbar.tsx   # Bulk operations (LOC, Grokipedia, Labels, Book from Image, Delete)
+│   │       ├── LocLookupResultsModal.tsx # LOC lookup results
+│   │       └── BookFromImageResultsModal.tsx # Book from Image results
 │   │
 │   ├── authors/             # Authors feature
 │   │   ├── AuthorsPage.tsx   # Authors list page

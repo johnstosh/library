@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { BookFilters } from './components/BookFilters'
 import { BookTable } from './components/BookTable'
@@ -55,9 +55,16 @@ export function BooksPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Books</h1>
         {isLibrarian && (
-          <Button variant="primary" onClick={handleAddBook} data-test="add-book">
-            Add Book
-          </Button>
+          <div className="flex gap-2">
+            <Link to="/books-from-feed">
+              <Button variant="outline" data-test="books-from-feed">
+                Books from Feed
+              </Button>
+            </Link>
+            <Button variant="primary" onClick={handleAddBook} data-test="add-book">
+              Add Book
+            </Button>
+          </div>
         )}
       </div>
 

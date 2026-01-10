@@ -2,18 +2,22 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useDeleteBooks } from '@/api/books'
+import { useDeleteBooks, useBulkBookFromImage } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
+import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
+import { PiCamera } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
 }
+
+export type BookFromImageResult = { id: number; success: boolean; book?: { title: string }; error?: string }
 
 export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -21,11 +25,14 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
   const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
   const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
+  const [showBookFromImageResults, setShowBookFromImageResults] = useState(false)
+  const [bookFromImageResults, setBookFromImageResults] = useState<BookFromImageResult[]>([])
   const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
   const lookupGrokipedia = useLookupBulkBooksGrokipedia()
+  const bulkBookFromImage = useBulkBookFromImage()
 
   const handleBulkDelete = async () => {
     try {
@@ -78,6 +85,16 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       alert('Failed to generate labels PDF. Please try again.')
     } finally {
       setIsGeneratingLabels(false)
+    }
+  }
+
+  const handleBookFromImage = async () => {
+    try {
+      const results = await bulkBookFromImage.mutateAsync(Array.from(selectedIds))
+      setBookFromImageResults(results)
+      setShowBookFromImageResults(true)
+    } catch (error) {
+      console.error('Failed to process books from images:', error)
     }
   }
 
@@ -135,6 +152,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               Generate Labels
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBookFromImage}
+              isLoading={bulkBookFromImage.isPending}
+              disabled={bulkBookFromImage.isPending}
+              leftIcon={<PiCamera />}
+              data-test="bulk-book-from-image"
+            >
+              Book from Image
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -170,6 +198,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         onClose={() => setShowGrokipediaResults(false)}
         results={grokipediaResults}
         entityType="book"
+      />
+
+      <BookFromImageResultsModal
+        isOpen={showBookFromImageResults}
+        onClose={() => setShowBookFromImageResults(false)}
+        results={bookFromImageResults}
       />
     </>
   )

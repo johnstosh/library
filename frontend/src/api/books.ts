@@ -175,3 +175,50 @@ export function useSuggestLocNumber() {
       api.post<{ suggestion: string }>('/books/suggest-loc', params),
   })
 }
+
+// Hook to generate book metadata from first photo using AI
+export function useBookFromImage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/book-by-photo`),
+    onSuccess: (data, id) => {
+      // Update the detail cache and invalidate summaries
+      queryClient.setQueryData(queryKeys.books.detail(id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+// Hook to generate book metadata from images for multiple books
+export function useBulkBookFromImage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results: { id: number; success: boolean; book?: BookDto; error?: string }[] = []
+      for (const id of ids) {
+        try {
+          const book = await api.put<BookDto>(`/books/${id}/book-by-photo`)
+          results.push({ id, success: true, book })
+          // Update cache for each book as it's processed
+          queryClient.setQueryData(queryKeys.books.detail(id), book)
+        } catch (error) {
+          results.push({
+            id,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+      }
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}

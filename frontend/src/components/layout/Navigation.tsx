@@ -103,9 +103,6 @@ export function Navigation() {
                   <NavLink to="/applications" data-test="nav-applications">
                     Applications
                   </NavLink>
-                  <NavLink to="/books-from-feed" data-test="nav-books-from-feed">
-                    Books from Feed
-                  </NavLink>
                   <NavLink to="/data-management" data-test="nav-data">
                     Data
                   </NavLink>
@@ -236,9 +233,6 @@ export function Navigation() {
               </NavLink>
               <NavLink to="/applications" data-test="nav-applications-mobile">
                 Applications
-              </NavLink>
-              <NavLink to="/books-from-feed" data-test="nav-books-from-feed-mobile">
-                Books from Feed
               </NavLink>
               <NavLink to="/data-management" data-test="nav-data-mobile">
                 Data Management
