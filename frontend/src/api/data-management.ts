@@ -10,6 +10,15 @@ export interface ImportExportStats {
   loans: number
 }
 
+// Database statistics from the backend (total counts from database)
+export interface DatabaseStatsDto {
+  libraryCount: number
+  bookCount: number
+  authorCount: number
+  userCount: number
+  loanCount: number
+}
+
 // Photo Export Types
 export interface PhotoExportStatsDto {
   total: number
@@ -82,6 +91,14 @@ export function useImportJsonData() {
       const data = JSON.parse(text)
       return api.post<string>('/import/json', data)
     },
+  })
+}
+
+// Get database statistics (total counts from database)
+export function useDatabaseStats() {
+  return useQuery({
+    queryKey: ['database-stats'],
+    queryFn: () => api.get<DatabaseStatsDto>('/import/stats'),
   })
 }
 

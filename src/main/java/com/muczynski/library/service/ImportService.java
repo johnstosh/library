@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
+import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LibraryDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.LibraryMapper;
@@ -577,5 +578,21 @@ public class ImportService {
         dto.setPhotos(null);
 
         return dto;
+    }
+
+    /**
+     * Get database statistics with total counts.
+     * Used by the Data Management page to show accurate database statistics
+     * rather than cached/paginated data from the frontend.
+     */
+    @Transactional(readOnly = true)
+    public DatabaseStatsDto getDatabaseStats() {
+        return new DatabaseStatsDto(
+            libraryRepository.count(),
+            bookRepository.count(),
+            authorRepository.count(),
+            userRepository.count(),
+            loanRepository.count()
+        );
     }
 }

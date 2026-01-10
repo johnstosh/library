@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.service.ImportService;
 import io.restassured.http.ContentType;
@@ -204,6 +205,78 @@ class ImportControllerTest {
             .auth().none()
         .when()
             .get("/api/import/json")
+        .then()
+            .statusCode(500);
+    }
+
+    // ==================== GET /api/import/stats Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_Success() {
+        // Arrange
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L);
+        when(importService.getDatabaseStats()).thenReturn(statsDto);
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("libraryCount", equalTo(5))
+            .body("bookCount", equalTo(100))
+            .body("authorCount", equalTo(50))
+            .body("userCount", equalTo(10))
+            .body("loanCount", equalTo(25));
+    }
+
+    @Test
+    void testGetDatabaseStats_Unauthorized() {
+        // Act & Assert - No authentication
+        given()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ZeroCounts() {
+        // Arrange - Empty database
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L);
+        when(importService.getDatabaseStats()).thenReturn(statsDto);
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("libraryCount", equalTo(0))
+            .body("bookCount", equalTo(0))
+            .body("authorCount", equalTo(0))
+            .body("userCount", equalTo(0))
+            .body("loanCount", equalTo(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ServiceException() {
+        // Arrange
+        when(importService.getDatabaseStats())
+                .thenThrow(new RuntimeException("Database error"));
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
         .then()
             .statusCode(500);
     }

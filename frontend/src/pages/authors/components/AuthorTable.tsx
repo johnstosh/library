@@ -4,7 +4,7 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteAuthor } from '@/api/authors'
-import { truncate } from '@/utils/formatters'
+import { truncate, isValidUrl } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
 import { PiEye } from 'react-icons/pi'
 
@@ -49,7 +49,7 @@ export function AuthorTable({
       header: 'Name',
       accessor: (author) => (
         <div className="font-medium text-gray-900">
-          {author.name}
+          {truncate(author.name, 30)}
         </div>
       ),
       width: '20%',
@@ -57,7 +57,7 @@ export function AuthorTable({
     {
       key: 'religiousAffiliation',
       header: 'Religious Affiliation',
-      accessor: (author) => author.religiousAffiliation || '—',
+      accessor: (author) => truncate(author.religiousAffiliation, 25) || '—',
       width: '15%',
     },
     {
@@ -105,6 +105,19 @@ export function AuthorTable({
             >
               <PiEye className="w-5 h-5" />
             </button>
+            {isValidUrl(author.grokipediaUrl) && (
+              <a
+                href={author.grokipediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-orange-600 hover:text-orange-900"
+                data-test={`grokipedia-author-${author.id}`}
+                title="View on Grokipedia"
+              >
+                <span className="text-lg font-bold">Ø</span>
+              </a>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()

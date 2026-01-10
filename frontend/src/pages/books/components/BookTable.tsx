@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { formatBookStatus } from '@/utils/formatters'
+import { formatBookStatus, truncate, isValidUrl } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
 import { PiCopy, PiEye } from 'react-icons/pi'
@@ -77,8 +77,8 @@ export function BookTable({
       header: 'Title',
       accessor: (book) => (
         <div>
-          <div className="font-medium text-gray-900">{book.title}</div>
-          {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
+          <div className="font-medium text-gray-900">{truncate(book.title, 50)}</div>
+          {book.author && <div className="text-sm text-gray-500">{truncate(book.author, 40)}</div>}
         </div>
       ),
       width: '45%',
@@ -134,6 +134,19 @@ export function BookTable({
             >
               <PiEye className="w-5 h-5" />
             </button>
+            {isValidUrl(book.grokipediaUrl) && (
+              <a
+                href={book.grokipediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-orange-600 hover:text-orange-900"
+                data-test={`grokipedia-book-${book.id}`}
+                title="View on Grokipedia"
+              >
+                <span className="text-lg font-bold">Ø</span>
+              </a>
+            )}
             {isLibrarian && (
               <>
                 <button

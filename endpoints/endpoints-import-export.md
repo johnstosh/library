@@ -37,4 +37,34 @@ Imports database from JSON format.
 
 ---
 
-**Related:** ImportController.java, ImportService.java, ImportRequestDto.java, feature-design-import-export.md
+### GET /api/import/stats
+Returns database statistics with total counts for each entity type.
+
+**Authentication:** Librarian only
+
+**Response:** DatabaseStatsDto containing:
+- `libraryCount` - Total number of libraries
+- `bookCount` - Total number of books
+- `authorCount` - Total number of authors
+- `userCount` - Total number of users
+- `loanCount` - Total number of loans
+
+**Example Response:**
+```json
+{
+  "libraryCount": 5,
+  "bookCount": 300,
+  "authorCount": 150,
+  "userCount": 25,
+  "loanCount": 50
+}
+```
+
+**Purpose:**
+- Provides accurate database counts for the Data Management page
+- Used for generating export filenames with accurate statistics
+- Returns actual database counts (not cached/paginated frontend data)
+
+---
+
+**Related:** ImportController.java, ImportService.java, ImportRequestDto.java, DatabaseStatsDto.java, feature-design-import-export.md

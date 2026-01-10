@@ -93,3 +93,18 @@ export function truncate(text: string | undefined, maxLength: number): string {
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
 }
+
+/**
+ * Check if a string is a valid URL
+ * Returns true only for properly formatted http/https URLs
+ * Rejects empty strings, single characters like "-", and malformed URLs
+ */
+export function isValidUrl(url: string | undefined | null): boolean {
+  if (!url || url.trim().length < 5) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}

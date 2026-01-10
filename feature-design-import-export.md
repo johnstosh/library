@@ -5,9 +5,10 @@ The application supports importing and exporting library data for backup, migrat
 
 ## JSON Database Import/Export
 
-### Endpoint
+### Endpoints
 - `GET /api/import/json` - Export database to JSON
 - `POST /api/import/json` - Import database from JSON
+- `GET /api/import/stats` - Get database statistics (total counts)
 - **Authentication**: Librarian only
 
 ### What's Included
@@ -38,15 +39,27 @@ The Data Management page displays real-time database statistics showing:
 - **Users** - Total number of user accounts
 - **Loans** - Total number of loan records
 
-These statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
+These statistics are fetched from the `/api/import/stats` endpoint which returns actual database counts (not cached/paginated data from the frontend). The statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
+
+**API Response (DatabaseStatsDto)**:
+```json
+{
+  "libraryCount": 5,
+  "bookCount": 300,
+  "authorCount": 150,
+  "userCount": 25,
+  "loanCount": 50
+}
+```
 
 ### Export Format
 - DTO: `ImportRequestDto`
 - Contains collections of each entity type
 - References between entities use natural keys (e.g., library name, author name, book title+author)
-- **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{date}.json`
-  - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-2025-12-29.json`
+- **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{photo-count}-photos-{date}.json`
+  - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-42-photos-2025-12-29.json`
   - Library name is sanitized (lowercase, special chars replaced with hyphens)
+  - Photo count represents the total photo records in the database (photo-metadata, not binary data which is stored in Google Photos)
 
 ### Import Behavior
 - **Merges** data with existing records (doesn't delete existing data)

@@ -301,4 +301,71 @@ class ImportControllerIntegrationTest {
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isForbidden());
     }
+
+    // ==================== GET /api/import/stats Integration Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ReturnsCorrectCounts() throws Exception {
+        // The setUp creates 1 library, 1 author, 1 book, 1 user (plus seeded data)
+        // This test verifies that the stats endpoint returns actual database counts
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.libraryCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.bookCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.authorCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.userCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.loanCount", greaterThanOrEqualTo(0)));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_IncludesNewData() throws Exception {
+        // Get initial counts
+        long initialBooks = bookRepository.count();
+        long initialAuthors = authorRepository.count();
+
+        // Create additional data
+        Author newAuthor = new Author();
+        newAuthor.setName("Stats Test Author");
+        newAuthor = authorRepository.save(newAuthor);
+
+        Book newBook1 = new Book();
+        newBook1.setTitle("Stats Test Book 1");
+        newBook1.setDateAddedToLibrary(LocalDateTime.now());
+        newBook1.setStatus(BookStatus.ACTIVE);
+        newBook1.setLibrary(testLibrary);
+        newBook1.setAuthor(newAuthor);
+        bookRepository.save(newBook1);
+
+        Book newBook2 = new Book();
+        newBook2.setTitle("Stats Test Book 2");
+        newBook2.setDateAddedToLibrary(LocalDateTime.now());
+        newBook2.setStatus(BookStatus.ACTIVE);
+        newBook2.setLibrary(testLibrary);
+        newBook2.setAuthor(newAuthor);
+        bookRepository.save(newBook2);
+
+        // Verify stats endpoint reflects the new data
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookCount", equalTo((int) (initialBooks + 2))))
+                .andExpect(jsonPath("$.authorCount", equalTo((int) (initialAuthors + 1))));
+    }
+
+    @Test
+    void testGetDatabaseStats_Unauthorized() throws Exception {
+        // Test that unauthenticated requests are rejected
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testGetDatabaseStats_Forbidden() throws Exception {
+        // Test that users without LIBRARIAN authority are forbidden
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isForbidden());
+    }
 }

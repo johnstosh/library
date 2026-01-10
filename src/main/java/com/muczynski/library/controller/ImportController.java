@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.service.ImportService;
 import lombok.RequiredArgsConstructor;
@@ -33,5 +34,12 @@ public class ImportController {
     public ResponseEntity<ImportRequestDto> exportJson() {
         ImportRequestDto exportData = importService.exportData();
         return ResponseEntity.ok(exportData);
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DatabaseStatsDto> getDatabaseStats() {
+        DatabaseStatsDto stats = importService.getDatabaseStats();
+        return ResponseEntity.ok(stats);
     }
 }

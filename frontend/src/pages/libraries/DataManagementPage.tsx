@@ -7,6 +7,7 @@ import {
   exportJsonData,
   exportPhotos,
   useImportJsonData,
+  useDatabaseStats,
   usePhotoExportStats,
   usePhotoExportList,
   useExportSinglePhoto,
@@ -17,10 +18,6 @@ import {
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { useLibraries } from '@/api/libraries'
-import { useBooks } from '@/api/books'
-import { useAuthors } from '@/api/authors'
-import { useUsers } from '@/api/users'
-import { useLoans } from '@/api/loans'
 import { formatDateTime, formatLocForSpine, truncate } from '@/utils/formatters'
 import {
   PiDownload,
@@ -48,12 +45,10 @@ export function DataManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
 
-  // Fetch data for statistics
+  // Fetch database statistics (total counts from backend)
+  const { data: dbStats } = useDatabaseStats()
+  // Fetch libraries for filename generation (this is a small list)
   const { data: libraries = [] } = useLibraries()
-  const { data: books = [] } = useBooks()
-  const { data: authors = [] } = useAuthors()
-  const { data: users = [] } = useUsers()
-  const { data: loans = [] } = useLoans()
 
   // Photo export hooks
   const { data: photoStats, refetch: refetchPhotoStats } = usePhotoExportStats()
@@ -72,7 +67,7 @@ export function DataManagementPage() {
     try {
       const blob = await exportJsonData()
 
-      // Generate filename with statistics (like main branch)
+      // Generate filename with statistics from database
       let libraryName = 'library'
       if (libraries.length > 0) {
         // Sanitize library name for use as filename
@@ -82,13 +77,14 @@ export function DataManagementPage() {
           .replace(/^-+|-+$/g, '')
       }
 
-      const bookCount = books.length
-      const authorCount = authors.length
-      const userCount = users.length
-      const loanCount = loans.length
+      const bookCount = dbStats?.bookCount ?? 0
+      const authorCount = dbStats?.authorCount ?? 0
+      const userCount = dbStats?.userCount ?? 0
+      const loanCount = dbStats?.loanCount ?? 0
+      const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${libraryName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${date}.json`
+      const filename = `${libraryName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos-${date}.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
@@ -414,23 +410,23 @@ export function DataManagementPage() {
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <div className="grid grid-cols-5 gap-4 text-center">
             <div data-test="stat-libraries">
-              <div className="text-2xl font-bold text-gray-900">{libraries.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.libraryCount ?? 0}</div>
               <div className="text-sm text-gray-600">Libraries</div>
             </div>
             <div data-test="stat-books">
-              <div className="text-2xl font-bold text-gray-900">{books.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.bookCount ?? 0}</div>
               <div className="text-sm text-gray-600">Books</div>
             </div>
             <div data-test="stat-authors">
-              <div className="text-2xl font-bold text-gray-900">{authors.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.authorCount ?? 0}</div>
               <div className="text-sm text-gray-600">Authors</div>
             </div>
             <div data-test="stat-users">
-              <div className="text-2xl font-bold text-gray-900">{users.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.userCount ?? 0}</div>
               <div className="text-sm text-gray-600">Users</div>
             </div>
             <div data-test="stat-loans">
-              <div className="text-2xl font-bold text-gray-900">{loans.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.loanCount ?? 0}</div>
               <div className="text-sm text-gray-600">Loans</div>
             </div>
           </div>
