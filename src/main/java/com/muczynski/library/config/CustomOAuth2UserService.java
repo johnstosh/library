@@ -14,7 +14,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
@@ -80,8 +79,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("User authenticated successfully: {} with authorities: {}", user.getUsername(),
                 user.getAuthorities().stream().map(a -> a.getName()).collect(Collectors.joining(", ")));
 
-        // Return OAuth2User with authorities
-        return new DefaultOAuth2User(grantedAuthorities, attributes, "sub");
+        // Return custom OAuth2User that uses database user ID as principal name
+        // This ensures consistency with CustomOidcUser for OIDC logins
+        return new CustomOAuth2User(grantedAuthorities, attributes, "sub", user.getId());
     }
 
     private User createNewSsoUser(String provider, String subjectId, String email, String name) {

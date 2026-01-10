@@ -35,10 +35,14 @@
 - OAuth2 flow for Google Photos authorization at `/api/oauth/google/authorize`
 - Scopes include full Google Photos Library access
 
-### OAuth Subject ID Handling
-- OAuth users are identified by their subject ID (not username) in `authentication.getName()`
-- Services must handle lookups by both username and SSO subject ID
-- Example: `LoanService.getLoansByUsername()` checks username first, then SSO subject ID
+### OAuth Principal Name Handling
+- Both OIDC and OAuth2 logins use **database user ID** as the principal name
+- `authentication.getName()` returns the database user ID (as a string), NOT the OAuth subject ID
+- Custom user classes ensure consistent behavior:
+  - `CustomOidcUser` - For OpenID Connect logins (e.g., Google with OIDC)
+  - `CustomOAuth2User` - For plain OAuth2 logins (e.g., Google without OIDC)
+- Services can directly parse the user ID: `Long userId = Long.parseLong(authentication.getName())`
+- OAuth subject ID is still stored in `User.ssoSubjectId` for user lookup during login
 
 ## Public Endpoints
 - Test data generation endpoints (`/api/test-data/**`)
@@ -76,7 +80,11 @@ These classes are no longer used in the React implementation.
 
 ### Backend
 - `SecurityConfig.java` - Spring Security configuration
-- `CustomUserDetailsService.java` - User details loading
+- `CustomUserDetailsService.java` - User details loading for form-based login
+- `CustomOidcUserService.java` - OIDC user service (returns CustomOidcUser)
+- `CustomOAuth2UserService.java` - OAuth2 user service (returns CustomOAuth2User)
+- `CustomOidcUser.java` - Custom OIDC user with database ID as principal
+- `CustomOAuth2User.java` - Custom OAuth2 user with database ID as principal
 - `GoogleOAuthController.java` - OAuth endpoints
 - `sso.md` - Google OAuth SSO configuration details
 
