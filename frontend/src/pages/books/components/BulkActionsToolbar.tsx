@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBooks } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
+import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
+import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
@@ -17,10 +19,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
+  const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
+  const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
   const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
+  const lookupGrokipedia = useLookupBulkBooksGrokipedia()
 
   const handleBulkDelete = async () => {
     try {
@@ -39,6 +44,16 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowResults(true)
     } catch (error) {
       console.error('Failed to lookup LOC:', error)
+    }
+  }
+
+  const handleGrokipediaLookup = async () => {
+    try {
+      const results = await lookupGrokipedia.mutateAsync(Array.from(selectedIds))
+      setGrokipediaResults(results)
+      setShowGrokipediaResults(true)
+    } catch (error) {
+      console.error('Failed to lookup Grokipedia URLs:', error)
     }
   }
 
@@ -100,6 +115,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
             <Button
               variant="outline"
               size="sm"
+              onClick={handleGrokipediaLookup}
+              isLoading={lookupGrokipedia.isPending}
+              disabled={lookupGrokipedia.isPending}
+              leftIcon={<span>🌐</span>}
+              data-test="bulk-lookup-grokipedia"
+            >
+              Find Grokipedia URLs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleGenerateLabels}
               isLoading={isGeneratingLabels}
               disabled={isGeneratingLabels}
@@ -137,6 +163,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showResults}
         onClose={() => setShowResults(false)}
         results={lookupResults}
+      />
+
+      <GrokipediaLookupResultsModal
+        isOpen={showGrokipediaResults}
+        onClose={() => setShowGrokipediaResults(false)}
+        results={grokipediaResults}
+        entityType="book"
       />
     </>
   )

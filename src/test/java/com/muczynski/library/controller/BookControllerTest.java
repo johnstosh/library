@@ -6,9 +6,11 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +54,9 @@ class BookControllerTest {
 
     @MockitoBean
     private AskGrok askGrok;
+
+    @MockitoBean
+    private GrokipediaLookupService grokipediaLookupService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -386,5 +391,48 @@ class BookControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void grokipediaLookupBulk() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L);
+
+        GrokipediaLookupResultDto result1 = GrokipediaLookupResultDto.builder()
+                .bookId(1L)
+                .name("Little Women")
+                .success(true)
+                .grokipediaUrl("https://grokipedia.com/page/Little_Women")
+                .build();
+
+        GrokipediaLookupResultDto result2 = GrokipediaLookupResultDto.builder()
+                .bookId(2L)
+                .name("Unknown Book")
+                .success(false)
+                .errorMessage("No Grokipedia page found")
+                .build();
+
+        when(grokipediaLookupService.lookupBooks(bookIds))
+                .thenReturn(Arrays.asList(result1, result2));
+
+        mockMvc.perform(post("/api/books/grokipedia-lookup-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].success").value(true))
+                .andExpect(jsonPath("$[0].grokipediaUrl").value("https://grokipedia.com/page/Little_Women"))
+                .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void grokipediaLookupBulk_requiresLibrarianAuthority() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L);
+
+        mockMvc.perform(post("/api/books/grokipedia-lookup-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isForbidden());
     }
 }

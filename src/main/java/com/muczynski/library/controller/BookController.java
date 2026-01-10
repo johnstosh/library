@@ -13,7 +13,9 @@ import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
+import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,9 @@ public class BookController {
 
     @Autowired
     private AskGrok askGrok;
+
+    @Autowired
+    private GrokipediaLookupService grokipediaLookupService;
 
     @Autowired
     private UserRepository userRepository;
@@ -174,6 +179,14 @@ public class BookController {
             logger.warn("Failed to bulk delete books {}: {}", bookIds, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    @PostMapping("/grokipedia-lookup-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(@RequestBody List<Long> bookIds) {
+        logger.info("Looking up Grokipedia URLs for {} books", bookIds.size());
+        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupBooks(bookIds);
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/{id}/clone")

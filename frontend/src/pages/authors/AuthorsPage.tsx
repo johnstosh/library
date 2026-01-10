@@ -6,12 +6,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { useAuthors, useDeleteAuthors } from '@/api/authors'
+import { useLookupBulkAuthorsGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { useUiStore, useAuthorsFilter, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
 export function AuthorsPage() {
   const navigate = useNavigate()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
+  const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
 
   const filter = useAuthorsFilter()
   const { selectedIds, selectAll } = useAuthorsTableSelection()
@@ -19,6 +23,7 @@ export function AuthorsPage() {
 
   const { data: authors = [], isLoading } = useAuthors(filter)
   const deleteAuthors = useDeleteAuthors()
+  const lookupGrokipedia = useLookupBulkAuthorsGrokipedia()
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -60,6 +65,16 @@ export function AuthorsPage() {
     }
   }
 
+  const handleGrokipediaLookup = async () => {
+    try {
+      const results = await lookupGrokipedia.mutateAsync(Array.from(selectedIds))
+      setGrokipediaResults(results)
+      setShowGrokipediaResults(true)
+    } catch (error) {
+      console.error('Failed to lookup Grokipedia URLs:', error)
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -92,6 +107,17 @@ export function AuthorsPage() {
                   </Button>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGrokipediaLookup}
+                    isLoading={lookupGrokipedia.isPending}
+                    disabled={lookupGrokipedia.isPending}
+                    leftIcon={<span>🌐</span>}
+                    data-test="bulk-lookup-grokipedia"
+                  >
+                    Find Grokipedia URLs
+                  </Button>
                   <Button
                     variant="danger"
                     size="sm"
@@ -137,6 +163,13 @@ export function AuthorsPage() {
         confirmText="Delete"
         variant="danger"
         isLoading={deleteAuthors.isPending}
+      />
+
+      <GrokipediaLookupResultsModal
+        isOpen={showGrokipediaResults}
+        onClose={() => setShowGrokipediaResults(false)}
+        results={grokipediaResults}
+        entityType="author"
       />
     </div>
   )

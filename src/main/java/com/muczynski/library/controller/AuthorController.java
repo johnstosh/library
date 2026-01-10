@@ -13,7 +13,9 @@ import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
+import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,9 @@ public class AuthorController {
 
     @Autowired
     private GooglePhotosService googlePhotosService;
+
+    @Autowired
+    private GrokipediaLookupService grokipediaLookupService;
 
     @Autowired
     private UserRepository userRepository;
@@ -282,6 +287,14 @@ public class AuthorController {
             logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @PostMapping("/grokipedia-lookup-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(@RequestBody List<Long> authorIds) {
+        logger.info("Looking up Grokipedia URLs for {} authors", authorIds.size());
+        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupAuthors(authorIds);
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/delete-authors-with-no-books")

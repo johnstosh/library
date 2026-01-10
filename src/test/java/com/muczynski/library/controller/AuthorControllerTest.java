@@ -6,9 +6,11 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -34,6 +37,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -52,6 +56,9 @@ class AuthorControllerTest {
 
     @MockitoBean
     private BookService bookService;
+
+    @MockitoBean
+    private GrokipediaLookupService grokipediaLookupService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -383,5 +390,48 @@ class AuthorControllerTest {
 
         mockMvc.perform(get("/api/authors/without-grokipedia"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void grokipediaLookupBulk() throws Exception {
+        List<Long> authorIds = Arrays.asList(1L, 2L);
+
+        GrokipediaLookupResultDto result1 = GrokipediaLookupResultDto.builder()
+                .authorId(1L)
+                .name("Mark Twain")
+                .success(true)
+                .grokipediaUrl("https://grokipedia.com/page/Mark_Twain")
+                .build();
+
+        GrokipediaLookupResultDto result2 = GrokipediaLookupResultDto.builder()
+                .authorId(2L)
+                .name("Unknown Author")
+                .success(false)
+                .errorMessage("No Grokipedia page found")
+                .build();
+
+        when(grokipediaLookupService.lookupAuthors(authorIds))
+                .thenReturn(Arrays.asList(result1, result2));
+
+        mockMvc.perform(post("/api/authors/grokipedia-lookup-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(authorIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].success").value(true))
+                .andExpect(jsonPath("$[0].grokipediaUrl").value("https://grokipedia.com/page/Mark_Twain"))
+                .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void grokipediaLookupBulk_requiresLibrarianAuthority() throws Exception {
+        List<Long> authorIds = Arrays.asList(1L, 2L);
+
+        mockMvc.perform(post("/api/authors/grokipedia-lookup-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(authorIds)))
+                .andExpect(status().isForbidden());
     }
 }

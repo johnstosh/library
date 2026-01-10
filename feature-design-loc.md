@@ -121,3 +121,62 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - `src/main/java/com/muczynski/library/repository/BookRepository.java` - Queries for books without LOC
 - `frontend/src/pages/books/components/BookTable.tsx` - UI for individual lookup buttons
 - `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - UI for bulk lookup and "Generate Labels" button
+
+---
+
+# Grokipedia URL Lookup
+
+## Overview
+The application can automatically discover Grokipedia article URLs for books and authors. This helps populate the `grokipediaUrl` field by checking if a page exists on grokipedia.com.
+
+## How It Works
+
+### URL Generation
+- Grokipedia URLs follow the pattern: `https://grokipedia.com/page/{Name_With_Underscores}`
+- Spaces in book titles or author names are converted to underscores
+- Example: "Little Women" → `https://grokipedia.com/page/Little_Women`
+- Example: "Louisa May Alcott" → `https://grokipedia.com/page/Louisa_May_Alcott`
+
+### URL Validation
+- The service makes a HEAD request to the generated URL
+- If the response is 2xx (success), the URL is saved to the entity
+- If the response is 4xx (not found), the URL is not saved
+- Each lookup attempt logs its result for debugging
+
+## Endpoints
+
+### Books Bulk Lookup
+- Endpoint: `POST /api/books/grokipedia-lookup-bulk`
+- Authorization: LIBRARIAN only
+- Request Body: `List<Long>` (book IDs to look up)
+- Response: `List<GrokipediaLookupResultDto>` with success/failure for each book
+- Looks up selected books regardless of existing `grokipediaUrl` value
+
+### Authors Bulk Lookup
+- Endpoint: `POST /api/authors/grokipedia-lookup-bulk`
+- Authorization: LIBRARIAN only
+- Request Body: `List<Long>` (author IDs to look up)
+- Response: `List<GrokipediaLookupResultDto>` with success/failure for each author
+- Looks up selected authors regardless of existing `grokipediaUrl` value
+
+## Frontend Integration
+
+### Books Page
+- "Find Grokipedia URLs" button in `BulkActionsToolbar`
+- Visible when books are selected
+- Shows results in `GrokipediaLookupResultsModal`
+- Results show success/failure count and individual results with URLs
+
+### Authors Page
+- "Find Grokipedia URLs" button in bulk actions bar
+- Visible when authors are selected
+- Shows results in `GrokipediaLookupResultsModal`
+- Results show success/failure count and individual results with URLs
+
+## Implementation Files
+- `src/main/java/com/muczynski/library/service/GrokipediaLookupService.java` - Core lookup logic
+- `src/main/java/com/muczynski/library/dto/GrokipediaLookupResultDto.java` - Result DTO
+- `frontend/src/api/grokipedia-lookup.ts` - API hooks
+- `frontend/src/components/GrokipediaLookupResultsModal.tsx` - Results modal
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Books bulk action button
+- `frontend/src/pages/authors/AuthorsPage.tsx` - Authors bulk action button
