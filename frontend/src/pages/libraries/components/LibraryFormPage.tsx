@@ -17,8 +17,8 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
   const isEditing = !!library
 
   const [formData, setFormData] = useState({
-    name: '',
-    hostname: '',
+    branchName: '',
+    librarySystemName: '',
   })
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -29,8 +29,8 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
   useEffect(() => {
     if (library) {
       setFormData({
-        name: library.name,
-        hostname: library.hostname,
+        branchName: library.branchName,
+        librarySystemName: library.librarySystemName,
       })
     }
   }, [library])
@@ -57,8 +57,8 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
     e.preventDefault()
     setError('')
 
-    if (!formData.name || !formData.hostname) {
-      setError('Name and hostname are required')
+    if (!formData.branchName || !formData.librarySystemName) {
+      setError('Branch name and library system name are required')
       return
     }
 
@@ -100,20 +100,20 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
         {error && <ErrorMessage message={error} />}
 
         <Input
-          label="Name"
-          value={formData.name}
-          onChange={(e) => handleFieldChange('name', e.target.value)}
+          label="Branch Name"
+          value={formData.branchName}
+          onChange={(e) => handleFieldChange('branchName', e.target.value)}
           required
-          data-test="library-name"
+          data-test="library-branch-name"
         />
 
         <Input
-          label="Hostname"
-          value={formData.hostname}
-          onChange={(e) => handleFieldChange('hostname', e.target.value)}
+          label="Library System Name"
+          value={formData.librarySystemName}
+          onChange={(e) => handleFieldChange('librarySystemName', e.target.value)}
           required
-          helpText="The domain name for this library (e.g., mylibrary.com)"
-          data-test="library-hostname"
+          helpText="The name of the library system this branch belongs to"
+          data-test="library-system-name"
         />
       </form>
 

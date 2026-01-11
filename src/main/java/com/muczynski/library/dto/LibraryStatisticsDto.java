@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LibraryStatisticsDto {
     private Long libraryId;
-    private String libraryName;
+    private String branchName;
     private Long bookCount;
     private Long activeLoansCount;
 }

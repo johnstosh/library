@@ -81,7 +81,7 @@ export function LibraryViewPage() {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
             <h1 className="text-2xl font-bold text-gray-900" data-test="library-name">
-              {library.name}
+              {library.branchName}
             </h1>
             <div className="flex gap-3">
               <Button
@@ -139,8 +139,8 @@ export function LibraryViewPage() {
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-500">Hostname</p>
-                <p className="text-gray-900 font-mono">{library.hostname}</p>
+                <p className="text-sm font-medium text-gray-500">Library System Name</p>
+                <p className="text-gray-900">{library.librarySystemName}</p>
               </div>
               {stats && (
                 <>

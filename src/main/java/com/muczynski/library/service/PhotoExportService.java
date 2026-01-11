@@ -28,6 +28,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -62,6 +64,31 @@ public class PhotoExportService {
 
     // Cache the album name to avoid repeated database lookups
     private String cachedAlbumName = null;
+
+    /**
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
 
     /**
      * Export photos to Google Photos
@@ -267,7 +294,7 @@ public class PhotoExportService {
         String libraryName = "Library";
 
         if (!libraries.isEmpty()) {
-            libraryName = libraries.get(0).getName();
+            libraryName = libraries.get(0).getBranchName();
         } else {
             logger.warn("No library found in database, using default name: {}", libraryName);
         }
@@ -643,6 +670,8 @@ public class PhotoExportService {
             if (mediaItem.getMimeType() != null) {
                 photo.setContentType(mediaItem.getMimeType());
             }
+            // Compute and set the image checksum so it's no longer counted as "pending import"
+            photo.setImageChecksum(computeChecksum(imageBytes));
             // Clear any previous error message and status on success
             photo.setExportErrorMessage(null);
             photo.setExportStatus(Photo.ExportStatus.COMPLETED);

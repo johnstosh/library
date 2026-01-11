@@ -20,7 +20,19 @@ export function LoansPage() {
   const showAll = useLoansShowAll()
   const setLoansShowAll = useUiStore((state) => state.setLoansShowAll)
 
-  const { data: loans = [], isLoading } = useLoans(showAll)
+  const { data: loans = [], isLoading, error, isFetching } = useLoans(showAll)
+
+  // Debug logging for loans
+  console.log('[LoansPage] Render state:', {
+    showAll,
+    isLoading,
+    isFetching,
+    loansCount: loans.length,
+    error: error?.message
+  })
+  if (loans.length > 0) {
+    console.log('[LoansPage] First loan:', loans[0])
+  }
   const returnBook = useReturnBook()
   const deleteLoan = useDeleteLoan()
 
@@ -139,6 +151,14 @@ export function LoansPage() {
           Checkout Book
         </Button>
       </div>
+
+      {/* Error display for debugging */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          <p className="font-bold">Error loading loans:</p>
+          <p>{error.message}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200">

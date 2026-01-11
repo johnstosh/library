@@ -17,7 +17,7 @@ INSERT INTO role (id, name) VALUES (1, 'USER');
 INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN');
 
 -- Insert a test library
-INSERT INTO library (id, name, hostname) VALUES (1, 'St. Martin de Porres', 'library.muczynskifamily.com');
+INSERT INTO library (id, branch_name, library_system_name) VALUES (1, 'St. Martin de Porres', 'Sacred Heart Library System');
 
 -- Insert test users
 -- Username: librarian, Password: password

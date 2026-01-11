@@ -216,7 +216,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const libraryOptions = libraries
     ? libraries.map((l) => ({
         value: l.id,
-        label: l.name,
+        label: l.branchName,
       }))
     : []
 

@@ -17,7 +17,7 @@ INSERT INTO role (id, name) VALUES (1, 'USER');
 INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN');
 
 -- Insert a test library
-INSERT INTO library (id, name, hostname) VALUES (1, 'Test Library', 'test.example.com');
+INSERT INTO library (id, branch_name, library_system_name) VALUES (1, 'Test Library', 'Test Library System');
 
 -- Insert a regular USER
 -- Username: testuser

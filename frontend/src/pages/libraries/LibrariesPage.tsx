@@ -52,22 +52,22 @@ export function LibrariesPage() {
   const columns: Column<LibraryDto>[] = [
     {
       key: 'name',
-      header: 'Name',
+      header: 'Branch Name',
       accessor: (library) => (
         <button
           onClick={() => handleView(library)}
           className="font-medium text-blue-600 hover:text-blue-900 text-left"
           data-test={`view-library-${library.id}`}
         >
-          {library.name}
+          {library.branchName}
         </button>
       ),
       width: '30%',
     },
     {
-      key: 'hostname',
-      header: 'Hostname',
-      accessor: (library) => <div className="text-gray-600">{library.hostname}</div>,
+      key: 'librarySystemName',
+      header: 'Library System',
+      accessor: (library) => <div className="text-gray-600">{library.librarySystemName}</div>,
       width: '30%',
     },
     {

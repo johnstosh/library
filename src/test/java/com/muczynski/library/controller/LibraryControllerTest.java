@@ -45,12 +45,12 @@ class LibraryControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void createLibrary() throws Exception {
         LibraryDto inputDto = new LibraryDto();
-        inputDto.setName("St. Martin de Porres");
-        inputDto.setHostname("library.muczynskifamily.com");
+        inputDto.setBranchName("St. Martin de Porres");
+        inputDto.setLibrarySystemName("library.muczynskifamily.com");
         LibraryDto returnedDto = new LibraryDto();
         returnedDto.setId(1L);
-        returnedDto.setName("St. Martin de Porres");
-        returnedDto.setHostname("library.muczynskifamily.com");
+        returnedDto.setBranchName("St. Martin de Porres");
+        returnedDto.setLibrarySystemName("library.muczynskifamily.com");
         when(libraryService.createLibrary(any(LibraryDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/libraries")
@@ -64,7 +64,7 @@ class LibraryControllerTest {
     void getAllLibraries() throws Exception {
         LibraryDto dto = new LibraryDto();
         dto.setId(1L);
-        dto.setName("St. Martin de Porres");
+        dto.setBranchName("St. Martin de Porres");
         when(libraryService.getAllLibraries()).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/libraries"))
@@ -76,7 +76,7 @@ class LibraryControllerTest {
     void getLibraryById() throws Exception {
         LibraryDto libraryDto = new LibraryDto();
         libraryDto.setId(1L);
-        libraryDto.setName("St. Martin de Porres");
+        libraryDto.setBranchName("St. Martin de Porres");
         when(libraryService.getLibraryById(1L)).thenReturn(libraryDto);
 
         mockMvc.perform(get("/api/libraries/1"))
@@ -87,12 +87,12 @@ class LibraryControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void updateLibrary() throws Exception {
         LibraryDto inputDto = new LibraryDto();
-        inputDto.setName("Updated Library");
-        inputDto.setHostname("updated.example.com");
+        inputDto.setBranchName("Updated Library");
+        inputDto.setLibrarySystemName("updated.example.com");
         LibraryDto returnedDto = new LibraryDto();
         returnedDto.setId(1L);
-        returnedDto.setName("Updated Library");
-        returnedDto.setHostname("updated.example.com");
+        returnedDto.setBranchName("Updated Library");
+        returnedDto.setLibrarySystemName("updated.example.com");
         when(libraryService.updateLibrary(eq(1L), any(LibraryDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(put("/api/libraries/1")

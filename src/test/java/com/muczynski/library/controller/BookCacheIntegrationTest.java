@@ -68,8 +68,8 @@ class BookCacheIntegrationTest {
     void setUp() {
         // Create test library
         testLibrary = new Library();
-        testLibrary.setName("Test Library");
-        testLibrary.setHostname("test.library.com");
+        testLibrary.setBranchName("Test Library");
+        testLibrary.setLibrarySystemName("Test Library System");
         testLibrary = libraryRepository.save(testLibrary);
 
         // Create test author

@@ -70,8 +70,8 @@ class ImportControllerIntegrationTest {
     void setUp() {
         // Create test library
         testLibrary = new Library();
-        testLibrary.setName("Test Library");
-        testLibrary.setHostname("test.library.com");
+        testLibrary.setBranchName("Test Library");
+        testLibrary.setLibrarySystemName("Test Library System");
         testLibrary = libraryRepository.save(testLibrary);
 
         // Create test author
@@ -386,7 +386,7 @@ class ImportControllerIntegrationTest {
         // Test that old format with embedded author object is still supported
         String oldFormatJson = """
             {
-                "libraries": [{"name": "Legacy Library", "hostname": "legacy.lib.com"}],
+                "libraries": [{"branchName": "Legacy Library", "librarySystemName": "Legacy System"}],
                 "authors": [{"name": "Legacy Author"}],
                 "users": [],
                 "books": [{
@@ -416,7 +416,7 @@ class ImportControllerIntegrationTest {
         // Test new format with authorName field (string reference)
         String newFormatJson = """
             {
-                "libraries": [{"name": "Modern Library", "hostname": "modern.lib.com"}],
+                "libraries": [{"branchName": "Modern Library", "librarySystemName": "Modern System"}],
                 "authors": [{"name": "Modern Author"}],
                 "users": [],
                 "books": [{
@@ -446,7 +446,7 @@ class ImportControllerIntegrationTest {
         // Test that old format loans with embedded book/user objects are still supported
         String oldFormatJson = """
             {
-                "libraries": [{"name": "Loan Test Library", "hostname": "loantest.lib.com"}],
+                "libraries": [{"branchName": "Loan Test Library", "librarySystemName": "Loan Test System"}],
                 "authors": [{"name": "Loan Test Author"}],
                 "users": [{"username": "loanuser", "authorities": ["USER"]}],
                 "books": [{
@@ -484,7 +484,7 @@ class ImportControllerIntegrationTest {
         // Test new format loans with reference fields
         String newFormatJson = """
             {
-                "libraries": [{"name": "New Loan Library", "hostname": "newloan.lib.com"}],
+                "libraries": [{"branchName": "New Loan Library", "librarySystemName": "New Loan System"}],
                 "authors": [{"name": "New Loan Author"}],
                 "users": [{"username": "newloanuser", "authorities": ["USER"]}],
                 "books": [{

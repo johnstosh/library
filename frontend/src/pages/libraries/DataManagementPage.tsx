@@ -70,8 +70,8 @@ export function DataManagementPage() {
       // Generate filename with statistics from database
       let libraryName = 'library'
       if (libraries.length > 0) {
-        // Sanitize library name for use as filename
-        libraryName = libraries[0].name
+        // Sanitize library branch name for use as filename
+        libraryName = libraries[0].branchName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '')

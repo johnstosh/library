@@ -72,15 +72,27 @@ public class LoanService {
     }
 
     public List<LoanDto> getAllLoans(boolean showAll) {
+        logger.info("LoanService.getAllLoans called with showAll={}", showAll);
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByOrderByDueDateAsc();
+            logger.info("LoanService.getAllLoans: Found {} total loans (showAll=true)", loans.size());
         } else {
             loans = loanRepository.findAllByReturnDateIsNullOrderByDueDateAsc();
+            logger.info("LoanService.getAllLoans: Found {} active loans (showAll=false)", loans.size());
         }
-        return loans.stream()
+        if (!loans.isEmpty()) {
+            logger.debug("LoanService.getAllLoans: First loan - id={}, bookId={}, userId={}, returnDate={}",
+                loans.get(0).getId(),
+                loans.get(0).getBook() != null ? loans.get(0).getBook().getId() : null,
+                loans.get(0).getUser() != null ? loans.get(0).getUser().getId() : null,
+                loans.get(0).getReturnDate());
+        }
+        List<LoanDto> result = loans.stream()
                 .map(loanMapper::toDto)
                 .collect(Collectors.toList());
+        logger.info("LoanService.getAllLoans: Returning {} loan DTOs", result.size());
+        return result;
     }
 
     public List<LoanDto> getLoansByUserId(Long userId, boolean showAll) {

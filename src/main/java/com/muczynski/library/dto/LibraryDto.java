@@ -8,6 +8,6 @@ import lombok.Data;
 @Data
 public class LibraryDto {
     private Long id;
-    private String name;
-    private String hostname;
+    private String branchName;
+    private String librarySystemName;
 }

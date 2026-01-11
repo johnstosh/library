@@ -32,8 +32,8 @@ class RandomBookTest {
         // Create a library if one doesn't exist (required by RandomBook.create)
         if (libraryRepository.count() == 0) {
             Library library = new Library();
-            library.setName("Test Library");
-            library.setHostname("test.library.com");
+            library.setBranchName("Test Library");
+            library.setLibrarySystemName("Test Library System");
             libraryRepository.save(library);
         }
 

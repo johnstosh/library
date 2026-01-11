@@ -80,8 +80,8 @@ public class LibraryService {
 
         // Create default library
         Library library = new Library();
-        library.setName("St. Martin de Porres");
-        library.setHostname("library.muczynskifamily.com");
+        library.setBranchName("St. Martin de Porres");
+        library.setLibrarySystemName("Sacred Heart Library System");
         return libraryRepository.save(library);
     }
 
@@ -98,7 +98,7 @@ public class LibraryService {
 
             LibraryStatisticsDto stats = new LibraryStatisticsDto(
                 library.getId(),
-                library.getName(),
+                library.getBranchName(),
                 bookCount,
                 activeLoansCount
             );

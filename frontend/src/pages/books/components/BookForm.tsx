@@ -186,7 +186,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
   const libraryOptions = libraries
     ? libraries.map((l) => ({
         value: l.id,
-        label: l.name,
+        label: l.branchName,
       }))
     : []
 

@@ -66,17 +66,22 @@ public class LoanController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll, Authentication authentication) {
+        logger.info("LoanController.getAllLoans: showAll={}, principal={}", showAll, authentication.getName());
         try {
             // Librarians see all loans, regular users see only their own loans
             boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+            logger.info("LoanController.getAllLoans: isLibrarian={}", isLibrarian);
             List<LoanDto> loans;
             if (isLibrarian) {
                 loans = loanService.getAllLoans(showAll);
+                logger.info("LoanController.getAllLoans: Librarian retrieved {} loans", loans.size());
             } else {
                 // The principal name is the database user ID (not username)
                 Long userId = Long.parseLong(authentication.getName());
                 loans = loanService.getLoansByUserId(userId, showAll);
+                logger.info("LoanController.getAllLoans: User {} retrieved {} loans", userId, loans.size());
             }
+            logger.info("LoanController.getAllLoans: Returning {} loans to client", loans.size());
             return ResponseEntity.ok(loans);
         } catch (Exception e) {
             logger.warn("Failed to retrieve loans (showAll: {}): {}", showAll, e.getMessage(), e);

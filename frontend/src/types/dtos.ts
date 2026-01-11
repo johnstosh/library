@@ -22,13 +22,13 @@ export interface SummaryDto {
 // Library DTOs
 export interface LibraryDto {
   id: number
-  name: string
-  hostname: string
+  branchName: string
+  librarySystemName: string
 }
 
 export interface LibraryStatisticsDto {
   libraryId: number
-  libraryName: string
+  branchName: string
   bookCount: number
   activeLoansCount: number
 }

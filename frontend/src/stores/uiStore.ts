@@ -38,7 +38,7 @@ export const useUiStore = create<UiState>((set) => ({
   loansTable: { selectedIds: new Set(), selectAll: false },
 
   booksFilter: 'most-recent',
-  authorsFilter: 'all',
+  authorsFilter: 'most-recent',
   loansShowAll: false,
 
   // Actions

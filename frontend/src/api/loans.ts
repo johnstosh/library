@@ -8,9 +8,15 @@ import type { LoanDto } from '@/types/dtos'
 export function useLoans(showAll = false) {
   return useQuery({
     queryKey: queryKeys.loans.list(showAll),
-    queryFn: () => {
+    queryFn: async () => {
       const endpoint = showAll ? '/loans?showAll=true' : '/loans'
-      return api.get<LoanDto[]>(endpoint)
+      console.log('[useLoans] Fetching loans from:', endpoint)
+      const loans = await api.get<LoanDto[]>(endpoint)
+      console.log('[useLoans] Received loans:', loans.length, 'items')
+      if (loans.length > 0) {
+        console.log('[useLoans] First loan:', loans[0])
+      }
+      return loans
     },
     staleTime: 1000 * 60 * 2, // 2 minutes - loans change frequently
   })

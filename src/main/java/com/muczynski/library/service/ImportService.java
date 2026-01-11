@@ -60,19 +60,19 @@ public class ImportService {
         Map<String, Library> libMap = new HashMap<>();
         if (dto.getLibraries() != null) {
             for (LibraryDto lDto : dto.getLibraries()) {
-                // Check if library with same name already exists
-                Library lib = libraryRepository.findByName(lDto.getName()).orElse(null);
+                // Check if library with same branch name already exists
+                Library lib = libraryRepository.findByBranchName(lDto.getBranchName()).orElse(null);
                 if (lib == null) {
                     // Create new library without copying ID from import
                     lib = new Library();
-                    lib.setName(lDto.getName());
-                    lib.setHostname(lDto.getHostname());
+                    lib.setBranchName(lDto.getBranchName());
+                    lib.setLibrarySystemName(lDto.getLibrarySystemName());
                 } else {
                     // Update existing library
-                    lib.setHostname(lDto.getHostname());
+                    lib.setLibrarySystemName(lDto.getLibrarySystemName());
                 }
                 lib = libraryRepository.save(lib);
-                libMap.put(lDto.getName(), lib);
+                libMap.put(lDto.getBranchName(), lib);
                 libraryCount++;
             }
         }
@@ -533,7 +533,7 @@ public class ImportService {
             }
             // Note: bDto.setAuthor() is NOT set - embedded author is deprecated for export
             if (book.getLibrary() != null) {
-                bDto.setLibraryName(book.getLibrary().getName());
+                bDto.setLibraryName(book.getLibrary().getBranchName());
             }
             bookDtos.add(bDto);
         }

@@ -46,7 +46,8 @@ export function Navigation() {
   }
 
   // Get library name for display
-  const libraryName = libraries.length > 0 ? libraries[0].name : 'Library'
+  const branchName = libraries.length > 0 ? libraries[0].branchName : 'Library'
+  const librarySystemName = libraries.length > 0 ? libraries[0].librarySystemName : 'Library System'
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
@@ -56,10 +57,10 @@ export function Navigation() {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex flex-col items-start" data-test="library-name">
               <span className="text-base font-bold text-gray-900 leading-tight">
-                The {libraryName} Branch
+                The {branchName} Branch
               </span>
               <span className="text-xs text-gray-600 leading-tight">
-                of the Sacred Heart Library System
+                of the {librarySystemName}
               </span>
             </Link>
 

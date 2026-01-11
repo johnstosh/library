@@ -52,8 +52,8 @@ class DeletionConflictTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "St. Martin de Porres",
-                                    "hostname": "library.muczynskifamily.com"
+                                    "branchName": "St. Martin de Porres",
+                                    "librarySystemName": "Sacred Heart Library System"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -97,8 +97,8 @@ class DeletionConflictTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "St. Martin de Porres",
-                                    "hostname": "library.muczynskifamily.com"
+                                    "branchName": "St. Martin de Porres",
+                                    "librarySystemName": "Sacred Heart Library System"
                                 }
                                 """))
                 .andExpect(status().isCreated())
