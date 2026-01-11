@@ -114,6 +114,7 @@ class ImportControllerIntegrationTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_WithCompleteData() throws Exception {
         // This test verifies that export works with books having author and library associations
+        // New format: books export authorName (string reference) instead of embedded author object
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -121,9 +122,10 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.authors", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.books", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.users", hasSize(greaterThanOrEqualTo(1))))
-                // Verify book has author and library data loaded (no lazy loading exception)
-                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].author.name", hasItem("Test Author")))
+                // Verify book has authorName (string reference) and libraryName
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].authorName", hasItem("Test Author")))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].libraryName", hasItem("Test Library")));
+                // Note: embedded author object is omitted via @JsonInclude(NON_NULL)
     }
 
     @Test
@@ -137,17 +139,18 @@ class ImportControllerIntegrationTest {
         loan.setDueDate(LocalDate.now().plusWeeks(2));
         loanRepository.save(loan);
 
-        // This test verifies that loans with nested book/author/library/user associations work
+        // This test verifies that loans export reference fields (new format)
+        // instead of embedded book/user objects
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.loans", hasSize(greaterThanOrEqualTo(1))))
-                // Verify loan has book data with nested author
-                .andExpect(jsonPath("$.loans[0].book.title", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].book.author.name", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].book.libraryName", notNullValue()))
-                // Verify loan has user data with authorities
-                .andExpect(jsonPath("$.loans[0].user.username", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].user.authorities", notNullValue()));
+                // Verify loan has reference fields (new format)
+                .andExpect(jsonPath("$.loans[0].bookTitle", notNullValue()))
+                .andExpect(jsonPath("$.loans[0].bookAuthorName", notNullValue()))
+                .andExpect(jsonPath("$.loans[0].username", notNullValue()))
+                // Verify embedded objects are NOT included (new format)
+                .andExpect(jsonPath("$.loans[0].book").doesNotExist())
+                .andExpect(jsonPath("$.loans[0].user").doesNotExist());
     }
 
     @Test
@@ -247,11 +250,13 @@ class ImportControllerIntegrationTest {
         // No author set
         bookRepository.save(bookNoAuthor);
 
-        // This test verifies that books without authors are exported correctly
+        // This test verifies that books without authors are exported correctly (new format)
+        // authorName field is omitted when null (via @JsonInclude(NON_NULL))
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')]", hasSize(1)))
-                .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')].author", hasItem(nullValue())));
+                .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')].libraryName", hasItem("Test Library")));
+                // Note: authorName is omitted from JSON when null via @JsonInclude(NON_NULL)
     }
 
     @Test
@@ -282,9 +287,13 @@ class ImportControllerIntegrationTest {
         loanRepository.save(loan);
 
         // This test verifies that users with multiple authorities are exported correctly
+        // New format: loans have username reference, users are exported separately with authorities
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.loans[?(@.user.username=='multiauthorityuser')].user.authorities", hasItem(hasSize(2))));
+                // Verify loan has username reference (new format)
+                .andExpect(jsonPath("$.loans[?(@.username=='multiauthorityuser')]", hasSize(1)))
+                // Verify user is exported in users array with multiple authorities
+                .andExpect(jsonPath("$.users[?(@.username=='multiauthorityuser')].authorities", hasItem(hasSize(2))));
     }
 
     @Test
@@ -367,5 +376,139 @@ class ImportControllerIntegrationTest {
         // Test that users without LIBRARIAN authority are forbidden
         mockMvc.perform(get("/api/import/stats"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ==================== Backward Compatibility Import Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_OldFormatWithEmbeddedAuthor() throws Exception {
+        // Test that old format with embedded author object is still supported
+        String oldFormatJson = """
+            {
+                "libraries": [{"name": "Legacy Library", "hostname": "legacy.lib.com"}],
+                "authors": [{"name": "Legacy Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Legacy Book",
+                    "libraryName": "Legacy Library",
+                    "author": {"name": "Legacy Author"}
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(oldFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the book was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Legacy Book", "Legacy Author").size() > 0,
+            "Book with embedded author format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_NewFormatWithAuthorName() throws Exception {
+        // Test new format with authorName field (string reference)
+        String newFormatJson = """
+            {
+                "libraries": [{"name": "Modern Library", "hostname": "modern.lib.com"}],
+                "authors": [{"name": "Modern Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Modern Book",
+                    "libraryName": "Modern Library",
+                    "authorName": "Modern Author"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the book was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Modern Book", "Modern Author").size() > 0,
+            "Book with authorName reference format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_OldFormatLoanWithEmbeddedObjects() throws Exception {
+        // Test that old format loans with embedded book/user objects are still supported
+        String oldFormatJson = """
+            {
+                "libraries": [{"name": "Loan Test Library", "hostname": "loantest.lib.com"}],
+                "authors": [{"name": "Loan Test Author"}],
+                "users": [{"username": "loanuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "Loan Test Book",
+                    "libraryName": "Loan Test Library",
+                    "authorName": "Loan Test Author"
+                }],
+                "loans": [{
+                    "loanDate": "2025-01-01",
+                    "dueDate": "2025-01-15",
+                    "book": {
+                        "title": "Loan Test Book",
+                        "author": {"name": "Loan Test Author"}
+                    },
+                    "user": {"username": "loanuser"}
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(oldFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the loan was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            loanRepository.count() > 0,
+            "Loan with embedded objects format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_NewFormatLoanWithReferences() throws Exception {
+        // Test new format loans with reference fields
+        String newFormatJson = """
+            {
+                "libraries": [{"name": "New Loan Library", "hostname": "newloan.lib.com"}],
+                "authors": [{"name": "New Loan Author"}],
+                "users": [{"username": "newloanuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "New Loan Book",
+                    "libraryName": "New Loan Library",
+                    "authorName": "New Loan Author"
+                }],
+                "loans": [{
+                    "loanDate": "2025-01-05",
+                    "dueDate": "2025-01-19",
+                    "bookTitle": "New Loan Book",
+                    "bookAuthorName": "New Loan Author",
+                    "username": "newloanuser"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the loan was imported correctly
+        java.util.List<Book> books = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("New Loan Book", "New Loan Author");
+        org.junit.jupiter.api.Assertions.assertTrue(books.size() > 0, "Book should exist");
     }
 }

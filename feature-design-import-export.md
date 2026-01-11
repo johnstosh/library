@@ -55,20 +55,68 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
 ### Export Format
 - DTO: `ImportRequestDto`
 - Contains collections of each entity type
-- References between entities use natural keys (e.g., library name, author name, book title+author)
+- **Reference-based format**: Entities reference other entities by natural keys instead of embedding full objects
+  - Books: Use `authorName` (string) instead of embedded author object
+  - Loans: Use `bookTitle`, `bookAuthorName`, `username` instead of embedded book/user objects
+  - Photos: Use `imageChecksum` (SHA-256) for photo identification
 - **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{photo-count}-photos-{date}.json`
   - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-42-photos-2025-12-29.json`
   - Library name is sanitized (lowercase, special chars replaced with hyphens)
   - Photo count represents the total photo records in the database (photo-metadata, not binary data which is stored in Google Photos)
 
+### New vs Old Format
+The export format changed to use lightweight references instead of embedded objects:
+
+**New Format (Current - Export Only):**
+```json
+{
+  "books": [{
+    "title": "Book Title",
+    "authorName": "Author Name",
+    "libraryName": "Library Name"
+  }],
+  "loans": [{
+    "bookTitle": "Book Title",
+    "bookAuthorName": "Author Name",
+    "username": "johndoe",
+    "loanDate": "2025-01-01"
+  }]
+}
+```
+
+**Old Format (Deprecated - Import Only):**
+```json
+{
+  "books": [{
+    "title": "Book Title",
+    "author": {"name": "Author Name", "dateOfBirth": "..."},
+    "libraryName": "Library Name"
+  }],
+  "loans": [{
+    "book": {"title": "Book Title", "author": {"name": "Author Name"}},
+    "user": {"username": "johndoe", "authorities": ["USER"]},
+    "loanDate": "2025-01-01"
+  }]
+}
+```
+
+**Backward Compatibility:**
+- **Import**: Supports BOTH old format (embedded objects) and new format (references)
+- **Export**: Only exports new format (references)
+
 ### Import Behavior
 - **Merges** data with existing records (doesn't delete existing data)
+- **Format detection**: Automatically detects and handles both old and new formats
+  - For books: Checks `authorName` first, falls back to `author.name`
+  - For loans: Checks reference fields first (`bookTitle`, `username`), falls back to embedded objects
+  - For photos: Matches by `imageChecksum` (SHA-256) first, then `permanentId`, then book/author + photoOrder
 - Matches entities by natural keys:
   - Libraries: by name
   - Authors: by name
   - Books: by title + author name
   - Users: by username
-  - Loans: creates new loans
+  - Loans: by book ID + user ID + loan date
+  - Photos: by imageChecksum, permanentId, or book/author + photoOrder
 - Handles missing references gracefully
 - Logs warnings for unresolved references
 

@@ -189,11 +189,21 @@ public class ImportService {
         Map<String, Book> bookMap = new HashMap<>();
         if (dto.getBooks() != null) {
             for (ImportBookDto bDto : dto.getBooks()) {
+                // Support both new format (authorName) and old format (embedded author object)
+                String authorNameToLookup = null;
+                if (bDto.getAuthorName() != null && !bDto.getAuthorName().isEmpty()) {
+                    // New format: direct author name reference
+                    authorNameToLookup = bDto.getAuthorName();
+                } else if (bDto.getAuthor() != null && bDto.getAuthor().getName() != null) {
+                    // Old format: extract name from embedded author object
+                    authorNameToLookup = bDto.getAuthor().getName();
+                }
+
                 Author author = null;
-                if (bDto.getAuthor() != null) {
-                    author = authMap.get(bDto.getAuthor().getName());
+                if (authorNameToLookup != null) {
+                    author = authMap.get(authorNameToLookup);
                     if (author == null) {
-                        throw new LibraryException("Author not found for book: " + bDto.getTitle() + " - " + bDto.getAuthor().getName());
+                        throw new LibraryException("Author not found for book: " + bDto.getTitle() + " - " + authorNameToLookup);
                     }
                 }
                 Library library = libMap.get(bDto.getLibraryName());
@@ -254,27 +264,56 @@ public class ImportService {
                 book.setLibrary(library);
                 book = bookRepository.save(book);
 
-                String key = bDto.getTitle() + "|" + (bDto.getAuthor() != null ? bDto.getAuthor().getName() : "");
+                String key = bDto.getTitle() + "|" + (authorNameToLookup != null ? authorNameToLookup : "");
                 bookMap.put(key, book);
             }
         }
 
         if (dto.getLoans() != null) {
             for (ImportLoanDto lDto : dto.getLoans()) {
+                // Support both new format (reference fields) and old format (embedded objects)
+                String bookTitle = null;
+                String bookAuthorName = null;
+                String username = null;
+
+                // Try new format first
+                if (lDto.getBookTitle() != null && !lDto.getBookTitle().isEmpty()) {
+                    bookTitle = lDto.getBookTitle();
+                    bookAuthorName = lDto.getBookAuthorName() != null ? lDto.getBookAuthorName() : "";
+                } else if (lDto.getBook() != null) {
+                    // Fall back to old format: extract from embedded book object
+                    bookTitle = lDto.getBook().getTitle();
+                    // Check both new authorName and old embedded author
+                    if (lDto.getBook().getAuthorName() != null && !lDto.getBook().getAuthorName().isEmpty()) {
+                        bookAuthorName = lDto.getBook().getAuthorName();
+                    } else if (lDto.getBook().getAuthor() != null && lDto.getBook().getAuthor().getName() != null) {
+                        bookAuthorName = lDto.getBook().getAuthor().getName();
+                    } else {
+                        bookAuthorName = "";
+                    }
+                }
+
+                // Try new format for user first
+                if (lDto.getUsername() != null && !lDto.getUsername().isEmpty()) {
+                    username = lDto.getUsername();
+                } else if (lDto.getUser() != null) {
+                    // Fall back to old format: extract from embedded user object
+                    username = lDto.getUser().getUsername();
+                }
+
                 Book book = null;
-                if (lDto.getBook() != null) {
-                    String authorName = lDto.getBook().getAuthor() != null ? lDto.getBook().getAuthor().getName() : "";
-                    String key = lDto.getBook().getTitle() + "|" + authorName;
+                if (bookTitle != null) {
+                    String key = bookTitle + "|" + bookAuthorName;
                     book = bookMap.get(key);
                     if (book == null) {
-                        throw new LibraryException("Book not found for loan: " + lDto.getBook().getTitle() + " by " + authorName);
+                        throw new LibraryException("Book not found for loan: " + bookTitle + " by " + bookAuthorName);
                     }
                 }
                 User user = null;
-                if (lDto.getUser() != null) {
-                    user = userMap.get(lDto.getUser().getUsername());
+                if (username != null) {
+                    user = userMap.get(username);
                     if (user == null) {
-                        throw new LibraryException("User not found for loan: " + lDto.getUser().getUsername());
+                        throw new LibraryException("User not found for loan: " + username);
                     }
                 }
 
@@ -302,7 +341,7 @@ public class ImportService {
         // Import photos
         logger.info("Ready to import photos.");
         if (dto.getPhotos() != null) {
-            logger.info("Importing {} photos", dto.getPhotos().size()); 
+            logger.info("Importing {} photos", dto.getPhotos().size());
             for (ImportPhotoDto pDto : dto.getPhotos()) {
                 // First resolve book and author references
                 Book book = null;
@@ -322,42 +361,50 @@ public class ImportService {
                     }
                 }
 
-                // Try to find existing photo by permanentId first, then book/author + photoOrder
+                // Try to find existing photo by imageChecksum, permanentId, or book/author + photoOrder
                 Photo photo = null;
 
-                // 1. If photo has a permanentId, try to find existing photo with same permanentId
-                if (pDto.getPermanentId() != null && !pDto.getPermanentId().trim().isEmpty()) {
+                // 1. If photo has imageChecksum (SHA-256), try to find existing photo with same checksum
+                if (pDto.getImageChecksum() != null && !pDto.getImageChecksum().trim().isEmpty()) {
+                    photo = photoRepository.findByImageChecksum(pDto.getImageChecksum()).orElse(null);
+                    if (photo != null) {
+                        logger.info("Found existing photo with imageChecksum: {} (Photo ID: {})", pDto.getImageChecksum(), photo.getId());
+                    }
+                }
+
+                // 2. If photo has a permanentId and not found by checksum, try permanentId
+                if (photo == null && pDto.getPermanentId() != null && !pDto.getPermanentId().trim().isEmpty()) {
                     photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
                     if (photo != null) {
                         logger.info("Found existing photo with permanentId: {} (Photo ID: {})", pDto.getPermanentId(), photo.getId());
                     }
                 }
 
-                // 2. If it's a book photo and not found by permanentId, match by book + photoOrder
+                // 3. If it's a book photo and not found by checksum/permanentId, match by book + photoOrder
                 if (photo == null && book != null && pDto.getPhotoOrder() != null) {
                     List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
                     if (!photos.isEmpty()) {
                         photo = photos.get(0); // Use the one with lowest ID
-                        logger.info("Found existing photo with bookId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})", 
+                        logger.info("Found existing photo with bookId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})",
                             book.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
                     }
                 }
 
-                // 3. If it's an author-only photo, match by author + photoOrder
+                // 4. If it's an author-only photo, match by author + photoOrder
                 if (photo == null && author != null && book == null && pDto.getPhotoOrder() != null) {
                     List<Photo> photos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), pDto.getPhotoOrder());
                     if (!photos.isEmpty()) {
                         photo = photos.get(0); // Use the one with lowest ID
-                        logger.info("Found existing photo with authorId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})", 
+                        logger.info("Found existing photo with authorId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})",
                             author.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
                     }
                 }
 
-                // 4. Create new photo if not found
+                // 5. Create new photo if not found
                 if (photo == null) {
                     photo = new Photo();
-                    logger.info("Existing photo not found for bookId: {}. Starting new photo. Perm ID: {}", 
-                        book.getId(), pDto.getPermanentId());
+                    logger.info("Existing photo not found for bookId: {}. Starting new photo. Perm ID: {} Checksum: {}",
+                        book != null ? book.getId() : "null", pDto.getPermanentId(), pDto.getImageChecksum());
                 }
 
                 // Update fields (merge)
@@ -368,6 +415,8 @@ public class ImportService {
                 photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
+                // Note: imageChecksum is not updated here - it's a reference field, not a value to import
+                // The actual imageChecksum is computed from the photo binary during upload
                 photo.setBook(book);
                 photo.setAuthor(author);
 
@@ -429,7 +478,7 @@ public class ImportService {
         }
         dto.setUsers(userDtos);
 
-        // Export books
+        // Export books (new format: authorName reference instead of embedded author object)
         List<ImportBookDto> bookDtos = new ArrayList<>();
         for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
@@ -446,18 +495,11 @@ public class ImportService {
             bDto.setStatus(book.getStatus());
             bDto.setLocNumber(book.getLocNumber());
             bDto.setStatusReason(book.getStatusReason());
+            // New format: reference author by name only (not embedded object)
             if (book.getAuthor() != null) {
-                ImportAuthorDto authorDto = new ImportAuthorDto();
-                authorDto.setName(book.getAuthor().getName());
-                authorDto.setDateOfBirth(book.getAuthor().getDateOfBirth());
-                authorDto.setDateOfDeath(book.getAuthor().getDateOfDeath());
-                authorDto.setReligiousAffiliation(book.getAuthor().getReligiousAffiliation());
-                authorDto.setBirthCountry(book.getAuthor().getBirthCountry());
-                authorDto.setNationality(book.getAuthor().getNationality());
-                authorDto.setBriefBiography(book.getAuthor().getBriefBiography());
-                authorDto.setGrokipediaUrl(book.getAuthor().getGrokipediaUrl());
-                bDto.setAuthor(authorDto);
+                bDto.setAuthorName(book.getAuthor().getName());
             }
+            // Note: bDto.setAuthor() is NOT set - embedded author is deprecated for export
             if (book.getLibrary() != null) {
                 bDto.setLibraryName(book.getLibrary().getName());
             }
@@ -465,66 +507,21 @@ public class ImportService {
         }
         dto.setBooks(bookDtos);
 
-        // Export loans
+        // Export loans (new format: reference fields instead of embedded objects)
         List<ImportLoanDto> loanDtos = new ArrayList<>();
         for (Loan loan : loanRepository.findAllWithBookAndUser()) {
             ImportLoanDto lDto = new ImportLoanDto();
+            // New format: reference book and user by natural keys only
             if (loan.getBook() != null) {
-                ImportBookDto bookDto = new ImportBookDto();
-                bookDto.setTitle(loan.getBook().getTitle());
-                bookDto.setPublicationYear(loan.getBook().getPublicationYear());
-                bookDto.setPublisher(loan.getBook().getPublisher());
-                bookDto.setPlotSummary(loan.getBook().getPlotSummary());
-                bookDto.setRelatedWorks(loan.getBook().getRelatedWorks());
-                bookDto.setDetailedDescription(loan.getBook().getDetailedDescription());
-                bookDto.setGrokipediaUrl(loan.getBook().getGrokipediaUrl());
-                bookDto.setFreeTextUrl(loan.getBook().getFreeTextUrl());
-                bookDto.setDateAddedToLibrary(loan.getBook().getDateAddedToLibrary());
-                bookDto.setLastModified(loan.getBook().getLastModified());
-                bookDto.setStatus(loan.getBook().getStatus());
-                bookDto.setLocNumber(loan.getBook().getLocNumber());
-                bookDto.setStatusReason(loan.getBook().getStatusReason());
+                lDto.setBookTitle(loan.getBook().getTitle());
                 if (loan.getBook().getAuthor() != null) {
-                    ImportAuthorDto authorDto = new ImportAuthorDto();
-                    authorDto.setName(loan.getBook().getAuthor().getName());
-                    authorDto.setDateOfBirth(loan.getBook().getAuthor().getDateOfBirth());
-                    authorDto.setDateOfDeath(loan.getBook().getAuthor().getDateOfDeath());
-                    authorDto.setReligiousAffiliation(loan.getBook().getAuthor().getReligiousAffiliation());
-                    authorDto.setBirthCountry(loan.getBook().getAuthor().getBirthCountry());
-                    authorDto.setNationality(loan.getBook().getAuthor().getNationality());
-                    authorDto.setBriefBiography(loan.getBook().getAuthor().getBriefBiography());
-                    authorDto.setGrokipediaUrl(loan.getBook().getAuthor().getGrokipediaUrl());
-                    bookDto.setAuthor(authorDto);
+                    lDto.setBookAuthorName(loan.getBook().getAuthor().getName());
                 }
-                if (loan.getBook().getLibrary() != null) {
-                    bookDto.setLibraryName(loan.getBook().getLibrary().getName());
-                }
-                lDto.setBook(bookDto);
             }
             if (loan.getUser() != null) {
-                ImportUserDto userDto = new ImportUserDto();
-                userDto.setUserIdentifier(loan.getUser().getUserIdentifier());
-                userDto.setUsername(loan.getUser().getUsername());
-                userDto.setPassword(loan.getUser().getPassword()); // Export BCrypt hashed password (60 chars)
-                userDto.setXaiApiKey(loan.getUser().getXaiApiKey());
-                userDto.setGooglePhotosApiKey(loan.getUser().getGooglePhotosApiKey());
-                userDto.setGooglePhotosRefreshToken(loan.getUser().getGooglePhotosRefreshToken());
-                userDto.setGooglePhotosTokenExpiry(loan.getUser().getGooglePhotosTokenExpiry());
-                userDto.setGoogleClientSecret(loan.getUser().getGoogleClientSecret());
-                userDto.setGooglePhotosAlbumId(loan.getUser().getGooglePhotosAlbumId());
-                userDto.setLastPhotoTimestamp(loan.getUser().getLastPhotoTimestamp());
-                userDto.setSsoProvider(loan.getUser().getSsoProvider());
-                userDto.setSsoSubjectId(loan.getUser().getSsoSubjectId());
-                userDto.setEmail(loan.getUser().getEmail());
-                userDto.setLibraryCardDesign(loan.getUser().getLibraryCardDesign());
-                if (loan.getUser().getAuthorities() != null) {
-                    List<String> authorities = loan.getUser().getAuthorities().stream()
-                            .map(a -> a.getName())
-                            .collect(Collectors.toList());
-                    userDto.setAuthorities(authorities);
-                }
-                lDto.setUser(userDto);
+                lDto.setUsername(loan.getUser().getUsername());
             }
+            // Note: lDto.setBook() and lDto.setUser() are NOT set - embedded objects are deprecated for export
             lDto.setLoanDate(loan.getLoanDate());
             lDto.setDueDate(loan.getDueDate());
             lDto.setReturnDate(loan.getReturnDate());

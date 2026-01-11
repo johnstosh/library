@@ -1,3 +1,6 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.dto.importdtos;
 
 import com.muczynski.library.domain.Photo;
@@ -7,6 +10,9 @@ import java.time.LocalDateTime;
 
 @Data
 public class ImportPhotoDto {
+    // SHA-256 checksum of image bytes for photo identification/matching
+    private String imageChecksum;
+
     private String contentType;
     private String caption;
     private String bookTitle;  // Reference book by title
