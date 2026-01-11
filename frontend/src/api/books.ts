@@ -3,7 +3,7 @@ import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { BookDto, BookSummaryDto } from '@/types/dtos'
+import type { BookDto, BookSummaryDto, BulkDeleteResultDto } from '@/types/dtos'
 import type { SavedBookDto } from './books-from-feed'
 import type { BookStatus } from '@/types/enums'
 
@@ -159,13 +159,17 @@ export function useDeleteBook() {
   })
 }
 
-// Hook to delete multiple books
+// Hook to delete multiple books (returns partial success result)
 export function useDeleteBooks() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (ids: number[]) => api.post('/books/delete-bulk', ids),
-    onSuccess: () => {
+    mutationFn: (ids: number[]) => api.post<BulkDeleteResultDto>('/books/delete-bulk', ids),
+    onSuccess: (result) => {
+      // Remove deleted books from cache
+      result.deletedIds.forEach((id) => {
+        queryClient.removeQueries({ queryKey: queryKeys.books.detail(id) })
+      })
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })

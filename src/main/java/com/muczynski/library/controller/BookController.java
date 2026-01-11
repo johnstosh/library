@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
@@ -177,14 +178,13 @@ public class BookController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deleteBulkBooks(@RequestBody List<Long> bookIds) {
-        try {
-            bookService.deleteBulkBooks(bookIds);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            logger.warn("Failed to bulk delete books {}: {}", bookIds, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    public ResponseEntity<BulkDeleteResultDto> deleteBulkBooks(@RequestBody List<Long> bookIds) {
+        BulkDeleteResultDto result = bookService.deleteBulkBooks(bookIds);
+        if (result.getFailedCount() > 0) {
+            logger.warn("Bulk delete partially failed: {} deleted, {} failed",
+                    result.getDeletedCount(), result.getFailedCount());
         }
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/grokipedia-lookup-bulk")

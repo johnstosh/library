@@ -140,6 +140,20 @@ export interface ApplicationDto {
   processedDate?: string
 }
 
+// Bulk Delete Result DTOs
+export interface BulkDeleteFailureDto {
+  id: number
+  title: string
+  errorMessage: string
+}
+
+export interface BulkDeleteResultDto {
+  deletedCount: number
+  failedCount: number
+  deletedIds: number[]
+  failures: BulkDeleteFailureDto[]
+}
+
 // Settings DTOs
 export interface GlobalSettingsDto {
   googleClientSecret?: string

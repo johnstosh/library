@@ -13,6 +13,7 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -34,6 +35,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -230,11 +232,39 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    /**
+     * Delete multiple books with partial success handling.
+     * Books that can be deleted are deleted; books with active loans are skipped.
+     * Returns a result DTO with counts and error details for failed deletions.
+     */
     @Transactional
-    public void deleteBulkBooks(List<Long> bookIds) {
+    public BulkDeleteResultDto deleteBulkBooks(List<Long> bookIds) {
+        List<Long> deletedIds = new ArrayList<>();
+        List<BulkDeleteResultDto.BulkDeleteFailureDto> failures = new ArrayList<>();
+
         for (Long id : bookIds) {
-            deleteBook(id);  // Reuse existing delete logic with photo cleanup
+            try {
+                deleteBook(id);
+                deletedIds.add(id);
+            } catch (LibraryException e) {
+                // Get book title for error message
+                String title = bookRepository.findById(id)
+                        .map(Book::getTitle)
+                        .orElse("Unknown");
+                failures.add(BulkDeleteResultDto.BulkDeleteFailureDto.builder()
+                        .id(id)
+                        .title(title)
+                        .errorMessage(e.getMessage())
+                        .build());
+            }
         }
+
+        return BulkDeleteResultDto.builder()
+                .deletedCount(deletedIds.size())
+                .failedCount(failures.size())
+                .deletedIds(deletedIds)
+                .failures(failures)
+                .build();
     }
 
     public BookDto cloneBook(Long id) {

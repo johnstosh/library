@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
@@ -154,12 +155,48 @@ class BookControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteBulkBooks() throws Exception {
         List<Long> bookIds = Arrays.asList(1L, 2L, 3L);
-        doNothing().when(bookService).deleteBulkBooks(bookIds);
+        BulkDeleteResultDto result = BulkDeleteResultDto.builder()
+                .deletedCount(3)
+                .failedCount(0)
+                .deletedIds(bookIds)
+                .failures(Collections.emptyList())
+                .build();
+        when(bookService.deleteBulkBooks(bookIds)).thenReturn(result);
 
         mockMvc.perform(post("/api/books/delete-bulk")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bookIds)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletedCount").value(3))
+                .andExpect(jsonPath("$.failedCount").value(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void deleteBulkBooks_partialSuccess() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L, 3L);
+        BulkDeleteResultDto.BulkDeleteFailureDto failure = BulkDeleteResultDto.BulkDeleteFailureDto.builder()
+                .id(2L)
+                .title("Book with Loan")
+                .errorMessage("Cannot delete book because it is currently checked out with 1 loan(s).")
+                .build();
+        BulkDeleteResultDto result = BulkDeleteResultDto.builder()
+                .deletedCount(2)
+                .failedCount(1)
+                .deletedIds(Arrays.asList(1L, 3L))
+                .failures(Collections.singletonList(failure))
+                .build();
+        when(bookService.deleteBulkBooks(bookIds)).thenReturn(result);
+
+        mockMvc.perform(post("/api/books/delete-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletedCount").value(2))
+                .andExpect(jsonPath("$.failedCount").value(1))
+                .andExpect(jsonPath("$.failures[0].id").value(2))
+                .andExpect(jsonPath("$.failures[0].title").value("Book with Loan"))
+                .andExpect(jsonPath("$.failures[0].errorMessage").exists());
     }
 
     @Test

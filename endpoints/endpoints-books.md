@@ -174,4 +174,52 @@ Uses Grok AI to extract book metadata from the book's first photo (cover image).
 
 ---
 
-**Related:** BookController.java, BookService.java, AskGrok.java, BookDto.java, BookSummaryDto.java
+## Bulk Operations
+
+### POST /api/books/delete-bulk
+Deletes multiple books with partial success handling. Books that can be deleted are deleted; books with active loans are skipped.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Request Body:** Array of Long (book IDs)
+```json
+[1, 2, 3]
+```
+
+**Response:** BulkDeleteResultDto
+```json
+{
+  "deletedCount": 2,
+  "failedCount": 1,
+  "deletedIds": [1, 3],
+  "failures": [
+    {
+      "id": 2,
+      "title": "Book Title",
+      "errorMessage": "Cannot delete book because it is currently checked out with 1 loan(s)."
+    }
+  ]
+}
+```
+
+**Fields:**
+- `deletedCount` - Number of books successfully deleted
+- `failedCount` - Number of books that could not be deleted
+- `deletedIds` - Array of IDs for successfully deleted books
+- `failures` - Array of failure details for books that couldn't be deleted
+  - `id` - Book ID
+  - `title` - Book title
+  - `errorMessage` - Reason deletion failed
+
+**Behavior:**
+- Deletes books in order, skipping any that have active loans
+- Returns 200 OK even if some deletions fail (partial success)
+- Frontend shows results modal with success/failure details
+
+**Use Case:**
+- Bulk delete books from the Books page
+- Safe for books with loans - they are skipped, not blocking other deletions
+
+---
+
+**Related:** BookController.java, BookService.java, AskGrok.java, BookDto.java, BookSummaryDto.java, BulkDeleteResultDto.java

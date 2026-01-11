@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Modal } from '@/components/ui/Modal'
 import { useDeleteBooks, useBulkBookFromImage } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
@@ -11,6 +12,7 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
+import type { BulkDeleteResultDto } from '@/types/dtos'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -21,6 +23,8 @@ export type BookFromImageResult = { id: number; success: boolean; book?: { title
 
 export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteResults, setShowDeleteResults] = useState(false)
+  const [deleteResults, setDeleteResults] = useState<BulkDeleteResultDto | null>(null)
   const [showResults, setShowResults] = useState(false)
   const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
   const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
@@ -36,11 +40,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
 
   const handleBulkDelete = async () => {
     try {
-      await deleteBooks.mutateAsync(Array.from(selectedIds))
-      onClearSelection()
+      const result = await deleteBooks.mutateAsync(Array.from(selectedIds))
       setShowDeleteConfirm(false)
+      onClearSelection()
+      // Show results if there were any failures
+      if (result.failedCount > 0) {
+        setDeleteResults(result)
+        setShowDeleteResults(true)
+      }
     } catch (error) {
       console.error('Failed to delete books:', error)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -205,6 +215,46 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         onClose={() => setShowBookFromImageResults(false)}
         results={bookFromImageResults}
       />
+
+      <Modal
+        isOpen={showDeleteResults}
+        onClose={() => setShowDeleteResults(false)}
+        title="Delete Results"
+        size="md"
+        footer={
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={() => setShowDeleteResults(false)} data-test="delete-results-close">
+              Close
+            </Button>
+          </div>
+        }
+      >
+        {deleteResults && (
+          <div className="space-y-4">
+            {deleteResults.deletedCount > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-green-800 font-medium">
+                  {deleteResults.deletedCount} {deleteResults.deletedCount === 1 ? 'book' : 'books'} deleted successfully
+                </p>
+              </div>
+            )}
+            {deleteResults.failedCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-800 font-medium mb-2">
+                  {deleteResults.failedCount} {deleteResults.failedCount === 1 ? 'book' : 'books'} could not be deleted:
+                </p>
+                <ul className="list-disc list-inside space-y-1">
+                  {deleteResults.failures.map((failure) => (
+                    <li key={failure.id} className="text-red-700 text-sm">
+                      <span className="font-medium">{failure.title}</span>: {failure.errorMessage}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </>
   )
 }
