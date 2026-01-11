@@ -41,7 +41,22 @@ public class ImportService {
     private final LibraryMapper libraryMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public void importData(ImportRequestDto dto) {
+    public ImportResponseDto.ImportCounts importData(ImportRequestDto dto) {
+        logger.info("Starting import. Libraries: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
+            dto.getLibraries() != null ? dto.getLibraries().size() : 0,
+            dto.getAuthors() != null ? dto.getAuthors().size() : 0,
+            dto.getUsers() != null ? dto.getUsers().size() : 0,
+            dto.getBooks() != null ? dto.getBooks().size() : 0,
+            dto.getLoans() != null ? dto.getLoans().size() : 0,
+            dto.getPhotos() != null ? dto.getPhotos().size() : 0);
+
+        int libraryCount = 0;
+        int authorCount = 0;
+        int userCount = 0;
+        int bookCount = 0;
+        int loanCount = 0;
+        int photoCount = 0;
+
         Map<String, Library> libMap = new HashMap<>();
         if (dto.getLibraries() != null) {
             for (LibraryDto lDto : dto.getLibraries()) {
@@ -58,8 +73,10 @@ public class ImportService {
                 }
                 lib = libraryRepository.save(lib);
                 libMap.put(lDto.getName(), lib);
+                libraryCount++;
             }
         }
+        logger.info("Imported {} libraries", libraryCount);
 
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
@@ -80,8 +97,10 @@ public class ImportService {
                 auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
                 auth = authorRepository.save(auth);
                 authMap.put(aDto.getName(), auth);
+                authorCount++;
             }
         }
+        logger.info("Imported {} authors", authorCount);
 
         Map<String, User> userMap = new HashMap<>();
         if (dto.getUsers() != null) {
@@ -183,8 +202,10 @@ public class ImportService {
                 }
                 user = userRepository.save(user);
                 userMap.put(uDto.getUsername(), user);
+                userCount++;
             }
         }
+        logger.info("Imported {} users", userCount);
 
         Map<String, Book> bookMap = new HashMap<>();
         if (dto.getBooks() != null) {
@@ -266,8 +287,10 @@ public class ImportService {
 
                 String key = bDto.getTitle() + "|" + (authorNameToLookup != null ? authorNameToLookup : "");
                 bookMap.put(key, book);
+                bookCount++;
             }
         }
+        logger.info("Imported {} books", bookCount);
 
         if (dto.getLoans() != null) {
             for (ImportLoanDto lDto : dto.getLoans()) {
@@ -335,8 +358,10 @@ public class ImportService {
                 loan.setDueDate(lDto.getDueDate() != null ? lDto.getDueDate() : loanDate.plusWeeks(2));
                 loan.setReturnDate(lDto.getReturnDate());
                 loanRepository.save(loan);
+                loanCount++;
             }
         }
+        logger.info("Imported {} loans", loanCount);
 
         // Import photos
         logger.info("Ready to import photos.");
@@ -421,8 +446,15 @@ public class ImportService {
                 photo.setAuthor(author);
 
                 photoRepository.save(photo);
+                photoCount++;
             }
         }
+        logger.info("Imported {} photos", photoCount);
+
+        logger.info("Import completed successfully. Total: {} libraries, {} authors, {} users, {} books, {} loans, {} photos",
+            libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+
+        return new ImportResponseDto.ImportCounts(libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
     }
 
     public ImportRequestDto exportData() {

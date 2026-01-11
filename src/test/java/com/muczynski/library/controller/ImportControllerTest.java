@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
+import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.ImportService;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -57,7 +58,8 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setLibraries(List.of());
 
-        doNothing().when(importService).importData(any(ImportRequestDto.class));
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
 
         // Act & Assert
         given()
@@ -68,7 +70,8 @@ class ImportControllerTest {
             .post("/api/import/json")
         .then()
             .statusCode(200)
-            .body(equalTo("Import completed successfully"));
+            .body("success", equalTo(true))
+            .body("message", equalTo("Import completed successfully"));
     }
 
     @Test
@@ -95,10 +98,10 @@ class ImportControllerTest {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
 
-        doThrow(new RuntimeException("Invalid import data"))
-                .when(importService).importData(any(ImportRequestDto.class));
+        when(importService.importData(any(ImportRequestDto.class)))
+                .thenThrow(new RuntimeException("Invalid import data"));
 
-        // Act & Assert
+        // Act & Assert - Controller catches exception and returns 400 with error response
         given()
             .contentType(ContentType.JSON)
             .body(importDto)
@@ -106,7 +109,9 @@ class ImportControllerTest {
         .when()
             .post("/api/import/json")
         .then()
-            .statusCode(500);
+            .statusCode(400)
+            .body("success", equalTo(false))
+            .body("message", containsString("Invalid import data"));
     }
 
     @Test
@@ -118,7 +123,8 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setLibraries(List.of());
 
-        doNothing().when(importService).importData(any(ImportRequestDto.class));
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
 
         // Act & Assert - Should still succeed with empty data
         given()
@@ -128,7 +134,8 @@ class ImportControllerTest {
         .when()
             .post("/api/import/json")
         .then()
-            .statusCode(200);
+            .statusCode(200)
+            .body("success", equalTo(true));
     }
 
     // ==================== GET /api/import/json Tests ====================

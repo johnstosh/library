@@ -10,6 +10,20 @@ export interface ImportExportStats {
   loans: number
 }
 
+// Import response from backend
+export interface ImportResponseDto {
+  success: boolean
+  message: string
+  counts?: {
+    libraries: number
+    authors: number
+    users: number
+    books: number
+    loans: number
+    photos: number
+  }
+}
+
 // Database statistics from the backend (total counts from database)
 export interface DatabaseStatsDto {
   libraryCount: number
@@ -85,11 +99,40 @@ export async function exportJsonData(): Promise<Blob> {
 
 // Import JSON data
 export function useImportJsonData() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (file: File) => {
       const text = await file.text()
-      const data = JSON.parse(text)
-      return api.post<string>('/import/json', data)
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        console.error('Failed to parse import file as JSON:', parseError)
+        throw new Error('Invalid JSON file format. Please check the file and try again.')
+      }
+      console.log('Importing data:', {
+        libraries: data.libraries?.length || 0,
+        authors: data.authors?.length || 0,
+        users: data.users?.length || 0,
+        books: data.books?.length || 0,
+        loans: data.loans?.length || 0,
+        photos: data.photos?.length || 0,
+      })
+      const response = await api.post<ImportResponseDto>('/import/json', data)
+      console.log('Import response:', response)
+      if (!response.success) {
+        throw new Error(response.message || 'Import failed')
+      }
+      return response
+    },
+    onSuccess: () => {
+      // Invalidate all queries to refresh data after import
+      queryClient.invalidateQueries({ queryKey: ['database-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['books'] })
+      queryClient.invalidateQueries({ queryKey: ['authors'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['loans'] })
+      queryClient.invalidateQueries({ queryKey: ['libraries'] })
     },
   })
 }
