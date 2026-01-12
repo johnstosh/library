@@ -18,6 +18,7 @@ import {
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { useLibraries } from '@/api/libraries'
+import { getThumbnailUrl } from '@/api/photos'
 import { formatDateTime, formatLocForSpine, truncate } from '@/utils/formatters'
 import {
   PiDownload,
@@ -52,7 +53,7 @@ export function DataManagementPage() {
 
   // Photo export hooks
   const { data: photoStats, refetch: refetchPhotoStats } = usePhotoExportStats()
-  const { data: photoList = [], refetch: refetchPhotoList } = usePhotoExportList()
+  const { data: photoList = [], refetch: refetchPhotoList, isLoading: isLoadingPhotos } = usePhotoExportList()
   const exportSinglePhoto = useExportSinglePhoto()
   const importSinglePhoto = useImportSinglePhoto()
   const verifyPhoto = useVerifyPhoto()
@@ -270,6 +271,8 @@ export function DataManagementPage() {
     try {
       const result = await exportSinglePhoto.mutateAsync(photoId)
       setSuccessMessage(result.message || 'Photo exported successfully!')
+      // Refresh data to update the row status
+      handleRefreshPhotoStatus()
     } catch {
       setErrorMessage('Failed to export photo. Please try again.')
     }
@@ -282,6 +285,8 @@ export function DataManagementPage() {
     try {
       const result = await importSinglePhoto.mutateAsync(photoId)
       setSuccessMessage(result.message || 'Photo imported successfully!')
+      // Refresh data to update the row status
+      handleRefreshPhotoStatus()
     } catch {
       setErrorMessage('Failed to import photo. Please try again.')
     }
@@ -320,6 +325,8 @@ export function DataManagementPage() {
     try {
       const result = await unlinkPhoto.mutateAsync(photoId)
       setSuccessMessage(result.message || 'Photo unlinked successfully!')
+      // Refresh data to update the row status
+      handleRefreshPhotoStatus()
     } catch {
       setErrorMessage('Failed to unlink photo. Please try again.')
     }
@@ -336,6 +343,8 @@ export function DataManagementPage() {
     try {
       await deletePhoto.mutateAsync(photoId)
       setSuccessMessage(`Photo #${photoId} deleted successfully!`)
+      // Refresh data to update the table
+      handleRefreshPhotoStatus()
     } catch {
       setErrorMessage('Failed to delete photo. Please try again.')
     }
@@ -352,6 +361,8 @@ export function DataManagementPage() {
         return 'bg-blue-100 text-blue-800'
       case 'NO_IMAGE':
         return 'bg-gray-100 text-gray-800'
+      case 'PENDING_IMPORT':
+        return 'bg-purple-100 text-purple-800'
       case 'PENDING':
       default:
         return 'bg-yellow-100 text-yellow-800'
@@ -369,6 +380,8 @@ export function DataManagementPage() {
         return 'In Progress'
       case 'NO_IMAGE':
         return 'No Image'
+      case 'PENDING_IMPORT':
+        return 'Pending Import'
       case 'PENDING':
       default:
         return 'Pending'
@@ -700,7 +713,16 @@ export function DataManagementPage() {
                   className="bg-white divide-y divide-gray-200"
                   data-test="photos-table-body"
                 >
-                  {photoList.length === 0 ? (
+                  {isLoadingPhotos ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                          <span>Loading photos...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : photoList.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                         No photos in the database
@@ -711,9 +733,9 @@ export function DataManagementPage() {
                       <tr key={photo.id} data-photo-id={photo.id}>
                         {/* Photo Thumbnail */}
                         <td className="px-4 py-3">
-                          {photo.id && photo.checksum ? (
+                          {photo.id && photo.hasImage ? (
                             <img
-                              src={`/api/photos/${photo.id}/thumbnail`}
+                              src={getThumbnailUrl(photo.id, 48)}
                               alt={`Photo #${photo.id}`}
                               className="w-12 h-12 object-cover rounded"
                             />

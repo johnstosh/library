@@ -16,9 +16,11 @@ import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
+import com.muczynski.library.photostorage.dto.MediaItemResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +38,9 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -183,7 +188,8 @@ class PhotoExportControllerTest {
         createPhotoWithPermanentId(testBook, "permanent-id-1");
         createPhotoNeedingImport(testBook, "permanent-id-2");
 
-        // Create a failed photo (has checksum but no permanentId, so counted in pendingExport)
+        // Create a failed photo (has checksum but no permanentId)
+        // FAILED photos are excluded from pendingExport count to prevent double-counting
         Photo failedPhoto = createPhotoWithImage(testBook, "Failed");
         failedPhoto.setExportStatus(Photo.ExportStatus.FAILED);
         failedPhoto.setExportErrorMessage("Test error");
@@ -194,8 +200,8 @@ class PhotoExportControllerTest {
                 .andExpect(jsonPath("$.total", is(5)))
                 .andExpect(jsonPath("$.exported", is(2)))  // 2 with permanentId
                 .andExpect(jsonPath("$.imported", is(1)))  // 1 with permanentId AND checksum
-                .andExpect(jsonPath("$.pendingExport", is(3)))  // 3 with checksum but no permanentId (including failed)
-                .andExpect(jsonPath("$.pendingImport", is(1)))  // 1 with permanentId but no checksum
+                .andExpect(jsonPath("$.pendingExport", is(2)))  // 2 with checksum but no permanentId (excluding failed)
+                .andExpect(jsonPath("$.pendingImport", is(1)))  // 1 with permanentId but no checksum (excluding failed)
                 .andExpect(jsonPath("$.failed", is(1)));
     }
 
@@ -210,6 +216,35 @@ class PhotoExportControllerTest {
                 .andExpect(jsonPath("$.pendingExport", is(0)))
                 .andExpect(jsonPath("$.pendingImport", is(0)))
                 .andExpect(jsonPath("$.failed", is(0)));
+    }
+
+    @Test
+    @WithMockUser(username = "1")
+    void getExportStats_excludesFailedFromPendingCounts() throws Exception {
+        // Create non-failed pending export photos
+        createPhotoWithImage(testBook, "Pending export 1");
+        createPhotoWithImage(testBook, "Pending export 2");
+
+        // Create failed export photo (has checksum, no permanentId, FAILED)
+        Photo failedExportPhoto = createPhotoWithImage(testBook, "Failed export");
+        failedExportPhoto.setExportStatus(Photo.ExportStatus.FAILED);
+        photoRepository.save(failedExportPhoto);
+
+        // Create non-failed pending import photo
+        createPhotoNeedingImport(testBook, "permanent-pending");
+
+        // Create failed import photo (has permanentId, no checksum, FAILED)
+        Photo failedImportPhoto = createPhotoNeedingImport(testBook, "permanent-failed");
+        failedImportPhoto.setExportStatus(Photo.ExportStatus.FAILED);
+        failedImportPhoto.setExportErrorMessage("Import failed");
+        photoRepository.save(failedImportPhoto);
+
+        mockMvc.perform(get("/api/photo-export/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total", is(5)))
+                .andExpect(jsonPath("$.pendingExport", is(2)))  // 2 non-failed pending exports
+                .andExpect(jsonPath("$.pendingImport", is(1)))  // 1 non-failed pending import
+                .andExpect(jsonPath("$.failed", is(2)));        // 2 failed (1 export + 1 import)
     }
 
     @Test
@@ -521,11 +556,16 @@ class PhotoExportControllerTest {
         pendingPhoto.setExportStatus(null);  // Clear stored status to test derivation
         photoRepository.save(pendingPhoto);
 
-        // Photo with permanentId (even if stored status is null) -> should show COMPLETED
+        // Photo with permanentId AND checksum (even if stored status is null) -> should show COMPLETED
         Photo exportedPhoto = createPhotoWithImage(testBook, "Exported");
         exportedPhoto.setPermanentId("permanent-id-derived");
         exportedPhoto.setExportStatus(null);  // Clear stored status to test derivation
         photoRepository.save(exportedPhoto);
+
+        // Photo with permanentId but NO checksum -> should show PENDING_IMPORT
+        Photo needsImportPhoto = createPhotoNeedingImport(testBook, "permanent-needs-import");
+        needsImportPhoto.setCaption("Needs import");
+        photoRepository.save(needsImportPhoto);
 
         // Photo with no checksum and no permanentId -> should show NO_IMAGE
         Photo noImagePhoto = new Photo();
@@ -543,9 +583,10 @@ class PhotoExportControllerTest {
 
         mockMvc.perform(get("/api/photo-export/photos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[?(@.caption == 'Pending export')].exportStatus", contains("PENDING")))
                 .andExpect(jsonPath("$[?(@.caption == 'Exported')].exportStatus", contains("COMPLETED")))
+                .andExpect(jsonPath("$[?(@.caption == 'Needs import')].exportStatus", contains("PENDING_IMPORT")))
                 .andExpect(jsonPath("$[?(@.caption == 'No image')].exportStatus", contains("NO_IMAGE")))
                 .andExpect(jsonPath("$[?(@.caption == 'Failed')].exportStatus", contains("FAILED")));
     }
@@ -572,5 +613,65 @@ class PhotoExportControllerTest {
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[?(@.exportStatus == 'PENDING')]", hasSize(2)))
                 .andExpect(jsonPath("$[?(@.exportStatus == 'COMPLETED')]", hasSize(1)));
+    }
+
+    // ===========================================
+    // Import with Batch Fallback Tests
+    // Verify fallback from single-item to batch endpoint on 404
+    // ===========================================
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importPhoto_usesBatchFallbackOn404() throws Exception {
+        Photo photo = createPhotoNeedingImport(testBook, "permanent-for-import");
+
+        // Mock GooglePhotosService to return valid access token
+        when(googlePhotosService.getValidAccessToken(ArgumentMatchers.any())).thenReturn("mock-access-token");
+
+        // Mock getMediaItem to return a valid media item (simulating batch fallback success)
+        MediaItemResponse mockResponse = new MediaItemResponse();
+        mockResponse.setId("permanent-for-import");
+        mockResponse.setBaseUrl("https://example.com/photo");
+        mockResponse.setMimeType("image/jpeg");
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenReturn(mockResponse);
+
+        // Mock downloadPhoto to return image bytes
+        byte[] mockImageBytes = createDummyImage(100, 100);
+        when(googlePhotosLibraryClient.downloadPhoto(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenReturn(mockImageBytes);
+
+        mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("imported")))
+                .andExpect(jsonPath("$.photoId", is(photo.getId().intValue())));
+
+        // Verify getMediaItem was called (which internally handles fallback)
+        verify(googlePhotosLibraryClient).getMediaItem(ArgumentMatchers.anyString(), eq("permanent-for-import"));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importPhoto_failsWhenBothEndpointsFail() throws Exception {
+        Photo photo = createPhotoNeedingImport(testBook, "permanent-not-found");
+
+        // Mock GooglePhotosService to return valid access token
+        when(googlePhotosService.getValidAccessToken(ArgumentMatchers.any())).thenReturn("mock-access-token");
+
+        // Mock getMediaItem to throw NotFound (simulating both endpoints failing)
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenThrow(new org.springframework.web.client.HttpClientErrorException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Media item not found via both single-item and batch endpoints"
+                ));
+
+        mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message", notNullValue()));
+
+        // Verify photo was marked as failed
+        Photo updatedPhoto = photoRepository.findById(photo.getId()).orElseThrow();
+        assert updatedPhoto.getExportStatus() == Photo.ExportStatus.FAILED;
+        assert updatedPhoto.getExportErrorMessage() != null;
     }
 }

@@ -498,7 +498,7 @@ public class PhotoExportService {
     @Transactional(readOnly = true)
     public List<PhotoExportInfoDto> getAllPhotosWithExportStatus() {
         logger.debug("Fetching all photo metadata (without image bytes)");
-        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findAllProjectedBy();
+        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findBy();
         logger.info("Found {} photos in database", allPhotos.size());
 
         List<PhotoExportInfoDto> result = new ArrayList<>();
@@ -515,15 +515,21 @@ public class PhotoExportService {
                 // Derive status from actual data to match stats counts exactly
                 // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
                 String derivedStatus;
+                boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
+                boolean hasChecksum = photo.getImageChecksum() != null;
+
                 if (photo.getExportStatus() == Photo.ExportStatus.FAILED) {
                     derivedStatus = "FAILED";
                 } else if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
                     derivedStatus = "IN_PROGRESS";
-                } else if (photo.getPermanentId() != null && !photo.getPermanentId().isEmpty()) {
-                    // Has permanentId = exported (regardless of stored exportStatus)
+                } else if (hasPermanentId && hasChecksum) {
+                    // Has both permanentId and checksum = fully synced (exported and imported)
                     derivedStatus = "COMPLETED";
-                } else if (photo.getImageChecksum() != null) {
-                    // Has image but no permanentId = pending export
+                } else if (hasPermanentId && !hasChecksum) {
+                    // Has permanentId but no checksum = needs import from Google Photos
+                    derivedStatus = "PENDING_IMPORT";
+                } else if (hasChecksum && !hasPermanentId) {
+                    // Has checksum but no permanentId = needs export to Google Photos
                     derivedStatus = "PENDING";
                 } else {
                     // No image and no permanentId = no data to export

@@ -174,12 +174,19 @@ class ImportControllerIntegrationTest {
         authorPhoto.setPhotoOrder(1);
         photoRepository.save(authorPhoto);
 
-        // IMPORTANT: Photos are NOT exported in JSON export (too large)
-        // Photos should be managed separately via Photo Export feature
-        // This test verifies that photos field is null in the export
+        // Photo metadata IS exported in JSON export (binary data excluded)
+        // This test verifies that photos field includes metadata with permanent IDs
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.photos").doesNotExist());
+                .andExpect(jsonPath("$.photos", hasSize(2)))
+                // Verify book photo metadata
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].contentType", hasItem("image/jpeg")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].caption", hasItem("Test book cover")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].bookTitle", hasItem("Test Book")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].bookAuthorName", hasItem("Test Author")))
+                // Verify author-only photo metadata
+                .andExpect(jsonPath("$.photos[?(@.caption=='Author portrait')].contentType", hasItem("image/png")))
+                .andExpect(jsonPath("$.photos[?(@.caption=='Author portrait')].authorName", hasItem("Test Author")));
     }
 
     @Test

@@ -561,16 +561,11 @@ public class ImportService {
         }
         dto.setLoans(loanDtos);
 
-        // IMPORTANT: Photos are NOT exported in JSON export (too large, even metadata can be significant)
-        // Photos should be managed separately via the Photo Export feature
-        // This ensures JSON exports remain lightweight and fast
-        // Photo metadata including permanent IDs, captions, and ordering is preserved in the database
-        // and will be reconnected during import via book/author matching
-
-        // The following code was used to export photo metadata, but has been disabled per design spec:
-        /*
+        // Export photo metadata (excluding binary image data)
+        // Photo metadata includes permanent IDs, captions, ordering, and export status
+        // This allows photos to be reconnected during import via book/author matching
         List<ImportPhotoDto> photoDtos = new ArrayList<>();
-        for (PhotoMetadataProjection photo : photoRepository.findAllProjectedBy()) {
+        for (PhotoMetadataProjection photo : photoRepository.findBy()) {
             // Skip soft-deleted photos
             if (photo.getDeletedAt() != null) {
                 continue;
@@ -584,6 +579,7 @@ public class ImportService {
             pDto.setExportedAt(photo.getExportedAt());
             pDto.setExportStatus(photo.getExportStatus());
             pDto.setExportErrorMessage(photo.getExportErrorMessage());
+            pDto.setImageChecksum(photo.getImageChecksum());
 
             // Set book reference if exists
             if (photo.getBook() != null) {
@@ -601,10 +597,6 @@ public class ImportService {
             photoDtos.add(pDto);
         }
         dto.setPhotos(photoDtos);
-        */
-
-        // Explicitly set photos to null to ensure they're not included in export
-        dto.setPhotos(null);
 
         return dto;
     }

@@ -18,18 +18,27 @@ The JSON export includes:
 - Users (including hashed passwords)
 - Books
 - Loans
+- **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included
-- **Photos are NOT included in JSON export (neither binary data nor metadata)**
-- **Why binary data is excluded**: Photos contain large binary data (image bytes) that would make the response too large
-- **Why metadata is excluded**: Even lightweight photo metadata (permanent IDs, captions, ordering) is excluded by design to keep exports "lightweight and fast" (per design spec in ImportService.java)
-- **Photo metadata locations**: Photo metadata is preserved in the database as sub-objects of Books and Authors with foreign keys
-- **Photo reconnection**: Photos can be reconnected during import via book/author matching using natural keys
-- **How to backup photos**: Use the separate Photo Export feature (Google Photos sync) to backup/restore photo binary data
+- **Photo binary data** (actual image bytes) - too large for JSON export
+- **How to backup photo images**: Use the separate Photo Export feature (Google Photos sync) to backup/restore photo binary data
 - **Complete backup workflow**:
-  1. Export JSON for metadata (libraries, authors, books, users, loans)
+  1. Export JSON for metadata (libraries, authors, books, users, loans, photo metadata)
   2. Export photos to Google Photos using `/api/photo-export/export-all` (creates cloud backup with permanent IDs)
   3. To restore: Import JSON first, then import photos from Google Photos using `/api/photo-export/import-all`
+
+### Photo Metadata in Export
+Photo metadata is now included in JSON export for complete backup:
+- `permanentId` - Google Photos permanent ID for reconnecting to cloud storage
+- `contentType` - MIME type (image/jpeg, image/png, etc.)
+- `caption` - User-provided caption
+- `photoOrder` - Position in photo list
+- `imageChecksum` - SHA-256 hash for photo identification/matching
+- `exportStatus` - Status of Google Photos export
+- `exportedAt` - Timestamp when photo was backed up
+- `bookTitle` / `bookAuthorName` - Reference to associated book
+- `authorName` - Reference to associated author (for author-only photos)
 
 ### Database Statistics Display
 The Data Management page displays real-time database statistics showing:
@@ -121,9 +130,9 @@ The export format changed to use lightweight references instead of embedded obje
 - Logs warnings for unresolved references
 
 ### Implementation
-- `ImportService.exportToJson()` - Creates export DTO
-- `ImportService.importFromJson()` - Processes import DTO
-- Photos explicitly set to `null` in export to prevent inclusion
+- `ImportService.exportData()` - Creates export DTO (includes photo metadata)
+- `ImportService.importData()` - Processes import DTO
+- Photo metadata exported via `PhotoMetadataProjection` (excludes binary data for performance)
 
 ## Photo Export (Google Photos Sync System)
 
@@ -166,6 +175,18 @@ The export format changed to use lightweight references instead of embedded obje
 - **Per-photo operations**: Can sync individual photos or all photos in bulk
 - **Status tracking**: Photo entity tracks sync status with permanent ID field
 
+### Google Photos API Fallback
+When fetching a photo from Google Photos for import, the system uses a fallback strategy:
+1. **Primary**: `GET /v1/mediaItems/{id}` - Single-item endpoint
+2. **Fallback**: `POST /v1/mediaItems:batchGet` - Batch endpoint (if primary returns 404)
+
+This fallback is necessary because sometimes the single-item endpoint returns 404 while the batch endpoint succeeds. This can happen when:
+- The photo was uploaded with a different OAuth client
+- The photo's permissions differ between access methods
+- Google Photos API inconsistencies
+
+The `GooglePhotosLibraryClient.getMediaItem()` method automatically handles this fallback internally.
+
 ### React UI (Photo Import/Export Status Section)
 The Data Management page includes a "Photo Import/Export Status" section with:
 
@@ -173,17 +194,20 @@ The Data Management page includes a "Photo Import/Export Status" section with:
 - Total Photos - total count
 - Exported - photos uploaded to Google Photos (green)
 - Imported - photos downloaded from Google Photos (blue)
-- Pending Export - photos with local data but no permanentId (yellow)
-- Pending Import - photos with permanentId but no local data (gray)
-- Failed - photos with export errors (red)
+- Pending Export - photos with local data but no permanentId, excluding FAILED (yellow)
+- Pending Import - photos with permanentId but no local data, excluding FAILED (gray)
+- Failed - photos with FAILED export status (red)
 
 **Status Derivation Logic**:
 The photo status displayed in the list is derived from actual data to ensure it matches the statistics counts exactly:
 1. **FAILED** - if `exportStatus == FAILED` (preserves failure for troubleshooting)
 2. **IN_PROGRESS** - if `exportStatus == IN_PROGRESS` (preserves in-progress state)
-3. **COMPLETED** - if photo has `permanentId` (regardless of stored exportStatus)
-4. **PENDING** - if photo has `imageChecksum` but no `permanentId` (has image, needs export)
-5. **NO_IMAGE** - if photo has neither `imageChecksum` nor `permanentId` (no data to export)
+3. **COMPLETED** - if photo has both `permanentId` AND `imageChecksum` (fully synced)
+4. **PENDING_IMPORT** - if photo has `permanentId` but no `imageChecksum` (needs download from Google Photos)
+5. **PENDING** - if photo has `imageChecksum` but no `permanentId` (has image, needs export to Google Photos)
+6. **NO_IMAGE** - if photo has neither `imageChecksum` nor `permanentId` (no data to export)
+
+**Note on Counting**: Pending Export and Pending Import counts exclude FAILED photos to prevent double-counting. A failed photo is counted in "Failed" only, not in both "Failed" and its pending category.
 
 **Action Buttons**:
 - **Export All Pending Photos** - batch upload pending photos to Google Photos
@@ -194,7 +218,7 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - Photo thumbnail
 - Title/Author (book title + author OR author name)
 - LOC Call Number (formatted for spine display)
-- Status badge (Completed/Failed/In Progress/Pending/No Image)
+- Status badge (Completed/Failed/In Progress/Pending Import/Pending/No Image)
 - Exported At timestamp
 - Permanent ID (truncated with tooltip)
 - Actions per photo:
