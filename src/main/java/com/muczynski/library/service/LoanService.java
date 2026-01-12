@@ -96,17 +96,49 @@ public class LoanService {
     }
 
     public List<LoanDto> getLoansByUserId(Long userId, boolean showAll) {
+        logger.info("LoanService.getLoansByUserId called with userId={}, showAll={}", userId, showAll);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new LibraryException("User not found: " + userId));
+        logger.info("LoanService.getLoansByUserId: Found user with id={}, username={}", user.getId(), user.getUsername());
+
+        // Debug: Compare count method (which works) vs fetch method
+        long countByUserId = loanRepository.countByUserIdAndReturnDateIsNull(userId);
+        logger.info("LoanService.getLoansByUserId: countByUserIdAndReturnDateIsNull({})={}", userId, countByUserId);
+
         List<Loan> loans;
         if (showAll) {
-            loans = loanRepository.findAllByUserOrderByDueDateAsc(user);
+            // Use the new userId-based query method
+            loans = loanRepository.findAllByUserIdOrderByDueDateAsc(userId);
+            logger.info("LoanService.getLoansByUserId: findAllByUserIdOrderByDueDateAsc returned {} loans", loans.size());
+
+            // Debug comparison with User entity method
+            List<Loan> loansViaUserEntity = loanRepository.findAllByUserOrderByDueDateAsc(user);
+            logger.info("LoanService.getLoansByUserId: [DEBUG] findAllByUserOrderByDueDateAsc (User entity) returned {} loans", loansViaUserEntity.size());
         } else {
-            loans = loanRepository.findAllByUserAndReturnDateIsNullOrderByDueDateAsc(user);
+            // Use the new userId-based query method
+            loans = loanRepository.findAllByUserIdAndReturnDateIsNullOrderByDueDateAsc(userId);
+            logger.info("LoanService.getLoansByUserId: findAllByUserIdAndReturnDateIsNullOrderByDueDateAsc returned {} loans", loans.size());
+
+            // Debug comparison with User entity method
+            List<Loan> loansViaUserEntity = loanRepository.findAllByUserAndReturnDateIsNullOrderByDueDateAsc(user);
+            logger.info("LoanService.getLoansByUserId: [DEBUG] findAllByUserAndReturnDateIsNullOrderByDueDateAsc (User entity) returned {} loans", loansViaUserEntity.size());
         }
-        return loans.stream()
+
+        if (!loans.isEmpty()) {
+            Loan firstLoan = loans.get(0);
+            logger.info("LoanService.getLoansByUserId: First loan - id={}, bookId={}, userId={}, loanDate={}, returnDate={}",
+                firstLoan.getId(),
+                firstLoan.getBook() != null ? firstLoan.getBook().getId() : null,
+                firstLoan.getUser() != null ? firstLoan.getUser().getId() : null,
+                firstLoan.getLoanDate(),
+                firstLoan.getReturnDate());
+        }
+
+        List<LoanDto> result = loans.stream()
                 .map(loanMapper::toDto)
                 .collect(Collectors.toList());
+        logger.info("LoanService.getLoansByUserId: Returning {} loan DTOs", result.size());
+        return result;
     }
 
     public LoanDto getLoanById(Long id) {

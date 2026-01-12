@@ -71,4 +71,25 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     Optional<Loan> findByBookIdAndUserIdAndLoanDate(Long bookId, Long userId, LocalDate loanDate);
     long countByReturnDateIsNull();
     long countByBookLibraryIdAndReturnDateIsNull(Long libraryId);
+
+    // Alternative methods using userId directly (for debugging comparison with count methods)
+    @Query("SELECT DISTINCT l FROM Loan l " +
+           "LEFT JOIN FETCH l.book b " +
+           "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
+           "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
+           "WHERE l.user.id = :userId " +
+           "ORDER BY l.dueDate ASC")
+    List<Loan> findAllByUserIdOrderByDueDateAsc(Long userId);
+
+    @Query("SELECT DISTINCT l FROM Loan l " +
+           "LEFT JOIN FETCH l.book b " +
+           "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
+           "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
+           "WHERE l.user.id = :userId AND l.returnDate IS NULL " +
+           "ORDER BY l.dueDate ASC")
+    List<Loan> findAllByUserIdAndReturnDateIsNullOrderByDueDateAsc(Long userId);
 }

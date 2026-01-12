@@ -221,6 +221,9 @@ public class GooglePhotosLibraryClient {
      * This is an alternative to the single-item GET endpoint that sometimes works
      * when the single-item endpoint returns 404.
      *
+     * Note: The batchGet endpoint is a GET request with query parameters, not POST.
+     * API: GET /v1/mediaItems:batchGet?mediaItemIds=id1&mediaItemIds=id2
+     *
      * @param accessToken OAuth access token
      * @param mediaItemId Permanent media item ID
      * @return MediaItemResponse with item details including baseUrl, or null if not found
@@ -228,14 +231,18 @@ public class GooglePhotosLibraryClient {
     public MediaItemResponse getMediaItemViaBatchGet(String accessToken, String mediaItemId) {
         log.debug("Getting media item via batchGet: {}", mediaItemId);
 
-        BatchGetRequest request = new BatchGetRequest();
-        request.setMediaItemIds(List.of(mediaItemId));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
 
-        HttpEntity<BatchGetRequest> entity = new HttpEntity<>(request, createAuthHeaders(accessToken));
+        HttpEntity<?> entity = new HttpEntity<>(headers);
 
         try {
-            ResponseEntity<BatchGetResponse> response = restTemplate.postForEntity(
-                    config.getBaseUrl() + "/mediaItems:batchGet",
+            // Build URL with query parameter - batchGet is GET, not POST
+            String url = config.getBaseUrl() + "/mediaItems:batchGet?mediaItemIds=" + mediaItemId;
+
+            ResponseEntity<BatchGetResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
                     entity,
                     BatchGetResponse.class
             );
