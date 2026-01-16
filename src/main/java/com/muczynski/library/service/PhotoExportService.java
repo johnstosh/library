@@ -615,61 +615,89 @@ public class PhotoExportService {
      */
     @Transactional
     public String importPhotoById(Long photoId) {
+        logger.info("=== Starting import for photo ID: {} ===", photoId);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Import failed for photo {}: No authenticated user found", photoId);
             return "No authenticated user found";
         }
         // The principal name is the database user ID (not username)
         Long userId = Long.parseLong(authentication.getName());
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
+            logger.error("Import failed for photo {}: User {} not found", photoId, userId);
             return "User not found";
         }
 
         Photo photo = photoRepository.findById(photoId).orElse(null);
         if (photo == null) {
+            logger.error("Import failed: Photo not found with ID: {}", photoId);
             return "Photo not found: " + photoId;
         }
 
+        // Log photo details for debugging
+        String bookInfo = photo.getBook() != null
+            ? String.format("Book ID: %d, Title: '%s'", photo.getBook().getId(), photo.getBook().getTitle())
+            : "No book";
+        String authorInfo = photo.getAuthor() != null
+            ? String.format("Author ID: %d, Name: '%s'", photo.getAuthor().getId(), photo.getAuthor().getName())
+            : "No author";
+        logger.info("Photo {} details: permanentId='{}', photoOrder={}, {}, {}",
+            photoId, photo.getPermanentId(), photo.getPhotoOrder(), bookInfo, authorInfo);
+
         if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+            logger.error("Import failed for photo {}: No permanent ID", photoId);
             return "Photo does not have a permanent ID to import from";
         }
 
         String accessToken;
         try {
             accessToken = googlePhotosService.getValidAccessToken(user);
+            logger.debug("Got access token for user {} (token length: {})", user.getId(), accessToken.length());
         } catch (Exception e) {
             String errorMsg = "Failed to get access token: " + e.getMessage();
+            logger.error("Import failed for photo {}: {}", photoId, errorMsg, e);
             markPhotoAsFailed(photo, "Import failed: " + errorMsg);
             return errorMsg;
         }
 
         try {
             // Get media item details from Google Photos
+            logger.info("Fetching media item from Google Photos for permanentId: {}", photo.getPermanentId());
             var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
 
             if (mediaItem == null) {
-                String errorMsg = "Media item not found in Google Photos";
+                String errorMsg = "Media item not found in Google Photos for permanentId: " + photo.getPermanentId();
+                logger.error("Import failed for photo {}: {}", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
+
+            logger.info("Media item found: filename='{}', mimeType='{}'",
+                mediaItem.getFilename(), mediaItem.getMimeType());
 
             // Download the image bytes
             String baseUrl = mediaItem.getBaseUrl();
             if (baseUrl == null || baseUrl.isEmpty()) {
-                String errorMsg = "No base URL available for media item";
+                String errorMsg = "No base URL available for media item (permanentId: " + photo.getPermanentId() + ")";
+                logger.error("Import failed for photo {}: {}", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
 
+            logger.info("Downloading photo from baseUrl (length: {} chars)", baseUrl.length());
             // Use downloadPhoto which already appends =d for original quality
             byte[] imageBytes = photosLibraryClient.downloadPhoto(accessToken, baseUrl);
 
             if (imageBytes == null || imageBytes.length == 0) {
-                String errorMsg = "Failed to download image from Google Photos";
+                String errorMsg = "Failed to download image from Google Photos (permanentId: " + photo.getPermanentId() + ")";
+                logger.error("Import failed for photo {}: {} - received null or empty bytes", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
+
+            logger.info("Downloaded {} bytes for photo {}", imageBytes.length, photoId);
 
             // Update the photo with downloaded image
             photo.setImage(imageBytes);
@@ -677,17 +705,22 @@ public class PhotoExportService {
                 photo.setContentType(mediaItem.getMimeType());
             }
             // Compute and set the image checksum so it's no longer counted as "pending import"
-            photo.setImageChecksum(computeChecksum(imageBytes));
+            String checksum = computeChecksum(imageBytes);
+            photo.setImageChecksum(checksum);
+            logger.debug("Computed checksum for photo {}: {}", photoId, checksum);
+
             // Clear any previous error message and status on success
             photo.setExportErrorMessage(null);
             photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+
+            logger.info("Saving photo {} to database...", photoId);
             photoRepository.save(photo);
 
-            logger.info("Successfully imported photo ID: {} from Google Photos ({} bytes)", photoId, imageBytes.length);
+            logger.info("=== Successfully imported photo ID: {} from Google Photos ({} bytes) ===", photoId, imageBytes.length);
             return null; // Success
 
         } catch (Exception e) {
-            logger.error("Failed to import photo ID: {}", photoId, e);
+            logger.error("Import failed for photo {} with exception: {} - {}", photoId, e.getClass().getSimpleName(), e.getMessage(), e);
             // Mark the photo as failed so it shows in stats and table
             String errorMsg = e.getMessage();
             markPhotoAsFailed(photo, "Import failed: " + errorMsg);

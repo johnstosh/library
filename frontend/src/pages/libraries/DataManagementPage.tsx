@@ -189,6 +189,7 @@ export function DataManagementPage() {
 
     let successCount = 0
     let failureCount = 0
+    const failedPhotos: { id: number; bookTitle?: string; error: string }[] = []
 
     for (let i = 0; i < pendingPhotos.length; i++) {
       const photo = pendingPhotos[i]
@@ -197,9 +198,26 @@ export function DataManagementPage() {
       try {
         await exportSinglePhoto.mutateAsync(photo.id)
         successCount++
-      } catch {
+      } catch (err) {
         failureCount++
+        // Capture error details for debugging
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err !== null && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : 'Unknown error'
+        console.error(
+          `Failed to export photo ${photo.id} (Book: ${photo.bookTitle || 'N/A'}):`,
+          errorMessage
+        )
+        failedPhotos.push({
+          id: photo.id,
+          bookTitle: photo.bookTitle,
+          error: errorMessage,
+        })
       }
+
     }
 
     setPhotoExportProgress('')
@@ -208,7 +226,17 @@ export function DataManagementPage() {
     if (failureCount === 0) {
       setSuccessMessage(`Successfully exported all ${successCount} photo(s)!`)
     } else {
-      setErrorMessage(`Export completed: ${successCount} succeeded, ${failureCount} failed.`)
+      // Log all failed photos for debugging
+      console.error('Failed photo exports:', failedPhotos)
+      // Show summary of failures
+      const failedBooks = [...new Set(failedPhotos.map((p) => p.bookTitle).filter(Boolean))]
+      const failedBooksSummary =
+        failedBooks.length > 0
+          ? ` Failed books: ${failedBooks.slice(0, 3).join(', ')}${failedBooks.length > 3 ? '...' : ''}`
+          : ''
+      setErrorMessage(
+        `Export completed: ${successCount} succeeded, ${failureCount} failed.${failedBooksSummary} Check browser console for details.`
+      )
     }
 
     handleRefreshPhotoStatus()
@@ -239,6 +267,7 @@ export function DataManagementPage() {
 
     let successCount = 0
     let failureCount = 0
+    const failedPhotos: { id: number; bookTitle?: string; error: string }[] = []
 
     for (let i = 0; i < pendingPhotos.length; i++) {
       const photo = pendingPhotos[i]
@@ -247,9 +276,26 @@ export function DataManagementPage() {
       try {
         await importSinglePhoto.mutateAsync(photo.id)
         successCount++
-      } catch {
+      } catch (err) {
         failureCount++
+        // Capture error details for debugging
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err !== null && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : 'Unknown error'
+        console.error(
+          `Failed to import photo ${photo.id} (Book: ${photo.bookTitle || 'N/A'}):`,
+          errorMessage
+        )
+        failedPhotos.push({
+          id: photo.id,
+          bookTitle: photo.bookTitle,
+          error: errorMessage,
+        })
       }
+
     }
 
     setPhotoExportProgress('')
@@ -258,7 +304,17 @@ export function DataManagementPage() {
     if (failureCount === 0) {
       setSuccessMessage(`Successfully imported all ${successCount} photo(s)!`)
     } else {
-      setErrorMessage(`Import completed: ${successCount} succeeded, ${failureCount} failed.`)
+      // Log all failed photos for debugging
+      console.error('Failed photo imports:', failedPhotos)
+      // Show summary of failures
+      const failedBooks = [...new Set(failedPhotos.map((p) => p.bookTitle).filter(Boolean))]
+      const failedBooksSummary =
+        failedBooks.length > 0
+          ? ` Failed books: ${failedBooks.slice(0, 3).join(', ')}${failedBooks.length > 3 ? '...' : ''}`
+          : ''
+      setErrorMessage(
+        `Import completed: ${successCount} succeeded, ${failureCount} failed.${failedBooksSummary} Check browser console for details.`
+      )
     }
 
     handleRefreshPhotoStatus()

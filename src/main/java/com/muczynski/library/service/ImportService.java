@@ -410,8 +410,14 @@ public class ImportService {
                     List<Photo> photos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), pDto.getPhotoOrder());
                     if (!photos.isEmpty()) {
                         photo = photos.get(0); // Use the one with lowest ID
-                        logger.info("Found existing photo with bookId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})",
-                            book.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
+                        logger.info("Found existing photo with bookId: {} photoOrder: {} (old Perm ID: '{}' -> New Perm ID: '{}' Photo ID: {})",
+                            book.getId(), pDto.getPhotoOrder(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
+                        if (photos.size() > 1) {
+                            logger.warn("WARNING: Found {} photos with same bookId {} and photoOrder {}. Using photo ID {}. " +
+                                "This may cause permanentId mismatches! Other photo IDs: {}",
+                                photos.size(), book.getId(), pDto.getPhotoOrder(), photo.getId(),
+                                photos.stream().skip(1).map(p -> p.getId().toString()).collect(java.util.stream.Collectors.joining(", ")));
+                        }
                     }
                 }
 
@@ -420,8 +426,14 @@ public class ImportService {
                     List<Photo> photos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), pDto.getPhotoOrder());
                     if (!photos.isEmpty()) {
                         photo = photos.get(0); // Use the one with lowest ID
-                        logger.info("Found existing photo with authorId: {} (old Perm ID: {} New Perm ID: {} Photo ID: {})",
-                            author.getId(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
+                        logger.info("Found existing photo with authorId: {} photoOrder: {} (old Perm ID: '{}' -> New Perm ID: '{}' Photo ID: {})",
+                            author.getId(), pDto.getPhotoOrder(), photo.getPermanentId(), pDto.getPermanentId(), photo.getId());
+                        if (photos.size() > 1) {
+                            logger.warn("WARNING: Found {} photos with same authorId {} and photoOrder {}. Using photo ID {}. " +
+                                "This may cause permanentId mismatches! Other photo IDs: {}",
+                                photos.size(), author.getId(), pDto.getPhotoOrder(), photo.getId(),
+                                photos.stream().skip(1).map(p -> p.getId().toString()).collect(java.util.stream.Collectors.joining(", ")));
+                        }
                     }
                 }
 

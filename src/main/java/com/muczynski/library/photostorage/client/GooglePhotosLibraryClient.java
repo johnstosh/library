@@ -194,25 +194,40 @@ public class GooglePhotosLibraryClient {
      * @return MediaItemResponse with item details including baseUrl
      */
     public MediaItemResponse getMediaItem(String accessToken, String mediaItemId) {
-        log.debug("Getting media item: {}", mediaItemId);
+        log.info("Getting media item: '{}' (length: {} chars)", mediaItemId, mediaItemId != null ? mediaItemId.length() : 0);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
+        String url = config.getBaseUrl() + "/mediaItems/" + mediaItemId;
+        log.info("Calling Google Photos API: GET {}", url);
+
         try {
             ResponseEntity<MediaItemResponse> response = restTemplate.exchange(
-                    config.getBaseUrl() + "/mediaItems/" + mediaItemId,
+                    url,
                     HttpMethod.GET,
                     entity,
                     MediaItemResponse.class
             );
-            return response.getBody();
+            MediaItemResponse body = response.getBody();
+            if (body != null) {
+                log.info("Got media item response: id='{}', filename='{}', mimeType='{}', baseUrl length={}",
+                    body.getId(), body.getFilename(), body.getMimeType(),
+                    body.getBaseUrl() != null ? body.getBaseUrl().length() : 0);
+            } else {
+                log.warn("Got null response body for media item: {}", mediaItemId);
+            }
+            return body;
         } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
             // Single-item endpoint returned 404, try batch endpoint as fallback
-            log.info("Single-item endpoint returned 404 for media item: {}, trying batch endpoint", mediaItemId);
+            log.info("Single-item endpoint returned 404 for media item: '{}', trying batch endpoint", mediaItemId);
             return getMediaItemViaBatchGet(accessToken, mediaItemId);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Google Photos API error for media item '{}': HTTP {} - {}",
+                mediaItemId, e.getStatusCode(), e.getMessage());
+            throw e;
         }
     }
 

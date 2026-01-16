@@ -674,4 +674,107 @@ class PhotoExportControllerTest {
         assert updatedPhoto.getExportStatus() == Photo.ExportStatus.FAILED;
         assert updatedPhoto.getExportErrorMessage() != null;
     }
+
+    // ===========================================
+    // Multiple Photos per Book Import Tests
+    // Verify importing multiple photos for the same book works correctly
+    // ===========================================
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importPhoto_multiplePhotosForSameBook_succeedsSequentially() throws Exception {
+        // Create multiple photos for the same book that need import
+        Photo photo1 = createPhotoNeedingImport(testBook, "permanent-1");
+        photo1.setPhotoOrder(0);
+        photo1 = photoRepository.save(photo1);
+
+        Photo photo2 = createPhotoNeedingImport(testBook, "permanent-2");
+        photo2.setPhotoOrder(1);
+        photo2 = photoRepository.save(photo2);
+
+        Photo photo3 = createPhotoNeedingImport(testBook, "permanent-3");
+        photo3.setPhotoOrder(2);
+        photo3 = photoRepository.save(photo3);
+
+        // Mock GooglePhotosService to return valid access token
+        when(googlePhotosService.getValidAccessToken(ArgumentMatchers.any())).thenReturn("mock-access-token");
+
+        // Mock getMediaItem to return different media items based on permanentId
+        MediaItemResponse mockResponse1 = new MediaItemResponse();
+        mockResponse1.setId("permanent-1");
+        mockResponse1.setBaseUrl("https://example.com/photo1");
+        mockResponse1.setMimeType("image/jpeg");
+        mockResponse1.setFilename("photo1.jpg");
+
+        MediaItemResponse mockResponse2 = new MediaItemResponse();
+        mockResponse2.setId("permanent-2");
+        mockResponse2.setBaseUrl("https://example.com/photo2");
+        mockResponse2.setMimeType("image/jpeg");
+        mockResponse2.setFilename("photo2.jpg");
+
+        MediaItemResponse mockResponse3 = new MediaItemResponse();
+        mockResponse3.setId("permanent-3");
+        mockResponse3.setBaseUrl("https://example.com/photo3");
+        mockResponse3.setMimeType("image/jpeg");
+        mockResponse3.setFilename("photo3.jpg");
+
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), eq("permanent-1")))
+                .thenReturn(mockResponse1);
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), eq("permanent-2")))
+                .thenReturn(mockResponse2);
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), eq("permanent-3")))
+                .thenReturn(mockResponse3);
+
+        // Mock downloadPhoto to return different image bytes for each photo
+        byte[] mockImageBytes1 = createDummyImage(100, 100);
+        byte[] mockImageBytes2 = createDummyImage(110, 110);
+        byte[] mockImageBytes3 = createDummyImage(120, 120);
+
+        when(googlePhotosLibraryClient.downloadPhoto(ArgumentMatchers.anyString(), eq("https://example.com/photo1")))
+                .thenReturn(mockImageBytes1);
+        when(googlePhotosLibraryClient.downloadPhoto(ArgumentMatchers.anyString(), eq("https://example.com/photo2")))
+                .thenReturn(mockImageBytes2);
+        when(googlePhotosLibraryClient.downloadPhoto(ArgumentMatchers.anyString(), eq("https://example.com/photo3")))
+                .thenReturn(mockImageBytes3);
+
+        // Import first photo
+        mockMvc.perform(post("/api/photo-export/import/" + photo1.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("imported")));
+
+        // Import second photo
+        mockMvc.perform(post("/api/photo-export/import/" + photo2.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("imported")));
+
+        // Import third photo
+        mockMvc.perform(post("/api/photo-export/import/" + photo3.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("imported")));
+
+        // Verify all photos were imported successfully
+        Photo updatedPhoto1 = photoRepository.findById(photo1.getId()).orElseThrow();
+        Photo updatedPhoto2 = photoRepository.findById(photo2.getId()).orElseThrow();
+        Photo updatedPhoto3 = photoRepository.findById(photo3.getId()).orElseThrow();
+
+        // All photos should have image checksums after successful import
+        assert updatedPhoto1.getImageChecksum() != null : "Photo 1 should have checksum after import";
+        assert updatedPhoto2.getImageChecksum() != null : "Photo 2 should have checksum after import";
+        assert updatedPhoto3.getImageChecksum() != null : "Photo 3 should have checksum after import";
+
+        // All photos should have COMPLETED status
+        assert updatedPhoto1.getExportStatus() == Photo.ExportStatus.COMPLETED : "Photo 1 should be COMPLETED";
+        assert updatedPhoto2.getExportStatus() == Photo.ExportStatus.COMPLETED : "Photo 2 should be COMPLETED";
+        assert updatedPhoto3.getExportStatus() == Photo.ExportStatus.COMPLETED : "Photo 3 should be COMPLETED";
+
+        // All photos should still be associated with the same book
+        assert updatedPhoto1.getBook().getId().equals(testBook.getId()) : "Photo 1 should still belong to test book";
+        assert updatedPhoto2.getBook().getId().equals(testBook.getId()) : "Photo 2 should still belong to test book";
+        assert updatedPhoto3.getBook().getId().equals(testBook.getId()) : "Photo 3 should still belong to test book";
+
+        // Photo orders should be preserved
+        assert updatedPhoto1.getPhotoOrder() == 0 : "Photo 1 order should be 0";
+        assert updatedPhoto2.getPhotoOrder() == 1 : "Photo 2 order should be 1";
+        assert updatedPhoto3.getPhotoOrder() == 2 : "Photo 3 order should be 2";
+    }
 }
