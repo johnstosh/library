@@ -152,8 +152,8 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Right side - User menu */}
-          <div className="flex items-center">
+          {/* Right side - User menu (desktop only) */}
+          <div className="hidden md:flex items-center">
             {isAuthenticated ? (
               <div className="flex flex-col items-end gap-1">
                 <div className="flex items-center gap-2">
