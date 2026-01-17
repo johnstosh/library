@@ -166,6 +166,7 @@ Uses Grok AI to extract book metadata from all of the book's photos (cover, spin
 - **All photos** associated with the book are analyzed together by AI (not just the first photo)
 - This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
 - AI receives all images in a single request for better context
+- Photos with missing or null image data are automatically skipped without causing errors
 
 **Error Responses:**
 - 404: Book not found

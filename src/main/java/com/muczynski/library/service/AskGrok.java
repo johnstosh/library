@@ -135,6 +135,11 @@ public class AskGrok {
             byte[] imageBytes = (byte[]) photoData.get("imageBytes");
             String contentType = (String) photoData.get("contentType");
 
+            // Skip photos with null image data
+            if (imageBytes == null || imageBytes.length == 0) {
+                continue;
+            }
+
             String base64Image = encoder.encodeToString(imageBytes);
 
             Map<String, Object> imageUrlPart = new HashMap<>();

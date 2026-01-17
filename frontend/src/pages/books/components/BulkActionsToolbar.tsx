@@ -168,9 +168,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               isLoading={bulkBookFromImage.isPending}
               disabled={bulkBookFromImage.isPending}
               leftIcon={<PiCamera />}
-              data-test="bulk-book-from-image"
+              data-test="bulk-book-from-images"
             >
-              Book from Image
+              Book from Images
             </Button>
             <Button
               variant="danger"

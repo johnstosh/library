@@ -201,7 +201,7 @@ export function useSuggestLocNumber() {
   })
 }
 
-// Hook to generate book metadata from first photo using AI
+// Hook to generate book metadata from photos using AI
 export function useBookFromImage() {
   const queryClient = useQueryClient()
 

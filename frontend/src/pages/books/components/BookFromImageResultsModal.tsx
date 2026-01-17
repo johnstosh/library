@@ -22,11 +22,11 @@ export function BookFromImageResultsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Book from Image Results"
+      title="Book from Images Results"
       size="lg"
       footer={
         <div className="flex justify-end">
-          <Button variant="primary" onClick={onClose} data-test="close-book-from-image-results">
+          <Button variant="primary" onClick={onClose} data-test="close-book-from-images-results">
             Close
           </Button>
         </div>
