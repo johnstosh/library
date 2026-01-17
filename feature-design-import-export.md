@@ -280,6 +280,8 @@ The photo status displayed in the list is derived from actual data to ensure it 
 ### Process
 1. Fetch photos from Google Photos feed
 2. Extract book information (title, author) from photo metadata or AI
+   - **All photos** for a book are analyzed by AI (not just the first photo)
+   - This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
 3. Create book records
 4. Associate photos with books
 5. Download and store photos locally

@@ -135,7 +135,7 @@ Uses Grok AI to suggest a Library of Congress call number for a book.
 ---
 
 ### PUT /api/books/{id}/book-by-photo
-Uses Grok AI to extract book metadata from the book's first photo (cover image).
+Uses Grok AI to extract book metadata from all of the book's photos (cover, spine, back cover, table of contents, etc.).
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
@@ -161,6 +161,11 @@ Uses Grok AI to extract book metadata from the book's first photo (cover image).
 - User must have xAI API key configured in user settings
 - Uses Grok-4 model for vision
 - 10-minute timeout for API calls
+
+**Photo Analysis:**
+- **All photos** associated with the book are analyzed together by AI (not just the first photo)
+- This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
+- AI receives all images in a single request for better context
 
 **Error Responses:**
 - 404: Book not found

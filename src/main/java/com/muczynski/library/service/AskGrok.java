@@ -101,6 +101,93 @@ public class AskGrok {
         }
     }
 
+    /**
+     * Ask a question about multiple photos
+     * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
+     * @param question The question to ask about the photos
+     * @return AI response as String
+     */
+    public String askAboutPhotos(List<Map<String, Object>> photoDataList, String question) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
+        }
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
+        String apiKey = userDto.getXaiApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
+        }
+
+        // Build content array: first the text question, then all images
+        List<Object> content = new ArrayList<>();
+
+        // Add text question first
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", question);
+        content.add(textPart);
+
+        // Add all images
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
+        for (Map<String, Object> photoData : photoDataList) {
+            byte[] imageBytes = (byte[]) photoData.get("imageBytes");
+            String contentType = (String) photoData.get("contentType");
+
+            String base64Image = encoder.encodeToString(imageBytes);
+
+            Map<String, Object> imageUrlPart = new HashMap<>();
+            imageUrlPart.put("url", "data:" + contentType + ";base64," + base64Image);
+
+            Map<String, Object> imagePart = new HashMap<>();
+            imagePart.put("type", "image_url");
+            imagePart.put("image_url", imageUrlPart);
+
+            content.add(imagePart);
+        }
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", content);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", "grok-4"); // use grok-4 for vision
+        request.put("messages", Arrays.asList(message));
+        request.put("max_tokens", 2000);
+        request.put("temperature", 0.7);
+        request.put("stream", false); // Disable streaming to avoid complexity; use long timeouts instead
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://api.x.ai/v1/chat/completions",
+                entity,
+                Map.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            Map<String, Object> body = response.getBody();
+            if (body != null && body.containsKey("choices")) {
+                List<Map> choices = (List<Map>) body.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    if (choice.containsKey("message")) {
+                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
+                        return (String) messageResponse.get("content");
+                    }
+                }
+            }
+            throw new LibraryException("Unexpected response format from xAI API");
+        } else {
+            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
+        }
+    }
+
     public String askTextOnly(String question) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

@@ -37,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -420,10 +421,19 @@ public class BookService {
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
         if (!photos.isEmpty()) {
-            Photo photo = photos.get(0);
+            // Prepare all photos for AI analysis
+            List<Map<String, Object>> photoDataList = new ArrayList<>();
+            for (Photo photo : photos) {
+                Map<String, Object> photoData = new HashMap<>();
+                photoData.put("imageBytes", photo.getImage());
+                photoData.put("contentType", photo.getContentType());
+                photoDataList.add(photoData);
+            }
+
             String question = """
-                Based on this book cover image, infer the book and author. Research details from a Catholic perspective. Be frank in your assessments, 
-                without providing a balanced view. Emphasize Catholic teachings, saints, and doctrine where applicable.  
+                Based on these book images, infer the book and author. The images may include the book cover, back cover, spine, table of contents, or other pages.
+                Research details from a Catholic perspective. Be frank in your assessments, without providing a balanced view.
+                Emphasize Catholic teachings, saints, and doctrine where applicable.
                 If the content aligns with Catholic faith, praise it; if not, politely critique it with charity and wisdom.
 
                 Provide details for the author:
@@ -444,11 +454,11 @@ public class BookService {
                 - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
 
                 Respond only with a JSON object in this exact format:
-                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]", 
-                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]", 
-                "briefBiography": "[biography text]"}, 
+                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]",
+                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]",
+                "briefBiography": "[biography text]"},
 
-                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]", 
+                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]",
                 "relatedWorks": "[related]", "detailedDescription": "[description]"}}
                 Do not include any other text before or after the JSON. Dig deep for helpful information.""";
 
@@ -456,7 +466,7 @@ public class BookService {
             RuntimeException lastException = null;
             for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
+                    String response = askGrok.askAboutPhotos(photoDataList, question);
                     Map<String, Object> jsonData = extractJsonFromResponse(response);
 
                     Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
@@ -616,7 +626,7 @@ public class BookService {
                 } catch (RuntimeException e) {
                     lastException = e;
                     if (e.getMessage().contains("unbalanced braces") && retry < maxRetries - 1) {
-                        logger.warn("Incomplete AI response detected (unbalanced braces), retrying {}/{} for book ID {} using photo ID {}", retry + 1, maxRetries, id, photo.getId());
+                        logger.warn("Incomplete AI response detected (unbalanced braces), retrying {}/{} for book ID {} using {} photos", retry + 1, maxRetries, id, photos.size());
                         // Optional: add a small delay before retry
                         try {
                             Thread.sleep(2000); // 2 seconds delay

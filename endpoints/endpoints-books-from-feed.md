@@ -56,10 +56,15 @@ Processes a single saved book with AI to extract metadata.
 
 **Requirements:**
 - User must have xAI API key configured
-- Book must have associated photo
+- Book must have associated photo(s)
+
+**Photo Analysis:**
+- **All photos** associated with the book are analyzed by AI (not just the first photo)
+- This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
+- AI receives all images in a single request for better context
 
 **Use Case:**
-- Extract book metadata from photo using AI
+- Extract book metadata from photos using AI
 - Convert saved photos into catalog entries
 
 ---
@@ -73,8 +78,13 @@ Processes all saved books with AI in batch.
 
 **Behavior:**
 - Processes each saved book sequentially
-- Uses AI to extract metadata from photos
+- Uses AI to extract metadata from **all photos** for each book (not just the first photo)
 - Updates processing status for each book
+
+**Photo Analysis:**
+- **All photos** associated with each book are analyzed together by AI
+- This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
+- AI receives all images in a single request for better context
 
 **Use Case:**
 - Bulk process imported photos from Google Photos feed
