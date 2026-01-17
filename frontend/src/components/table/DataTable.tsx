@@ -54,17 +54,17 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={clsx('overflow-x-auto', className)}>
+    <div className={clsx('overflow-x-auto -mx-4 sm:mx-0', className)}>
       <table className="min-w-full table-fixed divide-y divide-gray-200" data-test="data-table">
         <thead className="bg-gray-50">
           <tr>
             {selectable && (
-              <th className="px-6 py-3 text-left" style={{ width: '5%' }}>
+              <th className="px-3 sm:px-6 py-3 text-left" style={{ width: '5%' }}>
                 <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={onSelectAll}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 w-4 h-4"
                   data-test="select-all-checkbox"
                 />
               </th>
@@ -72,14 +72,14 @@ export function DataTable<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 style={{ width: column.width }}
               >
                 {column.header}
               </th>
             ))}
             {actions && (
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
+              <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                 Actions
               </th>
             )}
@@ -102,26 +102,26 @@ export function DataTable<T>({
                 data-entity-id={key}
               >
                 {selectable && (
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-4">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => onSelectToggle?.(Number(key))}
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 w-4 h-4"
                       data-test={`select-checkbox-${key}`}
                     />
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 overflow-hidden truncate">
+                  <td key={column.key} className="px-3 sm:px-6 py-3 sm:py-4 overflow-hidden truncate text-sm">
                     {column.accessor(item)}
                   </td>
                 ))}
                 {actions && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div
-                      className="flex justify-end gap-2"
+                      className="flex justify-end gap-1 sm:gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {actions(item)}

@@ -590,6 +590,45 @@ queryClient: new QueryClient({
 
 Photo thumbnails cached in IndexedDB (planned enhancement).
 
+### 4. Mobile Optimizations
+
+The frontend is fully responsive and optimized for mobile devices:
+
+**Navigation:**
+- Hamburger menu for mobile screens (< md breakpoint)
+- Full navigation menu collapsed into expandable mobile menu
+- Touch-friendly menu items with proper spacing
+- Mobile menu closes automatically after navigation
+
+**Forms:**
+- Responsive grid layouts (stack vertically on mobile, side-by-side on tablets+)
+- All grids use `grid-cols-1 sm:grid-cols-2` pattern for two-column layouts
+- Full-width inputs and selects on mobile devices
+- Minimum 44px touch targets for all interactive elements (Apple guideline)
+
+**Tables:**
+- Horizontal scrolling enabled for tables on narrow screens
+- Reduced padding on mobile (px-3 vs px-6) to maximize content space
+- Tighter spacing for action buttons (gap-1 vs gap-2)
+- Table container uses negative margins on mobile (-mx-4) for edge-to-edge display
+- Explicit text sizing (text-sm) for better mobile readability
+
+**Buttons & Inputs:**
+- Minimum height of 44px on mobile for all buttons (touch-friendly)
+- Form inputs (Input, Select) have 44px minimum height
+- Button padding responsive: larger on mobile, smaller on desktop
+- Focus rings sized appropriately for touch interaction
+
+**Touch Targets:**
+- All interactive elements meet minimum 44x44px touch target size
+- Checkboxes explicitly sized (w-4 h-4) for consistent rendering
+- Increased padding on mobile buttons (py-2.5 vs py-2)
+
+**Viewport:**
+- Proper viewport meta tag configured in index.html
+- Responsive breakpoints using Tailwind's sm/md/lg utilities
+- Mobile-first approach with progressive enhancement
+
 ## Authentication & Authorization
 
 ### Authentication Flow

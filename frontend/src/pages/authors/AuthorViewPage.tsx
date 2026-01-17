@@ -135,7 +135,7 @@ export function AuthorViewPage() {
 
           {/* Author Info */}
           <div className="bg-gray-50 rounded-lg p-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {author.dateOfBirth && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Date of Birth</p>

@@ -8,6 +8,7 @@ import com.muczynski.library.exception.InsufficientPermissionsException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.LoanService;
 import com.muczynski.library.service.UserService;
+import com.muczynski.library.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,8 +37,7 @@ public class LoanController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> checkoutBook(@Valid @RequestBody LoanDto loanDto, Authentication authentication) {
         // Regular users can only checkout books to themselves
-        boolean isLibrarian = authentication.getAuthorities().stream()
-                .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
+        boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
         if (!isLibrarian) {
             // For non-librarians, verify they're checking out to themselves
             // The principal name is the database user ID (not username)
@@ -73,8 +72,7 @@ public class LoanController {
         logger.info("LoanController.getAllLoans: authorities={}", authentication.getAuthorities());
         try {
             // Librarians see all loans, regular users see only their own loans
-            boolean isLibrarian = authentication.getAuthorities().stream()
-                    .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
+            boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
             logger.info("LoanController.getAllLoans: isLibrarian={}", isLibrarian);
             List<LoanDto> loans;
             if (isLibrarian) {

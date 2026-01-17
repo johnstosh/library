@@ -19,9 +19,18 @@
 - In tests: use `new SimpleGrantedAuthority("LIBRARIAN")` without `ROLE_` prefix
 
 ### Checking Authorities Programmatically in Controllers
-When you need to check authorities in controller code (not via `@PreAuthorize`), use the **stream-based** approach:
+When you need to check authorities in controller code (not via `@PreAuthorize`), use the **SecurityUtils** utility class:
 
-**CORRECT** - Stream-based authority check:
+**RECOMMENDED** - Use SecurityUtils utility class:
+```java
+import com.muczynski.library.util.SecurityUtils;
+
+boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
+boolean isUser = SecurityUtils.isUser(authentication);
+boolean hasCustomAuthority = SecurityUtils.hasAuthority(authentication, "CUSTOM_AUTHORITY");
+```
+
+**ALTERNATIVE** - Direct stream-based authority check (if SecurityUtils is not available):
 ```java
 boolean isLibrarian = authentication.getAuthorities().stream()
         .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
@@ -33,7 +42,14 @@ boolean isLibrarian = authentication.getAuthorities().stream()
 boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
 ```
 
-Why? The `.contains()` method relies on object equality, which can fail depending on how authorities are loaded (database entities vs SimpleGrantedAuthority instances). The stream-based approach checks the authority string value, which is reliable regardless of implementation.
+Why? The `.contains()` method relies on object equality, which can fail depending on how authorities are loaded (database entities vs SimpleGrantedAuthority instances). SecurityUtils and the stream-based approach check the authority string value, which is reliable regardless of implementation.
+
+**SecurityUtils Benefits:**
+- Encapsulates the correct authority checking logic
+- Null-safe (handles null authentication and authorities)
+- Prevents common bugs from incorrect authority checks
+- Provides a consistent API across the codebase
+- See `com.muczynski.library.util.SecurityUtils` for implementation
 
 ## Authentication Methods
 

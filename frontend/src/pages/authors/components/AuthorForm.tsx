@@ -127,7 +127,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
           data-test="author-name"
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Birth Date"
             type="date"
@@ -153,7 +153,7 @@ export function AuthorForm({ isOpen, onClose, author }: AuthorFormProps) {
           data-test="author-religious-affiliation"
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Textarea
             label="Birth Country"
             value={formData.birthCountry}

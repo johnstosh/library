@@ -37,7 +37,7 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
         <div className="space-y-6">
           {/* Author Info */}
           <div className="bg-gray-50 rounded-lg p-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Full Name</p>
                 <p className="text-gray-900">

@@ -138,7 +138,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
           // View mode for existing loans
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Book</p>
                   <p className="text-gray-900">{loan.bookTitle}</p>
