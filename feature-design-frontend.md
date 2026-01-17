@@ -42,7 +42,7 @@ frontend/src/
 │   ├── client.ts            # Fetch wrapper with auth
 │   ├── books.ts             # Book API + React Query hooks
 │   ├── authors.ts           # Author API + hooks
-│   ├── libraries.ts         # Library API + hooks
+│   ├── branches.ts         # Branch API + hooks
 │   ├── loans.ts             # Loan API + hooks
 │   ├── users.ts             # User API + hooks
 │   ├── photos.ts            # Photo API + hooks

@@ -32,10 +32,10 @@ export const queryKeys = {
     photos: (id: number) => [...queryKeys.authors.all, id, 'photos'] as const,
     books: (id: number) => [...queryKeys.authors.all, id, 'books'] as const,
   },
-  libraries: {
-    all: ['libraries'] as const,
-    list: () => [...queryKeys.libraries.all, 'list'] as const,
-    detail: (id: number) => [...queryKeys.libraries.all, 'detail', id] as const,
+  branches: {
+    all: ['branches'] as const,
+    list: () => [...queryKeys.branches.all, 'list'] as const,
+    detail: (id: number) => [...queryKeys.branches.all, 'detail', id] as const,
   },
   loans: {
     all: ['loans'] as const,

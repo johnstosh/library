@@ -16,7 +16,7 @@ import com.muczynski.library.domain.RandomUser;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
@@ -53,7 +53,7 @@ public class TestDataService {
     private BookRepository bookRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private PhotoRepository photoRepository;

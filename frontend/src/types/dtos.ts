@@ -20,14 +20,14 @@ export interface SummaryDto {
 }
 
 // Library DTOs
-export interface LibraryDto {
+export interface BranchDto {
   id: number
   branchName: string
   librarySystemName: string
 }
 
-export interface LibraryStatisticsDto {
-  libraryId: number
+export interface BranchStatisticsDto {
+  branchId: number
   branchName: string
   bookCount: number
   activeLoansCount: number

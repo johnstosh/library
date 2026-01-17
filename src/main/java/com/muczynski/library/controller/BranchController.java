@@ -3,9 +3,9 @@
  */
 package com.muczynski.library.controller;
 
-import com.muczynski.library.dto.LibraryDto;
-import com.muczynski.library.dto.LibraryStatisticsDto;
-import com.muczynski.library.service.LibraryService;
+import com.muczynski.library.dto.BranchDto;
+import com.muczynski.library.dto.BranchStatisticsDto;
+import com.muczynski.library.service.BranchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,82 +17,82 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/libraries")
-public class LibraryController {
+@RequestMapping("/api/branches")
+public class BranchController {
 
-    private static final Logger logger = LoggerFactory.getLogger(LibraryController.class);
+    private static final Logger logger = LoggerFactory.getLogger(BranchController.class);
 
     @Autowired
-    private LibraryService libraryService;
+    private BranchService branchService;
 
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getAllLibraries() {
+    public ResponseEntity<?> getAllBranches() {
         try {
-            List<LibraryDto> libraries = libraryService.getAllLibraries();
-            return ResponseEntity.ok(libraries);
+            List<BranchDto> branches = branchService.getAllBranches();
+            return ResponseEntity.ok(branches);
         } catch (Exception e) {
-            logger.warn("Failed to retrieve all libraries: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve all branches: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getLibraryById(@PathVariable Long id) {
+    public ResponseEntity<?> getBranchById(@PathVariable Long id) {
         try {
-            LibraryDto library = libraryService.getLibraryById(id);
-            return library != null ? ResponseEntity.ok(library) : ResponseEntity.notFound().build();
+            BranchDto branch = branchService.getBranchById(id);
+            return branch != null ? ResponseEntity.ok(branch) : ResponseEntity.notFound().build();
         } catch (Exception e) {
-            logger.warn("Failed to retrieve library by ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to retrieve branch by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> createLibrary(@RequestBody LibraryDto libraryDto) {
+    public ResponseEntity<?> createBranch(@RequestBody BranchDto branchDto) {
         try {
-            LibraryDto created = libraryService.createLibrary(libraryDto);
+            BranchDto created = branchService.createBranch(branchDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
-            logger.warn("Failed to create library with DTO {}: {}", libraryDto, e.getMessage(), e);
+            logger.warn("Failed to create branch with DTO {}: {}", branchDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updateLibrary(@PathVariable Long id, @RequestBody LibraryDto libraryDto) {
+    public ResponseEntity<?> updateBranch(@PathVariable Long id, @RequestBody BranchDto branchDto) {
         try {
-            LibraryDto updated = libraryService.updateLibrary(id, libraryDto);
+            BranchDto updated = branchService.updateBranch(id, branchDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
-            logger.warn("Failed to update library ID {} with DTO {}: {}", id, libraryDto, e.getMessage(), e);
+            logger.warn("Failed to update branch ID {} with DTO {}: {}", id, branchDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deleteLibrary(@PathVariable Long id) {
+    public ResponseEntity<?> deleteBranch(@PathVariable Long id) {
         try {
-            libraryService.deleteLibrary(id);
+            branchService.deleteBranch(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
-            logger.warn("Failed to delete library ID {}: {}", id, e.getMessage(), e);
+            logger.warn("Failed to delete branch ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
     @GetMapping("/statistics")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getLibraryStatistics() {
+    public ResponseEntity<?> getBranchStatistics() {
         try {
-            List<LibraryStatisticsDto> statistics = libraryService.getLibraryStatistics();
+            List<BranchStatisticsDto> statistics = branchService.getBranchStatistics();
             return ResponseEntity.ok(statistics);
         } catch (Exception e) {
-            logger.warn("Failed to retrieve library statistics: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve branch statistics: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

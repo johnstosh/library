@@ -3,7 +3,7 @@
  */
 package com.muczynski.library.domain;
 
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +14,7 @@ import java.util.Random;
 public class RandomBook {
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     private static final List<String> COLORS = List.of(
             "Red", "Green", "Blue", "Yellow", "Black",

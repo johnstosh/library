@@ -48,7 +48,7 @@ class DeletionConflictTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteAuthorWithAssociatedBooksReturns409() throws Exception {
         // Create library
-        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/libraries")
+        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/branches")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -93,7 +93,7 @@ class DeletionConflictTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteBookWithAssociatedLoansReturns409() throws Exception {
         // Create library
-        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/libraries")
+        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/branches")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

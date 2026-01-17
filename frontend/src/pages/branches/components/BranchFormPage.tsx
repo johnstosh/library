@@ -3,18 +3,18 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
-import { useCreateLibrary, useUpdateLibrary } from '@/api/libraries'
-import type { LibraryDto } from '@/types/dtos'
+import { useCreateBranch, useUpdateBranch } from '@/api/branches'
+import type { BranchDto } from '@/types/dtos'
 
-interface LibraryFormPageProps {
+interface BranchFormPageProps {
   title: string
-  library?: LibraryDto
+  branch?: BranchDto
   onSuccess: () => void
   onCancel: () => void
 }
 
-export function LibraryFormPage({ title, library, onSuccess, onCancel }: LibraryFormPageProps) {
-  const isEditing = !!library
+export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFormPageProps) {
+  const isEditing = !!branch
 
   const [formData, setFormData] = useState({
     branchName: '',
@@ -23,17 +23,17 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const createLibrary = useCreateLibrary()
-  const updateLibrary = useUpdateLibrary()
+  const createBranch = useCreateBranch()
+  const updateBranch = useUpdateBranch()
 
   useEffect(() => {
-    if (library) {
+    if (branch) {
       setFormData({
-        branchName: library.branchName,
-        librarySystemName: library.librarySystemName,
+        branchName: branch.branchName,
+        librarySystemName: branch.librarySystemName,
       })
     }
-  }, [library])
+  }, [branch])
 
   // Warn user about unsaved changes
   useEffect(() => {
@@ -64,9 +64,9 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
 
     try {
       if (isEditing) {
-        await updateLibrary.mutateAsync({ id: library.id, library: formData })
+        await updateBranch.mutateAsync({ id: branch.id, branch: formData })
       } else {
-        await createLibrary.mutateAsync(formData)
+        await createBranch.mutateAsync(formData)
       }
 
       setHasUnsavedChanges(false)
@@ -86,7 +86,7 @@ export function LibraryFormPage({ title, library, onSuccess, onCancel }: Library
     }
   }
 
-  const isLoading = createLibrary.isPending || updateLibrary.isPending
+  const isLoading = createBranch.isPending || updateBranch.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">

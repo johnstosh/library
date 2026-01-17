@@ -18,7 +18,7 @@ import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class BookService {
     private AuthorRepository authorRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private LoanRepository loanRepository;

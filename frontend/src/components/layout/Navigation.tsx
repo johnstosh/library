@@ -4,7 +4,7 @@ import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { clsx } from 'clsx'
 import { useTestDataPageVisibility } from '@/api/global-properties'
-import { useLibraries } from '@/api/libraries'
+import { useBranches } from '@/api/branches'
 
 interface NavLinkProps {
   to: string
@@ -38,7 +38,7 @@ export function Navigation() {
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
   const { data: testDataVisibility } = useTestDataPageVisibility()
-  const { data: libraries = [] } = useLibraries()
+  const { data: branches = [] } = useBranches()
 
   const handleLogout = () => {
     logout()
@@ -46,8 +46,8 @@ export function Navigation() {
   }
 
   // Get branch name for display
-  const branchName = libraries.length > 0 ? libraries[0].branchName : 'Branch'
-  const librarySystemName = libraries.length > 0 ? libraries[0].librarySystemName : 'Library System'
+  const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
+  const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
@@ -95,7 +95,7 @@ export function Navigation() {
               {isLibrarian && (
                 <>
                   <div className="w-px h-6 bg-gray-300 mx-2" />
-                  <NavLink to="/libraries" data-test="nav-libraries">
+                  <NavLink to="/branches" data-test="nav-libraries">
                     Branches
                   </NavLink>
                   <NavLink to="/users" data-test="nav-users">
@@ -226,7 +226,7 @@ export function Navigation() {
           {isLibrarian && (
             <>
               <div className="border-t border-gray-200 my-2" />
-              <NavLink to="/libraries" data-test="nav-libraries-mobile">
+              <NavLink to="/branches" data-test="nav-libraries-mobile">
                 Branches
               </NavLink>
               <NavLink to="/users" data-test="nav-users-mobile">

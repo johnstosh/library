@@ -18,7 +18,7 @@ import {
   useUploadPhotoImage,
   type PhotoExportInfoDto,
 } from '@/api/data-management'
-import { useLibraries } from '@/api/libraries'
+import { useBranches } from '@/api/branches'
 import { getThumbnailUrl } from '@/api/photos'
 import { formatDateTime, formatLocForSpine, truncate } from '@/utils/formatters'
 import {
@@ -52,7 +52,7 @@ export function DataManagementPage() {
   // Fetch database statistics (total counts from backend)
   const { data: dbStats } = useDatabaseStats()
   // Fetch libraries for filename generation (this is a small list)
-  const { data: libraries = [] } = useLibraries()
+  const { data: libraries = [] } = useBranches()
 
   // Photo export hooks
   const { data: photoStats, refetch: refetchPhotoStats } = usePhotoExportStats()

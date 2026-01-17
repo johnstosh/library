@@ -16,7 +16,7 @@ import com.muczynski.library.photostorage.dto.AlbumResponse;
 import com.muczynski.library.photostorage.dto.BatchCreateRequest;
 import com.muczynski.library.photostorage.dto.BatchCreateResponse;
 import com.muczynski.library.photostorage.dto.SearchResponse;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ public class PhotoExportService {
     private UserRepository userRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private com.muczynski.library.repository.BookRepository bookRepository;

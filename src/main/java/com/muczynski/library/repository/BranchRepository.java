@@ -10,6 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface LibraryRepository extends JpaRepository<Library, Long> {
+public interface BranchRepository extends JpaRepository<Library, Long> {
     Optional<Library> findByBranchName(String branchName);
 }

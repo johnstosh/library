@@ -1,26 +1,26 @@
 // (c) Copyright 2025 by Muczynski
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { useLibrary, useLibraryStatistics, useDeleteLibrary } from '@/api/libraries'
+import { useBranch, useBranchStatistics, useDeleteBranch } from '@/api/branches'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
-export function LibraryViewPage() {
+export function BranchViewPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const libraryId = id ? parseInt(id, 10) : 0
-  const { data: library, isLoading } = useLibrary(libraryId)
-  const { data: statistics = [] } = useLibraryStatistics()
-  const deleteLibrary = useDeleteLibrary()
+  const branchId = id ? parseInt(id, 10) : 0
+  const { data: branch, isLoading } = useBranch(branchId)
+  const { data: statistics = [] } = useBranchStatistics()
+  const deleteBranch = useDeleteBranch()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
   const handleDelete = async () => {
     try {
-      await deleteLibrary.mutateAsync(libraryId)
-      navigate('/libraries')
+      await deleteBranch.mutateAsync(branchId)
+      navigate('/branches')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete branch')
       setShowDeleteConfirm(false)
@@ -28,11 +28,11 @@ export function LibraryViewPage() {
   }
 
   const handleEdit = () => {
-    navigate(`/libraries/${libraryId}/edit`)
+    navigate(`/branches/${branchId}/edit`)
   }
 
   const handleBack = () => {
-    navigate('/libraries')
+    navigate('/branches')
   }
 
   if (isLoading) {
@@ -43,7 +43,7 @@ export function LibraryViewPage() {
     )
   }
 
-  if (!library) {
+  if (!branch) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow p-8">
@@ -60,8 +60,8 @@ export function LibraryViewPage() {
     )
   }
 
-  // Get statistics for this library
-  const stats = statistics.find((s) => s.libraryId === libraryId)
+  // Get statistics for this branch
+  const stats = statistics.find((s) => s.branchId === branchId)
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -81,7 +81,7 @@ export function LibraryViewPage() {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
             <h1 className="text-2xl font-bold text-gray-900" data-test="library-name">
-              {library.branchName}
+              {branch.branchName}
             </h1>
             <div className="flex gap-3">
               <Button
@@ -119,7 +119,7 @@ export function LibraryViewPage() {
                 <Button
                   variant="danger"
                   onClick={handleDelete}
-                  isLoading={deleteLibrary.isPending}
+                  isLoading={deleteBranch.isPending}
                   data-test="confirm-delete-library"
                 >
                   Yes, Delete
@@ -135,12 +135,12 @@ export function LibraryViewPage() {
             </div>
           )}
 
-          {/* Library Info */}
+          {/* Branch Info */}
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Library System Name</p>
-                <p className="text-gray-900">{library.librarySystemName}</p>
+                <p className="text-gray-900">{branch.librarySystemName}</p>
               </div>
               {stats && (
                 <>

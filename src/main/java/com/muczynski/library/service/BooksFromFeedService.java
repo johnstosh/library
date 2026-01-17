@@ -13,7 +13,7 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.repository.AuthorRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 
@@ -56,7 +56,7 @@ public class BooksFromFeedService {
     private PhotoService photoService;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
@@ -65,7 +65,7 @@ public class BooksFromFeedService {
     private PhotoRepository photoRepository;
 
     @Autowired
-    private LibraryService libraryService;
+    private BranchService branchService;
 
     @Autowired
     private UserRepository userRepository;
@@ -270,8 +270,8 @@ public class BooksFromFeedService {
         List<Map<String, Object>> savedPhotos = new ArrayList<>();
         List<Map<String, Object>> skippedPhotos = new ArrayList<>();
 
-        // Get default library once
-        Library library = libraryService.getOrCreateDefaultLibrary();
+        // Get default branch once
+        Library library = branchService.getOrCreateDefaultBranch();
         Long libraryId = library.getId();
 
         int photoIndex = 0;

@@ -6,31 +6,31 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
-  useLibraries,
-  useLibraryStatistics,
-  useDeleteLibrary,
-} from '@/api/libraries'
-import type { LibraryDto } from '@/types/dtos'
+  useBranches,
+  useBranchStatistics,
+  useDeleteBranch,
+} from '@/api/branches'
+import type { BranchDto } from '@/types/dtos'
 import { PiEye } from 'react-icons/pi'
 
-export function LibrariesPage() {
+export function BranchesPage() {
   const navigate = useNavigate()
   const [deleteLibraryId, setDeleteLibraryId] = useState<number | null>(null)
 
-  const { data: libraries = [], isLoading } = useLibraries()
-  const { data: statistics = [] } = useLibraryStatistics()
-  const deleteLibrary = useDeleteLibrary()
+  const { data: libraries = [], isLoading } = useBranches()
+  const { data: statistics = [] } = useBranchStatistics()
+  const deleteLibrary = useDeleteBranch()
 
   const handleAdd = () => {
-    navigate('/libraries/new')
+    navigate('/branches/new')
   }
 
-  const handleEdit = (library: LibraryDto) => {
-    navigate(`/libraries/${library.id}/edit`)
+  const handleEdit = (library: BranchDto) => {
+    navigate(`/branches/${library.id}/edit`)
   }
 
-  const handleView = (library: LibraryDto) => {
-    navigate(`/libraries/${library.id}`)
+  const handleView = (library: BranchDto) => {
+    navigate(`/branches/${library.id}`)
   }
 
   const handleDelete = async () => {
@@ -46,10 +46,10 @@ export function LibrariesPage() {
 
   // Get statistics for a library
   const getLibraryStats = (libraryId: number) => {
-    return statistics.find((s) => s.libraryId === libraryId)
+    return statistics.find((s) => s.branchId === libraryId)
   }
 
-  const columns: Column<LibraryDto>[] = [
+  const columns: Column<BranchDto>[] = [
     {
       key: 'name',
       header: 'Branch Name',

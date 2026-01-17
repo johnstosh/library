@@ -56,7 +56,7 @@ class ImportControllerTest {
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
         importDto.setBooks(List.of());
-        importDto.setLibraries(List.of());
+        importDto.setBranches(List.of());
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
@@ -121,7 +121,7 @@ class ImportControllerTest {
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
         importDto.setBooks(List.of());
-        importDto.setLibraries(List.of());
+        importDto.setBranches(List.of());
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
@@ -147,7 +147,7 @@ class ImportControllerTest {
         ImportRequestDto exportDto = new ImportRequestDto();
         exportDto.setAuthors(List.of());
         exportDto.setBooks(List.of());
-        exportDto.setLibraries(List.of());
+        exportDto.setBranches(List.of());
         exportDto.setPhotos(List.of());
 
         when(importService.exportData()).thenReturn(exportDto);
@@ -186,7 +186,7 @@ class ImportControllerTest {
         ImportRequestDto exportDto = new ImportRequestDto();
         exportDto.setAuthors(List.of());
         exportDto.setBooks(List.of());
-        exportDto.setLibraries(List.of());
+        exportDto.setBranches(List.of());
         exportDto.setPhotos(List.of());
 
         when(importService.exportData()).thenReturn(exportDto);
@@ -211,7 +211,7 @@ class ImportControllerTest {
         ImportRequestDto exportDto = new ImportRequestDto();
         exportDto.setAuthors(List.of());
         exportDto.setBooks(List.of());
-        exportDto.setLibraries(List.of());
+        exportDto.setBranches(List.of());
 
         com.muczynski.library.dto.importdtos.ImportPhotoDto photoDto = new com.muczynski.library.dto.importdtos.ImportPhotoDto();
         photoDto.setPermanentId("google-photos-permanent-id-123");

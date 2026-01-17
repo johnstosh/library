@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class LibraryDto {
+public class BranchDto {
     private Long id;
     private String branchName;
     private String librarySystemName;

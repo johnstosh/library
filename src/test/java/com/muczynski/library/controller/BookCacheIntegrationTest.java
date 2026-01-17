@@ -12,7 +12,7 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +47,7 @@ class BookCacheIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
@@ -70,7 +70,7 @@ class BookCacheIntegrationTest {
         testLibrary = new Library();
         testLibrary.setBranchName("Test Library");
         testLibrary.setLibrarySystemName("Test Library System");
-        testLibrary = libraryRepository.save(testLibrary);
+        testLibrary = branchRepository.save(testLibrary);
 
         // Create test author
         testAuthor = new Author();

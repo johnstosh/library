@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LibraryStatisticsDto {
-    private Long libraryId;
+public class BranchStatisticsDto {
+    private Long branchId;
     private String branchName;
     private Long bookCount;
     private Long activeLoansCount;

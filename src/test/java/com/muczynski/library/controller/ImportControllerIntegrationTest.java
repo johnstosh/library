@@ -40,7 +40,7 @@ class ImportControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
@@ -72,7 +72,7 @@ class ImportControllerIntegrationTest {
         testLibrary = new Library();
         testLibrary.setBranchName("Test Library");
         testLibrary.setLibrarySystemName("Test Library System");
-        testLibrary = libraryRepository.save(testLibrary);
+        testLibrary = branchRepository.save(testLibrary);
 
         // Create test author
         testAuthor = new Author();

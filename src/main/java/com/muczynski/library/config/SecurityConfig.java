@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/test-data/**").permitAll()
                         .requestMatchers("/api/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/photos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/authors/**", "/api/libraries").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/authors/**", "/api/branches/**").permitAll()
                         .requestMatchers("/apply/api/**").hasAuthority("LIBRARIAN")
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/user-settings").authenticated()

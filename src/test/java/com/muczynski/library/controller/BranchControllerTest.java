@@ -4,9 +4,9 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.muczynski.library.dto.LibraryDto;
-import com.muczynski.library.dto.LibraryStatisticsDto;
-import com.muczynski.library.service.LibraryService;
+import com.muczynski.library.dto.BranchDto;
+import com.muczynski.library.dto.BranchStatisticsDto;
+import com.muczynski.library.service.BranchService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,13 +30,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class LibraryControllerTest {
+class BranchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private LibraryService libraryService;
+    private BranchService branchService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -44,16 +44,16 @@ class LibraryControllerTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void createLibrary() throws Exception {
-        LibraryDto inputDto = new LibraryDto();
+        BranchDto inputDto = new BranchDto();
         inputDto.setBranchName("St. Martin de Porres");
         inputDto.setLibrarySystemName("library.muczynskifamily.com");
-        LibraryDto returnedDto = new LibraryDto();
+        BranchDto returnedDto = new BranchDto();
         returnedDto.setId(1L);
         returnedDto.setBranchName("St. Martin de Porres");
         returnedDto.setLibrarySystemName("library.muczynskifamily.com");
-        when(libraryService.createLibrary(any(LibraryDto.class))).thenReturn(returnedDto);
+        when(branchService.createBranch(any(BranchDto.class))).thenReturn(returnedDto);
 
-        mockMvc.perform(post("/api/libraries")
+        mockMvc.perform(post("/api/branches")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isCreated());
@@ -62,40 +62,40 @@ class LibraryControllerTest {
     @Test
     @WithMockUser
     void getAllLibraries() throws Exception {
-        LibraryDto dto = new LibraryDto();
+        BranchDto dto = new BranchDto();
         dto.setId(1L);
         dto.setBranchName("St. Martin de Porres");
-        when(libraryService.getAllLibraries()).thenReturn(Collections.singletonList(dto));
+        when(branchService.getAllBranches()).thenReturn(Collections.singletonList(dto));
 
-        mockMvc.perform(get("/api/libraries"))
+        mockMvc.perform(get("/api/branches"))
                 .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser
     void getLibraryById() throws Exception {
-        LibraryDto libraryDto = new LibraryDto();
+        BranchDto libraryDto = new BranchDto();
         libraryDto.setId(1L);
         libraryDto.setBranchName("St. Martin de Porres");
-        when(libraryService.getLibraryById(1L)).thenReturn(libraryDto);
+        when(branchService.getBranchById(1L)).thenReturn(libraryDto);
 
-        mockMvc.perform(get("/api/libraries/1"))
+        mockMvc.perform(get("/api/branches/1"))
                 .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void updateLibrary() throws Exception {
-        LibraryDto inputDto = new LibraryDto();
+        BranchDto inputDto = new BranchDto();
         inputDto.setBranchName("Updated Library");
         inputDto.setLibrarySystemName("updated.example.com");
-        LibraryDto returnedDto = new LibraryDto();
+        BranchDto returnedDto = new BranchDto();
         returnedDto.setId(1L);
         returnedDto.setBranchName("Updated Library");
         returnedDto.setLibrarySystemName("updated.example.com");
-        when(libraryService.updateLibrary(eq(1L), any(LibraryDto.class))).thenReturn(returnedDto);
+        when(branchService.updateBranch(eq(1L), any(BranchDto.class))).thenReturn(returnedDto);
 
-        mockMvc.perform(put("/api/libraries/1")
+        mockMvc.perform(put("/api/branches/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isOk());
@@ -104,24 +104,24 @@ class LibraryControllerTest {
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteLibrary() throws Exception {
-        doNothing().when(libraryService).deleteLibrary(1L);
+        doNothing().when(branchService).deleteBranch(1L);
 
-        mockMvc.perform(delete("/api/libraries/1"))
+        mockMvc.perform(delete("/api/branches/1"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
     void getLibraryStatistics() throws Exception {
-        LibraryStatisticsDto statsDto = new LibraryStatisticsDto(
+        BranchStatisticsDto statsDto = new BranchStatisticsDto(
                 1L,
                 "St. Martin de Porres",
                 150L,
                 12L
         );
-        when(libraryService.getLibraryStatistics()).thenReturn(Collections.singletonList(statsDto));
+        when(branchService.getBranchStatistics()).thenReturn(Collections.singletonList(statsDto));
 
-        mockMvc.perform(get("/api/libraries/statistics"))
+        mockMvc.perform(get("/api/branches/statistics"))
                 .andExpect(status().isOk());
     }
 
@@ -129,7 +129,7 @@ class LibraryControllerTest {
     @WithMockUser(authorities = "USER")
     void getLibraryStatistics_accessDeniedForNonLibrarian() throws Exception {
         // USER authority should not be able to access statistics
-        mockMvc.perform(get("/api/libraries/statistics"))
+        mockMvc.perform(get("/api/branches/statistics"))
                 .andExpect(status().isForbidden());
     }
 }

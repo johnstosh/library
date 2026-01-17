@@ -15,7 +15,7 @@ import com.muczynski.library.domain.RandomUser;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
@@ -56,7 +56,7 @@ class TestDataServiceTest {
     private BookRepository bookRepository;
 
     @Mock
-    private LibraryRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Mock
     private PhotoRepository photoRepository;
@@ -85,7 +85,7 @@ class TestDataServiceTest {
     @Test
     void testGenerateTestData_CreatesLibraryIfNoneExists() {
         // Arrange
-        when(libraryRepository.findAll()).thenReturn(Collections.emptyList());
+        when(branchRepository.findAll()).thenReturn(Collections.emptyList());
         when(randomAuthor.create()).thenReturn(new Author());
         when(randomBook.create(any(Author.class))).thenReturn(new Book());
 
@@ -93,7 +93,7 @@ class TestDataServiceTest {
         testDataService.generateTestData(1);
 
         // Assert
-        verify(libraryRepository, times(1)).save(any(Library.class));
+        verify(branchRepository, times(1)).save(any(Library.class));
         verify(authorRepository, times(1)).save(any(Author.class));
         verify(bookRepository, times(1)).save(any(Book.class));
     }
@@ -102,7 +102,7 @@ class TestDataServiceTest {
     void testGenerateTestData_DoesNotCreateLibraryIfExists() {
         // Arrange
         Library existingLibrary = new Library();
-        when(libraryRepository.findAll()).thenReturn(Collections.singletonList(existingLibrary));
+        when(branchRepository.findAll()).thenReturn(Collections.singletonList(existingLibrary));
         when(randomAuthor.create()).thenReturn(new Author());
         when(randomBook.create(any(Author.class))).thenReturn(new Book());
 
@@ -110,7 +110,7 @@ class TestDataServiceTest {
         testDataService.generateTestData(1);
 
         // Assert
-        verify(libraryRepository, never()).save(any(Library.class));
+        verify(branchRepository, never()).save(any(Library.class));
         verify(authorRepository, times(1)).save(any(Author.class));
         verify(bookRepository, times(1)).save(any(Book.class));
     }
@@ -119,7 +119,7 @@ class TestDataServiceTest {
     void testGenerateTestData_CreatesCorrectNumberOfBooksAndAuthors() {
         // Arrange
         Library library = new Library();
-        when(libraryRepository.findAll()).thenReturn(Collections.singletonList(library));
+        when(branchRepository.findAll()).thenReturn(Collections.singletonList(library));
         when(randomAuthor.create()).thenReturn(new Author());
         when(randomBook.create(any(Author.class))).thenReturn(new Book());
 
@@ -137,7 +137,7 @@ class TestDataServiceTest {
     void testGenerateTestData_WithZeroCount() {
         // Arrange
         Library library = new Library();
-        when(libraryRepository.findAll()).thenReturn(Collections.singletonList(library));
+        when(branchRepository.findAll()).thenReturn(Collections.singletonList(library));
 
         // Act
         testDataService.generateTestData(0);

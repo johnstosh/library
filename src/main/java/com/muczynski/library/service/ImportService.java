@@ -6,9 +6,9 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
 import com.muczynski.library.dto.DatabaseStatsDto;
-import com.muczynski.library.dto.LibraryDto;
+import com.muczynski.library.dto.BranchDto;
 import com.muczynski.library.dto.importdtos.*;
-import com.muczynski.library.mapper.LibraryMapper;
+import com.muczynski.library.mapper.BranchMapper;
 import com.muczynski.library.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -31,19 +31,19 @@ public class ImportService {
 
     public static final String DEFAULT_PASSWORD = "divinemercy";
 
-    private final LibraryRepository libraryRepository;
+    private final BranchRepository branchRepository;
     private final AuthorRepository authorRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final LoanRepository loanRepository;
     private final AuthorityRepository authorityRepository;
     private final PhotoRepository photoRepository;
-    private final LibraryMapper libraryMapper;
+    private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
 
     public ImportResponseDto.ImportCounts importData(ImportRequestDto dto) {
         logger.info("Starting import. Libraries: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
-            dto.getLibraries() != null ? dto.getLibraries().size() : 0,
+            dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
             dto.getUsers() != null ? dto.getUsers().size() : 0,
             dto.getBooks() != null ? dto.getBooks().size() : 0,
@@ -58,10 +58,10 @@ public class ImportService {
         int photoCount = 0;
 
         Map<String, Library> libMap = new HashMap<>();
-        if (dto.getLibraries() != null) {
-            for (LibraryDto lDto : dto.getLibraries()) {
+        if (dto.getBranches() != null) {
+            for (BranchDto lDto : dto.getBranches()) {
                 // Check if library with same branch name already exists
-                Library lib = libraryRepository.findByBranchName(lDto.getBranchName()).orElse(null);
+                Library lib = branchRepository.findByBranchName(lDto.getBranchName()).orElse(null);
                 if (lib == null) {
                     // Create new library without copying ID from import
                     lib = new Library();
@@ -71,7 +71,7 @@ public class ImportService {
                     // Update existing library
                     lib.setLibrarySystemName(lDto.getLibrarySystemName());
                 }
-                lib = libraryRepository.save(lib);
+                lib = branchRepository.save(lib);
                 libMap.put(lDto.getBranchName(), lib);
                 libraryCount++;
             }
@@ -472,11 +472,11 @@ public class ImportService {
     public ImportRequestDto exportData() {
         ImportRequestDto dto = new ImportRequestDto();
 
-        // Export libraries
-        List<LibraryDto> libDtos = libraryRepository.findAll().stream()
-                .map(libraryMapper::toDto)
+        // Export branches
+        List<BranchDto> libDtos = branchRepository.findAll().stream()
+                .map(branchMapper::toDto)
                 .collect(Collectors.toList());
-        dto.setLibraries(libDtos);
+        dto.setBranches(libDtos);
 
         // Export authors
         List<ImportAuthorDto> authDtos = new ArrayList<>();
@@ -621,7 +621,7 @@ public class ImportService {
     @Transactional(readOnly = true)
     public DatabaseStatsDto getDatabaseStats() {
         return new DatabaseStatsDto(
-            libraryRepository.count(),
+            branchRepository.count(),
             bookRepository.count(),
             authorRepository.count(),
             userRepository.count(),

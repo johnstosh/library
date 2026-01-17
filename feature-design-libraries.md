@@ -40,29 +40,29 @@ public class Library {
 
 ## API Endpoints
 
-**Base Path**: `/api/libraries`
+**Base Path**: `/api/branches`
 
 ### Public Endpoints (No Authentication Required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/libraries` | Get all libraries |
-| GET | `/api/libraries/{id}` | Get library by ID |
-| GET | `/api/libraries/statistics` | Get library statistics (books count, active loans count) |
+| GET | `/api/branches` | Get all libraries |
+| GET | `/api/branches/{id}` | Get library by ID |
+| GET | `/api/branches/statistics` | Get library statistics (books count, active loans count) |
 
 ### Librarian-Only Endpoints
 
 | Method | Endpoint | Description | Authorization |
 |--------|----------|-------------|---------------|
-| POST | `/api/libraries` | Create new library | `LIBRARIAN` |
-| PUT | `/api/libraries/{id}` | Update library | `LIBRARIAN` |
-| DELETE | `/api/libraries/{id}` | Delete library | `LIBRARIAN` |
+| POST | `/api/branches` | Create new library | `LIBRARIAN` |
+| PUT | `/api/branches/{id}` | Update library | `LIBRARIAN` |
+| DELETE | `/api/branches/{id}` | Delete library | `LIBRARIAN` |
 
-**Controller**: `src/main/java/com/muczynski/library/controller/LibraryController.java`
+**Controller**: `src/main/java/com/muczynski/library/controller/BranchController.java`
 
 ## User Interface
 
-**Location**: `frontend/src/pages/libraries/LibrariesPage.tsx`
+**Location**: `frontend/src/pages/branches/BranchesPage.tsx`
 **Technology**: React 18+ with TypeScript, TanStack Query, Tailwind CSS
 
 ### Page Structure
@@ -79,7 +79,7 @@ The Branches page is a React component that displays:
   - Actions: Edit and Delete buttons (librarian-only)
 
 #### 2. Add/Edit Branch Form
-- **Pattern**: URL-based CRUD (not modal) - `/libraries/new`, `/libraries/:id/edit`
+- **Pattern**: URL-based CRUD (not modal) - `/branches/new`, `/branches/:id/edit`
 - **Fields**:
   - Branch Name (required text input)
   - Library System Name (required text input with help text)
@@ -101,22 +101,22 @@ The Branches page is a React component that displays:
 
 ### State Management
 - **Server State**: TanStack Query hooks for API calls
-  - `useLibraries()`: Fetches all libraries
-  - `useLibraryStatistics()`: Fetches statistics (book counts, active loan counts)
-  - `useCreateLibrary()`: Creates new library
-  - `useUpdateLibrary()`: Updates existing library
-  - `useDeleteLibrary()`: Deletes library
+  - `useBranches()`: Fetches all libraries
+  - `useBranchStatistics()`: Fetches statistics (book counts, active loan counts)
+  - `useCreateBranch()`: Creates new library
+  - `useUpdateBranch()`: Updates existing library
+  - `useDeleteBranch()`: Deletes library
 - **Local State**: useState for form data, modals, error messages
 
 ### Key React Hooks
 
 | Hook | Purpose | File |
 |------|---------|------|
-| `useLibraries()` | Fetches and caches all libraries | `frontend/src/api/libraries.ts` |
-| `useLibraryStatistics()` | Fetches library statistics (books, active loans) | `frontend/src/api/libraries.ts` |
-| `useCreateLibrary()` | Mutation for creating library | `frontend/src/api/libraries.ts` |
-| `useUpdateLibrary()` | Mutation for updating library | `frontend/src/api/libraries.ts` |
-| `useDeleteLibrary()` | Mutation for deleting library | `frontend/src/api/libraries.ts` |
+| `useBranches()` | Fetches and caches all libraries | `frontend/src/api/branches.ts` |
+| `useBranchStatistics()` | Fetches library statistics (books, active loans) | `frontend/src/api/branches.ts` |
+| `useCreateBranch()` | Mutation for creating library | `frontend/src/api/branches.ts` |
+| `useUpdateBranch()` | Mutation for updating library | `frontend/src/api/branches.ts` |
+| `useDeleteBranch()` | Mutation for deleting library | `frontend/src/api/branches.ts` |
 
 ### Components Used
 - `DataTable`: Reusable table component with sorting and actions
@@ -156,7 +156,7 @@ User Action → React Event Handler → TanStack Query Mutation
 
 ### Statistics Loading Flow
 ```
-Component Mount → useLibraryStatistics() Hook → Parallel Fetch
+Component Mount → useBranchStatistics() Hook → Parallel Fetch
 → Cache Statistics → Display in Table Columns
 ```
 
@@ -182,7 +182,7 @@ Form Submit → handleSubmit() → Validation → Create/Update Mutation
 ### Data Management
 - JSON Import/Export functionality is on separate **Data Management** page
 - Photo Export functionality is on separate **Data Management** page
-- See `frontend/src/pages/libraries/DataManagementPage.tsx`
+- See `frontend/src/pages/branches/DataManagementPage.tsx`
 
 ### Test Data Generation
 - Test data page can generate libraries
@@ -193,8 +193,8 @@ Form Submit → handleSubmit() → Validation → Create/Update Mutation
 ### TanStack Query Pattern
 All data fetching uses TanStack Query for automatic caching and refetching:
 ```typescript
-const { data: libraries = [], isLoading } = useLibraries()
-const createLibrary = useCreateLibrary()
+const { data: libraries = [], isLoading } = useBranches()
+const createLibrary = useCreateBranch()
 await createLibrary.mutateAsync(formData)
 // TanStack Query automatically refetches and updates UI
 ```
@@ -215,10 +215,10 @@ setShowForm(true)
 ### Statistics Integration Pattern
 ```typescript
 // Statistics fetched separately
-const { data: statistics = [] } = useLibraryStatistics()
+const { data: statistics = [] } = useBranchStatistics()
 
 // Looked up per library in table cell
-const stats = statistics.find((s) => s.libraryId === library.id)
+const stats = statistics.find((s) => s.branchId === library.id)
 const bookCount = stats?.bookCount
 const activeLoansCount = stats?.activeLoansCount
 ```
@@ -252,27 +252,27 @@ const activeLoansCount = stats?.activeLoansCount
 
 ### Backend
 - `src/main/java/com/muczynski/library/domain/Library.java` - Entity
-- `src/main/java/com/muczynski/library/controller/LibraryController.java` - REST endpoints
-- `src/main/java/com/muczynski/library/service/LibraryService.java` - Business logic
-- `src/main/java/com/muczynski/library/dto/LibraryDto.java` - Data transfer object
-- `src/main/java/com/muczynski/library/dto/LibraryStatisticsDto.java` - Statistics DTO
-- `src/main/java/com/muczynski/library/mapper/LibraryMapper.java` - MapStruct mapper
-- `src/main/java/com/muczynski/library/repository/LibraryRepository.java` - JPA repository
+- `src/main/java/com/muczynski/library/controller/BranchController.java` - REST endpoints
+- `src/main/java/com/muczynski/library/service/BranchService.java` - Business logic
+- `src/main/java/com/muczynski/library/dto/BranchDto.java` - Data transfer object
+- `src/main/java/com/muczynski/library/dto/BranchStatisticsDto.java` - Statistics DTO
+- `src/main/java/com/muczynski/library/mapper/BranchMapper.java` - MapStruct mapper
+- `src/main/java/com/muczynski/library/repository/BranchRepository.java` - JPA repository
 - `src/main/java/com/muczynski/library/repository/LoanRepository.java` - Loan queries (for statistics)
 
 ### Frontend
-- `frontend/src/pages/libraries/LibrariesPage.tsx` - Main page component
-- `frontend/src/pages/libraries/DataManagementPage.tsx` - JSON/Photo import/export
-- `frontend/src/api/libraries.ts` - TanStack Query hooks
+- `frontend/src/pages/branches/BranchesPage.tsx` - Main page component
+- `frontend/src/pages/branches/DataManagementPage.tsx` - JSON/Photo import/export
+- `frontend/src/api/branches.ts` - TanStack Query hooks
 - `frontend/src/types/dtos.ts` - TypeScript DTO interfaces
 
 ### Testing
-- `src/test/java/com/muczynski/library/controller/LibraryControllerTest.java` - Integration tests
+- `src/test/java/com/muczynski/library/controller/BranchControllerTest.java` - Integration tests
 
 ## Testing
 
 ### Backend Integration Tests
-- **Location**: `src/test/java/com/muczynski/library/controller/LibraryControllerTest.java`
+- **Location**: `src/test/java/com/muczynski/library/controller/BranchControllerTest.java`
 - **Coverage**:
   - All CRUD endpoints
   - Statistics endpoint

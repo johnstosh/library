@@ -22,11 +22,11 @@ const AuthorsPage = lazy(() => import('@/pages/authors/AuthorsPage').then(m => (
 const AuthorNewPage = lazy(() => import('@/pages/authors/AuthorNewPage').then(m => ({ default: m.AuthorNewPage })))
 const AuthorEditPage = lazy(() => import('@/pages/authors/AuthorEditPage').then(m => ({ default: m.AuthorEditPage })))
 const AuthorViewPage = lazy(() => import('@/pages/authors/AuthorViewPage').then(m => ({ default: m.AuthorViewPage })))
-const LibrariesPage = lazy(() => import('@/pages/libraries/LibrariesPage').then(m => ({ default: m.LibrariesPage })))
-const LibraryNewPage = lazy(() => import('@/pages/libraries/LibraryNewPage').then(m => ({ default: m.LibraryNewPage })))
-const LibraryEditPage = lazy(() => import('@/pages/libraries/LibraryEditPage').then(m => ({ default: m.LibraryEditPage })))
-const LibraryViewPage = lazy(() => import('@/pages/libraries/LibraryViewPage').then(m => ({ default: m.LibraryViewPage })))
-const DataManagementPage = lazy(() => import('@/pages/libraries/DataManagementPage').then(m => ({ default: m.DataManagementPage })))
+const BranchesPage = lazy(() => import('./pages/branches/BranchesPage').then(m => ({ default: m.BranchesPage })))
+const BranchNewPage = lazy(() => import('./pages/branches/BranchNewPage').then(m => ({ default: m.BranchNewPage })))
+const BranchEditPage = lazy(() => import('./pages/branches/BranchEditPage').then(m => ({ default: m.BranchEditPage })))
+const BranchViewPage = lazy(() => import('./pages/branches/BranchViewPage').then(m => ({ default: m.BranchViewPage })))
+const DataManagementPage = lazy(() => import('@/pages/branches/DataManagementPage').then(m => ({ default: m.DataManagementPage })))
 const LoansPage = lazy(() => import('@/pages/loans/LoansPage').then(m => ({ default: m.LoansPage })))
 const LoanNewPage = lazy(() => import('@/pages/loans/LoanNewPage').then(m => ({ default: m.LoanNewPage })))
 const LoanEditPage = lazy(() => import('@/pages/loans/LoanEditPage').then(m => ({ default: m.LoanEditPage })))
@@ -91,10 +91,10 @@ function App() {
 
               {/* Librarian-only routes */}
               <Route element={<LibrarianRoute />}>
-                <Route path="/libraries" element={<LibrariesPage />} />
-                <Route path="/libraries/new" element={<LibraryNewPage />} />
-                <Route path="/libraries/:id" element={<LibraryViewPage />} />
-                <Route path="/libraries/:id/edit" element={<LibraryEditPage />} />
+                <Route path="/branches" element={<BranchesPage />} />
+                <Route path="/branches/new" element={<BranchNewPage />} />
+                <Route path="/branches/:id" element={<BranchViewPage />} />
+                <Route path="/branches/:id/edit" element={<BranchEditPage />} />
                 <Route path="/data-management" element={<DataManagementPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/new" element={<UserNewPage />} />

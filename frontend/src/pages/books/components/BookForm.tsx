@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useAuthors } from '@/api/authors'
-import { useLibraries } from '@/api/libraries'
+import { useBranches } from '@/api/branches'
 import { useCreateBook, useUpdateBook, useSuggestLocNumber } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
@@ -43,7 +43,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
   const [successMessage, setSuccessMessage] = useState('')
 
   const { data: authors, isLoading: authorsLoading } = useAuthors()
-  const { data: libraries, isLoading: librariesLoading } = useLibraries()
+  const { data: libraries, isLoading: librariesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
