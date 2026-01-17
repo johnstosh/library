@@ -222,12 +222,21 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - Exported At timestamp
 - Permanent ID (truncated with tooltip)
 - Actions per photo:
+  - **Paste Image** (always available) - paste an image from clipboard (Ctrl+V) to update photo
   - Export (if hasImage && !permanentId)
   - Import (if permanentId && !hasImage)
   - View in Google Photos (if permanentId)
   - Verify (if permanentId)
   - Unlink (if permanentId)
   - Delete
+
+**Paste Image Feature**:
+- Click the upload icon (↑) button in the Actions column to enter paste mode
+- A blue notification banner appears with instructions
+- Press Ctrl+V (or Cmd+V on Mac) to paste an image from clipboard
+- The image is automatically uploaded to replace/update the photo
+- Click "Cancel" in the notification banner to exit paste mode
+- Uses the `/api/photos/{id}/crop` endpoint to update the photo image
 
 **Data-test Attributes**:
 - `photo-export-section` - main section wrapper
@@ -236,6 +245,7 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - `export-stats` - statistics grid
 - `stats-total`, `stats-exported`, `stats-imported`, `stats-pending-export`, `stats-pending-import`, `stats-failed`
 - `photos-table`, `photos-table-body`
+- `paste-photo-{id}` - paste image button for specific photo
 
 ## LOC Bulk Lookup Import/Export
 

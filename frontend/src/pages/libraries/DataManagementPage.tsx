@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -15,6 +15,7 @@ import {
   useVerifyPhoto,
   useUnlinkPhoto,
   useDeletePhoto,
+  useUploadPhotoImage,
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { useLibraries } from '@/api/libraries'
@@ -42,6 +43,8 @@ export function DataManagementPage() {
   const [photoExportProgress, setPhotoExportProgress] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [pasteModePhotoId, setPasteModePhotoId] = useState<number | null>(null)
+  const [pasteInstructions, setPasteInstructions] = useState<string>('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
@@ -59,6 +62,7 @@ export function DataManagementPage() {
   const verifyPhoto = useVerifyPhoto()
   const unlinkPhoto = useUnlinkPhoto()
   const deletePhoto = useDeletePhoto()
+  const uploadPhotoImage = useUploadPhotoImage()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -406,6 +410,74 @@ export function DataManagementPage() {
     }
   }
 
+  const handleEnterPasteMode = (photoId: number) => {
+    setPasteModePhotoId(photoId)
+    setPasteInstructions(`Ready to paste. Press Ctrl+V to paste an image for photo #${photoId}`)
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    // Focus on window to ensure paste event is captured
+    window.focus()
+  }
+
+  const handleCancelPasteMode = () => {
+    setPasteModePhotoId(null)
+    setPasteInstructions('')
+  }
+
+  const handlePaste = async (event: ClipboardEvent) => {
+    if (pasteModePhotoId === null) return
+
+    const items = event.clipboardData?.items
+    if (!items) return
+
+    let imageFile: File | null = null
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.indexOf('image') !== -1) {
+        const blob = item.getAsFile()
+        if (blob) {
+          imageFile = new File([blob], 'pasted-image.png', { type: blob.type })
+          break
+        }
+      }
+    }
+
+    if (!imageFile) {
+      setErrorMessage('No image found in clipboard. Please copy an image and try again.')
+      return
+    }
+
+    setSuccessMessage('')
+    setErrorMessage('')
+    setPasteInstructions('Uploading pasted image...')
+
+    try {
+      await uploadPhotoImage.mutateAsync({ photoId: pasteModePhotoId, file: imageFile })
+      setSuccessMessage(`Image pasted and uploaded successfully for photo #${pasteModePhotoId}!`)
+      setPasteModePhotoId(null)
+      setPasteInstructions('')
+      handleRefreshPhotoStatus()
+    } catch {
+      setErrorMessage('Failed to upload pasted image. Please try again.')
+      setPasteInstructions(`Ready to paste. Press Ctrl+V to paste an image for photo #${pasteModePhotoId}`)
+    }
+  }
+
+  // Add paste event listener when in paste mode
+  useEffect(() => {
+    const pasteHandler = (event: Event) => handlePaste(event as ClipboardEvent)
+
+    if (pasteModePhotoId !== null) {
+      window.addEventListener('paste', pasteHandler)
+    }
+
+    return () => {
+      window.removeEventListener('paste', pasteHandler)
+    }
+  }, [pasteModePhotoId])
+
   // Get status badge color class
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -462,6 +534,24 @@ export function DataManagementPage() {
       {errorMessage && (
         <div className="mb-6">
           <ErrorMessage message={errorMessage} />
+        </div>
+      )}
+
+      {/* Paste Mode Instructions */}
+      {pasteInstructions && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <PiUpload className="w-5 h-5 text-blue-600" />
+              <p className="text-blue-900 font-medium">{pasteInstructions}</p>
+            </div>
+            <button
+              onClick={handleCancelPasteMode}
+              className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -861,6 +951,20 @@ export function DataManagementPage() {
                         {/* Actions */}
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
+                            {/* Paste Image button - always show */}
+                            <button
+                              onClick={() => handleEnterPasteMode(photo.id)}
+                              className={`px-2 py-1 text-xs rounded ${
+                                pasteModePhotoId === photo.id
+                                  ? 'bg-blue-600 text-white'
+                                  : 'border border-purple-600 text-purple-600 hover:bg-purple-50'
+                              }`}
+                              title="Paste image from clipboard"
+                              data-test={`paste-photo-${photo.id}`}
+                            >
+                              <PiUpload className="w-3 h-3 inline" />
+                            </button>
+
                             {/* Export button - show if hasImage && !permanentId */}
                             {photo.hasImage && !photo.permanentId && (
                               <button

@@ -240,3 +240,28 @@ export function useDeletePhoto() {
     },
   })
 }
+
+// Upload/replace photo image
+export function useUploadPhotoImage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ photoId, file }: { photoId: number; file: File }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`/api/photos/${photoId}/crop`, {
+        method: 'PUT',
+        body: formData,
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload photo image')
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
+    },
+  })
+}

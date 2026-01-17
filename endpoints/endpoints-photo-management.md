@@ -393,6 +393,7 @@ Replace photo with cropped/edited version.
 - Crop photo to remove unwanted areas
 - Replace photo with edited version
 - Update photo while preserving metadata and ordering
+- **Paste image from clipboard** - Used by Data Management page paste feature to upload clipboard images
 
 ---
 
