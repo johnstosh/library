@@ -101,9 +101,9 @@ export function LibrariesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Libraries</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Branches</h1>
         <Button variant="primary" onClick={handleAdd} data-test="add-library">
-          Add Library
+          Add Branch
         </Button>
       </div>
 
@@ -156,14 +156,14 @@ export function LibrariesPage() {
               </>
             )}
             isLoading={isLoading}
-            emptyMessage="No libraries found"
+            emptyMessage="No branches found"
           />
         </div>
 
         {!isLoading && libraries.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-700">
-              Showing {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'}
+              Showing {libraries.length} {libraries.length === 1 ? 'branch' : 'branches'}
             </p>
           </div>
         )}
@@ -173,8 +173,8 @@ export function LibrariesPage() {
         isOpen={deleteLibraryId !== null}
         onClose={() => setDeleteLibraryId(null)}
         onConfirm={handleDelete}
-        title="Delete Library"
-        message="Are you sure you want to delete this library? This action cannot be undone."
+        title="Delete Branch"
+        message="Are you sure you want to delete this branch? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
         isLoading={deleteLibrary.isPending}

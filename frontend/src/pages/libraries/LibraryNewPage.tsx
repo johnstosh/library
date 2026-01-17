@@ -16,7 +16,7 @@ export function LibraryNewPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <LibraryFormPage
-        title="Add New Library"
+        title="Add New Branch"
         onSuccess={handleSuccess}
         onCancel={handleCancel}
       />

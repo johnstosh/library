@@ -87,7 +87,7 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                 <p className="text-gray-900">{book.author}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Library</p>
+                <p className="text-sm font-medium text-gray-500">Branch</p>
                 <p className="text-gray-900">{book.library}</p>
               </div>
               {book.publicationYear && (

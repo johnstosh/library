@@ -143,7 +143,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     setSuccessMessage('')
 
     if (!formData.title || !formData.authorId || !formData.libraryId) {
-      setError('Title, Author, and Library are required')
+      setError('Title, Author, and Branch are required')
       return
     }
 
@@ -247,10 +247,10 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
           />
 
           <Select
-            label="Library"
+            label="Branch"
             value={formData.libraryId}
             onChange={(e) => setFormData({ ...formData, libraryId: e.target.value })}
-            options={[{ value: '', label: 'Select Library' }, ...libraryOptions]}
+            options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
             required
             disabled={librariesLoading}
             data-test="book-library"

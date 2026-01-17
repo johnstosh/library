@@ -1,18 +1,20 @@
-# Libraries Feature Design
+# Branches Feature Design
 
 ## Overview
 
-The Libraries page provides management of library branches in the system. Each library represents a physical location that can house books. The page displays library information with statistics on books and active loans.
+The Branches page (technical name: Libraries) provides management of library branches in the system. Each branch represents a physical location that can house books. The page displays branch information with statistics on books and active loans.
+
+**Note on Terminology**: The UI displays "Branch/Branches" for user-facing text, but the backend database entity is named `Library` to preserve backward compatibility with exports/imports and database schema.
 
 ## Purpose
 
-- **Library Management**: Create, read, update, and delete library branches
+- **Branch Management**: Create, read, update, and delete library branches
 - **Multi-Branch Support**: While the system currently operates as a single-branch library, the architecture supports multiple branches
-- **Statistics Display**: View book counts and active loan counts per library
+- **Statistics Display**: View book counts and active loan counts per branch
 
 ## Domain Model
 
-### Library Entity
+### Library Entity (Backend)
 
 **File**: `src/main/java/com/muczynski/library/domain/Library.java`
 
@@ -20,17 +22,21 @@ The Libraries page provides management of library branches in the system. Each l
 @Entity
 public class Library {
     private Long id;              // Auto-generated primary key
-    private String name;          // Library branch name (e.g., "Sacred Heart")
+    private String branchName;    // Branch name (e.g., "Sacred Heart")
+    private String librarySystemName;  // Library system name (e.g., "Regional Library System")
     private String hostname;      // Hostname for this branch
 }
 ```
 
 **Fields**:
 - `id`: Unique identifier (auto-generated)
-- `name`: Display name of the library branch
+- `branchName`: Display name of the branch (shown as "Branch Name" in UI)
+- `librarySystemName`: Name of the library system this branch belongs to
 - `hostname`: Server hostname where this library instance runs
 
 **Note**: Books have a `@ManyToOne` relationship to Library (via `book.library_id` foreign key), but Library does not maintain a collection of books. Book counts are queried directly via `bookRepository.countByLibraryId(libraryId)`.
+
+**UI vs Database Terminology**: The UI displays "Branch" but the database entity is named "Library" for backward compatibility.
 
 ## API Endpoints
 
@@ -61,28 +67,28 @@ public class Library {
 
 ### Page Structure
 
-The Libraries page is a React component that displays:
+The Branches page is a React component that displays:
 
-#### 1. Library Table
+#### 1. Branches Table
 - DataTable component displaying all library branches
 - **Columns**:
-  - Name: Library branch name
-  - Hostname: Server hostname
-  - Books: Count of books in this library (from statistics)
-  - Active Loans: Count of active loans for books in this library (from statistics)
+  - Branch Name: Branch name (from branchName field)
+  - Library System: Library system name (from librarySystemName field)
+  - Books: Count of books in this branch (from statistics)
+  - Active Loans: Count of active loans for books in this branch (from statistics)
   - Actions: Edit and Delete buttons (librarian-only)
 
-#### 2. Add/Edit Library Modal
-- **Visibility**: Modal-based form (opens when "Add Library" clicked or edit button clicked)
+#### 2. Add/Edit Branch Form
+- **Pattern**: URL-based CRUD (not modal) - `/libraries/new`, `/libraries/:id/edit`
 - **Fields**:
-  - Library Name (required text input)
-  - Hostname (required text input with help text)
+  - Branch Name (required text input)
+  - Library System Name (required text input with help text)
 - **Actions**:
   - Cancel button
   - Create/Update button (changes based on mode)
 - **Behavior**:
   - Single form handles both create and update operations
-  - Edit mode: Clicking edit button opens modal with populated form
+  - Edit mode: Navigates to edit page with populated form
 
 #### 3. Delete Confirmation Dialog
 - **Component**: ConfirmDialog

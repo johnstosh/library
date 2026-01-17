@@ -45,8 +45,8 @@ export function Navigation() {
     window.location.href = '/login'
   }
 
-  // Get library name for display
-  const branchName = libraries.length > 0 ? libraries[0].branchName : 'Library'
+  // Get branch name for display
+  const branchName = libraries.length > 0 ? libraries[0].branchName : 'Branch'
   const librarySystemName = libraries.length > 0 ? libraries[0].librarySystemName : 'Library System'
 
   return (
@@ -96,7 +96,7 @@ export function Navigation() {
                 <>
                   <div className="w-px h-6 bg-gray-300 mx-2" />
                   <NavLink to="/libraries" data-test="nav-libraries">
-                    Libraries
+                    Branches
                   </NavLink>
                   <NavLink to="/users" data-test="nav-users">
                     Users
@@ -227,7 +227,7 @@ export function Navigation() {
             <>
               <div className="border-t border-gray-200 my-2" />
               <NavLink to="/libraries" data-test="nav-libraries-mobile">
-                Libraries
+                Branches
               </NavLink>
               <NavLink to="/users" data-test="nav-users-mobile">
                 Users

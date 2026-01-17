@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `feature-design-photos.md` - Photo storage, Google Photos integration, caching
 - `feature-design-loc.md` - Library of Congress integration, call number lookup
 - `feature-design-import-export.md` - JSON import/export, photo backup
-- `feature-design-libraries.md` - Library management, library statistics
+- `feature-design-libraries.md` - Branch management, branch statistics (database entity still named `Library` for backward compatibility)
 - `feature-design-library-cards.md` - Library card applications, PDF generation, card designs
 - `feature-design-search.md` - Search functionality, pagination, search algorithm
 - `backend-requirements.md` - Backend development requirements and patterns
@@ -79,7 +79,7 @@ The build.gradle test configuration only shows detailed output for failed tests 
 
 ### Domain Model
 **Core Entities:**
-- `Library` - Library branch information (name, hostname)
+- `Library` - Branch information (branchName, librarySystemName, hostname). Note: Entity named `Library` for backward compatibility, but displayed as "Branch" in UI.
 - `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status, freeTextUrl
 - `Author` - Authors with biographical information
 - `Loan` - Book checkout tracking
