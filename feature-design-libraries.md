@@ -22,17 +22,16 @@ The Branches page (technical name: Libraries) provides management of library bra
 @Entity
 public class Library {
     private Long id;              // Auto-generated primary key
+    @Column(name = "name")        // Maps to "name" column for backward compatibility
     private String branchName;    // Branch name (e.g., "Sacred Heart")
     private String librarySystemName;  // Library system name (e.g., "Regional Library System")
-    private String hostname;      // Hostname for this branch
 }
 ```
 
 **Fields**:
 - `id`: Unique identifier (auto-generated)
-- `branchName`: Display name of the branch (shown as "Branch Name" in UI)
-- `librarySystemName`: Name of the library system this branch belongs to
-- `hostname`: Server hostname where this library instance runs
+- `branchName`: Display name of the branch (shown as "Branch Name" in UI). Maps to database column `name` for backward compatibility.
+- `librarySystemName`: Name of the library system this branch belongs to (new field added in dev branch)
 
 **Note**: Books have a `@ManyToOne` relationship to Library (via `book.library_id` foreign key), but Library does not maintain a collection of books. Book counts are queried directly via `bookRepository.countByLibraryId(libraryId)`.
 

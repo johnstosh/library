@@ -15,6 +15,7 @@ public class Library {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name")
     private String branchName;
 
     private String librarySystemName;

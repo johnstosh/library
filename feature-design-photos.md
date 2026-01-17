@@ -272,6 +272,14 @@ Librarians can configure Google Photos OAuth credentials through the Global Sett
 - Reduces bandwidth for list views
 - Width parameter for flexible sizing
 - Server-side resizing using ImageIO
+- **Image Type Handling:**
+  - JPEG images use `BufferedImage.TYPE_INT_RGB` (no alpha channel)
+  - PNG/other formats use `BufferedImage.TYPE_INT_ARGB` (with alpha channel)
+  - Prevents black thumbnail generation for JPEG images
+- **Error Handling:**
+  - Returns JSON error responses on failure
+  - Detailed logging for debugging thumbnail generation issues
+  - Validates ImageIO write success
 
 ### Google Photos
 - Batch operations reduce API calls
@@ -286,10 +294,18 @@ Librarians can configure Google Photos OAuth credentials through the Global Sett
 - Tests checksum computation and ordering logic
 
 ### Integration Tests
-- **PhotoControllerTest** - 7 tests covering API endpoints
-- Tests authentication/authorization (public vs librarian)
-- Tests image and thumbnail generation
-- Tests soft delete and restore operations
+- **PhotoControllerTest** - Tests covering API endpoints
+  - Tests authentication/authorization (public vs librarian)
+  - Tests image and thumbnail generation with various formats (JPEG, PNG)
+  - Tests soft delete and restore operations
+  - Tests JSON error responses
+  - Tests thumbnail color preservation (verifies thumbnails aren't black)
+- **PhotoServiceIntegrationTest** - Service-level thumbnail tests
+  - Tests thumbnail generation for JPEG images (TYPE_INT_RGB)
+  - Tests thumbnail generation for PNG images (TYPE_INT_ARGB)
+  - Tests aspect ratio preservation
+  - Tests color preservation across different image types
+  - Tests multiple thumbnail widths
 
 ## Related Files
 
@@ -310,6 +326,39 @@ Librarians can configure Google Photos OAuth credentials through the Global Sett
 - `endpoints.md` - Complete API endpoint documentation
 - `photos-design.md` - Detailed photo storage design (legacy, may be outdated)
 - `feature-design-import-export.md` - Photo export/import details
+
+## Frontend Display Guidelines
+
+**IMPORTANT: Photo Aspect Ratio Preservation**
+- Photo thumbnails MUST preserve their original aspect ratio when displayed as primary content
+- DO NOT use `aspect-square` class on photo gallery containers
+- DO NOT use `object-cover` on photo gallery thumbnails (causes cropping)
+- USE `object-contain` to display full image without cropping
+- USE `h-auto` to allow natural height based on aspect ratio
+- Backend generates thumbnails with correct aspect ratio (e.g., 400x533 for 3:4 images)
+- Frontend must respect and display these aspect ratios without forcing square containers
+
+**Exception:** Small table thumbnails (e.g., 48x48px in DataManagementPage) MAY use `object-cover` with fixed dimensions for consistent table layout, as these are decorative previews, not primary content.
+
+**Example (PhotoGallery.tsx):**
+```tsx
+{/* CORRECT - Primary photo display */}
+<div className="bg-gray-100 flex items-center justify-center min-h-[200px]">
+  <img className="w-full h-auto object-contain" />
+</div>
+
+{/* WRONG - causes cropping of primary content */}
+<div className="aspect-square bg-gray-100">
+  <img className="w-full h-full object-cover" />
+</div>
+
+{/* OK - Tiny table preview (not primary content) */}
+<img className="w-12 h-12 object-cover rounded" />
+```
+
+**Current Usage:**
+- ✅ `PhotoGallery.tsx` - Uses `object-contain` for aspect ratio preservation
+- ✅ `DataManagementPage.tsx` - Uses `object-cover` on 48x48px table thumbnails (acceptable)
 
 ## Known Limitations
 

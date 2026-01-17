@@ -12,8 +12,8 @@ DELETE FROM role;
 INSERT INTO role (id, name) VALUES (1, 'USER');
 INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN');
 
-INSERT INTO library (id, branch_name, library_system_name) VALUES (1, 'St. Martin de Porres', 'Sacred Heart Library System');
-INSERT INTO library (id, branch_name, library_system_name) VALUES (2, 'Holy Family Library', 'Sacred Heart Library System');
+INSERT INTO library (id, name, library_system_name) VALUES (1, 'St. Martin de Porres', 'Sacred Heart Library System');
+INSERT INTO library (id, name, library_system_name) VALUES (2, 'Holy Family Library', 'Sacred Heart Library System');
 
 -- Insert authors
 INSERT INTO author (id, name, brief_biography, date_of_birth, date_of_death) VALUES

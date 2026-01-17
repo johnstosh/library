@@ -59,18 +59,18 @@ export function PhotoGallery({
             data-test={`photo-${photo.id}`}
           >
             {/* Photo */}
-            <div className="aspect-square bg-gray-100">
+            <div className="bg-gray-100 flex items-center justify-center min-h-[200px]">
               <img
                 src={getThumbnailUrl(photo.id, 400)}
                 alt={photo.caption || `Photo ${index + 1}`}
-                className="w-full h-full object-cover cursor-pointer"
+                className="w-full h-auto object-contain cursor-pointer"
                 onClick={() => setLightboxPhoto(photo)}
                 loading="lazy"
               />
             </div>
 
             {/* Actions Overlay */}
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200">
+            <div className="absolute inset-0 group-hover:bg-black/40 transition-all duration-200">
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
                 {/* Top Actions */}
                 <div className="flex justify-end gap-1">

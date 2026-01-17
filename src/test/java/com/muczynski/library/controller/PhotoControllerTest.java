@@ -84,6 +84,53 @@ class PhotoControllerTest {
 
     @Test
     @WithMockUser
+    void getThumbnail_withDifferentImageTypes() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        // Test with TYPE_INT_ARGB (has alpha channel)
+        // Create a non-black image with some color to verify proper rendering
+        BufferedImage imageWithAlpha = new BufferedImage(200, 300, BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = imageWithAlpha.createGraphics();
+        g.setColor(java.awt.Color.BLUE);
+        g.fillRect(0, 0, 200, 300);
+        g.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(imageWithAlpha, "png", baos);
+        byte[] pngBytes = baos.toByteArray();
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(pngBytes);
+        photo.setContentType(MediaType.IMAGE_PNG_VALUE);
+        photoRepository.save(photo);
+
+        MvcResult result = mockMvc.perform(get("/api/photos/" + photo.getId() + "/thumbnail?width=100"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] thumbnailBytes = result.getResponse().getContentAsByteArray();
+        BufferedImage thumbnailImage = ImageIO.read(new ByteArrayInputStream(thumbnailBytes));
+        assertNotNull(thumbnailImage, "Thumbnail should be readable");
+        assertEquals(100, thumbnailImage.getWidth());
+        assertEquals(150, thumbnailImage.getHeight());
+
+        // Verify image is blue (not black) by checking the center pixel
+        // This verifies that the thumbnail preserves the original image's color
+        int centerPixelRGB = thumbnailImage.getRGB(thumbnailImage.getWidth() / 2, thumbnailImage.getHeight() / 2);
+        int blue = centerPixelRGB & 0xFF;
+        int green = (centerPixelRGB >> 8) & 0xFF;
+        int red = (centerPixelRGB >> 16) & 0xFF;
+
+        // Blue should be the dominant color (close to 255), red and green should be low
+        assertTrue(blue > 200, "Blue channel should be dominant");
+        assertTrue(red < 50, "Red channel should be low");
+        assertTrue(green < 50, "Green channel should be low");
+    }
+
+    @Test
+    @WithMockUser
     void getImage_returnsFullImage() throws Exception {
         Book book = new Book();
         bookRepository.save(book);
@@ -109,6 +156,58 @@ class PhotoControllerTest {
     void getImage_notFound() throws Exception {
         mockMvc.perform(get("/api/photos/99999/image"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    void getThumbnail_notFound() throws Exception {
+        mockMvc.perform(get("/api/photos/99999/thumbnail?width=100"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    void getThumbnail_withJpegImage() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        // Create a colored JPEG image
+        BufferedImage coloredImage = new BufferedImage(400, 600, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = coloredImage.createGraphics();
+        g.setColor(java.awt.Color.RED);
+        g.fillRect(0, 0, 400, 600);
+        g.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(coloredImage, "jpg", baos);
+        byte[] jpegBytes = baos.toByteArray();
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(jpegBytes);
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        MvcResult result = mockMvc.perform(get("/api/photos/" + photo.getId() + "/thumbnail?width=200"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG_VALUE))
+                .andReturn();
+
+        byte[] thumbnailBytes = result.getResponse().getContentAsByteArray();
+        BufferedImage thumbnailImage = ImageIO.read(new ByteArrayInputStream(thumbnailBytes));
+        assertNotNull(thumbnailImage, "Thumbnail should be readable");
+        assertEquals(200, thumbnailImage.getWidth());
+        assertEquals(300, thumbnailImage.getHeight());
+
+        // Verify the thumbnail is red (not black)
+        int centerPixelRGB = thumbnailImage.getRGB(thumbnailImage.getWidth() / 2, thumbnailImage.getHeight() / 2);
+        int red = (centerPixelRGB >> 16) & 0xFF;
+        int green = (centerPixelRGB >> 8) & 0xFF;
+        int blue = centerPixelRGB & 0xFF;
+
+        assertTrue(red > 200, "Red channel should be dominant, got: " + red);
+        assertTrue(green < 50, "Green channel should be low, got: " + green);
+        assertTrue(blue < 50, "Blue channel should be low, got: " + blue);
     }
 
     @Test

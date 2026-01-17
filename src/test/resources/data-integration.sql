@@ -1,5 +1,5 @@
 -- Insert test library if not exists
-INSERT INTO library (id, branch_name, library_system_name) VALUES (999, 'Test Library', 'Test System');
+INSERT INTO library (id, name, library_system_name) VALUES (999, 'Test Library', 'Test System');
 
 -- Insert test author if not exists
 INSERT INTO author (id, name) VALUES (999, 'Test Author');
