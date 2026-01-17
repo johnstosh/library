@@ -238,6 +238,13 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - Click "Cancel" in the notification banner to exit paste mode
 - Uses the `/api/photos/{id}/crop` endpoint to update the photo image
 
+**Status Messages and Notifications**:
+- Success/error messages appear in a **floating box at the top of the window**
+- Messages remain visible while scrolling through the photo table
+- Error messages include detailed information (e.g., "Failed to import photo #42: Photo not found in Google Photos")
+- Messages use position: fixed with z-50 to stay above page content
+- Shadow styling provides clear visual separation from content below
+
 **Data-test Attributes**:
 - `photo-export-section` - main section wrapper
 - `photos-header` - section title

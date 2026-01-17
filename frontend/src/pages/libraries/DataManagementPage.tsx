@@ -333,8 +333,9 @@ export function DataManagementPage() {
       setSuccessMessage(result.message || 'Photo exported successfully!')
       // Refresh data to update the row status
       handleRefreshPhotoStatus()
-    } catch {
-      setErrorMessage('Failed to export photo. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to export photo #${photoId}: ${errorMessage}`)
     }
   }
 
@@ -347,8 +348,9 @@ export function DataManagementPage() {
       setSuccessMessage(result.message || 'Photo imported successfully!')
       // Refresh data to update the row status
       handleRefreshPhotoStatus()
-    } catch {
-      setErrorMessage('Failed to import photo. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to import photo #${photoId}: ${errorMessage}`)
     }
   }
 
@@ -365,8 +367,9 @@ export function DataManagementPage() {
       } else {
         setErrorMessage(`Photo #${photoId} verification failed: ${result.message}`)
       }
-    } catch {
-      setErrorMessage('Failed to verify photo. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to verify photo #${photoId}: ${errorMessage}`)
     }
   }
 
@@ -387,8 +390,9 @@ export function DataManagementPage() {
       setSuccessMessage(result.message || 'Photo unlinked successfully!')
       // Refresh data to update the row status
       handleRefreshPhotoStatus()
-    } catch {
-      setErrorMessage('Failed to unlink photo. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to unlink photo #${photoId}: ${errorMessage}`)
     }
   }
 
@@ -405,8 +409,9 @@ export function DataManagementPage() {
       setSuccessMessage(`Photo #${photoId} deleted successfully!`)
       // Refresh data to update the table
       handleRefreshPhotoStatus()
-    } catch {
-      setErrorMessage('Failed to delete photo. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to delete photo #${photoId}: ${errorMessage}`)
     }
   }
 
@@ -459,8 +464,9 @@ export function DataManagementPage() {
       setPasteModePhotoId(null)
       setPasteInstructions('')
       handleRefreshPhotoStatus()
-    } catch {
-      setErrorMessage('Failed to upload pasted image. Please try again.')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to upload pasted image for photo #${pasteModePhotoId}: ${errorMessage}`)
       setPasteInstructions(`Ready to paste. Press Ctrl+V to paste an image for photo #${pasteModePhotoId}`)
     }
   }
@@ -518,42 +524,49 @@ export function DataManagementPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Floating Status Messages - Fixed at top of viewport */}
+      {(successMessage || errorMessage || pasteInstructions) && (
+        <div className="fixed top-16 left-0 right-0 z-50 flex justify-center px-4">
+          <div className="max-w-4xl w-full">
+            {/* Success/Error Messages */}
+            {successMessage && (
+              <div className="mb-3">
+                <SuccessMessage message={successMessage} className="shadow-lg" />
+              </div>
+            )}
+            {errorMessage && (
+              <div className="mb-3">
+                <ErrorMessage message={errorMessage} className="shadow-lg" />
+              </div>
+            )}
+
+            {/* Paste Mode Instructions */}
+            {pasteInstructions && (
+              <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <PiUpload className="w-5 h-5 text-blue-600" />
+                    <p className="text-blue-900 font-medium">{pasteInstructions}</p>
+                  </div>
+                  <button
+                    onClick={handleCancelPasteMode}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Data Management</h1>
         <p className="text-gray-600">
           Export and import library data for backup or migration
         </p>
       </div>
-
-      {/* Success/Error Messages */}
-      {successMessage && (
-        <div className="mb-6">
-          <SuccessMessage message={successMessage} />
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-6">
-          <ErrorMessage message={errorMessage} />
-        </div>
-      )}
-
-      {/* Paste Mode Instructions */}
-      {pasteInstructions && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <PiUpload className="w-5 h-5 text-blue-600" />
-              <p className="text-blue-900 font-medium">{pasteInstructions}</p>
-            </div>
-            <button
-              onClick={handleCancelPasteMode}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* JSON Export/Import Section */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
