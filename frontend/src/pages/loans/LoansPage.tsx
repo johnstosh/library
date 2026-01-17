@@ -11,6 +11,7 @@ import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
 import { formatDate } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
 import { PiEye } from 'react-icons/pi'
+import { useIsLibrarian } from '@/stores/authStore'
 
 export function LoansPage() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export function LoansPage() {
 
   const showAll = useLoansShowAll()
   const setLoansShowAll = useUiStore((state) => state.setLoansShowAll)
+  const isLibrarian = useIsLibrarian()
 
   const { data: loans = [], isLoading, error, isFetching } = useLoans(showAll)
 
@@ -79,7 +81,9 @@ export function LoansPage() {
           >
             {loan.bookTitle}
           </button>
-          {loan.userName && <div className="text-sm text-gray-500">Borrowed by: {loan.userName}</div>}
+          {isLibrarian && loan.userName && (
+            <div className="text-sm text-gray-500">Borrowed by: {loan.userName}</div>
+          )}
         </div>
       ),
       width: '30%',
@@ -185,7 +189,7 @@ export function LoansPage() {
                 >
                   <PiEye className="w-5 h-5" />
                 </button>
-                {!loan.returnDate && (
+                {isLibrarian && !loan.returnDate && (
                   <button
                     onClick={() => setReturnLoanId(loan.id)}
                     className="text-green-600 hover:text-green-900"
@@ -202,21 +206,23 @@ export function LoansPage() {
                     </svg>
                   </button>
                 )}
-                <button
-                  onClick={() => setDeleteLoanId(loan.id)}
-                  className="text-red-600 hover:text-red-900"
-                  data-test={`delete-loan-${loan.id}`}
-                  title="Delete"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
+                {isLibrarian && (
+                  <button
+                    onClick={() => setDeleteLoanId(loan.id)}
+                    className="text-red-600 hover:text-red-900"
+                    data-test={`delete-loan-${loan.id}`}
+                    title="Delete"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                )}
               </>
             )}
             isLoading={isLoading}

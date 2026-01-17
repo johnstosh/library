@@ -603,8 +603,10 @@ Photo thumbnails cached in IndexedDB (planned enhancement).
 ### Authorization Levels
 
 - **PUBLIC (Unauthenticated)**: Access to Search, Apply for Card
-- **USER**: Public access + Books, Authors, Loans, Settings, My Card (download card)
+- **USER**: Public access + Books, Authors, Loans (own loans only), Settings, My Card (download card)
 - **LIBRARIAN**: Full access including Users, Libraries, Applications, Books from Feed, Data Management, Global Settings, Test Data
+  - **Loans**: Librarians see all loans from all users with "Borrowed by" information, plus Return/Delete buttons
+  - **Users**: Regular users see only their own loans without Return/Delete buttons
 
 Note: Books and Authors menu items are only visible to authenticated users. Unauthenticated users see only Search and Login.
 
