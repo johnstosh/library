@@ -413,4 +413,72 @@ class LoanControllerIntegrationTest {
                 .andExpect(jsonPath("$[?(@.id == " + orphanedLoan.getId() + ")].userId",
                     hasItem(nullValue())));
     }
+
+    @Test
+    void testGetLoansAsLibrarian_With20RandomLoans_ShouldReturnAll20() throws Exception {
+        // Create 20 random authors
+        for (int i = 1; i <= 20; i++) {
+            Author author = new Author();
+            author.setName("Random Author " + i);
+            authorRepository.save(author);
+        }
+
+        // Create 20 random books
+        for (int i = 1; i <= 20; i++) {
+            Book book = new Book();
+            book.setTitle("Random Book " + i);
+            book.setAuthor(testAuthor); // Reuse one author for simplicity
+            book.setLibrary(testLibrary);
+            book.setStatus(BookStatus.ACTIVE);
+            bookRepository.save(book);
+        }
+
+        // Create 20 random users (regular users, not librarians)
+        for (int i = 1; i <= 20; i++) {
+            User user = new User();
+            user.setUsername("randomuser" + i);
+            user.setPassword("password");
+            user.setSsoProvider("local");
+            user.setLibraryCardDesign(LibraryCardDesign.CLASSICAL_DEVOTION);
+            Set<Authority> userAuths = new HashSet<>();
+            userAuths.add(userAuthority);
+            user.setAuthorities(userAuths);
+            userRepository.save(user);
+        }
+
+        // Create 20 random active loans (one per user)
+        int loanCount = 0;
+        for (User user : userRepository.findAll()) {
+            // Skip the librarian user and the test users from setUp
+            if (user.getUsername().startsWith("randomuser")) {
+                loanCount++;
+                for (Book book : bookRepository.findAll()) {
+                    if (book.getTitle().startsWith("Random Book " + loanCount)) {
+                        Loan loan = new Loan();
+                        loan.setBook(book);
+                        loan.setUser(user);
+                        loan.setLoanDate(LocalDate.now().minusDays(loanCount));
+                        loan.setDueDate(LocalDate.now().plusDays(14));
+                        loan.setReturnDate(null);
+                        loanRepository.save(loan);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Count total active loans in database (including the ones from setUp)
+        long totalActiveLoans = loanRepository.findAll().stream()
+                .filter(loan -> loan.getReturnDate() == null)
+                .count();
+
+        System.out.println("Total active loans in database: " + totalActiveLoans);
+
+        // Librarian should see all active loans (20 new + 2 from setUp = 22 total)
+        mockMvc.perform(get("/api/loans")
+                        .with(user(librarianUser.getId().toString()).authorities(new SimpleGrantedAuthority("LIBRARIAN")))
+                        .param("showAll", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize((int) totalActiveLoans)));
+    }
 }

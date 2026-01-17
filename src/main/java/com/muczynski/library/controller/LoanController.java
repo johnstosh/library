@@ -37,7 +37,8 @@ public class LoanController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> checkoutBook(@Valid @RequestBody LoanDto loanDto, Authentication authentication) {
         // Regular users can only checkout books to themselves
-        boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+        boolean isLibrarian = authentication.getAuthorities().stream()
+                .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
         if (!isLibrarian) {
             // For non-librarians, verify they're checking out to themselves
             // The principal name is the database user ID (not username)
@@ -72,7 +73,8 @@ public class LoanController {
         logger.info("LoanController.getAllLoans: authorities={}", authentication.getAuthorities());
         try {
             // Librarians see all loans, regular users see only their own loans
-            boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+            boolean isLibrarian = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
             logger.info("LoanController.getAllLoans: isLibrarian={}", isLibrarian);
             List<LoanDto> loans;
             if (isLibrarian) {

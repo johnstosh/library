@@ -18,6 +18,23 @@
 - In tests: use `@WithMockUser(authorities = "LIBRARIAN")` without `ROLE_` prefix
 - In tests: use `new SimpleGrantedAuthority("LIBRARIAN")` without `ROLE_` prefix
 
+### Checking Authorities Programmatically in Controllers
+When you need to check authorities in controller code (not via `@PreAuthorize`), use the **stream-based** approach:
+
+**CORRECT** - Stream-based authority check:
+```java
+boolean isLibrarian = authentication.getAuthorities().stream()
+        .anyMatch(auth -> "LIBRARIAN".equals(auth.getAuthority()));
+```
+
+**INCORRECT** - Do NOT use `.contains()` with new SimpleGrantedAuthority:
+```java
+// DON'T DO THIS - may fail due to object equality issues
+boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+```
+
+Why? The `.contains()` method relies on object equality, which can fail depending on how authorities are loaded (database entities vs SimpleGrantedAuthority instances). The stream-based approach checks the authority string value, which is reliable regardless of implementation.
+
 ## Authentication Methods
 
 ### Form-Based Login
