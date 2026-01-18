@@ -26,8 +26,9 @@ export async function apiClient<T>(
     ? endpoint
     : `${import.meta.env.VITE_API_BASE_URL || ''}/api${endpoint}`
 
+  // Build headers, but don't set Content-Type if body is FormData
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(fetchOptions.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...fetchOptions.headers,
   }
 
@@ -125,15 +126,11 @@ export const api = {
     apiClient<T>(endpoint, { ...options, method: 'DELETE' }),
 
   // Special handler for multipart/form-data (file uploads)
+  // Note: Content-Type is automatically omitted for FormData by apiClient
   postFormData: <T>(endpoint: string, formData: FormData, options?: RequestOptions) =>
     apiClient<T>(endpoint, {
       ...options,
       method: 'POST',
       body: formData,
-      headers: {
-        // Don't set Content-Type, let browser set it with boundary
-        ...options?.headers,
-        'Content-Type': undefined,
-      } as HeadersInit,
     }),
 }

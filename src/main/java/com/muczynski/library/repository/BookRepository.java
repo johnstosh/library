@@ -45,7 +45,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             b.id as id,
             b.title as title,
             a.name as authorName,
-            l.branch_name as libraryName,
+            l.name as libraryName,
             COALESCE(p.photo_count, 0) as photoCount,
             b.loc_number as locNumber,
             b.status as status,
