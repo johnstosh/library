@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Select } from '@/components/ui/Select'
+import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useCheckoutBook } from '@/api/loans'
@@ -26,7 +27,15 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
   const [formData, setFormData] = useState({
     bookId: '',
     userId: '',
+    checkoutDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+    dueDate: '',
   })
+  const [bookFilters, setBookFilters] = useState({
+    title: '',
+    author: '',
+    locNumber: '',
+  })
+  const [userFilter, setUserFilter] = useState('')
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
@@ -39,15 +48,69 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
       setFormData({
         bookId: loan.bookId.toString(),
         userId: loan.userId.toString(),
+        checkoutDate: formatDateToInput(loan.loanDate),
+        dueDate: formatDateToInput(loan.dueDate),
       })
     } else if (currentUser && !isLibrarian) {
       // Default to current user if not a librarian
+      const today = new Date()
+      const twoWeeksLater = new Date(today)
+      twoWeeksLater.setDate(today.getDate() + 14)
+
       setFormData({
         bookId: '',
         userId: currentUser.id.toString(),
+        checkoutDate: formatDateToInput(today.toISOString()),
+        dueDate: formatDateToInput(twoWeeksLater.toISOString()),
       })
+    } else {
+      // Initialize dates for librarians
+      const today = new Date()
+      const twoWeeksLater = new Date(today)
+      twoWeeksLater.setDate(today.getDate() + 14)
+
+      setFormData(prev => ({
+        ...prev,
+        checkoutDate: formatDateToInput(today.toISOString()),
+        dueDate: formatDateToInput(twoWeeksLater.toISOString()),
+      }))
     }
   }, [loan, currentUser, isLibrarian])
+
+  // Helper function to format ISO date string to MM-DD-YYYY
+  const formatDateToInput = (isoDate: string): string => {
+    if (!isoDate) return ''
+    const date = new Date(isoDate)
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${month}-${day}-${year}`
+  }
+
+  // Helper function to parse MM-DD-YYYY to ISO date string
+  const parseInputToISO = (dateStr: string): string => {
+    if (!dateStr) return ''
+    const parts = dateStr.split('-')
+    if (parts.length !== 3) return ''
+    const [month, day, year] = parts
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  // Update due date when checkout date changes
+  useEffect(() => {
+    if (formData.checkoutDate && !isEditing) {
+      const isoDate = parseInputToISO(formData.checkoutDate)
+      if (isoDate) {
+        const checkoutDate = new Date(isoDate)
+        const dueDate = new Date(checkoutDate)
+        dueDate.setDate(checkoutDate.getDate() + 14)
+        setFormData(prev => ({
+          ...prev,
+          dueDate: formatDateToInput(dueDate.toISOString()),
+        }))
+      }
+    }
+  }, [formData.checkoutDate, isEditing])
 
   // Warn user about unsaved changes
   useEffect(() => {
@@ -67,6 +130,16 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
     setHasUnsavedChanges(true)
   }
 
+  const handleBookFilterChange = (field: string, value: string) => {
+    setBookFilters({ ...bookFilters, [field]: value })
+    setHasUnsavedChanges(true)
+  }
+
+  const handleUserFilterChange = (value: string) => {
+    setUserFilter(value)
+    setHasUnsavedChanges(true)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -82,10 +155,21 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
       return
     }
 
+    // Parse and validate dates
+    const loanDate = parseInputToISO(formData.checkoutDate)
+    const dueDate = parseInputToISO(formData.dueDate)
+
+    if (!loanDate || !dueDate) {
+      setError('Invalid date format. Please use MM-DD-YYYY format.')
+      return
+    }
+
     try {
       await checkoutBook.mutateAsync({
         bookId: parseInt(formData.bookId),
         userId: parseInt(formData.userId),
+        loanDate,
+        dueDate,
       })
 
       setHasUnsavedChanges(false)
@@ -105,23 +189,87 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
     }
   }
 
-  const availableBooks = books.filter((b) => b.status === 'ACTIVE')
+  // Filter and rank books based on title, author, and locNumber
+  const filteredBooks = useMemo(() => {
+    const availableBooks = books.filter((b) => b.status === 'ACTIVE')
 
-  const bookOptions = availableBooks.map((b) => ({
+    if (!bookFilters.title && !bookFilters.author && !bookFilters.locNumber) {
+      return availableBooks
+    }
+
+    // Calculate match score for each book
+    const booksWithScore = availableBooks.map((book) => {
+      let score = 0
+      const titleMatch = bookFilters.title.toLowerCase()
+      const authorMatch = bookFilters.author.toLowerCase()
+      const locMatch = bookFilters.locNumber.toLowerCase()
+
+      if (titleMatch && book.title.toLowerCase().includes(titleMatch)) {
+        score += 10
+        // Exact match gets bonus
+        if (book.title.toLowerCase() === titleMatch) score += 20
+      }
+
+      if (authorMatch && book.author?.toLowerCase().includes(authorMatch)) {
+        score += 10
+        // Exact match gets bonus
+        if (book.author?.toLowerCase() === authorMatch) score += 20
+      }
+
+      if (locMatch && book.locNumber?.toLowerCase().includes(locMatch)) {
+        score += 10
+        // Exact match gets bonus
+        if (book.locNumber?.toLowerCase() === locMatch) score += 20
+      }
+
+      return { book, score }
+    })
+
+    // Sort by score (highest first) and return books with score > 0
+    return booksWithScore
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.book)
+  }, [books, bookFilters])
+
+  // Filter users based on username
+  const filteredUsers = useMemo(() => {
+    if (!userFilter) {
+      return users
+    }
+
+    const filterLower = userFilter.toLowerCase()
+    return users.filter((user) =>
+      user.username.toLowerCase().includes(filterLower)
+    )
+  }, [users, userFilter])
+
+
+  // Update book filters when a book is selected
+  useEffect(() => {
+    if (formData.bookId) {
+      const selectedBook = books.find(b => b.id === parseInt(formData.bookId))
+      if (selectedBook && !bookFilters.title && !bookFilters.author && !bookFilters.locNumber) {
+        setBookFilters({
+          title: selectedBook.title,
+          author: selectedBook.author || '',
+          locNumber: selectedBook.locNumber || '',
+        })
+      }
+    }
+  }, [formData.bookId, books])
+
+  const bookOptions = filteredBooks.map((b) => ({
     value: b.id,
     label: `${b.title} - ${b.author}`,
   }))
 
-  const userOptions = users.map((u) => ({
+  const userOptions = filteredUsers.map((u) => ({
     value: u.id,
     label: u.username,
   }))
 
   const isLoading = checkoutBook.isPending
-
-  // Calculate due date (14 days from today for new loans)
-  const dueDate = new Date()
-  dueDate.setDate(dueDate.getDate() + 14)
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -178,34 +326,98 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageP
         ) : (
           // Edit mode for new loans
           <>
-            <Select
-              label="Book"
-              value={formData.bookId}
-              onChange={(e) => handleFieldChange('bookId', e.target.value)}
-              options={[{ value: '', label: 'Select a book' }, ...bookOptions]}
-              required
-              helpText="Only available books are shown"
-              data-test="loan-book-select"
-              disabled={isEditing}
-            />
+            {/* Book Selection with Title/Author/LOC filters */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <Select
+                  label="Book"
+                  value={formData.bookId}
+                  onChange={(e) => handleFieldChange('bookId', e.target.value)}
+                  options={[{ value: '', label: 'Select a book' }, ...bookOptions]}
+                  required
+                  helpText={`Showing ${filteredBooks.length} available books`}
+                  data-test="loan-book-select"
+                  disabled={isEditing}
+                />
+              </div>
+              <div className="space-y-3">
+                <Input
+                  label="Title Filter"
+                  value={bookFilters.title}
+                  onChange={(e) => handleBookFilterChange('title', e.target.value)}
+                  placeholder="Filter books by title"
+                  data-test="loan-title-filter"
+                />
+                <Input
+                  label="Author Filter"
+                  value={bookFilters.author}
+                  onChange={(e) => handleBookFilterChange('author', e.target.value)}
+                  placeholder="Filter books by author"
+                  data-test="loan-author-filter"
+                />
+                <Input
+                  label="Call Number Filter"
+                  value={bookFilters.locNumber}
+                  onChange={(e) => handleBookFilterChange('locNumber', e.target.value)}
+                  placeholder="Filter books by LOC number"
+                  data-test="loan-loc-filter"
+                />
+              </div>
+            </div>
 
-            <Select
-              label="Borrower"
-              value={formData.userId}
-              onChange={(e) => handleFieldChange('userId', e.target.value)}
-              options={[{ value: '', label: 'Select a user' }, ...userOptions]}
-              required
-              data-test="loan-user-select"
-              disabled={isEditing || !isLibrarian}
-            />
+            {/* Borrower Selection with Filter */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <Select
+                  label="Borrower"
+                  value={formData.userId}
+                  onChange={(e) => handleFieldChange('userId', e.target.value)}
+                  options={[{ value: '', label: 'Select a user' }, ...userOptions]}
+                  required
+                  helpText={`Showing ${filteredUsers.length} users`}
+                  data-test="loan-user-select"
+                  disabled={isEditing || !isLibrarian}
+                />
+              </div>
+              <div>
+                <Input
+                  label="Borrower Filter"
+                  value={userFilter}
+                  onChange={(e) => handleUserFilterChange(e.target.value)}
+                  placeholder="Filter borrowers by username"
+                  data-test="loan-user-filter"
+                />
+              </div>
+            </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900">
-                <strong>Checkout Date:</strong> {formatDate(new Date().toISOString())}
-              </p>
-              <p className="text-sm text-blue-900 mt-1">
-                <strong>Due Date:</strong> {formatDate(dueDate.toISOString())} (14 days from checkout)
-              </p>
+            {/* Checkout Date */}
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                label="Checkout Date"
+                type="text"
+                value={formData.checkoutDate}
+                onChange={(e) => handleFieldChange('checkoutDate', e.target.value)}
+                required
+                placeholder="MM-DD-YYYY"
+                helpText="Enter checkout date in MM-DD-YYYY format (defaults to today)"
+                data-test="loan-checkout-date"
+                disabled={isEditing}
+              />
+            </div>
+
+            {/* Due Date */}
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                label="Due Date"
+                type="text"
+                value={formData.dueDate}
+                onChange={(e) => handleFieldChange('dueDate', e.target.value)}
+                required
+                placeholder="MM-DD-YYYY"
+                helpText="Enter due date in MM-DD-YYYY format (defaults to 2 weeks from checkout)"
+                data-test="loan-due-date"
+                disabled={isEditing}
+              />
             </div>
           </>
         )}

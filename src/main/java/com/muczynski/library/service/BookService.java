@@ -120,7 +120,7 @@ public class BookService {
     }
 
     /**
-     * Get books from most recent day OR with temporary titles (date-pattern titles).
+     * Get books from most recent 2 days OR with temporary titles (date-pattern titles).
      * Uses efficient projection query - no N+1 queries.
      * Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start of title.
      *

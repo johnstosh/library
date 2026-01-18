@@ -800,7 +800,19 @@ Headless UI Dialog with consistent structure:
 - Photo management
 - Book count tracking
 
-### 3. Photo Management
+### 3. Loans Management (Book Checkout)
+- View all loans (librarians) or own loans (users)
+- Filter by Active or All loans
+- Checkout books with smart book matching
+  - Title/Author/Call Number filter fields update book dropdown in real-time
+  - Books ranked by best-fit match (exact matches prioritized)
+- Last-issued-to display shows previous loan for selected borrower
+- Editable checkout and due dates (defaults: today and +2 weeks)
+- Date picker with text and calendar input support
+- Return book functionality (librarians only)
+- View loan history with overdue highlighting
+
+### 4. Photo Management
 - Upload photos
 - Crop with react-cropper
 - Rotate (CW/CCW)

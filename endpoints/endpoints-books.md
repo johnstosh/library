@@ -3,9 +3,9 @@
 ## Book Filtering Endpoints
 
 ### GET /api/books/most-recent-day
-Returns books from the most recent day OR books with temporary titles (date-pattern titles like "2025-01-10_14:30:00").
+Returns books from the most recent 2 days OR books with temporary titles (date-pattern titles like "2025-01-10_14:30:00").
 
-**Note:** This endpoint uses efficient database projections to avoid N+1 query issues. Returns the same data as `/api/books-from-feed/saved-books`.
+**Note:** This endpoint uses efficient database projections to avoid N+1 query issues. Returns the same data as `/api/books-from-feed/saved-books`. Includes 2 days to handle timezone differences and ensure recently added books are not missed.
 
 **Authentication:** Public (permitAll)
 

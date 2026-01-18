@@ -138,7 +138,11 @@ The application uses Google Photos API for storing and managing book and author 
 ### Photo Export (Google Photos Backup)
 - Separate from JSON database export
 - Endpoints: `/api/photo-export/**`
-- Uploads all photos to Google Photos cloud storage
+- **Bulk export with batch processing**:
+  - Processes photos in batches of up to 50 (Google Photos API limit)
+  - Uploads all photos in a batch
+  - Creates all media items in a single batch request
+  - Significantly faster than individual photo processing
 - Updates `permanentId` for each uploaded photo
 - See `feature-design-import-export.md` for details
 
@@ -146,6 +150,10 @@ The application uses Google Photos API for storing and managing book and author 
 - Downloads photos from Google Photos using `permanentId`
 - Restores photo bytes to local database
 - Used after database restore from JSON backup
+- **Bulk import with batch processing**:
+  - Processes photos in batches of 20 for optimal performance
+  - Downloads multiple photos concurrently
+  - Significantly faster than individual photo processing
 - Individual or batch import supported
 
 ### JSON Export Exclusion

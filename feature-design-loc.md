@@ -67,12 +67,13 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Also accessible via: `GET /api/books-from-feed/saved-books` (requires LIBRARIAN)
 - Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
-- Shows books added on the most recent date OR books with temporary titles
+- Shows books added in the most recent 2 days OR books with temporary titles
 - Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start (e.g., "2025-01-10_14:30:00")
 - Returns: `SavedBookDto` objects (efficient projection, no N+1 queries)
   - Includes: id, title, author, library, photoCount, needsProcessing, locNumber, status, grokipediaUrl
   - `needsProcessing` is true for temporary title books
 - Useful for processing newly imported books from Google Photos feed
+- Includes 2 days to handle timezone differences and ensure recently added books are not missed
 
 ### Books Without Grokipedia URL
 - Endpoint: `GET /api/books/without-grokipedia`

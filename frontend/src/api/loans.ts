@@ -36,7 +36,7 @@ export function useCheckoutBook() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { bookId: number; userId: number }) =>
+    mutationFn: (data: { bookId: number; userId: number; loanDate?: string; dueDate?: string }) =>
       api.post<LoanDto>('/loans/checkout', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })

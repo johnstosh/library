@@ -84,7 +84,7 @@ public class BookController {
     }
 
     /**
-     * Get books from most recent day OR with temporary titles (date-pattern titles).
+     * Get books from most recent 2 days OR with temporary titles (date-pattern titles).
      * Uses efficient projection query - no N+1 queries.
      * Returns SavedBookDto with id, title, author, library, photoCount, needsProcessing.
      */
@@ -95,7 +95,7 @@ public class BookController {
             List<SavedBookDto> books = bookService.getBooksFromMostRecentDay();
             return ResponseEntity.ok(books);
         } catch (Exception e) {
-            logger.warn("Failed to retrieve books from most recent day: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve books from most recent 2 days: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

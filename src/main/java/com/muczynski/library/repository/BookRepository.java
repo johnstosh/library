@@ -33,7 +33,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     }
 
     /**
-     * Find books from most recent day OR with temporary titles (date-pattern titles).
+     * Find books from most recent 2 days OR with temporary titles (date-pattern titles).
      * Uses native query for regex support and efficient projection.
      * Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start of title.
      */
@@ -60,7 +60,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             GROUP BY book_id
         ) p ON b.id = p.book_id
         CROSS JOIN most_recent_date mrd
-        WHERE DATE(b.date_added_to_library) = mrd.max_date
+        WHERE DATE(b.date_added_to_library) >= mrd.max_date - INTERVAL '1 day'
            OR b.title ~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}'
         ORDER BY b.date_added_to_library DESC
         """, nativeQuery = true)

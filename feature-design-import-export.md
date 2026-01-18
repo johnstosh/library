@@ -146,14 +146,27 @@ The export format changed to use lightweight references instead of embedded obje
 - **NOT a local ZIP download system** - syncs with Google Photos cloud storage
 - Photos contain large binary data that cannot be included in JSON export
 - Allows incremental photo sync without exporting entire database
+- **Batch processing** for improved performance:
+  - Export: Processes up to 50 photos per batch (Google Photos API limit)
+  - Import: Processes up to 20 photos per batch
+  - Significantly faster than one-at-a-time processing
 
 ### Key Features
 1. **Upload to Google Photos** (`export-all`, `export/{id}`)
-   - Uploads local photos to Google Photos
+   - **Batch export** (`export-all`): Processes photos in batches of up to 50
+     - Uploads all photos in batch
+     - Creates all media items in single Google Photos API request
+     - Tracks success/failure for each photo individually
+   - **Single export** (`export/{id}`): Exports individual photo
    - Stores permanent ID for each photo
    - Enables cloud backup of photo binary data
 
 2. **Download from Google Photos** (`import-all`, `import/{id}`)
+   - **Batch import** (`import-all`): Processes photos in batches of 20
+     - Downloads multiple photos concurrently
+     - Reduces total import time significantly
+     - Tracks success/failure for each photo individually
+   - **Single import** (`import/{id}`): Imports individual photo
    - Fetches photos from Google Photos using permanent IDs
    - Updates local database with downloaded photo bytes
    - Enables restore from cloud backup

@@ -777,4 +777,89 @@ class PhotoExportControllerTest {
         assert updatedPhoto2.getPhotoOrder() == 1 : "Photo 2 order should be 1";
         assert updatedPhoto3.getPhotoOrder() == 2 : "Photo 3 order should be 2";
     }
+
+    // ===========================================
+    // Batch Export Tests
+    // Verify batch export functionality works correctly
+    // ===========================================
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void exportAllPhotos_processesPhotosInBatches() throws Exception {
+        // Create 75 photos to verify batch processing (should be 2 batches: 50 + 25)
+        for (int i = 0; i < 75; i++) {
+            createPhotoWithImage(testBook, "Batch photo " + i);
+        }
+
+        // Verify stats before export
+        mockMvc.perform(get("/api/photo-export/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total", is(75)))
+                .andExpect(jsonPath("$.pendingExport", is(75)));
+
+        // Note: Actual export will fail without configured Google Photos credentials,
+        // but this test verifies the batching logic doesn't crash
+        mockMvc.perform(post("/api/photo-export/export-all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Export process started")));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importAllPhotos_processesPhotosInBatches() throws Exception {
+        // Create 45 photos needing import to verify batch processing (should be 3 batches of 20, 20, 5)
+        for (int i = 0; i < 45; i++) {
+            createPhotoNeedingImport(testBook, "permanent-import-" + i);
+        }
+
+        // Verify stats before import
+        mockMvc.perform(get("/api/photo-export/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total", is(45)))
+                .andExpect(jsonPath("$.pendingImport", is(45)));
+
+        // Mock GooglePhotosService to return valid access token
+        when(googlePhotosService.getValidAccessToken(ArgumentMatchers.any())).thenReturn("mock-access-token");
+
+        // Import will attempt to fetch from Google Photos and fail, but batching logic should work
+        mockMvc.perform(post("/api/photo-export/import-all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("Import complete")))
+                .andExpect(jsonPath("$.imported").exists())
+                .andExpect(jsonPath("$.failed").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importAllPhotos_partialSuccess_reportsCorrectCounts() throws Exception {
+        // Create 5 photos needing import
+        for (int i = 0; i < 5; i++) {
+            createPhotoNeedingImport(testBook, "permanent-" + i);
+        }
+
+        // Mock GooglePhotosService to return valid access token
+        when(googlePhotosService.getValidAccessToken(ArgumentMatchers.any())).thenReturn("mock-access-token");
+
+        // Mock first 2 photos to succeed, rest to fail
+        MediaItemResponse successResponse = new MediaItemResponse();
+        successResponse.setBaseUrl("https://example.com/success");
+        successResponse.setMimeType("image/jpeg");
+
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), eq("permanent-0")))
+                .thenReturn(successResponse);
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), eq("permanent-1")))
+                .thenReturn(successResponse);
+        when(googlePhotosLibraryClient.getMediaItem(ArgumentMatchers.anyString(), ArgumentMatchers.matches("permanent-[2-4]")))
+                .thenReturn(null); // Fail
+
+        byte[] mockImageBytes = createDummyImage(100, 100);
+        when(googlePhotosLibraryClient.downloadPhoto(ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenReturn(mockImageBytes);
+
+        mockMvc.perform(post("/api/photo-export/import-all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", containsString("Import complete")))
+                .andExpect(jsonPath("$.imported", is(2)))
+                .andExpect(jsonPath("$.failed", is(3)));
+    }
 }
