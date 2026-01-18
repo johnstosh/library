@@ -20,7 +20,8 @@ import {
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { getThumbnailUrl } from '@/api/photos'
-import { formatDateTime, formatLocForSpine, truncate } from '@/utils/formatters'
+import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
+import { formatDateTime, truncate } from '@/utils/formatters'
 import {
   PiDownload,
   PiUpload,
@@ -852,9 +853,6 @@ export function DataManagementPage() {
                       Title/Author
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      LOC Call Number
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -874,7 +872,7 @@ export function DataManagementPage() {
                 >
                   {isLoadingPhotos ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                         <div className="flex items-center justify-center gap-3">
                           <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
                           <span>Loading photos...</span>
@@ -883,7 +881,7 @@ export function DataManagementPage() {
                     </tr>
                   ) : photoList.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                         No photos in the database
                       </td>
                     </tr>
@@ -893,10 +891,11 @@ export function DataManagementPage() {
                         {/* Photo Thumbnail */}
                         <td className="px-4 py-3">
                           {photo.id && photo.hasImage ? (
-                            <img
-                              src={getThumbnailUrl(photo.id, 48)}
+                            <ThrottledThumbnail
+                              photoId={photo.id}
+                              url={getThumbnailUrl(photo.id, 48)}
                               alt={`Photo #${photo.id}`}
-                              className="w-12 h-12 object-cover rounded"
+                              className="w-12 rounded"
                             />
                           ) : (
                             <span className="text-gray-400">-</span>
@@ -918,17 +917,6 @@ export function DataManagementPage() {
                             <span className="text-gray-400">
                               {photo.caption || `Photo #${photo.id}`}
                             </span>
-                          )}
-                        </td>
-
-                        {/* LOC Call Number */}
-                        <td className="px-4 py-3">
-                          {photo.bookLocNumber ? (
-                            <code className="text-xs text-green-600 whitespace-pre-line">
-                              {formatLocForSpine(photo.bookLocNumber)}
-                            </code>
-                          ) : (
-                            <span className="text-gray-400">-</span>
                           )}
                         </td>
 

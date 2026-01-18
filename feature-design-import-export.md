@@ -228,9 +228,8 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - **Refresh Status** - reload statistics and photo list
 
 **Photo Details Table** with columns:
-- Photo thumbnail
+- Photo thumbnail (loads sequentially to avoid overwhelming server with concurrent requests)
 - Title/Author (book title + author OR author name)
-- LOC Call Number (formatted for spine display)
 - Status badge (Completed/Failed/In Progress/Pending Import/Pending/No Image)
 - Exported At timestamp
 - Permanent ID (truncated with tooltip)
