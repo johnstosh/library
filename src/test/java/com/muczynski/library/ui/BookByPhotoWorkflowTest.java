@@ -54,8 +54,10 @@ public class BookByPhotoWorkflowTest {
 
         // Set up the mock at class level for both single and multiple photo methods
         String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
-        when(askGrok.askAboutPhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
-        when(askGrok.askAboutPhotos(anyList(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhotos(anyList(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhotos(anyList(), anyString(), anyString())).thenReturn(mockJsonResponse);
     }
 
     @AfterAll
@@ -94,7 +96,7 @@ public class BookByPhotoWorkflowTest {
     }
 
     @Test
-    @Disabled("MockitoBean not properly intercepting askGrok.askAboutPhoto() calls - Spring Boot 3.4+ bean override configuration issue")
+    @Disabled("MockitoBean not properly intercepting askGrok.analyzePhoto() calls - Spring Boot 3.4+ bean override configuration issue")
     void testFullBookByPhotoWorkflow() {
         Path tempFile = null;
         try {

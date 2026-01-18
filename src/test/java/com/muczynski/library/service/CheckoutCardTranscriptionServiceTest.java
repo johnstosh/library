@@ -1,7 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.exception.LibraryException;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,14 +13,12 @@ import static org.mockito.Mockito.*;
 public class CheckoutCardTranscriptionServiceTest {
 
     private AskGrok askGrok;
-    private ObjectMapper objectMapper;
     private CheckoutCardTranscriptionService service;
 
     @BeforeEach
     void setUp() {
         askGrok = mock(AskGrok.class);
-        objectMapper = new ObjectMapper();
-        service = new CheckoutCardTranscriptionService(askGrok, objectMapper);
+        service = new CheckoutCardTranscriptionService(askGrok);
     }
 
     @Test
@@ -40,7 +37,7 @@ public class CheckoutCardTranscriptionServiceTest {
             }
             """;
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenReturn(grokResponse);
 
         // Act
@@ -55,7 +52,7 @@ public class CheckoutCardTranscriptionServiceTest {
         assertEquals("John", result.getLastIssuedTo());
         assertEquals("1-31-26", result.getLastDue());
 
-        verify(askGrok).askAboutPhoto(eq(imageBytes), eq(contentType), anyString());
+        verify(askGrok).analyzePhoto(eq(imageBytes), eq(contentType), anyString());
     }
 
     @Test
@@ -76,7 +73,7 @@ public class CheckoutCardTranscriptionServiceTest {
             This is the information from the card.
             """;
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenReturn(grokResponse);
 
         // Act
@@ -88,7 +85,7 @@ public class CheckoutCardTranscriptionServiceTest {
         assertEquals("Test Author", result.getAuthor());
         assertEquals("AB 123", result.getCallNumber());
 
-        verify(askGrok).askAboutPhoto(eq(imageBytes), eq(contentType), anyString());
+        verify(askGrok).analyzePhoto(eq(imageBytes), eq(contentType), anyString());
     }
 
     @Test
@@ -98,7 +95,7 @@ public class CheckoutCardTranscriptionServiceTest {
         String contentType = "image/jpeg";
         String grokResponse = "This is not valid JSON";
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenReturn(grokResponse);
 
         // Act & Assert
@@ -106,7 +103,7 @@ public class CheckoutCardTranscriptionServiceTest {
                 service.transcribeCheckoutCard(imageBytes, contentType)
         );
 
-        verify(askGrok).askAboutPhoto(eq(imageBytes), eq(contentType), anyString());
+        verify(askGrok).analyzePhoto(eq(imageBytes), eq(contentType), anyString());
     }
 
     @Test
@@ -115,7 +112,7 @@ public class CheckoutCardTranscriptionServiceTest {
         byte[] imageBytes = "test-image".getBytes();
         String contentType = "image/jpeg";
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenThrow(new LibraryException("xAI API key not configured"));
 
         // Act & Assert
@@ -123,7 +120,7 @@ public class CheckoutCardTranscriptionServiceTest {
                 service.transcribeCheckoutCard(imageBytes, contentType)
         );
 
-        verify(askGrok).askAboutPhoto(eq(imageBytes), eq(contentType), anyString());
+        verify(askGrok).analyzePhoto(eq(imageBytes), eq(contentType), anyString());
     }
 
     @Test
@@ -133,7 +130,7 @@ public class CheckoutCardTranscriptionServiceTest {
         String contentType = "image/jpeg";
         String grokResponse = "";
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenReturn(grokResponse);
 
         // Act & Assert
@@ -158,7 +155,7 @@ public class CheckoutCardTranscriptionServiceTest {
             }
             """;
 
-        when(askGrok.askAboutPhoto(eq(imageBytes), eq(contentType), anyString()))
+        when(askGrok.analyzePhoto(eq(imageBytes), eq(contentType), anyString()))
                 .thenReturn(grokResponse);
 
         // Act

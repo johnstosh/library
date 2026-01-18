@@ -385,16 +385,16 @@ class LoanControllerTest {
         when(checkoutCardTranscriptionService.transcribeCheckoutCard(any(byte[].class), eq("image/jpeg")))
                 .thenReturn(result);
 
-        // Act & Assert
+        // Act & Assert - API returns camelCase JSON keys
         mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
                         .file(photo))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("The Pushcart War"))
                 .andExpect(jsonPath("$.author").value("Jean Merrill"))
-                .andExpect(jsonPath("$.call_number").value("PZ 7 .M5453 5"))
-                .andExpect(jsonPath("$.last_date").value("1-17-26"))
-                .andExpect(jsonPath("$.last_issued_to").value("John"))
-                .andExpect(jsonPath("$.last_due").value("1-31-26"));
+                .andExpect(jsonPath("$.callNumber").value("PZ 7 .M5453 5"))
+                .andExpect(jsonPath("$.lastDate").value("1-17-26"))
+                .andExpect(jsonPath("$.lastIssuedTo").value("John"))
+                .andExpect(jsonPath("$.lastDue").value("1-31-26"));
     }
 
     @Test

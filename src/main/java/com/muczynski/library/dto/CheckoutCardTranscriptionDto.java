@@ -3,7 +3,6 @@
  */
 package com.muczynski.library.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +11,8 @@ import lombok.NoArgsConstructor;
 /**
  * DTO for library checkout card transcription result from Grok AI.
  * Contains book information and last checkout details extracted from a photo.
+ * Note: Grok returns snake_case JSON which is parsed using a snake_case ObjectMapper
+ * in CheckoutCardTranscriptionService. This DTO uses camelCase for the API response.
  */
 @Data
 @Builder
@@ -20,16 +21,8 @@ import lombok.NoArgsConstructor;
 public class CheckoutCardTranscriptionDto {
     private String title;
     private String author;
-
-    @JsonProperty("call_number")
     private String callNumber;
-
-    @JsonProperty("last_date")
     private String lastDate;
-
-    @JsonProperty("last_issued_to")
     private String lastIssuedTo;
-
-    @JsonProperty("last_due")
     private String lastDue;
 }

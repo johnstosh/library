@@ -5,9 +5,9 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.exception.LibraryException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
  * Extracts book information and last checkout details from card images.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class CheckoutCardTranscriptionService {
 
@@ -58,7 +57,14 @@ public class CheckoutCardTranscriptionService {
         """;
 
     private final AskGrok askGrok;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper snakeCaseMapper;
+
+    public CheckoutCardTranscriptionService(AskGrok askGrok) {
+        this.askGrok = askGrok;
+        // Create ObjectMapper configured for snake_case to parse Grok's response
+        this.snakeCaseMapper = new ObjectMapper();
+        this.snakeCaseMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+    }
 
     /**
      * Transcribe a checkout card photo and extract book/checkout information.
@@ -72,14 +78,15 @@ public class CheckoutCardTranscriptionService {
         log.info("Transcribing checkout card photo ({} bytes, type: {})", imageBytes.length, contentType);
 
         // Call Grok AI with the transcription prompt
-        String grokResponse = askGrok.askAboutPhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT);
+        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT);
         log.debug("Grok response: {}", grokResponse);
 
         // Parse JSON response
         try {
             // Extract JSON from response (Grok might include extra text)
             String jsonResponse = extractJson(grokResponse);
-            CheckoutCardTranscriptionDto result = objectMapper.readValue(jsonResponse, CheckoutCardTranscriptionDto.class);
+            log.info("Extracted JSON: {}", jsonResponse);
+            CheckoutCardTranscriptionDto result = snakeCaseMapper.readValue(jsonResponse, CheckoutCardTranscriptionDto.class);
             log.info("Successfully transcribed checkout card - title: {}, author: {}", result.getTitle(), result.getAuthor());
             return result;
         } catch (JsonProcessingException e) {

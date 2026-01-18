@@ -24,7 +24,7 @@ The Checkout Card Transcription feature uses Grok AI (xAI) vision capabilities t
   - `lastDate` - Date of last checkout
   - `lastIssuedTo` - Name of patron who last borrowed the book
   - `lastDue` - Due date of last checkout
-- Uses `@JsonProperty` annotations to map snake_case JSON (from Grok) to camelCase Java properties
+- Service parses snake_case JSON from Grok and returns camelCase to frontend
 
 **LoanController Endpoint**
 - `POST /api/loans/transcribe-checkout-card`
@@ -36,12 +36,12 @@ The Checkout Card Transcription feature uses Grok AI (xAI) vision capabilities t
 ### Frontend Components
 
 **CheckoutCardTranscriptionModal**
-- React modal component for photo upload and result display
+- React modal component for photo upload
 - Supports two modes:
   - File upload (from disk)
   - Camera capture (on mobile devices using HTML5 capture attribute)
 - Shows image preview before transcription
-- Displays transcription results in structured format
+- Auto-navigates to checkout form with pre-filled filters on successful transcription
 - Error handling for failed transcription
 - Uses TanStack Query mutation for API integration
 
@@ -75,11 +75,17 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
 4. Image preview is displayed
 5. User clicks "Transcribe" button
 6. Photo is uploaded to backend API
-7. Backend calls Grok AI vision model with specialized prompt
+7. Backend calls Grok AI vision model (grok-4-fast) with specialized prompt
 8. Grok analyzes photo and returns JSON with extracted data
-9. Backend parses JSON and returns structured DTO
-10. Frontend displays transcription results in modal
-11. User can use this information to find the book and create a loan record
+9. Backend parses JSON (snake_case) and returns structured DTO (camelCase)
+10. Modal automatically closes and navigates to checkout form with pre-filled data:
+    - Title filter populated from transcribed title
+    - Author filter populated from transcribed author
+    - Call Number filter populated from transcribed call number
+    - Borrower filter populated from "Issued To" name
+    - Checkout Date populated from last checkout date (normalized to MM-DD-YYYY)
+    - Due Date populated from last due date (normalized to MM-DD-YYYY)
+11. User selects the matching book and borrower, then completes checkout
 
 ## Security & Authentication
 
@@ -118,13 +124,12 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
 ## Dependencies
 
 - **Existing services:** AskGrok (for xAI API integration)
-- **AI Model:** Grok-4 (vision-capable model from xAI)
+- **AI Model:** grok-4-fast (vision-capable model from xAI)
 - **User requirement:** xAI API key must be configured in user settings
 
 ## Future Enhancements
 
 Potential improvements:
-- Auto-populate checkout form with transcribed data
 - Batch transcription (multiple cards at once)
 - Manual correction UI for transcription errors
 - Training/calibration mode to improve accuracy

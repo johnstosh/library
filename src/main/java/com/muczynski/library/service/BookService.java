@@ -466,7 +466,7 @@ public class BookService {
             RuntimeException lastException = null;
             for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    String response = askGrok.askAboutPhotos(photoDataList, question);
+                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_4);
                     Map<String, Object> jsonData = extractJsonFromResponse(response);
 
                     Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
@@ -678,7 +678,7 @@ public class BookService {
 
             Do not include any other text before or after the JSON.""";
 
-        String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
+        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_4);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         String title = (String) jsonData.get("title");
@@ -753,7 +753,7 @@ public class BookService {
             "detailedDescription": "[description]"}}
             Do not include any other text before or after the JSON.""", title.trim(), authorPart);
 
-        String response = askGrok.askTextOnly(question);
+        String response = askGrok.askQuestion(question);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         @SuppressWarnings("unchecked")

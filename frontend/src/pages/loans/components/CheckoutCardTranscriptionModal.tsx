@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useTranscribeCheckoutCard } from '@/api/loans'
 import type { CheckoutCardTranscriptionDto } from '@/types/dtos'
@@ -7,7 +8,7 @@ import type { CheckoutCardTranscriptionDto } from '@/types/dtos'
 interface CheckoutCardTranscriptionModalProps {
   isOpen: boolean
   onClose: () => void
-  onTranscriptionComplete?: (data: CheckoutCardTranscriptionDto) => void
+  onTranscriptionComplete?: (result: CheckoutCardTranscriptionDto) => void
   captureMode: 'file' | 'camera'
 }
 
@@ -17,9 +18,9 @@ export function CheckoutCardTranscriptionModal({
   onTranscriptionComplete,
   captureMode,
 }: CheckoutCardTranscriptionModalProps) {
+  const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [transcriptionResult, setTranscriptionResult] = useState<CheckoutCardTranscriptionDto | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const transcribeMutation = useTranscribeCheckoutCard()
 
@@ -31,7 +32,6 @@ export function CheckoutCardTranscriptionModal({
       setSelectedFile(file)
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
-      setTranscriptionResult(null)
     }
   }
 
@@ -40,10 +40,35 @@ export function CheckoutCardTranscriptionModal({
 
     try {
       const result = await transcribeMutation.mutateAsync(selectedFile)
-      setTranscriptionResult(result)
+
       if (onTranscriptionComplete) {
         onTranscriptionComplete(result)
       }
+
+      // Build query params for pre-filling the loan form
+      const params = new URLSearchParams()
+      if (result.title && result.title !== 'N/A') {
+        params.set('title', result.title)
+      }
+      if (result.author && result.author !== 'N/A') {
+        params.set('author', result.author)
+      }
+      if (result.callNumber && result.callNumber !== 'N/A') {
+        params.set('locNumber', result.callNumber)
+      }
+      if (result.lastIssuedTo && result.lastIssuedTo !== 'N/A') {
+        params.set('borrower', result.lastIssuedTo)
+      }
+      if (result.lastDate && result.lastDate !== 'N/A') {
+        params.set('checkoutDate', result.lastDate)
+      }
+      if (result.lastDue && result.lastDue !== 'N/A') {
+        params.set('dueDate', result.lastDue)
+      }
+
+      // Close modal and navigate to checkout form with pre-filled data
+      handleClose()
+      navigate(`/loans/new?${params.toString()}`)
     } catch (error) {
       console.error('Transcription failed:', error)
     }
@@ -52,7 +77,6 @@ export function CheckoutCardTranscriptionModal({
   const handleClose = () => {
     setSelectedFile(null)
     setPreviewUrl(null)
-    setTranscriptionResult(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -99,32 +123,6 @@ export function CheckoutCardTranscriptionModal({
             </div>
           )}
 
-          {/* Transcription result */}
-          {transcriptionResult && (
-            <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
-              <h3 className="font-semibold mb-2">Transcription Result:</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">Title:</span> {transcriptionResult.title}
-                </div>
-                <div>
-                  <span className="font-medium">Author:</span> {transcriptionResult.author}
-                </div>
-                <div>
-                  <span className="font-medium">Call Number:</span> {transcriptionResult.callNumber}
-                </div>
-                <div className="pt-2 border-t border-gray-300">
-                  <div className="font-medium mb-1">Last Checkout:</div>
-                  <div className="pl-4 space-y-1">
-                    <div>Date: {transcriptionResult.lastDate}</div>
-                    <div>Issued To: {transcriptionResult.lastIssuedTo}</div>
-                    <div>Due: {transcriptionResult.lastDue}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Error message */}
           {transcribeMutation.isError && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
@@ -139,9 +137,9 @@ export function CheckoutCardTranscriptionModal({
           {/* Action buttons */}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={handleClose} data-test="close-transcription-modal">
-              Close
+              Cancel
             </Button>
-            {selectedFile && !transcriptionResult && (
+            {selectedFile && (
               <Button
                 variant="primary"
                 onClick={handleTranscribe}

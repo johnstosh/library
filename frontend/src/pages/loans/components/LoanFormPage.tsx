@@ -12,30 +12,61 @@ import { useIsLibrarian } from '@/stores/authStore'
 import { formatDate } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
 
+interface InitialFilters {
+  title?: string
+  author?: string
+  locNumber?: string
+  borrower?: string
+  checkoutDate?: string
+  dueDate?: string
+}
+
 interface LoanFormPageProps {
   title: string
   loan?: LoanDto
   onSuccess: () => void
   onCancel: () => void
+  initialFilters?: InitialFilters
 }
 
-export function LoanFormPage({ title, loan, onSuccess, onCancel }: LoanFormPageProps) {
+export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters }: LoanFormPageProps) {
   const isEditing = !!loan
   const isLibrarian = useIsLibrarian()
   const currentUser = useAuthStore((state) => state.user)
 
+  // Helper to normalize date from Grok format to form format (MM-DD-YYYY)
+  const normalizeDate = (dateStr: string): string => {
+    if (!dateStr) return ''
+    // Handle formats like "1-7-24", "01-07-24", "1-28"
+    const parts = dateStr.split('-')
+    if (parts.length === 2) {
+      // Format: M-D (no year), assume current year
+      const [month, day] = parts
+      const year = new Date().getFullYear()
+      return `${month.padStart(2, '0')}-${day.padStart(2, '0')}-${year}`
+    } else if (parts.length === 3) {
+      // Format: M-D-YY or M-D-YYYY
+      const [month, day, yearPart] = parts
+      const year = yearPart.length === 2 ? `20${yearPart}` : yearPart
+      return `${month.padStart(2, '0')}-${day.padStart(2, '0')}-${year}`
+    }
+    return dateStr
+  }
+
   const [formData, setFormData] = useState({
     bookId: '',
     userId: '',
-    checkoutDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-    dueDate: '',
+    checkoutDate: initialFilters?.checkoutDate
+      ? normalizeDate(initialFilters.checkoutDate)
+      : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+    dueDate: initialFilters?.dueDate ? normalizeDate(initialFilters.dueDate) : '',
   })
   const [bookFilters, setBookFilters] = useState({
-    title: '',
-    author: '',
-    locNumber: '',
+    title: initialFilters?.title || '',
+    author: initialFilters?.author || '',
+    locNumber: initialFilters?.locNumber || '',
   })
-  const [userFilter, setUserFilter] = useState('')
+  const [userFilter, setUserFilter] = useState(initialFilters?.borrower || '')
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 

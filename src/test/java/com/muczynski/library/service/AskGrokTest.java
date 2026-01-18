@@ -89,7 +89,7 @@ public class AskGrokTest {
         )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         // Act
-        String result = askGrok.askAboutPhotos(photoDataList, "test question");
+        String result = askGrok.analyzePhotos(photoDataList, "test question");
 
         // Assert
         assertNotNull(result);
@@ -138,7 +138,7 @@ public class AskGrokTest {
         )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         // Act
-        String result = askGrok.askAboutPhotos(photoDataList, "test question");
+        String result = askGrok.analyzePhotos(photoDataList, "test question");
 
         // Assert
         assertNotNull(result);
@@ -154,7 +154,7 @@ public class AskGrokTest {
 
         // Act & Assert
         assertThrows(LibraryException.class, () ->
-            askGrok.askAboutPhotos(photoDataList, "test question")
+            askGrok.analyzePhotos(photoDataList, "test question")
         );
     }
 
@@ -173,7 +173,7 @@ public class AskGrokTest {
 
         // Act & Assert
         assertThrows(LibraryException.class, () ->
-            askGrok.askAboutPhotos(photoDataList, "test question")
+            askGrok.analyzePhotos(photoDataList, "test question")
         );
     }
 }

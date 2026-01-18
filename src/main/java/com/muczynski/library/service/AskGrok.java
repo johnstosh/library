@@ -31,7 +31,30 @@ public class AskGrok {
         this.restTemplate.setRequestFactory(factory);
     }
 
-    public String askAboutPhoto(byte[] imageBytes, String contentType, String question) {
+    // Model constants
+    public static final String MODEL_GROK_4 = "grok-4";
+    public static final String MODEL_GROK_4_FAST = "grok-4-fast";
+
+    /**
+     * Analyze a single photo using Grok AI vision model with grok-4-fast.
+     * @param imageBytes Photo bytes
+     * @param contentType Image content type (e.g., "image/jpeg")
+     * @param prompt The analysis prompt/question for the AI
+     * @return AI response as String
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt) {
+        return analyzePhoto(imageBytes, contentType, prompt, MODEL_GROK_4_FAST);
+    }
+
+    /**
+     * Analyze a single photo using Grok AI vision model with specified model.
+     * @param imageBytes Photo bytes
+     * @param contentType Image content type (e.g., "image/jpeg")
+     * @param prompt The analysis prompt/question for the AI
+     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @return AI response as String
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt, String model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
@@ -46,7 +69,7 @@ public class AskGrok {
 
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
-        textPart.put("text", question);
+        textPart.put("text", prompt);
 
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
         String base64Image = encoder.encodeToString(imageBytes);
@@ -65,7 +88,7 @@ public class AskGrok {
         message.put("content", content);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", "grok-4"); // use grok-4 for vision
+        request.put("model", model);
         request.put("messages", Arrays.asList(message));
         request.put("max_tokens", 2000);
         request.put("temperature", 0.7);
@@ -102,12 +125,23 @@ public class AskGrok {
     }
 
     /**
-     * Ask a question about multiple photos
+     * Analyze multiple photos using Grok AI vision model with grok-4-fast.
      * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
-     * @param question The question to ask about the photos
+     * @param prompt The analysis prompt/question for the AI
      * @return AI response as String
      */
-    public String askAboutPhotos(List<Map<String, Object>> photoDataList, String question) {
+    public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt) {
+        return analyzePhotos(photoDataList, prompt, MODEL_GROK_4_FAST);
+    }
+
+    /**
+     * Analyze multiple photos using Grok AI vision model with specified model.
+     * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
+     * @param prompt The analysis prompt/question for the AI
+     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @return AI response as String
+     */
+    public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt, String model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
@@ -123,10 +157,10 @@ public class AskGrok {
         // Build content array: first the text question, then all images
         List<Object> content = new ArrayList<>();
 
-        // Add text question first
+        // Add text prompt first
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
-        textPart.put("text", question);
+        textPart.put("text", prompt);
         content.add(textPart);
 
         // Add all images
@@ -157,7 +191,7 @@ public class AskGrok {
         message.put("content", content);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", "grok-4"); // use grok-4 for vision
+        request.put("model", model);
         request.put("messages", Arrays.asList(message));
         request.put("max_tokens", 2000);
         request.put("temperature", 0.7);
@@ -193,7 +227,12 @@ public class AskGrok {
         }
     }
 
-    public String askTextOnly(String question) {
+    /**
+     * Ask a text-only question to Grok AI (no images).
+     * @param question The question to ask
+     * @return AI response as String
+     */
+    public String askQuestion(String question) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
@@ -262,6 +301,6 @@ public class AskGrok {
                 title,
                 author != null && !author.isEmpty() ? author : "Unknown Author"
         );
-        return askTextOnly(prompt);
+        return askQuestion(prompt);
     }
 }
