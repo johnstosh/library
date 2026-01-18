@@ -13,6 +13,11 @@ if [ -z "$GCP_PROJECT_ID" ]; then
   exit 1
 fi
 
+if [ -z "$BRANCH_NAME" ]; then
+  echo "Error: Missing required environment variable: BRANCH_NAME"
+  exit 1
+fi
+
 # Check if required environment variables are set
 if [ -z "$BINARY_REPO_NAME" ]; then
   export BINARY_REPO_NAME
@@ -107,6 +112,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$GCP_REGION" \
   --platform managed \
   --allow-unauthenticated \
+  --concurrency 250 \
   --min-instances 0 \
   --max-instances 1 \
   --memory 512Mi \
