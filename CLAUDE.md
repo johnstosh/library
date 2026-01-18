@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `feature-design-libraries.md` - Branch management, branch statistics (database entity still named `Library` for backward compatibility)
 - `feature-design-library-cards.md` - Library card applications, PDF generation, card designs
 - `feature-design-search.md` - Search functionality, pagination, search algorithm
+- `feature-design-checkout-card-transcription.md` - Grok AI checkout card photo transcription
 - `backend-requirements.md` - Backend development requirements and patterns
 - `backend-development-requirements.md` - Detailed backend guidelines
 - `uitest-requirements.md` - UI testing with Playwright
@@ -195,6 +196,14 @@ See `feature-design-search.md` for complete details.
 - Case-insensitive partial matching on title and name
 - Paginated results (20 per page default)
 - Public access (no authentication required)
+
+### Checkout Card Transcription
+See `feature-design-checkout-card-transcription.md` for complete details.
+- Grok AI (xAI) vision model integration for photo transcription
+- Upload or capture photos of physical checkout cards
+- Extracts book title, author, call number, and last checkout details
+- Accessible from Loans page with "Checkout by Photo" and "Checkout by Camera" buttons
+- Requires user to have xAI API key configured in settings
 
 ### PDF Generation
 - **Library Cards**: Wallet-sized PDF cards via `LibraryCardPdfService` using iText

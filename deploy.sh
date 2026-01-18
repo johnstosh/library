@@ -112,7 +112,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --region "$GCP_REGION" \
   --platform managed \
   --allow-unauthenticated \
-  --concurrency 250 \
+  --concurrency 10 \
   --min-instances 0 \
   --max-instances 1 \
   --memory 512Mi \

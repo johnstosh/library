@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { LoanDto } from '@/types/dtos'
+import type { LoanDto, CheckoutCardTranscriptionDto } from '@/types/dtos'
 
 // Hook to get loans (with optional filter for showing all or just active)
 export function useLoans(showAll = false) {
@@ -67,6 +67,17 @@ export function useDeleteLoan() {
     onSuccess: (_, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.loans.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
+    },
+  })
+}
+
+// Hook to transcribe a checkout card photo using Grok AI
+export function useTranscribeCheckoutCard() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('photo', file)
+      return api.postFormData<CheckoutCardTranscriptionDto>('/loans/transcribe-checkout-card', formData)
     },
   })
 }

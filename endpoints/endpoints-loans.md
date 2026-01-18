@@ -82,4 +82,39 @@ Deletes a loan record.
 
 ---
 
-**Related:** LoanController.java, LoanService.java, LoanDto.java
+## POST /api/loans/transcribe-checkout-card
+Transcribes a photo of a library checkout card using Grok AI to extract book information.
+
+**Authentication:** Authenticated users (`isAuthenticated()`)
+
+**Request:** Multipart form data with photo file
+- Parameter name: `photo`
+- Accepted types: image/jpeg, image/png, image/gif, etc.
+- Maximum size: 50MB (configured in application.properties)
+
+**Response:** CheckoutCardTranscriptionDto
+```json
+{
+  "title": "The Pushcart War",
+  "author": "Jean Merrill",
+  "call_number": "PZ 7 .M5453 5",
+  "last_date": "1-17-26",
+  "last_issued_to": "John",
+  "last_due": "1-31-26"
+}
+```
+
+**Error Responses:**
+- 400: Empty file or non-image file
+- 401: User not authenticated
+- 500: Transcription failed (xAI API error, no API key configured, invalid JSON response, etc.)
+
+**Notes:**
+- Requires user to have xAI API key configured in User Settings
+- Uses Grok-4 vision model for image analysis
+- Fields may contain "N/A" if information is missing or unreadable from photo
+- Response uses snake_case JSON field names (call_number, last_date, last_issued_to, last_due)
+
+---
+
+**Related:** LoanController.java, LoanService.java, LoanDto.java, CheckoutCardTranscriptionService.java, CheckoutCardTranscriptionDto.java, AskGrok.java

@@ -3,9 +3,11 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.exception.InsufficientPermissionsException;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
 import com.muczynski.library.service.UserService;
 import com.muczynski.library.util.SecurityUtils;
@@ -18,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -32,6 +36,9 @@ public class LoanController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CheckoutCardTranscriptionService checkoutCardTranscriptionService;
 
     @PostMapping("/checkout")
     @PreAuthorize("isAuthenticated()")
@@ -139,6 +146,43 @@ public class LoanController {
         } catch (Exception e) {
             logger.warn("Failed to delete loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/transcribe-checkout-card")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> transcribeCheckoutCard(@RequestParam("photo") MultipartFile photo) {
+        try {
+            logger.info("Received checkout card photo for transcription: {} ({} bytes)",
+                    photo.getOriginalFilename(), photo.getSize());
+
+            if (photo.isEmpty()) {
+                return ResponseEntity.badRequest().body("Photo file is empty");
+            }
+
+            byte[] imageBytes = photo.getBytes();
+            String contentType = photo.getContentType();
+
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body("File must be an image");
+            }
+
+            CheckoutCardTranscriptionDto result = checkoutCardTranscriptionService
+                    .transcribeCheckoutCard(imageBytes, contentType);
+
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            logger.error("Failed to read photo file: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to read photo file: " + e.getMessage());
+        } catch (LibraryException e) {
+            logger.error("Transcription failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Transcription failed: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Unexpected error during transcription: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error: " + e.getMessage());
         }
     }
 }

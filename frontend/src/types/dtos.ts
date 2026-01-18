@@ -130,6 +130,15 @@ export interface LoanDto {
   lastModified: string
 }
 
+export interface CheckoutCardTranscriptionDto {
+  title: string
+  author: string
+  callNumber: string
+  lastDate: string
+  lastIssuedTo: string
+  lastDue: string
+}
+
 // Library Card DTOs
 export interface ApplicationDto {
   id: number

@@ -4,7 +4,9 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
 import com.muczynski.library.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -53,6 +56,9 @@ class LoanControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private CheckoutCardTranscriptionService checkoutCardTranscriptionService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -353,5 +359,88 @@ class LoanControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isForbidden());
+    }
+
+    // ==================== POST /api/loans/transcribe-checkout-card Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_Success() throws Exception {
+        // Arrange
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        CheckoutCardTranscriptionDto result = new CheckoutCardTranscriptionDto();
+        result.setTitle("The Pushcart War");
+        result.setAuthor("Jean Merrill");
+        result.setCallNumber("PZ 7 .M5453 5");
+        result.setLastDate("1-17-26");
+        result.setLastIssuedTo("John");
+        result.setLastDue("1-31-26");
+
+        when(checkoutCardTranscriptionService.transcribeCheckoutCard(any(byte[].class), eq("image/jpeg")))
+                .thenReturn(result);
+
+        // Act & Assert
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("The Pushcart War"))
+                .andExpect(jsonPath("$.author").value("Jean Merrill"))
+                .andExpect(jsonPath("$.call_number").value("PZ 7 .M5453 5"))
+                .andExpect(jsonPath("$.last_date").value("1-17-26"))
+                .andExpect(jsonPath("$.last_issued_to").value("John"))
+                .andExpect(jsonPath("$.last_due").value("1-31-26"));
+    }
+
+    @Test
+    void testTranscribeCheckoutCard_Unauthorized() throws Exception {
+        // No authentication
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_EmptyFile() throws Exception {
+        // Empty photo file
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                new byte[0]
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_NotAnImage() throws Exception {
+        // Non-image file
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.txt",
+                "text/plain",
+                "not an image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isBadRequest());
     }
 }
