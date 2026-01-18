@@ -76,6 +76,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Test Output Configuration
 The build.gradle test configuration only shows detailed output for failed tests to reduce noise.
 
+## Deployment
+
+The application deploys to Google Cloud Run with PostgreSQL on Cloud SQL. Deployment happens both automatically via CI/CD pipeline and manually using the `./deploy.sh` script.
+
+### Deployment Environments
+- **Production**: `main` branch → https://library.muczynskifamily.com
+- **Development**: `dev` branch → https://library-dev.muczynskifamily.com
+
+### Deployment Process
+The `./deploy.sh` script handles the full deployment:
+1. Builds React frontend using `./build-frontend.sh`
+2. Builds Spring Boot backend with Gradle
+3. Creates Docker image with version tag from `build.gradle`
+4. Pushes image to GCP Artifact Registry
+5. Deploys to Cloud Run with Cloud SQL connection
+6. Service name format: `{base-name}-{branch}` (e.g., `library-dev` for dev branch)
+
+### Required Environment Variables
+```bash
+GCP_PROJECT_ID          # Google Cloud project ID
+BRANCH_NAME             # Git branch name (main or dev)
+DB_PASSWORD             # PostgreSQL database password
+GCP_REGION              # Defaults to us-east1
+BINARY_REPO_NAME        # Artifact Registry repo, defaults to scrabble-game
+CLOUD_RUN_SERVICE_ACCOUNT # Optional service account name
+```
+
+### Manual Deployment
+```bash
+# Ensure environment variables are set, then:
+./deploy.sh
+```
+
+### Automatic Deployment
+Pushing to `main` or `dev` branches triggers automatic deployment via CI/CD pipeline, which sets the required environment variables and runs `./deploy.sh`.
+
 ## Architecture Overview
 
 ### Domain Model
