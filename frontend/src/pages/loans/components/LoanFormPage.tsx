@@ -9,7 +9,7 @@ import { useBooks } from '@/api/books'
 import { useUsers } from '@/api/users'
 import { useAuthStore } from '@/stores/authStore'
 import { useIsLibrarian } from '@/stores/authStore'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
 
 interface InitialFilters {
@@ -109,9 +109,10 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
   }, [loan, currentUser, isLibrarian])
 
   // Helper function to format ISO date string to MM-DD-YYYY
+  // Uses parseISODateSafe to avoid timezone issues with date-only strings
   const formatDateToInput = (isoDate: string): string => {
     if (!isoDate) return ''
-    const date = new Date(isoDate)
+    const date = parseISODateSafe(isoDate)
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const year = date.getFullYear()
@@ -290,6 +291,21 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
     }
   }, [formData.bookId, books])
 
+  // Auto-select first book when filtered list changes and no book is selected
+  useEffect(() => {
+    if (!isEditing && !formData.bookId && filteredBooks.length > 0 &&
+        (bookFilters.title || bookFilters.author || bookFilters.locNumber)) {
+      setFormData(prev => ({ ...prev, bookId: filteredBooks[0].id.toString() }))
+    }
+  }, [filteredBooks, formData.bookId, bookFilters, isEditing])
+
+  // Auto-select first user when filtered list changes and no user is selected
+  useEffect(() => {
+    if (!isEditing && !formData.userId && filteredUsers.length > 0 && userFilter) {
+      setFormData(prev => ({ ...prev, userId: filteredUsers[0].id.toString() }))
+    }
+  }, [filteredUsers, formData.userId, userFilter, isEditing])
+
   const bookOptions = filteredBooks.map((b) => ({
     value: b.id,
     label: `${b.title} - ${b.author}`,
@@ -333,7 +349,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
                 <div>
                   <p className="text-sm font-medium text-gray-500">Due Date</p>
                   <p className={
-                    !loan.returnDate && new Date(loan.dueDate) < new Date()
+                    !loan.returnDate && parseISODateSafe(loan.dueDate) < new Date()
                       ? 'text-red-600 font-medium'
                       : 'text-gray-900'
                   }>

@@ -13,10 +13,15 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_user_username", columnList = "username"),
-    @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
-})
+@Table(name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier")
+    },
+    indexes = {
+        @Index(name = "idx_user_username", columnList = "username"),
+        @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
+    }
+)
 @Getter
 @Setter
 public class User implements Serializable {
@@ -26,7 +31,7 @@ public class User implements Serializable {
     private Long id;
 
     // Unique identifier for the user (UUID) - used for identification across systems
-    @Column(unique = true)
+    // Unique constraint is defined at table level with explicit name: uk_user_identifier
     private String userIdentifier;
 
     private String username;

@@ -2,12 +2,45 @@
 import { format, parseISO } from 'date-fns'
 
 /**
+ * Parse an ISO date string to a Date object, handling timezone issues correctly.
+ *
+ * CRITICAL: Date-only strings (e.g., "2025-01-19") are parsed as UTC midnight by
+ * JavaScript's Date constructor, which causes off-by-1-day errors in local timezones.
+ *
+ * This function detects date-only strings and parses them as local dates instead.
+ * For datetime strings (with "T"), it uses standard ISO parsing.
+ *
+ * @param dateString - ISO date string (either "YYYY-MM-DD" or full ISO datetime)
+ * @returns Date object in local timezone
+ */
+export function parseISODateSafe(dateString: string): Date {
+  if (!dateString) {
+    return new Date(NaN)
+  }
+
+  // Check if this is a date-only string (no time component)
+  // Date-only format: "YYYY-MM-DD" (exactly 10 chars, no "T")
+  if (dateString.length === 10 && !dateString.includes('T')) {
+    // Parse as local date by extracting components directly
+    const [year, month, day] = dateString.split('-').map(Number)
+    // Create date at local midnight (month is 0-indexed in JS)
+    return new Date(year, month - 1, day)
+  }
+
+  // For datetime strings, use standard parseISO which handles timezone correctly
+  return parseISO(dateString)
+}
+
+/**
  * Format an ISO date string to a readable date format
+ *
+ * Uses parseISODateSafe to correctly handle date-only strings without
+ * timezone conversion issues.
  */
 export function formatDate(dateString: string | undefined, formatStr = 'MMM d, yyyy'): string {
   if (!dateString) return ''
   try {
-    const date = parseISO(dateString)
+    const date = parseISODateSafe(dateString)
     return format(date, formatStr)
   } catch {
     return dateString
@@ -16,6 +49,8 @@ export function formatDate(dateString: string | undefined, formatStr = 'MMM d, y
 
 /**
  * Format an ISO datetime string to a readable datetime format
+ *
+ * Uses parseISODateSafe to correctly handle both date-only and datetime strings.
  */
 export function formatDateTime(
   dateString: string | undefined,
@@ -23,7 +58,7 @@ export function formatDateTime(
 ): string {
   if (!dateString) return ''
   try {
-    const date = parseISO(dateString)
+    const date = parseISODateSafe(dateString)
     return format(date, formatStr)
   } catch {
     return dateString
@@ -33,11 +68,13 @@ export function formatDateTime(
 /**
  * Format a date as relative time (e.g., "5 minutes ago", "2 hours ago")
  * Falls back to absolute date for dates older than a week
+ *
+ * Uses parseISODateSafe to correctly handle both date-only and datetime strings.
  */
 export function formatRelativeTime(dateString: string | undefined): string {
   if (!dateString) return ''
   try {
-    const date = parseISO(dateString)
+    const date = parseISODateSafe(dateString)
     const now = new Date()
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 

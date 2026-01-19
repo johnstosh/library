@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useLoan, useReturnBook, useDeleteLoan } from '@/api/loans'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiArrowLeft, PiCheckCircle, PiTrash } from 'react-icons/pi'
 import { useState } from 'react'
@@ -66,7 +66,7 @@ export function LoanViewPage() {
     )
   }
 
-  const isOverdue = !loan.returnDate && new Date(loan.dueDate) < new Date()
+  const isOverdue = !loan.returnDate && parseISODateSafe(loan.dueDate) < new Date()
   const isReturned = !!loan.returnDate
 
   return (

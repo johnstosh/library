@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CheckoutCardTranscriptionModal } from './components/CheckoutCardTranscriptionModal'
 import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto, CheckoutCardTranscriptionDto } from '@/types/dtos'
 import { PiEye } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -118,7 +118,7 @@ export function LoansPage() {
       accessor: (loan) => (
         <span
           className={
-            !loan.returnDate && new Date(loan.dueDate) < new Date()
+            !loan.returnDate && parseISODateSafe(loan.dueDate) < new Date()
               ? 'text-red-600 font-medium'
               : ''
           }
@@ -150,7 +150,7 @@ export function LoansPage() {
             </span>
           )
         }
-        const isOverdue = new Date(loan.dueDate) < new Date()
+        const isOverdue = parseISODateSafe(loan.dueDate) < new Date()
         return (
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
