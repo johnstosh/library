@@ -104,9 +104,10 @@ interface ThrottledThumbnailProps {
   alt: string
   className?: string
   checksum?: string
+  respectOrientation?: boolean
 }
 
-export function ThrottledThumbnail({ photoId, url, alt, className, checksum }: ThrottledThumbnailProps) {
+export function ThrottledThumbnail({ photoId, url, alt, className, checksum, respectOrientation }: ThrottledThumbnailProps) {
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -168,11 +169,15 @@ export function ThrottledThumbnail({ photoId, url, alt, className, checksum }: T
     )
   }
 
+  // CSS image-orientation: from-image tells the browser to respect EXIF orientation data
+  const style = respectOrientation ? { imageOrientation: 'from-image' as const } : undefined
+
   return (
     <img
       src={loadedUrl}
       alt={alt}
       className={className}
+      style={style}
     />
   )
 }

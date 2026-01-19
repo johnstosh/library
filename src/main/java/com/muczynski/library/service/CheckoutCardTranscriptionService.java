@@ -77,8 +77,8 @@ public class CheckoutCardTranscriptionService {
     public CheckoutCardTranscriptionDto transcribeCheckoutCard(byte[] imageBytes, String contentType) {
         log.info("Transcribing checkout card photo ({} bytes, type: {})", imageBytes.length, contentType);
 
-        // Call Grok AI with the transcription prompt
-        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT);
+        // Call Grok AI with the transcription prompt using grok-4 for better accuracy
+        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT, AskGrok.MODEL_GROK_4);
         log.debug("Grok response: {}", grokResponse);
 
         // Parse JSON response
@@ -100,6 +100,11 @@ public class CheckoutCardTranscriptionService {
      * Handles cases where Grok includes extra text before/after the JSON.
      */
     private String extractJson(String response) {
+        if (response == null || response.isEmpty()) {
+            log.warn("Empty or null response from Grok");
+            throw new LibraryException("Empty response from Grok AI");
+        }
+
         // Look for JSON object in the response
         int startIndex = response.indexOf('{');
         int endIndex = response.lastIndexOf('}');

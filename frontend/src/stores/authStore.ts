@@ -15,18 +15,22 @@ interface AuthState {
   isAuthenticated: boolean
   user: CurrentUser | null
   isLoading: boolean
+  returnUrl: string | null // URL to return to after login (Alternative 5: state parameter)
 
   // Actions
   login: (username: string, password: string) => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
   setUser: (user: CurrentUser | null) => void
+  setReturnUrl: (url: string | null) => void
+  getAndClearReturnUrl: () => string | null
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   user: null,
   isLoading: true,
+  returnUrl: null,
 
   login: async (username: string, password: string) => {
     // Hash password client-side using SHA-256
@@ -65,6 +69,30 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user: CurrentUser | null) => {
     set({ isAuthenticated: !!user, user, isLoading: false })
+  },
+
+  setReturnUrl: (url: string | null) => {
+    // Security: Only allow relative URLs to prevent open redirect attacks
+    if (url && (url.startsWith('/') && !url.startsWith('//'))) {
+      set({ returnUrl: url })
+      // Also persist to sessionStorage for OAuth flows (browser redirect loses state)
+      sessionStorage.setItem('auth_return_url', url)
+    } else {
+      set({ returnUrl: null })
+      sessionStorage.removeItem('auth_return_url')
+    }
+  },
+
+  getAndClearReturnUrl: () => {
+    // Check both store and sessionStorage (for OAuth flows)
+    let { returnUrl } = get()
+    if (!returnUrl) {
+      returnUrl = sessionStorage.getItem('auth_return_url')
+    }
+    // Clear both
+    set({ returnUrl: null })
+    sessionStorage.removeItem('auth_return_url')
+    return returnUrl
   },
 }))
 

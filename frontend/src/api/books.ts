@@ -10,22 +10,26 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   const queryClient = useQueryClient()
 
   // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
+  // For 'all' filter, we also use the summaries endpoint to enable caching
   const getFilterEndpoint = (f: typeof filter) => {
     switch (f) {
       case 'most-recent': return '/books/most-recent-day'
       case 'without-loc': return '/books/without-loc'
       case '3-letter-loc': return '/books/by-3letter-loc'
       case 'without-grokipedia': return '/books/without-grokipedia'
+      case 'all':
       default: return '/books/summaries'
     }
   }
 
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
+  // For all filters including 'all', we use the summaries endpoint to enable caching
   const filterEndpoint = getFilterEndpoint(filter)
   const { data: summaries, isLoading: summariesLoading } = useQuery({
     queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
     queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
-    staleTime: Infinity, // Summaries never stale - we use them to detect changes
+    staleTime: 0, // Always check for fresh data when filter changes
+    refetchOnMount: true, // Always refetch when component mounts or filter changes
   })
 
   // Step 2: Determine which books need fetching based on cache
@@ -41,19 +45,17 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   }, [summaries, queryClient])
 
   // Step 3: Batch fetch changed books using /books/by-ids
+  // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedBooks, isLoading: fetchingBooks } = useQuery({
     queryKey: queryKeys.books.byIds(booksToFetch, filter),
     queryFn: async () => {
-      if (filter === 'all') {
-        // For 'all' filter, fetch all books directly (no caching optimization)
-        return api.get<BookDto[]>('/books')
-      } else if (booksToFetch.length > 0) {
+      if (booksToFetch.length > 0) {
         // Only fetch books that changed
         return api.post<BookDto[]>('/books/by-ids', booksToFetch)
       }
       return []
     },
-    enabled: summaries !== undefined && (filter === 'all' || booksToFetch.length > 0),
+    enabled: summaries !== undefined && booksToFetch.length > 0,
   })
 
   // Populate individual book caches when books are fetched
@@ -64,19 +66,21 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   }, [fetchedBooks, queryClient])
 
   // Step 4: Get all cached books for display
+  // Note: We depend on fetchedBooks to ensure the memo re-runs after cache is populated
   const allBooks = useMemo(() => {
     if (!summaries) return []
 
-    // For 'all' filter, return the fetched results directly
-    if (filter === 'all') {
-      return fetchedBooks || []
+    // For all filters, wait for fetchedBooks to complete before reading from cache
+    // This ensures we don't return empty results while the cache is being populated
+    if (booksToFetch.length > 0 && !fetchedBooks) {
+      return []
     }
 
-    // For filtered views and default, get books from individual caches
+    // Get books from individual caches
     return summaries
       .map((summary) => queryClient.getQueryData<BookDto>(queryKeys.books.detail(summary.id)))
       .filter((book): book is BookDto => book !== undefined)
-  }, [summaries, queryClient, fetchedBooks, filter])
+  }, [summaries, queryClient, fetchedBooks, booksToFetch])
 
   return {
     data: allBooks,

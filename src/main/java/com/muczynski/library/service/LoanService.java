@@ -247,6 +247,11 @@ public class LoanService {
         if (!loanRepository.existsById(id)) {
             throw new LibraryException("Loan not found: " + id);
         }
+        // Delete any associated checkout card photos first to avoid FK constraint violation
+        photoRepository.findByLoanId(id).ifPresent(photo -> {
+            logger.info("Deleting checkout card photo {} for loan {}", photo.getId(), id);
+            photoRepository.delete(photo);
+        });
         loanRepository.deleteById(id);
     }
 }

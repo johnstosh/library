@@ -35,20 +35,23 @@ The Checkout Card Transcription feature uses Grok AI (xAI) vision capabilities t
 
 ### Frontend Components
 
-**CheckoutCardTranscriptionModal**
-- React modal component for photo upload
-- Supports two modes:
+**LoanFormPage**
+- Checkout form component with integrated photo panel
+- When captureMode query param is set ('file' or 'camera'):
+  - Photo panel appears on the right side of the form
+  - File picker or camera opens automatically on page load
+  - Photo is displayed and transcription starts automatically when file is selected
+  - Photo remains visible for comparison with transcribed data
+- Uses TanStack Query mutation for API integration
+- Supports two modes via captureMode:
   - File upload (from disk)
   - Camera capture (on mobile devices using HTML5 capture attribute)
-- Shows image preview before transcription
-- Auto-navigates to checkout form with pre-filled filters on successful transcription
-- Error handling for failed transcription
-- Uses TanStack Query mutation for API integration
+- Error handling for failed transcription with retry option
 
 **LoansPage Integration**
-- Two new buttons: "Checkout by Photo" and "Checkout by Camera"
-- "Checkout by Photo" - Opens modal with file picker
-- "Checkout by Camera" - Opens modal with camera capture (on supported devices)
+- Two buttons: "Checkout by Photo" and "Checkout by Camera"
+- "Checkout by Photo" - Navigates to /loans/new?captureMode=file
+- "Checkout by Camera" - Navigates to /loans/new?captureMode=camera
 - Positioned next to existing "Checkout Book" button
 
 **API Integration**
@@ -70,15 +73,15 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
 ## Typical Workflow
 
 1. User clicks "Checkout by Photo" or "Checkout by Camera" on Loans page
-2. Modal opens with appropriate file input configuration
-3. User selects/captures photo of checkout card
-4. Image preview is displayed
-5. User clicks "Transcribe" button
+2. User is navigated to the checkout form page with a photo panel on the right side
+3. File picker or camera opens automatically
+4. User selects/captures photo of checkout card
+5. Image is displayed in the photo panel, transcription starts automatically
 6. Photo is uploaded to backend API
-7. Backend calls Grok AI vision model (grok-4-fast) with specialized prompt
+7. Backend calls Grok AI vision model (grok-4) with specialized prompt
 8. Grok analyzes photo and returns JSON with extracted data
 9. Backend parses JSON (snake_case) and returns structured DTO (camelCase)
-10. Modal automatically closes and navigates to checkout form with pre-filled data:
+10. Form fields are auto-populated with transcribed data:
     - Title filter populated from transcribed title
     - Author filter populated from transcribed author
     - Call Number filter populated from transcribed call number
@@ -87,7 +90,8 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
     - Due Date populated from last due date (normalized to MM-DD-YYYY)
     - **Important:** When dates are provided from transcription, the form preserves them
       and does NOT auto-recalculate the due date from checkout date
-11. User selects the matching book and borrower, then completes checkout
+11. Image remains visible in the right panel for comparison with form data
+12. User selects the matching book and borrower, then completes checkout
 
 ## Date Format Handling
 
@@ -141,7 +145,7 @@ The frontend normalizes dates from Grok to the form's expected MM-DD-YYYY format
 ## Dependencies
 
 - **Existing services:** AskGrok (for xAI API integration)
-- **AI Model:** grok-4-fast (vision-capable model from xAI)
+- **AI Model:** grok-4 (vision-capable model from xAI, provides better accuracy than grok-4-fast)
 - **User requirement:** xAI API key must be configured in user settings
 
 ## Photo Storage

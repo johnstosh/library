@@ -224,6 +224,7 @@ export function LoanViewPage() {
                     alt="Checkout card photo"
                     className="max-w-md rounded border border-gray-300 hover:opacity-90 transition-opacity cursor-pointer"
                     checksum={loan.photoChecksum}
+                    respectOrientation
                   />
                 </a>
               </div>

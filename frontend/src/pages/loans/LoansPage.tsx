@@ -6,11 +6,10 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { CheckoutCardTranscriptionModal } from './components/CheckoutCardTranscriptionModal'
 import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
-import type { LoanDto, CheckoutCardTranscriptionDto } from '@/types/dtos'
+import type { LoanDto } from '@/types/dtos'
 import { PiEye } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
 
@@ -18,8 +17,6 @@ export function LoansPage() {
   const navigate = useNavigate()
   const [returnLoanId, setReturnLoanId] = useState<number | null>(null)
   const [deleteLoanId, setDeleteLoanId] = useState<number | null>(null)
-  const [isTranscriptionModalOpen, setIsTranscriptionModalOpen] = useState(false)
-  const [captureMode, setCaptureMode] = useState<'file' | 'camera'>('file')
 
   const showAll = useLoansShowAll()
   const setLoansShowAll = useUiStore((state) => state.setLoansShowAll)
@@ -46,18 +43,11 @@ export function LoansPage() {
   }
 
   const handleCheckoutByPhoto = () => {
-    setCaptureMode('file')
-    setIsTranscriptionModalOpen(true)
+    navigate('/loans/new?captureMode=file')
   }
 
   const handleCheckoutByCamera = () => {
-    setCaptureMode('camera')
-    setIsTranscriptionModalOpen(true)
-  }
-
-  const handleTranscriptionComplete = (data: CheckoutCardTranscriptionDto) => {
-    console.log('Transcription completed:', data)
-    // TODO: Could auto-populate checkout form with this data
+    navigate('/loans/new?captureMode=camera')
   }
 
   const handleViewLoan = (loan: LoanDto) => {
@@ -285,13 +275,6 @@ export function LoansPage() {
         confirmText="Delete"
         variant="danger"
         isLoading={deleteLoan.isPending}
-      />
-
-      <CheckoutCardTranscriptionModal
-        isOpen={isTranscriptionModalOpen}
-        onClose={() => setIsTranscriptionModalOpen(false)}
-        onTranscriptionComplete={handleTranscriptionComplete}
-        captureMode={captureMode}
       />
     </div>
   )

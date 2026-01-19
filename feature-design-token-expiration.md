@@ -195,20 +195,37 @@ if (returnUrl) {
 }
 ```
 
-## Recommended Approach
+## Implemented Approach
 
-For this application, **Alternative 1 (Frontend Interceptor) combined with Alternative 6 (Zustand Store)** is recommended:
+**Alternative 5 (Backend Redirect with State)** was implemented, adapted for the SPA architecture:
 
-1. Add a 401 interceptor to the API client
-2. Store return URL in the auth Zustand store (with localStorage persistence)
-3. Redirect to login page
-4. After successful login, read return URL from store and navigate
+The implementation follows the OAuth-style state parameter pattern:
+
+1. **API 401 Interception** (`frontend/src/api/client.ts`):
+   - On 401 response, save current URL to authStore and sessionStorage
+   - Redirect to login page
+
+2. **Protected Route** (`frontend/src/components/auth/ProtectedRoute.tsx`):
+   - When unauthenticated user accesses protected route, save intended URL
+   - Redirect to login page
+
+3. **Auth Store** (`frontend/src/stores/authStore.ts`):
+   - `returnUrl` state with `setReturnUrl` and `getAndClearReturnUrl` actions
+   - Persisted to sessionStorage for OAuth flows (browser redirect loses Zustand state)
+   - Security: Only accepts relative URLs to prevent open redirect attacks
+
+4. **Login Page** (`frontend/src/pages/LoginPage.tsx`):
+   - After successful login, redirect to saved return URL or default to /books
+
+5. **Home Redirect** (`frontend/src/App.tsx`):
+   - `HomeRedirect` component handles OAuth return
+   - Checks for saved return URL and redirects there after OAuth completes
 
 This approach:
-- Is straightforward to implement
-- Works with the existing architecture
-- Handles both API and navigation scenarios
-- Persists across page refreshes if needed
+- Follows OAuth-style state parameter pattern (Alternative 5)
+- Works with the SPA architecture
+- Handles both API 401s and direct navigation scenarios
+- Persists across browser redirects (OAuth flow) via sessionStorage
 
 ## Security Considerations
 
