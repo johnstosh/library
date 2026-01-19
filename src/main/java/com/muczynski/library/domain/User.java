@@ -14,9 +14,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier")
-    },
     indexes = {
         @Index(name = "idx_user_username", columnList = "username"),
         @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
@@ -31,7 +28,7 @@ public class User implements Serializable {
     private Long id;
 
     // Unique identifier for the user (UUID) - used for identification across systems
-    // Unique constraint is defined at table level with explicit name: uk_user_identifier
+    @Column(unique = true)
     private String userIdentifier;
 
     private String username;

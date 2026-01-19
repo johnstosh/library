@@ -435,13 +435,26 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
     }
   }, [formData.bookId, books])
 
-  // Auto-select first book when filtered list changes and no book is selected
+  // Auto-select or update book selection when filtered list changes
   useEffect(() => {
-    if (!isEditing && !formData.bookId && filteredBooks.length > 0 &&
-        (bookFilters.title || bookFilters.author || bookFilters.locNumber)) {
-      setFormData(prev => ({ ...prev, bookId: filteredBooks[0].id.toString() }))
+    if (isEditing) return
+
+    const hasFilters = bookFilters.title || bookFilters.author || bookFilters.locNumber
+
+    if (hasFilters && filteredBooks.length > 0) {
+      // Check if currently selected book is still in filtered results
+      const currentBookInFiltered = formData.bookId &&
+        filteredBooks.some(b => b.id.toString() === formData.bookId)
+
+      if (!currentBookInFiltered) {
+        // Update to first filtered book if current selection is not in results
+        setFormData(prev => ({ ...prev, bookId: filteredBooks[0].id.toString() }))
+      }
+    } else if (hasFilters && filteredBooks.length === 0 && formData.bookId) {
+      // Clear selection if filters are set but no books match
+      setFormData(prev => ({ ...prev, bookId: '' }))
     }
-  }, [filteredBooks, formData.bookId, bookFilters, isEditing])
+  }, [filteredBooks, bookFilters, isEditing])
 
   // Auto-select first user when filtered list changes and no user is selected
   useEffect(() => {
