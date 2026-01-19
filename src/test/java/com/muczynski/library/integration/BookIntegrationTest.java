@@ -33,12 +33,12 @@ class BookIntegrationTest {
     @Sql(scripts = "/data-integration.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getBooksWith3LetterLocStart_returnsFilteredBooks() throws Exception {
+        // Filter endpoints now return BookSummaryDto (id + lastModified) for cache validation
         mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(999L))
-                .andExpect(jsonPath("$[0].title").value("Test Book with 3-Letter LOC"))
-                .andExpect(jsonPath("$[0].locNumber").value("ABC 123.45"));
+                .andExpect(jsonPath("$[0].lastModified").exists());
     }
 
     @Test
@@ -56,13 +56,14 @@ class BookIntegrationTest {
     @Sql(scripts = "/data-integration-without-grokipedia.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getBooksWithoutGrokipediaUrl_returnsFilteredBooks() throws Exception {
+        // Filter endpoints now return BookSummaryDto (id + lastModified) for cache validation
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].title").value("Book Without Grokipedia URL"))
-                .andExpect(jsonPath("$[0].grokipediaUrl").isEmpty())
-                .andExpect(jsonPath("$[1].title").value("Book With Empty Grokipedia URL"))
-                .andExpect(jsonPath("$[1].grokipediaUrl").value(""));
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].lastModified").exists())
+                .andExpect(jsonPath("$[1].id").exists())
+                .andExpect(jsonPath("$[1].lastModified").exists());
     }
 
     @Test

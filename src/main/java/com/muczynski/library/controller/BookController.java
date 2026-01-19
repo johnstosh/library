@@ -75,8 +75,8 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWithoutLocNumber() {
         try {
-            List<BookDto> books = bookService.getBooksWithoutLocNumber();
-            return ResponseEntity.ok(books);
+            List<BookSummaryDto> summaries = bookService.getSummariesWithoutLocNumber();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books without LOC number: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -84,16 +84,15 @@ public class BookController {
     }
 
     /**
-     * Get books from most recent 2 days OR with temporary titles (date-pattern titles).
-     * Uses efficient projection query - no N+1 queries.
-     * Returns SavedBookDto with id, title, author, library, photoCount, needsProcessing.
+     * Get book summaries (id + lastModified) from most recent 2 days OR with temporary titles.
+     * Returns BookSummaryDto for cache validation - use /books/by-ids to fetch full data.
      */
     @GetMapping("/most-recent-day")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksFromMostRecentDay() {
         try {
-            List<SavedBookDto> books = bookService.getBooksFromMostRecentDay();
-            return ResponseEntity.ok(books);
+            List<BookSummaryDto> summaries = bookService.getSummariesFromMostRecentDay();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books from most recent 2 days: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -104,8 +103,8 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWith3LetterLocStart() {
         try {
-            List<BookDto> books = bookService.getBooksWith3LetterLocStart();
-            return ResponseEntity.ok(books);
+            List<BookSummaryDto> summaries = bookService.getSummariesWith3LetterLocStart();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -116,8 +115,8 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWithoutGrokipediaUrl() {
         try {
-            List<BookDto> books = bookService.getBooksWithoutGrokipediaUrl();
-            return ResponseEntity.ok(books);
+            List<BookSummaryDto> summaries = bookService.getSummariesWithoutGrokipediaUrl();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books without Grokipedia URL: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

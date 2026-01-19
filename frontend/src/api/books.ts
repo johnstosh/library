@@ -4,38 +4,31 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto } from '@/types/dtos'
-import type { SavedBookDto } from './books-from-feed'
-import type { BookStatus } from '@/types/enums'
-
-/**
- * Convert SavedBookDto to BookDto for display in the Books table.
- * The most-recent-day endpoint returns SavedBookDto (efficient projection).
- */
-function savedBookToBookDto(saved: SavedBookDto): BookDto {
-  return {
-    id: saved.id,
-    title: saved.title,
-    author: saved.author,
-    library: saved.library,
-    locNumber: saved.locNumber,
-    status: (saved.status as BookStatus) || 'ACTIVE',
-    grokipediaUrl: saved.grokipediaUrl,
-    lastModified: '', // Not needed for table display
-  }
-}
 
 // Hook to get all books with optimized lastModified caching
 export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia') {
   const queryClient = useQueryClient()
 
-  // Step 1: Fetch summaries (ID + lastModified)
+  // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
+  const getFilterEndpoint = (f: typeof filter) => {
+    switch (f) {
+      case 'most-recent': return '/books/most-recent-day'
+      case 'without-loc': return '/books/without-loc'
+      case '3-letter-loc': return '/books/by-3letter-loc'
+      case 'without-grokipedia': return '/books/without-grokipedia'
+      default: return '/books/summaries'
+    }
+  }
+
+  // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
+  const filterEndpoint = getFilterEndpoint(filter)
   const { data: summaries, isLoading: summariesLoading } = useQuery({
-    queryKey: queryKeys.books.summaries(),
-    queryFn: () => api.get<BookSummaryDto[]>('/books/summaries'),
+    queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
+    queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
     staleTime: Infinity, // Summaries never stale - we use them to detect changes
   })
 
-  // Step 2: Determine which books need fetching
+  // Step 2: Determine which books need fetching based on cache
   const booksToFetch = useMemo(() => {
     if (!summaries) return []
 
@@ -47,23 +40,12 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
       .map((s) => s.id)
   }, [summaries, queryClient])
 
-  // Step 3: Batch fetch changed books
+  // Step 3: Batch fetch changed books using /books/by-ids
   const { data: fetchedBooks, isLoading: fetchingBooks } = useQuery({
-    queryKey: queryKeys.books.list(filter),
+    queryKey: queryKeys.books.byIds(booksToFetch, filter),
     queryFn: async () => {
-      // Apply filter on backend for special filters
-      if (filter === 'most-recent') {
-        // most-recent-day returns SavedBookDto (efficient projection), convert to BookDto
-        const savedBooks = await api.get<SavedBookDto[]>('/books/most-recent-day')
-        return savedBooks.map(savedBookToBookDto)
-      } else if (filter === 'without-loc') {
-        return api.get<BookDto[]>('/books/without-loc')
-      } else if (filter === '3-letter-loc') {
-        return api.get<BookDto[]>('/books/by-3letter-loc')
-      } else if (filter === 'without-grokipedia') {
-        return api.get<BookDto[]>('/books/without-grokipedia')
-      } else if (filter === 'all') {
-        // Fetch all books directly for 'all' filter
+      if (filter === 'all') {
+        // For 'all' filter, fetch all books directly (no caching optimization)
         return api.get<BookDto[]>('/books')
       } else if (booksToFetch.length > 0) {
         // Only fetch books that changed
@@ -71,7 +53,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
       }
       return []
     },
-    enabled: summaries !== undefined && (filter === 'most-recent' || filter === 'without-loc' || filter === '3-letter-loc' || filter === 'without-grokipedia' || filter === 'all' || booksToFetch.length > 0),
+    enabled: summaries !== undefined && (filter === 'all' || booksToFetch.length > 0),
   })
 
   // Populate individual book caches when books are fetched
@@ -85,12 +67,12 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   const allBooks = useMemo(() => {
     if (!summaries) return []
 
-    // For filtered views (including 'all'), return the fetched results directly
-    if (filter === 'most-recent' || filter === 'without-loc' || filter === '3-letter-loc' || filter === 'without-grokipedia' || filter === 'all') {
+    // For 'all' filter, return the fetched results directly
+    if (filter === 'all') {
       return fetchedBooks || []
     }
 
-    // For other views, get books from individual caches
+    // For filtered views and default, get books from individual caches
     return summaries
       .map((summary) => queryClient.getQueryData<BookDto>(queryKeys.books.detail(summary.id)))
       .filter((book): book is BookDto => book !== undefined)
