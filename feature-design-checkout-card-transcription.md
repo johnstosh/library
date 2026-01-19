@@ -85,7 +85,24 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
     - Borrower filter populated from "Issued To" name
     - Checkout Date populated from last checkout date (normalized to MM-DD-YYYY)
     - Due Date populated from last due date (normalized to MM-DD-YYYY)
+    - **Important:** When dates are provided from transcription, the form preserves them
+      and does NOT auto-recalculate the due date from checkout date
 11. User selects the matching book and borrower, then completes checkout
+
+## Date Format Handling
+
+The frontend normalizes dates from Grok to the form's expected MM-DD-YYYY format:
+
+**Input formats supported:**
+- `M-D` (e.g., "1-7") - Month-Day, year assumed to be current year
+- `M-D-YY` (e.g., "1-7-26") - Month-Day-Year with 2-digit year (20XX assumed)
+- `M-D-YYYY` (e.g., "1-7-2026") - Full format
+
+**Behavior:**
+- If transcription provides both checkoutDate and dueDate, both are preserved as-is
+- The form's auto-calculation of dueDate (checkout + 14 days) is skipped when
+  transcription provides a dueDate
+- If the user later changes the checkout date manually, auto-calculation resumes
 
 ## Security & Authentication
 
@@ -126,6 +143,43 @@ The prompt is designed specifically for the St. Martin de Porres library card fo
 - **Existing services:** AskGrok (for xAI API integration)
 - **AI Model:** grok-4-fast (vision-capable model from xAI)
 - **User requirement:** xAI API key must be configured in user settings
+
+## Photo Storage
+
+Starting with this feature, checkout card photos are stored in the database and associated with the loan record.
+
+### How It Works
+
+1. When user transcribes a photo, the photo is stored in sessionStorage (base64 encoded)
+2. When the loan is created, the frontend calls `/api/loans/checkout-with-photo` with the photo
+3. Backend saves the photo to the photos table with a foreign key to the loan
+4. Photo SHA-256 checksum is computed for frontend caching
+5. Loan DTO includes `photoId` and `photoChecksum` fields
+6. Loan view page displays the photo using the ThrottledThumbnail component
+7. Frontend uses checksum-based caching for efficient photo loading
+
+### Database Schema
+
+The `Photo` entity now includes:
+- `loan_id` (FK to Loan) - nullable, for checkout card photos
+
+### API Endpoints
+
+**POST /api/loans/checkout-with-photo**
+- Multipart form data with:
+  - `bookId` (required)
+  - `userId` (required)
+  - `loanDate` (optional, ISO date string)
+  - `dueDate` (optional, ISO date string)
+  - `photo` (optional, image file)
+- Returns `LoanDto` with `photoId` and `photoChecksum` if photo was saved
+
+### Frontend Caching
+
+The frontend uses the `ThrottledThumbnail` component with checksum-based caching:
+- Photos are cached by their SHA-256 checksum
+- Cache persists across page navigation
+- Reduces network requests when viewing the same photo multiple times
 
 ## Future Enhancements
 

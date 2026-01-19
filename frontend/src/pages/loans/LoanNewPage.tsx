@@ -22,6 +22,7 @@ export function LoanNewPage() {
     borrower: searchParams.get('borrower') || '',
     checkoutDate: searchParams.get('checkoutDate') || '',
     dueDate: searchParams.get('dueDate') || '',
+    hasPhoto: searchParams.get('hasPhoto') === 'true',
   }
 
   return (

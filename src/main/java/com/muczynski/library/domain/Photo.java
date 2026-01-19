@@ -34,6 +34,10 @@ public class Photo {
     @JoinColumn(name = "author_id")
     private Author author;
 
+    @ManyToOne
+    @JoinColumn(name = "loan_id")
+    private Loan loan;
+
     private Integer photoOrder;
 
     // Google Photos export fields

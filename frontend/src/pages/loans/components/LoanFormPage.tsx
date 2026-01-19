@@ -1,10 +1,10 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
-import { useCheckoutBook } from '@/api/loans'
+import { useCheckoutBook, useCheckoutBookWithPhoto } from '@/api/loans'
 import { useBooks } from '@/api/books'
 import { useUsers } from '@/api/users'
 import { useAuthStore } from '@/stores/authStore'
@@ -19,6 +19,7 @@ interface InitialFilters {
   borrower?: string
   checkoutDate?: string
   dueDate?: string
+  hasPhoto?: boolean
 }
 
 interface LoanFormPageProps {
@@ -73,6 +74,10 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
   const { data: books = [] } = useBooks('all')
   const { data: users = [] } = useUsers()
   const checkoutBook = useCheckoutBook()
+  const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
+
+  // Track if initial transcription dueDate should be preserved (skip first auto-calc)
+  const skipDueDateAutoCalc = useRef(!!initialFilters?.dueDate)
 
   useEffect(() => {
     if (loan) {
@@ -82,30 +87,29 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
         checkoutDate: formatDateToInput(loan.loanDate),
         dueDate: formatDateToInput(loan.dueDate),
       })
-    } else if (currentUser && !isLibrarian) {
-      // Default to current user if not a librarian
-      const today = new Date()
-      const twoWeeksLater = new Date(today)
-      twoWeeksLater.setDate(today.getDate() + 14)
-
-      setFormData({
-        bookId: '',
-        userId: currentUser.id.toString(),
-        checkoutDate: formatDateToInput(today.toISOString()),
-        dueDate: formatDateToInput(twoWeeksLater.toISOString()),
-      })
     } else {
-      // Initialize dates for librarians
-      const today = new Date()
-      const twoWeeksLater = new Date(today)
-      twoWeeksLater.setDate(today.getDate() + 14)
+      // New loan - set user if applicable
+      if (currentUser && !isLibrarian) {
+        // Default to current user if not a librarian
+        setFormData(prev => ({
+          ...prev,
+          userId: currentUser.id.toString(),
+        }))
+      }
+      // Only set default dates if no transcription dates were provided
+      if (!initialFilters?.checkoutDate) {
+        const today = new Date()
+        const twoWeeksLater = new Date(today)
+        twoWeeksLater.setDate(today.getDate() + 14)
 
-      setFormData(prev => ({
-        ...prev,
-        checkoutDate: formatDateToInput(today.toISOString()),
-        dueDate: formatDateToInput(twoWeeksLater.toISOString()),
-      }))
+        setFormData(prev => ({
+          ...prev,
+          checkoutDate: formatDateToInput(today.toISOString()),
+          dueDate: formatDateToInput(twoWeeksLater.toISOString()),
+        }))
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loan, currentUser, isLibrarian])
 
   // Helper function to format ISO date string to MM-DD-YYYY
@@ -130,6 +134,12 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
 
   // Update due date when checkout date changes
   useEffect(() => {
+    // Skip auto-calculation on initial mount if transcription provided dueDate
+    if (skipDueDateAutoCalc.current) {
+      skipDueDateAutoCalc.current = false
+      return
+    }
+
     if (formData.checkoutDate && !isEditing) {
       const isoDate = parseInputToISO(formData.checkoutDate)
       if (isoDate) {
@@ -172,6 +182,18 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
     setHasUnsavedChanges(true)
   }
 
+  // Helper function to convert base64 data URL to File
+  const base64ToFile = (dataUrl: string, filename: string, mimeType: string): File => {
+    const arr = dataUrl.split(',')
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new File([u8arr], filename, { type: mimeType })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -197,12 +219,39 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
     }
 
     try {
-      await checkoutBook.mutateAsync({
-        bookId: parseInt(formData.bookId),
-        userId: parseInt(formData.userId),
-        loanDate,
-        dueDate,
-      })
+      // Check if we have a checkout card photo from the transcription
+      const storedPhotoData = sessionStorage.getItem('checkoutCardPhoto')
+      let photoFile: File | undefined
+
+      if (initialFilters?.hasPhoto && storedPhotoData) {
+        try {
+          const photoInfo = JSON.parse(storedPhotoData)
+          photoFile = base64ToFile(photoInfo.data, photoInfo.name, photoInfo.type)
+        } catch (photoErr) {
+          console.warn('Failed to parse stored photo, continuing without photo:', photoErr)
+        }
+      }
+
+      if (photoFile) {
+        // Use checkout-with-photo endpoint
+        await checkoutBookWithPhoto.mutateAsync({
+          bookId: parseInt(formData.bookId),
+          userId: parseInt(formData.userId),
+          loanDate,
+          dueDate,
+          photo: photoFile,
+        })
+        // Clear the stored photo after successful checkout
+        sessionStorage.removeItem('checkoutCardPhoto')
+      } else {
+        // Use regular checkout endpoint
+        await checkoutBook.mutateAsync({
+          bookId: parseInt(formData.bookId),
+          userId: parseInt(formData.userId),
+          loanDate,
+          dueDate,
+        })
+      }
 
       setHasUnsavedChanges(false)
       onSuccess()
@@ -316,7 +365,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters 
     label: u.username,
   }))
 
-  const isLoading = checkoutBook.isPending
+  const isLoading = checkoutBook.isPending || checkoutBookWithPhoto.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">

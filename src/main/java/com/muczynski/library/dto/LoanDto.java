@@ -26,4 +26,8 @@ public class LoanDto {
     private LocalDate dueDate;
     private LocalDate returnDate;
     private LocalDateTime lastModified;
+
+    // Checkout card photo (from loan-by-photo feature)
+    private Long photoId;
+    private String photoChecksum;
 }

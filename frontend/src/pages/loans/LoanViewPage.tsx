@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/Button'
 import { useLoan, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
-import { PiArrowLeft, PiCheckCircle, PiTrash } from 'react-icons/pi'
+import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
+import { getThumbnailUrl, getPhotoUrl } from '@/api/photos'
+import { PiArrowLeft, PiCheckCircle, PiTrash, PiCamera } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
@@ -201,6 +203,35 @@ export function LoanViewPage() {
               )}
             </div>
           </div>
+
+          {/* Checkout Card Photo */}
+          {loan.photoId && (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <PiCamera className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Checkout Card Photo</h3>
+              </div>
+              <div className="flex justify-center">
+                <a
+                  href={getPhotoUrl(loan.photoId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <ThrottledThumbnail
+                    photoId={loan.photoId}
+                    url={getThumbnailUrl(loan.photoId, 400)}
+                    alt="Checkout card photo"
+                    className="max-w-md rounded border border-gray-300 hover:opacity-90 transition-opacity cursor-pointer"
+                    checksum={loan.photoChecksum}
+                  />
+                </a>
+              </div>
+              <p className="text-sm text-gray-500 text-center mt-2">
+                Click to view full size
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

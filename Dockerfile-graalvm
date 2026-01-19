@@ -1,0 +1,72 @@
+# (c) Copyright 2025 by Muczynski
+# GraalVM Native Image Dockerfile for Spring Boot application
+#
+# NOTE: GraalVM native compilation requires significant additional configuration
+# for Spring Boot applications using reflection-heavy libraries like:
+# - Hibernate/JPA
+# - Jackson (JSON)
+# - iText (PDF)
+# - Marc4J
+#
+# See: https://docs.spring.io/spring-boot/docs/current/reference/html/native-image.html
+#
+# Before using this Dockerfile, ensure:
+# 1. Add 'org.graalvm.buildtools.native' plugin to build.gradle
+# 2. Generate native image configuration with tracing agent
+# 3. Add reflect-config.json, resource-config.json, etc.
+
+# --- Stage 1: Build native image ---
+FROM ghcr.io/graalvm/native-image-community:17 AS builder
+
+WORKDIR /build
+
+# Install necessary tools
+RUN microdnf install -y findutils
+
+# Copy Gradle wrapper and build files
+COPY gradlew gradlew
+COPY gradle gradle
+COPY build.gradle settings.gradle ./
+
+# Download dependencies
+RUN ./gradlew dependencies --no-daemon || true
+
+# Copy source code
+COPY src src
+
+# Copy frontend build (must be pre-built)
+COPY frontend/dist src/main/resources/static
+
+# Build native image
+# Note: This requires the native-image Gradle plugin and proper configuration
+# RUN ./gradlew nativeCompile --no-daemon
+# For now, build the JAR and create a fallback to JIT compilation
+RUN ./gradlew clean build -x test --no-daemon
+
+# --- Stage 2: Runtime image ---
+# Using a minimal container with just the native executable
+# For native images, use distroless or alpine
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Copy the JAR (fallback until native compilation is fully configured)
+COPY --from=builder /build/build/libs/*.jar /app/application.jar
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
+
+# Expose the port (Cloud Run uses PORT env variable, default 8080)
+EXPOSE ${PORT:-8080}
+
+# GraalVM-optimized JVM flags for reduced memory footprint
+# These optimize for startup time and memory at the cost of peak throughput
+ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAM=256m"
+
+# Run the JAR with GraalVM-optimized settings
+CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/application.jar"]
+
+# When native compilation is working, replace the CMD with:
+# COPY --from=builder /build/build/native/nativeCompile/application /app/application
+# CMD ["/app/application"]
