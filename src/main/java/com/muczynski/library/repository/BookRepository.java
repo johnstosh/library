@@ -33,6 +33,15 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     }
 
     /**
+     * Interface projection for book summaries (id + lastModified).
+     * Used for cache validation with filter endpoints.
+     */
+    interface BookSummaryProjection {
+        Long getId();
+        LocalDateTime getLastModified();
+    }
+
+    /**
      * Find books from most recent 2 days OR with temporary titles (date-pattern titles).
      * Uses native query for regex support and efficient projection.
      * Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start of title.
@@ -102,4 +111,38 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findBooksWithoutGrokipediaUrl();
 
     long countByLibraryId(Long libraryId);
+
+    /**
+     * Get summaries (id + lastModified) for books without LOC number.
+     */
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.locNumber IS NULL OR b.locNumber = ''")
+    List<BookSummaryProjection> findSummariesWithoutLocNumber();
+
+    /**
+     * Get summaries (id + lastModified) for books with 3-letter LOC start.
+     */
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.locNumber IS NOT NULL AND b.locNumber != '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z'")
+    List<BookSummaryProjection> findSummariesWith3LetterLocStart();
+
+    /**
+     * Get summaries (id + lastModified) for books without Grokipedia URL.
+     */
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''")
+    List<BookSummaryProjection> findSummariesWithoutGrokipediaUrl();
+
+    /**
+     * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
+     * Uses native query for regex support and PostgreSQL compatibility.
+     */
+    @Query(value = """
+        WITH most_recent_date AS (
+            SELECT DATE(MAX(date_added_to_library)) as max_date FROM book
+        )
+        SELECT b.id as id, b.last_modified as lastModified
+        FROM book b
+        CROSS JOIN most_recent_date mrd
+        WHERE DATE(b.date_added_to_library) >= mrd.max_date - INTERVAL '1 day'
+           OR b.title ~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}'
+        """, nativeQuery = true)
+    List<BookSummaryProjection> findSummariesFromMostRecentDay();
 }

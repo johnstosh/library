@@ -20,7 +20,7 @@ import {
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { getThumbnailUrl } from '@/api/photos'
-import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
+import { ThrottledThumbnail, clearThumbnailQueue } from '@/components/ui/ThrottledThumbnail'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import {
   PiDownload,
@@ -64,6 +64,13 @@ export function DataManagementPage() {
   const unlinkPhoto = useUnlinkPhoto()
   const deletePhoto = useDeletePhoto()
   const uploadPhotoImage = useUploadPhotoImage()
+
+  // Clear thumbnail loading queue when leaving the page
+  useEffect(() => {
+    return () => {
+      clearThumbnailQueue()
+    }
+  }, [])
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -896,6 +903,7 @@ export function DataManagementPage() {
                               url={getThumbnailUrl(photo.id, 48)}
                               alt={`Photo #${photo.id}`}
                               className="w-12 rounded"
+                              checksum={photo.checksum}
                             />
                           ) : (
                             <span className="text-gray-400">-</span>

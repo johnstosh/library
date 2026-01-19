@@ -12,11 +12,13 @@ import org.mapstruct.Mapping;
 public interface PhotoMapper {
     @Mapping(source = "book.id", target = "bookId")
     @Mapping(source = "author.id", target = "authorId")
+    @Mapping(source = "loan.id", target = "loanId")
     PhotoDto toDto(Photo photo);
 
     @Mapping(target = "image", ignore = true)
     @Mapping(target = "book", ignore = true)
     @Mapping(target = "author", ignore = true)
+    @Mapping(target = "loan", ignore = true)
     @Mapping(target = "photoOrder", ignore = true)
     @Mapping(target = "permanentId", ignore = true)
     @Mapping(target = "exportedAt", ignore = true)

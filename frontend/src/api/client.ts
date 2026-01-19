@@ -42,11 +42,18 @@ export async function apiClient<T>(
   try {
     const response = await fetch(url, config)
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - redirect to login with state (Alternative 5)
     if (response.status === 401 && requireAuth) {
       // Import dynamically to avoid circular dependency
       const { useAuthStore } = await import('@/stores/authStore')
-      useAuthStore.getState().logout()
+      const authStore = useAuthStore.getState()
+
+      // Save current URL as return URL (OAuth-style state parameter)
+      const currentPath = window.location.pathname + window.location.search
+      authStore.setReturnUrl(currentPath)
+
+      // Logout and redirect to login
+      authStore.logout()
       window.location.href = '/login'
       throw new ApiError('Unauthorized', 401, response.statusText)
     }

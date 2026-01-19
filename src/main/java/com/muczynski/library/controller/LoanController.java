@@ -149,6 +149,65 @@ public class LoanController {
         }
     }
 
+    /**
+     * Checkout a book with an optional checkout card photo.
+     * Uses multipart form data to accept both loan data and photo.
+     */
+    @PostMapping(value = "/checkout-with-photo", consumes = "multipart/form-data")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> checkoutBookWithPhoto(
+            @RequestParam("bookId") Long bookId,
+            @RequestParam("userId") Long userId,
+            @RequestParam(value = "loanDate", required = false) String loanDateStr,
+            @RequestParam(value = "dueDate", required = false) String dueDateStr,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            Authentication authentication) {
+        try {
+            // Regular users can only checkout books to themselves
+            boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
+            if (!isLibrarian) {
+                Long authenticatedUserId = Long.parseLong(authentication.getName());
+                if (!authenticatedUserId.equals(userId)) {
+                    throw new InsufficientPermissionsException("You can only checkout books to yourself");
+                }
+            }
+
+            LoanDto loanDto = new LoanDto();
+            loanDto.setBookId(bookId);
+            loanDto.setUserId(userId);
+
+            // Parse dates if provided
+            if (loanDateStr != null && !loanDateStr.isEmpty()) {
+                loanDto.setLoanDate(java.time.LocalDate.parse(loanDateStr));
+            }
+            if (dueDateStr != null && !dueDateStr.isEmpty()) {
+                loanDto.setDueDate(java.time.LocalDate.parse(dueDateStr));
+            }
+
+            LoanDto created;
+            if (photo != null && !photo.isEmpty()) {
+                byte[] imageBytes = photo.getBytes();
+                String contentType = photo.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    return ResponseEntity.badRequest().body("File must be an image");
+                }
+                created = loanService.checkoutBookWithPhoto(loanDto, imageBytes, contentType);
+            } else {
+                created = loanService.checkoutBook(loanDto);
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IOException e) {
+            logger.error("Failed to read photo file: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to read photo file: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Failed to checkout book with photo: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to checkout: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/transcribe-checkout-card")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> transcribeCheckoutCard(@RequestParam("photo") MultipartFile photo) {

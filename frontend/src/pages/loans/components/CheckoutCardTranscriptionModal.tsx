@@ -45,6 +45,19 @@ export function CheckoutCardTranscriptionModal({
         onTranscriptionComplete(result)
       }
 
+      // Store the photo in sessionStorage for checkout-with-photo
+      // We need to convert the file to base64 for storage
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result as string
+        sessionStorage.setItem('checkoutCardPhoto', JSON.stringify({
+          data: base64,
+          type: selectedFile.type,
+          name: selectedFile.name
+        }))
+      }
+      reader.readAsDataURL(selectedFile)
+
       // Build query params for pre-filling the loan form
       const params = new URLSearchParams()
       if (result.title && result.title !== 'N/A') {
@@ -65,6 +78,7 @@ export function CheckoutCardTranscriptionModal({
       if (result.lastDue && result.lastDue !== 'N/A') {
         params.set('dueDate', result.lastDue)
       }
+      params.set('hasPhoto', 'true')
 
       // Close modal and navigate to checkout form with pre-filled data
       handleClose()

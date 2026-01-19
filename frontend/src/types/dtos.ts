@@ -128,6 +128,9 @@ export interface LoanDto {
   dueDate: string
   returnDate?: string
   lastModified: string
+  // Checkout card photo (from loan-by-photo feature)
+  photoId?: number
+  photoChecksum?: string
 }
 
 export interface CheckoutCardTranscriptionDto {

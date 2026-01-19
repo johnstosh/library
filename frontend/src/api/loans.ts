@@ -45,6 +45,39 @@ export function useCheckoutBook() {
   })
 }
 
+// Hook to checkout a book with a checkout card photo
+export function useCheckoutBookWithPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: {
+      bookId: number
+      userId: number
+      loanDate?: string
+      dueDate?: string
+      photo?: File
+    }) => {
+      const formData = new FormData()
+      formData.append('bookId', data.bookId.toString())
+      formData.append('userId', data.userId.toString())
+      if (data.loanDate) {
+        formData.append('loanDate', data.loanDate)
+      }
+      if (data.dueDate) {
+        formData.append('dueDate', data.dueDate)
+      }
+      if (data.photo) {
+        formData.append('photo', data.photo)
+      }
+      return api.postFormData<LoanDto>('/loans/checkout-with-photo', formData)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
+  })
+}
+
 // Hook to return a book (update loan with return date)
 export function useReturnBook() {
   const queryClient = useQueryClient()

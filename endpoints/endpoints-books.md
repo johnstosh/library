@@ -2,56 +2,95 @@
 
 ## Book Filtering Endpoints
 
-### GET /api/books/most-recent-day
-Returns books from the most recent 2 days OR books with temporary titles (date-pattern titles like "2025-01-10_14:30:00").
+All book filter endpoints return **BookSummaryDto** (id + lastModified) for cache validation. Use `/api/books/by-ids` to fetch full book data for the IDs you need.
 
-**Note:** This endpoint uses efficient database projections to avoid N+1 query issues. Returns the same data as `/api/books-from-feed/saved-books`. Includes 2 days to handle timezone differences and ensure recently added books are not missed.
+### GET /api/books/most-recent-day
+Returns book summaries for books from the most recent 2 days OR books with temporary titles (date-pattern titles like "2025-01-10_14:30:00").
+
+**Note:** This endpoint returns lightweight summaries for cache validation. Use `/api/books/by-ids` to fetch full book data. Includes 2 days to handle timezone differences.
 
 **Authentication:** Public (permitAll)
 
-**Response:** Array of SavedBookDto
+**Response:** Array of BookSummaryDto
 ```json
 [
   {
     "id": 123,
-    "title": "Book Title",
-    "author": "Author Name",
-    "library": "Library Name",
-    "photoCount": 2,
-    "needsProcessing": false,
-    "locNumber": "PS3566.O5",
-    "status": "ACTIVE",
-    "grokipediaUrl": "https://..."
+    "lastModified": "2025-01-10T14:30:00"
   },
   {
     "id": 124,
-    "title": "2025-01-10_14:30:00",
-    "author": null,
-    "library": "Library Name",
-    "photoCount": 1,
-    "needsProcessing": true,
-    "locNumber": null,
-    "status": "ACTIVE",
-    "grokipediaUrl": null
+    "lastModified": "2025-01-10T15:00:00"
   }
 ]
 ```
 
-**Fields:**
-- `id` - Book ID
-- `title` - Book title (temporary titles start with date pattern YYYY-MM-DD)
-- `author` - Author name (optional)
-- `library` - Library name (optional)
-- `photoCount` - Number of photos associated with book
-- `needsProcessing` - true if title matches temporary date pattern (YYYY-M-D or YYYY-MM-DD at start)
-- `locNumber` - Library of Congress call number (optional)
-- `status` - Book status (ACTIVE, ON_ORDER, LOST)
-- `grokipediaUrl` - Grokipedia URL (optional)
+**Use Case:**
+- Books page "Most Recent Day" filter
+- Cache validation: compare lastModified with cached data, fetch only changed books
+
+---
+
+### GET /api/books/without-loc
+Returns book summaries for books without a Library of Congress call number.
+
+**Authentication:** Public (permitAll)
+
+**Response:** Array of BookSummaryDto
+```json
+[
+  {
+    "id": 123,
+    "lastModified": "2025-01-10T14:30:00"
+  }
+]
+```
 
 **Use Case:**
-- View recently added books
-- Identify books needing AI processing (needsProcessing=true)
-- Books page "Most Recent Day" filter
+- Books page "Without LOC" filter
+- Identify books that need LOC number assignment
+
+---
+
+### GET /api/books/by-3letter-loc
+Returns book summaries for books with 3-letter LOC call number prefixes (e.g., "ABC 123.45").
+
+**Authentication:** Public (permitAll)
+
+**Response:** Array of BookSummaryDto
+```json
+[
+  {
+    "id": 123,
+    "lastModified": "2025-01-10T14:30:00"
+  }
+]
+```
+
+**Use Case:**
+- Books page "3-Letter LOC" filter
+- Identify books with potentially incorrect 3-letter LOC prefixes
+
+---
+
+### GET /api/books/without-grokipedia
+Returns book summaries for books without a Grokipedia URL.
+
+**Authentication:** Public (permitAll)
+
+**Response:** Array of BookSummaryDto
+```json
+[
+  {
+    "id": 123,
+    "lastModified": "2025-01-10T14:30:00"
+  }
+]
+```
+
+**Use Case:**
+- Books page "Without Grokipedia" filter
+- Identify books that need Grokipedia lookup
 
 ---
 

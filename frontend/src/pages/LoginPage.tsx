@@ -11,6 +11,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const login = useAuthStore((state) => state.login)
+  const getAndClearReturnUrl = useAuthStore((state) => state.getAndClearReturnUrl)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,7 +21,10 @@ export function LoginPage() {
 
     try {
       await login(username, password)
-      navigate('/books')
+
+      // Redirect to saved return URL or default to /books (Alternative 5: state parameter)
+      const returnUrl = getAndClearReturnUrl()
+      navigate(returnUrl || '/books')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {

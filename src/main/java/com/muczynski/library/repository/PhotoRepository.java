@@ -15,6 +15,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByBookIdOrderByPhotoOrder(Long bookId);
     List<Photo> findByAuthorIdOrderByPhotoOrder(Long authorId);
     List<Photo> findByAuthorId(Long authorId);
+    Optional<Photo> findByLoanId(Long loanId);
     Optional<Photo> findByPermanentId(String permanentId);
     Optional<Photo> findByImageChecksum(String imageChecksum);
     List<Photo> findByImageChecksumIsNull();

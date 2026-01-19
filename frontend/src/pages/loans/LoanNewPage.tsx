@@ -22,15 +22,20 @@ export function LoanNewPage() {
     borrower: searchParams.get('borrower') || '',
     checkoutDate: searchParams.get('checkoutDate') || '',
     dueDate: searchParams.get('dueDate') || '',
+    hasPhoto: searchParams.get('hasPhoto') === 'true',
   }
 
+  // Check for capture mode (checkout by photo/camera)
+  const captureMode = searchParams.get('captureMode') as 'file' | 'camera' | null
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <LoanFormPage
         title="Checkout Book"
         onSuccess={handleSuccess}
         onCancel={handleCancel}
         initialFilters={initialFilters}
+        captureMode={captureMode}
       />
     </div>
   )

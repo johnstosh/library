@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -52,6 +52,21 @@ function PageLoader() {
   )
 }
 
+// Home redirect component - handles OAuth return URL (Alternative 5: state parameter)
+function HomeRedirect() {
+  const navigate = useNavigate()
+  const getAndClearReturnUrl = useAuthStore((state) => state.getAndClearReturnUrl)
+
+  useEffect(() => {
+    // Check for saved return URL (from OAuth flow or API 401 redirect)
+    const returnUrl = getAndClearReturnUrl()
+    navigate(returnUrl || '/books', { replace: true })
+  }, [getAndClearReturnUrl, navigate])
+
+  // Show nothing while redirecting
+  return null
+}
+
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth)
 
@@ -73,7 +88,7 @@ function App() {
           {/* Protected routes (authenticated users) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
-              <Route path="/" element={<Navigate to="/books" replace />} />
+              <Route path="/" element={<HomeRedirect />} />
               <Route path="/books" element={<BooksPage />} />
               <Route path="/books/new" element={<BookNewPage />} />
               <Route path="/books/:id" element={<BookViewPage />} />

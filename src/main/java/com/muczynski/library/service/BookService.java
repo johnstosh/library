@@ -898,6 +898,53 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get summaries (id + lastModified) for books without LOC number.
+     * Used for cache validation in frontend.
+     */
+    public List<BookSummaryDto> getSummariesWithoutLocNumber() {
+        return bookRepository.findSummariesWithoutLocNumber().stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
+     * Used for cache validation in frontend.
+     */
+    public List<BookSummaryDto> getSummariesFromMostRecentDay() {
+        return bookRepository.findSummariesFromMostRecentDay().stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries (id + lastModified) for books with 3-letter LOC start.
+     * Used for cache validation in frontend.
+     */
+    public List<BookSummaryDto> getSummariesWith3LetterLocStart() {
+        return bookRepository.findSummariesWith3LetterLocStart().stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries (id + lastModified) for books without Grokipedia URL.
+     * Used for cache validation in frontend.
+     */
+    public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl() {
+        return bookRepository.findSummariesWithoutGrokipediaUrl().stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    private BookSummaryDto projectionToSummaryDto(BookRepository.BookSummaryProjection projection) {
+        BookSummaryDto dto = new BookSummaryDto();
+        dto.setId(projection.getId());
+        dto.setLastModified(projection.getLastModified());
+        return dto;
+    }
+
     public List<BookDto> getBooksByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();

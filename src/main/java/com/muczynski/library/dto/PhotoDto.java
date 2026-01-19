@@ -14,6 +14,7 @@ public class PhotoDto {
     private String caption;
     private Long bookId;
     private Long authorId;
+    private Long loanId;
     private String imageChecksum;
     private LocalDateTime dateTaken;
 }

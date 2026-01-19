@@ -112,6 +112,58 @@ public class PhotoService {
     }
 
     /**
+     * Add checkout card photo to a loan using raw image bytes
+     * Used by loan-by-photo feature to store the checkout card image
+     */
+    @Transactional
+    public PhotoDto addPhotoToLoan(Long loanId, byte[] imageBytes, String contentType) {
+        try {
+            Photo photo = new Photo();
+            // Note: Loan will be set by the caller (LoanService) after loan creation
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("Checkout card photo");
+            photo.setPhotoOrder(0);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added checkout card photo with checksum: {}", savedPhoto.getImageChecksum());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add checkout card photo: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to store checkout card photo: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Associate an existing photo with a loan
+     * Used after loan creation to link the checkout card photo to the loan
+     */
+    @Transactional
+    public void associatePhotoWithLoan(Long photoId, com.muczynski.library.domain.Loan loan) {
+        try {
+            Photo photo = photoRepository.findById(photoId)
+                    .orElseThrow(() -> new LibraryException("Photo not found"));
+            photo.setLoan(loan);
+            photoRepository.save(photo);
+            logger.info("Associated photo ID {} with loan ID {}", photoId, loan.getId());
+        } catch (Exception e) {
+            logger.error("Failed to associate photo with loan: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to associate photo with loan: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get photo associated with a loan
+     */
+    @Transactional(readOnly = true)
+    public PhotoDto getPhotoByLoanId(Long loanId) {
+        return photoRepository.findByLoanId(loanId)
+                .map(photoMapper::toDto)
+                .orElse(null);
+    }
+
+    /**
      * Add photo to book using raw image bytes, content type, and optional date taken
      * Used by books-from-feed when downloading photos from Google Photos with metadata
      */

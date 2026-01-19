@@ -13,10 +13,12 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_user_username", columnList = "username"),
-    @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
-})
+@Table(name = "users",
+    indexes = {
+        @Index(name = "idx_user_username", columnList = "username"),
+        @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
+    }
+)
 @Getter
 @Setter
 public class User implements Serializable {

@@ -7,11 +7,14 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
+import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.mapper.LoanMapper;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,9 @@ public class LoanService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PhotoRepository photoRepository;
+
     public LoanDto checkoutBook(LoanDto loanDto) {
         Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
         User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
@@ -59,6 +65,75 @@ public class LoanService {
         loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
         return loanMapper.toDto(savedLoan);
+    }
+
+    /**
+     * Checkout a book with an associated checkout card photo.
+     * The photo is stored and linked to the loan.
+     *
+     * @param loanDto The loan data
+     * @param imageBytes The checkout card photo bytes
+     * @param contentType The image content type (e.g., "image/jpeg")
+     * @return The created loan DTO with photo information
+     */
+    public LoanDto checkoutBookWithPhoto(LoanDto loanDto, byte[] imageBytes, String contentType) {
+        Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
+        User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
+
+        // Check if book is already on loan (has an active loan with no return date)
+        long activeLoans = loanRepository.countByBookIdAndReturnDateIsNull(book.getId());
+        if (activeLoans > 0) {
+            throw new BookAlreadyLoanedException(book.getId());
+        }
+
+        // Create the loan
+        Loan loan = new Loan();
+        loan.setBook(book);
+        loan.setUser(user);
+        loan.setLoanDate(loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now());
+        loan.setDueDate(loanDto.getDueDate() != null ? loanDto.getDueDate() : loan.getLoanDate().plusWeeks(2));
+        loan.setReturnDate(loanDto.getReturnDate());
+        Loan savedLoan = loanRepository.save(loan);
+
+        // Create and associate the checkout card photo
+        if (imageBytes != null && imageBytes.length > 0) {
+            Photo photo = new Photo();
+            photo.setLoan(savedLoan);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("Checkout card photo");
+            photo.setPhotoOrder(0);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+            photoRepository.save(photo);
+            logger.info("Created checkout card photo for loan ID {} with checksum {}", savedLoan.getId(), photo.getImageChecksum());
+        }
+
+        return loanMapper.toDto(savedLoan);
+    }
+
+    /**
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
     }
 
     public LoanDto returnBook(Long loanId) {
@@ -172,6 +247,11 @@ public class LoanService {
         if (!loanRepository.existsById(id)) {
             throw new LibraryException("Loan not found: " + id);
         }
+        // Delete any associated checkout card photos first to avoid FK constraint violation
+        photoRepository.findByLoanId(id).ifPresent(photo -> {
+            logger.info("Deleting checkout card photo {} for loan {}", photo.getId(), id);
+            photoRepository.delete(photo);
+        });
         loanRepository.deleteById(id);
     }
 }

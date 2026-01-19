@@ -291,90 +291,70 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksWithoutLocNumber() throws Exception {
-        BookDto book1 = new BookDto();
-        book1.setId(1L);
-        book1.setTitle("Book Without LOC");
-        book1.setLocNumber(null);
-        book1.setDateAddedToLibrary(LocalDateTime.now());
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        summary1.setLastModified(LocalDateTime.of(2025, 1, 1, 12, 0));
 
-        BookDto book2 = new BookDto();
-        book2.setId(2L);
-        book2.setTitle("Another Book Without LOC");
-        book2.setLocNumber("");
-        book2.setDateAddedToLibrary(LocalDateTime.now());
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+        summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getBooksWithoutLocNumber()).thenReturn(Arrays.asList(book1, book2));
+        when(bookService.getSummariesWithoutLocNumber()).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/without-loc"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].lastModified").exists())
+                .andExpect(jsonPath("$[1].id").value(2));
     }
 
     @Test
     @WithMockUser
     void getBooksFromMostRecentDay() throws Exception {
-        // getBooksFromMostRecentDay now returns SavedBookDto (efficient projection)
-        // and includes both most recent day books AND temporary title books
-        SavedBookDto book1 = SavedBookDto.builder()
-                .id(1L)
-                .title("Recent Book 1")
-                .author("Author 1")
-                .library("Library 1")
-                .photoCount(2L)
-                .needsProcessing(false)
-                .locNumber("PS3566.O5")
-                .status("ACTIVE")
-                .build();
+        // getBooksFromMostRecentDay now returns BookSummaryDto (id + lastModified)
+        // for cache validation - use /books/by-ids to fetch full data
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        summary1.setLastModified(LocalDateTime.of(2025, 1, 10, 14, 30));
 
-        SavedBookDto book2 = SavedBookDto.builder()
-                .id(2L)
-                .title("2025-01-10_14:30:00") // Temporary title - needsProcessing
-                .author(null)
-                .library("Library 1")
-                .photoCount(1L)
-                .needsProcessing(true)
-                .locNumber(null)
-                .status("ACTIVE")
-                .build();
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+        summary2.setLastModified(LocalDateTime.of(2025, 1, 10, 15, 0));
 
-        when(bookService.getBooksFromMostRecentDay()).thenReturn(Arrays.asList(book1, book2));
+        when(bookService.getSummariesFromMostRecentDay()).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/most-recent-day"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].needsProcessing").value(false))
+                .andExpect(jsonPath("$[0].lastModified").exists())
                 .andExpect(jsonPath("$[1].id").value(2))
-                .andExpect(jsonPath("$[1].needsProcessing").value(true));
+                .andExpect(jsonPath("$[1].lastModified").exists());
     }
 
     @Test
     @WithMockUser
     void getBooksWith3LetterLocStart() throws Exception {
-        LocalDateTime recentDate = LocalDateTime.now();
-        BookDto book1 = new BookDto();
-        book1.setId(1L);
-        book1.setTitle("Book with ABC LOC");
-        book1.setLocNumber("ABC 123.45");
-        book1.setDateAddedToLibrary(recentDate);
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        summary1.setLastModified(LocalDateTime.of(2025, 1, 1, 12, 0));
 
-        BookDto book2 = new BookDto();
-        book2.setId(2L);
-        book2.setTitle("Book with XYZ LOC");
-        book2.setLocNumber("XYZ .A1");
-        book2.setDateAddedToLibrary(recentDate);
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+        summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getBooksWith3LetterLocStart()).thenReturn(Arrays.asList(book2, book1));
+        when(bookService.getSummariesWith3LetterLocStart()).thenReturn(Arrays.asList(summary2, summary1));
 
         mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].title").value("Book with XYZ LOC"))
-                .andExpect(jsonPath("$[1].title").value("Book with ABC LOC"));
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[1].id").value(1));
     }
 
     @Test
     @WithMockUser
     void getBooksWith3LetterLocStartEmpty() throws Exception {
-        when(bookService.getBooksWith3LetterLocStart()).thenReturn(Collections.emptyList());
+        when(bookService.getSummariesWith3LetterLocStart()).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk());
@@ -383,31 +363,27 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksWithoutGrokipediaUrl() throws Exception {
-        BookDto book1 = new BookDto();
-        book1.setId(1L);
-        book1.setTitle("Book Without Grokipedia URL");
-        book1.setGrokipediaUrl(null);
-        book1.setDateAddedToLibrary(LocalDateTime.now());
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        summary1.setLastModified(LocalDateTime.of(2025, 1, 1, 12, 0));
 
-        BookDto book2 = new BookDto();
-        book2.setId(2L);
-        book2.setTitle("Another Book Without Grokipedia URL");
-        book2.setGrokipediaUrl("");
-        book2.setDateAddedToLibrary(LocalDateTime.now());
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+        summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getBooksWithoutGrokipediaUrl()).thenReturn(Arrays.asList(book1, book2));
+        when(bookService.getSummariesWithoutGrokipediaUrl()).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].title").value("Book Without Grokipedia URL"))
-                .andExpect(jsonPath("$[1].title").value("Another Book Without Grokipedia URL"));
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[1].id").value(2));
     }
 
     @Test
     @WithMockUser
     void getBooksWithoutGrokipediaUrlEmpty() throws Exception {
-        when(bookService.getBooksWithoutGrokipediaUrl()).thenReturn(Collections.emptyList());
+        when(bookService.getSummariesWithoutGrokipediaUrl()).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
