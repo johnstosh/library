@@ -40,7 +40,7 @@ class ImportControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
@@ -52,7 +52,7 @@ class ImportControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private AuthorityRepository authorityRepository;
 
     @Autowired
     private LoanRepository loanRepository;
@@ -64,15 +64,15 @@ class ImportControllerIntegrationTest {
     private Author testAuthor;
     private Book testBook;
     private User testUser;
-    private Role testRole;
+    private Authority testAuthority;
 
     @BeforeEach
     void setUp() {
         // Create test library
         testLibrary = new Library();
-        testLibrary.setName("Test Library");
-        testLibrary.setHostname("test.library.com");
-        testLibrary = libraryRepository.save(testLibrary);
+        testLibrary.setBranchName("Test Library");
+        testLibrary.setLibrarySystemName("Test Library System");
+        testLibrary = branchRepository.save(testLibrary);
 
         // Create test author
         testAuthor = new Author();
@@ -95,19 +95,18 @@ class ImportControllerIntegrationTest {
         testBook.setLibrary(testLibrary);
         testBook = bookRepository.save(testBook);
 
-        // Create test role
-        testRole = new Role();
-        testRole.setName("LIBRARIAN");
-        testRole = roleRepository.save(testRole);
+        // Get existing LIBRARIAN authority from data-base.sql
+        testAuthority = authorityRepository.findByName("LIBRARIAN")
+                .orElseThrow(() -> new RuntimeException("LIBRARIAN authority not found"));
 
-        // Create test user with roles
+        // Create test user with authorities
         testUser = new User();
         testUser.setUserIdentifier("test-user-id");
         testUser.setUsername("testuser");
         testUser.setPassword("$2a$10$hashedpassword");
-        Set<Role> roles = new HashSet<>();
-        roles.add(testRole);
-        testUser.setRoles(roles);
+        Set<Authority> authorities = new HashSet<>();
+        authorities.add(testAuthority);
+        testUser.setAuthorities(authorities);
         testUser = userRepository.save(testUser);
     }
 
@@ -115,6 +114,7 @@ class ImportControllerIntegrationTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_WithCompleteData() throws Exception {
         // This test verifies that export works with books having author and library associations
+        // New format: books export authorName (string reference) instead of embedded author object
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -122,9 +122,10 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.authors", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.books", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.users", hasSize(greaterThanOrEqualTo(1))))
-                // Verify book has author and library data loaded (no lazy loading exception)
-                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].author.name", hasItem("Test Author")))
+                // Verify book has authorName (string reference) and libraryName
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].authorName", hasItem("Test Author")))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].libraryName", hasItem("Test Library")));
+                // Note: embedded author object is omitted via @JsonInclude(NON_NULL)
     }
 
     @Test
@@ -138,17 +139,18 @@ class ImportControllerIntegrationTest {
         loan.setDueDate(LocalDate.now().plusWeeks(2));
         loanRepository.save(loan);
 
-        // This test verifies that loans with nested book/author/library/user associations work
+        // This test verifies that loans export reference fields (new format)
+        // instead of embedded book/user objects
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.loans", hasSize(greaterThanOrEqualTo(1))))
-                // Verify loan has book data with nested author
-                .andExpect(jsonPath("$.loans[0].book.title", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].book.author.name", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].book.libraryName", notNullValue()))
-                // Verify loan has user data with roles
-                .andExpect(jsonPath("$.loans[0].user.username", notNullValue()))
-                .andExpect(jsonPath("$.loans[0].user.roles", notNullValue()));
+                // Verify loan has reference fields (new format)
+                .andExpect(jsonPath("$.loans[0].bookTitle", notNullValue()))
+                .andExpect(jsonPath("$.loans[0].bookAuthorName", notNullValue()))
+                .andExpect(jsonPath("$.loans[0].username", notNullValue()))
+                // Verify embedded objects are NOT included (new format)
+                .andExpect(jsonPath("$.loans[0].book").doesNotExist())
+                .andExpect(jsonPath("$.loans[0].user").doesNotExist());
     }
 
     @Test
@@ -172,12 +174,19 @@ class ImportControllerIntegrationTest {
         authorPhoto.setPhotoOrder(1);
         photoRepository.save(authorPhoto);
 
-        // IMPORTANT: Photos are NOT exported in JSON export (too large)
-        // Photos should be managed separately via Photo Export feature
-        // This test verifies that photos field is null in the export
+        // Photo metadata IS exported in JSON export (binary data excluded)
+        // This test verifies that photos field includes metadata with permanent IDs
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.photos").doesNotExist());
+                .andExpect(jsonPath("$.photos", hasSize(2)))
+                // Verify book photo metadata
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].contentType", hasItem("image/jpeg")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].caption", hasItem("Test book cover")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].bookTitle", hasItem("Test Book")))
+                .andExpect(jsonPath("$.photos[?(@.permanentId=='test-permanent-id')].bookAuthorName", hasItem("Test Author")))
+                // Verify author-only photo metadata
+                .andExpect(jsonPath("$.photos[?(@.caption=='Author portrait')].contentType", hasItem("image/png")))
+                .andExpect(jsonPath("$.photos[?(@.caption=='Author portrait')].authorName", hasItem("Test Author")));
     }
 
     @Test
@@ -215,9 +224,9 @@ class ImportControllerIntegrationTest {
             user.setUserIdentifier("user-" + i);
             user.setUsername("user" + i);
             user.setPassword("$2a$10$hash" + i);
-            Set<Role> roles = new HashSet<>();
-            roles.add(testRole);
-            user.setRoles(roles);
+            Set<Authority> authorities = new HashSet<>();
+            authorities.add(testAuthority);
+            user.setAuthorities(authorities);
             user = userRepository.save(user);
 
             Loan loan = new Loan();
@@ -248,44 +257,50 @@ class ImportControllerIntegrationTest {
         // No author set
         bookRepository.save(bookNoAuthor);
 
-        // This test verifies that books without authors are exported correctly
+        // This test verifies that books without authors are exported correctly (new format)
+        // authorName field is omitted when null (via @JsonInclude(NON_NULL))
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')]", hasSize(1)))
-                .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')].author", hasItem(nullValue())));
+                .andExpect(jsonPath("$.books[?(@.title=='Anonymous Book')].libraryName", hasItem("Test Library")));
+                // Note: authorName is omitted from JSON when null via @JsonInclude(NON_NULL)
     }
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_UserWithMultipleRoles() throws Exception {
-        // Create additional role
-        Role adminRole = new Role();
-        adminRole.setName("ADMIN");
-        adminRole = roleRepository.save(adminRole);
+    void testExportJson_UserWithMultipleAuthorities() throws Exception {
+        // Create additional authority
+        Authority adminAuthority = new Authority();
+        adminAuthority.setName("ADMIN");
+        adminAuthority = authorityRepository.save(adminAuthority);
 
-        // Create user with multiple roles
-        User multiRoleUser = new User();
-        multiRoleUser.setUserIdentifier("multi-role-user");
-        multiRoleUser.setUsername("multiroleuser");
-        multiRoleUser.setPassword("$2a$10$hashedpw");
-        Set<Role> roles = new HashSet<>();
-        roles.add(testRole);
-        roles.add(adminRole);
-        multiRoleUser.setRoles(roles);
-        userRepository.save(multiRoleUser);
+        // Create user with multiple authorities
+        User multiAuthorityUser = new User();
+        multiAuthorityUser.setUserIdentifier("multi-authority-user");
+        multiAuthorityUser.setUsername("multiauthorityuser");
+        multiAuthorityUser.setPassword("$2a$10$hashedpw");
+        Set<Authority> authorities = new HashSet<>();
+        authorities.add(testAuthority);
+        authorities.add(adminAuthority);
+        multiAuthorityUser.setAuthorities(authorities);
+        userRepository.save(multiAuthorityUser);
 
         // Create a loan for this user
         Loan loan = new Loan();
         loan.setBook(testBook);
-        loan.setUser(multiRoleUser);
+        loan.setUser(multiAuthorityUser);
         loan.setLoanDate(LocalDate.now());
         loan.setDueDate(LocalDate.now().plusWeeks(2));
         loanRepository.save(loan);
 
-        // This test verifies that users with multiple roles are exported correctly
+        // This test verifies that users with multiple authorities are exported correctly
+        // New format: loans have username reference, users are exported separately with authorities
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.loans[?(@.user.username=='multiroleuser')].user.roles", hasItem(hasSize(2))));
+                // Verify loan has username reference (new format)
+                .andExpect(jsonPath("$.loans[?(@.username=='multiauthorityuser')]", hasSize(1)))
+                // Verify user is exported in users array with multiple authorities
+                .andExpect(jsonPath("$.users[?(@.username=='multiauthorityuser')].authorities", hasItem(hasSize(2))));
     }
 
     @Test
@@ -301,5 +316,206 @@ class ImportControllerIntegrationTest {
         // Test that users without LIBRARIAN authority are forbidden
         mockMvc.perform(get("/api/import/json"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ==================== GET /api/import/stats Integration Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ReturnsCorrectCounts() throws Exception {
+        // The setUp creates 1 library, 1 author, 1 book, 1 user (plus seeded data)
+        // This test verifies that the stats endpoint returns actual database counts
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.libraryCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.bookCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.authorCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.userCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.loanCount", greaterThanOrEqualTo(0)));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_IncludesNewData() throws Exception {
+        // Get initial counts
+        long initialBooks = bookRepository.count();
+        long initialAuthors = authorRepository.count();
+
+        // Create additional data
+        Author newAuthor = new Author();
+        newAuthor.setName("Stats Test Author");
+        newAuthor = authorRepository.save(newAuthor);
+
+        Book newBook1 = new Book();
+        newBook1.setTitle("Stats Test Book 1");
+        newBook1.setDateAddedToLibrary(LocalDateTime.now());
+        newBook1.setStatus(BookStatus.ACTIVE);
+        newBook1.setLibrary(testLibrary);
+        newBook1.setAuthor(newAuthor);
+        bookRepository.save(newBook1);
+
+        Book newBook2 = new Book();
+        newBook2.setTitle("Stats Test Book 2");
+        newBook2.setDateAddedToLibrary(LocalDateTime.now());
+        newBook2.setStatus(BookStatus.ACTIVE);
+        newBook2.setLibrary(testLibrary);
+        newBook2.setAuthor(newAuthor);
+        bookRepository.save(newBook2);
+
+        // Verify stats endpoint reflects the new data
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookCount", equalTo((int) (initialBooks + 2))))
+                .andExpect(jsonPath("$.authorCount", equalTo((int) (initialAuthors + 1))));
+    }
+
+    @Test
+    void testGetDatabaseStats_Unauthorized() throws Exception {
+        // Test that unauthenticated requests are rejected
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testGetDatabaseStats_Forbidden() throws Exception {
+        // Test that users without LIBRARIAN authority are forbidden
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ==================== Backward Compatibility Import Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_OldFormatWithEmbeddedAuthor() throws Exception {
+        // Test that old format with embedded author object is still supported
+        String oldFormatJson = """
+            {
+                "libraries": [{"branchName": "Legacy Library", "librarySystemName": "Legacy System"}],
+                "authors": [{"name": "Legacy Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Legacy Book",
+                    "libraryName": "Legacy Library",
+                    "author": {"name": "Legacy Author"}
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(oldFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the book was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Legacy Book", "Legacy Author").size() > 0,
+            "Book with embedded author format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_NewFormatWithAuthorName() throws Exception {
+        // Test new format with authorName field (string reference)
+        String newFormatJson = """
+            {
+                "libraries": [{"branchName": "Modern Library", "librarySystemName": "Modern System"}],
+                "authors": [{"name": "Modern Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Modern Book",
+                    "libraryName": "Modern Library",
+                    "authorName": "Modern Author"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the book was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Modern Book", "Modern Author").size() > 0,
+            "Book with authorName reference format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_OldFormatLoanWithEmbeddedObjects() throws Exception {
+        // Test that old format loans with embedded book/user objects are still supported
+        String oldFormatJson = """
+            {
+                "libraries": [{"branchName": "Loan Test Library", "librarySystemName": "Loan Test System"}],
+                "authors": [{"name": "Loan Test Author"}],
+                "users": [{"username": "loanuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "Loan Test Book",
+                    "libraryName": "Loan Test Library",
+                    "authorName": "Loan Test Author"
+                }],
+                "loans": [{
+                    "loanDate": "2025-01-01",
+                    "dueDate": "2025-01-15",
+                    "book": {
+                        "title": "Loan Test Book",
+                        "author": {"name": "Loan Test Author"}
+                    },
+                    "user": {"username": "loanuser"}
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(oldFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the loan was imported correctly
+        org.junit.jupiter.api.Assertions.assertTrue(
+            loanRepository.count() > 0,
+            "Loan with embedded objects format should be imported"
+        );
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_NewFormatLoanWithReferences() throws Exception {
+        // Test new format loans with reference fields
+        String newFormatJson = """
+            {
+                "libraries": [{"branchName": "New Loan Library", "librarySystemName": "New Loan System"}],
+                "authors": [{"name": "New Loan Author"}],
+                "users": [{"username": "newloanuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "New Loan Book",
+                    "libraryName": "New Loan Library",
+                    "authorName": "New Loan Author"
+                }],
+                "loans": [{
+                    "loanDate": "2025-01-05",
+                    "dueDate": "2025-01-19",
+                    "bookTitle": "New Loan Book",
+                    "bookAuthorName": "New Loan Author",
+                    "username": "newloanuser"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newFormatJson))
+                .andExpect(status().isOk());
+
+        // Verify the loan was imported correctly
+        java.util.List<Book> books = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("New Loan Book", "New Loan Author");
+        org.junit.jupiter.api.Assertions.assertTrue(books.size() > 0, "Book should exist");
     }
 }

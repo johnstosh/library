@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AuthorDto {
@@ -21,7 +23,10 @@ public class AuthorDto {
     private String birthCountry;
     private String nationality;
     private String briefBiography;
+    private String grokipediaUrl;
     private Long firstPhotoId;
     private String firstPhotoChecksum;
     private Long bookCount;
+    private LocalDateTime lastModified;
+    private List<BookDto> books;
 }

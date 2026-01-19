@@ -21,3 +21,7 @@ data/
 *.db
 *.mv.db
 *.trace.db
+
+
+# Frontend build output (copied from frontend/dist/)
+src/main/resources/static/

@@ -82,6 +82,10 @@ else
   STARTED_CONTAINER=true
 fi
 
+# Build the frontend first
+log "Building React frontend..."
+./build-frontend.sh
+
 # Build the Spring Boot JAR
 log "Building Spring Boot JAR..."
 ./gradlew clean build -x test

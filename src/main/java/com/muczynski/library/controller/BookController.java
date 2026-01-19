@@ -3,12 +3,21 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
+import com.muczynski.library.dto.SavedBookDto;
+import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
+import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +50,15 @@ public class BookController {
     @Autowired
     private GooglePhotosService googlePhotosService;
 
+    @Autowired
+    private AskGrok askGrok;
+
+    @Autowired
+    private GrokipediaLookupService grokipediaLookupService;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllBooks() {
@@ -65,14 +83,43 @@ public class BookController {
         }
     }
 
+    /**
+     * Get books from most recent 2 days OR with temporary titles (date-pattern titles).
+     * Uses efficient projection query - no N+1 queries.
+     * Returns SavedBookDto with id, title, author, library, photoCount, needsProcessing.
+     */
     @GetMapping("/most-recent-day")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksFromMostRecentDay() {
         try {
-            List<BookDto> books = bookService.getBooksFromMostRecentDay();
+            List<SavedBookDto> books = bookService.getBooksFromMostRecentDay();
             return ResponseEntity.ok(books);
         } catch (Exception e) {
-            logger.warn("Failed to retrieve books from most recent day: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve books from most recent 2 days: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/by-3letter-loc")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksWith3LetterLocStart() {
+        try {
+            List<BookDto> books = bookService.getBooksWith3LetterLocStart();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/without-grokipedia")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksWithoutGrokipediaUrl() {
+        try {
+            List<BookDto> books = bookService.getBooksWithoutGrokipediaUrl();
+            return ResponseEntity.ok(books);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books without Grokipedia URL: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -129,6 +176,25 @@ public class BookController {
         }
     }
 
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<BulkDeleteResultDto> deleteBulkBooks(@RequestBody List<Long> bookIds) {
+        BulkDeleteResultDto result = bookService.deleteBulkBooks(bookIds);
+        if (result.getFailedCount() > 0) {
+            logger.warn("Bulk delete partially failed: {} deleted, {} failed",
+                    result.getDeletedCount(), result.getFailedCount());
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/grokipedia-lookup-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(@RequestBody List<Long> bookIds) {
+        logger.info("Looking up Grokipedia URLs for {} books", bookIds.size());
+        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupBooks(bookIds);
+        return ResponseEntity.ok(results);
+    }
+
     @PostMapping("/{id}/clone")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> cloneBook(@PathVariable Long id) {
@@ -143,34 +209,39 @@ public class BookController {
 
     @PostMapping("/{bookId}/photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<PhotoDto> addPhotoToBook(@PathVariable Long bookId, @RequestParam("file") MultipartFile file) {
         try {
             PhotoDto created = photoService.addPhoto(bookId, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (Exception e) {
             logger.warn("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/{bookId}/photos/from-google-photos")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<PhotoAddFromGooglePhotosResponse> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
 
             if (photos == null || photos.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "No photos provided",
-                        "savedCount", 0
-                ));
+                PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+                response.setSavedCount(0);
+                response.setFailedCount(0);
+                response.setSavedPhotos(Collections.emptyList());
+                response.setFailedPhotos(Collections.singletonList(Map.of("error", "No photos provided")));
+                return ResponseEntity.badRequest().body(response);
             }
 
             // Get valid access token for downloading photos
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            String accessToken = googlePhotosService.getValidAccessToken(username);
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new LibraryException("User not found"));
+            String accessToken = googlePhotosService.getValidAccessToken(user);
 
             List<PhotoDto> savedPhotos = new ArrayList<>();
             List<Map<String, Object>> failedPhotos = new ArrayList<>();
@@ -202,79 +273,81 @@ public class BookController {
                 }
             }
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "savedCount", savedPhotos.size(),
-                    "failedCount", failedPhotos.size(),
-                    "savedPhotos", savedPhotos,
-                    "failedPhotos", failedPhotos
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(savedPhotos.size());
+            response.setFailedCount(failedPhotos.size());
+            response.setSavedPhotos(savedPhotos);
+            response.setFailedPhotos(failedPhotos);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (Exception e) {
             logger.error("Failed to add photos from Google Photos to book {}: {}", bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", e.getMessage(),
-                    "savedCount", 0
-            ));
+            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
+            response.setSavedCount(0);
+            response.setFailedCount(0);
+            response.setSavedPhotos(Collections.emptyList());
+            response.setFailedPhotos(Collections.singletonList(Map.of("error", e.getMessage())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @GetMapping("/{bookId}/photos")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getPhotosByBook(@PathVariable Long bookId) {
+    public ResponseEntity<List<PhotoDto>> getPhotosByBook(@PathVariable Long bookId) {
         try {
             List<PhotoDto> photos = photoService.getPhotosByBookId(bookId);
             return ResponseEntity.ok(photos);
         } catch (Exception e) {
             logger.warn("Failed to retrieve photos for book ID {}: {}", bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
+    public ResponseEntity<PhotoDto> updatePhoto(@PathVariable Long bookId, @PathVariable Long photoId, @RequestBody PhotoDto photoDto) {
         try {
             PhotoDto updated = photoService.updatePhoto(photoId, photoDto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to update photo ID {} for book ID {} with DTO {}: {}", photoId, bookId, photoDto, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @DeleteMapping("/{bookId}/photos/{photoId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> deletePhoto(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.deletePhoto(photoId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             logger.warn("Failed to delete photo ID {} for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-cw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCW(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.rotatePhoto(photoId, true);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/rotate-ccw")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> rotatePhotoCCW(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.rotatePhoto(photoId, false);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to rotate photo ID {} counter-clockwise for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -292,19 +365,19 @@ public class BookController {
 
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getTitleAuthorFromPhoto(@PathVariable Long id) {
+    public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.getTitleAuthorFromPhoto(id);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{id}/book-from-title-author")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<BookDto> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
         try {
             String title = request.get("title");
             String authorName = request.get("authorName");
@@ -312,31 +385,31 @@ public class BookController {
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-left")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> movePhotoLeft(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.movePhotoLeft(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-right")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> movePhotoRight(@PathVariable Long bookId, @PathVariable Long photoId) {
         try {
             photoService.movePhotoRight(bookId, photoId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -361,6 +434,27 @@ public class BookController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/suggest-loc")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> suggestLocNumber(@RequestBody Map<String, String> request) {
+        try {
+            String title = request.get("title");
+            String author = request.get("author");
+
+            if (title == null || title.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Title is required"));
+            }
+
+            String suggestion = askGrok.suggestLocNumber(title, author);
+            return ResponseEntity.ok(Map.of("suggestion", suggestion));
+        } catch (Exception e) {
+            logger.warn("Failed to get LOC suggestion for title '{}': {}",
+                    request.get("title"), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

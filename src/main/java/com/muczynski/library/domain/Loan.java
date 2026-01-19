@@ -8,8 +8,14 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
+@Table(indexes = {
+    @Index(name = "idx_loan_book_return", columnList = "book_id, return_date"),
+    @Index(name = "idx_loan_user_return", columnList = "user_id, return_date"),
+    @Index(name = "idx_loan_due_date", columnList = "due_date")
+})
 @Getter
 @Setter
 public class Loan {
@@ -28,4 +34,12 @@ public class Loan {
     private LocalDate dueDate = LocalDate.now().plusWeeks(2);
 
     private LocalDate returnDate;
+
+    private LocalDateTime lastModified;
+
+    @PreUpdate
+    @PrePersist
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
 }

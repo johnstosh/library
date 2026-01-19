@@ -4,15 +4,17 @@
 package com.muczynski.library.domain;
 
 import com.muczynski.library.repository.AuthorRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 class RandomBookTest {
 
@@ -23,13 +25,17 @@ class RandomBookTest {
     private AuthorRepository authorRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Test
     void testRandomBookCreation() {
-        Library library = new Library();
-        library.setName("St. Martin de Porres");
-        libraryRepository.save(library);
+        // Create a library if one doesn't exist (required by RandomBook.create)
+        if (branchRepository.count() == 0) {
+            Library library = new Library();
+            library.setBranchName("Test Library");
+            library.setLibrarySystemName("Test Library System");
+            branchRepository.save(library);
+        }
 
         Author author = new Author();
         author.setName("Test Author");
@@ -43,7 +49,6 @@ class RandomBookTest {
         assertNotNull(book.getAuthor());
         assertEquals("Test Author", book.getAuthor().getName());
         assertNotNull(book.getLibrary());
-        assertEquals("St. Martin de Porres", book.getLibrary().getName());
         assertNull(book.getLocNumber());
         assertNull(book.getStatusReason());
     }

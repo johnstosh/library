@@ -4,13 +4,17 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
+import com.muczynski.library.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -50,6 +54,12 @@ class LoanControllerTest {
     @MockitoBean
     private LoanService loanService;
 
+    @MockitoBean
+    private UserService userService;
+
+    @MockitoBean
+    private CheckoutCardTranscriptionService checkoutCardTranscriptionService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -74,16 +84,16 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testCheckoutBook_Success_AsRegularUser() throws Exception {
         // Regular users can checkout books (to themselves)
         LoanDto inputDto = new LoanDto();
         inputDto.setBookId(1L);
-        inputDto.setUserId(2L);  // Their own user ID
+        inputDto.setUserId(1L);  // Their own user ID
         LoanDto returnedDto = new LoanDto();
         returnedDto.setId(1L);
         returnedDto.setBookId(1L);
-        returnedDto.setUserId(2L);
+        returnedDto.setUserId(1L);
         when(loanService.checkoutBook(any(LoanDto.class))).thenReturn(returnedDto);
 
         mockMvc.perform(post("/api/loans/checkout")
@@ -126,14 +136,14 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetAllLoans_Success_AsRegularUser() throws Exception {
         // Regular users see only their own loans
         LoanDto dto = new LoanDto();
         dto.setId(1L);
         dto.setBookId(1L);
         dto.setUserId(2L);
-        when(loanService.getLoansByUsername(eq("testuser"), eq(false)))
+        when(loanService.getLoansByUserId(eq(1L), eq(false)))
                 .thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/loans"))
@@ -141,7 +151,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetAllLoans_RegularUserSeesOnlyOwnLoans() throws Exception {
         // Verify regular user gets filtered results
         LoanDto ownLoan = new LoanDto();
@@ -149,7 +159,7 @@ class LoanControllerTest {
         ownLoan.setBookId(1L);
         ownLoan.setUserId(2L);
 
-        when(loanService.getLoansByUsername(eq("testuser"), eq(false)))
+        when(loanService.getLoansByUserId(eq(1L), eq(false)))
                 .thenReturn(Collections.singletonList(ownLoan));
 
         mockMvc.perform(get("/api/loans"))
@@ -180,7 +190,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testGetLoanById_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot get loans by ID (librarian-only)
         mockMvc.perform(get("/api/loans/1"))
@@ -214,7 +224,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testUpdateLoan_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot update loans
         LoanDto inputDto = new LoanDto();
@@ -251,7 +261,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testDeleteLoan_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot delete loans
         mockMvc.perform(delete("/api/loans/1"))
@@ -278,7 +288,7 @@ class LoanControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser", authorities = "USER")
+    @WithMockUser(username = "1", authorities = "USER")
     void testReturnBook_Forbidden_AsRegularUser() throws Exception {
         // Regular users cannot return books (librarian-only)
         mockMvc.perform(put("/api/loans/return/1"))
@@ -289,5 +299,148 @@ class LoanControllerTest {
     void testReturnBook_Unauthorized() throws Exception {
         mockMvc.perform(put("/api/loans/return/1"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ==================== Additional Tests for Coverage ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetLoanById_NotFound() throws Exception {
+        when(loanService.getLoanById(999L)).thenReturn(null);
+
+        mockMvc.perform(get("/api/loans/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testReturnBook_NotFound() throws Exception {
+        when(loanService.returnBook(999L)).thenReturn(null);
+
+        mockMvc.perform(put("/api/loans/return/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testCheckoutBook_InvalidInput_MissingBookId() throws Exception {
+        LoanDto inputDto = new LoanDto();
+        inputDto.setUserId(1L);
+        // bookId is null - should fail validation
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testCheckoutBook_InvalidInput_MissingUserId() throws Exception {
+        LoanDto inputDto = new LoanDto();
+        inputDto.setBookId(1L);
+        // userId is null - should fail validation
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "USER")
+    void testCheckoutBook_Forbidden_CheckoutToDifferentUser() throws Exception {
+        // Regular user attempting to checkout a book to a different user
+        LoanDto inputDto = new LoanDto();
+        inputDto.setBookId(1L);
+        inputDto.setUserId(999L);  // Different user ID
+
+        mockMvc.perform(post("/api/loans/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    // ==================== POST /api/loans/transcribe-checkout-card Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_Success() throws Exception {
+        // Arrange
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        CheckoutCardTranscriptionDto result = new CheckoutCardTranscriptionDto();
+        result.setTitle("The Pushcart War");
+        result.setAuthor("Jean Merrill");
+        result.setCallNumber("PZ 7 .M5453 5");
+        result.setLastDate("1-17-26");
+        result.setLastIssuedTo("John");
+        result.setLastDue("1-31-26");
+
+        when(checkoutCardTranscriptionService.transcribeCheckoutCard(any(byte[].class), eq("image/jpeg")))
+                .thenReturn(result);
+
+        // Act & Assert - API returns camelCase JSON keys
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("The Pushcart War"))
+                .andExpect(jsonPath("$.author").value("Jean Merrill"))
+                .andExpect(jsonPath("$.callNumber").value("PZ 7 .M5453 5"))
+                .andExpect(jsonPath("$.lastDate").value("1-17-26"))
+                .andExpect(jsonPath("$.lastIssuedTo").value("John"))
+                .andExpect(jsonPath("$.lastDue").value("1-31-26"));
+    }
+
+    @Test
+    void testTranscribeCheckoutCard_Unauthorized() throws Exception {
+        // No authentication
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_EmptyFile() throws Exception {
+        // Empty photo file
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                new byte[0]
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void testTranscribeCheckoutCard_NotAnImage() throws Exception {
+        // Non-image file
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.txt",
+                "text/plain",
+                "not an image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/loans/transcribe-checkout-card")
+                        .file(photo))
+                .andExpect(status().isBadRequest());
     }
 }

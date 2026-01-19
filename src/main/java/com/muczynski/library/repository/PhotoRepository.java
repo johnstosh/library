@@ -42,10 +42,16 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.permanentId IS NOT NULL AND p.permanentId <> '' AND p.imageChecksum IS NOT NULL")
     long countImportedPhotos();
 
-    @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL AND (p.permanentId IS NULL OR p.permanentId = '')")
+    // Pending Export: has checksum (local image) but no permanentId (not uploaded), excluding FAILED
+    @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL " +
+           "AND (p.permanentId IS NULL OR p.permanentId = '') " +
+           "AND (p.exportStatus IS NULL OR p.exportStatus <> com.muczynski.library.domain.Photo$ExportStatus.FAILED)")
     long countPendingExportPhotos();
 
-    @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.permanentId IS NOT NULL AND p.permanentId <> '' AND p.imageChecksum IS NULL")
+    // Pending Import: has permanentId (uploaded) but no checksum (no local image), excluding FAILED
+    @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.permanentId IS NOT NULL AND p.permanentId <> '' " +
+           "AND p.imageChecksum IS NULL " +
+           "AND (p.exportStatus IS NULL OR p.exportStatus <> com.muczynski.library.domain.Photo$ExportStatus.FAILED)")
     long countPendingImportPhotos();
 
     @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.exportStatus = :status")
@@ -85,5 +91,6 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     String findFirstPhotoChecksumByAuthorId(@Param("authorId") Long authorId);
 
     // Projection query that returns only metadata without image bytes - for export operations
-    List<PhotoMetadataProjection> findAllProjectedBy();
+    // Note: Using findBy() with no criteria returns all records with the projection type
+    List<PhotoMetadataProjection> findBy();
 }

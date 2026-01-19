@@ -35,6 +35,8 @@ public class BookMapper {
         bookDto.setPlotSummary(book.getPlotSummary());
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
+        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
+        bookDto.setFreeTextUrl(book.getFreeTextUrl());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bookDto.setLastModified(book.getLastModified());
         bookDto.setStatus(book.getStatus());
@@ -46,7 +48,7 @@ public class BookMapper {
         }
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
-            bookDto.setLibrary(book.getLibrary().getName()); // Set library name for display
+            bookDto.setLibrary(book.getLibrary().getBranchName()); // Set library branch name for display
         }
         // Use efficient queries to get first photo ID and checksum without loading photos collection
         Long firstPhotoId = photoRepository.findFirstPhotoIdByBookId(book.getId());
@@ -76,6 +78,8 @@ public class BookMapper {
         book.setPlotSummary(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
+        book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
+        book.setFreeTextUrl(bookDto.getFreeTextUrl());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
         book.setLastModified(bookDto.getLastModified());
         book.setStatus(bookDto.getStatus());

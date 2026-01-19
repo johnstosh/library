@@ -1,3 +1,4 @@
+/* (c) Copyright 2025 by Muczynski */
 package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
@@ -32,26 +33,15 @@ public class UserSettingsService {
     @Autowired
     private UserMapper userMapper;
 
-    private User findUserByUsername(String username) {
-        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found");
-        }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
-        return user;
-    }
-
-    public UserDto getUserSettings(String currentUsername) {
-        User user = findUserByUsername(currentUsername);
+    public UserDto getUserSettings(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
         return userMapper.toDto(user);
     }
 
-    public UserDto updateUserSettings(String currentUsername, UserSettingsDto userSettingsDto) {
-        User user = findUserByUsername(currentUsername);
+    public UserDto updateUserSettings(Long userId, UserSettingsDto userSettingsDto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         if (StringUtils.hasText(userSettingsDto.getUsername()) && !userSettingsDto.getUsername().equalsIgnoreCase(user.getUsername())) {
             if (!userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(userSettingsDto.getUsername()).isEmpty()) {
@@ -65,6 +55,18 @@ public class UserSettingsService {
             if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getPassword())) {
                 throw new LibraryException("Invalid password format - expected SHA-256 hash");
             }
+
+            // If changing password, verify current password if provided
+            if (StringUtils.hasText(userSettingsDto.getCurrentPassword())) {
+                if (!PasswordHashingUtil.isValidSHA256Hash(userSettingsDto.getCurrentPassword())) {
+                    throw new LibraryException("Invalid current password format - expected SHA-256 hash");
+                }
+                // Verify current password matches
+                if (!passwordEncoder.matches(userSettingsDto.getCurrentPassword(), user.getPassword())) {
+                    throw new LibraryException("Current password is incorrect");
+                }
+            }
+
             user.setPassword(passwordEncoder.encode(userSettingsDto.getPassword()));
         }
 
@@ -75,6 +77,14 @@ public class UserSettingsService {
 
         if (userSettingsDto.getGooglePhotosApiKey() != null) {
             user.setGooglePhotosApiKey(userSettingsDto.getGooglePhotosApiKey());
+        }
+
+        if (userSettingsDto.getGooglePhotosRefreshToken() != null) {
+            user.setGooglePhotosRefreshToken(userSettingsDto.getGooglePhotosRefreshToken());
+        }
+
+        if (userSettingsDto.getGooglePhotosTokenExpiry() != null) {
+            user.setGooglePhotosTokenExpiry(userSettingsDto.getGooglePhotosTokenExpiry());
         }
 
         if (userSettingsDto.getGoogleClientSecret() != null) {
@@ -97,8 +107,9 @@ public class UserSettingsService {
         return userMapper.toDto(savedUser);
     }
 
-    public void deleteUser(String currentUsername) {
-        User user = findUserByUsername(currentUsername);
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
         userRepository.delete(user);
     }
 }

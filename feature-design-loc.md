@@ -24,18 +24,20 @@ The application integrates with the Library of Congress to look up and manage ca
 ### Lookup Strategies
 The service attempts multiple strategies to find LOC call numbers:
 
-1. **ISBN + Author lookup**: Primary strategy
-2. **Title-only fallback**: If ISBN + author fails
-3. **Truncated title + author**: For long titles
-4. **Truncated title-only**: Last resort
+1. **Title + Author lookup**: Primary strategy (uses book title and author name if available)
+2. **Title-only fallback**: If author is not available or title + author fails
+3. **Truncated title + author**: For long titles (truncates to first 50 characters)
+4. **Truncated title-only**: Last resort (truncated title without author)
 
 Each strategy updates the book's `locNumber` and `lastModified` fields on success.
+
+**Note**: The Book entity does not have an ISBN field. All lookups are based on title and author information.
 
 ## LOC Number Formatting
 
 ### Display Format
 - Use `formatLocForSpine()` in `utils.js` for displaying LOC call numbers
-- Formats call numbers appropriately for spine labels
+- Formats call numbers appropriately for book pocket labels
 - Handles multi-line formatting for PDF labels
 
 ### Sorting
@@ -44,24 +46,49 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Example: "PS3545.H16" should sort correctly relative to "PS3545.A1"
 
 ## PDF Label Generation
-- Spine labels for books with LOC call numbers
+- Book pocket labels for books with LOC call numbers
 - Service: `LabelsPdfService` using iText 8
 - Custom formatting for LOC numbers on labels
-- Endpoint: `/api/labels/pdf` (librarian only)
+- Endpoint: `GET /api/labels/generate?bookIds={ids}` (librarian only)
+- Accessible via "Generate Labels" button in Books page bulk actions toolbar
 
 ## Book Filtering
 
 ### Books Without LOC
 - Endpoint: `GET /api/books/without-loc`
-- Filter button in Books table UI
+- Authorization: Public (permitAll)
+- Filter button in Books page bulk actions toolbar
 - Shows all books missing LOC call numbers
+- Returns: Full `BookDto` objects
 - Query: `SELECT b WHERE b.locNumber IS NULL OR b.locNumber = ''`
 
-### Most Recent Day
+### Most Recent Day (+ Temporary Titles)
 - Endpoint: `GET /api/books/most-recent-day`
-- Filter button in Books table UI
-- Shows books added on the most recent date
-- Useful for processing newly imported books
+- Also accessible via: `GET /api/books-from-feed/saved-books` (requires LIBRARIAN)
+- Authorization: Public (permitAll)
+- Filter button in Books page bulk actions toolbar
+- Shows books added in the most recent 2 days OR books with temporary titles
+- Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start (e.g., "2025-01-10_14:30:00")
+- Returns: `SavedBookDto` objects (efficient projection, no N+1 queries)
+  - Includes: id, title, author, library, photoCount, needsProcessing, locNumber, status, grokipediaUrl
+  - `needsProcessing` is true for temporary title books
+- Useful for processing newly imported books from Google Photos feed
+- Includes 2 days to handle timezone differences and ensure recently added books are not missed
+
+### Books Without Grokipedia URL
+- Endpoint: `GET /api/books/without-grokipedia`
+- Authorization: Public (permitAll)
+- Radio button filter in Books page
+- Shows all books missing Grokipedia URL
+- Returns: Full `BookDto` objects
+- Query: `SELECT b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''`
+- Useful for identifying books that need Grokipedia article links
+
+### All Books with LOC Status
+- Endpoint: `GET /api/loc-bulk-lookup/books`
+- Authorization: LIBRARIAN only
+- Shows all books with their current LOC status
+- Returns: `BookLocStatusDto` objects (specialized for LOC bulk lookup operations)
 
 ## Implementation Details
 
@@ -72,32 +99,89 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 
 ### Repository Layer
 - `BookRepository.findBooksWithoutLocNumber()` - Find books needing LOC numbers
+- `BookRepository.findBooksWithoutGrokipediaUrl()` - Find books without Grokipedia URL
 - Uses LEFT JOIN FETCH for performance
 
 ### Frontend
-- `js/loc-bulk-lookup.js` - Bulk lookup UI (currently hidden from menu)
-- `js/books-table.js` - Individual lookup buttons in table
-- `js/labels.js` - PDF label generation UI
-- `js/utils.js` - `formatLocForSpine()` utility function
+- `frontend/src/pages/books/components/BookTable.tsx` - Individual lookup buttons in table
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Bulk lookup UI and "Generate Labels" button
+- `frontend/src/utils/formatters.ts` - `formatLocForSpine()` utility function
 
 ## UI Integration
 
 ### Books Table
-- Individual "Lookup" button per book (librarian only)
-- Shows LOC number in table with special formatting
-- Filter buttons: "Books Without LOC", "Books from Most Recent Day", "All Books"
-- LOC numbers displayed as green `<code>` blocks when present
+- Individual "Lookup" button per book (librarian only) - purple magnifying glass icon
+- Shows LOC number in table column
+- Results displayed in modal dialog after lookup
+- Filter buttons available in bulk actions toolbar
 
 ### Menu Items
-- LOC Lookup section currently hidden from main menu
-  - Functionality replaced by individual lookup buttons
-  - Can be re-enabled by uncommenting in `index.html`
-- Labels section visible in menu (for PDF generation)
+- Individual LOC lookup buttons integrated into Books table (librarian only)
+- Bulk lookup functionality available in Books page bulk actions toolbar
+- "Generate Labels" button in Books page bulk actions toolbar (for PDF generation, librarian only)
 
 ## Related Files
-- `LocBulkLookupService.java` - Core lookup logic
-- `LabelsPdfService.java` - PDF generation for spine labels
-- `BookRepository.java` - Queries for books without LOC
-- `books-table.js` - UI for individual lookup buttons
-- `loc-bulk-lookup.js` - UI for bulk lookup (hidden)
-- `labels.js` - UI for PDF label generation
+- `src/main/java/com/muczynski/library/service/LocBulkLookupService.java` - Core lookup logic
+- `src/main/java/com/muczynski/library/service/LabelsPdfService.java` - PDF generation for book pocket labels
+- `src/main/java/com/muczynski/library/repository/BookRepository.java` - Queries for books without LOC
+- `frontend/src/pages/books/components/BookTable.tsx` - UI for individual lookup buttons
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - UI for bulk lookup and "Generate Labels" button
+
+---
+
+# Grokipedia URL Lookup
+
+## Overview
+The application can automatically discover Grokipedia article URLs for books and authors. This helps populate the `grokipediaUrl` field by checking if a page exists on grokipedia.com.
+
+## How It Works
+
+### URL Generation
+- Grokipedia URLs follow the pattern: `https://grokipedia.com/page/{Name_With_Underscores}`
+- Spaces in book titles or author names are converted to underscores
+- Example: "Little Women" → `https://grokipedia.com/page/Little_Women`
+- Example: "Louisa May Alcott" → `https://grokipedia.com/page/Louisa_May_Alcott`
+
+### URL Validation
+- The service makes a HEAD request to the generated URL
+- If the response is 2xx (success), the URL is saved to the entity
+- If the response is 4xx (not found), the URL is not saved
+- Each lookup attempt logs its result for debugging
+
+## Endpoints
+
+### Books Bulk Lookup
+- Endpoint: `POST /api/books/grokipedia-lookup-bulk`
+- Authorization: LIBRARIAN only
+- Request Body: `List<Long>` (book IDs to look up)
+- Response: `List<GrokipediaLookupResultDto>` with success/failure for each book
+- Looks up selected books regardless of existing `grokipediaUrl` value
+
+### Authors Bulk Lookup
+- Endpoint: `POST /api/authors/grokipedia-lookup-bulk`
+- Authorization: LIBRARIAN only
+- Request Body: `List<Long>` (author IDs to look up)
+- Response: `List<GrokipediaLookupResultDto>` with success/failure for each author
+- Looks up selected authors regardless of existing `grokipediaUrl` value
+
+## Frontend Integration
+
+### Books Page
+- "Find Grokipedia URLs" button in `BulkActionsToolbar`
+- Visible when books are selected
+- Shows results in `GrokipediaLookupResultsModal`
+- Results show success/failure count and individual results with URLs
+
+### Authors Page
+- "Find Grokipedia URLs" button in bulk actions bar
+- Visible when authors are selected
+- Shows results in `GrokipediaLookupResultsModal`
+- Results show success/failure count and individual results with URLs
+
+## Implementation Files
+- `src/main/java/com/muczynski/library/service/GrokipediaLookupService.java` - Core lookup logic
+- `src/main/java/com/muczynski/library/dto/GrokipediaLookupResultDto.java` - Result DTO
+- `frontend/src/api/grokipedia-lookup.ts` - API hooks
+- `frontend/src/components/GrokipediaLookupResultsModal.tsx` - Results modal
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Books bulk action button
+- `frontend/src/pages/authors/AuthorsPage.tsx` - Authors bulk action button

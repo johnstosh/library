@@ -12,11 +12,11 @@ import java.util.List;
 public class LocCallNumberFormatter {
 
     /**
-     * Formats a LOC call number for display on a book spine label.
+     * Formats a LOC call number for display on a book pocket label.
      *
      * Each component of the call number is placed on its own line because
-     * library book spine labels have limited horizontal space. Breaking up
-     * the call number makes it easier to read vertically on the spine.
+     * library book pocket labels have limited horizontal space. Breaking up
+     * the call number makes it easier to read on the label.
      *
      * Examples:
      *   Input:  "BX 4705.M124 A77 2005"
@@ -110,10 +110,13 @@ public class LocCallNumberFormatter {
     }
 
     /**
-     * Formats a LOC call number for HTML display on a book spine label.
+     * Formats a LOC call number for HTML display on a book pocket label.
      *
      * Same as {@link #formatForSpine(String)} but uses HTML line breaks
      * instead of newline characters for web display.
+     *
+     * Note: The method name references "spine" for historical reasons, but
+     * this formatting is actually used for book pocket labels.
      *
      * @param locNumber the LOC call number to format
      * @return the formatted call number with HTML &lt;br&gt; tags between components,

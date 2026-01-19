@@ -55,19 +55,16 @@ public class GoogleOAuthController {
     private final Map<String, String> stateTokens = new ConcurrentHashMap<>();
 
     /**
-     * Find user by username, handling duplicates by using the one with lowest ID
+     * Get authenticated user ID from security context
+     * @return User ID
      */
-    private User findUserByUsername(String username) {
-        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found");
+    private Long getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("User must be logged in to authorize Google Photos");
         }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
-        return user;
+        // The principal name is the database user ID (not username)
+        return Long.parseLong(authentication.getName());
     }
 
     /**
@@ -77,11 +74,7 @@ public class GoogleOAuthController {
     public RedirectView authorize(@RequestParam("origin") String origin) {
         logger.info("OAuth authorization initiated from origin: {}", origin);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("OAuth authorization attempted without authentication");
-            throw new LibraryException("User must be logged in to authorize Google Photos");
-        }
+        Long userId = getAuthenticatedUserId();
 
         // Get effective client ID from global settings
         String effectiveClientId = globalSettingsService.getEffectiveClientId();
@@ -92,12 +85,11 @@ public class GoogleOAuthController {
 
         // Generate state token for CSRF protection
         String state = UUID.randomUUID().toString();
-        String username = authentication.getName();
 
-        logger.info("Generating OAuth state token for user: {}", username);
+        logger.info("Generating OAuth state token for user ID: {}", userId);
 
-        // Store both username and origin, separated by colon
-        stateTokens.put(state, username + ":" + origin);
+        // Store both userId and origin, separated by colon
+        stateTokens.put(state, userId + ":" + origin);
 
         // Build redirect URI from origin
         String redirectUri = origin + "/api/oauth/google/callback";
@@ -162,21 +154,21 @@ public class GoogleOAuthController {
             return new RedirectView("/?oauth_error=invalid_state");
         }
 
-        // Split username and origin
+        // Split userId and origin
         String[] parts = stateData.split(":", 2);
         if (parts.length != 2) {
-            logger.error("Invalid state data format. Expected 'username:origin', got: {}", stateData);
+            logger.error("Invalid state data format. Expected 'userId:origin', got: {}", stateData);
             return new RedirectView("/?oauth_error=invalid_state_format");
         }
-        String username = parts[0];
+        Long userId = Long.parseLong(parts[0]);
         String origin = parts[1];
 
-        logger.info("State token validated for user: {} from origin: {}", username, origin);
+        logger.info("State token validated for user ID: {} from origin: {}", userId, origin);
 
         try {
             // Exchange authorization code for tokens
-            logger.info("Exchanging authorization code for tokens for user: {}", username);
-            Map<String, Object> tokenResponse = exchangeCodeForTokens(code, username, origin);
+            logger.info("Exchanging authorization code for tokens for user ID: {}", userId);
+            Map<String, Object> tokenResponse = exchangeCodeForTokens(code, userId, origin);
 
             // Extract tokens
             String accessToken = (String) tokenResponse.get("access_token");
@@ -188,7 +180,7 @@ public class GoogleOAuthController {
                 return new RedirectView("/?oauth_error=no_access_token");
             }
 
-            logger.info("Successfully obtained access token for user: {}", username);
+            logger.info("Successfully obtained access token for user ID: {}", userId);
             logger.debug("Access token length: {} characters", accessToken.length());
             logger.info("Refresh token present: {}", refreshToken != null);
             logger.info("Token expires in: {} seconds", expiresIn);
@@ -200,25 +192,26 @@ public class GoogleOAuthController {
             logger.debug("Token expiry timestamp: {}", expiryTime);
 
             // Save tokens to user
-            User user = findUserByUsername(username);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new LibraryException("User not found"));
 
             user.setGooglePhotosApiKey(accessToken);
             if (refreshToken != null) {
                 user.setGooglePhotosRefreshToken(refreshToken);
-                logger.info("Saved refresh token for user: {}", username);
+                logger.info("Saved refresh token for user ID: {}", userId);
             } else {
-                logger.warn("No refresh token received for user: {}. User may need to re-authorize when token expires.", username);
+                logger.warn("No refresh token received for user ID: {}. User may need to re-authorize when token expires.", userId);
             }
             user.setGooglePhotosTokenExpiry(expiryTime);
             userRepository.save(user);
 
-            logger.info("OAuth authorization completed successfully for user: {}", username);
+            logger.info("OAuth authorization completed successfully for user ID: {}", userId);
 
             // Redirect back to settings with success message
             return new RedirectView("/?oauth_success=true#settings");
 
         } catch (Exception e) {
-            logger.error("OAuth callback failed for user: {}", username, e);
+            logger.error("OAuth callback failed for user ID: {}", userId, e);
             logger.error("Error message: {}", e.getMessage());
             return new RedirectView("/?oauth_error=" + e.getMessage());
         }
@@ -231,20 +224,15 @@ public class GoogleOAuthController {
     public ResponseEntity<Map<String, String>> revoke() {
         logger.info("Revoke Google Photos access requested");
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Revoke attempted without authentication");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Not authenticated"));
-        }
+        Long userId = getAuthenticatedUserId();
+        logger.info("Revoking Google Photos access for user ID: {}", userId);
 
-        String username = authentication.getName();
-        logger.info("Revoking Google Photos access for user: {}", username);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
-        User user = findUserByUsername(username);
-
-        boolean hadAccessToken = !user.getGooglePhotosApiKey().isEmpty();
-        boolean hadRefreshToken = !user.getGooglePhotosRefreshToken().isEmpty();
+        // Null-safe checks for token presence
+        boolean hadAccessToken = user.getGooglePhotosApiKey() != null && !user.getGooglePhotosApiKey().isEmpty();
+        boolean hadRefreshToken = user.getGooglePhotosRefreshToken() != null && !user.getGooglePhotosRefreshToken().isEmpty();
 
         // Clear OAuth tokens
         user.setGooglePhotosApiKey("");
@@ -252,8 +240,8 @@ public class GoogleOAuthController {
         user.setGooglePhotosTokenExpiry("");
         userRepository.save(user);
 
-        logger.info("Successfully revoked Google Photos access for user: {} (had access token: {}, had refresh token: {})",
-                username, hadAccessToken, hadRefreshToken);
+        logger.info("Successfully revoked Google Photos access for user ID: {} (had access token: {}, had refresh token: {})",
+                userId, hadAccessToken, hadRefreshToken);
 
         return ResponseEntity.ok(Map.of("message", "Google Photos access revoked"));
     }
@@ -261,8 +249,8 @@ public class GoogleOAuthController {
     /**
      * Exchange authorization code for access and refresh tokens
      */
-    private Map<String, Object> exchangeCodeForTokens(String code, String username, String origin) {
-        logger.debug("Exchanging authorization code for tokens (user: {}, origin: {})", username, origin);
+    private Map<String, Object> exchangeCodeForTokens(String code, Long userId, String origin) {
+        logger.debug("Exchanging authorization code for tokens (user ID: {}, origin: {})", userId, origin);
 
         // Get Client ID and Client Secret from global settings (application-wide)
         String effectiveClientId = globalSettingsService.getEffectiveClientId();
@@ -383,11 +371,11 @@ public class GoogleOAuthController {
                 throw new LibraryException(error + ": " + errorDescription);
             }
 
-            logger.info("Token exchange successful for user: {}", username);
+            logger.info("Token exchange successful for user ID: {}", userId);
             return responseBody;
 
         } catch (Exception e) {
-            logger.error("Exception during token exchange for user: {}", username, e);
+            logger.error("Exception during token exchange for user ID: {}", userId, e);
             logger.error("Error type: {}", e.getClass().getSimpleName());
             logger.error("Error message: {}", e.getMessage());
 

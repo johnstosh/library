@@ -26,6 +26,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.atLeastOnce;
@@ -51,9 +52,12 @@ public class BookByPhotoWorkflowTest {
         Playwright playwright = Playwright.create();
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
 
-        // Set up the mock at class level
+        // Set up the mock at class level for both single and multiple photo methods
         String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
-        when(askGrok.askAboutPhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhotos(anyList(), anyString())).thenReturn(mockJsonResponse);
+        when(askGrok.analyzePhotos(anyList(), anyString(), anyString())).thenReturn(mockJsonResponse);
     }
 
     @AfterAll
@@ -92,7 +96,7 @@ public class BookByPhotoWorkflowTest {
     }
 
     @Test
-    @Disabled("MockitoBean not properly intercepting askGrok.askAboutPhoto() calls - Spring Boot 3.4+ bean override configuration issue")
+    @Disabled("MockitoBean not properly intercepting askGrok.analyzePhoto() calls - Spring Boot 3.4+ bean override configuration issue")
     void testFullBookByPhotoWorkflow() {
         Path tempFile = null;
         try {
@@ -164,7 +168,7 @@ public class BookByPhotoWorkflowTest {
             titleInput.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
             assertThat(titleInput).hasValue("Mock AI Title", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
 
-            // 17. The first photo is used to determine the title, author, ...
+            // 17. All photos are used to determine the title, author, ...
             // 18. The new book dto is returned from the backend and the fields are updated with non-blank data from the dto
 
             // Wait for new author option to appear after repopulation

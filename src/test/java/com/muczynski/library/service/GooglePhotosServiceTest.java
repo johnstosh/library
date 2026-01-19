@@ -57,27 +57,27 @@ class GooglePhotosServiceTest {
         // Set up security context
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         lenient().when(authentication.isAuthenticated()).thenReturn(true);
-        lenient().when(authentication.getName()).thenReturn("testuser");
+        lenient().when(authentication.getName()).thenReturn("1");
         SecurityContextHolder.setContext(securityContext);
 
         // Set up test user DTO
         testUser = new UserDto();
+        testUser.setId(1L);
         testUser.setUsername("testuser");
         testUser.setGooglePhotosApiKey("test-api-key");
 
-        lenient().when(userSettingsService.getUserSettings("testuser")).thenReturn(testUser);
+        lenient().when(userSettingsService.getUserSettings(1L)).thenReturn(testUser);
 
         // Set up test user entity for repository
         User userEntity = new User();
+        userEntity.setId(1L);
         userEntity.setUsername("testuser");
         userEntity.setGooglePhotosApiKey("test-api-key");
         userEntity.setGooglePhotosRefreshToken("test-refresh-token");
         userEntity.setGooglePhotosTokenExpiry(Instant.now().plusSeconds(3600).toString());
 
-        lenient().when(userRepository.findByUsernameIgnoreCase("testuser"))
+        lenient().when(userRepository.findById(1L))
                 .thenReturn(Optional.of(userEntity));
-        lenient().when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-                .thenReturn(Collections.singletonList(userEntity));
         lenient().when(userRepository.save(any(User.class))).thenReturn(userEntity);
 
         // Inject mock RestTemplate into service
@@ -126,10 +126,11 @@ class GooglePhotosServiceTest {
     void downloadPhoto_withoutApiKey_throwsException() {
         // Arrange
         User userEntity = new User();
+        userEntity.setId(1L);
         userEntity.setUsername("testuser");
         userEntity.setGooglePhotosApiKey(null);
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-                .thenReturn(Collections.singletonList(userEntity));
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(userEntity));
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {

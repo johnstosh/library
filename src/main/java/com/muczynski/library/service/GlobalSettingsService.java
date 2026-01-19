@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.mapper.GlobalSettingsMapper;
 import com.muczynski.library.repository.GlobalSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,9 @@ public class GlobalSettingsService {
     @Autowired
     private GlobalSettingsRepository globalSettingsRepository;
 
+    @Autowired
+    private GlobalSettingsMapper globalSettingsMapper;
+
     @Value("${google.oauth.client-id}")
     private String configuredClientId;
 
@@ -42,6 +46,9 @@ public class GlobalSettingsService {
 
     @Value("${GOOGLE_SSO_CLIENT_SECRET:}")
     private String envSsoClientSecret;
+
+    @Value("${app.external-base-url:https://library.muczynskifamily.com}")
+    private String externalBaseUrl;
 
     /**
      * Get the global settings singleton
@@ -66,13 +73,17 @@ public class GlobalSettingsService {
         logger.debug("Fetching global settings DTO");
         GlobalSettings settings = getGlobalSettings();
 
-        GlobalSettingsDto dto = new GlobalSettingsDto();
+        // Use MapStruct mapper for basic field mapping
+        GlobalSettingsDto dto = globalSettingsMapper.toDto(settings);
+
+        // Override Client ID with fallback logic
         dto.setGoogleClientId(settings.getGoogleClientId() != null && !settings.getGoogleClientId().isEmpty()
                 ? settings.getGoogleClientId()
                 : configuredClientId);
-        dto.setRedirectUri(settings.getRedirectUri());
-        dto.setGoogleClientSecretUpdatedAt(settings.getGoogleClientSecretUpdatedAt());
-        dto.setLastUpdated(settings.getLastUpdated());
+
+        // Compute redirect URI from external base URL (for Google Photos OAuth)
+        String computedRedirectUri = externalBaseUrl + "/api/oauth/google/callback";
+        dto.setRedirectUri(computedRedirectUri);
 
         // Determine effective Client Secret (database or environment variable)
         String effectiveSecret = getEffectiveClientSecret();
@@ -118,9 +129,14 @@ public class GlobalSettingsService {
             } else {
                 dto.setGoogleSsoClientSecretPartial("(too short)");
             }
+
+            // Validate SSO secret format
+            String ssoValidation = validateClientSecretFormat(effectiveSsoClientSecret);
+            dto.setGoogleSsoClientSecretValidation(ssoValidation);
         } else {
             dto.setGoogleSsoClientSecretConfigured(false);
             dto.setGoogleSsoClientSecretPartial("(not configured)");
+            dto.setGoogleSsoClientSecretValidation("SSO Client Secret not configured");
         }
 
         // Don't include the actual SSO secret in responses
@@ -183,7 +199,17 @@ public class GlobalSettingsService {
         // Update SSO Client Secret if provided
         if (dto.getGoogleSsoClientSecret() != null && !dto.getGoogleSsoClientSecret().trim().isEmpty()) {
             String newSecret = dto.getGoogleSsoClientSecret().trim();
+
+            // Validate format
+            String validation = validateClientSecretFormat(newSecret);
+            if (!validation.equals("Valid")) {
+                logger.warn("SSO Client Secret validation warning: {}", validation);
+            }
+
             logger.info("Updating Google SSO Client Secret (length: {} chars)", newSecret.length());
+            logger.debug("New SSO Client Secret starts with: {}...",
+                    newSecret.substring(0, Math.min(8, newSecret.length())));
+
             settings.setGoogleSsoClientSecret(newSecret);
             settings.setGoogleSsoCredentialsUpdatedAt(Instant.now());
             updated = true;

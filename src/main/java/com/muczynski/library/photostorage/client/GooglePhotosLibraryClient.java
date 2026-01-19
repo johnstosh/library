@@ -185,26 +185,112 @@ public class GooglePhotosLibraryClient {
      * Get a media item by its permanent ID
      * Required scope: photoslibrary.readonly.appcreateddata
      *
+     * This method first tries the single-item endpoint (GET /mediaItems/{id}).
+     * If that returns a 404, it falls back to the batch endpoint (POST /mediaItems:batchGet)
+     * which sometimes works when the single-item endpoint fails.
+     *
      * @param accessToken OAuth access token
      * @param mediaItemId Permanent media item ID
      * @return MediaItemResponse with item details including baseUrl
      */
     public MediaItemResponse getMediaItem(String accessToken, String mediaItemId) {
-        log.debug("Getting media item: {}", mediaItemId);
+        log.info("Getting media item: '{}' (length: {} chars)", mediaItemId, mediaItemId != null ? mediaItemId.length() : 0);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<MediaItemResponse> response = restTemplate.exchange(
-                config.getBaseUrl() + "/mediaItems/" + mediaItemId,
-                HttpMethod.GET,
-                entity,
-                MediaItemResponse.class
-        );
+        String url = config.getBaseUrl() + "/mediaItems/" + mediaItemId;
+        log.info("Calling Google Photos API: GET {}", url);
 
-        return response.getBody();
+        try {
+            ResponseEntity<MediaItemResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    MediaItemResponse.class
+            );
+            MediaItemResponse body = response.getBody();
+            if (body != null) {
+                log.info("Got media item response: id='{}', filename='{}', mimeType='{}', baseUrl length={}",
+                    body.getId(), body.getFilename(), body.getMimeType(),
+                    body.getBaseUrl() != null ? body.getBaseUrl().length() : 0);
+            } else {
+                log.warn("Got null response body for media item: {}", mediaItemId);
+            }
+            return body;
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+            // Single-item endpoint returned 404, try batch endpoint as fallback
+            log.info("Single-item endpoint returned 404 for media item: '{}', trying batch endpoint", mediaItemId);
+            return getMediaItemViaBatchGet(accessToken, mediaItemId);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Google Photos API error for media item '{}': HTTP {} - {}",
+                mediaItemId, e.getStatusCode(), e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Get a media item using the batch get endpoint
+     * This is an alternative to the single-item GET endpoint that sometimes works
+     * when the single-item endpoint returns 404.
+     *
+     * Note: The batchGet endpoint is a GET request with query parameters, not POST.
+     * API: GET /v1/mediaItems:batchGet?mediaItemIds=id1&mediaItemIds=id2
+     *
+     * @param accessToken OAuth access token
+     * @param mediaItemId Permanent media item ID
+     * @return MediaItemResponse with item details including baseUrl, or null if not found
+     */
+    public MediaItemResponse getMediaItemViaBatchGet(String accessToken, String mediaItemId) {
+        log.debug("Getting media item via batchGet: {}", mediaItemId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+
+        try {
+            // Build URL with query parameter - batchGet is GET, not POST
+            String url = config.getBaseUrl() + "/mediaItems:batchGet?mediaItemIds=" + mediaItemId;
+
+            ResponseEntity<BatchGetResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    BatchGetResponse.class
+            );
+
+            BatchGetResponse batchResponse = response.getBody();
+            if (batchResponse != null && batchResponse.getMediaItemResults() != null
+                    && !batchResponse.getMediaItemResults().isEmpty()) {
+                BatchGetResponse.MediaItemResult result = batchResponse.getMediaItemResults().get(0);
+
+                // Check status - code 0 or null means success
+                if (result.getStatus() != null && result.getStatus().getCode() != null
+                        && result.getStatus().getCode() != 0) {
+                    log.warn("BatchGet returned error status for media item {}: code={}, message={}",
+                            mediaItemId, result.getStatus().getCode(), result.getStatus().getMessage());
+                    return null;
+                }
+
+                if (result.getMediaItem() != null) {
+                    log.info("Successfully retrieved media item {} via batchGet", mediaItemId);
+                    return result.getMediaItem();
+                }
+            }
+
+            log.warn("BatchGet returned no results for media item: {}", mediaItemId);
+            return null;
+        } catch (Exception e) {
+            log.warn("BatchGet failed for media item {}: {}", mediaItemId, e.getMessage());
+            // Re-throw as NotFound to maintain consistent behavior with single-item endpoint
+            throw new org.springframework.web.client.HttpClientErrorException(
+                    org.springframework.http.HttpStatus.NOT_FOUND,
+                    "Media item not found via both single-item and batch endpoints: " + mediaItemId
+            );
+        }
     }
 
     /**

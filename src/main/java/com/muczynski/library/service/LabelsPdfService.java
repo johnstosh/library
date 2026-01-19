@@ -25,7 +25,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 /**
- * Service for generating Avery 6572 label PDFs (2" x 2-5/8")
+ * Service for generating Avery 6572 book pocket label PDFs (2" x 2-5/8")
+ * These labels are placed in book pockets for library catalog organization.
  * Layout: 3 columns x 5 rows = 15 labels per page
  */
 @Service
@@ -92,10 +93,11 @@ public class LabelsPdfService {
                     }
 
                     // Create table with fixed column widths matching label dimensions
+                    // Column 3 needs 0.1" additional spacing to align with physical labels
                     float[] columnWidths = new float[LABELS_PER_ROW];
-                    for (int i = 0; i < LABELS_PER_ROW; i++) {
-                        columnWidths[i] = LABEL_WIDTH;
-                    }
+                    columnWidths[0] = LABEL_WIDTH;  // Column 1
+                    columnWidths[1] = LABEL_WIDTH;  // Column 2
+                    columnWidths[2] = LABEL_WIDTH + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     // Remove all table spacing to prevent overflow
@@ -228,11 +230,11 @@ public class LabelsPdfService {
     }
 
     /**
-     * Format LOC call number for multi-line display on book spine labels.
+     * Format LOC call number for multi-line display on book pocket labels.
      *
      * Uses the centralized LocCallNumberFormatter to ensure consistent formatting
      * across the application. Each component of the call number is placed on its
-     * own line because library book spine labels have limited horizontal space.
+     * own line because library book pocket labels have limited horizontal space.
      *
      * Example: "BX 4705.M124 A77 2005" becomes:
      * BX

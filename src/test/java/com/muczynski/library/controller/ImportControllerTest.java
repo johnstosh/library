@@ -3,7 +3,9 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
+import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.ImportService;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -54,9 +56,10 @@ class ImportControllerTest {
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
         importDto.setBooks(List.of());
-        importDto.setLibraries(List.of());
+        importDto.setBranches(List.of());
 
-        doNothing().when(importService).importData(any(ImportRequestDto.class));
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
 
         // Act & Assert
         given()
@@ -67,7 +70,8 @@ class ImportControllerTest {
             .post("/api/import/json")
         .then()
             .statusCode(200)
-            .body(equalTo("Import completed successfully"));
+            .body("success", equalTo(true))
+            .body("message", equalTo("Import completed successfully"));
     }
 
     @Test
@@ -94,10 +98,10 @@ class ImportControllerTest {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
 
-        doThrow(new RuntimeException("Invalid import data"))
-                .when(importService).importData(any(ImportRequestDto.class));
+        when(importService.importData(any(ImportRequestDto.class)))
+                .thenThrow(new RuntimeException("Invalid import data"));
 
-        // Act & Assert
+        // Act & Assert - Controller catches exception and returns 400 with error response
         given()
             .contentType(ContentType.JSON)
             .body(importDto)
@@ -105,7 +109,9 @@ class ImportControllerTest {
         .when()
             .post("/api/import/json")
         .then()
-            .statusCode(500);
+            .statusCode(400)
+            .body("success", equalTo(false))
+            .body("message", containsString("Invalid import data"));
     }
 
     @Test
@@ -115,9 +121,10 @@ class ImportControllerTest {
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
         importDto.setBooks(List.of());
-        importDto.setLibraries(List.of());
+        importDto.setBranches(List.of());
 
-        doNothing().when(importService).importData(any(ImportRequestDto.class));
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
 
         // Act & Assert - Should still succeed with empty data
         given()
@@ -127,7 +134,8 @@ class ImportControllerTest {
         .when()
             .post("/api/import/json")
         .then()
-            .statusCode(200);
+            .statusCode(200)
+            .body("success", equalTo(true));
     }
 
     // ==================== GET /api/import/json Tests ====================
@@ -139,7 +147,8 @@ class ImportControllerTest {
         ImportRequestDto exportDto = new ImportRequestDto();
         exportDto.setAuthors(List.of());
         exportDto.setBooks(List.of());
-        exportDto.setLibraries(List.of());
+        exportDto.setBranches(List.of());
+        exportDto.setPhotos(List.of());
 
         when(importService.exportData()).thenReturn(exportDto);
 
@@ -153,7 +162,8 @@ class ImportControllerTest {
             .contentType(ContentType.JSON)
             .body("authors", notNullValue())
             .body("books", notNullValue())
-            .body("libraries", notNullValue());
+            .body("libraries", notNullValue())
+            .body("photos", notNullValue());
     }
 
     @Test
@@ -176,7 +186,8 @@ class ImportControllerTest {
         ImportRequestDto exportDto = new ImportRequestDto();
         exportDto.setAuthors(List.of());
         exportDto.setBooks(List.of());
-        exportDto.setLibraries(List.of());
+        exportDto.setBranches(List.of());
+        exportDto.setPhotos(List.of());
 
         when(importService.exportData()).thenReturn(exportDto);
 
@@ -189,7 +200,44 @@ class ImportControllerTest {
             .statusCode(200)
             .body("authors", hasSize(0))
             .body("books", hasSize(0))
-            .body("libraries", hasSize(0));
+            .body("libraries", hasSize(0))
+            .body("photos", hasSize(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testExportJson_WithPhotoMetadata() {
+        // Arrange - Export includes photo metadata with permanent IDs
+        ImportRequestDto exportDto = new ImportRequestDto();
+        exportDto.setAuthors(List.of());
+        exportDto.setBooks(List.of());
+        exportDto.setBranches(List.of());
+
+        com.muczynski.library.dto.importdtos.ImportPhotoDto photoDto = new com.muczynski.library.dto.importdtos.ImportPhotoDto();
+        photoDto.setPermanentId("google-photos-permanent-id-123");
+        photoDto.setContentType("image/jpeg");
+        photoDto.setCaption("Test photo caption");
+        photoDto.setPhotoOrder(1);
+        photoDto.setBookTitle("Test Book");
+        photoDto.setBookAuthorName("Test Author");
+        exportDto.setPhotos(List.of(photoDto));
+
+        when(importService.exportData()).thenReturn(exportDto);
+
+        // Act & Assert - Verify photo metadata is included in export
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/json")
+        .then()
+            .statusCode(200)
+            .body("photos", hasSize(1))
+            .body("photos[0].permanentId", equalTo("google-photos-permanent-id-123"))
+            .body("photos[0].contentType", equalTo("image/jpeg"))
+            .body("photos[0].caption", equalTo("Test photo caption"))
+            .body("photos[0].photoOrder", equalTo(1))
+            .body("photos[0].bookTitle", equalTo("Test Book"))
+            .body("photos[0].bookAuthorName", equalTo("Test Author"));
     }
 
     @Test
@@ -204,6 +252,78 @@ class ImportControllerTest {
             .auth().none()
         .when()
             .get("/api/import/json")
+        .then()
+            .statusCode(500);
+    }
+
+    // ==================== GET /api/import/stats Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_Success() {
+        // Arrange
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L);
+        when(importService.getDatabaseStats()).thenReturn(statsDto);
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("libraryCount", equalTo(5))
+            .body("bookCount", equalTo(100))
+            .body("authorCount", equalTo(50))
+            .body("userCount", equalTo(10))
+            .body("loanCount", equalTo(25));
+    }
+
+    @Test
+    void testGetDatabaseStats_Unauthorized() {
+        // Act & Assert - No authentication
+        given()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ZeroCounts() {
+        // Arrange - Empty database
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L);
+        when(importService.getDatabaseStats()).thenReturn(statsDto);
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("libraryCount", equalTo(0))
+            .body("bookCount", equalTo(0))
+            .body("authorCount", equalTo(0))
+            .body("userCount", equalTo(0))
+            .body("loanCount", equalTo(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_ServiceException() {
+        // Arrange
+        when(importService.getDatabaseStats())
+                .thenThrow(new RuntimeException("Database error"));
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/stats")
         .then()
             .statusCode(500);
     }

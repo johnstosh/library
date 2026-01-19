@@ -29,7 +29,7 @@ public class Applied {
 
     private String name;
 
-    @Column(length = 60)
+    @Column(length = 64)
     private String password;
 
     @Enumerated(EnumType.STRING)

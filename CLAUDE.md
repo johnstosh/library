@@ -9,13 +9,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `feature-design-photos.md` - Photo storage, Google Photos integration, caching
 - `feature-design-loc.md` - Library of Congress integration, call number lookup
 - `feature-design-import-export.md` - JSON import/export, photo backup
-- `feature-design-libraries.md` - Library card design, PDF generation, applications
+- `feature-design-libraries.md` - Branch management, branch statistics (database entity still named `Library` for backward compatibility)
+- `feature-design-library-cards.md` - Library card applications, PDF generation, card designs
+- `feature-design-search.md` - Search functionality, pagination, search algorithm
+- `feature-design-checkout-card-transcription.md` - Grok AI checkout card photo transcription
 - `backend-requirements.md` - Backend development requirements and patterns
 - `backend-development-requirements.md` - Detailed backend guidelines
 - `uitest-requirements.md` - UI testing with Playwright
 - `backend-lessons-learned.md` - Important backend lessons
 - `lessons-learned.md` - General best practices
-- `endpoints.md` - API endpoint documentation
+- `endpoints/` - API endpoint documentation (organized by subsystem)
 - `sso.md` - Google OAuth SSO configuration
 - `photos-design.md` - Photo storage design details
 - `wipe-instructions.md` - Database reset instructions
@@ -35,14 +38,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - BYU CallNumber library for LOC sorting
 
 **Frontend:**
-- Single-page application (SPA) using vanilla JavaScript
-- Bootstrap 5.3.8 for UI
-- Cropper.js for image manipulation
-- **CRITICAL: Hybrid module system** (see `feature-design-frontend.md`)
-  - Core files use ES6 modules (auth.js, sections.js, utils.js, init.js)
-  - Feature modules may use global scope
-  - Check existing patterns before modifying
-  - Script load order in index.html is critical
+- Modern React 18+ SPA with TypeScript (migrated Dec 2024)
+- Tailwind CSS v4 for utility-first styling
+- TanStack Query v5 for server state management
+- React Router v6 for client-side routing
+  - **URL-based CRUD pattern** (not modals): `/entity`, `/entity/new`, `/entity/:id`, `/entity/:id/edit`
+- Zustand for client state
+- Vite for fast builds and dev server
+- **See `feature-design-frontend.md` for complete architecture**
+- **See `FRONTEND_PROGRESS.md` for migration status**
 
 **Testing:**
 - JUnit 5 with Spring Boot Test
@@ -72,18 +76,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Test Output Configuration
 The build.gradle test configuration only shows detailed output for failed tests to reduce noise.
 
+## Deployment
+
+The application deploys to Google Cloud Run with PostgreSQL on Cloud SQL. Deployment happens both automatically via CI/CD pipeline and manually using the `./deploy.sh` script.
+
+### Deployment Environments
+- **Production**: `main` branch → https://library.muczynskifamily.com
+- **Development**: `dev` branch → https://library-dev.muczynskifamily.com
+
+### Deployment Process
+The `./deploy.sh` script handles the full deployment:
+1. Builds React frontend using `./build-frontend.sh`
+2. Builds Spring Boot backend with Gradle
+3. Creates Docker image with version tag from `build.gradle`
+4. Pushes image to GCP Artifact Registry
+5. Deploys to Cloud Run with Cloud SQL connection
+6. Service name format: `{base-name}-{branch}` (e.g., `library-dev` for dev branch)
+
+### Required Environment Variables
+```bash
+GCP_PROJECT_ID          # Google Cloud project ID
+BRANCH_NAME             # Git branch name (main or dev)
+DB_PASSWORD             # PostgreSQL database password
+GCP_REGION              # Defaults to us-east1
+BINARY_REPO_NAME        # Artifact Registry repo, defaults to scrabble-game
+CLOUD_RUN_SERVICE_ACCOUNT # Optional service account name
+```
+
+### Manual Deployment
+```bash
+# Ensure environment variables are set, then:
+./deploy.sh
+```
+
+### Automatic Deployment
+Pushing to `main` or `dev` branches triggers automatic deployment via CI/CD pipeline, which sets the required environment variables and runs `./deploy.sh`.
+
 ## Architecture Overview
 
 ### Domain Model
 **Core Entities:**
-- `Library` - Library branch information (name, hostname)
-- `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status
+- `Library` - Branch information (branchName, librarySystemName, hostname). Note: Entity named `Library` for backward compatibility, but displayed as "Branch" in UI.
+- `Book` - Book inventory with title, publication year, publisher, author, library, LOC number, status, freeTextUrl
 - `Author` - Authors with biographical information
 - `Loan` - Book checkout tracking
-- `User` - Library patron/staff accounts with authority-based access
+- `User` - Library patron/staff accounts with authority-based access (includes `libraryCardDesign` enum field)
 - `Photo` - Book and author photos with Google Photos integration
 - `Applied` - Library card application tracking
-- `LibraryCardDesign` - Library card PDF design settings
+- `LibraryCardDesign` - Enum with 5 predefined card design options (per-user preference)
 - `GlobalSettings` - Application-wide settings (SSO, etc.)
 - `RandomBook`, `RandomAuthor`, `RandomLoan` - Test data generation templates
 
@@ -122,12 +162,16 @@ The build.gradle test configuration only shows detailed output for failed tests 
 See `feature-design-frontend.md` for complete details.
 
 **Key Points:**
-- Single-page application with section-based navigation
-- `showSection(sectionId)` controls visibility
-- Access control via CSS classes: `librarian-only`, `public-item`, `librarian-or-unauthenticated`
-- All API calls use `fetch()` with utilities in `utils.js`
+- React 18 single-page application with React Router
+- TypeScript strict mode for type safety
+- TanStack Query for server state management and caching
+- Tailwind CSS for styling
+- Protected routes with role-based access control
+- All API calls use TanStack Query hooks
 - `data-test` attributes on all interactive elements for Playwright tests
-- Consistent CRUD pattern: Add button, View, Edit icon (✏️), Delete icon (🗑️)
+- Consistent CRUD pattern across all features
+- Code splitting with lazy-loaded page components (49% bundle reduction)
+- Error boundaries for graceful error handling
 
 ## Key Configuration
 
@@ -182,34 +226,50 @@ See `feature-design-import-export.md` for complete details.
 - Import merges data (doesn't delete existing)
 - Books can be imported from Google Photos feed
 
+### Search
+See `feature-design-search.md` for complete details.
+- Global search across books and authors
+- Case-insensitive partial matching on title and name
+- Paginated results (20 per page default)
+- Public access (no authentication required)
+
+### Checkout Card Transcription
+See `feature-design-checkout-card-transcription.md` for complete details.
+- Grok AI (xAI) vision model integration for photo transcription
+- Upload or capture photos of physical checkout cards
+- Extracts book title, author, call number, and last checkout details
+- Accessible from Loans page with "Checkout by Photo" and "Checkout by Camera" buttons
+- Requires user to have xAI API key configured in settings
+
 ### PDF Generation
 - **Library Cards**: Wallet-sized PDF cards via `LibraryCardPdfService` using iText
-- **Book Labels**: Spine labels for books with LOC call numbers via `LabelsPdfService`
+- **Book Labels**: Spine labels for books with LOC call numbers via `LabelsPdfService` (accessible from Books page)
 
 ### Test Data Generation
-- `/api/test-data/**` endpoints (no auth required)
-- Generates sample books, authors, libraries, users, loans
+- `/api/test-data/**` endpoints (**no auth required** - design decision for development convenience)
+- Generates sample books, authors, libraries, loans, and users
+- Test data is marked for easy identification and cleanup
 - Menu visibility controlled by `app.show-test-data-page` property
 - Default: hidden in production, visible in development
 
 ## Git Workflow
 
-**This project uses direct commits to the `main` branch - no feature branches.**
+**This project uses direct commits to the `dev` branch - no feature branches.**
 
 ```bash
 # Before starting work
-git checkout main
+git checkout dev
 git pull
 
 # After completing work
-git push origin main
+git push origin dev
 ```
 
 ## Definition of Done
 
 For any request to be considered complete, ALL of these steps must be accomplished:
 
-1. **Checkout main branch**: `git checkout main`
+1. **Checkout dev branch**: `git checkout dev`
 2. **Complete the requested work**: Implement the feature/fix
 3. **Update documentation**:
    - Update .md files in root directory if architecture or APIs changed
@@ -224,15 +284,33 @@ For any request to be considered complete, ALL of these steps must be accomplish
    - **Why all three?** Other programmers make errors that need to be caught
 5. **Run verifier**: Use the appropriate verifier to confirm the request was accomplished
    - **IMPORTANT**: If you don't know what verifier to use, don't start work
-6. **Push to main**: `git push origin main`
+6. **Push to dev**: `git push origin dev`
 
 ## Development Workflow
 
-1. **Adding a new feature**: Create/modify entities → services → controllers → DTOs → mappers → frontend JS
-2. **UI changes**: Edit `index.html` for structure, `js/*.js` for behavior, `css/style.css` for styling
-3. **API changes**: Update controller, ensure `@PreAuthorize` is correct, update corresponding frontend JS
-4. **Tests**: Write controller tests with `@SpringBootTest`, UI tests with Playwright in `ui/` package
-5. **Security**: Always use `@PreAuthorize` for librarian-only operations, test with different authorities
+### Backend Development
+1. **Adding a new feature**: Create/modify entities → services → controllers → DTOs → mappers
+2. **API changes**: Update controller, ensure `@PreAuthorize` is correct, add/update DTO types
+3. **Tests**: Write controller tests with `@SpringBootTest`, integration tests
+4. **Security**: Always use `@PreAuthorize` for librarian-only operations, test with different authorities
+
+### Frontend Development (React)
+1. **Adding a new CRUD feature**:
+   - Create API functions in `frontend/src/api/`
+   - Add React Query hooks (useFeatures, useCreateFeature, etc.)
+   - Create page components following URL-based pattern:
+     - `FeaturePage.tsx` - List view at `/features`
+     - `FeatureNewPage.tsx` - Create form at `/features/new`
+     - `FeatureViewPage.tsx` - Detail view at `/features/:id`
+     - `FeatureEditPage.tsx` - Edit form at `/features/:id/edit`
+   - Add child components (filters, table, FeatureFormPage)
+   - Add routes in `App.tsx` (lazy-loaded) for all 4 pages
+   - Add navigation link in `Navigation.tsx`
+   - Add TypeScript interfaces in `frontend/src/types/dtos.ts`
+2. **UI changes**: Edit React components with Tailwind CSS classes
+3. **Tests**: Write Playwright UI tests with `data-test` attributes
+   - Tests should use `page.waitForURL()` instead of modal expectations
+   - Update data-test attributes (e.g., `feature-view-edit`, `feature-view-delete`, `back-to-features`)
 
 ## Important Patterns to Follow
 
@@ -243,14 +321,25 @@ For any request to be considered complete, ALL of these steps must be accomplish
 - OAuth user handling: Services must check both username and SSO subject ID
 - Password hashing: Always use SHA-256 client-side via `hashPassword()` before sending to server
 
-### Frontend
+### Frontend (React + TypeScript)
+- **URL-based CRUD pattern**: All create/edit/view operations use dedicated routes (NOT modals)
+  - List: `/entity` - Table view with filters
+  - Create: `/entity/new` - Form page to create new entity
+  - View: `/entity/:id` - Read-only view with action buttons (Edit, Delete, etc.)
+  - Edit: `/entity/:id/edit` - Form page to edit existing entity
+- **Unsaved changes warning**: Form pages must warn users before navigation with unsaved changes
+  - Use `beforeunload` event listener
+  - Show confirmation dialog on Cancel button click if changes exist
 - Use `data-test` attributes for all testable elements
-- Librarian-only UI elements must have `librarian-only` CSS class
-- Public UI elements must have `public-item` CSS class
-- JavaScript modules: Core uses ES6 modules, features may use global scope
-  - Check existing patterns before modifying
-  - Maintain consistency with the existing file's pattern
-- LOC formatting: Use `formatLocForSpine()` in utils.js for spine label display
+- TypeScript strict mode - all props and state must be typed
+- Use TanStack Query hooks for all API calls (never raw fetch)
+- Protected routes: Use `<ProtectedRoute />` and `<LibrarianRoute />` wrappers
+- Lazy load all page components for code splitting
+- Forms: Use controlled components with useState, track `hasUnsavedChanges` state
+- State management: TanStack Query (server) + Zustand (client) + useState (local)
+- Styling: Use Tailwind CSS utility classes, not custom CSS
+- LOC formatting: Use `formatLocForSpine()` in `utils/formatters.ts`
+- Copyright header: `// (c) Copyright 2025 by Muczynski` on all new files
 
 ### General
 - **Copyright headers**: Every source file must have copyright at top

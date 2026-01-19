@@ -11,4 +11,5 @@ TEST_ARGS=$(find src/test/java -name "*Test.java" -not -path "*/ui/*" | \
   tr '\n' ' ')
 
 # Run the tests
+./gradlew clean
 ./gradlew test $TEST_ARGS

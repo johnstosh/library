@@ -64,7 +64,7 @@ class GoogleOAuthControllerTest {
     // ==================== GET /api/oauth/google/authorize Tests ====================
 
     @Test
-    @WithMockUser(username = "testuser")
+    @WithMockUser(username = "1")
     void testAuthorize_Success() {
         // Act & Assert - Should redirect to Google (302 Found)
         given()
@@ -78,7 +78,7 @@ class GoogleOAuthControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser")
+    @WithMockUser(username = "1")
     void testAuthorize_ContainsAllRequiredScopes() {
         // Act - Get the redirect Location header
         String locationHeader = given()
@@ -109,17 +109,17 @@ class GoogleOAuthControllerTest {
 
     @Test
     void testAuthorize_Unauthorized() {
-        // Act & Assert - No authentication - Spring Security redirects to login
+        // Act & Assert - No authentication - Returns 400 Bad Request
         given()
             .param("origin", "http://localhost:8080")
         .when()
             .get("/api/oauth/google/authorize")
         .then()
-            .statusCode(302); // Redirect to login page
+            .statusCode(400); // Bad Request (authentication failure)
     }
 
     @Test
-    @WithMockUser(username = "testuser")
+    @WithMockUser(username = "1")
     void testAuthorize_MissingOriginParameter() {
         // Act & Assert - Missing required origin parameter
         given()
@@ -139,7 +139,7 @@ class GoogleOAuthControllerTest {
     // ==================== POST /api/oauth/google/revoke Tests ====================
 
     @Test
-    @WithMockUser(username = "testuser")
+    @WithMockUser(username = "1")
     void testRevoke_Success() {
         // Arrange
         User user = new User();
@@ -149,8 +149,8 @@ class GoogleOAuthControllerTest {
         user.setGooglePhotosRefreshToken("refresh-token");
         user.setGooglePhotosTokenExpiry("2025-12-31T23:59:59Z");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(Collections.singletonList(user));
+        when(userRepository.findById(1L))
+            .thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         // Act & Assert
@@ -182,11 +182,11 @@ class GoogleOAuthControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "nonexistent")
+    @WithMockUser(username = "999")
     void testRevoke_UserNotFound() {
         // Arrange
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("nonexistent"))
-            .thenReturn(Collections.emptyList());
+        when(userRepository.findById(999L))
+            .thenReturn(Optional.empty());
 
         // Act & Assert - LibraryException returns 422 (Unprocessable Entity)
         given()
@@ -198,7 +198,7 @@ class GoogleOAuthControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "testuser")
+    @WithMockUser(username = "1")
     void testRevoke_AlreadyRevoked() {
         // Arrange - User with no tokens
         User user = new User();
@@ -208,8 +208,8 @@ class GoogleOAuthControllerTest {
         user.setGooglePhotosRefreshToken("");
         user.setGooglePhotosTokenExpiry("");
 
-        when(userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("testuser"))
-            .thenReturn(Collections.singletonList(user));
+        when(userRepository.findById(1L))
+            .thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         // Act & Assert - Should still succeed

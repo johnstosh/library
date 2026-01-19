@@ -7,12 +7,16 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.dto.PhotoExportInfoDto;
+import com.muczynski.library.dto.PhotoExportStatsDto;
+import com.muczynski.library.dto.PhotoImportResultDto;
+import com.muczynski.library.dto.PhotoVerifyResultDto;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
 import com.muczynski.library.photostorage.dto.AlbumResponse;
 import com.muczynski.library.photostorage.dto.BatchCreateRequest;
 import com.muczynski.library.photostorage.dto.BatchCreateResponse;
 import com.muczynski.library.photostorage.dto.SearchResponse;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
@@ -24,6 +28,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -39,7 +45,7 @@ public class PhotoExportService {
     private UserRepository userRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private com.muczynski.library.repository.BookRepository bookRepository;
@@ -60,8 +66,34 @@ public class PhotoExportService {
     private String cachedAlbumName = null;
 
     /**
-     * Export photos to Google Photos
+     * Compute SHA-256 checksum of image bytes
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
+
+    /**
+     * Export photos to Google Photos using batch operations
      * Can be triggered manually via API endpoint
+     * Processes photos in batches of up to 50 (Google Photos API limit)
      */
     @Transactional
     public void exportPhotos() {
@@ -97,14 +129,25 @@ public class PhotoExportService {
             int successCount = 0;
             int failureCount = 0;
 
-            for (Photo photo : photosToExport) {
+            // Process photos in batches of 50 (Google Photos API limit)
+            final int BATCH_SIZE = 50;
+            for (int i = 0; i < photosToExport.size(); i += BATCH_SIZE) {
+                int endIndex = Math.min(i + BATCH_SIZE, photosToExport.size());
+                List<Photo> batch = photosToExport.subList(i, endIndex);
+
+                logger.info("Processing batch {}-{} of {}", i + 1, endIndex, photosToExport.size());
+
                 try {
-                    exportPhoto(photo, librarian.getUsername());
-                    successCount++;
+                    int batchSuccess = exportPhotosBatch(batch, librarian);
+                    successCount += batchSuccess;
+                    failureCount += (batch.size() - batchSuccess);
                 } catch (Exception e) {
-                    logger.error("Failed to export photo ID: {}", photo.getId(), e);
-                    markPhotoAsFailed(photo, e.getMessage());
-                    failureCount++;
+                    logger.error("Failed to export batch {}-{}: {}", i + 1, endIndex, e.getMessage(), e);
+                    // Mark all photos in failed batch as failed
+                    for (Photo photo : batch) {
+                        markPhotoAsFailed(photo, "Batch export failed: " + e.getMessage());
+                    }
+                    failureCount += batch.size();
                 }
             }
 
@@ -112,6 +155,126 @@ public class PhotoExportService {
 
         } catch (Exception e) {
             logger.error("Error during scheduled photo export", e);
+        }
+    }
+
+    /**
+     * Export a batch of photos to Google Photos in a single batch operation
+     * @param photos List of photos to export (max 50)
+     * @param user User with Google Photos credentials
+     * @return Number of successfully exported photos
+     */
+    @Transactional
+    public int exportPhotosBatch(List<Photo> photos, User user) {
+        if (photos.isEmpty()) {
+            return 0;
+        }
+
+        logger.info("Exporting batch of {} photos to Google Photos", photos.size());
+
+        // Mark all photos as in progress
+        for (Photo photo : photos) {
+            photo.setExportStatus(Photo.ExportStatus.IN_PROGRESS);
+        }
+        photoRepository.saveAll(photos);
+
+        try {
+            // Step 1: Upload all photo bytes and collect upload tokens
+            List<String> uploadTokens = new ArrayList<>();
+            List<Photo> successfulUploads = new ArrayList<>();
+
+            for (Photo photo : photos) {
+                try {
+                    String uploadToken = uploadPhotoBytes(photo.getImage(), photo.getContentType(), user);
+                    uploadTokens.add(uploadToken);
+                    successfulUploads.add(photo);
+                } catch (Exception e) {
+                    logger.error("Failed to upload photo ID {}: {}", photo.getId(), e.getMessage(), e);
+                    markPhotoAsFailed(photo, "Upload failed: " + e.getMessage());
+                }
+            }
+
+            if (uploadTokens.isEmpty()) {
+                logger.warn("No photos successfully uploaded in this batch");
+                return 0;
+            }
+
+            logger.info("Successfully uploaded {} of {} photos, creating media items...", uploadTokens.size(), photos.size());
+
+            // Step 2: Create all media items in a single batch request
+            List<BatchCreateRequest.NewMediaItem> newMediaItems = new ArrayList<>();
+            for (int i = 0; i < successfulUploads.size(); i++) {
+                Photo photo = successfulUploads.get(i);
+                String uploadToken = uploadTokens.get(i);
+
+                String description = buildPhotoDescription(photo);
+
+                BatchCreateRequest.NewMediaItem newMediaItem = new BatchCreateRequest.NewMediaItem();
+                newMediaItem.setDescription(description);
+
+                BatchCreateRequest.SimpleMediaItem simpleMediaItem = new BatchCreateRequest.SimpleMediaItem();
+                simpleMediaItem.setUploadToken(uploadToken);
+                newMediaItem.setSimpleMediaItem(simpleMediaItem);
+
+                newMediaItems.add(newMediaItem);
+            }
+
+            // Get valid access token
+            String accessToken = googlePhotosService.getValidAccessToken(user);
+
+            // Verify token scopes
+            logger.info("Verifying token scopes before batch create operation...");
+            googlePhotosService.verifyAccessTokenScopes(accessToken);
+
+            // Get or create the library album
+            String albumId = getOrCreateAlbum(user);
+
+            // Create media items in batch
+            BatchCreateResponse response = photosLibraryClient.batchCreate(accessToken, albumId, newMediaItems);
+
+            // Step 3: Process results and update photo records
+            int successCount = 0;
+            if (response.getNewMediaItemResults() != null) {
+                for (int i = 0; i < response.getNewMediaItemResults().size(); i++) {
+                    BatchCreateResponse.NewMediaItemResult result = response.getNewMediaItemResults().get(i);
+                    Photo photo = successfulUploads.get(i);
+
+                    // Check status - code 0 or null means success
+                    if (result.getStatus() != null && result.getStatus().getCode() != null
+                            && result.getStatus().getCode() != 0) {
+                        String errorMsg = "Create failed with code " + result.getStatus().getCode() + ": "
+                                + result.getStatus().getMessage();
+                        logger.error("Failed to create media item for photo ID {}: {}", photo.getId(), errorMsg);
+                        markPhotoAsFailed(photo, errorMsg);
+                    } else if (result.getMediaItem() != null && result.getMediaItem().getId() != null) {
+                        String permanentId = result.getMediaItem().getId();
+                        photo.setPermanentId(permanentId);
+                        photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+                        photo.setExportedAt(LocalDateTime.now());
+                        photo.setExportErrorMessage(null);
+                        photoRepository.save(photo);
+                        successCount++;
+                        logger.debug("Successfully exported photo ID {} with permanent ID: {}",
+                                photo.getId(), permanentId);
+                    } else {
+                        logger.error("No media item ID in response for photo ID {}", photo.getId());
+                        markPhotoAsFailed(photo, "No media item ID in response");
+                    }
+                }
+            }
+
+            logger.info("Batch export completed: {} of {} photos succeeded", successCount, successfulUploads.size());
+            return successCount;
+
+        } catch (Exception e) {
+            logger.error("Batch export failed: {}", e.getMessage(), e);
+            // Mark remaining in-progress photos as failed
+            for (Photo photo : photos) {
+                if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
+                    markPhotoAsFailed(photo, "Batch export failed: " + e.getMessage());
+                }
+            }
+            throw e;
         }
     }
 
@@ -140,7 +303,7 @@ public class PhotoExportService {
      * Export a single photo to Google Photos
      */
     @Transactional
-    public void exportPhoto(Photo photo, String username) {
+    public void exportPhoto(Photo photo, User user) {
         logger.info("Backing up photo ID: {}", photo.getId());
 
         // Mark as in progress
@@ -149,10 +312,10 @@ public class PhotoExportService {
 
         try {
             // Step 1: Upload the raw bytes to get an upload token
-            String uploadToken = uploadPhotoBytes(photo.getImage(), photo.getContentType(), username);
+            String uploadToken = uploadPhotoBytes(photo.getImage(), photo.getContentType(), user);
 
             // Step 2: Create a media item with the upload token
-            String permanentId = createMediaItem(uploadToken, photo, username);
+            String permanentId = createMediaItem(uploadToken, photo, user);
 
             // Step 3: Mark as completed
             photo.setPermanentId(permanentId);
@@ -172,11 +335,11 @@ public class PhotoExportService {
     /**
      * Upload photo bytes to Google Photos and get an upload token
      */
-    private String uploadPhotoBytes(byte[] imageBytes, String contentType, String username) {
+    private String uploadPhotoBytes(byte[] imageBytes, String contentType, User user) {
         logger.debug("Uploading photo bytes ({} bytes) to Google Photos", imageBytes.length);
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before upload
         logger.info("Verifying token scopes before upload operation...");
@@ -189,18 +352,18 @@ public class PhotoExportService {
     /**
      * Create a media item in Google Photos using the upload token
      */
-    private String createMediaItem(String uploadToken, Photo photo, String username) {
+    private String createMediaItem(String uploadToken, Photo photo, User user) {
         logger.debug("Creating media item in Google Photos");
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before attempting batchCreate
         logger.info("Verifying token scopes before batchCreate operation...");
         googlePhotosService.verifyAccessTokenScopes(accessToken);
 
         // Get or create the library album
-        String albumId = getOrCreateAlbum(username);
+        String albumId = getOrCreateAlbum(user);
 
         // Build description from photo caption and associated book/author
         String description = buildPhotoDescription(photo);
@@ -263,7 +426,7 @@ public class PhotoExportService {
         String libraryName = "Library";
 
         if (!libraries.isEmpty()) {
-            libraryName = libraries.get(0).getName();
+            libraryName = libraries.get(0).getBranchName();
         } else {
             logger.warn("No library found in database, using default name: {}", libraryName);
         }
@@ -283,15 +446,7 @@ public class PhotoExportService {
     /**
      * Get or create the library album in Google Photos
      */
-    private String getOrCreateAlbum(String username) {
-        // Get the user from database
-        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
-        if (userOpt.isEmpty()) {
-            throw new LibraryException("User not found: " + username);
-        }
-
-        User user = userOpt.get();
-
+    private String getOrCreateAlbum(User user) {
         // Check if user has a saved album ID
         if (user.getGooglePhotosAlbumId() != null && !user.getGooglePhotosAlbumId().trim().isEmpty()) {
             logger.info("Using saved album ID from user settings: {}", user.getGooglePhotosAlbumId());
@@ -303,7 +458,7 @@ public class PhotoExportService {
         logger.info("No saved album ID found. Creating new album: {}", albumName);
 
         // Get valid access token
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
         // Verify token scopes before creating album
         logger.info("Verifying token scopes before album creation...");
@@ -404,8 +559,8 @@ public class PhotoExportService {
      * Uses efficient COUNT queries to avoid loading image bytes into memory
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> getExportStats() {
-        Map<String, Object> stats = new HashMap<>();
+    public PhotoExportStatsDto getExportStats() {
+        PhotoExportStatsDto stats = new PhotoExportStatsDto();
 
         try {
             // Use efficient COUNT queries that don't load image bytes
@@ -417,38 +572,38 @@ public class PhotoExportService {
             long failed = photoRepository.countByExportStatus(Photo.ExportStatus.FAILED);
             long inProgress = photoRepository.countByExportStatus(Photo.ExportStatus.IN_PROGRESS);
 
-            stats.put("total", total);
-            stats.put("exported", exported);
-            stats.put("imported", imported);
-            stats.put("pendingExport", pendingExport);
-            stats.put("pendingImport", pendingImport);
-            stats.put("failed", failed);
-            stats.put("inProgress", inProgress);
+            stats.setTotal(total);
+            stats.setExported(exported);
+            stats.setImported(imported);
+            stats.setPendingExport(pendingExport);
+            stats.setPendingImport(pendingImport);
+            stats.setFailed(failed);
+            stats.setInProgress(inProgress);
 
             // Keep legacy fields for backwards compatibility
-            stats.put("completed", exported);
-            stats.put("pending", pendingExport);
+            stats.setCompleted(exported);
+            stats.setPending(pendingExport);
         } catch (Exception e) {
             logger.error("Failed to retrieve photo statistics from database", e);
             // Return safe defaults
-            stats.put("total", 0L);
-            stats.put("exported", 0L);
-            stats.put("imported", 0L);
-            stats.put("pendingExport", 0L);
-            stats.put("pendingImport", 0L);
-            stats.put("failed", 0L);
-            stats.put("inProgress", 0L);
-            stats.put("completed", 0L);
-            stats.put("pending", 0L);
+            stats.setTotal(0L);
+            stats.setExported(0L);
+            stats.setImported(0L);
+            stats.setPendingExport(0L);
+            stats.setPendingImport(0L);
+            stats.setFailed(0L);
+            stats.setInProgress(0L);
+            stats.setCompleted(0L);
+            stats.setPending(0L);
         }
 
         // Add album information
         try {
             String albumName = getAlbumName();
-            stats.put("albumName", albumName);
+            stats.setAlbumName(albumName);
         } catch (Exception e) {
             logger.error("Failed to retrieve album name", e);
-            stats.put("albumName", "Library");
+            stats.setAlbumName("Library");
         }
 
         // Get album ID from librarian user settings
@@ -456,13 +611,13 @@ public class PhotoExportService {
             Optional<User> librarianOpt = userRepository.findByUsernameIgnoreCase("librarian");
             if (librarianOpt.isPresent()) {
                 String albumId = librarianOpt.get().getGooglePhotosAlbumId();
-                stats.put("albumId", albumId != null && !albumId.trim().isEmpty() ? albumId : null);
+                stats.setAlbumId(albumId != null && !albumId.trim().isEmpty() ? albumId : null);
             } else {
-                stats.put("albumId", null);
+                stats.setAlbumId(null);
             }
         } catch (Exception e) {
             logger.error("Failed to retrieve album ID from librarian user", e);
-            stats.put("albumId", null);
+            stats.setAlbumId(null);
         }
 
         return stats;
@@ -473,12 +628,12 @@ public class PhotoExportService {
      * Uses PhotoMetadataProjection to avoid loading image bytes and prevent OutOfMemory errors
      */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getAllPhotosWithExportStatus() {
+    public List<PhotoExportInfoDto> getAllPhotosWithExportStatus() {
         logger.debug("Fetching all photo metadata (without image bytes)");
-        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findAllProjectedBy();
+        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findBy();
         logger.info("Found {} photos in database", allPhotos.size());
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<PhotoExportInfoDto> result = new ArrayList<>();
 
         for (com.muczynski.library.repository.PhotoMetadataProjection photo : allPhotos) {
             // Skip soft-deleted photos
@@ -486,35 +641,58 @@ public class PhotoExportService {
                 continue;
             }
             try {
-                Map<String, Object> photoInfo = new HashMap<>();
-                photoInfo.put("id", photo.getId());
-                photoInfo.put("caption", photo.getCaption());
-                photoInfo.put("exportStatus", photo.getExportStatus() != null ? photo.getExportStatus().toString() : "PENDING");
-                photoInfo.put("exportedAt", photo.getExportedAt());
-                photoInfo.put("permanentId", photo.getPermanentId());
-                photoInfo.put("exportErrorMessage", photo.getExportErrorMessage());
-                photoInfo.put("contentType", photo.getContentType());
+                PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
+                photoInfo.setId(photo.getId());
+                photoInfo.setCaption(photo.getCaption());
+                // Derive status from actual data to match stats counts exactly
+                // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
+                String derivedStatus;
+                boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
+                boolean hasChecksum = photo.getImageChecksum() != null;
+
+                if (photo.getExportStatus() == Photo.ExportStatus.FAILED) {
+                    derivedStatus = "FAILED";
+                } else if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
+                    derivedStatus = "IN_PROGRESS";
+                } else if (hasPermanentId && hasChecksum) {
+                    // Has both permanentId and checksum = fully synced (exported and imported)
+                    derivedStatus = "COMPLETED";
+                } else if (hasPermanentId && !hasChecksum) {
+                    // Has permanentId but no checksum = needs import from Google Photos
+                    derivedStatus = "PENDING_IMPORT";
+                } else if (hasChecksum && !hasPermanentId) {
+                    // Has checksum but no permanentId = needs export to Google Photos
+                    derivedStatus = "PENDING";
+                } else {
+                    // No image and no permanentId = no data to export
+                    derivedStatus = "NO_IMAGE";
+                }
+                photoInfo.setExportStatus(derivedStatus);
+                photoInfo.setExportedAt(photo.getExportedAt());
+                photoInfo.setPermanentId(photo.getPermanentId());
+                photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
+                photoInfo.setContentType(photo.getContentType());
                 // Use imageChecksum as proxy for hasImage to avoid loading image bytes
-                photoInfo.put("hasImage", photo.getImageChecksum() != null);
-                photoInfo.put("checksum", photo.getImageChecksum());
+                photoInfo.setHasImage(photo.getImageChecksum() != null);
+                photoInfo.setChecksum(photo.getImageChecksum());
 
                 if (photo.getBook() != null) {
-                    photoInfo.put("bookTitle", photo.getBook().getTitle());
-                    photoInfo.put("bookId", photo.getBook().getId());
-                    photoInfo.put("bookLocNumber", photo.getBook().getLocNumber());
+                    photoInfo.setBookTitle(photo.getBook().getTitle());
+                    photoInfo.setBookId(photo.getBook().getId());
+                    photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
                     // Fetch dateAddedToLibrary separately since it's not in the projection
                     bookRepository.findById(photo.getBook().getId()).ifPresent(book -> {
-                        photoInfo.put("bookDateAdded", book.getDateAddedToLibrary());
+                        photoInfo.setBookDateAdded(book.getDateAddedToLibrary());
                     });
                     // Include book's author if available
                     if (photo.getBook().getAuthor() != null) {
-                        photoInfo.put("bookAuthorName", photo.getBook().getAuthor().getName());
+                        photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
                     }
                 }
 
                 if (photo.getAuthor() != null) {
-                    photoInfo.put("authorName", photo.getAuthor().getName());
-                    photoInfo.put("authorId", photo.getAuthor().getId());
+                    photoInfo.setAuthorName(photo.getAuthor().getName());
+                    photoInfo.setAuthorId(photo.getAuthor().getId());
                 }
 
                 result.add(photoInfo);
@@ -527,8 +705,8 @@ public class PhotoExportService {
         // Sort by book dateAdded (descending, most recent first) to group photos of the same book together
         // Photos without books will appear at the end
         result.sort((p1, p2) -> {
-            Object date1 = p1.get("bookDateAdded");
-            Object date2 = p2.get("bookDateAdded");
+            LocalDateTime date1 = p1.getBookDateAdded();
+            LocalDateTime date2 = p2.getBookDateAdded();
 
             // Handle null values - put photos without books at the end
             if (date1 == null && date2 == null) return 0;
@@ -536,7 +714,7 @@ public class PhotoExportService {
             if (date2 == null) return -1; // p1 goes before p2
 
             // Both dates exist - compare in descending order (most recent first)
-            return ((LocalDateTime) date2).compareTo((LocalDateTime) date1);
+            return date2.compareTo(date1);
         });
 
         logger.info("Successfully processed {} photos for display", result.size());
@@ -552,12 +730,15 @@ public class PhotoExportService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
 
-        exportPhoto(photo, username);
+        exportPhoto(photo, user);
     }
 
     /**
@@ -566,72 +747,112 @@ public class PhotoExportService {
      */
     @Transactional
     public String importPhotoById(Long photoId) {
+        logger.info("=== Starting import for photo ID: {} ===", photoId);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Import failed for photo {}: No authenticated user found", photoId);
             return "No authenticated user found";
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            logger.error("Import failed for photo {}: User {} not found", photoId, userId);
+            return "User not found";
+        }
 
         Photo photo = photoRepository.findById(photoId).orElse(null);
         if (photo == null) {
+            logger.error("Import failed: Photo not found with ID: {}", photoId);
             return "Photo not found: " + photoId;
         }
 
+        // Log photo details for debugging
+        String bookInfo = photo.getBook() != null
+            ? String.format("Book ID: %d, Title: '%s'", photo.getBook().getId(), photo.getBook().getTitle())
+            : "No book";
+        String authorInfo = photo.getAuthor() != null
+            ? String.format("Author ID: %d, Name: '%s'", photo.getAuthor().getId(), photo.getAuthor().getName())
+            : "No author";
+        logger.info("Photo {} details: permanentId='{}', photoOrder={}, {}, {}",
+            photoId, photo.getPermanentId(), photo.getPhotoOrder(), bookInfo, authorInfo);
+
         if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+            logger.error("Import failed for photo {}: No permanent ID", photoId);
             return "Photo does not have a permanent ID to import from";
         }
 
         String accessToken;
         try {
-            accessToken = googlePhotosService.getValidAccessToken(username);
+            accessToken = googlePhotosService.getValidAccessToken(user);
+            logger.debug("Got access token for user {} (token length: {})", user.getId(), accessToken.length());
         } catch (Exception e) {
             String errorMsg = "Failed to get access token: " + e.getMessage();
+            logger.error("Import failed for photo {}: {}", photoId, errorMsg, e);
             markPhotoAsFailed(photo, "Import failed: " + errorMsg);
             return errorMsg;
         }
 
         try {
             // Get media item details from Google Photos
+            logger.info("Fetching media item from Google Photos for permanentId: {}", photo.getPermanentId());
             var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
 
             if (mediaItem == null) {
-                String errorMsg = "Media item not found in Google Photos";
+                String errorMsg = "Media item not found in Google Photos for permanentId: " + photo.getPermanentId();
+                logger.error("Import failed for photo {}: {}", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
+
+            logger.info("Media item found: filename='{}', mimeType='{}'",
+                mediaItem.getFilename(), mediaItem.getMimeType());
 
             // Download the image bytes
             String baseUrl = mediaItem.getBaseUrl();
             if (baseUrl == null || baseUrl.isEmpty()) {
-                String errorMsg = "No base URL available for media item";
+                String errorMsg = "No base URL available for media item (permanentId: " + photo.getPermanentId() + ")";
+                logger.error("Import failed for photo {}: {}", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
 
+            logger.info("Downloading photo from baseUrl (length: {} chars)", baseUrl.length());
             // Use downloadPhoto which already appends =d for original quality
             byte[] imageBytes = photosLibraryClient.downloadPhoto(accessToken, baseUrl);
 
             if (imageBytes == null || imageBytes.length == 0) {
-                String errorMsg = "Failed to download image from Google Photos";
+                String errorMsg = "Failed to download image from Google Photos (permanentId: " + photo.getPermanentId() + ")";
+                logger.error("Import failed for photo {}: {} - received null or empty bytes", photoId, errorMsg);
                 markPhotoAsFailed(photo, "Import failed: " + errorMsg);
                 return errorMsg;
             }
+
+            logger.info("Downloaded {} bytes for photo {}", imageBytes.length, photoId);
 
             // Update the photo with downloaded image
             photo.setImage(imageBytes);
             if (mediaItem.getMimeType() != null) {
                 photo.setContentType(mediaItem.getMimeType());
             }
+            // Compute and set the image checksum so it's no longer counted as "pending import"
+            String checksum = computeChecksum(imageBytes);
+            photo.setImageChecksum(checksum);
+            logger.debug("Computed checksum for photo {}: {}", photoId, checksum);
+
             // Clear any previous error message and status on success
             photo.setExportErrorMessage(null);
             photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+
+            logger.info("Saving photo {} to database...", photoId);
             photoRepository.save(photo);
 
-            logger.info("Successfully imported photo ID: {} from Google Photos ({} bytes)", photoId, imageBytes.length);
+            logger.info("=== Successfully imported photo ID: {} from Google Photos ({} bytes) ===", photoId, imageBytes.length);
             return null; // Success
 
         } catch (Exception e) {
-            logger.error("Failed to import photo ID: {}", photoId, e);
+            logger.error("Import failed for photo {} with exception: {} - {}", photoId, e.getClass().getSimpleName(), e.getMessage(), e);
             // Mark the photo as failed so it shows in stats and table
             String errorMsg = e.getMessage();
             markPhotoAsFailed(photo, "Import failed: " + errorMsg);
@@ -642,9 +863,10 @@ public class PhotoExportService {
     /**
      * Import all photos that have permanent IDs but no image data
      * Uses efficient ID-based query to avoid loading image bytes
+     * Processes photos in batches for better performance
      */
     @Transactional
-    public Map<String, Object> importAllPhotos() {
+    public PhotoImportResultDto importAllPhotos() {
         logger.info("Starting import of all pending photos...");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -652,15 +874,20 @@ public class PhotoExportService {
             throw new LibraryException("No authenticated user found");
         }
 
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
+
         // Use efficient query that returns only IDs without loading image bytes
         List<Long> photoIdsToImport = photoRepository.findIdsNeedingImport();
 
         if (photoIdsToImport.isEmpty()) {
             logger.info("No photos need import at this time");
-            Map<String, Object> result = new HashMap<>();
-            result.put("message", "No photos need import");
-            result.put("imported", 0);
-            result.put("failed", 0);
+            PhotoImportResultDto result = new PhotoImportResultDto();
+            result.setMessage("No photos need import");
+            result.setImported(0);
+            result.setFailed(0);
             return result;
         }
 
@@ -669,34 +896,161 @@ public class PhotoExportService {
         int successCount = 0;
         int failureCount = 0;
 
-        for (Long photoId : photoIdsToImport) {
-            String errorMessage = importPhotoById(photoId);
-            if (errorMessage == null) {
-                successCount++;
-            } else {
-                failureCount++;
+        // Process photos in batches of 20 (conservative batch size for downloads)
+        final int BATCH_SIZE = 20;
+        for (int i = 0; i < photoIdsToImport.size(); i += BATCH_SIZE) {
+            int endIndex = Math.min(i + BATCH_SIZE, photoIdsToImport.size());
+            List<Long> batchIds = photoIdsToImport.subList(i, endIndex);
+
+            logger.info("Processing batch {}-{} of {}", i + 1, endIndex, photoIdsToImport.size());
+
+            try {
+                int batchSuccess = importPhotosBatch(batchIds, user);
+                successCount += batchSuccess;
+                failureCount += (batchIds.size() - batchSuccess);
+            } catch (Exception e) {
+                logger.error("Failed to import batch {}-{}: {}", i + 1, endIndex, e.getMessage(), e);
+                failureCount += batchIds.size();
             }
         }
 
         logger.info("Photo import complete. Success: {}, Failed: {}", successCount, failureCount);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("message", String.format("Import complete. %d succeeded, %d failed", successCount, failureCount));
-        result.put("imported", successCount);
-        result.put("failed", failureCount);
+        PhotoImportResultDto result = new PhotoImportResultDto();
+        result.setMessage(String.format("Import complete. %d succeeded, %d failed", successCount, failureCount));
+        result.setImported(successCount);
+        result.setFailed(failureCount);
         return result;
+    }
+
+    /**
+     * Import a batch of photos from Google Photos in parallel
+     * @param photoIds List of photo IDs to import
+     * @param user User with Google Photos credentials
+     * @return Number of successfully imported photos
+     */
+    @Transactional
+    public int importPhotosBatch(List<Long> photoIds, User user) {
+        if (photoIds.isEmpty()) {
+            return 0;
+        }
+
+        logger.info("Importing batch of {} photos from Google Photos", photoIds.size());
+
+        // Load photos from database
+        List<Photo> photos = new ArrayList<>();
+        for (Long photoId : photoIds) {
+            photoRepository.findById(photoId).ifPresent(photos::add);
+        }
+
+        if (photos.isEmpty()) {
+            logger.warn("No valid photos found in batch");
+            return 0;
+        }
+
+        int successCount = 0;
+        String accessToken;
+
+        try {
+            accessToken = googlePhotosService.getValidAccessToken(user);
+            logger.debug("Got access token for user {} (token length: {})", user.getId(), accessToken.length());
+        } catch (Exception e) {
+            logger.error("Failed to get access token: {}", e.getMessage(), e);
+            // Mark all photos as failed
+            for (Photo photo : photos) {
+                markPhotoAsFailed(photo, "Import failed: " + e.getMessage());
+            }
+            return 0;
+        }
+
+        // Process each photo in the batch
+        for (Photo photo : photos) {
+            try {
+                if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
+                    logger.warn("Photo {} has no permanent ID, skipping", photo.getId());
+                    continue;
+                }
+
+                // Get media item details from Google Photos
+                logger.debug("Fetching media item from Google Photos for photo {} (permanentId: {})",
+                        photo.getId(), photo.getPermanentId());
+                var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
+
+                if (mediaItem == null) {
+                    String errorMsg = "Media item not found in Google Photos for permanentId: " + photo.getPermanentId();
+                    logger.error("Import failed for photo {}: {}", photo.getId(), errorMsg);
+                    markPhotoAsFailed(photo, "Import failed: " + errorMsg);
+                    continue;
+                }
+
+                logger.debug("Media item found for photo {}: filename='{}', mimeType='{}'",
+                        photo.getId(), mediaItem.getFilename(), mediaItem.getMimeType());
+
+                // Download the image bytes
+                String baseUrl = mediaItem.getBaseUrl();
+                if (baseUrl == null || baseUrl.isEmpty()) {
+                    String errorMsg = "No base URL available for media item (permanentId: " + photo.getPermanentId() + ")";
+                    logger.error("Import failed for photo {}: {}", photo.getId(), errorMsg);
+                    markPhotoAsFailed(photo, "Import failed: " + errorMsg);
+                    continue;
+                }
+
+                logger.debug("Downloading photo {} from baseUrl (length: {} chars)", photo.getId(), baseUrl.length());
+                byte[] imageBytes = photosLibraryClient.downloadPhoto(accessToken, baseUrl);
+
+                if (imageBytes == null || imageBytes.length == 0) {
+                    String errorMsg = "Failed to download image from Google Photos (permanentId: " + photo.getPermanentId() + ")";
+                    logger.error("Import failed for photo {}: {} - received null or empty bytes", photo.getId(), errorMsg);
+                    markPhotoAsFailed(photo, "Import failed: " + errorMsg);
+                    continue;
+                }
+
+                logger.debug("Downloaded {} bytes for photo {}", imageBytes.length, photo.getId());
+
+                // Update the photo with downloaded image
+                photo.setImage(imageBytes);
+                if (mediaItem.getMimeType() != null) {
+                    photo.setContentType(mediaItem.getMimeType());
+                }
+                // Compute and set the image checksum
+                String checksum = computeChecksum(imageBytes);
+                photo.setImageChecksum(checksum);
+                logger.debug("Computed checksum for photo {}: {}", photo.getId(), checksum);
+
+                // Clear any previous error message and status on success
+                photo.setExportErrorMessage(null);
+                photo.setExportStatus(Photo.ExportStatus.COMPLETED);
+
+                photoRepository.save(photo);
+                successCount++;
+
+                logger.debug("Successfully imported photo {} ({} bytes)", photo.getId(), imageBytes.length);
+
+            } catch (Exception e) {
+                logger.error("Import failed for photo {} with exception: {} - {}",
+                        photo.getId(), e.getClass().getSimpleName(), e.getMessage(), e);
+                String errorMsg = e.getMessage();
+                markPhotoAsFailed(photo, "Import failed: " + errorMsg);
+            }
+        }
+
+        logger.info("Batch import completed: {} of {} photos succeeded", successCount, photos.size());
+        return successCount;
     }
 
     /**
      * Verify that a photo's permanent ID still works in Google Photos
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> verifyPhotoById(Long photoId) {
+    public PhotoVerifyResultDto verifyPhotoById(Long photoId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
 
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
@@ -704,37 +1058,37 @@ public class PhotoExportService {
         if (photo.getPermanentId() == null || photo.getPermanentId().trim().isEmpty()) {
             throw new LibraryException("Photo does not have a permanent ID to verify");
         }
-        String accessToken = googlePhotosService.getValidAccessToken(username);
+        String accessToken = googlePhotosService.getValidAccessToken(user);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("photoId", photoId);
-        result.put("permanentId", photo.getPermanentId());
+        PhotoVerifyResultDto result = new PhotoVerifyResultDto();
+        result.setPhotoId(photoId);
+        result.setPermanentId(photo.getPermanentId());
 
         try {
             // Try to get media item details from Google Photos
             var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
 
             if (mediaItem != null) {
-                result.put("valid", true);
-                result.put("message", "Permanent ID is valid");
-                result.put("filename", mediaItem.getFilename());
-                result.put("mimeType", mediaItem.getMimeType());
+                result.setValid(true);
+                result.setMessage("Permanent ID is valid");
+                result.setFilename(mediaItem.getFilename());
+                result.setMimeType(mediaItem.getMimeType());
             } else {
-                result.put("valid", false);
-                result.put("message", "Media item not found in Google Photos");
+                result.setValid(false);
+                result.setMessage("Media item not found in Google Photos");
             }
 
         } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
             logger.warn("Verification returned 404 for photo ID {}: permanent ID {} not found in Google Photos. " +
                     "This may indicate the photo was deleted, or was uploaded with a different OAuth client/authorization.",
                     photoId, photo.getPermanentId());
-            result.put("valid", false);
-            result.put("message", "Media item not found in Google Photos. The photo may have been deleted, " +
+            result.setValid(false);
+            result.setMessage("Media item not found in Google Photos. The photo may have been deleted, " +
                     "or the permanent ID was stored from a failed upload. Consider unlinking and re-exporting.");
         } catch (Exception e) {
             logger.warn("Verification failed for photo ID {}: {}", photoId, e.getMessage());
-            result.put("valid", false);
-            result.put("message", "Verification failed: " + e.getMessage());
+            result.setValid(false);
+            result.setMessage("Verification failed: " + e.getMessage());
         }
 
         return result;

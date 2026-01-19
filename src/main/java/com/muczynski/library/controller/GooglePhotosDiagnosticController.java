@@ -42,9 +42,10 @@ public class GooglePhotosDiagnosticController {
     public ResponseEntity<?> testToken() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
 
-            User user = userRepository.findByUsernameIgnoreCase(username)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
@@ -83,9 +84,10 @@ public class GooglePhotosDiagnosticController {
     public ResponseEntity<?> testListAlbums() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
 
-            User user = userRepository.findByUsernameIgnoreCase(username)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
@@ -129,9 +131,10 @@ public class GooglePhotosDiagnosticController {
     public ResponseEntity<?> testSearchSimple() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
 
-            User user = userRepository.findByUsernameIgnoreCase(username)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();
@@ -180,9 +183,10 @@ public class GooglePhotosDiagnosticController {
     public ResponseEntity<?> testSearchWithDateFilter() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
+            // The principal name is the database user ID (not username)
+            Long userId = Long.parseLong(authentication.getName());
 
-            User user = userRepository.findByUsernameIgnoreCase(username)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new LibraryException("User not found"));
 
             String accessToken = user.getGooglePhotosApiKey();

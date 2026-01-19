@@ -11,9 +11,12 @@ import lombok.Setter;
 @Setter
 public class UserSettingsDto {
     private String username;
+    private String currentPassword;  // For password verification
     private String password;
     private String xaiApiKey;
     private String googlePhotosApiKey;
+    private String googlePhotosRefreshToken;
+    private String googlePhotosTokenExpiry;
     private String googleClientSecret;
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;

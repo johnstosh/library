@@ -1,0 +1,37 @@
+// (c) Copyright 2025 by Muczynski
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { LoanFormPage } from './components/LoanFormPage'
+
+export function LoanNewPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const handleSuccess = () => {
+    navigate('/loans')
+  }
+
+  const handleCancel = () => {
+    navigate('/loans')
+  }
+
+  // Read initial filter values from query params (from checkout card transcription)
+  const initialFilters = {
+    title: searchParams.get('title') || '',
+    author: searchParams.get('author') || '',
+    locNumber: searchParams.get('locNumber') || '',
+    borrower: searchParams.get('borrower') || '',
+    checkoutDate: searchParams.get('checkoutDate') || '',
+    dueDate: searchParams.get('dueDate') || '',
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <LoanFormPage
+        title="Checkout Book"
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
+        initialFilters={initialFilters}
+      />
+    </div>
+  )
+}

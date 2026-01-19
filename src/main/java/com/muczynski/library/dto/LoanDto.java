@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class LoanDto {
@@ -24,4 +25,5 @@ public class LoanDto {
     private LocalDate loanDate;
     private LocalDate dueDate;
     private LocalDate returnDate;
+    private LocalDateTime lastModified;
 }

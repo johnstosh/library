@@ -33,7 +33,8 @@ public class AppliedService {
     }
 
     public Applied getAppliedById(Long id) {
-        return appliedRepository.findById(id).orElse(null);
+        return appliedRepository.findById(id)
+                .orElseThrow(() -> new LibraryException("Applied not found: " + id));
     }
 
     public Applied createApplied(Applied applied) {

@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.BookAlreadyLoanedException;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Book;
@@ -43,6 +44,13 @@ public class LoanService {
     public LoanDto checkoutBook(LoanDto loanDto) {
         Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
         User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
+
+        // Check if book is already on loan (has an active loan with no return date)
+        long activeLoans = loanRepository.countByBookIdAndReturnDateIsNull(book.getId());
+        if (activeLoans > 0) {
+            throw new BookAlreadyLoanedException(book.getId());
+        }
+
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);
@@ -64,48 +72,73 @@ public class LoanService {
     }
 
     public List<LoanDto> getAllLoans(boolean showAll) {
+        logger.info("LoanService.getAllLoans called with showAll={}", showAll);
         List<Loan> loans;
         if (showAll) {
             loans = loanRepository.findAllByOrderByDueDateAsc();
+            logger.info("LoanService.getAllLoans: Found {} total loans (showAll=true)", loans.size());
         } else {
             loans = loanRepository.findAllByReturnDateIsNullOrderByDueDateAsc();
+            logger.info("LoanService.getAllLoans: Found {} active loans (showAll=false)", loans.size());
         }
-        return loans.stream()
+        if (!loans.isEmpty()) {
+            logger.debug("LoanService.getAllLoans: First loan - id={}, bookId={}, userId={}, returnDate={}",
+                loans.get(0).getId(),
+                loans.get(0).getBook() != null ? loans.get(0).getBook().getId() : null,
+                loans.get(0).getUser() != null ? loans.get(0).getUser().getId() : null,
+                loans.get(0).getReturnDate());
+        }
+        List<LoanDto> result = loans.stream()
                 .map(loanMapper::toDto)
                 .collect(Collectors.toList());
+        logger.info("LoanService.getAllLoans: Returning {} loan DTOs", result.size());
+        return result;
     }
 
-    public List<LoanDto> getLoansByUsername(String username, boolean showAll) {
-        List<User> users = userRepository.findAllByUsernameOrderByIdAsc(username);
+    public List<LoanDto> getLoansByUserId(Long userId, boolean showAll) {
+        logger.info("LoanService.getLoansByUserId called with userId={}, showAll={}", userId, showAll);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found: " + userId));
+        logger.info("LoanService.getLoansByUserId: Found user with id={}, username={}", user.getId(), user.getUsername());
 
-        // If no users found by username, check if this is an OAuth subject ID
-        if (users.isEmpty()) {
-            // Try to find by SSO subject ID (for OAuth users like Google)
-            // OAuth subject IDs are typically numeric strings
-            List<User> ssoUsers = userRepository.findAllBySsoProviderAndSsoSubjectIdOrderByIdAsc("google", username);
-            if (!ssoUsers.isEmpty()) {
-                users = ssoUsers;
-                logger.debug("Found user by SSO subject ID: {}", username);
-            }
-        }
+        // Debug: Compare count method (which works) vs fetch method
+        long countByUserId = loanRepository.countByUserIdAndReturnDateIsNull(userId);
+        logger.info("LoanService.getLoansByUserId: countByUserIdAndReturnDateIsNull({})={}", userId, countByUserId);
 
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found: " + username);
-        }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
         List<Loan> loans;
         if (showAll) {
-            loans = loanRepository.findAllByUserOrderByDueDateAsc(user);
+            // Use the new userId-based query method
+            loans = loanRepository.findAllByUserIdOrderByDueDateAsc(userId);
+            logger.info("LoanService.getLoansByUserId: findAllByUserIdOrderByDueDateAsc returned {} loans", loans.size());
+
+            // Debug comparison with User entity method
+            List<Loan> loansViaUserEntity = loanRepository.findAllByUserOrderByDueDateAsc(user);
+            logger.info("LoanService.getLoansByUserId: [DEBUG] findAllByUserOrderByDueDateAsc (User entity) returned {} loans", loansViaUserEntity.size());
         } else {
-            loans = loanRepository.findAllByUserAndReturnDateIsNullOrderByDueDateAsc(user);
+            // Use the new userId-based query method
+            loans = loanRepository.findAllByUserIdAndReturnDateIsNullOrderByDueDateAsc(userId);
+            logger.info("LoanService.getLoansByUserId: findAllByUserIdAndReturnDateIsNullOrderByDueDateAsc returned {} loans", loans.size());
+
+            // Debug comparison with User entity method
+            List<Loan> loansViaUserEntity = loanRepository.findAllByUserAndReturnDateIsNullOrderByDueDateAsc(user);
+            logger.info("LoanService.getLoansByUserId: [DEBUG] findAllByUserAndReturnDateIsNullOrderByDueDateAsc (User entity) returned {} loans", loansViaUserEntity.size());
         }
-        return loans.stream()
+
+        if (!loans.isEmpty()) {
+            Loan firstLoan = loans.get(0);
+            logger.info("LoanService.getLoansByUserId: First loan - id={}, bookId={}, userId={}, loanDate={}, returnDate={}",
+                firstLoan.getId(),
+                firstLoan.getBook() != null ? firstLoan.getBook().getId() : null,
+                firstLoan.getUser() != null ? firstLoan.getUser().getId() : null,
+                firstLoan.getLoanDate(),
+                firstLoan.getReturnDate());
+        }
+
+        List<LoanDto> result = loans.stream()
                 .map(loanMapper::toDto)
                 .collect(Collectors.toList());
+        logger.info("LoanService.getLoansByUserId: Returning {} loan DTOs", result.size());
+        return result;
     }
 
     public LoanDto getLoanById(Long id) {

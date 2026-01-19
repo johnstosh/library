@@ -3,8 +3,14 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.exception.InsufficientPermissionsException;
+import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
+import com.muczynski.library.service.UserService;
+import com.muczynski.library.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +19,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -27,16 +34,26 @@ public class LoanController {
     @Autowired
     private LoanService loanService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private CheckoutCardTranscriptionService checkoutCardTranscriptionService;
+
     @PostMapping("/checkout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> checkoutBook(@Valid @RequestBody LoanDto loanDto, Authentication authentication) {
         // Regular users can only checkout books to themselves
-        boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+        boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
         if (!isLibrarian) {
             // For non-librarians, verify they're checking out to themselves
-            String username = authentication.getName();
-            logger.debug("Regular user {} attempting to checkout book", username);
-            // The frontend should set the userId correctly, but we trust the service layer to validate
+            // The principal name is the database user ID (not username)
+            Long authenticatedUserId = Long.parseLong(authentication.getName());
+            logger.debug("Regular user ID {} attempting to checkout book", authenticatedUserId);
+            if (!authenticatedUserId.equals(loanDto.getUserId())) {
+                logger.warn("User ID {} attempted to checkout book to different user ID {}", authenticatedUserId, loanDto.getUserId());
+                throw new InsufficientPermissionsException("You can only checkout books to yourself");
+            }
         }
         LoanDto created = loanService.checkoutBook(loanDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -57,16 +74,38 @@ public class LoanController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getAllLoans(@RequestParam(defaultValue = "false") boolean showAll, Authentication authentication) {
+        logger.info("LoanController.getAllLoans: showAll={}, principal={}, principalClass={}",
+            showAll, authentication.getName(), authentication.getPrincipal().getClass().getSimpleName());
+        logger.info("LoanController.getAllLoans: authorities={}", authentication.getAuthorities());
         try {
             // Librarians see all loans, regular users see only their own loans
-            boolean isLibrarian = authentication.getAuthorities().contains(new SimpleGrantedAuthority("LIBRARIAN"));
+            boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
+            logger.info("LoanController.getAllLoans: isLibrarian={}", isLibrarian);
             List<LoanDto> loans;
             if (isLibrarian) {
                 loans = loanService.getAllLoans(showAll);
+                logger.info("LoanController.getAllLoans: Librarian retrieved {} loans", loans.size());
             } else {
-                String username = authentication.getName();
-                loans = loanService.getLoansByUsername(username, showAll);
+                // The principal name is the database user ID (not username) for OAuth users
+                // For form login users, we need to look up the user by username
+                String principalName = authentication.getName();
+                Long userId;
+                try {
+                    userId = Long.parseLong(principalName);
+                    logger.info("LoanController.getAllLoans: Parsed principal as user ID: {}", userId);
+                } catch (NumberFormatException e) {
+                    // Principal is a username (form login), look up user ID
+                    logger.info("LoanController.getAllLoans: Principal '{}' is not a number, treating as username", principalName);
+                    userId = userService.getUserIdByUsernameOrSsoSubject(principalName);
+                    logger.info("LoanController.getAllLoans: Looked up user ID {} for username '{}'", userId, principalName);
+                    if (userId == null) {
+                        throw new LibraryException("User not found: " + principalName);
+                    }
+                }
+                loans = loanService.getLoansByUserId(userId, showAll);
+                logger.info("LoanController.getAllLoans: User {} retrieved {} loans", userId, loans.size());
             }
+            logger.info("LoanController.getAllLoans: Returning {} loans to client", loans.size());
             return ResponseEntity.ok(loans);
         } catch (Exception e) {
             logger.warn("Failed to retrieve loans (showAll: {}): {}", showAll, e.getMessage(), e);
@@ -107,6 +146,43 @@ public class LoanController {
         } catch (Exception e) {
             logger.warn("Failed to delete loan ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/transcribe-checkout-card")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> transcribeCheckoutCard(@RequestParam("photo") MultipartFile photo) {
+        try {
+            logger.info("Received checkout card photo for transcription: {} ({} bytes)",
+                    photo.getOriginalFilename(), photo.getSize());
+
+            if (photo.isEmpty()) {
+                return ResponseEntity.badRequest().body("Photo file is empty");
+            }
+
+            byte[] imageBytes = photo.getBytes();
+            String contentType = photo.getContentType();
+
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body("File must be an image");
+            }
+
+            CheckoutCardTranscriptionDto result = checkoutCardTranscriptionService
+                    .transcribeCheckoutCard(imageBytes, contentType);
+
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            logger.error("Failed to read photo file: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to read photo file: " + e.getMessage());
+        } catch (LibraryException e) {
+            logger.error("Transcription failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Transcription failed: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Unexpected error during transcription: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error: " + e.getMessage());
         }
     }
 }

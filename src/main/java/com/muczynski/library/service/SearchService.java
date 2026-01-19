@@ -7,6 +7,8 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.PageInfoDto;
+import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -18,9 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,12 +39,24 @@ public class SearchService {
     private AuthorMapper authorMapper;
 
     @Transactional(readOnly = true)
-    public Map<String, Object> search(String query, int page, int size) {
+    public SearchResponseDto search(String query, int page, int size, String searchType) {
         if (query == null || query.trim().isEmpty()) {
             throw new IllegalArgumentException("Query cannot be empty");
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<Book> bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+        Page<Book> bookPage;
+        switch (searchType) {
+            case "ONLINE":
+                bookPage = bookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(query, pageable);
+                break;
+            case "IN_LIBRARY":
+                bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable);
+                break;
+            case "ALL":
+            default:
+                bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
+                break;
+        }
         Page<Author> authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);
 
         List<BookDto> books = bookPage.getContent().stream()
@@ -54,24 +66,20 @@ public class SearchService {
                 .map(authorMapper::toDto)
                 .collect(Collectors.toList());
 
-        Map<String, Object> results = new HashMap<>();
-        results.put("books", books);
-        results.put("authors", authors);
+        PageInfoDto bookPageInfo = new PageInfoDto(
+                bookPage.getTotalPages(),
+                bookPage.getTotalElements(),
+                bookPage.getNumber(),
+                bookPage.getSize()
+        );
 
-        Map<String, Object> bookPageInfo = new HashMap<>();
-        bookPageInfo.put("totalPages", bookPage.getTotalPages());
-        bookPageInfo.put("totalElements", bookPage.getTotalElements());
-        bookPageInfo.put("currentPage", bookPage.getNumber());
-        bookPageInfo.put("pageSize", bookPage.getSize());
-        results.put("bookPage", bookPageInfo);
+        PageInfoDto authorPageInfo = new PageInfoDto(
+                authorPage.getTotalPages(),
+                authorPage.getTotalElements(),
+                authorPage.getNumber(),
+                authorPage.getSize()
+        );
 
-        Map<String, Object> authorPageInfo = new HashMap<>();
-        authorPageInfo.put("totalPages", authorPage.getTotalPages());
-        authorPageInfo.put("totalElements", authorPage.getTotalElements());
-        authorPageInfo.put("currentPage", authorPage.getNumber());
-        authorPageInfo.put("pageSize", authorPage.getSize());
-        results.put("authorPage", authorPageInfo);
-
-        return results;
+        return new SearchResponseDto(books, authors, bookPageInfo, authorPageInfo);
     }
 }

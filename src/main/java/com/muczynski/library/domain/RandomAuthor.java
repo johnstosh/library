@@ -27,6 +27,7 @@ public class RandomAuthor {
         Author author = new Author();
         author.setName(generateRandomName());
         author.setReligiousAffiliation("test-data");
+        author.setGrokipediaUrl("https://grokipedia.example.com/author/" + RANDOM.nextInt(1000));
         return author;
     }
 

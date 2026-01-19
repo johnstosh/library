@@ -9,7 +9,7 @@ on:
   push:
     branches:
       - main
-      - claude/include-books-without-loc-01Fe53UKh4oDuAbRLWDmpmQv
+      - dev
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -31,5 +31,6 @@ jobs:
         run: |
           export GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
           export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          export BRANCH_NAME=${{ github.ref_name }}
           chmod +x deploy.sh  # Make script executable if needed
           ./deploy.sh

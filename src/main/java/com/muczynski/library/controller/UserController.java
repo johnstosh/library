@@ -34,6 +34,7 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         try {
             logger.info("GET /api/users/me called, authentication: {}", authentication != null ? authentication.getClass().getName() : "null");
@@ -44,7 +45,7 @@ public class UserController {
             }
 
             String username = null;
-            Set<String> roles = null;
+            Set<String> authorities = null;
 
             // Handle both UserDetails (form login) and OAuth2User (SSO login)
             Object principal = authentication.getPrincipal();
@@ -53,7 +54,7 @@ public class UserController {
                 // Traditional form-based login
                 UserDetails userDetails = (UserDetails) principal;
                 username = userDetails.getUsername();
-                roles = userDetails.getAuthorities().stream()
+                authorities = userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toSet());
             } else if (principal instanceof OAuth2User) {
@@ -65,7 +66,7 @@ public class UserController {
                     // Fallback to 'sub' if email not available
                     username = oauth2User.getAttribute("sub");
                 }
-                roles = authentication.getAuthorities().stream()
+                authorities = authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toSet());
             } else {
@@ -78,11 +79,11 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            logger.info("Username determined: {}, roles: {}", username, roles);
+            logger.info("Username determined: {}, authorities: {}", username, authorities);
 
             UserDto userDto = new UserDto();
             userDto.setUsername(username);
-            userDto.setRoles(roles);
+            userDto.setAuthorities(authorities);
 
             // Load full user details including ID and API key by username
             UserDto fullUser = userService.getUserByUsername(username);
@@ -141,14 +142,19 @@ public class UserController {
 
     @PostMapping("/public/register")
     public ResponseEntity<?> registerUser(@RequestBody CreateUserDto createUserDto) {
+        logger.info("=== USERS PUBLIC REGISTER ENDPOINT CALLED ===");
+        logger.info("Received user registration request - username: {}, authority: {}",
+                    createUserDto.getUsername(), createUserDto.getAuthority());
         try {
-            if (!"USER".equals(createUserDto.getRole())) {
+            if (!"USER".equals(createUserDto.getAuthority())) {
+                logger.warn("Rejected registration - authority must be USER, got: {}", createUserDto.getAuthority());
                 return ResponseEntity.badRequest().build();
             }
             UserDto createdUser = userService.createUser(createUserDto);
+            logger.info("Successfully created user with ID: {}", createdUser.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
         } catch (Exception e) {
-            logger.warn("Failed to register public user with DTO {}: {}", createUserDto, e.getMessage(), e);
+            logger.error("Failed to register public user with DTO {}: {}", createUserDto, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -186,6 +192,22 @@ public class UserController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             logger.warn("Failed to delete user ID {}: {}", id, e.getMessage(), e);
+            if (e.getMessage().contains("active loan")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", e.getMessage()));
+            }
+            throw e;
+        }
+    }
+
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> deleteBulkUsers(@RequestBody List<Long> ids) {
+        try {
+            userService.deleteBulkUsers(ids);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            logger.warn("Failed to bulk delete users {}: {}", ids, e.getMessage(), e);
             if (e.getMessage().contains("active loan")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(Map.of("message", e.getMessage()));

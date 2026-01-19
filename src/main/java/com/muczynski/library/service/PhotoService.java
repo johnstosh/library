@@ -108,6 +108,15 @@ public class PhotoService {
      */
     @Transactional
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType) {
+        return addPhotoFromBytes(bookId, imageBytes, contentType, null);
+    }
+
+    /**
+     * Add photo to book using raw image bytes, content type, and optional date taken
+     * Used by books-from-feed when downloading photos from Google Photos with metadata
+     */
+    @Transactional
+    public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType, LocalDateTime dateTaken) {
         try {
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new LibraryException("Book not found"));
@@ -124,9 +133,13 @@ public class PhotoService {
             photo.setCaption("");
             photo.setPhotoOrder(maxOrder + 1);
             photo.setImageChecksum(computeChecksum(imageBytes));
+            if (dateTaken != null) {
+                photo.setDateTaken(dateTaken);
+            }
 
             Photo savedPhoto = photoRepository.save(photo);
-            logger.debug("Added photo to book ID {} with order {}", bookId, savedPhoto.getPhotoOrder());
+            logger.debug("Added photo to book ID {} with order {} (dateTaken: {})",
+                    bookId, savedPhoto.getPhotoOrder(), dateTaken);
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add photo from bytes to book ID {}: {}", bookId, e.getMessage(), e);
@@ -281,7 +294,10 @@ public class PhotoService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
             ImageIO.write(rotatedImage, formatName, baos);
-            photo.setImage(baos.toByteArray());
+            byte[] rotatedBytes = baos.toByteArray();
+            photo.setImage(rotatedBytes);
+            // Recalculate checksum after rotation since image bytes changed
+            photo.setImageChecksum(computeChecksum(rotatedBytes));
         } catch (IOException e) {
             logger.error("IO error rotating image: {}", e.getMessage(), e);
             throw new LibraryException("Failed to rotate image", e);
@@ -594,36 +610,82 @@ public class PhotoService {
     @Transactional(readOnly = true)
     public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
         try {
+            logger.debug("Generating thumbnail for photo ID {} with width {}", photoId, width);
+
             Photo photo = photoRepository.findById(photoId)
                     .orElseThrow(() -> new LibraryException("Photo not found"));
 
+            logger.debug("Photo found: ID {}, contentType {}, imageSize {} bytes",
+                    photoId, photo.getContentType(), photo.getImage() != null ? photo.getImage().length : 0);
+
+            // Check if image data exists
+            if (photo.getImage() == null || photo.getImage().length == 0) {
+                logger.error("Photo ID {} has no image data (null or empty)", photoId);
+                throw new LibraryException("Photo has no image data");
+            }
+
             BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
             if (originalImage == null) {
-                return null;
+                logger.error("Failed to read image data for photo ID {}", photoId);
+                throw new LibraryException("Failed to read image data");
             }
 
             int originalWidth = originalImage.getWidth();
             int originalHeight = originalImage.getHeight();
             int newHeight = (int) Math.round((double) originalHeight / originalWidth * width);
 
+            logger.debug("Scaling image from {}x{} to {}x{}", originalWidth, originalHeight, width, newHeight);
+
             Image scaledImage = originalImage.getScaledInstance(width, newHeight, Image.SCALE_SMOOTH);
-            BufferedImage bufferedScaledImage = new BufferedImage(width, newHeight, originalImage.getType());
+
+            // Determine the appropriate BufferedImage type based on content type
+            // JPEG doesn't support alpha channel, so use TYPE_INT_RGB for JPEG
+            String contentType = photo.getContentType().toLowerCase();
+            int imageType;
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                imageType = BufferedImage.TYPE_INT_RGB;
+            } else {
+                imageType = BufferedImage.TYPE_INT_ARGB;
+            }
+
+            BufferedImage bufferedScaledImage = new BufferedImage(width, newHeight, imageType);
 
             Graphics2D g2d = bufferedScaledImage.createGraphics();
             g2d.drawImage(scaledImage, 0, 0, null);
             g2d.dispose();
 
+            logger.debug("Image scaled successfully, writing to output stream");
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
-            ImageIO.write(bufferedScaledImage, formatName, baos);
-            return Pair.of(baos.toByteArray(), photo.getContentType());
+
+            // Handle common format name variations
+            if (formatName.equalsIgnoreCase("jpeg")) {
+                formatName = "jpg";
+            }
+
+            logger.debug("Writing image as format: {}", formatName);
+
+            boolean writeSuccess = ImageIO.write(bufferedScaledImage, formatName, baos);
+            if (!writeSuccess) {
+                logger.error("ImageIO.write returned false for format {} on photo ID {}", formatName, photoId);
+                throw new LibraryException("Failed to write thumbnail image - unsupported format: " + formatName);
+            }
+
+            byte[] thumbnailBytes = baos.toByteArray();
+            logger.debug("Thumbnail generated successfully: {} bytes", thumbnailBytes.length);
+
+            return Pair.of(thumbnailBytes, photo.getContentType());
 
         } catch (IOException e) {
             logger.error("IO error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
-            throw new LibraryException("Failed to create thumbnail", e);
-        } catch (Exception e) {
-            logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
+            throw new LibraryException("Failed to create thumbnail due to IO error", e);
+        } catch (LibraryException e) {
+            logger.error("Library error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
             throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
+            throw new LibraryException("Failed to generate thumbnail", e);
         }
     }
 

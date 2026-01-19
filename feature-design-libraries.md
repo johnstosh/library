@@ -1,19 +1,20 @@
-# Libraries Feature Design
+# Branches Feature Design
 
 ## Overview
 
-The Libraries page provides management of library branches in the system. Each library represents a physical location that can house books. The page serves as the central hub for library administration and includes database-wide import/export functionality.
+The Branches page (technical name: Libraries) provides management of library branches in the system. Each branch represents a physical location that can house books. The page displays branch information with statistics on books and active loans.
+
+**Note on Terminology**: The UI displays "Branch/Branches" for user-facing text, but the backend database entity is named `Library` to preserve backward compatibility with exports/imports and database schema.
 
 ## Purpose
 
-- **Library Management**: Create, read, update, and delete library branches
+- **Branch Management**: Create, read, update, and delete library branches
 - **Multi-Branch Support**: While the system currently operates as a single-branch library, the architecture supports multiple branches
-- **Database Backup/Restore**: Provides JSON import/export for entire database backup and migration
-- **Photo Management**: Track Google Photos integration status for all photos across the library
+- **Statistics Display**: View book counts and active loan counts per branch
 
 ## Domain Model
 
-### Library Entity
+### Library Entity (Backend)
 
 **File**: `src/main/java/com/muczynski/library/domain/Library.java`
 
@@ -21,165 +22,108 @@ The Libraries page provides management of library branches in the system. Each l
 @Entity
 public class Library {
     private Long id;              // Auto-generated primary key
-    private String name;          // Library branch name (e.g., "Sacred Heart")
-    private String hostname;      // Hostname for this branch
-    private List<Book> books;     // One-to-many relationship with books
+    @Column(name = "name")        // Maps to "name" column for backward compatibility
+    private String branchName;    // Branch name (e.g., "Sacred Heart")
+    private String librarySystemName;  // Library system name (e.g., "Regional Library System")
 }
 ```
 
 **Fields**:
 - `id`: Unique identifier (auto-generated)
-- `name`: Display name of the library branch
-- `hostname`: Server hostname where this library instance runs
-- `books`: Collection of all books belonging to this library
+- `branchName`: Display name of the branch (shown as "Branch Name" in UI). Maps to database column `name` for backward compatibility.
+- `librarySystemName`: Name of the library system this branch belongs to (new field added in dev branch)
+
+**Note**: Books have a `@ManyToOne` relationship to Library (via `book.library_id` foreign key), but Library does not maintain a collection of books. Book counts are queried directly via `bookRepository.countByLibraryId(libraryId)`.
+
+**UI vs Database Terminology**: The UI displays "Branch" but the database entity is named "Library" for backward compatibility.
 
 ## API Endpoints
 
-**Base Path**: `/api/libraries`
+**Base Path**: `/api/branches`
 
 ### Public Endpoints (No Authentication Required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/libraries` | Get all libraries |
-| GET | `/api/libraries/{id}` | Get library by ID |
+| GET | `/api/branches` | Get all libraries |
+| GET | `/api/branches/{id}` | Get library by ID |
+| GET | `/api/branches/statistics` | Get library statistics (books count, active loans count) |
 
 ### Librarian-Only Endpoints
 
 | Method | Endpoint | Description | Authorization |
 |--------|----------|-------------|---------------|
-| POST | `/api/libraries` | Create new library | `LIBRARIAN` |
-| PUT | `/api/libraries/{id}` | Update library | `LIBRARIAN` |
-| DELETE | `/api/libraries/{id}` | Delete library | `LIBRARIAN` |
+| POST | `/api/branches` | Create new library | `LIBRARIAN` |
+| PUT | `/api/branches/{id}` | Update library | `LIBRARIAN` |
+| DELETE | `/api/branches/{id}` | Delete library | `LIBRARIAN` |
 
-**Controller**: `src/main/java/com/muczynski/library/controller/LibraryController.java`
+**Controller**: `src/main/java/com/muczynski/library/controller/BranchController.java`
 
 ## User Interface
 
-**Location**: `index.html` lines 130-270
-**JavaScript**: `src/main/resources/static/js/libraries.js`
+**Location**: `frontend/src/pages/branches/BranchesPage.tsx`
+**Technology**: React 18+ with TypeScript, TanStack Query, Tailwind CSS
 
 ### Page Structure
 
-The Libraries page consists of four main sections:
+The Branches page is a React component that displays:
 
-#### 1. Library List (Lines 131-132)
-- Table displaying all library branches
-- Shows: Library name, hostname, and action buttons
+#### 1. Branches Table
+- DataTable component displaying all library branches
 - **Columns**:
-  - Library: `name (hostname)`
-  - Actions: Edit (✏️) and Delete (🗑️) buttons (librarian-only)
+  - Branch Name: Branch name (from branchName field)
+  - Library System: Library system name (from librarySystemName field)
+  - Books: Count of books in this branch (from statistics)
+  - Active Loans: Count of active loans for books in this branch (from statistics)
+  - Actions: Edit and Delete buttons (librarian-only)
 
-#### 2. Add/Edit Library Form (Lines 133-140)
-- **Visibility**: Librarian-only
+#### 2. Add/Edit Branch Form
+- **Pattern**: URL-based CRUD (not modal) - `/branches/new`, `/branches/:id/edit`
 - **Fields**:
-  - Library Name (text input)
-  - Hostname (text input)
+  - Branch Name (required text input)
+  - Library System Name (required text input with help text)
 - **Actions**:
-  - "Add Library" button (changes to "Update Library" in edit mode)
+  - Cancel button
+  - Create/Update button (changes based on mode)
 - **Behavior**:
   - Single form handles both create and update operations
-  - Edit mode: Clicking edit button populates form and changes button to "Update Library"
+  - Edit mode: Navigates to edit page with populated form
 
-#### 3. JSON Import/Export Section (Lines 142-169)
-**CRITICAL**: Essential for database backup and restore operations
+#### 3. Delete Confirmation Dialog
+- **Component**: ConfirmDialog
+- **Behavior**:
+  - Opens when delete button clicked
+  - Shows warning message
+  - Requires explicit confirmation
 
-- **Visibility**: Librarian-only
-- **Export Card**:
-  - Exports entire database to JSON file
-  - Includes: libraries, authors, books, loans, users, photo metadata
-  - **Note**: Photo image bytes NOT exported (only metadata)
-  - **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors.json`
-  - **Button**: "Export Database to JSON"
+## React Implementation
 
-- **Import Card**:
-  - Imports database from JSON file
-  - File input accepts `.json` files
-  - **Note**: Photo image bytes NOT imported (must be re-downloaded from Google Photos)
-  - **Button**: "Import JSON to Database"
+### State Management
+- **Server State**: TanStack Query hooks for API calls
+  - `useBranches()`: Fetches all libraries
+  - `useBranchStatistics()`: Fetches statistics (book counts, active loan counts)
+  - `useCreateBranch()`: Creates new library
+  - `useUpdateBranch()`: Updates existing library
+  - `useDeleteBranch()`: Deletes library
+- **Local State**: useState for form data, modals, error messages
 
-**Why This Section Exists Here**:
-- Libraries page is the "root" administrative page
-- Natural place for database-wide operations
-- Librarians expect backup/restore near system configuration
+### Key React Hooks
 
-**Implementation Note**: This section was previously dynamically injected via `setupImportUI()` in JavaScript but is now statically defined in HTML for better visibility and maintainability. See comment in `libraries.js` lines 233-236.
+| Hook | Purpose | File |
+|------|---------|------|
+| `useBranches()` | Fetches and caches all libraries | `frontend/src/api/branches.ts` |
+| `useBranchStatistics()` | Fetches library statistics (books, active loans) | `frontend/src/api/branches.ts` |
+| `useCreateBranch()` | Mutation for creating library | `frontend/src/api/branches.ts` |
+| `useUpdateBranch()` | Mutation for updating library | `frontend/src/api/branches.ts` |
+| `useDeleteBranch()` | Mutation for deleting library | `frontend/src/api/branches.ts` |
 
-#### 4. Photo Import/Export Status (Lines 172-239)
-- **Visibility**: Librarian-only
-- **Purpose**: Monitor Google Photos integration for all photos in the library
-- **Features**:
-  - Album name display (auto-created on first export)
-  - Statistics dashboard (6 cards):
-    - Total Photos
-    - Exported (to Google Photos)
-    - Imported (from Google Photos)
-    - Pending Export
-    - Pending Import
-    - Failed
-  - Bulk action buttons:
-    - "Export All Pending Photos"
-    - "Import All Pending Photos"
-    - "Refresh Status"
-  - Photo details table with columns:
-    - Photo thumbnail
-    - Title/Author
-    - LOC Call Number (formatted for spine)
-    - Status (badge: Completed, Failed, In Progress, Pending)
-    - Exported At (timestamp)
-    - Permanent ID (Google Photos ID, truncated)
-    - Actions (Export, Import, View, Verify, Unlink, Delete)
-
-## JavaScript Functions
-
-**File**: `src/main/resources/static/js/libraries.js`
-
-### Library CRUD Operations
-
-| Function | Purpose |
-|----------|---------|
-| `loadLibraries()` | Fetches and displays all libraries; updates page title |
-| `addLibrary()` | Creates new library from form data |
-| `editLibrary(id)` | Populates form with library data for editing |
-| `updateLibrary(id)` | Updates existing library |
-| `deleteLibrary(id)` | Deletes library with confirmation |
-
-### JSON Import/Export
-
-| Function | Purpose |
-|----------|---------|
-| `exportJson()` | Exports entire database to JSON file with smart filename |
-| `importJson()` | Imports database from uploaded JSON file |
-
-**Export Process**:
-1. Fetches libraries, books, and authors counts
-2. Sanitizes library name for filename (lowercase, dashes only)
-3. Creates filename: `{library}-{books}-books-{authors}-authors.json`
-4. Downloads JSON file to browser
-
-**Import Process**:
-1. Reads selected file
-2. Parses JSON
-3. Validates structure
-4. POSTs to `/api/import/json`
-5. Refreshes libraries list
-6. Shows success alert
-
-### Photo Management Functions
-
-**File**: `src/main/resources/static/js/photos.js`
-
-| Function | Purpose |
-|----------|---------|
-| `loadPhotoExportStatus()` | Loads statistics and photo table |
-| `exportAllPhotos()` | Exports all pending photos to Google Photos |
-| `importAllPhotos()` | Imports all pending photos from Google Photos |
-| `exportSinglePhoto(id)` | Exports individual photo |
-| `importSinglePhoto(id)` | Imports individual photo |
-| `verifyPhoto(id)` | Verifies Google Photos permanent ID still works |
-| `unlinkPhoto(id)` | Removes permanent ID from photo |
-| `deletePhotoWithUndo(id)` | Soft deletes photo with undo option |
-| `updatePhotoRow(id)` | Updates single table row without full reload |
+### Components Used
+- `DataTable`: Reusable table component with sorting and actions
+- `Modal`: Modal dialog for add/edit forms
+- `ConfirmDialog`: Confirmation dialog for delete operations
+- `Button`: Styled button with loading states
+- `Input`: Form input with label and validation
+- `ErrorMessage`: Error display component
 
 ## Security Model
 
@@ -187,53 +131,39 @@ The Libraries page consists of four main sections:
 
 | Role | Permissions |
 |------|-------------|
-| **Public/Unauthenticated** | View libraries list |
-| **USER** | View libraries list |
-| **LIBRARIAN** | Full CRUD access + Import/Export + Photo management |
+| **Public/Unauthenticated** | View libraries list and statistics |
+| **USER** | View libraries list and statistics |
+| **LIBRARIAN** | Full CRUD access |
 
 ### Implementation
 
-- **Frontend**: Elements with class `librarian-only` are hidden for non-librarians
-- **Backend**: `@PreAuthorize("hasAuthority('LIBRARIAN')")` on write endpoints
-- **API**: Public read access via `@PreAuthorize("permitAll()")`
-
-## Page Title Behavior
-
-The navbar page title dynamically updates based on library configuration:
-
-- **With Libraries**: `"The {library.name} Branch"` + `"of the Sacred Heart Library System"`
-- **Without Libraries**: `"Library Management"`
-
-**Implementation**: `loadLibraries()` lines 55-65
+- **Frontend**:
+  - Add/Edit/Delete buttons only shown to librarians (handled by protected routes)
+  - Public users can view library information
+- **Backend**:
+  - `@PreAuthorize("hasAuthority('LIBRARIAN')")` on write endpoints
+  - `@PreAuthorize("permitAll()")` on read endpoints
 
 ## Data Flow
 
 ### Library CRUD Flow
 ```
-User Action → Form Submit → JavaScript Function → API Endpoint
-→ Service Layer → Repository → Database → Response
-→ Refresh UI (loadLibraries())
+User Action → React Event Handler → TanStack Query Mutation
+→ API Endpoint → Service Layer → Repository → Database
+→ TanStack Query Cache Update → React Re-render
 ```
 
-### JSON Export Flow
+### Statistics Loading Flow
 ```
-Export Button → exportJson() → Parallel Fetch [libraries, books, authors]
-→ Generate Filename → Fetch /api/import/json
-→ Create Blob → Download File
-```
-
-### JSON Import Flow
-```
-Select File → importJson() → Read File → Parse JSON
-→ Validate → POST /api/import/json
-→ Refresh UI → Alert Success
+Component Mount → useBranchStatistics() Hook → Parallel Fetch
+→ Cache Statistics → Display in Table Columns
 ```
 
-### Photo Export Flow
+### Form Submission Flow
 ```
-Export Button → exportAllPhotos() → Filter Pending Photos
-→ Confirm → Loop through photos → POST /api/photo-export/export/{id}
-→ Update Row (no full reload) → Show Stats
+Form Submit → handleSubmit() → Validation → Create/Update Mutation
+→ API Call → Success → Close Modal → TanStack Query Refetch
+→ Table Updates Automatically
 ```
 
 ## Integration Points
@@ -241,13 +171,17 @@ Export Button → exportAllPhotos() → Filter Pending Photos
 ### Book Management
 - Books belong to libraries (foreign key: `book.library_id`)
 - Deleting a library requires handling associated books
-- Book form dropdowns populated via `populateBookDropdowns()`
+- Statistics show book count per library
 
-### Google Photos Integration
-- Photos exported to album named after library
-- Album ID stored in user settings: `googlePhotosAlbumId`
-- Permanent IDs allow re-importing photos without storing image bytes
-- Export/Import status tracked per photo
+### Loan Management
+- Active loans count is calculated per library
+- Uses query: `countByBookLibraryIdAndReturnDateIsNull(libraryId)`
+- Shows librarians how many books are currently checked out
+
+### Data Management
+- JSON Import/Export functionality is on separate **Data Management** page
+- Photo Export functionality is on separate **Data Management** page
+- See `frontend/src/pages/branches/DataManagementPage.tsx`
 
 ### Test Data Generation
 - Test data page can generate libraries
@@ -255,101 +189,107 @@ Export Button → exportAllPhotos() → Filter Pending Photos
 
 ## Important Patterns
 
-### UI Update Pattern
-After any CRUD operation:
-```javascript
-await loadLibraries();           // Refresh libraries list
-await populateBookDropdowns();   // Update book form dropdowns
+### TanStack Query Pattern
+All data fetching uses TanStack Query for automatic caching and refetching:
+```typescript
+const { data: libraries = [], isLoading } = useBranches()
+const createLibrary = useCreateBranch()
+await createLibrary.mutateAsync(formData)
+// TanStack Query automatically refetches and updates UI
 ```
 
-### Edit Mode Toggle Pattern
-```javascript
-// Add mode
-btn.textContent = 'Add Library';
-btn.onclick = addLibrary;
+### Modal Form Pattern
+```typescript
+// Open modal in add mode
+setEditingLibrary(null)
+setFormData({ name: '', hostname: '' })
+setShowForm(true)
 
-// Edit mode
-btn.textContent = 'Update Library';
-btn.onclick = () => updateLibrary(id);
+// Open modal in edit mode
+setEditingLibrary(library)
+setFormData({ name: library.name, hostname: library.hostname })
+setShowForm(true)
 ```
 
-### Button Spinner Pattern
-```javascript
-showButtonSpinner(btn, 'Loading...');
-try {
-    // Operation
-} finally {
-    hideButtonSpinner(btn, 'Original Text');
-}
-```
+### Statistics Integration Pattern
+```typescript
+// Statistics fetched separately
+const { data: statistics = [] } = useBranchStatistics()
 
-### Photo Row Update Pattern
-Instead of reloading entire table:
-```javascript
-await updatePhotoRow(photoId);  // Updates single row in place
+// Looked up per library in table cell
+const stats = statistics.find((s) => s.branchId === library.id)
+const bookCount = stats?.bookCount
+const activeLoansCount = stats?.activeLoansCount
 ```
 
 ## Known Limitations
 
 1. **Single Library Mode**: While the architecture supports multiple branches, the current deployment uses only one library
-2. **Hostname Field**: Currently set to `window.location.hostname` but could support branch-specific URLs
-3. **Photo Bytes Not Exported**: JSON export excludes photo image data (only metadata)
-4. **No Library Deletion Cascade UI**: Backend may prevent deletion if library has books, but UI doesn't warn beforehand
+2. **Hostname Field**: Currently set manually but could support branch-specific URLs
+3. **No Library Deletion Cascade UI**: Backend may prevent deletion if library has books, but UI doesn't warn beforehand
+4. **Statistics Update Timing**: Statistics refetch on every page load; no real-time updates
 
 ## Best Practices
 
 ### When Adding Features to Libraries Page
 
-1. **CRUD Operations**: Follow the standard Edit (✏️) / Delete (🗑️) button pattern
-2. **Librarian-Only Elements**: Add `librarian-only` class to restrict access
-3. **Data Tests**: Add `data-test` attributes for Playwright tests
-4. **Error Handling**: Use `showError('libraries', message)` for user feedback
-5. **Button Spinners**: Always show loading state during async operations
-6. **Import/Export Section**: **DO NOT REMOVE** - Essential for backups (see HTML comment lines 142-147)
+1. **CRUD Operations**: Follow the standard TanStack Query mutation pattern
+2. **Librarian-Only Elements**: Handle via protected routes, not UI conditionals
+3. **Data Tests**: Add `data-test` attributes for Playwright tests (already present)
+4. **Error Handling**: Use ErrorMessage component and try/catch in handlers
+5. **Loading States**: Use `isLoading` from queries and `isPending` from mutations
+6. **TypeScript**: All props and state must be properly typed
 
-### Photo Management
+### TypeScript Patterns
 
-1. **Row Updates**: Use `updatePhotoRow(id)` instead of full table reload for better UX
-2. **Batch Operations**: Show progress in button text: "Exporting 3/10..."
-3. **Undo Pattern**: Soft delete with strikethrough + undo button
-4. **Status Badges**: Use Bootstrap badge colors (success, danger, warning, info)
+1. **DTOs**: Import types from `frontend/src/types/dtos.ts`
+2. **Props**: Define inline or as separate type/interface
+3. **Event Handlers**: Use proper React event types (`React.FormEvent`, etc.)
+4. **Null Checks**: Handle undefined data from queries with default values
 
 ## File References
 
 ### Backend
 - `src/main/java/com/muczynski/library/domain/Library.java` - Entity
-- `src/main/java/com/muczynski/library/controller/LibraryController.java` - REST endpoints
-- `src/main/java/com/muczynski/library/service/LibraryService.java` - Business logic
-- `src/main/java/com/muczynski/library/dto/LibraryDto.java` - Data transfer object
-- `src/main/java/com/muczynski/library/mapper/LibraryMapper.java` - MapStruct mapper
+- `src/main/java/com/muczynski/library/controller/BranchController.java` - REST endpoints
+- `src/main/java/com/muczynski/library/service/BranchService.java` - Business logic
+- `src/main/java/com/muczynski/library/dto/BranchDto.java` - Data transfer object
+- `src/main/java/com/muczynski/library/dto/BranchStatisticsDto.java` - Statistics DTO
+- `src/main/java/com/muczynski/library/mapper/BranchMapper.java` - MapStruct mapper
+- `src/main/java/com/muczynski/library/repository/BranchRepository.java` - JPA repository
+- `src/main/java/com/muczynski/library/repository/LoanRepository.java` - Loan queries (for statistics)
 
 ### Frontend
-- `src/main/resources/static/index.html` (lines 130-270) - Page structure
-- `src/main/resources/static/js/libraries.js` - Library CRUD + JSON import/export
-- `src/main/resources/static/js/photos.js` - Photo export/import management
-- `src/main/resources/static/js/utils.js` - Shared utilities (error handling, spinners, LOC formatting)
+- `frontend/src/pages/branches/BranchesPage.tsx` - Main page component
+- `frontend/src/pages/branches/DataManagementPage.tsx` - JSON/Photo import/export
+- `frontend/src/api/branches.ts` - TanStack Query hooks
+- `frontend/src/types/dtos.ts` - TypeScript DTO interfaces
+
+### Testing
+- `src/test/java/com/muczynski/library/controller/BranchControllerTest.java` - Integration tests
 
 ## Testing
 
-### UI Tests
-- **Location**: `src/test/java/com/muczynski/library/ui/` (Playwright)
-- **Pattern**: Use `data-test` attributes for element selection
-- **Test Coverage**:
-  - Library CRUD operations
-  - JSON export/import
-  - Photo export/import workflows
+### Backend Integration Tests
+- **Location**: `src/test/java/com/muczynski/library/controller/BranchControllerTest.java`
+- **Coverage**:
+  - All CRUD endpoints
+  - Statistics endpoint
   - Role-based access control
 
-### Integration Tests
-- **Location**: `src/test/java/com/muczynski/library/controller/LibraryControllerTest.java`
-- **Coverage**: All API endpoints with different roles
+### Frontend UI Tests
+- **Location**: `src/test/java/com/muczynski/library/ui/` (Playwright)
+- **Pattern**: Use `data-test` attributes for element selection
+- **Coverage Needed**:
+  - Library CRUD operations
+  - Statistics display
+  - Role-based access control
 
 ## Future Enhancements
 
 1. **Multi-Branch Support**: UI for switching between library branches
 2. **Hostname Management**: Better configuration for branch-specific URLs
-3. **Photo Byte Export**: Option to include full photo data in JSON export
-4. **Batch Library Operations**: Import/export library configurations separately
-5. **Library-Specific Settings**: Per-branch configuration (hours, contact info, etc.)
-6. **Cascade Delete Warning**: Show book count before allowing library deletion
-7. **Photo Album Auto-Creation**: One-click album setup per library
+3. **Cascade Delete Warning**: Show book count before allowing library deletion
+4. **Library-Specific Settings**: Per-branch configuration (hours, contact info, etc.)
+5. **Real-time Statistics**: WebSocket updates for active loan counts
+6. **Statistics History**: Track book and loan counts over time

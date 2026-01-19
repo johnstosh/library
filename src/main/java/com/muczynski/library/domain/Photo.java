@@ -51,6 +51,8 @@ public class Photo {
     @Column(length = 64)
     private String imageChecksum;  // SHA-256 checksum of image bytes for duplicate detection
 
+    private LocalDateTime dateTaken;  // Original photo creation time (from Google Photos mediaMetadata)
+
     public enum ExportStatus {
         PENDING,      // Not yet exported
         IN_PROGRESS,  // Currently being exported

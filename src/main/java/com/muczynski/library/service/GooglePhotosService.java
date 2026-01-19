@@ -51,19 +51,19 @@ public class GooglePhotosService {
     }
 
     /**
-     * Find user by username, handling duplicates by using the one with lowest ID
+     * Get authenticated user from security context
+     * @return User entity
      */
-    private User findUserByUsername(String username) {
-        List<User> users = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(username);
-        if (users.isEmpty()) {
-            throw new LibraryException("User not found");
+    private User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
         }
-        User user = users.get(0);
-        if (users.size() > 1) {
-            logger.warn("Found {} duplicate users with username '{}'. Using user with lowest ID: {}.",
-                       users.size(), username, user.getId());
-        }
-        return user;
+
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
     }
 
 
@@ -75,15 +75,10 @@ public class GooglePhotosService {
     public byte[] downloadPhoto(String baseUrl) {
         logger.debug("Downloading photo from base URL: {}", baseUrl);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to download photo without authentication");
-            throw new LibraryException("No authenticated user found");
-        }
-        String username = authentication.getName();
+        User user = getAuthenticatedUser();
 
         // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
+        String apiKey = getValidAccessToken(user);
 
         // Add parameters to download full resolution photo
         String downloadUrl = baseUrl + "=d";
@@ -96,7 +91,7 @@ public class GooglePhotosService {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         try {
-            logger.debug("Downloading photo for user: {}", username);
+            logger.debug("Downloading photo for user ID: {}", user.getId());
 
             ResponseEntity<byte[]> response = restTemplate.exchange(
                     downloadUrl,
@@ -121,7 +116,7 @@ public class GooglePhotosService {
                 throw new LibraryException("Failed to download photo: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            logger.error("Failed to download photo from Google Photos for user: {}", username, e);
+            logger.error("Failed to download photo from Google Photos for user ID: {}", user.getId(), e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to download photo from Google Photos: " + e.getMessage(), e);
         }
@@ -136,15 +131,10 @@ public class GooglePhotosService {
         logger.info("Updating photo description for photo ID: {}", photoId);
         logger.debug("New description: {}", description);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to update photo description without authentication");
-            throw new LibraryException("No authenticated user found");
-        }
-        String username = authentication.getName();
+        User user = getAuthenticatedUser();
 
         // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
+        String apiKey = getValidAccessToken(user);
 
         Map<String, Object> request = new HashMap<>();
         request.put("description", description);
@@ -170,7 +160,7 @@ public class GooglePhotosService {
                     photoId, response.getStatusCode());
 
         } catch (Exception e) {
-            logger.error("Failed to update photo description for photo ID: {} (user: {})", photoId, username, e);
+            logger.error("Failed to update photo description for photo ID: {} (user ID: {})", photoId, user.getId(), e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to update photo description: " + e.getMessage(), e);
         }
@@ -200,21 +190,21 @@ public class GooglePhotosService {
 
     /**
      * Get valid access token, refreshing if necessary
+     * @param user The user entity
+     * @return Valid access token
      */
-    public String getValidAccessToken(String username) {
-        logger.debug("Getting valid access token for user: {}", username);
-
-        User user = findUserByUsername(username);
+    public String getValidAccessToken(User user) {
+        logger.debug("Getting valid access token for user ID: {}", user.getId());
 
         String accessToken = user.getGooglePhotosApiKey();
         String tokenExpiry = user.getGooglePhotosTokenExpiry();
 
         if (accessToken == null || accessToken.trim().isEmpty()) {
-            logger.error("User {} has not authorized Google Photos. Access token is empty.", username);
+            logger.error("User ID {} has not authorized Google Photos. Access token is empty.", user.getId());
             throw new LibraryException("Google Photos not authorized. Please authorize in Settings.");
         }
 
-        logger.debug("Access token found for user: {} (length: {} chars)", username, accessToken.length());
+        logger.debug("Access token found for user ID: {} (length: {} chars)", user.getId(), accessToken.length());
 
         // Check if token is expired or will expire soon (within 5 minutes)
         if (tokenExpiry != null && !tokenExpiry.trim().isEmpty()) {
@@ -228,22 +218,22 @@ public class GooglePhotosService {
                 if (now.plusSeconds(300).isAfter(expiry)) {
                     // Token is expired or will expire soon, refresh it
                     if (now.isAfter(expiry)) {
-                        logger.info("Access token for user {} has expired. Refreshing...", username);
+                        logger.info("Access token for user ID {} has expired. Refreshing...", user.getId());
                     } else {
-                        logger.info("Access token for user {} will expire in {} seconds. Refreshing proactively...",
-                                username, secondsUntilExpiry);
+                        logger.info("Access token for user ID {} will expire in {} seconds. Refreshing proactively...",
+                                user.getId(), secondsUntilExpiry);
                     }
                     return refreshAccessToken(user);
                 } else {
-                    logger.debug("Access token is valid for user: {} (expires in {} seconds)", username, secondsUntilExpiry);
+                    logger.debug("Access token is valid for user ID: {} (expires in {} seconds)", user.getId(), secondsUntilExpiry);
                 }
             } catch (Exception e) {
                 // If we can't parse expiry, try to refresh
-                logger.warn("Failed to parse token expiry '{}' for user: {}. Attempting to refresh token.", tokenExpiry, username);
+                logger.warn("Failed to parse token expiry '{}' for user ID: {}. Attempting to refresh token.", tokenExpiry, user.getId());
                 return refreshAccessToken(user);
             }
         } else {
-            logger.warn("No token expiry timestamp for user: {}. Token validity unknown.", username);
+            logger.warn("No token expiry timestamp for user ID: {}. Token validity unknown.", user.getId());
         }
 
         return accessToken;
@@ -432,15 +422,10 @@ public class GooglePhotosService {
     public List<Map<String, Object>> fetchPickerMediaItems(String sessionId) {
         logger.info("Fetching media items from Picker session: {}", sessionId);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to fetch picker media items without authentication");
-            throw new LibraryException("No authenticated user found");
-        }
-        String username = authentication.getName();
+        User user = getAuthenticatedUser();
 
         // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
+        String apiKey = getValidAccessToken(user);
 
         List<Map<String, Object>> allMediaItems = new ArrayList<>();
         String pageToken = null;
@@ -497,7 +482,7 @@ public class GooglePhotosService {
             return allMediaItems;
 
         } catch (Exception e) {
-            logger.error("Failed to fetch media items from Picker session for user: {}", username, e);
+            logger.error("Failed to fetch media items from Picker session for user ID: {}", user.getId(), e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to fetch media items from Picker: " + e.getMessage(), e);
         }
@@ -509,17 +494,12 @@ public class GooglePhotosService {
      * @return Session info map with id and pickerUri
      */
     public Map<String, Object> createPickerSession() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to create picker session without authentication");
-            throw new LibraryException("No authenticated user found");
-        }
-        String username = authentication.getName();
+        User user = getAuthenticatedUser();
 
         // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
+        String apiKey = getValidAccessToken(user);
 
-        logger.info("Creating Picker session for user: {}", username);
+        logger.info("Creating Picker session for user ID: {}", user.getId());
 
         try {
             String url = "https://photospicker.googleapis.com/v1/sessions";
@@ -548,7 +528,7 @@ public class GooglePhotosService {
             }
 
         } catch (Exception e) {
-            logger.error("Failed to create Picker session for user: {}", username, e);
+            logger.error("Failed to create Picker session for user ID: {}", user.getId(), e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to create Picker session: " + e.getMessage(), e);
         }
@@ -560,17 +540,12 @@ public class GooglePhotosService {
      * @return Session status map with mediaItemsSet field
      */
     public Map<String, Object> getPickerSessionStatus(String sessionId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            logger.error("Attempted to get picker session status without authentication");
-            throw new LibraryException("No authenticated user found");
-        }
-        String username = authentication.getName();
+        User user = getAuthenticatedUser();
 
         // Get valid access token (will auto-refresh if needed)
-        String apiKey = getValidAccessToken(username);
+        String apiKey = getValidAccessToken(user);
 
-        logger.debug("Checking Picker session status for user: {} session: {}", username, sessionId);
+        logger.debug("Checking Picker session status for user ID: {} session: {}", user.getId(), sessionId);
 
         try {
             String url = "https://photospicker.googleapis.com/v1/sessions/" + sessionId;
@@ -595,7 +570,7 @@ public class GooglePhotosService {
             }
 
         } catch (Exception e) {
-            logger.error("Failed to get Picker session status for user: {}", username, e);
+            logger.error("Failed to get Picker session status for user ID: {}", user.getId(), e);
             logger.error("Error message: {}", e.getMessage());
             throw new LibraryException("Failed to get Picker session status: " + e.getMessage(), e);
         }

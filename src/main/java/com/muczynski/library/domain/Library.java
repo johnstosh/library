@@ -7,8 +7,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-
 @Entity
 @Getter
 @Setter
@@ -17,10 +15,8 @@ public class Library {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    @Column(name = "name")
+    private String branchName;
 
-    private String hostname;
-
-    @OneToMany(mappedBy = "library")
-    private List<Book> books;
+    private String librarySystemName;
 }

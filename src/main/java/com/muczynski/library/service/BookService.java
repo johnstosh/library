@@ -13,10 +13,12 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
+import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import com.muczynski.library.repository.LibraryRepository;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import org.slf4j.Logger;
@@ -33,7 +35,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,7 +58,7 @@ public class BookService {
     private AuthorRepository authorRepository;
 
     @Autowired
-    private LibraryRepository libraryRepository;
+    private BranchRepository libraryRepository;
 
     @Autowired
     private LoanRepository loanRepository;
@@ -115,17 +119,68 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
-    public List<BookDto> getBooksFromMostRecentDay() {
-        LocalDateTime maxDateTime = bookRepository.findMaxDateAddedToLibrary();
-        if (maxDateTime == null) {
+    /**
+     * Get books from most recent 2 days OR with temporary titles (date-pattern titles).
+     * Uses efficient projection query - no N+1 queries.
+     * Temporary titles match pattern: YYYY-M-D or YYYY-MM-DD at start of title.
+     *
+     * @return List of SavedBookDto with all fields needed by both Books page and Books from Feed page
+     */
+    public List<SavedBookDto> getBooksFromMostRecentDay() {
+        return bookRepository.findSavedBooksWithProjection().stream()
+                .map(projection -> SavedBookDto.builder()
+                        .id(projection.getId())
+                        .title(projection.getTitle())
+                        .author(projection.getAuthorName())
+                        .library(projection.getLibraryName())
+                        .photoCount(projection.getPhotoCount())
+                        .needsProcessing(isTemporaryTitle(projection.getTitle()))
+                        .locNumber(projection.getLocNumber())
+                        .status(projection.getStatus())
+                        .grokipediaUrl(projection.getGrokipediaUrl())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Check if a title is a temporary title (starts with date pattern YYYY-M-D or YYYY-MM-DD).
+     */
+    public static boolean isTemporaryTitle(String title) {
+        if (title == null || title.isEmpty()) {
+            return false;
+        }
+        return title.matches("^\\d{4}-\\d{1,2}-\\d{1,2}.*");
+    }
+
+    /**
+     * Get books with temporary titles (date-pattern titles) for batch processing.
+     * Uses efficient query to find IDs first, then loads full DTOs only for matching books.
+     *
+     * @return List of BookDto for books with temporary titles
+     */
+    public List<BookDto> getBooksWithTemporaryTitles() {
+        List<Long> ids = bookRepository.findBookIdsWithTemporaryTitles();
+        if (ids.isEmpty()) {
             return List.of();
         }
-        // Get the date portion only (start of day)
-        LocalDateTime startOfDay = maxDateTime.toLocalDate().atStartOfDay();
-        LocalDateTime endOfDay = startOfDay.plusDays(1);
-
-        return bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay).stream()
+        return bookRepository.findAllById(ids).stream()
                 .map(bookMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksWith3LetterLocStart() {
+        return bookRepository.findBooksWith3LetterLocStart().stream()
+                .map(bookMapper::toDto)
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksWithoutGrokipediaUrl() {
+        return bookRepository.findBooksWithoutGrokipediaUrl().stream()
+                .map(bookMapper::toDto)
+                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
     }
 
@@ -178,6 +233,41 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
+    /**
+     * Delete multiple books with partial success handling.
+     * Books that can be deleted are deleted; books with active loans are skipped.
+     * Returns a result DTO with counts and error details for failed deletions.
+     */
+    @Transactional
+    public BulkDeleteResultDto deleteBulkBooks(List<Long> bookIds) {
+        List<Long> deletedIds = new ArrayList<>();
+        List<BulkDeleteResultDto.BulkDeleteFailureDto> failures = new ArrayList<>();
+
+        for (Long id : bookIds) {
+            try {
+                deleteBook(id);
+                deletedIds.add(id);
+            } catch (LibraryException e) {
+                // Get book title for error message
+                String title = bookRepository.findById(id)
+                        .map(Book::getTitle)
+                        .orElse("Unknown");
+                failures.add(BulkDeleteResultDto.BulkDeleteFailureDto.builder()
+                        .id(id)
+                        .title(title)
+                        .errorMessage(e.getMessage())
+                        .build());
+            }
+        }
+
+        return BulkDeleteResultDto.builder()
+                .deletedCount(deletedIds.size())
+                .failedCount(failures.size())
+                .deletedIds(deletedIds)
+                .failures(failures)
+                .build();
+    }
+
     public BookDto cloneBook(Long id) {
         Book original = bookRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Book not found: " + id));
@@ -220,14 +310,14 @@ public class BookService {
 
         // Find all existing books with the same base title
         List<Book> allBooks = bookRepository.findAll();
-        int maxCopyNumber = 1;
+        int maxCopyNumber = 0;
 
         for (Book book : allBooks) {
             String bookTitle = book.getTitle();
 
-            // Check if this book's title matches the base title exactly
+            // Check if this book's title matches the base title exactly (the original)
             if (bookTitle.equals(baseTitle)) {
-                maxCopyNumber = Math.max(maxCopyNumber, 1);
+                maxCopyNumber = Math.max(maxCopyNumber, 0);
             }
 
             // Check if this book's title matches the pattern "baseTitle, c. N"
@@ -331,11 +421,20 @@ public class BookService {
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
         if (!photos.isEmpty()) {
-            Photo photo = photos.get(0);
+            // Prepare all photos for AI analysis
+            List<Map<String, Object>> photoDataList = new ArrayList<>();
+            for (Photo photo : photos) {
+                Map<String, Object> photoData = new HashMap<>();
+                photoData.put("imageBytes", photo.getImage());
+                photoData.put("contentType", photo.getContentType());
+                photoDataList.add(photoData);
+            }
+
             String question = """
-                Based on this book cover image, infer the book and author. Research details from a Catholic perspective. Be frank in your assessments, 
-                without providing a balanced view. Emphasize Catholic teachings, saints, and doctrine where applicable. If the content aligns with 
-                Catholic faith, praise it; if not, critique it with wisdom.
+                Based on these book images, infer the book and author. The images may include the book cover, back cover, spine, table of contents, or other pages.
+                Research details from a Catholic perspective. Be frank in your assessments, without providing a balanced view.
+                Emphasize Catholic teachings, saints, and doctrine where applicable.
+                If the content aligns with Catholic faith, praise it; if not, politely critique it with charity and wisdom.
 
                 Provide details for the author:
                 - name: the full name of the author. First name first and last name last.
@@ -344,36 +443,30 @@ public class BookService {
                 - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
                 - birthCountry: the author's country of birth
                 - nationality: the author's nationality, or nationalities
-                - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion. If a grokipedia.com article is available, 
-                  then summarize the summary of that article and end with a URL to the article for more details.
+                - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
 
                 For the book:
                 - title: title of the book. If there's ambiguity, explain in plotSummary.
                 - publicationYear: publication year, if known. If there's any uncertainty, leave null.
-                - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave  null.
-                - locNumber: leave null.
-                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite. If a grokipedia.com article is available, 
-                  then summarize the summary of that article and end with a URL to the article for more details.
+                - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave null.
+                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
                 - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
-                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite.
-
-                URL for a book cover image - leave null.
-                URL for an author portrait image - leave null.
+                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
 
                 Respond only with a JSON object in this exact format:
-                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]", 
-                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]", 
-                "briefBiography": "[biography text]", "imageUrl": "[url]", "preferredContentType": "image/jpeg"}, 
-                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "locNumber": "[LOC or null]", "plotSummary": "[summary]", 
-                "relatedWorks": "[related]", "detailedDescription": "[description]", "coverImageUrl": "[url]", 
-                "preferredContentType": "image/jpeg"}}
+                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]",
+                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]",
+                "briefBiography": "[biography text]"},
+
+                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]",
+                "relatedWorks": "[related]", "detailedDescription": "[description]"}}
                 Do not include any other text before or after the JSON. Dig deep for helpful information.""";
 
             int maxRetries = 3;
             RuntimeException lastException = null;
             for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
+                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_4);
                     Map<String, Object> jsonData = extractJsonFromResponse(response);
 
                     Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
@@ -533,7 +626,7 @@ public class BookService {
                 } catch (RuntimeException e) {
                     lastException = e;
                     if (e.getMessage().contains("unbalanced braces") && retry < maxRetries - 1) {
-                        logger.warn("Incomplete AI response detected (unbalanced braces), retrying {}/{} for book ID {} using photo ID {}", retry + 1, maxRetries, id, photo.getId());
+                        logger.warn("Incomplete AI response detected (unbalanced braces), retrying {}/{} for book ID {} using {} photos", retry + 1, maxRetries, id, photos.size());
                         // Optional: add a small delay before retry
                         try {
                             Thread.sleep(2000); // 2 seconds delay
@@ -585,7 +678,7 @@ public class BookService {
 
             Do not include any other text before or after the JSON.""";
 
-        String response = askGrok.askAboutPhoto(photo.getImage(), photo.getContentType(), question);
+        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_4);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         String title = (String) jsonData.get("title");
@@ -660,7 +753,7 @@ public class BookService {
             "detailedDescription": "[description]"}}
             Do not include any other text before or after the JSON.""", title.trim(), authorPart);
 
-        String response = askGrok.askTextOnly(question);
+        String response = askGrok.askQuestion(question);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         @SuppressWarnings("unchecked")

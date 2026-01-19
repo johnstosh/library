@@ -7,14 +7,20 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_user_username", columnList = "username"),
+    @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
+})
 @Getter
 @Setter
-public class User {
+public class User implements Serializable {
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,7 +31,7 @@ public class User {
 
     private String username;
 
-    @Column(length = 60)
+    @Column(length = 64)
     private String password;
 
     private String xaiApiKey = "";
@@ -45,11 +51,31 @@ public class User {
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
     private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;
 
+    private LocalDateTime lastModified;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private Set<Role> roles;
+    private Set<Authority> authorities;
+
+    @PreUpdate
+    @PrePersist
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now();
+    }
+
+    /**
+     * Get the highest authority for this user.
+     * Returns "LIBRARIAN" if user has LIBRARIAN authority, otherwise "USER".
+     */
+    public String getHighestAuthority() {
+        if (authorities == null || authorities.isEmpty()) {
+            return "USER";
+        }
+        return authorities.stream()
+                .anyMatch(authority -> "LIBRARIAN".equals(authority.getName())) ? "LIBRARIAN" : "USER";
+    }
 }

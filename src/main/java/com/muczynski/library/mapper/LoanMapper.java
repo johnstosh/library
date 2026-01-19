@@ -3,60 +3,51 @@
  */
 package com.muczynski.library.mapper;
 
-import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
-import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.LoanDto;
-import org.springframework.stereotype.Service;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Service
-public class LoanMapper {
+@Mapper(componentModel = "spring")
+public abstract class LoanMapper {
 
-    public LoanDto toDto(Loan loan) {
-        if (loan == null) {
+    private static final Logger logger = LoggerFactory.getLogger(LoanMapper.class);
+
+    @Mapping(target = "bookId", expression = "java(getBookId(loan))")
+    @Mapping(target = "bookTitle", expression = "java(getBookTitle(loan))")
+    @Mapping(target = "userId", expression = "java(getUserId(loan))")
+    @Mapping(target = "userName", expression = "java(getUserName(loan))")
+    public abstract LoanDto toDto(Loan loan);
+
+    protected Long getBookId(Loan loan) {
+        if (loan == null || loan.getBook() == null) {
+            logger.warn("Loan or book is null when mapping to DTO - loan ID: {}", loan != null ? loan.getId() : "null");
             return null;
         }
-
-        LoanDto loanDto = new LoanDto();
-        loanDto.setId(loan.getId());
-        loanDto.setLoanDate(loan.getLoanDate());
-        loanDto.setDueDate(loan.getDueDate());
-        loanDto.setReturnDate(loan.getReturnDate());
-        if (loan.getBook() != null) {
-            loanDto.setBookId(loan.getBook().getId());
-            loanDto.setBookTitle(loan.getBook().getTitle());
-        }
-        if (loan.getUser() != null) {
-            loanDto.setUserId(loan.getUser().getId());
-            loanDto.setUserName(loan.getUser().getUsername());
-        }
-
-        return loanDto;
+        return loan.getBook().getId();
     }
 
-    public Loan toEntity(LoanDto loanDto) {
-        if (loanDto == null) {
+    protected String getBookTitle(Loan loan) {
+        if (loan == null || loan.getBook() == null) {
+            return "Unknown Book";
+        }
+        return loan.getBook().getTitle();
+    }
+
+    protected Long getUserId(Loan loan) {
+        if (loan == null || loan.getUser() == null) {
+            logger.warn("Loan or user is null when mapping to DTO - loan ID: {}", loan != null ? loan.getId() : "null");
             return null;
         }
+        return loan.getUser().getId();
+    }
 
-        Loan loan = new Loan();
-        loan.setId(loanDto.getId());
-        loan.setLoanDate(loanDto.getLoanDate());
-        loan.setDueDate(loanDto.getDueDate());
-        loan.setReturnDate(loanDto.getReturnDate());
-
-        if (loanDto.getBookId() != null) {
-            Book book = new Book();
-            book.setId(loanDto.getBookId());
-            loan.setBook(book);
+    protected String getUserName(Loan loan) {
+        if (loan == null || loan.getUser() == null) {
+            return "Unknown User";
         }
-
-        if (loanDto.getUserId() != null) {
-            User user = new User();
-            user.setId(loanDto.getUserId());
-            loan.setUser(user);
-        }
-
-        return loan;
+        return loan.getUser().getUsername();
     }
 }

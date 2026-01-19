@@ -31,21 +31,45 @@ public class AskGrok {
         this.restTemplate.setRequestFactory(factory);
     }
 
-    public String askAboutPhoto(byte[] imageBytes, String contentType, String question) {
+    // Model constants
+    public static final String MODEL_GROK_4 = "grok-4";
+    public static final String MODEL_GROK_4_FAST = "grok-4-fast";
+
+    /**
+     * Analyze a single photo using Grok AI vision model with grok-4-fast.
+     * @param imageBytes Photo bytes
+     * @param contentType Image content type (e.g., "image/jpeg")
+     * @param prompt The analysis prompt/question for the AI
+     * @return AI response as String
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt) {
+        return analyzePhoto(imageBytes, contentType, prompt, MODEL_GROK_4_FAST);
+    }
+
+    /**
+     * Analyze a single photo using Grok AI vision model with specified model.
+     * @param imageBytes Photo bytes
+     * @param contentType Image content type (e.g., "image/jpeg")
+     * @param prompt The analysis prompt/question for the AI
+     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @return AI response as String
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt, String model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        UserDto userDto = userSettingsService.getUserSettings(username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user: " + username);
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
         }
 
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
-        textPart.put("text", question);
+        textPart.put("text", prompt);
 
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
         String base64Image = encoder.encodeToString(imageBytes);
@@ -64,7 +88,7 @@ public class AskGrok {
         message.put("content", content);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", "grok-4"); // use grok-4 for vision
+        request.put("model", model);
         request.put("messages", Arrays.asList(message));
         request.put("max_tokens", 2000);
         request.put("temperature", 0.7);
@@ -100,16 +124,125 @@ public class AskGrok {
         }
     }
 
-    public String askTextOnly(String question) {
+    /**
+     * Analyze multiple photos using Grok AI vision model with grok-4-fast.
+     * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
+     * @param prompt The analysis prompt/question for the AI
+     * @return AI response as String
+     */
+    public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt) {
+        return analyzePhotos(photoDataList, prompt, MODEL_GROK_4_FAST);
+    }
+
+    /**
+     * Analyze multiple photos using Grok AI vision model with specified model.
+     * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
+     * @param prompt The analysis prompt/question for the AI
+     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @return AI response as String
+     */
+    public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt, String model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        String username = authentication.getName();
-        UserDto userDto = userSettingsService.getUserSettings(username);
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user: " + username);
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
+        }
+
+        // Build content array: first the text question, then all images
+        List<Object> content = new ArrayList<>();
+
+        // Add text prompt first
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", prompt);
+        content.add(textPart);
+
+        // Add all images
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
+        for (Map<String, Object> photoData : photoDataList) {
+            byte[] imageBytes = (byte[]) photoData.get("imageBytes");
+            String contentType = (String) photoData.get("contentType");
+
+            // Skip photos with null image data
+            if (imageBytes == null || imageBytes.length == 0) {
+                continue;
+            }
+
+            String base64Image = encoder.encodeToString(imageBytes);
+
+            Map<String, Object> imageUrlPart = new HashMap<>();
+            imageUrlPart.put("url", "data:" + contentType + ";base64," + base64Image);
+
+            Map<String, Object> imagePart = new HashMap<>();
+            imagePart.put("type", "image_url");
+            imagePart.put("image_url", imageUrlPart);
+
+            content.add(imagePart);
+        }
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", content);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", model);
+        request.put("messages", Arrays.asList(message));
+        request.put("max_tokens", 2000);
+        request.put("temperature", 0.7);
+        request.put("stream", false); // Disable streaming to avoid complexity; use long timeouts instead
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://api.x.ai/v1/chat/completions",
+                entity,
+                Map.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            Map<String, Object> body = response.getBody();
+            if (body != null && body.containsKey("choices")) {
+                List<Map> choices = (List<Map>) body.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    if (choice.containsKey("message")) {
+                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
+                        return (String) messageResponse.get("content");
+                    }
+                }
+            }
+            throw new LibraryException("Unexpected response format from xAI API");
+        } else {
+            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
+        }
+    }
+
+    /**
+     * Ask a text-only question to Grok AI (no images).
+     * @param question The question to ask
+     * @return AI response as String
+     */
+    public String askQuestion(String question) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
+        }
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
+        String apiKey = userDto.getXaiApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
         }
 
         Map<String, Object> message = new HashMap<>();
@@ -151,5 +284,23 @@ public class AskGrok {
         } else {
             throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
         }
+    }
+
+    /**
+     * Get Library of Congress call number suggestion for a book
+     * @param title Book title
+     * @param author Author name
+     * @return Suggested LOC call number
+     */
+    public String suggestLocNumber(String title, String author) {
+        String prompt = String.format(
+                "What is the Library of Congress call number for the book \"%s\" by %s? " +
+                "Please provide ONLY the call number in standard Library of Congress format. " +
+                "If you're not certain, provide your best estimate based on the subject matter and author. " +
+                "Do not include any explanation, just the call number.",
+                title,
+                author != null && !author.isEmpty() ? author : "Unknown Author"
+        );
+        return askQuestion(prompt);
     }
 }

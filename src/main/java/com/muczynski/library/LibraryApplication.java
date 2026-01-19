@@ -3,17 +3,19 @@
  */
 package com.muczynski.library;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
-import com.muczynski.library.repository.RoleRepository;
+import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -25,26 +27,35 @@ public class LibraryApplication {
     }
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public CommandLineRunner initData(UserRepository userRepository, AuthorityRepository authorityRepository, PasswordEncoder passwordEncoder, Environment environment) {
         return args -> {
-            if (userRepository.count() == 0) {
-                // Use list-based query to handle potential duplicates gracefully
-                List<Role> existingRoles = roleRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
-                Role librarianRole;
-                if (existingRoles.isEmpty()) {
-                    Role role = new Role();
-                    role.setName("LIBRARIAN");
-                    librarianRole = roleRepository.save(role);
+            // Skip initialization in test profile
+            if (Arrays.stream(environment.getActiveProfiles()).anyMatch("test"::equals)) {
+                return;
+            }
+
+            // Check if the default "librarian" user already exists
+            List<User> existingLibrarians = userRepository.findAllByUsernameWithPasswordOrderByIdAsc("librarian");
+
+            if (existingLibrarians.isEmpty()) {
+                // Create LIBRARIAN authority if it doesn't exist
+                List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("LIBRARIAN");
+                Authority librarianAuthority;
+                if (existingAuthorities.isEmpty()) {
+                    Authority authority = new Authority();
+                    authority.setName("LIBRARIAN");
+                    librarianAuthority = authorityRepository.save(authority);
                 } else {
-                    librarianRole = existingRoles.get(0); // Select the one with the lowest ID
+                    librarianAuthority = existingAuthorities.get(0); // Select the one with the lowest ID
                 }
 
+                // Create the default librarian user
                 User librarianUser = new User();
                 librarianUser.setUsername("librarian");
                 // Hash with SHA-256 first (matching frontend), then BCrypt encode
                 String sha256Hash = PasswordHashingUtil.hashPasswordSHA256("divinemercy");
                 librarianUser.setPassword(passwordEncoder.encode(sha256Hash));
-                librarianUser.setRoles(Set.of(librarianRole));
+                librarianUser.setAuthorities(Set.of(librarianAuthority));
                 userRepository.save(librarianUser);
             }
         };

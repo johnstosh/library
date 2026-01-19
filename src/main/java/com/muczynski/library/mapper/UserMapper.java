@@ -3,30 +3,30 @@
  */
 package com.muczynski.library.mapper;
 
-import com.muczynski.library.domain.Role;
+import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 
-@Component
-public class UserMapper {
+@Mapper(componentModel = "spring")
+public interface UserMapper {
 
-    public UserDto toDto(User user) {
-        UserDto userDto = new UserDto();
-        userDto.setId(user.getId());
-        userDto.setUsername(user.getUsername());
-        userDto.setXaiApiKey(user.getXaiApiKey());
-        userDto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
-        userDto.setGoogleClientSecret(user.getGoogleClientSecret());
-        userDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
-        userDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
-        userDto.setSsoProvider(user.getSsoProvider());
-        userDto.setSsoSubjectId(user.getSsoSubjectId());
-        userDto.setEmail(user.getEmail());
-        userDto.setLibraryCardDesign(user.getLibraryCardDesign());
-        userDto.setRoles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
-        return userDto;
+    @Mapping(target = "authorities", source = "authorities", qualifiedByName = "authoritiesToStrings")
+    @Mapping(target = "activeLoansCount", ignore = true) // Set by service
+    UserDto toDto(User user);
+
+    @Named("authoritiesToStrings")
+    default Set<String> authoritiesToStrings(Set<Authority> authorities) {
+        if (authorities == null) {
+            return null;
+        }
+        return authorities.stream()
+                .map(Authority::getName)
+                .collect(Collectors.toSet());
     }
 }

@@ -89,4 +89,9 @@ public class GlobalSettingsDto {
      * Validation message for the Client Secret format
      */
     private String googleClientSecretValidation;
+
+    /**
+     * Validation message for the SSO Client Secret format
+     */
+    private String googleSsoClientSecretValidation;
 }

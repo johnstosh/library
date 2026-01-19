@@ -48,12 +48,12 @@ class DeletionConflictTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteAuthorWithAssociatedBooksReturns409() throws Exception {
         // Create library
-        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/libraries")
+        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/branches")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "St. Martin de Porres",
-                                    "hostname": "library.muczynskifamily.com"
+                                    "branchName": "St. Martin de Porres",
+                                    "librarySystemName": "Sacred Heart Library System"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -93,12 +93,12 @@ class DeletionConflictTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteBookWithAssociatedLoansReturns409() throws Exception {
         // Create library
-        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/libraries")
+        MvcResult libraryResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/branches")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "name": "St. Martin de Porres",
-                                    "hostname": "library.muczynskifamily.com"
+                                    "branchName": "St. Martin de Porres",
+                                    "librarySystemName": "Sacred Heart Library System"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -139,7 +139,7 @@ class DeletionConflictTest {
                                 {
                                     "username": "integration_test_user",
                                     "password": "%s",
-                                    "role": "USER"
+                                    "authority": "USER"
                                 }
                                 """.formatted(hashedPassword)))
                 .andExpect(status().isCreated())

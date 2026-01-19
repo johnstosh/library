@@ -48,7 +48,7 @@ class AppliedControllerTest {
         RestAssuredMockMvc.mockMvc(mockMvc);
     }
 
-    // ==================== POST /api/public/register Tests ====================
+    // ==================== POST /api/application/public/register Tests ====================
 
     @Test
     void testPublicRegister_Success() {
@@ -69,9 +69,9 @@ class AppliedControllerTest {
             .contentType(ContentType.JSON)
             .body(request)
         .when()
-            .post("/api/public/register")
+            .post("/api/application/public/register")
         .then()
-            .statusCode(200);
+            .statusCode(204);
     }
 
     @Test
@@ -89,7 +89,7 @@ class AppliedControllerTest {
             .contentType(ContentType.JSON)
             .body(request)
         .when()
-            .post("/api/public/register")
+            .post("/api/application/public/register")
         .then()
             .statusCode(500)
             .body(containsString("Username already exists"));

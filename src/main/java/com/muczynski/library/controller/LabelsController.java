@@ -3,13 +3,13 @@
  */
 package com.muczynski.library.controller;
 
-import com.muczynski.library.dto.BookLocStatusDto;
 import com.muczynski.library.service.LabelsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,27 +25,10 @@ public class LabelsController {
     private final LabelsService labelsService;
 
     /**
-     * Get books from most recent day (regardless of LOC status), sorted by date added
-     */
-    @GetMapping("/books")
-    public ResponseEntity<List<BookLocStatusDto>> getBooksForLabels() {
-        List<BookLocStatusDto> books = labelsService.getBooksForLabels();
-        return ResponseEntity.ok(books);
-    }
-
-    /**
-     * Get all books (regardless of LOC status), sorted by date added
-     */
-    @GetMapping("/books/all")
-    public ResponseEntity<List<BookLocStatusDto>> getAllBooksForLabels() {
-        List<BookLocStatusDto> books = labelsService.getAllBooksForLabels();
-        return ResponseEntity.ok(books);
-    }
-
-    /**
-     * Generate labels PDF for specified books
+     * Generate labels PDF for specified books (librarian only)
      */
     @GetMapping("/generate")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<byte[]> generateLabelsPdf(@RequestParam List<Long> bookIds) {
         byte[] pdfBytes = labelsService.generateLabelsPdf(bookIds);
 
