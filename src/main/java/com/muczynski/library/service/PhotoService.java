@@ -716,28 +716,34 @@ public class PhotoService {
                 transform.translate(0, -height);
                 break;
             case 5: // Transpose (flip horizontal + rotate 270)
-                transform.rotate(Math.toRadians(270), height / 2.0, height / 2.0);
+                // Rotate 270 CW then flip horizontal
+                transform.translate(0, width);
+                transform.rotate(Math.toRadians(270));
                 transform.scale(-1.0, 1.0);
-                transform.translate(-height, 0);
+                transform.translate(-width, 0);
                 newWidth = height;
                 newHeight = width;
                 break;
             case 6: // Rotate 90 CW
-                transform.rotate(Math.toRadians(90), height / 2.0, height / 2.0);
-                transform.translate((height - width) / 2.0, (height - width) / 2.0);
+                // Translate so rotated image lands at origin, then rotate
+                transform.translate(height, 0);
+                transform.rotate(Math.toRadians(90));
                 newWidth = height;
                 newHeight = width;
                 break;
             case 7: // Transverse (flip horizontal + rotate 90)
-                transform.rotate(Math.toRadians(90), height / 2.0, height / 2.0);
+                // Rotate 90 CW then flip horizontal
+                transform.translate(height, 0);
+                transform.rotate(Math.toRadians(90));
                 transform.scale(-1.0, 1.0);
-                transform.translate(-width + (height - width) / 2.0, (height - width) / 2.0);
+                transform.translate(-width, 0);
                 newWidth = height;
                 newHeight = width;
                 break;
             case 8: // Rotate 270 CW
-                transform.rotate(Math.toRadians(270), width / 2.0, width / 2.0);
-                transform.translate((width - height) / 2.0, (width - height) / 2.0);
+                // Translate so rotated image lands at origin, then rotate
+                transform.translate(0, width);
+                transform.rotate(Math.toRadians(270));
                 newWidth = height;
                 newHeight = width;
                 break;
