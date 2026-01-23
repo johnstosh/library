@@ -49,7 +49,7 @@ if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ]; then
   IMAGE_NAME="${BASE_SERVICE_NAME}-main"           # Docker image: library-main
   echo "Info: Deploying to production (main branch): service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"
 else
-  SERVICE_NAME="$BASE_SERVICE_NAME"                # Cloud Run service: still library (shared)
+  SERVICE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}" # Cloud Run service
   DB_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"    # Database: library-featureX
   IMAGE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}" # Docker image: library-featureX
   echo "Info: Deploying branch '${BRANCH_NAME}': service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"

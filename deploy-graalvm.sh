@@ -45,12 +45,12 @@ fi
 # ── Determine names based on branch ────────────────────────────────
 # GraalVM deploys to a separate service with -graalvm suffix
 if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ]; then
-  SERVICE_NAME="${BASE_SERVICE_NAME}-graalvm"      # Cloud Run service: library-graalvm
+  SERVICE_NAME="${BASE_SERVICE_NAME}"              # Cloud Run service
   DB_NAME="$BASE_SERVICE_NAME"                     # Database: library
   IMAGE_NAME="${BASE_SERVICE_NAME}-main-graalvm"   # Docker image: library-main-graalvm
   echo "Info: Deploying GraalVM to production (main branch): service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"
 else
-  SERVICE_NAME="${BASE_SERVICE_NAME}-graalvm"      # Cloud Run service: library-graalvm (shared)
+  SERVICE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}" # Cloud Run service
   DB_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"    # Database: library-featureX
   IMAGE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}-graalvm" # Docker image: library-featureX-graalvm
   echo "Info: Deploying GraalVM branch '${BRANCH_NAME}': service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"
