@@ -25,3 +25,8 @@ data/
 
 # Frontend build output (copied from frontend/dist/)
 src/main/resources/static/
+
+# Book lookup statistics output
+book-lookup/
+book-lookup-statistics.json
+branch-archive.json

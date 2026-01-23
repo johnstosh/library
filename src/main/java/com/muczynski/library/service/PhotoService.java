@@ -37,6 +37,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifIFD0Directory;
+
 @Service
 @RequiredArgsConstructor
 public class PhotoService {
@@ -659,6 +663,103 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Read EXIF orientation from image bytes
+     * @return orientation value (1-8), or 1 if not found or on error
+     */
+    private int getExifOrientation(byte[] imageBytes) {
+        try {
+            Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(imageBytes));
+            ExifIFD0Directory exifDir = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            if (exifDir != null && exifDir.containsTag(ExifIFD0Directory.TAG_ORIENTATION)) {
+                return exifDir.getInt(ExifIFD0Directory.TAG_ORIENTATION);
+            }
+        } catch (Exception e) {
+            logger.debug("Could not read EXIF orientation: {}", e.getMessage());
+        }
+        return 1; // Default: no rotation needed
+    }
+
+    /**
+     * Apply EXIF orientation transform to image
+     * EXIF Orientation values:
+     * 1 = Normal
+     * 2 = Flip horizontal
+     * 3 = Rotate 180
+     * 4 = Flip vertical
+     * 5 = Transpose (flip horizontal + rotate 270)
+     * 6 = Rotate 90 CW
+     * 7 = Transverse (flip horizontal + rotate 90)
+     * 8 = Rotate 270 CW (90 CCW)
+     */
+    private BufferedImage applyExifOrientation(BufferedImage image, int orientation) {
+        if (orientation == 1) {
+            return image; // No transformation needed
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+        AffineTransform transform = new AffineTransform();
+        int newWidth = width;
+        int newHeight = height;
+
+        switch (orientation) {
+            case 2: // Flip horizontal
+                transform.scale(-1.0, 1.0);
+                transform.translate(-width, 0);
+                break;
+            case 3: // Rotate 180
+                transform.rotate(Math.PI, width / 2.0, height / 2.0);
+                break;
+            case 4: // Flip vertical
+                transform.scale(1.0, -1.0);
+                transform.translate(0, -height);
+                break;
+            case 5: // Transpose (flip horizontal + rotate 270)
+                // Rotate 270 CW then flip horizontal
+                transform.translate(0, width);
+                transform.rotate(Math.toRadians(270));
+                transform.scale(-1.0, 1.0);
+                transform.translate(-width, 0);
+                newWidth = height;
+                newHeight = width;
+                break;
+            case 6: // Rotate 90 CW
+                // Translate so rotated image lands at origin, then rotate
+                transform.translate(height, 0);
+                transform.rotate(Math.toRadians(90));
+                newWidth = height;
+                newHeight = width;
+                break;
+            case 7: // Transverse (flip horizontal + rotate 90)
+                // Rotate 90 CW then flip horizontal
+                transform.translate(height, 0);
+                transform.rotate(Math.toRadians(90));
+                transform.scale(-1.0, 1.0);
+                transform.translate(-width, 0);
+                newWidth = height;
+                newHeight = width;
+                break;
+            case 8: // Rotate 270 CW
+                // Translate so rotated image lands at origin, then rotate
+                transform.translate(0, width);
+                transform.rotate(Math.toRadians(270));
+                newWidth = height;
+                newHeight = width;
+                break;
+            default:
+                return image;
+        }
+
+        BufferedImage rotated = new BufferedImage(newWidth, newHeight, image.getType());
+        Graphics2D g2d = rotated.createGraphics();
+        g2d.setTransform(transform);
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+
+        return rotated;
+    }
+
     @Transactional(readOnly = true)
     public Pair<byte[], String> getThumbnail(Long photoId, Integer width) {
         try {
@@ -680,6 +781,14 @@ public class PhotoService {
             if (originalImage == null) {
                 logger.error("Failed to read image data for photo ID {}", photoId);
                 throw new LibraryException("Failed to read image data");
+            }
+
+            // Read and apply EXIF orientation to correct rotated images
+            // ImageIO doesn't respect EXIF orientation, so we must apply it manually
+            int exifOrientation = getExifOrientation(photo.getImage());
+            if (exifOrientation != 1) {
+                logger.debug("Applying EXIF orientation {} for photo ID {}", exifOrientation, photoId);
+                originalImage = applyExifOrientation(originalImage, exifOrientation);
             }
 
             int originalWidth = originalImage.getWidth();

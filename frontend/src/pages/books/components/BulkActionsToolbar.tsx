@@ -6,12 +6,15 @@ import { Modal } from '@/components/ui/Modal'
 import { useDeleteBooks, useBulkBookFromImage } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
+import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
+import { PiBookOpen } from 'react-icons/pi'
 import type { BulkDeleteResultDto } from '@/types/dtos'
 
 interface BulkActionsToolbarProps {
@@ -32,10 +35,16 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [showBookFromImageResults, setShowBookFromImageResults] = useState(false)
   const [bookFromImageResults, setBookFromImageResults] = useState<BookFromImageResult[]>([])
   const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
+  const [showFreeTextResults, setShowFreeTextResults] = useState(false)
+  const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
+  const [freeTextProgress, setFreeTextProgress] = useState(0)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
   const lookupGrokipedia = useLookupBulkBooksGrokipedia()
+  const lookupFreeText = useLookupBulkFreeTextWithProgress((completed, _total) => {
+    setFreeTextProgress(completed)
+  })
   const bulkBookFromImage = useBulkBookFromImage()
 
   const handleBulkDelete = async () => {
@@ -108,6 +117,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
+  const handleFreeTextLookup = async () => {
+    setFreeTextProgress(0)
+    try {
+      const results = await lookupFreeText.mutateAsync(Array.from(selectedIds))
+      setFreeTextResults(results)
+      setShowFreeTextResults(true)
+    } catch (error) {
+      console.error('Failed to lookup free online text:', error)
+    }
+  }
+
   if (selectedIds.size === 0) return null
 
   return (
@@ -149,6 +169,19 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               data-test="bulk-lookup-grokipedia"
             >
               Find Grokipedia URLs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFreeTextLookup}
+              isLoading={lookupFreeText.isPending}
+              disabled={lookupFreeText.isPending}
+              leftIcon={<PiBookOpen />}
+              data-test="bulk-lookup-free-text"
+            >
+              {lookupFreeText.isPending
+                ? `Finding... (${freeTextProgress}/${selectedIds.size})`
+                : 'Find links to free online text'}
             </Button>
             <Button
               variant="outline"
@@ -214,6 +247,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showBookFromImageResults}
         onClose={() => setShowBookFromImageResults(false)}
         results={bookFromImageResults}
+      />
+
+      <FreeTextLookupResultsModal
+        isOpen={showFreeTextResults}
+        onClose={() => setShowFreeTextResults(false)}
+        results={freeTextResults}
       />
 
       <Modal

@@ -114,11 +114,11 @@ export function Navigation() {
                   <NavLink to="/loans" data-test="nav-loans">
                     Loans
                   </NavLink>
-                  <NavLink to="/settings" data-test="nav-settings">
-                    Settings
-                  </NavLink>
                   <NavLink to="/my-card" data-test="nav-my-card">
                     My Card
+                  </NavLink>
+                  <NavLink to="/settings" data-test="nav-settings">
+                    Settings
                   </NavLink>
                 </>
               )}
@@ -212,11 +212,11 @@ export function Navigation() {
                 <NavLink to="/loans" data-test="nav-loans-mobile" onClick={closeMobileMenu}>
                   Loans
                 </NavLink>
-                <NavLink to="/settings" data-test="nav-settings-mobile" onClick={closeMobileMenu}>
-                  Settings
-                </NavLink>
                 <NavLink to="/my-card" data-test="nav-my-card-mobile" onClick={closeMobileMenu}>
                   My Card
+                </NavLink>
+                <NavLink to="/settings" data-test="nav-settings-mobile" onClick={closeMobileMenu}>
+                  Settings
                 </NavLink>
               </>
             )}
