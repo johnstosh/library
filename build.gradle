@@ -56,6 +56,9 @@ dependencies {
 
     // iText 7 for PDF generation (library cards)
     implementation 'com.itextpdf:itext-core:8.0.5'
+
+    // Metadata-extractor for reading EXIF orientation data
+    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 }
 
 jar {

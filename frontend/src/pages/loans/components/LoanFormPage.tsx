@@ -365,6 +365,11 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
     }
   }
 
+  // Helper to normalize call numbers by removing all spaces for comparison
+  const normalizeCallNumber = (callNumber: string): string => {
+    return callNumber.replace(/\s+/g, '').toLowerCase()
+  }
+
   // Filter and rank books based on title, author, and locNumber
   const filteredBooks = useMemo(() => {
     const availableBooks = books.filter((b) => b.status === 'ACTIVE')
@@ -378,7 +383,8 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       let score = 0
       const titleMatch = bookFilters.title.toLowerCase()
       const authorMatch = bookFilters.author.toLowerCase()
-      const locMatch = bookFilters.locNumber.toLowerCase()
+      // Normalize call number filter by removing spaces
+      const locMatch = normalizeCallNumber(bookFilters.locNumber)
 
       if (titleMatch && book.title.toLowerCase().includes(titleMatch)) {
         score += 10
@@ -392,10 +398,12 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
         if (book.author?.toLowerCase() === authorMatch) score += 20
       }
 
-      if (locMatch && book.locNumber?.toLowerCase().includes(locMatch)) {
+      // Normalize book's call number by removing spaces before comparison
+      const bookLocNormalized = book.locNumber ? normalizeCallNumber(book.locNumber) : ''
+      if (locMatch && bookLocNormalized.includes(locMatch)) {
         score += 10
         // Exact match gets bonus
-        if (book.locNumber?.toLowerCase() === locMatch) score += 20
+        if (bookLocNormalized === locMatch) score += 20
       }
 
       return { book, score }
