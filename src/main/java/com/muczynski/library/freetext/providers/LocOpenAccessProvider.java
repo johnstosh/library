@@ -65,25 +65,27 @@ public class LocOpenAccessProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "No open access books found");
             }
 
-            // Find best title match
+            // Find best title match - only return if title actually matches
+            // Do NOT fall back to first result (causes false positives for copyrighted works)
             for (LocResult result : response.getResults()) {
                 String resultTitle = result.getTitle();
                 if (resultTitle != null && TitleMatcher.titleMatches(resultTitle, title)) {
-                    String resultUrl = result.getUrl();
-                    if (resultUrl != null) {
-                        return FreeTextLookupResult.success(getProviderName(), resultUrl);
+                    // Verify it has online text format (not just catalog entry)
+                    List<String> formats = result.getOnlineFormat();
+                    if (formats != null && formats.stream().anyMatch(f ->
+                            f.toLowerCase().contains("online text") ||
+                            f.toLowerCase().contains("full text") ||
+                            f.toLowerCase().contains("pdf") ||
+                            f.toLowerCase().contains("epub"))) {
+                        String resultUrl = result.getUrl();
+                        if (resultUrl != null) {
+                            return FreeTextLookupResult.success(getProviderName(), resultUrl);
+                        }
                     }
                 }
             }
 
-            // Return first result with URL if no exact match
-            for (LocResult result : response.getResults()) {
-                if (result.getUrl() != null) {
-                    return FreeTextLookupResult.success(getProviderName(), result.getUrl());
-                }
-            }
-
-            return FreeTextLookupResult.error(getProviderName(), "No online text available");
+            return FreeTextLookupResult.error(getProviderName(), "No matching title with online text found");
 
         } catch (Exception e) {
             log.warn("LOC Open Access search failed: {}", e.getMessage());

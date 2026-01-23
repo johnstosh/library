@@ -62,6 +62,7 @@ class FreeTextLookupStatisticsTest {
     private static final String ARCHIVE_FILE = "./branch-archive.json";
     private static final String STATISTICS_FILE = "./book-lookup-statistics.json";
     private static final String LOG_DIRECTORY = "./book-lookup";
+    private static final String PROGRESS_FILE = "./book-lookup-progress.log";
 
     @Autowired
     private List<FreeTextProvider> providers;
@@ -147,9 +148,19 @@ class FreeTextLookupStatisticsTest {
         Map<String, PrintWriter> logWriters = openLogFiles();
         System.out.println("Opened " + logWriters.size() + " log files");
 
+        // Create progress file for real-time monitoring (tail -f ./book-lookup-progress.log)
+        PrintWriter progressWriter = new PrintWriter(new FileWriter(PROGRESS_FILE, false));
+        progressWriter.println("=".repeat(60));
+        progressWriter.println("FREE TEXT LOOKUP STATISTICS - PROGRESS LOG");
+        progressWriter.println("Started: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        progressWriter.println("Monitor with: tail -f " + PROGRESS_FILE);
+        progressWriter.println("=".repeat(60));
+        progressWriter.flush();
+
         System.out.println();
         System.out.println("=".repeat(60));
         System.out.println("STARTING BOOK PROCESSING");
+        System.out.println("Monitor progress with: tail -f " + PROGRESS_FILE);
         System.out.println("=".repeat(60));
         System.out.println();
 
@@ -182,6 +193,13 @@ class FreeTextLookupStatisticsTest {
                         bookIndex, books.size(), title, authorName != null ? authorName : "Unknown");
                 System.out.println("-".repeat(60));
 
+                // Write to progress file (can be tailed)
+                progressWriter.printf("%n[%d/%d] %s - \"%s\" by %s%n",
+                        bookIndex, books.size(),
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                        title, authorName != null ? authorName : "Unknown");
+                progressWriter.flush();
+
                 int bookHits = 0;
                 long bookStartTime = System.currentTimeMillis();
 
@@ -206,8 +224,10 @@ class FreeTextLookupStatisticsTest {
                             logResult(logWriters.get(providerName), title, authorName, "HIT", result.getUrl());
                             System.out.printf("  %-25s [%4dms] HIT: %s%n", providerName, providerTime, result.getUrl());
                         } else {
-                            logResult(logWriters.get(providerName), title, authorName, "MISS",
-                                    result.getErrorMessage() != null ? result.getErrorMessage() : "Not found");
+                            // Truncate error message (some providers return full HTML bodies)
+                            String errMsg = result.getErrorMessage() != null ? result.getErrorMessage() : "Not found";
+                            String truncatedErr = errMsg.length() > 100 ? errMsg.substring(0, 100) + "..." : errMsg;
+                            logResult(logWriters.get(providerName), title, authorName, "MISS", truncatedErr);
                             System.out.printf("  %-25s [%4dms] MISS%n", providerName, providerTime);
                         }
 
@@ -221,15 +241,22 @@ class FreeTextLookupStatisticsTest {
                         long providerTime = System.currentTimeMillis() - providerStartTime;
                         providerStats.setLookups(providerStats.getLookups() + 1);
                         totalLookups++;
-                        logResult(logWriters.get(providerName), title, authorName, "ERROR", e.getMessage());
+                        // Truncate error message for logging (some errors contain full HTML pages)
+                        String errorMsg = e.getMessage() != null ? e.getMessage() : "null";
+                        String truncatedError = errorMsg.length() > 100 ? errorMsg.substring(0, 100) + "..." : errorMsg;
+                        logResult(logWriters.get(providerName), title, authorName, "ERROR", truncatedError);
                         System.out.printf("  %-25s [%4dms] ERROR: %s%n", providerName, providerTime,
-                                e.getMessage() != null ? e.getMessage().substring(0, Math.min(50, e.getMessage().length())) : "null");
+                                errorMsg.length() > 50 ? errorMsg.substring(0, 50) + "..." : errorMsg);
                     }
                 }
 
                 long bookTime = System.currentTimeMillis() - bookStartTime;
                 System.out.printf("  Book complete: %d hits from %d providers in %dms%n",
                         bookHits, providers.size(), bookTime);
+                System.out.flush(); // Force output to show immediately
+
+                progressWriter.printf("  -> %d hits in %dms%n", bookHits, bookTime);
+                progressWriter.flush();
 
                 // Mark book as processed
                 stats.getProcessedBookTitles().add(title);
@@ -278,6 +305,9 @@ class FreeTextLookupStatisticsTest {
             for (PrintWriter writer : logWriters.values()) {
                 writer.close();
             }
+            progressWriter.println();
+            progressWriter.println("Test completed at " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            progressWriter.close();
             System.out.println("Done.");
         }
     }
@@ -368,6 +398,118 @@ class FreeTextLookupStatisticsTest {
         System.out.println();
         System.out.println("Statistics saved to: " + STATISTICS_FILE);
         System.out.println("Logs saved to: " + LOG_DIRECTORY + "/");
+    }
+
+    /**
+     * Test with two specific books to verify provider behavior:
+     * - "The Spiritual Exercises" by Ignatius of Loyola - expected to be found in MOST providers
+     * - "How the Grinch Stole Christmas" by Dr. Seuss - expected to be found in NONE (copyrighted)
+     *
+     * Run with: ./gradlew test --tests "*.FreeTextLookupStatisticsTest.testTwoKnownBooks" --console=plain
+     */
+    @Test
+    @Tag("manual")
+    void testTwoKnownBooks() {
+        System.out.println();
+        System.out.println("=".repeat(60));
+        System.out.println("TWO KNOWN BOOKS TEST");
+        System.out.println("=".repeat(60));
+        System.out.println();
+
+        // Sort providers by priority
+        providers.sort(Comparator.comparingInt(FreeTextProvider::getPriority));
+
+        // Test 1: Ignatius - The Spiritual Exercises (public domain, should be found in many providers)
+        String ignatiusTitle = "The Spiritual Exercises";
+        String ignatiusAuthor = "Ignatius of Loyola";
+        int ignatiusHits = 0;
+
+        System.out.println("Book 1: \"" + ignatiusTitle + "\" by " + ignatiusAuthor);
+        System.out.println("Expected: Found in MOST providers (public domain classic)");
+        System.out.println("-".repeat(60));
+
+        for (FreeTextProvider provider : providers) {
+            long startTime = System.currentTimeMillis();
+            try {
+                FreeTextLookupResult result = provider.search(ignatiusTitle, ignatiusAuthor);
+                long elapsed = System.currentTimeMillis() - startTime;
+
+                if (result.isFound()) {
+                    ignatiusHits++;
+                    System.out.printf("  %-30s [%4dms] HIT: %s%n",
+                            provider.getProviderName(), elapsed, result.getUrl());
+                } else {
+                    System.out.printf("  %-30s [%4dms] MISS%n",
+                            provider.getProviderName(), elapsed);
+                }
+            } catch (Exception e) {
+                long elapsed = System.currentTimeMillis() - startTime;
+                System.out.printf("  %-30s [%4dms] ERROR: %s%n",
+                        provider.getProviderName(), elapsed,
+                        e.getMessage() != null ? e.getMessage().substring(0, Math.min(50, e.getMessage().length())) : "null");
+            }
+        }
+
+        System.out.println();
+        System.out.printf("Ignatius result: %d/%d providers found it (%.0f%%)%n",
+                ignatiusHits, providers.size(), (100.0 * ignatiusHits / providers.size()));
+        System.out.println();
+
+        // Test 2: Dr. Seuss - How the Grinch Stole Christmas (copyrighted, should NOT be found)
+        String seussTitle = "How the Grinch Stole Christmas";
+        String seussAuthor = "Dr. Seuss";
+        int seussHits = 0;
+
+        System.out.println("Book 2: \"" + seussTitle + "\" by " + seussAuthor);
+        System.out.println("Expected: Found in NONE (copyrighted, not public domain)");
+        System.out.println("-".repeat(60));
+
+        for (FreeTextProvider provider : providers) {
+            long startTime = System.currentTimeMillis();
+            try {
+                FreeTextLookupResult result = provider.search(seussTitle, seussAuthor);
+                long elapsed = System.currentTimeMillis() - startTime;
+
+                if (result.isFound()) {
+                    seussHits++;
+                    System.out.printf("  %-30s [%4dms] HIT: %s%n",
+                            provider.getProviderName(), elapsed, result.getUrl());
+                } else {
+                    System.out.printf("  %-30s [%4dms] MISS%n",
+                            provider.getProviderName(), elapsed);
+                }
+            } catch (Exception e) {
+                long elapsed = System.currentTimeMillis() - startTime;
+                System.out.printf("  %-30s [%4dms] ERROR: %s%n",
+                        provider.getProviderName(), elapsed,
+                        e.getMessage() != null ? e.getMessage().substring(0, Math.min(50, e.getMessage().length())) : "null");
+            }
+        }
+
+        System.out.println();
+        System.out.printf("Seuss result: %d/%d providers found it (%.0f%%)%n",
+                seussHits, providers.size(), (100.0 * seussHits / providers.size()));
+
+        // Summary and assertions
+        System.out.println();
+        System.out.println("=".repeat(60));
+        System.out.println("SUMMARY");
+        System.out.println("=".repeat(60));
+        System.out.printf("Ignatius (Spiritual Exercises): %d/%d hits - %s%n",
+                ignatiusHits, providers.size(),
+                ignatiusHits >= providers.size() / 2 ? "PASS (found in majority)" : "UNEXPECTED (should be found in most)");
+        System.out.printf("Seuss (Grinch): %d/%d hits - %s%n",
+                seussHits, providers.size(),
+                seussHits == 0 ? "PASS (not found, as expected)" : "UNEXPECTED (should not be found - copyrighted)");
+        System.out.println("=".repeat(60));
+
+        // Soft assertions - log but don't fail (providers may vary)
+        if (ignatiusHits < providers.size() / 2) {
+            System.out.println("WARNING: Ignatius found in fewer than half the providers");
+        }
+        if (seussHits > 0) {
+            System.out.println("WARNING: Seuss was found - these may be unauthorized copies or false positives");
+        }
     }
 
     /**

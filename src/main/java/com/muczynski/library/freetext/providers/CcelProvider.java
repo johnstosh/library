@@ -5,6 +5,7 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -59,27 +60,46 @@ public class CcelProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "No response from CCEL search");
             }
 
-            // CCEL book links follow pattern /ccel/{author}/{work}
-            // Look for these in search results
-            Pattern bookPattern = Pattern.compile(
-                    "<a[^>]+href=\"(/ccel/[^/]+/[^\"]+)\"[^>]*>",
+            // CCEL search results show book cards. Each card has:
+            // - A div with class "card" containing the book
+            // - Book link: href="https://ccel.org/ccel/{author}/{work}/{work}"
+            // - Title in span within card-title: <span>Book Title</span>
+            //
+            // Strategy: Find each book card and extract URL+title together
+
+            // Pattern to find book cards (div with class containing "card")
+            // Each card starts with <div class="card and ends when next card starts
+            Pattern cardPattern = Pattern.compile(
+                    "<div[^>]+class=\"card[^\"]*mx-auto[^>]*>(.*?)</div>\\s*</div>\\s*</div>",
+                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+            // Pattern to extract URL from card
+            Pattern urlPattern = Pattern.compile(
+                    "href=\"(https?://ccel\\.org/ccel/[^/]+/[^/]+/[^\"]+)\"",
                     Pattern.CASE_INSENSITIVE);
 
-            Matcher matcher = bookPattern.matcher(html);
-            if (matcher.find()) {
-                String bookPath = matcher.group(1);
-                return FreeTextLookupResult.success(getProviderName(), BASE_URL + bookPath);
-            }
-
-            // Also check for author pages that might list the book
-            Pattern authorPattern = Pattern.compile(
-                    "<a[^>]+href=\"(/ccel/[^\"]+)\"[^>]*class=\"[^\"]*author[^\"]*\"",
+            // Pattern to extract title from card-title span
+            Pattern titlePattern = Pattern.compile(
+                    "<h5[^>]*class=\"[^\"]*card-title[^\"]*\"[^>]*>\\s*<span>([^<]+)</span>",
                     Pattern.CASE_INSENSITIVE);
 
-            matcher = authorPattern.matcher(html);
-            if (matcher.find()) {
-                String authorPath = matcher.group(1);
-                return FreeTextLookupResult.success(getProviderName(), BASE_URL + authorPath);
+            Matcher cardMatcher = cardPattern.matcher(html);
+            while (cardMatcher.find()) {
+                String cardHtml = cardMatcher.group(1);
+
+                // Extract title from this card
+                Matcher titleMatcher = titlePattern.matcher(cardHtml);
+                if (titleMatcher.find()) {
+                    String cardTitle = titleMatcher.group(1).trim();
+
+                    if (TitleMatcher.titleMatches(cardTitle, title)) {
+                        // Found matching title, get the URL from this card
+                        Matcher urlMatcher = urlPattern.matcher(cardHtml);
+                        if (urlMatcher.find()) {
+                            return FreeTextLookupResult.success(getProviderName(), urlMatcher.group(1));
+                        }
+                    }
+                }
             }
 
             return FreeTextLookupResult.error(getProviderName(), "Not found in CCEL");
