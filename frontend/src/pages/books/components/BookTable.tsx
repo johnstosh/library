@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { formatBookStatus, truncate, isValidUrl } from '@/utils/formatters'
+import { formatBookStatus, truncate, isValidUrl, formatDate } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
 import { PiCopy, PiEye } from 'react-icons/pi'
@@ -81,13 +81,19 @@ export function BookTable({
           {book.author && <div className="text-sm text-gray-500">{truncate(book.author, 40)}</div>}
         </div>
       ),
-      width: '45%',
+      width: '40%',
     },
     {
       key: 'locCallNumber',
       header: 'LOC',
       accessor: (book) => book.locNumber || '—',
-      width: '20%',
+      width: '15%',
+    },
+    {
+      key: 'dateAdded',
+      header: 'Date Added',
+      accessor: (book) => formatDate(book.dateAddedToLibrary) || '—',
+      width: '15%',
     },
     {
       key: 'status',
@@ -105,7 +111,7 @@ export function BookTable({
           {formatBookStatus(book.status)}
         </span>
       ),
-      width: '15%',
+      width: '10%',
     },
   ]
 

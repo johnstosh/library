@@ -35,15 +35,25 @@ if [ -z "$GCP_REGION" ]; then
   echo "Warning: GCP_REGION not set. Defaulting to ${GCP_REGION}"
 fi
 
-# Extract SERVICE_NAME from settings.gradle
+# Extract BASE_SERVICE_NAME from settings.gradle
 BASE_SERVICE_NAME=$(grep "rootProject.name" settings.gradle | sed "s/.*rootProject.name = '\(.*\)'.*/\1/")
 if [ -z "$BASE_SERVICE_NAME" ]; then
   echo "Error: Could not extract service name from settings.gradle"
   exit 1
 fi
 
-SERVICE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"
-DB_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"
+# ── Determine names based on branch ────────────────────────────────
+if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ]; then
+  SERVICE_NAME="$BASE_SERVICE_NAME"                # Cloud Run service: library
+  DB_NAME="$BASE_SERVICE_NAME"                     # Database: library
+  IMAGE_NAME="${BASE_SERVICE_NAME}-main"           # Docker image: library-main
+  echo "Info: Deploying to production (main branch): service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"
+else
+  SERVICE_NAME="$BASE_SERVICE_NAME"                # Cloud Run service: still library (shared)
+  DB_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}"    # Database: library-featureX
+  IMAGE_NAME="${BASE_SERVICE_NAME}-${BRANCH_NAME}" # Docker image: library-featureX
+  echo "Info: Deploying branch '${BRANCH_NAME}': service=$SERVICE_NAME, db=$DB_NAME, image=$IMAGE_NAME"
+fi
 
 gcloud config set project "$GCP_PROJECT_ID" --quiet
 
@@ -87,11 +97,11 @@ echo "Building React frontend..."
 # Build the Docker image without secrets (version tag for tracking)
 echo "Building Docker image... version $SERVICE_VERSION"
 ./gradlew clean build -x test
-docker build -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$SERVICE_NAME":"$SERVICE_VERSION" .
+docker build -t us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$IMAGE_NAME":"$SERVICE_VERSION" .
 
 # Push the image to Artifact Registry
 echo "Pushing image ${SERVICE_VERSION} to Artifact Registry..."
-docker push us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$SERVICE_NAME":"$SERVICE_VERSION"
+docker push us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$IMAGE_NAME":"$SERVICE_VERSION"
 
 # Deploy to Cloud Run with Cloud SQL connection and all env vars (secrets at runtime only)
 echo "Deploying ${SERVICE_VERSION} to Cloud Run in $GCP_REGION..."
@@ -108,7 +118,7 @@ if [ -n "$CLOUD_RUN_SERVICE_ACCOUNT" ]; then
 fi
 
 gcloud run deploy "$SERVICE_NAME" \
-  --image us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$SERVICE_NAME":"$SERVICE_VERSION" \
+  --image us-east1-docker.pkg.dev/"$GCP_PROJECT_ID"/${BINARY_REPO_NAME}/"$IMAGE_NAME":"$SERVICE_VERSION" \
   --region "$GCP_REGION" \
   --platform managed \
   --allow-unauthenticated \

@@ -65,21 +65,42 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
     })
   }, [fetchedBooks, queryClient])
 
-  // Step 4: Get all cached books for display
-  // Note: We depend on fetchedBooks to ensure the memo re-runs after cache is populated
+  // Step 4: Get all books for display
+  // IMPORTANT: We must use fetchedBooks directly here, not rely on the cache.
+  // The cache is populated by a useEffect which runs AFTER this useMemo,
+  // so reading from cache would return stale/missing data on first render.
   const allBooks = useMemo(() => {
     if (!summaries) return []
 
-    // For all filters, wait for fetchedBooks to complete before reading from cache
-    // This ensures we don't return empty results while the cache is being populated
+    // Wait for fetchedBooks to complete if we have books to fetch
     if (booksToFetch.length > 0 && !fetchedBooks) {
       return []
     }
 
-    // Get books from individual caches
-    return summaries
-      .map((summary) => queryClient.getQueryData<BookDto>(queryKeys.books.detail(summary.id)))
+    // Build a map of newly fetched books for quick lookup
+    const fetchedBooksMap = new Map<number, BookDto>()
+    fetchedBooks?.forEach((book) => {
+      fetchedBooksMap.set(book.id, book)
+    })
+
+    // Get books: prefer freshly fetched books, then fall back to cache
+    const books = summaries
+      .map((summary) => {
+        // First check if we just fetched this book
+        const fetched = fetchedBooksMap.get(summary.id)
+        if (fetched) return fetched
+        // Otherwise check cache (for books that didn't need refetching)
+        return queryClient.getQueryData<BookDto>(queryKeys.books.detail(summary.id))
+      })
       .filter((book): book is BookDto => book !== undefined)
+
+    // Sort by dateAddedToLibrary descending (most recent first)
+    // This ensures consistent ordering regardless of cache state
+    return books.sort((a, b) => {
+      const dateA = a.dateAddedToLibrary ? new Date(a.dateAddedToLibrary).getTime() : 0
+      const dateB = b.dateAddedToLibrary ? new Date(b.dateAddedToLibrary).getTime() : 0
+      return dateB - dateA // Descending order (most recent first)
+    })
   }, [summaries, queryClient, fetchedBooks, booksToFetch])
 
   return {

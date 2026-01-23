@@ -295,7 +295,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   }
 
   const handleBookFilterChange = (field: string, value: string) => {
-    setBookFilters({ ...bookFilters, [field]: value })
+    setBookFilters(prev => ({ ...prev, [field]: value }))
     setHasUnsavedChanges(true)
   }
 
@@ -406,7 +406,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .map(item => item.book)
-  }, [books, bookFilters])
+  }, [books, bookFilters.title, bookFilters.author, bookFilters.locNumber])
 
   // Filter users based on username
   const filteredUsers = useMemo(() => {
@@ -730,7 +730,12 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''  // Reset to allow re-selecting same file
+                      fileInputRef.current.click()
+                    }
+                  }}
                   className="w-full"
                 >
                   Select Different Photo
