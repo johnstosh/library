@@ -3,8 +3,10 @@ import { useState } from 'react'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
+import { getThumbnailUrl } from '@/api/photos'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus, truncate, isValidUrl, formatDate } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
@@ -73,6 +75,25 @@ export function BookTable({
 
   const columns: Column<BookDto>[] = [
     {
+      key: 'photo',
+      header: '',
+      accessor: (book) =>
+        book.firstPhotoId ? (
+          <ThrottledThumbnail
+            photoId={book.firstPhotoId}
+            url={getThumbnailUrl(book.firstPhotoId, 50)}
+            alt={`Cover of ${book.title}`}
+            className="w-10 h-14 object-cover rounded"
+            checksum={book.firstPhotoChecksum}
+          />
+        ) : (
+          <div className="w-10 h-14 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+            -
+          </div>
+        ),
+      width: '50px',
+    },
+    {
       key: 'title',
       header: 'Title',
       accessor: (book) => (
@@ -81,7 +102,7 @@ export function BookTable({
           {book.author && <div className="text-sm text-gray-500">{truncate(book.author, 40)}</div>}
         </div>
       ),
-      width: '40%',
+      width: '35%',
     },
     {
       key: 'locCallNumber',
