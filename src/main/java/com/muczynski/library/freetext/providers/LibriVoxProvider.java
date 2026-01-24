@@ -44,33 +44,32 @@ public class LibriVoxProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String searchTitle = TitleMatcher.normalizeForSearch(title);
+
+            // Note: LibriVox API can be unreliable when combining title+author filters (returns 500),
+            // so we search by title only and use TitleMatcher to validate results
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(API_BASE)
                     .queryParam("format", "json")
-                    .queryParam("title", "^" + title); // ^ means starts with
-
-            if (authorName != null && !authorName.isBlank()) {
-                // Extract last name for author search
-                String lastName = getLastName(authorName);
-                builder.queryParam("author", "^" + lastName);
-            }
+                    .queryParam("title", "^" + searchTitle); // ^ means starts with
 
             String url = builder.build().toUriString();
+            log.debug("LibriVox search URL: {}", url);
             LibriVoxResponse response = restTemplate.getForObject(url, LibriVoxResponse.class);
 
             if (response == null || response.getBooks() == null || response.getBooks().isEmpty()) {
                 return FreeTextLookupResult.error(getProviderName(), "No audiobooks found");
             }
 
-            // Find best title match
+            log.debug("LibriVox: Got {} results for '{}'", response.getBooks().size(), title);
+
+            // Find best title match - only return if title actually matches
+            // Do NOT fall back to first result (causes false positives for copyrighted works)
             for (LibriVoxBook book : response.getBooks()) {
                 if (TitleMatcher.titleMatches(book.getTitle(), title)) {
+                    log.debug("LibriVox: Found match '{}' -> {}", book.getTitle(), book.getUrlLibrivox());
                     return FreeTextLookupResult.success(getProviderName(), book.getUrlLibrivox());
                 }
-            }
-
-            // Return first result if no exact match
-            if (!response.getBooks().isEmpty()) {
-                return FreeTextLookupResult.success(getProviderName(), response.getBooks().get(0).getUrlLibrivox());
             }
 
             return FreeTextLookupResult.error(getProviderName(), "Title not found in audiobooks");
@@ -79,11 +78,6 @@ public class LibriVoxProvider implements FreeTextProvider {
             log.warn("LibriVox search failed: {}", e.getMessage());
             return FreeTextLookupResult.error(getProviderName(), "Search error: " + e.getMessage());
         }
-    }
-
-    private String getLastName(String fullName) {
-        String[] parts = fullName.split("\\s+");
-        return parts.length > 0 ? parts[parts.length - 1] : fullName;
     }
 
     @Data

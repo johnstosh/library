@@ -44,9 +44,13 @@ public class CcelProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            String query = title;
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String query = TitleMatcher.normalizeForSearch(title);
             if (authorName != null && !authorName.isBlank()) {
-                query = title + " " + authorName;
+                // Add author's last name to improve search accuracy
+                String[] authorParts = authorName.split("\\s+");
+                String lastName = authorParts[authorParts.length - 1];
+                query = query + " " + lastName;
             }
 
             String url = UriComponentsBuilder.fromHttpUrl(SEARCH_URL)

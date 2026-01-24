@@ -5,6 +5,7 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -43,9 +44,13 @@ public class EwtnLibraryProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            String query = title;
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String query = TitleMatcher.normalizeForSearch(title);
             if (authorName != null && !authorName.isBlank()) {
-                query = title + " " + authorName;
+                // Add author's last name to improve search accuracy
+                String[] authorParts = authorName.split("\\s+");
+                String lastName = authorParts[authorParts.length - 1];
+                query = query + " " + lastName;
             }
 
             String searchUrl = SEARCH_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -55,25 +60,22 @@ public class EwtnLibraryProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "No response from EWTN search");
             }
 
-            // Look for library links in search results
-            // EWTN library URLs contain "/catholicism/library/"
-            Pattern libraryPattern = Pattern.compile(
-                    "<a[^>]+href=\"(https?://www\\.ewtn\\.com/catholicism/library/[^\"]+)\"",
+            // Find library/teachings links with their associated text and validate title
+            // Pattern captures URL and link text
+            Pattern linkPattern = Pattern.compile(
+                    "<a[^>]+href=\"(https?://www\\.ewtn\\.com/catholicism/(?:library|teachings)/[^\"]+)\"[^>]*>([^<]+)</a>",
                     Pattern.CASE_INSENSITIVE);
 
-            Matcher matcher = libraryPattern.matcher(html);
-            if (matcher.find()) {
-                return FreeTextLookupResult.success(getProviderName(), matcher.group(1));
-            }
+            Matcher matcher = linkPattern.matcher(html);
+            while (matcher.find()) {
+                String href = matcher.group(1);
+                String linkText = matcher.group(2);
 
-            // Also check for teachings/documents
-            Pattern teachingsPattern = Pattern.compile(
-                    "<a[^>]+href=\"(https?://www\\.ewtn\\.com/catholicism/teachings/[^\"]+)\"",
-                    Pattern.CASE_INSENSITIVE);
-
-            matcher = teachingsPattern.matcher(html);
-            if (matcher.find()) {
-                return FreeTextLookupResult.success(getProviderName(), matcher.group(1));
+                // Use TitleMatcher for accurate title matching
+                if (TitleMatcher.titleMatches(linkText, title)) {
+                    log.debug("EWTN: Found match '{}' -> {}", linkText, href);
+                    return FreeTextLookupResult.success(getProviderName(), href);
+                }
             }
 
             return FreeTextLookupResult.error(getProviderName(), "Not found in EWTN library");

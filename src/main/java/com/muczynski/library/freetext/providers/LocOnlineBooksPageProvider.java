@@ -87,9 +87,8 @@ public class LocOnlineBooksPageProvider implements FreeTextProvider {
 
 
                 // Check if this author matches what we're looking for
-                // For historical names like "Ignatius, of Loyola, Saint, 1491-1556",
-                // use a simpler check: does the found name contain the search name's key parts?
-                if (authorNamesMatch(foundAuthorName, authorName)) {
+                // Use TitleMatcher.authorMatches which handles various name formats
+                if (TitleMatcher.authorMatches(foundAuthorName, authorName)) {
                     // Follow this link to get the author's books
                     // Use URI to prevent double-encoding (URL is already encoded from HTML)
                     try {
@@ -170,39 +169,4 @@ public class LocOnlineBooksPageProvider implements FreeTextProvider {
         return parts[0] + ", " + String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length));
     }
 
-    /**
-     * Check if two author names match, handling OBP's complex historical name format.
-     * OBP uses formats like "Ignatius, of Loyola, Saint, 1491-1556"
-     *
-     * @param obpAuthorName the author name from OBP (may include dates, titles)
-     * @param searchAuthor the author name we're searching for
-     * @return true if the names appear to match
-     */
-    private boolean authorNamesMatch(String obpAuthorName, String searchAuthor) {
-        // Normalize both names: lowercase, remove punctuation
-        String normalizedObp = obpAuthorName.toLowerCase()
-                .replaceAll("[^a-z\\s]", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
-        String normalizedSearch = searchAuthor.toLowerCase()
-                .replaceAll("[^a-z\\s]", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
-
-        // Check if all significant words from search appear in OBP name
-        String[] searchWords = normalizedSearch.split("\\s+");
-        for (String word : searchWords) {
-            if (word.length() > 2 && !normalizedObp.contains(word)) {
-                return false;
-            }
-        }
-
-        // Additional check: first significant word should match
-        // This prevents matching "John Smith" with "Jane Smith"
-        if (searchWords.length > 0 && searchWords[0].length() > 2) {
-            return normalizedObp.contains(searchWords[0]);
-        }
-
-        return true;
-    }
 }

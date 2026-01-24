@@ -5,6 +5,7 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -48,11 +49,7 @@ public class CatholicSatProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "Unable to fetch e-books page");
             }
 
-            // Normalize title for searching
-            String searchTerm = title.split(":")[0].trim().toLowerCase();
-            String[] searchWords = searchTerm.split("\\s+");
-
-            // Find all links and check for title matches
+            // Find all links and check for title matches using TitleMatcher
             Pattern linkPattern = Pattern.compile(
                     "<a[^>]+href=\"([^\"]+)\"[^>]*>([^<]+)</a>",
                     Pattern.CASE_INSENSITIVE);
@@ -60,18 +57,15 @@ public class CatholicSatProvider implements FreeTextProvider {
             Matcher matcher = linkPattern.matcher(html);
             while (matcher.find()) {
                 String href = matcher.group(1);
-                String linkText = matcher.group(2).toLowerCase();
+                String linkText = matcher.group(2);
 
-                // Check if link text contains key words from title
-                int matchCount = 0;
-                for (String word : searchWords) {
-                    if (word.length() > 3 && linkText.contains(word)) {
-                        matchCount++;
-                    }
+                // Skip external links (only accept catholicsat.com content)
+                if (href.startsWith("http") && !href.contains("catholicsat.com")) {
+                    continue;
                 }
 
-                // If enough words match, consider it a hit
-                if (matchCount >= 2 || (searchWords.length <= 2 && matchCount >= 1)) {
+                // Use TitleMatcher for accurate title matching
+                if (TitleMatcher.titleMatches(linkText, title)) {
                     String fullUrl = href;
                     if (!href.startsWith("http")) {
                         if (href.startsWith("/")) {
@@ -80,6 +74,7 @@ public class CatholicSatProvider implements FreeTextProvider {
                             fullUrl = EBOOKS_URL + "/" + href;
                         }
                     }
+                    log.debug("CatholicSat: Found match '{}' -> {}", linkText, fullUrl);
                     return FreeTextLookupResult.success(getProviderName(), fullUrl);
                 }
             }

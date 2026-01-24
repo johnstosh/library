@@ -129,4 +129,46 @@ class TitleMatcherTest {
                 "War and Peace",
                 "War and Peace: Complete Edition"));
     }
+
+    // Tests for normalizeForSearch
+
+    @Test
+    void normalizeForSearch_removesLeadingArticles() {
+        assertEquals("spiritual exercises", TitleMatcher.normalizeForSearch("The Spiritual Exercises"));
+        assertEquals("tale two cities", TitleMatcher.normalizeForSearch("A Tale of Two Cities"));
+        assertEquals("apple day", TitleMatcher.normalizeForSearch("An Apple a Day"));
+    }
+
+    @Test
+    void normalizeForSearch_removesCommonWords() {
+        // Removes: the, a, an, in, at, to, of, on, by, for, and, or, with, from
+        assertEquals("history world", TitleMatcher.normalizeForSearch("The History of the World"));
+        assertEquals("war peace", TitleMatcher.normalizeForSearch("War and Peace"));
+        assertEquals("journey center earth", TitleMatcher.normalizeForSearch("A Journey to the Center of the Earth"));
+    }
+
+    @Test
+    void normalizeForSearch_removesPunctuation() {
+        assertEquals("hello world", TitleMatcher.normalizeForSearch("Hello, World!"));
+        assertEquals("its wonderful life", TitleMatcher.normalizeForSearch("It's a Wonderful Life"));
+    }
+
+    @Test
+    void normalizeForSearch_handlesNullAndEmpty() {
+        assertEquals("", TitleMatcher.normalizeForSearch(null));
+        assertEquals("", TitleMatcher.normalizeForSearch(""));
+        assertEquals("", TitleMatcher.normalizeForSearch("   "));
+    }
+
+    @Test
+    void normalizeForSearch_preservesSignificantWords() {
+        // "Exercises" should be preserved (not a stop word)
+        String result = TitleMatcher.normalizeForSearch("The Spiritual Exercises of Saint Ignatius");
+        assertTrue(result.contains("spiritual"));
+        assertTrue(result.contains("exercises"));
+        assertTrue(result.contains("saint"));
+        assertTrue(result.contains("ignatius"));
+        assertFalse(result.contains("the"));
+        assertFalse(result.contains("of"));
+    }
 }

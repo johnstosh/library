@@ -401,6 +401,66 @@ class FreeTextLookupStatisticsTest {
     }
 
     /**
+     * Test with specific books to debug provider behavior:
+     * - "Fireside Reader" by Reader's Digest - should NOT be found (copyrighted, only available for borrowing)
+     * - "Eight Cousins" by Louisa May Alcott - expected to be found (public domain)
+     *
+     * Run with: ./gradlew test --tests "*.FreeTextLookupStatisticsTest.testDebugBooks" --console=plain
+     */
+    @Test
+    @Tag("manual")
+    void testDebugBooks() {
+        System.out.println();
+        System.out.println("=".repeat(60));
+        System.out.println("DEBUG BOOKS TEST - ALL PROVIDERS");
+        System.out.println("=".repeat(60));
+        System.out.println();
+
+        // Sort providers by priority
+        providers.sort(Comparator.comparingInt(FreeTextProvider::getPriority));
+
+        // Test 1: Fireside Reader (copyrighted, should NOT be found - only available for borrowing on Internet Archive)
+        String title1 = "Fireside Reader";
+        String author1 = "Reader's Digest Editors";
+        System.out.println("Book 1: \"" + title1 + "\" by " + author1);
+        System.out.println("Expected: NOT FOUND in any provider (copyrighted - only borrowing available)");
+        System.out.println("-".repeat(60));
+
+        int falsePositives = 0;
+        for (FreeTextProvider provider : providers) {
+            long startTime = System.currentTimeMillis();
+            try {
+                FreeTextLookupResult result = provider.search(title1, author1);
+                long elapsed = System.currentTimeMillis() - startTime;
+
+                if (result.isFound()) {
+                    falsePositives++;
+                    System.out.printf("  %-35s [%4dms] FALSE POSITIVE: %s%n",
+                            provider.getProviderName(), elapsed, result.getUrl());
+                } else {
+                    System.out.printf("  %-35s [%4dms] MISS (correct)%n",
+                            provider.getProviderName(), elapsed);
+                }
+            } catch (Exception e) {
+                long elapsed = System.currentTimeMillis() - startTime;
+                System.out.printf("  %-35s [%4dms] ERROR: %s%n",
+                        provider.getProviderName(), elapsed,
+                        e.getMessage() != null ? e.getMessage().substring(0, Math.min(50, e.getMessage().length())) : "null");
+            }
+        }
+
+        System.out.println();
+        System.out.println("=".repeat(60));
+        if (falsePositives == 0) {
+            System.out.println("TEST PASSED: No false positives for copyrighted book");
+        } else {
+            System.out.println("TEST FAILED: " + falsePositives + " provider(s) returned false positives");
+            System.out.println("These providers need to be fixed to distinguish free text from borrowing");
+        }
+        System.out.println("=".repeat(60));
+    }
+
+    /**
      * Test with two specific books to verify provider behavior:
      * - "The Spiritual Exercises" by Ignatius of Loyola - expected to be found in MOST providers
      * - "How the Grinch Stole Christmas" by Dr. Seuss - expected to be found in NONE (copyrighted)

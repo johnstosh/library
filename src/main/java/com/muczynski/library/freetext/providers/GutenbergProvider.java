@@ -46,10 +46,13 @@ public class GutenbergProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            // Search by title first, optionally with author
-            String searchQuery = title;
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String searchQuery = TitleMatcher.normalizeForSearch(title);
             if (authorName != null && !authorName.isBlank()) {
-                searchQuery = title + " " + authorName;
+                // Add author's last name to improve search accuracy
+                String[] authorParts = authorName.split("\\s+");
+                String lastName = authorParts[authorParts.length - 1];
+                searchQuery = searchQuery + " " + lastName;
             }
 
             String url = UriComponentsBuilder.fromHttpUrl(API_BASE)

@@ -5,6 +5,7 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -47,14 +48,6 @@ public class CatholicPlanetProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "Unable to fetch index page");
             }
 
-            // Normalize title for searching
-            String normalizedTitle = title.toLowerCase();
-            String[] titleWords = normalizedTitle.split("\\s+");
-
-            // Search for the title in the index page
-            // Catholic Planet uses simple HTML lists with links
-            String htmlLower = html.toLowerCase();
-
             // Find all links and check if any match the title
             Pattern linkPattern = Pattern.compile(
                     "<a[^>]+href=\"([^\"]+)\"[^>]*>([^<]+)</a>",
@@ -63,22 +56,27 @@ public class CatholicPlanetProvider implements FreeTextProvider {
             Matcher matcher = linkPattern.matcher(html);
             while (matcher.find()) {
                 String href = matcher.group(1);
-                String linkText = matcher.group(2).toLowerCase();
+                String linkText = matcher.group(2);
 
-                // Check if link text contains key words from title
-                int matchCount = 0;
-                for (String word : titleWords) {
-                    if (word.length() > 3 && linkText.contains(word)) {
-                        matchCount++;
-                    }
+                // Skip external links (only accept catholicplanet.com content)
+                if (href.startsWith("http") && !href.contains("catholicplanet.com")) {
+                    continue;
                 }
 
-                // If enough words match, consider it a hit
-                if (matchCount >= 2 || (titleWords.length <= 2 && matchCount >= 1)) {
+                // Skip non-ebook links (must be .pdf, .htm, .html, or relative path)
+                String hrefLower = href.toLowerCase();
+                if (href.startsWith("http") && !hrefLower.endsWith(".pdf") &&
+                        !hrefLower.endsWith(".htm") && !hrefLower.endsWith(".html")) {
+                    continue;
+                }
+
+                // Use TitleMatcher for accurate title matching
+                if (TitleMatcher.titleMatches(linkText, title)) {
                     String fullUrl = href;
                     if (!href.startsWith("http")) {
                         fullUrl = INDEX_URL + href;
                     }
+                    log.debug("Catholic Planet: Found match '{}' -> {}", linkText, fullUrl);
                     return FreeTextLookupResult.success(getProviderName(), fullUrl);
                 }
             }

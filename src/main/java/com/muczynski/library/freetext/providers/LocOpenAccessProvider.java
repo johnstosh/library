@@ -46,9 +46,13 @@ public class LocOpenAccessProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            String query = title;
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String query = TitleMatcher.normalizeForSearch(title);
             if (authorName != null && !authorName.isBlank()) {
-                query = title + " " + authorName;
+                // Add author's last name to improve search accuracy
+                String[] authorParts = authorName.split("\\s+");
+                String lastName = authorParts[authorParts.length - 1];
+                query = query + " " + lastName;
             }
 
             String url = UriComponentsBuilder.fromHttpUrl(API_BASE)
@@ -59,19 +63,29 @@ public class LocOpenAccessProvider implements FreeTextProvider {
                     .build()
                     .toUriString();
 
+            log.debug("LOC Open Access search URL: {}", url);
+
             LocSearchResponse response = restTemplate.getForObject(url, LocSearchResponse.class);
 
             if (response == null || response.getResults() == null || response.getResults().isEmpty()) {
+                log.debug("LOC Open Access: No results returned for '{}'", title);
                 return FreeTextLookupResult.error(getProviderName(), "No open access books found");
             }
+
+            log.debug("LOC Open Access: Got {} results for '{}'", response.getResults().size(), title);
 
             // Find best title match - only return if title actually matches
             // Do NOT fall back to first result (causes false positives for copyrighted works)
             for (LocResult result : response.getResults()) {
                 String resultTitle = result.getTitle();
-                if (resultTitle != null && TitleMatcher.titleMatches(resultTitle, title)) {
+                boolean titleMatches = resultTitle != null && TitleMatcher.titleMatches(resultTitle, title);
+                log.debug("LOC Open Access: Checking '{}' vs '{}' - match: {}", resultTitle, title, titleMatches);
+
+                if (titleMatches) {
                     // Verify it has online text format (not just catalog entry)
                     List<String> formats = result.getOnlineFormat();
+                    log.debug("LOC Open Access: Formats for '{}': {}", resultTitle, formats);
+
                     if (formats != null && formats.stream().anyMatch(f ->
                             f.toLowerCase().contains("online text") ||
                             f.toLowerCase().contains("full text") ||
@@ -79,12 +93,14 @@ public class LocOpenAccessProvider implements FreeTextProvider {
                             f.toLowerCase().contains("epub"))) {
                         String resultUrl = result.getUrl();
                         if (resultUrl != null) {
+                            log.info("LOC Open Access: Found match for '{}' -> {}", title, resultUrl);
                             return FreeTextLookupResult.success(getProviderName(), resultUrl);
                         }
                     }
                 }
             }
 
+            log.debug("LOC Open Access: No matching title with online text found for '{}'", title);
             return FreeTextLookupResult.error(getProviderName(), "No matching title with online text found");
 
         } catch (Exception e) {

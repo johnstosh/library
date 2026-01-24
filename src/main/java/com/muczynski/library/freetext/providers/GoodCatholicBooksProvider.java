@@ -5,6 +5,7 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -44,10 +45,13 @@ public class GoodCatholicBooksProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            // Try site search first
-            String query = title;
+            // Normalize title for API search (removes articles, short words, punctuation)
+            String query = TitleMatcher.normalizeForSearch(title);
             if (authorName != null && !authorName.isBlank()) {
-                query = title + " " + authorName;
+                // Add author's last name to improve search accuracy
+                String[] authorParts = authorName.split("\\s+");
+                String lastName = authorParts[authorParts.length - 1];
+                query = query + " " + lastName;
             }
 
             String searchUrl = SEARCH_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -57,24 +61,22 @@ public class GoodCatholicBooksProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "No response from search");
             }
 
-            // Look for book links in search results
-            Pattern bookPattern = Pattern.compile(
-                    "<a[^>]+href=\"(" + Pattern.quote(BASE_URL) + "/[^\"]+)\"[^>]*class=\"[^\"]*book[^\"]*\"",
+            // Look for book links in search results with title validation
+            // Pattern to find links with associated text
+            Pattern linkPattern = Pattern.compile(
+                    "<a[^>]+href=\"(" + Pattern.quote(BASE_URL) + "/[^\"]+)\"[^>]*>([^<]+)</a>",
                     Pattern.CASE_INSENSITIVE);
 
-            Matcher matcher = bookPattern.matcher(html);
-            if (matcher.find()) {
-                return FreeTextLookupResult.success(getProviderName(), matcher.group(1));
-            }
+            Matcher matcher = linkPattern.matcher(html);
+            while (matcher.find()) {
+                String href = matcher.group(1);
+                String linkText = matcher.group(2);
 
-            // Alternative: look for any internal link that might be a book page
-            Pattern altPattern = Pattern.compile(
-                    "<a[^>]+href=\"(" + Pattern.quote(BASE_URL) + "/author/[^\"]+)\"",
-                    Pattern.CASE_INSENSITIVE);
-
-            matcher = altPattern.matcher(html);
-            if (matcher.find()) {
-                return FreeTextLookupResult.success(getProviderName(), matcher.group(1));
+                // Use TitleMatcher for accurate title matching
+                if (TitleMatcher.titleMatches(linkText, title)) {
+                    log.debug("Good Catholic Books: Found match '{}' -> {}", linkText, href);
+                    return FreeTextLookupResult.success(getProviderName(), href);
+                }
             }
 
             return FreeTextLookupResult.error(getProviderName(), "Not found in Good Catholic Books");
