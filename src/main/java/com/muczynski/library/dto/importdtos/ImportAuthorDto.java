@@ -3,11 +3,13 @@
  */
 package com.muczynski.library.dto.importdtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ImportAuthorDto {
     private String name;
     private LocalDate dateOfBirth;

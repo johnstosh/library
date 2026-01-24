@@ -73,6 +73,23 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
   - Library name is sanitized (lowercase, special chars replaced with hyphens)
   - Photo count represents the total photo records in the database (photo-metadata, not binary data which is stored in Google Photos)
 
+### Null/Empty String Handling
+- **Export**: Empty strings are converted to null, and null fields are omitted from JSON
+  - Uses `@JsonInclude(JsonInclude.Include.NON_EMPTY)` on all DTOs
+  - Produces cleaner, smaller JSON without `":null"` or `":""` fields
+- **Import**: Null values are converted back to empty strings for fields that require it
+  - User fields like `xaiApiKey`, `googlePhotosApiKey`, etc. are initialized to empty strings if null
+
+### Excluded from Export
+- **`lastModified` fields**: Not exported because they are automatically updated during import
+  - Both Book and Author entities have `@PreUpdate` hooks that set `lastModified`
+  - Exporting these fields would be misleading since they change on import
+
+### User Field Ordering
+- **`userIdentifier`** appears at the end of each user object in JSON export
+  - Uses `@JsonPropertyOrder` annotation to ensure consistent ordering
+  - Makes JSON more readable with identifying info (username) first
+
 ### New vs Old Format
 The export format changed to use lightweight references instead of embedded objects:
 
@@ -310,11 +327,34 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - Existing entities matched by natural keys
 - Updates existing entities rather than creating duplicates
 
+### Error Messages
+- **Frontend**: Shows specific error messages from backend when import fails
+  - Changed from generic "Failed to import JSON data. Please check the file format and try again."
+  - Now shows: "Failed to import JSON data: {specific error from backend}"
+  - Examples: "Author not found for book: The Red Dog Runs - Unknown Author"
+  - Helps users identify and fix issues in their import files
+
+## Testing
+
+### Integration Test
+- `ImportExportRoundTripTest.java` - Comprehensive export/import round-trip test
+  - Creates 20 authors with all fields populated
+  - Creates 20 books with all fields populated
+  - Creates 20 users with all fields populated
+  - Creates 20 loans (half with return dates)
+  - Creates photos for half the books and authors
+  - Verifies export contains all data
+  - Verifies re-import doesn't create duplicates (merge behavior)
+  - Verifies null/empty string handling
+  - Verifies userIdentifier ordering in JSON
+
 ## Related Files
 - `ImportService.java` - Core import/export logic
 - `ImportController.java` - REST API
 - `ImportRequestDto.java` - JSON structure
 - `PhotoExportService.java` - Photo export functionality
 - `BooksFromFeedController.java` - Google Photos feed import
+- `RandomBook.java`, `RandomAuthor.java`, `RandomUser.java`, `RandomPhoto.java` - Test data generators
+- `ImportExportRoundTripTest.java` - Comprehensive integration test
 - `endpoints.md` - API documentation
 - `feature-design-photos.md` - Photo storage details

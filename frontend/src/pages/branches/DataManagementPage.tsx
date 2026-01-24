@@ -166,7 +166,8 @@ export function DataManagementPage() {
       }
     } catch (error) {
       console.error('Failed to import JSON:', error)
-      setErrorMessage('Failed to import JSON data. Please check the file format and try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to import JSON data: ${errorMessage}`)
     }
   }
 

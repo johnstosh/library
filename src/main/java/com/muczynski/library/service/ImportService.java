@@ -135,7 +135,8 @@ public class ImportService {
                     // No password and user is new - use default
                     user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
                 }
-                // Update other fields (merge)
+                // Update other fields (merge) - convert null to empty string for string fields
+                // Note: only update if DTO has a non-null value (null in DTO means "not provided")
                 if (uDto.getXaiApiKey() != null) {
                     user.setXaiApiKey(uDto.getXaiApiKey());
                 }
@@ -169,6 +170,14 @@ public class ImportService {
                 if (uDto.getLibraryCardDesign() != null) {
                     user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
+                // Ensure empty fields are initialized properly for new users
+                if (user.getXaiApiKey() == null) user.setXaiApiKey("");
+                if (user.getGooglePhotosApiKey() == null) user.setGooglePhotosApiKey("");
+                if (user.getGooglePhotosRefreshToken() == null) user.setGooglePhotosRefreshToken("");
+                if (user.getGooglePhotosTokenExpiry() == null) user.setGooglePhotosTokenExpiry("");
+                if (user.getGoogleClientSecret() == null) user.setGoogleClientSecret("");
+                if (user.getGooglePhotosAlbumId() == null) user.setGooglePhotosAlbumId("");
+                if (user.getLastPhotoTimestamp() == null) user.setLastPhotoTimestamp("");
                 Set<Authority> authorities = new HashSet<>();
                 // Merge both 'authorities' and 'roles' fields for backwards compatibility
                 List<String> authorityNames = new ArrayList<>();
@@ -370,11 +379,13 @@ public class ImportService {
             for (ImportPhotoDto pDto : dto.getPhotos()) {
                 // First resolve book and author references
                 Book book = null;
-                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
-                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                if (pDto.getBookTitle() != null) {
+                    // Handle books with or without authors (null author means empty string key)
+                    String authorKey = pDto.getBookAuthorName() != null ? pDto.getBookAuthorName() : "";
+                    String key = pDto.getBookTitle() + "|" + authorKey;
                     book = bookMap.get(key);
                     if (book == null) {
-                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + (pDto.getBookAuthorName() != null ? pDto.getBookAuthorName() : "(no author)"));
                     }
                 }
 
@@ -479,38 +490,39 @@ public class ImportService {
         dto.setBranches(libDtos);
 
         // Export authors
+        // Note: Empty strings are converted to null so they're excluded from JSON export
         List<ImportAuthorDto> authDtos = new ArrayList<>();
         for (Author author : authorRepository.findAll()) {
             ImportAuthorDto aDto = new ImportAuthorDto();
             aDto.setName(author.getName());
             aDto.setDateOfBirth(author.getDateOfBirth());
             aDto.setDateOfDeath(author.getDateOfDeath());
-            aDto.setReligiousAffiliation(author.getReligiousAffiliation());
-            aDto.setBirthCountry(author.getBirthCountry());
-            aDto.setNationality(author.getNationality());
-            aDto.setBriefBiography(author.getBriefBiography());
-            aDto.setGrokipediaUrl(author.getGrokipediaUrl());
+            aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
+            aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
+            aDto.setNationality(emptyToNull(author.getNationality()));
+            aDto.setBriefBiography(emptyToNull(author.getBriefBiography()));
+            aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
             authDtos.add(aDto);
         }
         dto.setAuthors(authDtos);
 
         // Export users (including hashed passwords)
+        // Note: Empty strings are converted to null so they're excluded from JSON export
         List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
             ImportUserDto uDto = new ImportUserDto();
-            uDto.setUserIdentifier(user.getUserIdentifier());
             uDto.setUsername(user.getUsername());
             uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
-            uDto.setXaiApiKey(user.getXaiApiKey());
-            uDto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
-            uDto.setGooglePhotosRefreshToken(user.getGooglePhotosRefreshToken());
-            uDto.setGooglePhotosTokenExpiry(user.getGooglePhotosTokenExpiry());
-            uDto.setGoogleClientSecret(user.getGoogleClientSecret());
-            uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
-            uDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
-            uDto.setSsoProvider(user.getSsoProvider());
-            uDto.setSsoSubjectId(user.getSsoSubjectId());
-            uDto.setEmail(user.getEmail());
+            uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+            uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
+            uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
+            uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
+            uDto.setGoogleClientSecret(emptyToNull(user.getGoogleClientSecret()));
+            uDto.setGooglePhotosAlbumId(emptyToNull(user.getGooglePhotosAlbumId()));
+            uDto.setLastPhotoTimestamp(emptyToNull(user.getLastPhotoTimestamp()));
+            uDto.setSsoProvider(emptyToNull(user.getSsoProvider()));
+            uDto.setSsoSubjectId(emptyToNull(user.getSsoSubjectId()));
+            uDto.setEmail(emptyToNull(user.getEmail()));
             uDto.setLibraryCardDesign(user.getLibraryCardDesign());
             if (user.getAuthorities() != null) {
                 java.util.List<String> authorityNames = user.getAuthorities().stream()
@@ -518,27 +530,29 @@ public class ImportService {
                         .collect(Collectors.toList());
                 uDto.setAuthorities(authorityNames);
             }
+            uDto.setUserIdentifier(user.getUserIdentifier());  // Set last for JSON ordering
             userDtos.add(uDto);
         }
         dto.setUsers(userDtos);
 
         // Export books (new format: authorName reference instead of embedded author object)
+        // Note: lastModified is NOT exported because it gets updated during import
         List<ImportBookDto> bookDtos = new ArrayList<>();
         for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
-            bDto.setPublisher(book.getPublisher());
-            bDto.setPlotSummary(book.getPlotSummary());
-            bDto.setRelatedWorks(book.getRelatedWorks());
-            bDto.setDetailedDescription(book.getDetailedDescription());
-            bDto.setGrokipediaUrl(book.getGrokipediaUrl());
-            bDto.setFreeTextUrl(book.getFreeTextUrl());
+            bDto.setPublisher(emptyToNull(book.getPublisher()));
+            bDto.setPlotSummary(emptyToNull(book.getPlotSummary()));
+            bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
+            bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
+            bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
+            bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
             bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
-            bDto.setLastModified(book.getLastModified());
+            // Note: lastModified is NOT exported - it will be updated during import
             bDto.setStatus(book.getStatus());
-            bDto.setLocNumber(book.getLocNumber());
-            bDto.setStatusReason(book.getStatusReason());
+            bDto.setLocNumber(emptyToNull(book.getLocNumber()));
+            bDto.setStatusReason(emptyToNull(book.getStatusReason()));
             // New format: reference author by name only (not embedded object)
             if (book.getAuthor() != null) {
                 bDto.setAuthorName(book.getAuthor().getName());
@@ -584,14 +598,14 @@ public class ImportService {
             }
 
             ImportPhotoDto pDto = new ImportPhotoDto();
-            pDto.setContentType(photo.getContentType());
-            pDto.setCaption(photo.getCaption());
+            pDto.setContentType(emptyToNull(photo.getContentType()));
+            pDto.setCaption(emptyToNull(photo.getCaption()));
             pDto.setPhotoOrder(photo.getPhotoOrder());
-            pDto.setPermanentId(photo.getPermanentId());
+            pDto.setPermanentId(emptyToNull(photo.getPermanentId()));
             pDto.setExportedAt(photo.getExportedAt());
             pDto.setExportStatus(photo.getExportStatus());
-            pDto.setExportErrorMessage(photo.getExportErrorMessage());
-            pDto.setImageChecksum(photo.getImageChecksum());
+            pDto.setExportErrorMessage(emptyToNull(photo.getExportErrorMessage()));
+            pDto.setImageChecksum(emptyToNull(photo.getImageChecksum()));
 
             // Set book reference if exists
             if (photo.getBook() != null) {
@@ -611,6 +625,21 @@ public class ImportService {
         dto.setPhotos(photoDtos);
 
         return dto;
+    }
+
+    /**
+     * Converts empty strings to null so they're excluded from JSON export.
+     * This keeps the exported JSON cleaner and smaller.
+     */
+    private String emptyToNull(String value) {
+        return (value == null || value.isEmpty()) ? null : value;
+    }
+
+    /**
+     * Converts null to empty string for fields that require it during import.
+     */
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     /**

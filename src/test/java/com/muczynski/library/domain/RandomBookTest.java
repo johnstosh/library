@@ -49,7 +49,21 @@ class RandomBookTest {
         assertNotNull(book.getAuthor());
         assertEquals("Test Author", book.getAuthor().getName());
         assertNotNull(book.getLibrary());
-        assertNull(book.getLocNumber());
+        // RandomBook now generates all fields including LOC number
+        assertNotNull(book.getLocNumber(), "RandomBook should generate LOC number");
+        assertTrue(book.getLocNumber().matches("[A-Z]{2}\\d+\\.[A-Z]\\d+"),
+                "LOC number should match expected format");
         assertNull(book.getStatusReason());
+        // Verify other populated fields
+        assertNotNull(book.getPublisher(), "Publisher should be generated");
+        assertTrue(book.getPublisher().startsWith("test-data"), "Publisher should be marked as test-data");
+        assertNotNull(book.getPublicationYear(), "Publication year should be generated");
+        assertNotNull(book.getPlotSummary(), "Plot summary should be generated");
+        assertNotNull(book.getRelatedWorks(), "Related works should be generated");
+        assertNotNull(book.getDetailedDescription(), "Detailed description should be generated");
+        assertNotNull(book.getGrokipediaUrl(), "Grokipedia URL should be generated");
+        assertNotNull(book.getFreeTextUrl(), "Free text URL should be generated");
+        assertNotNull(book.getDateAddedToLibrary(), "Date added should be generated");
+        assertEquals(BookStatus.ACTIVE, book.getStatus(), "Status should be ACTIVE");
     }
 }
