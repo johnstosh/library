@@ -10,6 +10,6 @@ TEST_ARGS=$(find src/test/java -name "*Test.java" -not -path "*/ui/*" | \
   sed 's/^/--tests /' | \
   tr '\n' ' ')
 
-# Run the tests
+# Run the tests (excluding manual-tagged tests)
 ./gradlew clean
-./gradlew test $TEST_ARGS
+./gradlew test $TEST_ARGS -PexcludeTags=manual

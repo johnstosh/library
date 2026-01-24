@@ -48,6 +48,12 @@ public class GooglePhotosService {
 
     public GooglePhotosService() {
         this.restTemplate = new RestTemplate();
+        // Configure 60-second timeouts for all HTTP connections
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(60000); // 60 seconds
+        factory.setReadTimeout(60000); // 60 seconds
+        this.restTemplate.setRequestFactory(factory);
     }
 
     /**

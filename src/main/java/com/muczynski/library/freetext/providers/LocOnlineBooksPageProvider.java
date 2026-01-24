@@ -6,8 +6,9 @@ package com.muczynski.library.freetext.providers;
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
 import com.muczynski.library.freetext.TitleMatcher;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -24,13 +25,14 @@ import java.util.regex.Pattern;
  * Website: http://onlinebooks.library.upenn.edu/
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class LocOnlineBooksPageProvider implements FreeTextProvider {
 
     private static final String LOOKUP_URL = "https://onlinebooks.library.upenn.edu/webbin/book/lookupname";
 
-    private final RestTemplate restTemplate;
+    @Autowired
+    @Qualifier("providerRestTemplate")
+    private RestTemplate restTemplate;
 
     @Override
     public String getProviderName() {
@@ -114,8 +116,14 @@ public class LocOnlineBooksPageProvider implements FreeTextProvider {
             return FreeTextLookupResult.error(getProviderName(), "Title not found for this author");
 
         } catch (Exception e) {
-            log.warn("Online Books Page search failed: {}", e.getMessage());
-            return FreeTextLookupResult.error(getProviderName(), "Search error: " + e.getMessage());
+            // Get root cause for better error messages (e.g., SocketTimeoutException)
+            Throwable rootCause = e;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                rootCause = rootCause.getCause();
+            }
+            String rootMessage = rootCause.getClass().getSimpleName() + ": " + rootCause.getMessage();
+            log.warn("Online Books Page search failed: {}", rootMessage);
+            return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
     }
 

@@ -70,6 +70,13 @@ tasks.named('test') {
 }
 
 test {
+    useJUnitPlatform {
+        // Exclude tests tagged with 'manual' by default
+        // These are long-running tests that should only be run explicitly
+        if (project.hasProperty('excludeTags')) {
+            excludeTags project.property('excludeTags').split(',')
+        }
+    }
     testLogging {
         // Only show detailed output for failed tests
         events 'failed'

@@ -4,9 +4,9 @@
 package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
@@ -21,12 +21,8 @@ class GutenbergProviderTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @InjectMocks
     private GutenbergProvider provider;
-
-    @BeforeEach
-    void setUp() {
-        provider = new GutenbergProvider(restTemplate);
-    }
 
     @Test
     void getProviderName_returnsCorrectName() {

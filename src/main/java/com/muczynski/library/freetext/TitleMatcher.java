@@ -28,10 +28,11 @@ public final class TitleMatcher {
 
     /**
      * Normalize a title for use in API search queries.
-     * Removes articles, common short words, and punctuation to improve search matches.
+     * Removes articles, common short words, pure numbers, and punctuation to improve search matches.
      * <p>
      * Example: "The History of the World" -> "History World"
      * Example: "A Tale of Two Cities" -> "Tale Two Cities"
+     * Example: "War and Peace 1952 Edition" -> "War Peace Edition"
      *
      * @param title the original title
      * @return normalized title suitable for API searches
@@ -46,10 +47,10 @@ public final class TitleMatcher {
                 .replaceAll("[^a-z0-9\\s]", "")
                 .split("\\s+");
 
-        // Keep only significant words (not in stop words list)
+        // Keep only significant words (not in stop words list and not pure numbers)
         StringBuilder result = new StringBuilder();
         for (String word : words) {
-            if (!word.isEmpty() && !STOP_WORDS.contains(word)) {
+            if (!word.isEmpty() && !STOP_WORDS.contains(word) && !word.matches("\\d+")) {
                 if (result.length() > 0) {
                     result.append(" ");
                 }
@@ -94,7 +95,10 @@ public final class TitleMatcher {
 
         // Contains match for longer titles (to handle slight variations)
         if (candidateMain.length() > 15 && targetMain.length() > 15) {
-            return candidateMain.contains(targetMain) || targetMain.contains(candidateMain);
+            if (candidateMain.contains(targetMain) || targetMain.contains(candidateMain)) {
+                return true;
+            }
+            // If no contains match, continue to word-based matching below
         }
 
         // Prefix match: if one title starts with the other, it's likely the same book
@@ -116,12 +120,14 @@ public final class TitleMatcher {
     /**
      * Normalize a title for comparison:
      * - Convert to lowercase
+     * - Remove trailing parenthetical content (dates, editions, etc.)
      * - Remove leading articles (the, a, an)
      * - Remove punctuation except spaces
      * - Collapse multiple spaces
      */
     private static String normalize(String title) {
         return title.toLowerCase()
+                .replaceAll("\\s*\\([^)]*\\)\\s*$", "") // Remove trailing (date), (edition), etc.
                 .replaceAll("^(the|a|an)\\s+", "")
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", " ")
@@ -172,12 +178,27 @@ public final class TitleMatcher {
     }
 
     /**
-     * Count significant words (length > 2) in a word array.
+     * Check if a word is significant for matching purposes.
+     * A word is significant if:
+     * - It has more than 2 characters
+     * - It is NOT a pure number (like publication years 1952, 1999)
+     */
+    private static boolean isSignificantWord(String word) {
+        if (word.length() <= 2) {
+            return false;
+        }
+        // Treat pure numbers as insignificant (publication years, edition numbers, etc.)
+        return !word.matches("\\d+");
+    }
+
+    /**
+     * Count significant words in a word array.
+     * Significant words have length > 2 and are not pure numbers.
      */
     private static int countSignificantWords(String[] words) {
         int count = 0;
         for (String word : words) {
-            if (word.length() > 2) {
+            if (isSignificantWord(word)) {
                 count++;
             }
         }
@@ -190,7 +211,7 @@ public final class TitleMatcher {
     private static int countMatchingWords(String[] source, String[] target) {
         int matchCount = 0;
         for (String word : source) {
-            if (word.length() > 2) { // Only count significant words
+            if (isSignificantWord(word)) { // Only count significant words
                 for (String targetWord : target) {
                     if (word.equals(targetWord)) {
                         matchCount++;

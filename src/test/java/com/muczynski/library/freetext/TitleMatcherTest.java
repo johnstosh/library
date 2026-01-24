@@ -171,4 +171,49 @@ class TitleMatcherTest {
         assertFalse(result.contains("the"));
         assertFalse(result.contains("of"));
     }
+
+    @Test
+    void normalizeForSearch_removesNumbers() {
+        // Pure numbers like publication years should be removed
+        assertEquals("war peace edition", TitleMatcher.normalizeForSearch("War and Peace 1952 Edition"));
+        assertEquals("history world vol", TitleMatcher.normalizeForSearch("A History of the World Vol 2"));
+        assertEquals("collected poems", TitleMatcher.normalizeForSearch("Collected Poems 1909-1962"));
+    }
+
+    @Test
+    void titleMatches_ignoresNumbers_simpleCase() {
+        // Publication years should not affect matching - base title is the same
+        assertTrue(TitleMatcher.titleMatches("War and Peace", "War and Peace 1952"));
+        assertTrue(TitleMatcher.titleMatches("War and Peace 1952", "War and Peace"));
+    }
+
+    @Test
+    void titleMatches_ignoresNumbers_withDifferentSuffixes() {
+        // These have 4 significant words each: war, and, peace, edition/complete
+        // 3 out of 4 match (75% >= 70% threshold) so they should match
+        // The years 1952/1869 are ignored as insignificant
+        assertTrue(TitleMatcher.titleMatches("War and Peace 1952 Edition", "War and Peace 1869 Complete"));
+    }
+
+    @Test
+    void titleMatches_singleWordChristmasDoesNotMatchLongTitle() {
+        // Regression test: Single word should not match a long title containing that word
+        // because bidirectional matching requires 70% in BOTH directions
+        assertFalse(TitleMatcher.titleMatches("Christmas", "How the Grinch Stole Christmas"));
+    }
+
+    @Test
+    void titleMatches_ignoresTrailingParentheticalDates() {
+        // Titles with trailing dates in parentheses should match the base title
+        assertTrue(TitleMatcher.titleMatches("Humanae Vitae (July 25, 1968)", "Humanae Vitae"));
+        assertTrue(TitleMatcher.titleMatches("Humanae Vitae", "Humanae Vitae (July 25, 1968)"));
+        assertTrue(TitleMatcher.titleMatches("Rerum Novarum (May 15, 1891)", "Rerum Novarum"));
+    }
+
+    @Test
+    void titleMatches_ignoresTrailingParentheticalEditions() {
+        // Titles with edition info in parentheses should match
+        assertTrue(TitleMatcher.titleMatches("War and Peace (2nd Edition)", "War and Peace"));
+        assertTrue(TitleMatcher.titleMatches("The Republic (Penguin Classics)", "The Republic"));
+    }
 }

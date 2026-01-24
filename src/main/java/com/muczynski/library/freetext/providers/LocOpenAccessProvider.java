@@ -9,8 +9,9 @@ import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
 import com.muczynski.library.freetext.TitleMatcher;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -25,13 +26,14 @@ import java.util.Map;
  * API documentation: https://www.loc.gov/apis/
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class LocOpenAccessProvider implements FreeTextProvider {
 
     private static final String API_BASE = "https://www.loc.gov/books/";
 
-    private final RestTemplate restTemplate;
+    @Autowired
+    @Qualifier("providerRestTemplate")
+    private RestTemplate restTemplate;
 
     @Override
     public String getProviderName() {
@@ -104,8 +106,14 @@ public class LocOpenAccessProvider implements FreeTextProvider {
             return FreeTextLookupResult.error(getProviderName(), "No matching title with online text found");
 
         } catch (Exception e) {
-            log.warn("LOC Open Access search failed: {}", e.getMessage());
-            return FreeTextLookupResult.error(getProviderName(), "Search error: " + e.getMessage());
+            // Get root cause for better error messages (e.g., SocketTimeoutException)
+            Throwable rootCause = e;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                rootCause = rootCause.getCause();
+            }
+            String rootMessage = rootCause.getClass().getSimpleName() + ": " + rootCause.getMessage();
+            log.warn("LOC Open Access search failed: {}", rootMessage);
+            return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
     }
 

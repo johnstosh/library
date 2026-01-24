@@ -6,8 +6,9 @@ package com.muczynski.library.freetext.providers;
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
 import com.muczynski.library.freetext.TitleMatcher;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -21,13 +22,14 @@ import java.util.regex.Pattern;
  * Website: https://www.catholicplanet.com/ebooks/
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class CatholicPlanetProvider implements FreeTextProvider {
 
     private static final String INDEX_URL = "https://www.catholicplanet.com/ebooks/";
 
-    private final RestTemplate restTemplate;
+    @Autowired
+    @Qualifier("providerRestTemplate")
+    private RestTemplate restTemplate;
 
     @Override
     public String getProviderName() {
@@ -84,8 +86,14 @@ public class CatholicPlanetProvider implements FreeTextProvider {
             return FreeTextLookupResult.error(getProviderName(), "Title not found in Catholic Planet eLibrary");
 
         } catch (Exception e) {
-            log.warn("Catholic Planet search failed: {}", e.getMessage());
-            return FreeTextLookupResult.error(getProviderName(), "Search error: " + e.getMessage());
+            // Get root cause for better error messages (e.g., SocketTimeoutException)
+            Throwable rootCause = e;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                rootCause = rootCause.getCause();
+            }
+            String rootMessage = rootCause.getClass().getSimpleName() + ": " + rootCause.getMessage();
+            log.warn("Catholic Planet search failed: {}", rootMessage);
+            return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
     }
 }

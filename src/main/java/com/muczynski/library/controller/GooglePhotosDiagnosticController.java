@@ -33,7 +33,17 @@ public class GooglePhotosDiagnosticController {
     @Autowired
     private UserRepository userRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    {
+        // Configure RestTemplate with 60-second timeouts
+        restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(60000); // 60 seconds
+        factory.setReadTimeout(60000); // 60 seconds
+        restTemplate.setRequestFactory(factory);
+    }
 
     /**
      * Test basic authentication by getting token info

@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @SpringBootTest
 @ActiveProfiles("test")
 @Tag("manual")
+@Disabled("Long-running test - run manually with: ./gradlew test --tests '*.FreeTextLookupStatisticsTest'")
 class FreeTextLookupStatisticsTest {
 
     private static final String ARCHIVE_FILE = "./branch-archive.json";
@@ -221,13 +223,13 @@ class FreeTextLookupStatisticsTest {
                             providerStats.setHits(providerStats.getHits() + 1);
                             totalHits++;
                             bookHits++;
-                            logResult(logWriters.get(providerName), title, authorName, "HIT", result.getUrl());
+                            logResult(logWriters.get(providerName), title, authorName, "HIT", result.getUrl(), providerTime);
                             System.out.printf("  %-25s [%4dms] HIT: %s%n", providerName, providerTime, result.getUrl());
                         } else {
                             // Truncate error message (some providers return full HTML bodies)
                             String errMsg = result.getErrorMessage() != null ? result.getErrorMessage() : "Not found";
                             String truncatedErr = errMsg.length() > 100 ? errMsg.substring(0, 100) + "..." : errMsg;
-                            logResult(logWriters.get(providerName), title, authorName, "MISS", truncatedErr);
+                            logResult(logWriters.get(providerName), title, authorName, "MISS", truncatedErr, providerTime);
                             System.out.printf("  %-25s [%4dms] MISS%n", providerName, providerTime);
                         }
 
@@ -244,7 +246,7 @@ class FreeTextLookupStatisticsTest {
                         // Truncate error message for logging (some errors contain full HTML pages)
                         String errorMsg = e.getMessage() != null ? e.getMessage() : "null";
                         String truncatedError = errorMsg.length() > 100 ? errorMsg.substring(0, 100) + "..." : errorMsg;
-                        logResult(logWriters.get(providerName), title, authorName, "ERROR", truncatedError);
+                        logResult(logWriters.get(providerName), title, authorName, "ERROR", truncatedError, providerTime);
                         System.out.printf("  %-25s [%4dms] ERROR: %s%n", providerName, providerTime,
                                 errorMsg.length() > 50 ? errorMsg.substring(0, 50) + "..." : errorMsg);
                     }
@@ -351,12 +353,13 @@ class FreeTextLookupStatisticsTest {
         return writers;
     }
 
-    private void logResult(PrintWriter writer, String title, String author, String status, String detail) {
+    private void logResult(PrintWriter writer, String title, String author, String status, String detail, long durationMs) {
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
         writer.println("========================================");
         writer.println("Book: " + title);
         writer.println("Author: " + (author != null ? author : "Unknown"));
         writer.println("Timestamp: " + LocalDateTime.now().format(formatter));
+        writer.println("Duration: " + durationMs + "ms");
         writer.println("----------------------------------------");
         writer.println("Status: " + status);
         if (detail != null && !detail.isBlank()) {

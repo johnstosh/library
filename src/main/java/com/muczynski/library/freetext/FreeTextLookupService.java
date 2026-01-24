@@ -39,11 +39,14 @@ public class FreeTextLookupService {
         log.info("Initialized {} free text providers: {}",
                 providers.size(),
                 providers.stream().map(FreeTextProvider::getProviderName).toList());
+        log.info("Free text cache contains {} authors with {} books",
+                FreeTextLookupCache.getAuthorCount(),
+                FreeTextLookupCache.getBookCount());
     }
 
     /**
      * Look up free online text for a single book.
-     * Tries all providers in priority order until one finds a match.
+     * First checks the global cache, then tries all providers in priority order until one finds a match.
      *
      * @param bookId the book ID to look up
      * @return result with URL if found, or error message if not
@@ -64,6 +67,28 @@ public class FreeTextLookupService {
         }
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+
+        // Check global cache first
+        String cachedUrl = FreeTextLookupCache.lookupFirstUrl(authorName, book.getTitle());
+        if (cachedUrl != null) {
+            // Update the book with the cached URL
+            book.setFreeTextUrl(cachedUrl);
+            book.setLastModified(LocalDateTime.now());
+            bookRepository.save(book);
+
+            log.info("Found free text for book {} in cache: {}", bookId, cachedUrl);
+
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(book.getTitle())
+                    .authorName(authorName)
+                    .success(true)
+                    .freeTextUrl(cachedUrl)
+                    .providerName("Cache")
+                    .providersSearched(List.of("Cache"))
+                    .build();
+        }
+
         List<String> searchedProviders = new ArrayList<>();
 
         for (FreeTextProvider provider : providers) {
