@@ -10,6 +10,7 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
+import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
 import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage } from '@/api/books'
@@ -677,6 +678,17 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         onClose={() => setShowFreeTextResults(false)}
         results={freeTextResults}
       />
+
+      {/* Photos Section - only show when editing */}
+      {isEditing && book && (
+        <div className="mt-8">
+          <PhotoSection
+            entityType="book"
+            entityId={book.id}
+            entityName={book.title}
+          />
+        </div>
+      )}
     </div>
   )
 }
