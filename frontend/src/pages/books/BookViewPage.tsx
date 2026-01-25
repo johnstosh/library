@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
@@ -161,7 +161,18 @@ export function BookViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
-                <p className="text-gray-900">{book.author}</p>
+                {book.authorId ? (
+                  <Link
+                    to={`/authors/${book.authorId}`}
+                    className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                    data-test="book-author-link"
+                  >
+                    <span>👤</span>
+                    <span className="underline">{book.author}</span>
+                  </Link>
+                ) : (
+                  <p className="text-gray-900">{book.author}</p>
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Branch</p>

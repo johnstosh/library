@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
@@ -479,15 +479,29 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Author"
-            value={formData.authorId}
-            onChange={(e) => handleFieldChange('authorId', e.target.value)}
-            options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
-            required
-            isLoading={authorsLoading}
-            data-test="book-author"
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Select
+                label="Author"
+                value={formData.authorId}
+                onChange={(e) => handleFieldChange('authorId', e.target.value)}
+                options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
+                required
+                isLoading={authorsLoading}
+                data-test="book-author"
+              />
+            </div>
+            {formData.authorId && (
+              <Link
+                to={`/authors/${formData.authorId}`}
+                className="mb-0.5 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded inline-flex items-center gap-1"
+                data-test="book-see-author"
+                title="View Author"
+              >
+                <span>👤</span>
+              </Link>
+            )}
+          </div>
 
           <Select
             label="Branch"
