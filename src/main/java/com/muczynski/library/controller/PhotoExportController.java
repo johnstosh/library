@@ -18,6 +18,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -50,8 +52,8 @@ public class PhotoExportController {
     }
 
     /**
-     * Download all photos as a ZIP file.
-     * Memory-efficient - photos are loaded and written one at a time to the ZIP stream.
+     * Download all photos as a ZIP file using true streaming.
+     * Memory-efficient - photos are streamed directly to the response, never buffered entirely in memory.
      * The ZIP uses the same filename format as the import feature:
      * - book-{sanitized-title}[-{n}].{ext}
      * - author-{sanitized-name}[-{n}].{ext}
@@ -59,43 +61,58 @@ public class PhotoExportController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> downloadPhotosAsZip() {
+    public void downloadPhotosAsZip(HttpServletResponse response) {
         try {
             logger.info("ZIP download request received");
 
             // First check if there are any photos to export (quick metadata query)
-            var metadata = photoExportService.getPhotoMetadataForZipExport();
-            if (metadata.isEmpty()) {
+            var photoIds = photoExportService.getPhotoIdsForZipExport();
+            if (photoIds.isEmpty()) {
                 logger.warn("No photos available for export");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new ErrorResponse("Export Failed", "No photos available for export"));
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"error\":\"Export Failed\",\"message\":\"No photos available for export\"}");
+                return;
             }
 
-            logger.info("Starting ZIP export of {} photos", metadata.size());
+            logger.info("Starting streaming ZIP export of {} photos", photoIds.size());
 
-            // Create ZIP using memory-efficient streaming (loads one photo at a time)
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            photoExportService.streamPhotosToZip(baos);
-            byte[] zipData = baos.toByteArray();
+            // Set response headers for ZIP download
+            response.setContentType("application/zip");
+            response.setHeader("Content-Disposition",
+                    "attachment; filename=\"library-photos-" + java.time.LocalDate.now() + ".zip\"");
+            // Note: No Content-Length because we're streaming
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType("application/zip"));
-            headers.setContentDispositionFormData("attachment",
-                    "library-photos-" + java.time.LocalDate.now() + ".zip");
-            headers.setContentLength(zipData.length);
+            // Stream directly to response - never buffer entire ZIP in memory
+            photoExportService.streamPhotosToZip(response.getOutputStream());
+            response.flushBuffer();
 
-            logger.info("ZIP download completed: {} bytes", zipData.length);
-            return new ResponseEntity<>(zipData, headers, HttpStatus.OK);
+            logger.info("ZIP streaming completed");
 
         } catch (LibraryException e) {
             logger.warn("Photo ZIP export failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Export Failed", e.getMessage()));
+            try {
+                if (!response.isCommitted()) {
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"Export Failed\",\"message\":\"" +
+                            e.getMessage().replace("\"", "\\\"") + "\"}");
+                }
+            } catch (Exception ex) {
+                logger.error("Failed to write error response", ex);
+            }
         } catch (Exception e) {
             logger.error("Failed to create photo ZIP: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Internal Server Error",
-                            "Failed to export photos: " + e.getMessage()));
+            try {
+                if (!response.isCommitted()) {
+                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"Internal Server Error\",\"message\":\"Failed to export photos: " +
+                            e.getMessage().replace("\"", "\\\"") + "\"}");
+                }
+            } catch (Exception ex) {
+                logger.error("Failed to write error response", ex);
+            }
         }
     }
 

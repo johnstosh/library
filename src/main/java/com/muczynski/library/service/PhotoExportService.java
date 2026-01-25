@@ -1139,16 +1139,23 @@ public class PhotoExportService {
     }
 
     /**
+     * Get photo IDs for ZIP export (lightweight query).
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getPhotoIdsForZipExport() {
+        logger.info("Querying photo IDs for ZIP export...");
+        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
+        logger.info("Found {} photo IDs for ZIP export", photoIds.size());
+        return photoIds;
+    }
+
+    /**
      * Get metadata for all photos that can be exported (have images).
      * This loads photo metadata efficiently, one at a time.
      */
     @Transactional(readOnly = true)
     public List<PhotoZipMetadata> getPhotoMetadataForZipExport() {
-        logger.info("Querying photo IDs for ZIP export...");
-
-        // First get just the IDs - very lightweight query
-        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
-        logger.info("Found {} photo IDs for ZIP export", photoIds.size());
+        List<Long> photoIds = getPhotoIdsForZipExport();
 
         // Build metadata list by loading each photo individually
         // This avoids loading all Photo objects into memory at once
