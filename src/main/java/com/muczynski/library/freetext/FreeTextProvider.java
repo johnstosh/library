@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.freetext;
 
+import java.util.List;
+
 /**
  * Interface for providers that search for free online text versions of books.
  * Each implementation handles a specific website with its own API or scraping approach.
@@ -33,4 +35,16 @@ public interface FreeTextProvider {
      * @return priority number (lower = higher priority)
      */
     int getPriority();
+
+    /**
+     * Get the expected domain(s) for URLs returned by this provider.
+     * Used for validation to ensure API responses don't return unexpected/malicious URLs.
+     * If a URL's domain doesn't match any expected domain, the result is rejected.
+     *
+     * @return list of expected domains (e.g., "gutenberg.org", "archive.org").
+     *         Empty list means no domain validation is performed.
+     */
+    default List<String> getExpectedDomains() {
+        return List.of();  // Default: no validation (for backwards compatibility)
+    }
 }

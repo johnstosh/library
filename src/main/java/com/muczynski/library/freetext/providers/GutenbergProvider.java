@@ -46,6 +46,11 @@ public class GutenbergProvider implements FreeTextProvider {
     }
 
     @Override
+    public List<String> getExpectedDomains() {
+        return List.of("gutenberg.org");
+    }
+
+    @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
             // Normalize title for API search (removes articles, short words, punctuation)

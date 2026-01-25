@@ -44,6 +44,11 @@ public class LibriVoxProvider implements FreeTextProvider {
     }
 
     @Override
+    public List<String> getExpectedDomains() {
+        return List.of("librivox.org");
+    }
+
+    @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
             // Normalize title for API search (removes articles, short words, punctuation)

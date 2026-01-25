@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +42,11 @@ public class CcelProvider implements FreeTextProvider {
     @Override
     public int getPriority() {
         return 35;
+    }
+
+    @Override
+    public List<String> getExpectedDomains() {
+        return List.of("ccel.org");
     }
 
     @Override

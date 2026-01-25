@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -117,6 +118,20 @@ public class FreeTextLookupService {
                 FreeTextLookupResult result = provider.search(book.getTitle(), authorName);
 
                 if (result.isFound()) {
+                    // Validate domain if provider specifies expected domains
+                    List<String> expectedDomains = provider.getExpectedDomains();
+                    if (!expectedDomains.isEmpty()) {
+                        String urlDomain = extractDomain(result.getUrl());
+                        boolean domainMatches = expectedDomains.stream()
+                                .anyMatch(expected -> urlDomain != null && urlDomain.contains(expected));
+                        if (!domainMatches) {
+                            log.error("Provider {} returned URL with unexpected domain: {} (expected one of: {})",
+                                    provider.getProviderName(), result.getUrl(), expectedDomains);
+                            // Skip this result and continue to next provider
+                            continue;
+                        }
+                    }
+
                     // Update the book with the found URL
                     book.setFreeTextUrl(result.getUrl());
                     book.setLastModified(LocalDateTime.now());
@@ -193,5 +208,24 @@ public class FreeTextLookupService {
         return providers.stream()
                 .map(FreeTextProvider::getProviderName)
                 .toList();
+    }
+
+    /**
+     * Extract the domain from a URL.
+     *
+     * @param url the URL to extract domain from
+     * @return the domain (e.g., "www.gutenberg.org"), or null if extraction fails
+     */
+    private String extractDomain(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            URI uri = new URI(url);
+            return uri.getHost();
+        } catch (Exception e) {
+            log.warn("Failed to extract domain from URL: {}", url);
+            return null;
+        }
     }
 }

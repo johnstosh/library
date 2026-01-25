@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -85,6 +86,11 @@ public class VaticanProvider implements FreeTextProvider {
     @Override
     public int getPriority() {
         return 50;
+    }
+
+    @Override
+    public List<String> getExpectedDomains() {
+        return List.of("vatican.va");
     }
 
     @Override

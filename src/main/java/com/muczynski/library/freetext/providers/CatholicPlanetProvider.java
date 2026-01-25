@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,6 +40,11 @@ public class CatholicPlanetProvider implements FreeTextProvider {
     @Override
     public int getPriority() {
         return 60;
+    }
+
+    @Override
+    public List<String> getExpectedDomains() {
+        return List.of("catholicplanet.com");
     }
 
     @Override

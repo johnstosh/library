@@ -46,6 +46,11 @@ public class InternetArchiveProvider implements FreeTextProvider {
     }
 
     @Override
+    public List<String> getExpectedDomains() {
+        return List.of("archive.org");
+    }
+
+    @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
             // Build advanced search query
