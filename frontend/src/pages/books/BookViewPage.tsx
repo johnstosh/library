@@ -241,6 +241,22 @@ export function BookViewPage() {
                   </p>
                 </div>
               )}
+              {book.tagsList && book.tagsList.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Tags</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {book.tagsList.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
+                        data-test={`book-tag-${tag}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {book.statusReason && (
