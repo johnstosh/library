@@ -6,6 +6,7 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -210,6 +211,43 @@ public class AuthorService {
 
         // Get authors for these IDs
         return authorRepository.findAllById(authorIds).stream()
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all author summaries (id + lastModified) for caching.
+     */
+    public List<AuthorSummaryDto> getAllAuthorSummaries() {
+        return authorRepository.findAll().stream()
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get authors by IDs for batch fetching.
+     */
+    public List<AuthorDto> getAuthorsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return authorRepository.findAllById(ids).stream()
                 .map(author -> {
                     AuthorDto dto = authorMapper.toDto(author);
                     dto.setBookCount(bookRepository.countByAuthorId(author.getId()));

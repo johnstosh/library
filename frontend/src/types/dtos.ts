@@ -53,7 +53,7 @@ export interface AuthorDto {
 
 export interface AuthorSummaryDto {
   id: number
-  name: string
+  lastModified: string
 }
 
 // Book DTOs

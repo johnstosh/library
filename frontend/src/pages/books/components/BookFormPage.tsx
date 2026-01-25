@@ -258,7 +258,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             onChange={(e) => handleFieldChange('authorId', e.target.value)}
             options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
             required
-            disabled={authorsLoading}
+            isLoading={authorsLoading}
             data-test="book-author"
           />
 
@@ -268,7 +268,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             onChange={(e) => handleFieldChange('libraryId', e.target.value)}
             options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
             required
-            disabled={librariesLoading}
+            isLoading={librariesLoading}
             data-test="book-library"
           />
         </div>

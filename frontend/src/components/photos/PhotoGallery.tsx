@@ -74,14 +74,16 @@ export function PhotoGallery({
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
                 {/* Top Actions */}
                 <div className="flex justify-end gap-1">
-                  <button
-                    onClick={() => setLightboxPhoto(photo)}
+                  <a
+                    href={`/photos/${photo.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-100 transition-colors"
-                    title="View Full Size"
+                    title="Open in New Tab"
                     data-test={`view-photo-${photo.id}`}
                   >
                     <PiMagnifyingGlassPlus className="w-4 h-4 text-gray-700" />
-                  </button>
+                  </a>
                   <button
                     onClick={() => setDeletingPhotoId(photo.id)}
                     className="p-2 bg-white rounded-lg shadow-sm hover:bg-red-50 transition-colors"

@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
@@ -66,6 +67,30 @@ public class AuthorController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve all authors: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/summaries")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<AuthorSummaryDto>> getAllAuthorSummaries() {
+        try {
+            List<AuthorSummaryDto> summaries = authorService.getAllAuthorSummaries();
+            return ResponseEntity.ok(summaries);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve author summaries: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/by-ids")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<AuthorDto>> getAuthorsByIds(@RequestBody List<Long> ids) {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsByIds(ids);
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors by IDs {}: {}", ids, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

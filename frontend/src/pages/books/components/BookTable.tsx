@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -79,19 +80,28 @@ export function BookTable({
       header: '',
       accessor: (book) =>
         book.firstPhotoId ? (
-          <ThrottledThumbnail
-            photoId={book.firstPhotoId}
-            url={getThumbnailUrl(book.firstPhotoId, 50)}
-            alt={`Cover of ${book.title}`}
-            className="w-10 h-14 object-cover rounded"
-            checksum={book.firstPhotoChecksum}
-          />
+          <a
+            href={`/photos/${book.firstPhotoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="block"
+            title="View full-size photo"
+          >
+            <ThrottledThumbnail
+              photoId={book.firstPhotoId}
+              url={getThumbnailUrl(book.firstPhotoId, 70)}
+              alt={`Cover of ${book.title}`}
+              className="w-14 h-20 object-cover rounded hover:opacity-80 transition-opacity cursor-pointer"
+              checksum={book.firstPhotoChecksum}
+            />
+          </a>
         ) : (
-          <div className="w-10 h-14 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+          <div className="w-14 h-20 bg-gray-100 rounded flex items-center justify-center text-gray-400">
             -
           </div>
         ),
-      width: '50px',
+      width: '70px',
     },
     {
       key: 'title',
@@ -102,7 +112,7 @@ export function BookTable({
           {book.author && <div className="text-sm text-gray-500">{truncate(book.author, 40)}</div>}
         </div>
       ),
-      width: '35%',
+      width: '28%',
     },
     {
       key: 'locCallNumber',
@@ -173,6 +183,17 @@ export function BookTable({
               >
                 <span className="text-lg font-bold">Ø</span>
               </a>
+            )}
+            {book.authorId && (
+              <Link
+                to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-teal-600 hover:text-teal-900"
+                data-test={`see-author-${book.id}`}
+                title="See Author"
+              >
+                <span className="text-lg">👤</span>
+              </Link>
             )}
             {isLibrarian && (
               <>

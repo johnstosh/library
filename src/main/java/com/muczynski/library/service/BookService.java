@@ -204,7 +204,12 @@ public class BookService {
         book.setPlotSummary(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
-        book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
+        book.setFreeTextUrl(bookDto.getFreeTextUrl());
+        // Preserve dateAddedToLibrary if not provided in DTO (don't overwrite with null)
+        if (bookDto.getDateAddedToLibrary() != null) {
+            book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        }
         if (bookDto.getStatus() != null) {
             book.setStatus(bookDto.getStatus());
         }

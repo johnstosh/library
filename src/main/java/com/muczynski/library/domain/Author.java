@@ -12,9 +12,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 @Entity
-@Table(indexes = {
-    @Index(name = "idx_author_name", columnList = "name")
-})
+@Table(
+    indexes = {
+        @Index(name = "idx_author_name", columnList = "name")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_author_name", columnNames = "name")
+    }
+)
 @Getter
 @Setter
 public class Author {
@@ -22,6 +27,7 @@ public class Author {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
     private String name;
 
     private LocalDate dateOfBirth;

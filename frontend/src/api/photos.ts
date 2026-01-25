@@ -237,6 +237,11 @@ export function getPhotoUrl(photoId: number): string {
   return `/api/photos/${photoId}/image`
 }
 
+// Alias for getPhotoUrl for use in PhotoViewPage
+export function getImageUrl(photoId: number): string {
+  return `/api/photos/${photoId}/image`
+}
+
 export function getThumbnailUrl(photoId: number, width: number): string {
   return `/api/photos/${photoId}/thumbnail?width=${width}`
 }

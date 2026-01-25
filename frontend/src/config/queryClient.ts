@@ -29,6 +29,8 @@ export const queryKeys = {
   },
   authors: {
     all: ['authors'] as const,
+    summaries: () => [...queryKeys.authors.all, 'summaries'] as const,
+    byIds: (ids: number[]) => [...queryKeys.authors.all, 'byIds', ids.join(',')] as const,
     list: (filter?: string) => [...queryKeys.authors.all, 'list', filter] as const,
     detail: (id: number) => [...queryKeys.authors.all, 'detail', id] as const,
     photos: (id: number) => [...queryKeys.authors.all, id, 'photos'] as const,

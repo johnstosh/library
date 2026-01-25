@@ -42,6 +42,7 @@ const UserSettingsPage = lazy(() => import('@/pages/settings/UserSettingsPage').
 const GlobalSettingsPage = lazy(() => import('@/pages/settings/GlobalSettingsPage').then(m => ({ default: m.GlobalSettingsPage })))
 const TestDataPage = lazy(() => import('@/pages/test-data/TestDataPage').then(m => ({ default: m.TestDataPage })))
 const BooksFromFeedPage = lazy(() => import('@/pages/books-from-feed/BooksFromFeedPage').then(m => ({ default: m.BooksFromFeedPage })))
+const PhotoViewPage = lazy(() => import('@/pages/photos/PhotoViewPage').then(m => ({ default: m.PhotoViewPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -84,6 +85,9 @@ function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/apply" element={<ApplyForCardPage />} />
           </Route>
+
+          {/* Public photo view (no navigation, full screen) */}
+          <Route path="/photos/:id" element={<PhotoViewPage />} />
 
           {/* Protected routes (authenticated users) */}
           <Route element={<ProtectedRoute />}>
