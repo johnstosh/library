@@ -363,8 +363,31 @@ public class PhotoService {
             int newWidth = (int) Math.floor(width * cos + height * sin);
             int newHeight = (int) Math.floor(height * cos + width * sin);
 
-            BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
+            // Determine the appropriate BufferedImage type based on content type
+            // JPEG doesn't support alpha channel, so use TYPE_INT_RGB for JPEG
+            // Using originalImage.getType() can return 0 (TYPE_CUSTOM) which causes issues
+            String contentType = photo.getContentType() != null ? photo.getContentType().toLowerCase() : "";
+            int imageType;
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                imageType = BufferedImage.TYPE_INT_RGB;
+            } else {
+                imageType = BufferedImage.TYPE_INT_ARGB;
+            }
+
+            BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, imageType);
             Graphics2D g2d = rotatedImage.createGraphics();
+
+            // Set rendering hints for better quality
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Fill background with white for JPEG (since alpha not supported)
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                g2d.setColor(Color.WHITE);
+                g2d.fillRect(0, 0, newWidth, newHeight);
+            }
+
             AffineTransform at = new AffineTransform();
             at.setToRotation(radians, newWidth / 2.0, newHeight / 2.0);
             at.translate((newWidth - width) / 2.0, (newHeight - height) / 2.0);
@@ -374,11 +397,23 @@ public class PhotoService {
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
-            ImageIO.write(rotatedImage, formatName, baos);
+
+            // Handle common format name variations
+            if (formatName.equalsIgnoreCase("jpeg")) {
+                formatName = "jpg";
+            }
+
+            boolean writeSuccess = ImageIO.write(rotatedImage, formatName, baos);
+            if (!writeSuccess) {
+                logger.error("ImageIO.write returned false for format {} during rotation", formatName);
+                throw new LibraryException("Failed to write rotated image - unsupported format: " + formatName);
+            }
+
             byte[] rotatedBytes = baos.toByteArray();
             photo.setImage(rotatedBytes);
             // Recalculate checksum after rotation since image bytes changed
             photo.setImageChecksum(computeChecksum(rotatedBytes));
+            logger.debug("Rotated image by {} degrees, new size: {} bytes", degrees, rotatedBytes.length);
         } catch (IOException e) {
             logger.error("IO error rotating image: {}", e.getMessage(), e);
             throw new LibraryException("Failed to rotate image", e);

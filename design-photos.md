@@ -47,7 +47,11 @@ Each photo belongs to exactly one entity. Cascade delete is enabled - deleting a
 - Checksum computed on upload for change tracking
 
 ### Manipulation
-- **Rotate**: Server-side 90° rotation using AffineTransform
+- **Rotate**: Server-side 90° rotation using AffineTransform with proper image type handling
+  - Uses TYPE_INT_RGB for JPEG (no alpha channel support)
+  - Uses TYPE_INT_ARGB for PNG and other formats
+  - Fills JPEG backgrounds with white to avoid black artifacts
+  - Applies rendering hints for better quality (bilinear interpolation, antialiasing)
 - **Crop**: Creates new photo at original position, shifts original right
 - **Reorder**: Move left/right operations with position swapping
 
