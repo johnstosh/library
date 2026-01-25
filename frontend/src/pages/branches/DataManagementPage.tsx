@@ -142,7 +142,8 @@ export function DataManagementPage() {
       setSuccessMessage('Photo export downloaded successfully')
     } catch (error) {
       console.error('Failed to export photos:', error)
-      setErrorMessage('Failed to export photos. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Photo export failed: ${errorMessage}`)
     } finally {
       setIsExportingPhotos(false)
     }

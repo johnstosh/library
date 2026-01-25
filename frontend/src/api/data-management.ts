@@ -152,7 +152,20 @@ export async function exportPhotos(): Promise<Blob> {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to export photos')
+    // Try to get error message from response body
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || errorData.error || 'Failed to export photos')
+    }
+    // Handle common HTTP errors
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.')
+    }
+    if (response.status === 403) {
+      throw new Error('Permission denied. Librarian access required.')
+    }
+    throw new Error(`Failed to export photos (HTTP ${response.status})`)
   }
 
   return response.blob()

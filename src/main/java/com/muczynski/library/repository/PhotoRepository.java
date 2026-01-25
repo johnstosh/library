@@ -94,4 +94,14 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // Projection query that returns only metadata without image bytes - for export operations
     // Note: Using findBy() with no criteria returns all records with the projection type
     List<PhotoMetadataProjection> findBy();
+
+    // Find active photos that have images for ZIP export
+    // Note: This loads full Photo entities including image bytes - use only for actual export
+    @Query("SELECT DISTINCT p FROM Photo p " +
+           "LEFT JOIN FETCH p.book b LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.loan l LEFT JOIN FETCH l.book LEFT JOIN FETCH l.user " +
+           "WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL " +
+           "ORDER BY p.id")
+    List<Photo> findActivePhotosWithImages();
 }

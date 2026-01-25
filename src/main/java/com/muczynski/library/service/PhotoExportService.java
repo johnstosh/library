@@ -1114,4 +1114,113 @@ public class PhotoExportService {
 
         logger.info("Unlinked photo ID: {} from permanent ID: {}", photoId, oldPermanentId);
     }
+
+    /**
+     * Export all photos as a ZIP file.
+     * Uses the same filename format as the ZIP import feature:
+     * - book-{sanitized-title}[-{n}].{ext}
+     * - author-{sanitized-name}[-{n}].{ext}
+     * - loan-{sanitized-title}-{sanitized-username}[-{n}].{ext}
+     *
+     * @return byte array containing the ZIP file
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportPhotosAsZip() {
+        logger.info("Starting photo ZIP export...");
+
+        // Get all active photos that have images (have checksum)
+        List<Photo> photos = photoRepository.findActivePhotosWithImages();
+
+        if (photos.isEmpty()) {
+            throw new LibraryException("No photos available for export");
+        }
+
+        logger.info("Exporting {} photos to ZIP", photos.size());
+
+        // Track filename counts for handling multiple photos of same entity
+        Map<String, Integer> filenameCount = new HashMap<>();
+
+        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+             java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
+
+            for (Photo photo : photos) {
+                try {
+                    // Get image bytes
+                    byte[] imageBytes = photo.getImage();
+                    if (imageBytes == null || imageBytes.length == 0) {
+                        logger.warn("Skipping photo {} - no image data", photo.getId());
+                        continue;
+                    }
+
+                    // Generate filename
+                    String baseFilename = generateZipFilename(photo);
+                    String extension = getFileExtension(photo.getContentType());
+
+                    // Handle multiple photos for same entity
+                    int count = filenameCount.getOrDefault(baseFilename, 0);
+                    filenameCount.put(baseFilename, count + 1);
+
+                    String filename;
+                    if (count == 0) {
+                        filename = baseFilename + extension;
+                    } else {
+                        filename = baseFilename + "-" + (count + 1) + extension;
+                    }
+
+                    // Add to ZIP
+                    java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(filename);
+                    zos.putNextEntry(entry);
+                    zos.write(imageBytes);
+                    zos.closeEntry();
+
+                    logger.debug("Added photo {} as {}", photo.getId(), filename);
+
+                } catch (Exception e) {
+                    logger.error("Failed to add photo {} to ZIP: {}", photo.getId(), e.getMessage());
+                    // Continue with other photos
+                }
+            }
+
+            zos.finish();
+            byte[] result = baos.toByteArray();
+            logger.info("Photo ZIP export completed: {} bytes", result.length);
+            return result;
+
+        } catch (java.io.IOException e) {
+            logger.error("Failed to create ZIP file: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to create ZIP file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate a filename for a photo in the ZIP archive.
+     * Format matches the import filename format for round-trip compatibility.
+     */
+    private String generateZipFilename(Photo photo) {
+        if (photo.getBook() != null) {
+            return "book-" + sanitizeName(photo.getBook().getTitle());
+        } else if (photo.getAuthor() != null) {
+            return "author-" + sanitizeName(photo.getAuthor().getName());
+        } else if (photo.getLoan() != null) {
+            String bookTitle = photo.getLoan().getBook() != null
+                    ? photo.getLoan().getBook().getTitle() : "unknown";
+            String username = photo.getLoan().getUser() != null
+                    ? photo.getLoan().getUser().getUsername() : "unknown";
+            return "loan-" + sanitizeName(bookTitle) + "-" + sanitizeName(username);
+        } else {
+            return "photo-" + photo.getId();
+        }
+    }
+
+    /**
+     * Sanitize a name for use in filenames.
+     * Lowercase, replace spaces and special chars with dashes.
+     * Matches PhotoZipImportService.sanitizeName() for round-trip compatibility.
+     */
+    private String sanitizeName(String name) {
+        if (name == null) return "unknown";
+        return name.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", ""); // Remove leading/trailing dashes
+    }
 }

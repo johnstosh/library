@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.ErrorResponse;
+import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.dto.PhotoExportInfoDto;
 import com.muczynski.library.dto.PhotoExportResponseDto;
 import com.muczynski.library.dto.PhotoExportStatsDto;
@@ -12,7 +14,9 @@ import com.muczynski.library.service.PhotoExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +46,41 @@ public class PhotoExportController {
         } catch (Exception e) {
             logger.error("Failed to get export statistics", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Download all photos as a ZIP file.
+     * The ZIP uses the same filename format as the import feature:
+     * - book-{sanitized-title}[-{n}].{ext}
+     * - author-{sanitized-name}[-{n}].{ext}
+     * - loan-{sanitized-title}-{sanitized-username}[-{n}].{ext}
+     */
+    @GetMapping
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> downloadPhotosAsZip() {
+        try {
+            logger.info("ZIP download request received");
+            byte[] zipData = photoExportService.exportPhotosAsZip();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/zip"));
+            headers.setContentDispositionFormData("attachment",
+                    "library-photos-" + java.time.LocalDate.now() + ".zip");
+            headers.setContentLength(zipData.length);
+
+            logger.info("ZIP download completed: {} bytes", zipData.length);
+            return new ResponseEntity<>(zipData, headers, HttpStatus.OK);
+
+        } catch (LibraryException e) {
+            logger.warn("Photo ZIP export failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Export Failed", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Failed to create photo ZIP: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error",
+                            "Failed to export photos: " + e.getMessage()));
         }
     }
 
