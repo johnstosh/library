@@ -69,24 +69,40 @@ public class FreeTextLookupService {
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
 
         // Check global cache first (may return multiple space-separated URLs)
+        // Empty string "" means "searched but not found" - don't search again
         String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
         if (cachedUrls != null) {
-            // Update the book with all cached URLs (space-separated)
-            book.setFreeTextUrl(cachedUrls);
-            book.setLastModified(LocalDateTime.now());
-            bookRepository.save(book);
+            if (!cachedUrls.isBlank()) {
+                // Found URLs in cache
+                book.setFreeTextUrl(cachedUrls);
+                book.setLastModified(LocalDateTime.now());
+                bookRepository.save(book);
 
-            log.info("Found free text for book {} in cache: {}", bookId, cachedUrls);
+                log.info("Found free text for book {} in cache: {}", bookId, cachedUrls);
 
-            return FreeTextBulkLookupResultDto.builder()
-                    .bookId(bookId)
-                    .bookTitle(book.getTitle())
-                    .authorName(authorName)
-                    .success(true)
-                    .freeTextUrl(cachedUrls)
-                    .providerName("Cache")
-                    .providersSearched(List.of("Cache"))
-                    .build();
+                return FreeTextBulkLookupResultDto.builder()
+                        .bookId(bookId)
+                        .bookTitle(book.getTitle())
+                        .authorName(authorName)
+                        .success(true)
+                        .freeTextUrl(cachedUrls)
+                        .providerName("Cache")
+                        .providersSearched(List.of("Cache"))
+                        .build();
+            } else {
+                // Cached as "not found" - don't search again
+                log.info("Book {} was previously searched and not found (cached)", bookId);
+
+                return FreeTextBulkLookupResultDto.builder()
+                        .bookId(bookId)
+                        .bookTitle(book.getTitle())
+                        .authorName(authorName)
+                        .success(false)
+                        .errorMessage("Previously searched - not found (cached)")
+                        .providerName("Cache")
+                        .providersSearched(List.of("Cache"))
+                        .build();
+            }
         }
 
         List<String> searchedProviders = new ArrayList<>();

@@ -250,6 +250,44 @@ public final class FreeTextLookupCache {
         add("Catholic Church", "The Handbook of Indulgences: Norms and Grants",
             "https://www.vatican.va/roman_curia/tribunals/apost_penit/documents/rc_trib_appen_doc_20020826_enchiridion-indulgentiarum_lt.html");
 
+        // ===============================================
+        // Books searched but not found (cached as empty)
+        // These prevent redundant provider searches
+        // ===============================================
+        addNotFound("Lawrence G. Lovasik", "My Treasured Catholic Prayers");
+        addNotFound("John Anthony Hardon", "The Catholic Lifetime Reading Plan");
+        addNotFound("Marie McSwigan", "Snow Treasure");
+        addNotFound("Robert J. Batastini", "Gather Comprehensive, c. 1");
+        addNotFound("Robert J. Batastini", "Gather Comprehensive, c. 3");
+        addNotFound("Robert J. Batastini", "Gather Comprehensive, c. 4");
+        addNotFound("Robert J. Batastini", "Gather Comprehensive, c. 5");
+        addNotFound("Ann Shields", "More of the Holy Spirit: How to Keep the Fire Burning in Our Hearts");
+        addNotFound("Jean Bédard", "The Missing Violin");
+        addNotFound("John Anthony Hardon", "The Catholic Catechism");
+        addNotFound("Gabriel Denis", "The Reign of Jesus Through Mary");
+        addNotFound("Richard Rolle", "The Enkindling of Love");
+        addNotFound("Angela of Foligno", "Angela of Foligno: Complete Works");
+        addNotFound("Jean-François Kieffer", "The Adventures of Loupio, Volume 2: The Hunters and Other Stories");
+        addNotFound("Thomas Bertram Costain", "The Last Plantagenets");
+        addNotFound("Alan Cooper", "The Inmates Are Running the Asylum");
+        addNotFound("Ellery Queen", "Queen's Ransom");
+        addNotFound("Warren Hasty Carroll", "The Cleaving of Christendom, A History of Christendom, Vol. 4");
+        addNotFound("Eliyahu M. Goldratt", "The Haystack Syndrome: Sifting Information Out of the Data Ocean");
+        addNotFound("John R. Wood", "Ordinary Lives, Extraordinary Mission");
+        addNotFound("Elizabeth Hanna Pham", "A Storybook of Saints");
+        addNotFound("Mary Ray", "Spring Tide");
+        addNotFound("Michael Dubruiel", "Praying the Rosary: With the Joyful, Luminous, Sorrowful, & Glorious Mysteries");
+        addNotFound("Karen West", "The Best of Polish Cooking");
+        addNotFound("Philip D. Gallery", "Can You Find Jesus?: Introducing Your Child to the Gospel");
+        addNotFound("Robyn Freedman Spizman", "The GIFTionary");
+        addNotFound("Alfonso Maria de Liguori", "Way of the Cross at the National Shrine of The Divine Mercy, c. 3");
+        addNotFound("Dola de Jong", "The Level Land");
+        addNotFound("Antonio Michele Ghislieri", "The Order of the Mass with Prayers and Devotions");
+        addNotFound("Paul Burns", "Butler's Lives of the Saints New Full Edition Supplement of New Saints and Blesseds Volume 1, c. 2");
+        addNotFound("Margaret Rumer Godden", "The Kitchen Madonna");
+        addNotFound("Peter V. Armenio", "Our Moral Life in Christ: A Complete Course");
+        addNotFound("Ronda De Sola Chervin", "Quotable Saints");
+
         log.info("FreeTextLookupCache initialized with {} authors", CACHE.size());
     }
 
@@ -267,6 +305,14 @@ public final class FreeTextLookupCache {
 
         CACHE.computeIfAbsent(normalizedAuthor, k -> new HashMap<>())
              .put(normalizedTitle, urlString);
+    }
+
+    /**
+     * Mark a book as searched but not found (cache empty string).
+     * This prevents redundant provider searches.
+     */
+    private static void addNotFound(String author, String title) {
+        add(author, title); // varargs with no args = empty string
     }
 
     /**
