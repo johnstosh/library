@@ -104,4 +104,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
            "WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL " +
            "ORDER BY p.id")
     List<Photo> findActivePhotosWithImages();
+
+    // Find photo IDs that have images (for streaming ZIP export)
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL ORDER BY p.id")
+    List<Long> findActivePhotoIdsWithImages();
 }

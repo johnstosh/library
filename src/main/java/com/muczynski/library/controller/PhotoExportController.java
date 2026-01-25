@@ -51,6 +51,7 @@ public class PhotoExportController {
 
     /**
      * Download all photos as a ZIP file.
+     * Memory-efficient - photos are loaded and written one at a time to the ZIP stream.
      * The ZIP uses the same filename format as the import feature:
      * - book-{sanitized-title}[-{n}].{ext}
      * - author-{sanitized-name}[-{n}].{ext}
@@ -61,7 +62,21 @@ public class PhotoExportController {
     public ResponseEntity<?> downloadPhotosAsZip() {
         try {
             logger.info("ZIP download request received");
-            byte[] zipData = photoExportService.exportPhotosAsZip();
+
+            // First check if there are any photos to export (quick metadata query)
+            var metadata = photoExportService.getPhotoMetadataForZipExport();
+            if (metadata.isEmpty()) {
+                logger.warn("No photos available for export");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("Export Failed", "No photos available for export"));
+            }
+
+            logger.info("Starting ZIP export of {} photos", metadata.size());
+
+            // Create ZIP using memory-efficient streaming (loads one photo at a time)
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            photoExportService.streamPhotosToZip(baos);
+            byte[] zipData = baos.toByteArray();
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/zip"));

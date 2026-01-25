@@ -1116,43 +1116,106 @@ public class PhotoExportService {
     }
 
     /**
-     * Export all photos as a ZIP file.
-     * Uses the same filename format as the ZIP import feature:
-     * - book-{sanitized-title}[-{n}].{ext}
-     * - author-{sanitized-name}[-{n}].{ext}
-     * - loan-{sanitized-title}-{sanitized-username}[-{n}].{ext}
-     *
-     * @return byte array containing the ZIP file
+     * Data class containing metadata needed for ZIP filename generation.
+     * Does not include image bytes to minimize memory usage.
+     */
+    public static class PhotoZipMetadata {
+        public final Long id;
+        public final String contentType;
+        public final String bookTitle;
+        public final String authorName;
+        public final String loanBookTitle;
+        public final String loanUsername;
+
+        public PhotoZipMetadata(Long id, String contentType, String bookTitle, String authorName,
+                               String loanBookTitle, String loanUsername) {
+            this.id = id;
+            this.contentType = contentType;
+            this.bookTitle = bookTitle;
+            this.authorName = authorName;
+            this.loanBookTitle = loanBookTitle;
+            this.loanUsername = loanUsername;
+        }
+    }
+
+    /**
+     * Get metadata for all photos that can be exported (have images).
+     * This loads photo metadata efficiently, one at a time.
      */
     @Transactional(readOnly = true)
-    public byte[] exportPhotosAsZip() {
-        logger.info("Starting photo ZIP export...");
+    public List<PhotoZipMetadata> getPhotoMetadataForZipExport() {
+        logger.info("Querying photo IDs for ZIP export...");
 
-        // Get all active photos that have images (have checksum)
-        List<Photo> photos = photoRepository.findActivePhotosWithImages();
+        // First get just the IDs - very lightweight query
+        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
+        logger.info("Found {} photo IDs for ZIP export", photoIds.size());
 
-        if (photos.isEmpty()) {
+        // Build metadata list by loading each photo individually
+        // This avoids loading all Photo objects into memory at once
+        List<PhotoZipMetadata> metadata = new ArrayList<>();
+        for (Long id : photoIds) {
+            photoRepository.findById(id).ifPresent(photo -> {
+                String bookTitle = photo.getBook() != null ? photo.getBook().getTitle() : null;
+                String authorName = photo.getAuthor() != null ? photo.getAuthor().getName() : null;
+                String loanBookTitle = null;
+                String loanUsername = null;
+                if (photo.getLoan() != null) {
+                    loanBookTitle = photo.getLoan().getBook() != null ? photo.getLoan().getBook().getTitle() : null;
+                    loanUsername = photo.getLoan().getUser() != null ? photo.getLoan().getUser().getUsername() : null;
+                }
+                metadata.add(new PhotoZipMetadata(id, photo.getContentType(),
+                        bookTitle, authorName, loanBookTitle, loanUsername));
+            });
+        }
+
+        return metadata;
+    }
+
+    /**
+     * Stream photos to a ZIP output stream, loading one photo at a time.
+     * This is memory-efficient for large photo collections.
+     *
+     * @param outputStream the output stream to write the ZIP to
+     * @throws IOException if writing fails
+     */
+    @Transactional(readOnly = true)
+    public void streamPhotosToZip(java.io.OutputStream outputStream) throws java.io.IOException {
+        logger.info("Starting streaming photo ZIP export...");
+
+        // Get just the IDs first - very lightweight
+        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
+
+        if (photoIds.isEmpty()) {
             throw new LibraryException("No photos available for export");
         }
 
-        logger.info("Exporting {} photos to ZIP", photos.size());
+        logger.info("Streaming {} photos to ZIP", photoIds.size());
 
         // Track filename counts for handling multiple photos of same entity
         Map<String, Integer> filenameCount = new HashMap<>();
+        int successCount = 0;
+        int errorCount = 0;
 
-        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-             java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
-
-            for (Photo photo : photos) {
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(outputStream)) {
+            for (Long photoId : photoIds) {
                 try {
-                    // Get image bytes
-                    byte[] imageBytes = photo.getImage();
-                    if (imageBytes == null || imageBytes.length == 0) {
-                        logger.warn("Skipping photo {} - no image data", photo.getId());
+                    // Load this photo with relationships (image is LAZY loaded)
+                    Photo photo = photoRepository.findById(photoId).orElse(null);
+                    if (photo == null) {
+                        logger.warn("Photo {} not found during export", photoId);
+                        errorCount++;
                         continue;
                     }
 
-                    // Generate filename
+                    // Now load the image bytes (triggers LAZY load)
+                    byte[] imageBytes = photo.getImage();
+                    if (imageBytes == null || imageBytes.length == 0) {
+                        logger.warn("Skipping photo {} - no image data", photoId);
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Generate filename from the loaded photo
                     String baseFilename = generateZipFilename(photo);
                     String extension = getFileExtension(photo.getContentType());
 
@@ -1167,25 +1230,45 @@ public class PhotoExportService {
                         filename = baseFilename + "-" + (count + 1) + extension;
                     }
 
-                    // Add to ZIP
+                    // Add to ZIP and immediately release memory
                     java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(filename);
                     zos.putNextEntry(entry);
                     zos.write(imageBytes);
                     zos.closeEntry();
+                    zos.flush();
 
-                    logger.debug("Added photo {} as {}", photo.getId(), filename);
+                    successCount++;
+                    if (successCount % 10 == 0) {
+                        logger.info("Progress: {} photos exported", successCount);
+                    }
 
                 } catch (Exception e) {
-                    logger.error("Failed to add photo {} to ZIP: {}", photo.getId(), e.getMessage());
+                    logger.error("Failed to add photo {} to ZIP: {}", photoId, e.getMessage(), e);
+                    errorCount++;
                     // Continue with other photos
                 }
             }
 
             zos.finish();
-            byte[] result = baos.toByteArray();
-            logger.info("Photo ZIP export completed: {} bytes", result.length);
-            return result;
+            logger.info("Photo ZIP export completed: {} succeeded, {} failed", successCount, errorCount);
+        }
+    }
 
+    /**
+     * Export all photos as a ZIP file (legacy method for tests).
+     * Uses the same filename format as the ZIP import feature.
+     * WARNING: This loads all photos into memory - use streamPhotosToZip for production.
+     *
+     * @return byte array containing the ZIP file
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportPhotosAsZip() {
+        logger.info("Starting photo ZIP export (in-memory)...");
+
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        try {
+            streamPhotosToZip(baos);
+            return baos.toByteArray();
         } catch (java.io.IOException e) {
             logger.error("Failed to create ZIP file: {}", e.getMessage(), e);
             throw new LibraryException("Failed to create ZIP file: " + e.getMessage());
