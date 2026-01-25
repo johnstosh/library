@@ -31,6 +31,7 @@ public interface PhotoMetadataProjection {
         Long getId();
         String getTitle();
         String getLocNumber();
+        java.time.LocalDateTime getDateAddedToLibrary();
         AuthorProjection getAuthor();
     }
 

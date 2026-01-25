@@ -680,10 +680,8 @@ public class PhotoExportService {
                     photoInfo.setBookTitle(photo.getBook().getTitle());
                     photoInfo.setBookId(photo.getBook().getId());
                     photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
-                    // Fetch dateAddedToLibrary separately since it's not in the projection
-                    bookRepository.findById(photo.getBook().getId()).ifPresent(book -> {
-                        photoInfo.setBookDateAdded(book.getDateAddedToLibrary());
-                    });
+                    // Use dateAddedToLibrary from projection (no need to load full Book entity)
+                    photoInfo.setBookDateAdded(photo.getBook().getDateAddedToLibrary());
                     // Include book's author if available
                     if (photo.getBook().getAuthor() != null) {
                         photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
