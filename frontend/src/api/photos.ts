@@ -13,6 +13,24 @@ export interface PhotoDto {
   dateTaken?: string // ISO-8601 datetime string
 }
 
+export interface PhotoZipImportItemDto {
+  filename: string
+  status: 'SUCCESS' | 'FAILURE' | 'SKIPPED'
+  entityType?: string
+  entityName?: string
+  entityId?: number
+  photoId?: number
+  errorMessage?: string
+}
+
+export interface PhotoZipImportResultDto {
+  totalFiles: number
+  successCount: number
+  failureCount: number
+  skippedCount: number
+  items: PhotoZipImportItemDto[]
+}
+
 // Get photos for a book
 export function useBookPhotos(bookId: number) {
   return useQuery({
@@ -228,6 +246,36 @@ export function useCropPhoto() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })
+    },
+  })
+}
+
+// Import photos from ZIP file
+export function useImportPhotosFromZip() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (file: File): Promise<PhotoZipImportResultDto> => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/photos/import-zip', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
+        throw new Error(error.message || error.error || 'Failed to import photos')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },
   })
 }

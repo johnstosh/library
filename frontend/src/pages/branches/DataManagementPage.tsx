@@ -19,7 +19,7 @@ import {
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
-import { getThumbnailUrl } from '@/api/photos'
+import { getThumbnailUrl, useImportPhotosFromZip, type PhotoZipImportResultDto } from '@/api/photos'
 import { ThrottledThumbnail, clearThumbnailQueue } from '@/components/ui/ThrottledThumbnail'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import {
@@ -46,9 +46,12 @@ export function DataManagementPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [pasteModePhotoId, setPasteModePhotoId] = useState<number | null>(null)
   const [pasteInstructions, setPasteInstructions] = useState<string>('')
+  const [zipImportResult, setZipImportResult] = useState<PhotoZipImportResultDto | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const zipFileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
+  const importPhotosFromZip = useImportPhotosFromZip()
 
   // Fetch database statistics (total counts from backend)
   const { data: dbStats } = useDatabaseStats()
@@ -168,6 +171,48 @@ export function DataManagementPage() {
       console.error('Failed to import JSON:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(`Failed to import JSON data: ${errorMessage}`)
+    }
+  }
+
+  const handleZipImportClick = () => {
+    zipFileInputRef.current?.click()
+  }
+
+  const handleZipFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setSuccessMessage('')
+    setErrorMessage('')
+    setZipImportResult(null)
+
+    try {
+      const result = await importPhotosFromZip.mutateAsync(file)
+      setZipImportResult(result)
+
+      if (result.failureCount === 0 && result.successCount > 0) {
+        setSuccessMessage(
+          `Successfully imported ${result.successCount} photo(s)${result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''}`
+        )
+      } else if (result.failureCount > 0) {
+        setErrorMessage(
+          `Import completed: ${result.successCount} succeeded, ${result.failureCount} failed, ${result.skippedCount} skipped`
+        )
+      } else {
+        setSuccessMessage(`Import completed: ${result.skippedCount} files skipped (no photos imported)`)
+      }
+
+      // Reset file input
+      if (zipFileInputRef.current) {
+        zipFileInputRef.current.value = ''
+      }
+
+      // Refresh photo status
+      handleRefreshPhotoStatus()
+    } catch (error) {
+      console.error('Failed to import photos from ZIP:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setErrorMessage(`Failed to import photos from ZIP: ${errorMessage}`)
     }
   }
 
@@ -684,37 +729,124 @@ export function DataManagementPage() {
           <div className="flex items-center gap-3">
             <PiImage className="w-8 h-8" />
             <div>
-              <h2 className="text-xl font-bold">Photo Export</h2>
+              <h2 className="text-xl font-bold">Photo Export/Import</h2>
               <p className="text-sm text-purple-100">
-                Download all book and author photos as a ZIP file
+                Export or import book, author, and loan photos as a ZIP file
               </p>
             </div>
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="flex items-start gap-3">
-            <PiFileArrowDown className="w-6 h-6 text-purple-600 mt-1" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Export Photos
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Download all photos stored in Google Photos as a ZIP archive. This is
-                separate from the JSON export and can be used for complete backup.
-              </p>
-              <Button
-                variant="primary"
-                onClick={handleExportPhotos}
-                isLoading={isExportingPhotos}
-                leftIcon={<PiDownload />}
-                data-test="export-photos"
-              >
-                Export Photos
-              </Button>
+        <div className="p-6 grid md:grid-cols-2 gap-6">
+          {/* Export Photos */}
+          <div className="border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <PiFileArrowDown className="w-6 h-6 text-purple-600 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Export Photos
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Download all photos stored in Google Photos as a ZIP archive. This is
+                  separate from the JSON export and can be used for complete backup.
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={handleExportPhotos}
+                  isLoading={isExportingPhotos}
+                  leftIcon={<PiDownload />}
+                  data-test="export-photos"
+                >
+                  Export Photos
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Import Photos from ZIP */}
+          <div className="border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <PiFileArrowUp className="w-6 h-6 text-green-600 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Import Photos from ZIP
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload a ZIP file with photos to import. Filenames must follow the format:
+                </p>
+                <ul className="text-xs text-gray-500 mb-4 space-y-1">
+                  <li><code className="bg-gray-100 px-1 rounded">book-{'{title}'}.jpg</code> - Book photo</li>
+                  <li><code className="bg-gray-100 px-1 rounded">author-{'{name}'}.jpg</code> - Author photo</li>
+                  <li><code className="bg-gray-100 px-1 rounded">loan-{'{title}'}-{'{username}'}.jpg</code> - Loan photo</li>
+                </ul>
+                <input
+                  ref={zipFileInputRef}
+                  type="file"
+                  accept=".zip"
+                  onChange={handleZipFileChange}
+                  className="hidden"
+                  data-test="import-zip-input"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={handleZipImportClick}
+                  isLoading={importPhotosFromZip.isPending}
+                  leftIcon={<PiUpload />}
+                  data-test="import-photos-zip"
+                >
+                  Import Photos ZIP
+                </Button>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* ZIP Import Results */}
+        {zipImportResult && (
+          <div className="px-6 pb-6">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <h4 className="font-medium text-gray-900">
+                  Import Results: {zipImportResult.totalFiles} file(s) processed
+                </h4>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Filename</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {zipImportResult.items.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-4 py-2 text-sm font-mono text-gray-900">{item.filename}</td>
+                        <td className="px-4 py-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            item.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
+                            item.status === 'FAILURE' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-600">
+                          {item.entityType && `${item.entityType}: ${item.entityName || '-'}`}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-500">
+                          {item.errorMessage || (item.photoId ? `Photo #${item.photoId}` : '-')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Photo Import/Export Status Section */}

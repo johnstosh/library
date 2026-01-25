@@ -118,6 +118,7 @@ public class PhotoService {
     /**
      * Add checkout card photo to a loan using raw image bytes
      * Used by loan-by-photo feature to store the checkout card image
+     * Note: This version does NOT set the loan - caller must use associatePhotoWithLoan
      */
     @Transactional
     public PhotoDto addPhotoToLoan(Long loanId, byte[] imageBytes, String contentType) {
@@ -135,6 +136,30 @@ public class PhotoService {
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add checkout card photo: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to store checkout card photo: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Add checkout card photo directly associated with an existing loan
+     * Used by zip import to attach photos to existing loans
+     */
+    @Transactional
+    public PhotoDto addPhotoToExistingLoan(com.muczynski.library.domain.Loan loan, byte[] imageBytes, String contentType) {
+        try {
+            Photo photo = new Photo();
+            photo.setLoan(loan);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("Checkout card photo");
+            photo.setPhotoOrder(0);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added checkout card photo to loan ID {} with checksum: {}", loan.getId(), savedPhoto.getImageChecksum());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add checkout card photo to loan ID {}: {}", loan.getId(), e.getMessage(), e);
             throw new LibraryException("Failed to store checkout card photo: " + e.getMessage(), e);
         }
     }
@@ -386,6 +411,38 @@ public class PhotoService {
         } catch (Exception e) {
             logger.warn("Failed to add photo to author ID {} with file {}: {}", authorId, file.getOriginalFilename(), e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Add photo to author using raw image bytes and content type
+     * Used by zip import for batch importing author photos
+     */
+    @Transactional
+    public PhotoDto addAuthorPhotoFromBytes(Long authorId, byte[] imageBytes, String contentType) {
+        try {
+            Author author = authorRepository.findById(authorId)
+                    .orElseThrow(() -> new LibraryException("Author not found"));
+            List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setAuthor(author);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.debug("Added photo to author ID {} with order {}", authorId, savedPhoto.getPhotoOrder());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add photo from bytes to author ID {}: {}", authorId, e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
         }
     }
 

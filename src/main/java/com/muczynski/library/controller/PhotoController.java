@@ -5,8 +5,10 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.ErrorResponse;
+import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.service.PhotoZipImportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class PhotoController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private PhotoZipImportService photoZipImportService;
 
     @PreAuthorize("permitAll()")
     @GetMapping("/{id}/image")
@@ -156,6 +161,44 @@ public class PhotoController {
             logger.error("Failed to crop photo ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file.
+     * Filename format determines which entity the photo is associated with:
+     * - book-{title}[-{n}].{ext} - Associates photo with a book by title
+     * - author-{name}[-{n}].{ext} - Associates photo with an author by name
+     * - loan-{title}-{username}[-{n}].{ext} - Associates photo with a loan
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping("/import-zip")
+    public ResponseEntity<?> importFromZip(@RequestParam("file") MultipartFile file) {
+        try {
+            logger.info("ZIP import request received: {}", file.getOriginalFilename());
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("Bad Request", "File is empty"));
+            }
+
+            String filename = file.getOriginalFilename();
+            if (filename == null || !filename.toLowerCase().endsWith(".zip")) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("Bad Request", "File must be a ZIP archive"));
+            }
+
+            PhotoZipImportResultDto result = photoZipImportService.importFromZip(file);
+
+            logger.info("ZIP import completed: {} total, {} success, {} failed, {} skipped",
+                    result.getTotalFiles(), result.getSuccessCount(),
+                    result.getFailureCount(), result.getSkippedCount());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import photos from ZIP: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos: " + e.getMessage()));
         }
     }
 }

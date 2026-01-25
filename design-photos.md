@@ -154,6 +154,76 @@ queryKeys.photos = {
 
 **Note**: Photos are NOT included in JSON database export. Use Photo Export for backup.
 
+## ZIP Import
+
+The system supports bulk importing photos from a ZIP file. Photos are automatically matched to entities based on filename patterns.
+
+### Filename Format
+
+```
+{type}-{name}[-{n}].{ext}
+```
+
+- **type**: `book`, `author`, or `loan`
+- **name**: Entity identifier (sanitized - lowercase, special chars replaced with dashes)
+- **n** (optional): Number suffix for multiple photos of same entity
+- **ext**: Image extension (jpg, jpeg, png, gif, webp)
+
+### Examples
+
+| Filename | Description |
+|----------|-------------|
+| `book-the-great-gatsby.jpg` | Photo for book titled "The Great Gatsby" |
+| `book-war-and-peace-2.png` | Second photo for "War and Peace" |
+| `author-mark-twain.jpg` | Photo for author "Mark Twain" |
+| `loan-moby-dick-johnsmith.jpg` | Checkout card for "Moby Dick" borrowed by user "johnsmith" |
+
+### Matching Algorithm
+
+1. **Books**: Title is searched case-insensitively with partial match, then exact sanitized match
+2. **Authors**: Name is searched case-insensitively with partial match, then exact sanitized match
+3. **Loans**: Book title + username are matched against existing loans
+
+### API Endpoint
+
+```
+POST /api/photos/import-zip  (Librarian only)
+```
+
+Request: `multipart/form-data` with `file` parameter containing ZIP archive
+
+Response:
+```json
+{
+  "totalFiles": 10,
+  "successCount": 7,
+  "failureCount": 2,
+  "skippedCount": 1,
+  "items": [
+    {
+      "filename": "book-moby-dick.jpg",
+      "status": "SUCCESS",
+      "entityType": "book",
+      "entityName": "Moby Dick",
+      "entityId": 42,
+      "photoId": 123
+    },
+    {
+      "filename": "readme.txt",
+      "status": "SKIPPED",
+      "errorMessage": "Filename format not recognized..."
+    }
+  ]
+}
+```
+
+### Frontend Integration
+
+Access via **Data Management** page (`/data-management`):
+- Upload button in Photo Export/Import section
+- Results table shows status of each file
+- Success/failure messages with counts
+
 ## Requirements for Participating Entities
 
 For an entity type to support photos:
