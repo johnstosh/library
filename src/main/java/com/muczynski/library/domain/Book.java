@@ -37,6 +37,11 @@ public class Book {
 
     private String grokipediaUrl;
 
+    /**
+     * Space-separated list of URLs where free online text can be found.
+     * Using @Lob to allow longer content since multiple URLs may be stored.
+     */
+    @Lob
     private String freeTextUrl;
 
     private LocalDateTime dateAddedToLibrary;

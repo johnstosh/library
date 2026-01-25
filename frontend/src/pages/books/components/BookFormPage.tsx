@@ -564,13 +564,16 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-grokipedia-url"
         />
 
-        <Input
-          label="Free Text URL"
-          value={formData.freeTextUrl}
-          onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
-          placeholder="https://www.gutenberg.org/ebooks/123"
-          data-test="book-free-text-url"
-        />
+        <div>
+          <Input
+            label="Free Text URLs"
+            value={formData.freeTextUrl}
+            onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
+            placeholder="https://gutenberg.org/123 https://archive.org/456"
+            data-test="book-free-text-url"
+          />
+          <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-end gap-2">
