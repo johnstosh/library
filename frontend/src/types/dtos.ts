@@ -167,6 +167,15 @@ export interface BulkDeleteResultDto {
   failures: BulkDeleteFailureDto[]
 }
 
+// Genre Lookup DTOs
+export interface GenreLookupResultDto {
+  bookId: number
+  title?: string
+  success: boolean
+  suggestedGenres?: string[]
+  errorMessage?: string
+}
+
 // Settings DTOs
 export interface GlobalSettingsDto {
   googleClientSecret?: string

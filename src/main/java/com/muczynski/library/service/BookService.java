@@ -14,6 +14,7 @@ import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
+import com.muczynski.library.dto.GenreLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -958,6 +959,107 @@ public class BookService {
                 .map(bookMapper::toDto)
                 .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lookup genres for a single book using Grok AI.
+     * Skips books with blank descriptions.
+     *
+     * @param bookId The book ID to look up genres for
+     * @return GenreLookupResultDto with suggested genres
+     */
+    public GenreLookupResultDto lookupGenresForBook(Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null) {
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .success(false)
+                    .errorMessage("Book not found")
+                    .build();
+        }
+
+        // Skip books with blank descriptions
+        String description = book.getDetailedDescription();
+        if (description == null || description.isBlank()) {
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(false)
+                    .errorMessage("Book has no description - cannot suggest genres")
+                    .build();
+        }
+
+        try {
+            // Serialize book to JSON
+            BookDto bookDto = bookMapper.toDto(book);
+            String bookJson = objectMapper.writeValueAsString(bookDto);
+
+            // Serialize author to JSON if present
+            String authorJson = null;
+            if (book.getAuthor() != null) {
+                Map<String, Object> authorMap = new HashMap<>();
+                authorMap.put("name", book.getAuthor().getName());
+                authorMap.put("religiousAffiliation", book.getAuthor().getReligiousAffiliation());
+                authorMap.put("birthCountry", book.getAuthor().getBirthCountry());
+                authorMap.put("nationality", book.getAuthor().getNationality());
+                authorMap.put("briefBiography", book.getAuthor().getBriefBiography());
+                authorJson = objectMapper.writeValueAsString(authorMap);
+            }
+
+            // Call Grok AI for genre suggestions
+            String response = askGrok.suggestGenres(bookJson, authorJson);
+
+            // Parse the comma-separated response into a list
+            List<String> genres = parseGenreResponse(response);
+
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(true)
+                    .suggestedGenres(genres)
+                    .build();
+
+        } catch (Exception e) {
+            logger.error("Failed to lookup genres for book ID {}: {}", bookId, e.getMessage(), e);
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * Lookup genres for multiple books using Grok AI.
+     * Skips books with blank descriptions.
+     *
+     * @param bookIds List of book IDs to look up genres for
+     * @return List of GenreLookupResultDto with suggested genres
+     */
+    public List<GenreLookupResultDto> lookupGenresForBooks(List<Long> bookIds) {
+        List<GenreLookupResultDto> results = new ArrayList<>();
+        for (Long bookId : bookIds) {
+            results.add(lookupGenresForBook(bookId));
+        }
+        return results;
+    }
+
+    /**
+     * Parse the comma-separated genre response from Grok AI.
+     * Normalizes tags to lowercase with only letters, numbers, and dashes.
+     */
+    private List<String> parseGenreResponse(String response) {
+        if (response == null || response.isBlank()) {
+            return List.of();
+        }
+
+        return java.util.Arrays.stream(response.split(","))
+                .map(String::trim)
+                .map(tag -> tag.toLowerCase().replaceAll("[^a-z0-9-]", ""))
+                .filter(tag -> !tag.isEmpty())
+                .distinct()
                 .collect(Collectors.toList());
     }
 

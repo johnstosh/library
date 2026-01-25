@@ -10,18 +10,19 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
+import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
-import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
-import type { BookDto } from '@/types/dtos'
+import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash } from 'react-icons/pi'
+import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag } from 'react-icons/pi'
 
 interface BookFormPageProps {
   title: string
@@ -63,6 +64,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [showFreeTextResults, setShowFreeTextResults] = useState(false)
   const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false)
+  const [showGenreResults, setShowGenreResults] = useState(false)
+  const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
   const { data: authors, isLoading: authorsLoading } = useAuthors()
   const { data: libraries, isLoading: librariesLoading } = useBranches()
@@ -77,6 +80,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const bookFromImage = useBookFromImage()
   const lookupGrokipedia = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
+  const lookupGenres = useLookupGenres()
 
   useEffect(() => {
     if (book) {
@@ -308,6 +312,31 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  const handleGenreLookup = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupGenres.mutateAsync(book.id)
+      setGenreResults([result])
+      setShowGenreResults(true)
+      if (result.success && result.suggestedGenres && result.suggestedGenres.length > 0) {
+        // Merge suggested genres with existing tags
+        const existingTags = formData.tagsList
+          ? formData.tagsList.split(',').map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0)
+          : []
+        const newTags = [...new Set([...existingTags, ...result.suggestedGenres])]
+        setFormData({ ...formData, tagsList: newTags.join(', ') })
+        setHasUnsavedChanges(true)
+        setSuccessMessage(`Added ${result.suggestedGenres.length} suggested genre(s) to tags`)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup genres')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -393,7 +422,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isSuggesting = suggestLoc.isPending
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
-    lookupGrokipedia.isPending || lookupFreeText.isPending || isGeneratingLabel
+    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -463,6 +492,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-book-from-image"
             >
               Book from Image
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenreLookup}
+              isLoading={lookupGenres.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiTag />}
+              data-test="book-operation-lookup-genres"
+            >
+              Lookup Genres
             </Button>
             <Button
               type="button"
@@ -704,6 +745,12 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         isOpen={showFreeTextResults}
         onClose={() => setShowFreeTextResults(false)}
         results={freeTextResults}
+      />
+
+      <GenreLookupResultsModal
+        isOpen={showGenreResults}
+        onClose={() => setShowGenreResults(false)}
+        results={genreResults}
       />
 
       {/* Photos Section - only show when editing */}
