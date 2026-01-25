@@ -120,7 +120,7 @@ export function AuthorTable({
               </a>
             )}
             <Link
-              to={`/search?q=${encodeURIComponent(author.name)}`}
+              to={`/authors/${author.id}`}
               onClick={(e) => e.stopPropagation()}
               className="text-teal-600 hover:text-teal-900"
               data-test={`see-books-${author.id}`}
