@@ -1179,22 +1179,30 @@ public class PhotoExportService {
     /**
      * Stream photos to a ZIP output stream, loading one photo at a time.
      * This is memory-efficient for large photo collections.
+     * Note: Not transactional to avoid timeout issues with large exports.
+     * Each photo is loaded individually with its own database access.
      *
      * @param outputStream the output stream to write the ZIP to
      * @throws IOException if writing fails
      */
-    @Transactional(readOnly = true)
     public void streamPhotosToZip(java.io.OutputStream outputStream) throws java.io.IOException {
         logger.info("Starting streaming photo ZIP export...");
 
         // Get just the IDs first - very lightweight
         List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
 
+        // Also get count of all photos for comparison
+        long totalPhotos = photoRepository.countActivePhotos();
+        long photosWithImages = photoIds.size();
+        long photosPendingImport = totalPhotos - photosWithImages;
+
         if (photoIds.isEmpty()) {
-            throw new LibraryException("No photos available for export");
+            throw new LibraryException("No photos with local image data available for export. " +
+                    totalPhotos + " photos exist but need to be imported from Google Photos first.");
         }
 
-        logger.info("Streaming {} photos to ZIP", photoIds.size());
+        logger.info("Streaming {} photos to ZIP (total: {}, pending import: {})",
+                photosWithImages, totalPhotos, photosPendingImport);
 
         // Track filename counts for handling multiple photos of same entity
         Map<String, Integer> filenameCount = new HashMap<>();
@@ -1302,13 +1310,16 @@ public class PhotoExportService {
 
     /**
      * Sanitize a name for use in filenames.
-     * Lowercase, replace spaces and special chars with dashes.
-     * Matches PhotoZipImportService.sanitizeName() for round-trip compatibility.
+     * Preserves the complete name but removes/replaces characters that are
+     * invalid in filenames across different operating systems.
+     * Invalid chars: / \ : * ? " < > |
      */
     private String sanitizeName(String name) {
         if (name == null) return "unknown";
-        return name.toLowerCase()
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("^-+|-+$", ""); // Remove leading/trailing dashes
+        return name
+                .replaceAll("[/\\\\:*?\"<>|]+", "-")  // Replace invalid filename chars with dash
+                .replaceAll("\\s+", " ")              // Normalize whitespace
+                .trim()
+                .replaceAll("^-+|-+$", "");           // Remove leading/trailing dashes
     }
 }

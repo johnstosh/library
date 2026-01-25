@@ -242,11 +242,12 @@ class PhotoZipExportImportTest {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 String filename = entry.getName();
-                if (filename.equals("book-the-adventures-of-tom-sawyer.jpg")) {
+                // New format preserves complete book name with spaces
+                if (filename.equals("book-The Adventures of Tom Sawyer.jpg")) {
                     hasBaseName = true;
-                } else if (filename.equals("book-the-adventures-of-tom-sawyer-2.jpg")) {
+                } else if (filename.equals("book-The Adventures of Tom Sawyer-2.jpg")) {
                     hasSuffix2 = true;
-                } else if (filename.equals("book-the-adventures-of-tom-sawyer-3.jpg")) {
+                } else if (filename.equals("book-The Adventures of Tom Sawyer-3.jpg")) {
                     hasSuffix3 = true;
                 }
             }
