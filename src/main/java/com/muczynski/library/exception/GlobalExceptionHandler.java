@@ -162,7 +162,12 @@ public class GlobalExceptionHandler {
             Exception ex, WebRequest request) {
         logger.error("Unexpected exception on path {}: {}", request.getDescription(false), ex.getMessage(), ex);
 
-        ErrorResponse response = new ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred");
+        // Include the actual error message to help with debugging
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            message = "An unexpected error occurred: " + ex.getClass().getSimpleName();
+        }
+        ErrorResponse response = new ErrorResponse("INTERNAL_ERROR", message);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
