@@ -144,6 +144,26 @@ export function BookTable({
       ),
       width: '10%',
     },
+    {
+      key: 'tags',
+      header: 'Tags',
+      accessor: (book) => (
+        <div className="flex flex-wrap gap-1">
+          {book.tagsList?.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
+            >
+              {tag}
+            </span>
+          ))}
+          {book.tagsList && book.tagsList.length > 3 && (
+            <span className="text-xs text-gray-500">+{book.tagsList.length - 3}</span>
+          )}
+        </div>
+      ),
+      width: '12%',
+    },
   ]
 
   return (

@@ -62,6 +62,11 @@ public class BookMapper {
 
         bookDto.setLoanCount(loanRepository.countByBookIdAndReturnDateIsNull(book.getId()));
 
+        // Map tags list
+        if (book.getTagsList() != null) {
+            bookDto.setTagsList(new java.util.ArrayList<>(book.getTagsList()));
+        }
+
         return bookDto;
     }
 
@@ -96,6 +101,16 @@ public class BookMapper {
             Library library = new Library();
             library.setId(bookDto.getLibraryId());
             book.setLibrary(library);
+        }
+
+        // Map tags list - normalize to lowercase with only allowed characters
+        if (bookDto.getTagsList() != null) {
+            book.setTagsList(bookDto.getTagsList().stream()
+                    .filter(tag -> tag != null && !tag.isBlank())
+                    .map(tag -> tag.toLowerCase().replaceAll("[^a-z0-9-]", ""))
+                    .filter(tag -> !tag.isEmpty())
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList()));
         }
 
         return book;

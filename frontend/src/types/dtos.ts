@@ -79,6 +79,7 @@ export interface BookDto {
   firstPhotoChecksum?: string
   loanCount?: number
   lastModified: string
+  tagsList?: string[]
 }
 
 export interface BookSummaryDto {

@@ -55,6 +55,15 @@ public class Book {
 
     private String statusReason;
 
+    /**
+     * List of tags for categorizing the book (e.g., fiction, fantasy, theology).
+     * Tags should be lowercase with only letters, numbers, and dashes.
+     */
+    @ElementCollection
+    @CollectionTable(name = "book_tags", joinColumns = @JoinColumn(name = "book_id"))
+    @Column(name = "tag")
+    private java.util.List<String> tagsList = new java.util.ArrayList<>();
+
     @ManyToOne
     private Author author;
 

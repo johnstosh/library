@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class BookDto {
@@ -39,4 +40,10 @@ public class BookDto {
     private Long loanCount;
     private String locNumber;
     private String statusReason;
+
+    /**
+     * List of tags for categorizing the book.
+     * Tags should be lowercase with only letters, numbers, and dashes.
+     */
+    private List<String> tagsList;
 }

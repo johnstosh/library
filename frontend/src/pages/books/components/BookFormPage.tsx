@@ -50,6 +50,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     locNumber: '',
     authorId: '',
     libraryId: '',
+    tagsList: '',  // Comma-separated tags for editing
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -93,6 +94,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         libraryId: book.libraryId?.toString() || '',
+        tagsList: book.tagsList?.join(', ') || '',
       })
     } else {
       setFormData({
@@ -109,6 +111,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: '',
         authorId: '',
         libraryId: '',
+        tagsList: '',
       })
     }
   }, [book])
@@ -296,6 +299,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
         libraryId: updated.libraryId?.toString() || formData.libraryId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -315,6 +319,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
 
     try {
+      // Parse tags from comma-separated string to array, normalize to lowercase
+      const tagsList = formData.tagsList
+        ? formData.tagsList
+            .split(',')
+            .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''))
+            .filter((tag) => tag.length > 0)
+        : undefined
+
       const bookData = {
         title: formData.title,
         publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
@@ -329,6 +341,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.libraryId),
+        tagsList,
       }
 
       if (isEditing) {
@@ -573,6 +586,17 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             data-test="book-free-text-url"
           />
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
+        </div>
+
+        <div>
+          <Input
+            label="Tags"
+            value={formData.tagsList}
+            onChange={(e) => handleFieldChange('tagsList', e.target.value)}
+            placeholder="fiction, fantasy, childrens"
+            data-test="book-tags"
+          />
+          <p className="text-xs text-gray-500 mt-1">Comma-separated tags (e.g., fiction, theology, childrens)</p>
         </div>
 
         <div className="space-y-4">
