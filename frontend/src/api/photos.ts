@@ -251,26 +251,49 @@ export function useCropPhoto() {
 }
 
 // Import photos from ZIP file
+// Uses streaming endpoint for large files (> 100MB) to avoid upload size limits
 export function useImportPhotosFromZip() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (file: File): Promise<PhotoZipImportResultDto> => {
-      const formData = new FormData()
-      formData.append('file', file)
+      const STREAMING_THRESHOLD = 100 * 1024 * 1024 // 100MB
 
-      const response = await fetch('/api/photos/import-zip', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      })
+      if (file.size > STREAMING_THRESHOLD) {
+        // Use streaming endpoint for large files
+        const response = await fetch('/api/photos/import-zip-stream', {
+          method: 'POST',
+          body: file, // Send raw file bytes, not FormData
+          headers: {
+            'Content-Type': 'application/zip',
+          },
+          credentials: 'include',
+        })
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
-        throw new Error(error.message || error.error || 'Failed to import photos')
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
+          throw new Error(error.message || error.error || 'Failed to import photos')
+        }
+
+        return response.json()
+      } else {
+        // Use standard multipart endpoint for smaller files
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('/api/photos/import-zip', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
+          throw new Error(error.message || error.error || 'Failed to import photos')
+        }
+
+        return response.json()
       }
-
-      return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })

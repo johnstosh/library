@@ -69,12 +69,24 @@ public class PhotoZipImportService {
      * @return result containing import statistics and details
      */
     public PhotoZipImportResultDto importFromZip(MultipartFile zipFile) throws IOException {
+        return importFromZipStream(zipFile.getInputStream());
+    }
+
+    /**
+     * Import photos from a ZIP input stream.
+     * This method processes the ZIP as it streams in, without buffering the entire file.
+     * Supports files of any size.
+     *
+     * @param inputStream the ZIP input stream
+     * @return result containing import statistics and details
+     */
+    public PhotoZipImportResultDto importFromZipStream(InputStream inputStream) throws IOException {
         List<PhotoZipImportItemDto> items = new ArrayList<>();
         int successCount = 0;
         int failureCount = 0;
         int skippedCount = 0;
 
-        try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
+        try (ZipInputStream zis = new ZipInputStream(inputStream)) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.isDirectory()) {

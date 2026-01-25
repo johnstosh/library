@@ -9,6 +9,7 @@ import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.PhotoService;
 import com.muczynski.library.service.PhotoZipImportService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -165,7 +166,7 @@ public class PhotoController {
     }
 
     /**
-     * Import photos from a ZIP file.
+     * Import photos from a ZIP file (small files, < 500MB).
      * Filename format determines which entity the photo is associated with:
      * - book-{title}[-{n}].{ext} - Associates photo with a book by title
      * - author-{name}[-{n}].{ext} - Associates photo with an author by name
@@ -197,6 +198,34 @@ public class PhotoController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to import photos from ZIP: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file using streaming (for large files).
+     * This endpoint processes the ZIP as it streams in, without buffering the entire file.
+     * Supports files of any size (tested with 6GB+).
+     *
+     * Usage: POST /api/photos/import-zip-stream with raw ZIP bytes in request body
+     * Content-Type: application/zip or application/octet-stream
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping(value = "/import-zip-stream", consumes = {"application/zip", "application/octet-stream"})
+    public ResponseEntity<?> importFromZipStream(HttpServletRequest request) {
+        try {
+            logger.info("Streaming ZIP import request received");
+
+            PhotoZipImportResultDto result = photoZipImportService.importFromZipStream(request.getInputStream());
+
+            logger.info("Streaming ZIP import completed: {} total, {} success, {} failed, {} skipped",
+                    result.getTotalFiles(), result.getSuccessCount(),
+                    result.getFailureCount(), result.getSkippedCount());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import photos from ZIP stream: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", "Failed to import photos: " + e.getMessage()));
         }
