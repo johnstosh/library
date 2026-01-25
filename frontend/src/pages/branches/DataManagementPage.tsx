@@ -133,7 +133,16 @@ export function DataManagementPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `library-photos-${new Date().toISOString().split('T')[0]}.zip`
+      // Generate filename: 2026-01-25-library-photos-<branchname>.zip
+      let branchName = 'branch'
+      if (libraries.length > 0) {
+        branchName = libraries[0].branchName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
+      const date = new Date().toISOString().split('T')[0]
+      a.download = `${date}-library-photos-${branchName}.zip`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

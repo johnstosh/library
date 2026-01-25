@@ -10,6 +10,8 @@ import com.muczynski.library.dto.PhotoExportResponseDto;
 import com.muczynski.library.dto.PhotoExportStatsDto;
 import com.muczynski.library.dto.PhotoImportResultDto;
 import com.muczynski.library.dto.PhotoVerifyResultDto;
+import com.muczynski.library.domain.Library;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.service.PhotoExportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,9 @@ public class PhotoExportController {
 
     @Autowired
     private PhotoExportService photoExportService;
+
+    @Autowired
+    private BranchRepository branchRepository;
 
     /**
      * Get export statistics
@@ -79,8 +84,14 @@ public class PhotoExportController {
 
             // Set response headers for ZIP download
             response.setContentType("application/zip");
-            response.setHeader("Content-Disposition",
-                    "attachment; filename=\"library-photos-" + java.time.LocalDate.now() + ".zip\"");
+            // Generate filename: 2026-01-25-library-photos-<branchname>.zip
+            String branchName = branchRepository.findAll().stream()
+                    .findFirst()
+                    .map(Library::getBranchName)
+                    .map(name -> name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", ""))
+                    .orElse("branch");
+            String filename = java.time.LocalDate.now() + "-library-photos-" + branchName + ".zip";
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
             // Note: No Content-Length because we're streaming
 
             // Stream directly to response - never buffer entire ZIP in memory
