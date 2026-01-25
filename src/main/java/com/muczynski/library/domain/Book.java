@@ -39,9 +39,10 @@ public class Book {
 
     /**
      * Space-separated list of URLs where free online text can be found.
-     * Using TEXT column type to allow longer content since multiple URLs may be stored.
+     * Using @Lob to allow longer content since multiple URLs may be stored.
+     * This works consistently across H2 (CLOB) and PostgreSQL (text).
      */
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String freeTextUrl;
 
     private LocalDateTime dateAddedToLibrary;
