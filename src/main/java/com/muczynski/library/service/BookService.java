@@ -222,6 +222,17 @@ public class BookService {
         if (bookDto.getLibraryId() != null) {
             book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
         }
+        // Update tags list - normalize to lowercase with only allowed characters
+        if (bookDto.getTagsList() != null) {
+            book.setTagsList(bookDto.getTagsList().stream()
+                    .filter(tag -> tag != null && !tag.isBlank())
+                    .map(tag -> tag.toLowerCase().replaceAll("[^a-z0-9-]", ""))
+                    .filter(tag -> !tag.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList()));
+        } else {
+            book.setTagsList(new ArrayList<>());
+        }
         // Update lastModified to current time
         book.setLastModified(LocalDateTime.now());
         Book savedBook = bookRepository.save(book);
