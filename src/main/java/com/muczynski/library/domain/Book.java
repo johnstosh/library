@@ -27,22 +27,26 @@ public class Book {
     private String publisher;
 
     @Lob
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String plotSummary;
 
     @Lob
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String relatedWorks;
 
     @Lob
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String detailedDescription;
 
     private String grokipediaUrl;
 
     /**
      * Space-separated list of URLs where free online text can be found.
-     * Using @Lob to allow longer content since multiple URLs may be stored.
-     * This works consistently across H2 (CLOB) and PostgreSQL (text).
+     * Using @Lob with explicit LONGVARCHAR type for PostgreSQL compatibility.
+     * This avoids Hibernate 6's default OID handling for LOBs in PostgreSQL.
      */
     @Lob
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String freeTextUrl;
 
     private LocalDateTime dateAddedToLibrary;
