@@ -348,11 +348,46 @@ The photo status displayed in the list is derived from actual data to ensure it 
   - Verifies null/empty string handling
   - Verifies userIdentifier ordering in JSON
 
+## Photo ZIP Export/Import
+
+### Endpoints
+- `GET /api/photo-export` - Download all photos as ZIP file
+- `POST /api/photos/import-zip` - Import photos from ZIP file
+- **Authentication**: Librarian only
+
+### ZIP Export Behavior
+- Only exports photos that have local image data (`imageChecksum IS NOT NULL`)
+- Photos that only have `permanentId` (uploaded to Google Photos) but no local image need to be imported first
+- To export all photos: first use "Import All" to download from Google Photos, then export ZIP
+- Logs show how many photos have local data vs. how many need import
+
+### ZIP Filename Format
+Uses the complete entity name with invalid filename characters replaced:
+- `book-{Book Title}[-{n}].{ext}` - Book photos with full title preserved
+- `author-{Author Name}[-{n}].{ext}` - Author photos with full name preserved
+- `loan-{Book Title}-{Username}[-{n}].{ext}` - Loan photos
+
+Invalid filename characters (`/\:*?"<>|`) are replaced with dashes.
+
+### ZIP Import with Merge/Deduplication
+The photo ZIP import uses merge behavior based on checksum and photo order:
+- **Match by entity**: Find book/author by name (case-insensitive partial match)
+- **Match by order**: The `-{n}` suffix indicates photo position (1-based in filename, 0-based internally)
+- **Deduplication by checksum**: SHA-256 hash of image bytes
+
+**Merge logic for each photo:**
+1. If photo exists at same order with **same checksum** → Skip (duplicate)
+2. If photo exists at same order with **different checksum** → Replace existing
+3. If no photo exists at that order → Add new photo
+
+This allows re-importing a ZIP without creating duplicates, and updating changed photos.
+
 ## Related Files
 - `ImportService.java` - Core import/export logic
 - `ImportController.java` - REST API
 - `ImportRequestDto.java` - JSON structure
 - `PhotoExportService.java` - Photo export functionality
+- `PhotoZipImportService.java` - Photo ZIP import with merge support
 - `BooksFromFeedController.java` - Google Photos feed import
 - `RandomBook.java`, `RandomAuthor.java`, `RandomUser.java`, `RandomPhoto.java` - Test data generators
 - `ImportExportRoundTripTest.java` - Comprehensive integration test
