@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
-import { formatBookStatus, parseISODateSafe } from '@/utils/formatters'
+import { formatBookStatus, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -210,18 +210,23 @@ export function BookViewPage() {
                   </a>
                 </div>
               )}
-              {book.freeTextUrl && (
+              {book.freeTextUrl && parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Free Online Text</p>
-                  <a
-                    href={book.freeTextUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
-                    data-test="book-free-text-link"
-                  >
-                    Read Online
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
+                      <a
+                        key={index}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                        data-test={`book-free-text-link-${index}`}
+                      >
+                        {extractDomain(url)}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
               <div>

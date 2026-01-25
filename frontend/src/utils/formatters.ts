@@ -145,3 +145,27 @@ export function isValidUrl(url: string | undefined | null): boolean {
     return false
   }
 }
+
+/**
+ * Extract domain name from a URL for use as anchor text
+ * Examples:
+ *   "https://www.gutenberg.org/ebooks/123" -> "gutenberg.org"
+ *   "https://archive.org/details/book" -> "archive.org"
+ */
+export function extractDomain(url: string): string {
+  try {
+    const parsed = new URL(url)
+    // Remove 'www.' prefix if present
+    return parsed.hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+/**
+ * Parse space-separated URLs into an array of valid URLs
+ */
+export function parseSpaceSeparatedUrls(urls: string | undefined | null): string[] {
+  if (!urls) return []
+  return urls.split(/\s+/).filter((url) => isValidUrl(url))
+}

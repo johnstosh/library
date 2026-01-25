@@ -68,22 +68,22 @@ public class FreeTextLookupService {
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
 
-        // Check global cache first
-        String cachedUrl = FreeTextLookupCache.lookupFirstUrl(authorName, book.getTitle());
-        if (cachedUrl != null) {
-            // Update the book with the cached URL
-            book.setFreeTextUrl(cachedUrl);
+        // Check global cache first (may return multiple space-separated URLs)
+        String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
+        if (cachedUrls != null) {
+            // Update the book with all cached URLs (space-separated)
+            book.setFreeTextUrl(cachedUrls);
             book.setLastModified(LocalDateTime.now());
             bookRepository.save(book);
 
-            log.info("Found free text for book {} in cache: {}", bookId, cachedUrl);
+            log.info("Found free text for book {} in cache: {}", bookId, cachedUrls);
 
             return FreeTextBulkLookupResultDto.builder()
                     .bookId(bookId)
                     .bookTitle(book.getTitle())
                     .authorName(authorName)
                     .success(true)
-                    .freeTextUrl(cachedUrl)
+                    .freeTextUrl(cachedUrls)
                     .providerName("Cache")
                     .providersSearched(List.of("Cache"))
                     .build();
