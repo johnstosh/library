@@ -75,11 +75,6 @@ export function GenreLookupResultsModal({ isOpen, onClose, results }: GenreLooku
           ))}
         </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <p className="text-gray-700 text-sm">
-            <strong>Note:</strong> These are suggestions only. To apply genres to a book, edit the book and add the suggested tags.
-          </p>
-        </div>
       </div>
     </Modal>
   )
