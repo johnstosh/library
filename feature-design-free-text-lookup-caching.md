@@ -86,6 +86,58 @@ The `lookup(author, title)` method performs matching in this order:
 
 This allows flexible matching while prioritizing author-specific results.
 
+## Not Found Caching
+
+The cache distinguishes between three states:
+
+| Return Value | Meaning |
+|--------------|---------|
+| `null` | Book was never searched - will query providers |
+| `""` (empty string) | Book was searched but no free text found - skip providers |
+| Non-empty string | URLs found - use cached URLs |
+
+### Why Cache "Not Found"?
+
+Searching external providers is expensive (10-20 seconds per book). For books that have been searched and have no available free text, we cache an empty string to avoid redundant provider queries.
+
+### Adding "Not Found" Entries
+
+Use the `addNotFound()` method in the static initializer:
+
+```java
+// Book was searched but has no free text available
+addNotFound("Author Name", "Book Title");
+```
+
+This stores an empty string in the cache, which `FreeTextLookupService` interprets as "searched but not found".
+
+### Service Integration
+
+The `FreeTextLookupService` handles the three states:
+
+```java
+String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
+if (cachedUrls != null) {
+    if (!cachedUrls.isBlank()) {
+        // URLs found - use them
+        book.setFreeTextUrl(cachedUrls);
+    } else {
+        // Cached as "not found" - don't search again
+        return "Previously searched - not found (cached)";
+    }
+}
+// null = never searched, proceed to query providers
+```
+
+## Data Population
+
+The cache was populated from the results of running free text lookup on the entire library collection (~300 books). The lookup results were recorded in `book-lookup-reference-backup/book-lookup-progress.log`.
+
+- **Books with hits**: Added using `add()` with URLs
+- **Books with 0 hits**: Added using `addNotFound()` with empty string
+
+This means a fresh lookup on any book in `branch-archive.json` will hit the cache, either returning URLs or the "not found" status.
+
 ## Usage
 
 The cache is automatically consulted by `FreeTextLookupService` before querying external providers:

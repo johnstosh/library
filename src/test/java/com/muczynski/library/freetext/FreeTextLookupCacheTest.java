@@ -167,4 +167,47 @@ class FreeTextLookupCacheTest {
         String url = FreeTextLookupCache.lookupFirstUrl("Brother Lawrence", "The Practice of the Presence of God");
         assertThat(url).isNotNull();
     }
+
+    /**
+     * Test that books marked as "not found" return an empty string, not null.
+     * This allows distinguishing between "never searched" (null) and "searched but not found" (empty string).
+     */
+    @Test
+    void testNotFoundCaching() {
+        // "My Treasured Catholic Prayers" was searched but has no free text - should return empty string
+        String result = FreeTextLookupCache.lookup("Lawrence G. Lovasik", "My Treasured Catholic Prayers");
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void testNotFoundCachingVsNeverSearched() {
+        // Book that was searched but not found - returns empty string
+        String notFound = FreeTextLookupCache.lookup("John Anthony Hardon", "The Catholic Catechism");
+        assertThat(notFound).isNotNull().isEmpty();
+
+        // Book that was never searched - returns null
+        String neverSearched = FreeTextLookupCache.lookup("Unknown Author", "This Book Was Never Searched");
+        assertThat(neverSearched).isNull();
+    }
+
+    @Test
+    void testNotFoundCachingMultipleBooks() {
+        // Verify several books from the 0-hits list return empty strings
+        assertThat(FreeTextLookupCache.lookup("Marie McSwigan", "Snow Treasure"))
+                .isNotNull().isEmpty();
+
+        assertThat(FreeTextLookupCache.lookup("Catholic Church", "The Handbook of Indulgences: Norms and Grants"))
+                .isNotNull(); // This one might have a URL depending on cache
+
+        assertThat(FreeTextLookupCache.lookup("Gabriel Denis", "The Reign of Jesus Through Mary"))
+                .isNotNull().isEmpty();
+    }
+
+    @Test
+    void testCacheContainsBooksFromArchive() {
+        // These books should be in the cache (either with URLs or as not-found)
+        // based on the branch-archive.json lookup
+        assertThat(FreeTextLookupCache.getBookCount()).isGreaterThan(250);
+    }
 }

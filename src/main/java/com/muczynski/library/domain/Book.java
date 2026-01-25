@@ -39,9 +39,9 @@ public class Book {
 
     /**
      * Space-separated list of URLs where free online text can be found.
-     * Using @Lob to allow longer content since multiple URLs may be stored.
+     * Using TEXT column type to allow longer content since multiple URLs may be stored.
      */
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String freeTextUrl;
 
     private LocalDateTime dateAddedToLibrary;
