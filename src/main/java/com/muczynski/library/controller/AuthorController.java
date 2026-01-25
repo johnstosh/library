@@ -98,8 +98,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithoutDescription() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithoutDescription();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithoutDescription();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors without description: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -110,8 +110,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithZeroBooks() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithZeroBooks();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithZeroBooks();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors with zero books: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -122,8 +122,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsFromMostRecentDay() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsFromMostRecentDay();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesFromMostRecentDay();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors from most recent day: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -134,8 +134,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithoutGrokipedia() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithoutGrokipedia();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithoutGrokipedia();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors without grokipedia: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

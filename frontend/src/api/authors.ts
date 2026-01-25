@@ -9,16 +9,27 @@ import type { AuthorDto, AuthorSummaryDto, BookDto } from '@/types/dtos'
 export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
   const queryClient = useQueryClient()
 
-  // For filter endpoints, use direct fetch (not cacheable in the same way)
-  const filterEndpoint = filter && filter !== 'all' ? getFilterEndpoint(filter) : null
+  // Determine the filter endpoint - all filter endpoints now return AuthorSummaryDto
+  // For 'all' filter, we also use the summaries endpoint to enable caching
+  const getFilterEndpoint = (f: typeof filter) => {
+    switch (f) {
+      case 'without-description': return '/authors/without-description'
+      case 'zero-books': return '/authors/zero-books'
+      case 'without-grokipedia': return '/authors/without-grokipedia'
+      case 'most-recent': return '/authors/most-recent-day'
+      case 'all':
+      default: return '/authors/summaries'
+    }
+  }
 
-  // Step 1: Fetch summaries (id + lastModified) for all authors
+  // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
+  // For all filters including 'all', we use the summaries endpoint to enable caching
+  const filterEndpoint = getFilterEndpoint(filter)
   const { data: summaries, isLoading: summariesLoading } = useQuery({
-    queryKey: queryKeys.authors.summaries(),
-    queryFn: () => api.get<AuthorSummaryDto[]>('/authors/summaries'),
-    staleTime: 0, // Always check for fresh data
-    refetchOnMount: true,
-    enabled: !filterEndpoint, // Only use caching for 'all' filter
+    queryKey: filter ? queryKeys.authors.filterSummaries(filter) : queryKeys.authors.summaries(),
+    queryFn: () => api.get<AuthorSummaryDto[]>(filterEndpoint),
+    staleTime: 0, // Always check for fresh data when filter changes
+    refetchOnMount: true, // Always refetch when component mounts or filter changes
   })
 
   // Step 2: Determine which authors need fetching based on cache
@@ -34,15 +45,17 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   }, [summaries, queryClient])
 
   // Step 3: Batch fetch changed authors using /authors/by-ids
+  // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedAuthors, isLoading: fetchingAuthors } = useQuery({
-    queryKey: queryKeys.authors.byIds(authorsToFetch),
+    queryKey: queryKeys.authors.byIds(authorsToFetch, filter),
     queryFn: async () => {
       if (authorsToFetch.length > 0) {
+        // Only fetch authors that changed
         return api.post<AuthorDto[]>('/authors/by-ids', authorsToFetch)
       }
       return []
     },
-    enabled: summaries !== undefined && authorsToFetch.length > 0 && !filterEndpoint,
+    enabled: summaries !== undefined && authorsToFetch.length > 0,
   })
 
   // Populate individual author caches when authors are fetched
@@ -52,7 +65,10 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
     })
   }, [fetchedAuthors, queryClient])
 
-  // Step 4: Get all authors for display (cached approach)
+  // Step 4: Get all authors for display
+  // IMPORTANT: We must use fetchedAuthors directly here, not rely on the cache.
+  // The cache is populated by a useEffect which runs AFTER this useMemo,
+  // so reading from cache would return stale/missing data on first render.
   const allAuthors = useMemo(() => {
     if (!summaries) return []
 
@@ -89,40 +105,9 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
     })
   }, [summaries, queryClient, fetchedAuthors, authorsToFetch])
 
-  // For filter endpoints, use direct query
-  const directQuery = useQuery({
-    queryKey: queryKeys.authors.list(filter),
-    queryFn: () => api.get<AuthorDto[]>(filterEndpoint!),
-    enabled: !!filterEndpoint,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  })
-
-  // Return appropriate data based on filter
-  if (filterEndpoint) {
-    return {
-      data: directQuery.data,
-      isLoading: directQuery.isLoading,
-    }
-  }
-
   return {
     data: allAuthors,
     isLoading: summariesLoading || fetchingAuthors,
-  }
-}
-
-function getFilterEndpoint(filter: string): string | null {
-  switch (filter) {
-    case 'without-description':
-      return '/authors/without-description'
-    case 'zero-books':
-      return '/authors/zero-books'
-    case 'without-grokipedia':
-      return '/authors/without-grokipedia'
-    case 'most-recent':
-      return '/authors/most-recent-day'
-    default:
-      return null
   }
 }
 
