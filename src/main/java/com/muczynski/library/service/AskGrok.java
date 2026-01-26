@@ -317,10 +317,10 @@ public class AskGrok {
                 "Based on the following book and author information from a library card catalog, " +
                 "suggest genre/category tags for this book. " +
                 "Use ONLY these predefined tags where applicable: " +
-                "fiction, non-fiction, slice-of-life, hagiography, saint, fantasy, family, childrens, adult, " +
-                "philosophy, theology, spiritual-life, discernment, talking-animals, biography, history, " +
-                "devotional, prayer, classic, poetry, science, nature, cooking, crafts, art, music, drama, " +
-                "mystery, adventure, romance, humor, reference, educational. " +
+                "fiction, slice-of-life, hagiography, saint, fantasy, family, childrens, adult, " +
+                "philosophy, theology, discernment, talking-animals, biography, history, " +
+                "prayer, classic, poetry, science, music, " +
+                "mystery, adventure, romance, humor. " +
                 "Note: science-fiction should be categorized under 'fantasy'. " +
                 "Return ONLY a comma-separated list of applicable tags, nothing else. " +
                 "For example: fiction, fantasy, childrens\n\n" +
