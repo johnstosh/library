@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
-import { useDeleteBooks, useBulkBookFromImage, useLookupGenresBulk } from '@/api/books'
+import { useDeleteBooks, useBulkBookFromImage, useLookupGenres } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
@@ -42,6 +42,8 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [freeTextProgress, setFreeTextProgress] = useState(0)
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
+  const [genreProgress, setGenreProgress] = useState(0)
+  const [isGenreLookupRunning, setIsGenreLookupRunning] = useState(false)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
@@ -50,7 +52,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     setFreeTextProgress(completed)
   })
   const bulkBookFromImage = useBulkBookFromImage()
-  const lookupGenres = useLookupGenresBulk()
+  const lookupGenres = useLookupGenres()
 
   const handleBulkDelete = async () => {
     try {
@@ -134,12 +136,26 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   }
 
   const handleGenreLookup = async () => {
+    const ids = Array.from(selectedIds)
+    setGenreProgress(0)
+    setGenreResults([])
+    setShowGenreResults(true)
+    setIsGenreLookupRunning(true)
     try {
-      const results = await lookupGenres.mutateAsync(Array.from(selectedIds))
-      setGenreResults(results)
-      setShowGenreResults(true)
-    } catch (error) {
-      console.error('Failed to lookup genres:', error)
+      for (let i = 0; i < ids.length; i++) {
+        try {
+          const result = await lookupGenres.mutateAsync(ids[i])
+          setGenreResults((prev) => [...prev, result])
+        } catch (error) {
+          setGenreResults((prev) => [
+            ...prev,
+            { bookId: ids[i], success: false, errorMessage: String(error) } as GenreLookupResultDto,
+          ])
+        }
+        setGenreProgress(i + 1)
+      }
+    } finally {
+      setIsGenreLookupRunning(false)
     }
   }
 
@@ -224,12 +240,14 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               variant="outline"
               size="sm"
               onClick={handleGenreLookup}
-              isLoading={lookupGenres.isPending}
-              disabled={lookupGenres.isPending}
+              isLoading={isGenreLookupRunning}
+              disabled={isGenreLookupRunning}
               leftIcon={<PiTag />}
               data-test="bulk-lookup-genres"
             >
-              Lookup Genres
+              {isGenreLookupRunning
+                ? `Genres... (${genreProgress}/${selectedIds.size})`
+                : 'Lookup Genres'}
             </Button>
             <Button
               variant="danger"
