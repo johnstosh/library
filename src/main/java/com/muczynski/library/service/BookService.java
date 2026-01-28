@@ -1024,6 +1024,16 @@ public class BookService {
             // Parse the comma-separated response into a list
             List<String> genres = parseGenreResponse(response);
 
+            // Merge suggested genres into book's existing tags and save
+            if (!genres.isEmpty()) {
+                List<String> existingTags = book.getTagsList() != null ? book.getTagsList() : new ArrayList<>();
+                java.util.Set<String> mergedTags = new java.util.LinkedHashSet<>(existingTags);
+                mergedTags.addAll(genres);
+                book.setTagsList(new ArrayList<>(mergedTags));
+                bookRepository.save(book);
+                logger.info("Saved {} genre tags to book '{}' (ID: {})", genres.size(), book.getTitle(), bookId);
+            }
+
             return GenreLookupResultDto.builder()
                     .bookId(bookId)
                     .title(book.getTitle())

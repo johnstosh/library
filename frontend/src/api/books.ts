@@ -257,14 +257,24 @@ export function useBulkBookFromImage() {
 
 // Hook to lookup genres for a single book using Grok AI
 export function useLookupGenres() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
   })
 }
 
 // Hook to lookup genres for multiple books using Grok AI
 export function useLookupGenresBulk() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (ids: number[]) => api.post<GenreLookupResultDto[]>('/books/lookup-genres-bulk', ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
   })
 }
