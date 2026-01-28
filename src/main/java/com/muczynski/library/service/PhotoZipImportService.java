@@ -246,18 +246,9 @@ public class PhotoZipImportService {
      */
     private PhotoZipImportItemDto importBookPhoto(String filename, String sanitizedTitle,
                                                    byte[] imageBytes, String contentType, int photoOrder) {
-        // Try to find book by title (case-insensitive, partial match)
+        // Try to find book by title using multiple strategies
         String searchTitle = unsanitizeName(sanitizedTitle);
-        List<Book> books = bookRepository.findAll().stream()
-                .filter(b -> b.getTitle().toLowerCase().contains(searchTitle.toLowerCase()))
-                .toList();
-
-        if (books.isEmpty()) {
-            // Try exact match with sanitized comparison
-            books = bookRepository.findAll().stream()
-                    .filter(b -> sanitizeName(b.getTitle()).equalsIgnoreCase(sanitizedTitle))
-                    .toList();
-        }
+        List<Book> books = findBooksByTitle(searchTitle, sanitizedTitle);
 
         if (books.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -338,15 +329,7 @@ public class PhotoZipImportService {
     private PhotoZipImportItemDto importAuthorPhoto(String filename, String sanitizedName,
                                                      byte[] imageBytes, String contentType, int photoOrder) {
         String searchName = unsanitizeName(sanitizedName);
-        List<Author> authors = authorRepository.findAll().stream()
-                .filter(a -> a.getName().toLowerCase().contains(searchName.toLowerCase()))
-                .toList();
-
-        if (authors.isEmpty()) {
-            authors = authorRepository.findAll().stream()
-                    .filter(a -> sanitizeName(a.getName()).equalsIgnoreCase(sanitizedName))
-                    .toList();
-        }
+        List<Author> authors = findAuthorsByName(searchName, sanitizedName);
 
         if (authors.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -482,12 +465,172 @@ public class PhotoZipImportService {
     }
 
     /**
+     * Find books by title using multiple matching strategies.
+     * Within each strategy, exact matches are preferred over substring matches.
+     * Tries: 1) substring match, 2) word-based match, 3) sanitized comparison
+     */
+    private List<Book> findBooksByTitle(String searchTitle, String sanitizedTitle) {
+        String searchLower = searchTitle.toLowerCase();
+
+        // Strategy 1: Direct substring match (works for simple cases)
+        List<Book> books = bookRepository.findAll().stream()
+                .filter(b -> b.getTitle().toLowerCase().contains(searchLower))
+                .toList();
+
+        if (!books.isEmpty()) {
+            return preferExactMatch(books, searchLower);
+        }
+
+        // Strategy 2: Word-based match (handles cases where punctuation differs)
+        // Extract significant words (3+ chars) and require most to match
+        String[] searchWords = searchLower.split("\\s+");
+        List<String> significantWords = java.util.Arrays.stream(searchWords)
+                .filter(w -> w.length() >= 3)
+                .limit(5) // Use first 5 significant words
+                .toList();
+
+        if (!significantWords.isEmpty()) {
+            books = bookRepository.findAll().stream()
+                    .filter(b -> {
+                        String titleLower = b.getTitle().toLowerCase();
+                        long matchCount = significantWords.stream()
+                                .filter(titleLower::contains)
+                                .count();
+                        return matchCount >= Math.ceil(significantWords.size() * 0.8);
+                    })
+                    .toList();
+
+            if (!books.isEmpty()) {
+                return preferExactMatch(books, searchLower);
+            }
+        }
+
+        // Strategy 3: Sanitized comparison (legacy format)
+        return bookRepository.findAll().stream()
+                .filter(b -> sanitizeName(b.getTitle()).equalsIgnoreCase(sanitizedTitle))
+                .toList();
+    }
+
+    /**
+     * When multiple books match, prefer the one whose title length is closest
+     * to the search string. This handles the case where "Foo" and "Foo Bar"
+     * both match a search for "Foo" — we want the shorter (exact) match.
+     */
+    private List<Book> preferExactMatch(List<Book> candidates, String searchLower) {
+        if (candidates.size() <= 1) {
+            return candidates;
+        }
+
+        // Strip all non-alphanumeric to compare core content length
+        String searchNorm = searchLower.replaceAll("[^a-z0-9]", "");
+        int searchLen = searchNorm.length();
+
+        // Sort by how close the title length is to the search length (closest first)
+        List<Book> sorted = new java.util.ArrayList<>(candidates);
+        sorted.sort(java.util.Comparator.comparingInt(b -> {
+            String titleNorm = b.getTitle().toLowerCase().replaceAll("[^a-z0-9]", "");
+            return Math.abs(titleNorm.length() - searchLen);
+        }));
+
+        // Return only the best match (or ties)
+        int bestDiff = Math.abs(sorted.get(0).getTitle().toLowerCase()
+                .replaceAll("[^a-z0-9]", "").length() - searchLen);
+        return sorted.stream()
+                .filter(b -> Math.abs(b.getTitle().toLowerCase()
+                        .replaceAll("[^a-z0-9]", "").length() - searchLen) == bestDiff)
+                .toList();
+    }
+
+    /**
+     * Find authors by name using multiple matching strategies.
+     * Within each strategy, exact matches are preferred over substring matches.
+     */
+    private List<Author> findAuthorsByName(String searchName, String sanitizedName) {
+        String searchLower = searchName.toLowerCase();
+
+        // Strategy 1: Direct substring match
+        List<Author> authors = authorRepository.findAll().stream()
+                .filter(a -> a.getName().toLowerCase().contains(searchLower))
+                .toList();
+
+        if (!authors.isEmpty()) {
+            if (authors.size() > 1) {
+                // Prefer closest length match
+                String searchNorm = searchLower.replaceAll("[^a-z0-9]", "");
+                int searchLen = searchNorm.length();
+                List<Author> sorted = new java.util.ArrayList<>(authors);
+                sorted.sort(java.util.Comparator.comparingInt(a -> {
+                    String nameNorm = a.getName().toLowerCase().replaceAll("[^a-z0-9]", "");
+                    return Math.abs(nameNorm.length() - searchLen);
+                }));
+                return List.of(sorted.get(0));
+            }
+            return authors;
+        }
+
+        // Strategy 2: Word-based match
+        String[] searchWords = searchLower.split("\\s+");
+        List<String> significantWords = java.util.Arrays.stream(searchWords)
+                .filter(w -> w.length() >= 3)
+                .limit(3)
+                .toList();
+
+        if (!significantWords.isEmpty()) {
+            authors = authorRepository.findAll().stream()
+                    .filter(a -> {
+                        String nameLower = a.getName().toLowerCase();
+                        long matchCount = significantWords.stream()
+                                .filter(nameLower::contains)
+                                .count();
+                        return matchCount >= Math.ceil(significantWords.size() * 0.8);
+                    })
+                    .toList();
+
+            if (!authors.isEmpty()) {
+                return authors;
+            }
+        }
+
+        // Strategy 3: Sanitized comparison (legacy format)
+        return authorRepository.findAll().stream()
+                .filter(a -> sanitizeName(a.getName()).equalsIgnoreCase(sanitizedName))
+                .toList();
+    }
+
+    /**
      * Convert filename-safe name to search-friendly format.
-     * Replaces dashes with spaces and handles common patterns.
+     * Handles both old format (lowercase-with-dashes) and new format (preserves original name).
+     *
+     * Old format: "the-adventures-of-tom-sawyer" -> "the adventures of tom sawyer"
+     * New format: "The Adventures of Tom Sawyer" -> "The Adventures of Tom Sawyer"
+     *
+     * For new format, dashes that replace invalid chars (like :) become spaces.
+     * For hyphens within words (like "Error-Correcting"), preserve them.
      */
     private String unsanitizeName(String sanitized) {
-        // Replace dashes with spaces, but preserve intentional dashes
-        return sanitized.replace("-", " ").trim();
+        if (sanitized == null || sanitized.isEmpty()) {
+            return "";
+        }
+
+        // Check if this is the old format (all lowercase with dashes)
+        boolean isOldFormat = sanitized.equals(sanitized.toLowerCase()) &&
+                              sanitized.contains("-") &&
+                              !sanitized.contains(" ");
+
+        if (isOldFormat) {
+            // Old format: replace all dashes with spaces
+            return sanitized.replace("-", " ").trim();
+        } else {
+            // New format: only replace dashes that are surrounded by spaces or at edges
+            // These are likely replacements for invalid chars like ":"
+            // Preserve hyphens within words (e.g., "Error-Correcting")
+            return sanitized
+                    .replaceAll("(^-+|-+$)", "")           // Remove leading/trailing dashes
+                    .replaceAll("\\s+-\\s+", " ")          // " - " -> " "
+                    .replaceAll("\\s+-", " ")              // " -" -> " "
+                    .replaceAll("-\\s+", " ")              // "- " -> " "
+                    .trim();
+        }
     }
 
     /**

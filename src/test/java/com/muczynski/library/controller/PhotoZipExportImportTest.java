@@ -507,4 +507,177 @@ class PhotoZipExportImportTest {
         assertEquals(originalChecksum, restoredPhotos.get(0).getImageChecksum(),
                 "Image checksum should match after round-trip");
     }
+
+    // ===========================================
+    // Long Title Tests (from branch-archive.json)
+    // ===========================================
+
+    /**
+     * The 12 longest book titles from branch-archive.json, plus the shorter
+     * "Catholic and Christian" variant to test prefix/exact match disambiguation.
+     * These test that our filename sanitization and import matching handle real-world edge cases.
+     */
+    private static final String[] LONGEST_TITLES = {
+        "Foundations of Coding: Theory and Applications of Error-Correcting Codes with an Introduction to Cryptography and Information Theory",
+        "Sermons of St. Bernard on Advent & Christmas Including the Famous Treatise on the Incarnation Called \"Missus Est\"",
+        "Butler's Lives of the Saints New Full Edition Supplement of New Saints and Blesseds Volume 1, c. 2",
+        "Butler's Lives of the Saints New Full Edition Supplement of New Saints and Blesseds Volume 1, c. 3",
+        "Butler's Lives of the Saints New Full Edition Supplement of New Saints and Blesseds Volume 1, c. 1",
+        "Catholic and Christian: An Explanation of Commonly Misunderstood Catholic Beliefs, Study Guide",
+        "Catholic and Christian: An Explanation of Commonly Misunderstood Catholic Beliefs",
+        "Saint Stanislaus of Jesus and Mary Papczynski: The Life and Writings of the Marians' Founder",
+        "Friendship with Jesus: Pope Benedict XVI Speaks to Children on Their First Holy Communion",
+        "Drawing Stories from Around the World and a Sampling of European Handkerchief Stories",
+        "Mother Angelica: The Remarkable Story of a Nun, Her Nerve, and a Network of Miracles",
+        "To the Heart of the Matter: The 40-Day Companion to Live a Culture of Life",
+        "Praying the Rosary: With the Joyful, Luminous, Sorrowful, & Glorious Mysteries"
+    };
+
+    /**
+     * Invalid filename characters that must be sanitized: / \ : * ? " < > |
+     */
+    private static final String INVALID_FILENAME_CHARS = "/\\:*?\"<>|";
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void exportThenImport_longestTitles_roundTrip() throws Exception {
+        // Create books with the 12 longest titles
+        for (int i = 0; i < LONGEST_TITLES.length; i++) {
+            Book book = new Book();
+            book.setTitle(LONGEST_TITLES[i]);
+            book.setAuthor(testAuthor);
+            book = bookRepository.save(book);
+
+            // Create a photo for each book
+            Photo photo = new Photo();
+            photo.setBook(book);
+            photo.setImage(createDummyImage(50 + i, 50 + i)); // Slightly different images
+            photo.setContentType("image/jpeg");
+            photo.setPhotoOrder(0);
+            photo.setImageChecksum(computeChecksum(photo.getImage()));
+            photoRepository.save(photo);
+        }
+
+        // Verify we have photos for all titles
+        assertEquals(LONGEST_TITLES.length, photoRepository.findAll().size());
+
+        // Export to ZIP
+        MvcResult exportResult = mockMvc.perform(get("/api/photo-export"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] exportedZipBytes = exportResult.getResponse().getContentAsByteArray();
+        assertTrue(exportedZipBytes.length > 0, "ZIP should not be empty");
+
+        // Verify all files are in the ZIP
+        int fileCount = 0;
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(exportedZipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                String filename = entry.getName();
+                // Verify filename doesn't contain invalid characters
+                for (char c : INVALID_FILENAME_CHARS.toCharArray()) {
+                    assertFalse(filename.contains(String.valueOf(c)),
+                            "Filename should not contain '" + c + "': " + filename);
+                }
+                fileCount++;
+            }
+        }
+        assertEquals(LONGEST_TITLES.length, fileCount, "Should have " + LONGEST_TITLES.length + " files in ZIP");
+
+        // Delete all photos
+        photoRepository.deleteAll();
+        assertEquals(0, photoRepository.findAll().size());
+
+        // Import from the exported ZIP
+        MockMultipartFile zipFile = new MockMultipartFile(
+                "file",
+                "library-photos.zip",
+                "application/zip",
+                exportedZipBytes
+        );
+
+        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.successCount", is(LONGEST_TITLES.length)))
+                .andExpect(jsonPath("$.failureCount", is(0)));
+
+        // Verify all photos were restored to the correct books
+        var restoredPhotos = photoRepository.findAll();
+        assertEquals(LONGEST_TITLES.length, restoredPhotos.size(), "All photos should be restored");
+
+        // Verify each title got its photo back
+        for (String title : LONGEST_TITLES) {
+            Book book = bookRepository.findAll().stream()
+                    .filter(b -> b.getTitle().equals(title))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Book not found: " + title));
+            var photos = photoRepository.findByBookIdOrderByPhotoOrder(book.getId());
+            assertEquals(1, photos.size(), "Book should have 1 photo: " + title);
+        }
+    }
+
+    @Test
+    void verifyAllTitles_noInvalidFilenameCharactersAfterSanitization() {
+        // All titles that contain invalid filename characters (from branch-archive.json analysis)
+        String[] titlesWithInvalidChars = {
+            "Foundations of Coding: Theory and Applications of Error-Correcting Codes with an Introduction to Cryptography and Information Theory",
+            "Sermons of St. Bernard on Advent & Christmas Including the Famous Treatise on the Incarnation Called \"Missus Est\"",
+            "Catholic and Christian: An Explanation of Commonly Misunderstood Catholic Beliefs, Study Guide",
+            "Saint Stanislaus of Jesus and Mary Papczynski: The Life and Writings of the Marians' Founder",
+            "Friendship with Jesus: Pope Benedict XVI Speaks to Children on Their First Holy Communion",
+            "Mother Angelica: The Remarkable Story of a Nun, Her Nerve, and a Network of Miracles",
+            "Catholic and Christian: An Explanation of Commonly Misunderstood Catholic Beliefs",
+            "Praying the Rosary: With the Joyful, Luminous, Sorrowful, & Glorious Mysteries",
+            "To the Heart of the Matter: The 40-Day Companion to Live a Culture of Life",
+            "Joy to the World: How Christ's Coming Changed Everything (and Still Does)",
+            "More of the Holy Spirit: How to Keep the Fire Burning in Our Hearts",
+            "The Adventures of Loupio, Volume 1: The Encounter and other stories",
+            "The Adventures of Loupio, Volume 2: The Hunters and Other Stories",
+            "Absolute Relativism: The New Dictatorship And What To Do About It",
+            "The Discernment of Spirits: An Ignatian Guide for Everyday Living",
+            "The Road to Bethlehem: Daily Meditations for Advent and Christmas",
+            "Can You Find Jesus?: Introducing Your Child to the Gospel",
+            "Our Lady of Guadalupe: Mother of the Civilization of Love",
+            "Can You Find Saints?",
+            "Code: Polonaise",
+            "Mary: God's Yes to Man"
+        };
+
+        for (String title : titlesWithInvalidChars) {
+            // Verify original title contains at least one invalid character
+            boolean hasInvalidChar = false;
+            for (char c : INVALID_FILENAME_CHARS.toCharArray()) {
+                if (title.contains(String.valueOf(c))) {
+                    hasInvalidChar = true;
+                    break;
+                }
+            }
+            assertTrue(hasInvalidChar, "Test title should contain invalid char: " + title);
+
+            // Apply the same sanitization as PhotoExportService.sanitizeName()
+            String sanitized = sanitizeName(title);
+
+            // Verify sanitized name doesn't contain any invalid characters
+            for (char c : INVALID_FILENAME_CHARS.toCharArray()) {
+                assertFalse(sanitized.contains(String.valueOf(c)),
+                        "Sanitized name should not contain '" + c + "': " + sanitized + " (from: " + title + ")");
+            }
+
+            // Verify sanitized name is not empty
+            assertFalse(sanitized.isEmpty(), "Sanitized name should not be empty for: " + title);
+        }
+    }
+
+    /**
+     * Mirrors the sanitization logic from PhotoExportService.sanitizeName()
+     */
+    private String sanitizeName(String name) {
+        if (name == null) return "unknown";
+        return name
+                .replaceAll("[/\\\\:*?\"<>|]+", "-")  // Replace invalid filename chars with dash
+                .replaceAll("\\s+", " ")              // Normalize whitespace
+                .trim()
+                .replaceAll("^-+|-+$", "");           // Remove leading/trailing dashes
+    }
 }
