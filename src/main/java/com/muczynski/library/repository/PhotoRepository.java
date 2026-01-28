@@ -101,11 +101,12 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
            "LEFT JOIN FETCH p.book b LEFT JOIN FETCH b.author " +
            "LEFT JOIN FETCH p.author " +
            "LEFT JOIN FETCH p.loan l LEFT JOIN FETCH l.book LEFT JOIN FETCH l.user " +
-           "WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL " +
+           "WHERE p.deletedAt IS NULL AND (p.imageChecksum IS NOT NULL OR p.image IS NOT NULL) " +
            "ORDER BY p.id")
     List<Photo> findActivePhotosWithImages();
 
     // Find photo IDs that have images (for streaming ZIP export)
-    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND p.imageChecksum IS NOT NULL ORDER BY p.id")
+    // Include photos with image data even if checksum hasn't been computed yet
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND (p.imageChecksum IS NOT NULL OR p.image IS NOT NULL) ORDER BY p.id")
     List<Long> findActivePhotoIdsWithImages();
 }

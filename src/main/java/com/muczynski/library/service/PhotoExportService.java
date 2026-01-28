@@ -1228,6 +1228,14 @@ public class PhotoExportService {
                         continue;
                     }
 
+                    // Backfill checksum if missing
+                    if (photo.getImageChecksum() == null) {
+                        String checksum = computeChecksum(imageBytes);
+                        photo.setImageChecksum(checksum);
+                        photoRepository.save(photo);
+                        logger.info("Backfilled checksum for photo {}", photoId);
+                    }
+
                     // Generate filename from the loaded photo
                     String baseFilename = generateZipFilename(photo);
                     String extension = getFileExtension(photo.getContentType());
