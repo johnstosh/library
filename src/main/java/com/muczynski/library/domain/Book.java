@@ -27,15 +27,12 @@ public class Book {
     private String publisher;
 
     @Lob
-    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String plotSummary;
 
     @Lob
-    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String relatedWorks;
 
     @Lob
-    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String detailedDescription;
 
     private String grokipediaUrl;
