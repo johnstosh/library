@@ -133,7 +133,15 @@ public class PhotoZipImportService {
                     continue;
                 }
 
-                String filename = getFilenameFromPath(entry.getName());
+                // Skip macOS resource fork files and hidden files
+                String entryPath = entry.getName();
+                if (entryPath.contains("__MACOSX/") || entryPath.contains("/.") || getFilenameFromPath(entryPath).startsWith(".")) {
+                    log.debug("Skipping hidden/resource fork file: {}", entryPath);
+                    zis.closeEntry();
+                    continue;
+                }
+
+                String filename = getFilenameFromPath(entryPath);
                 PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors);
                 items.add(item);
 
