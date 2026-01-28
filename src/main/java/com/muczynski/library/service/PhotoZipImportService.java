@@ -228,6 +228,9 @@ public class PhotoZipImportService {
 
         String contentType = getContentType(extension);
 
+        // Correct EXIF orientation before storing
+        imageBytes = photoService.correctImageOrientation(imageBytes, contentType);
+
         try {
             return switch (type) {
                 case "book" -> importBookPhoto(filename, name, imageBytes, contentType, photoOrder, allBooks);

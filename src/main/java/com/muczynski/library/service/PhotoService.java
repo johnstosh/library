@@ -88,7 +88,7 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo photo = new Photo();
             photo.setBook(book);
             photo.setImage(imageBytes);
@@ -123,6 +123,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoToLoan(Long loanId, byte[] imageBytes, String contentType) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Photo photo = new Photo();
             // Note: Loan will be set by the caller (LoanService) after loan creation
             photo.setImage(imageBytes);
@@ -147,6 +148,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoToExistingLoan(com.muczynski.library.domain.Loan loan, byte[] imageBytes, String contentType) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Photo photo = new Photo();
             photo.setLoan(loan);
             photo.setImage(imageBytes);
@@ -199,6 +201,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType, LocalDateTime dateTaken) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new LibraryException("Book not found"));
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
@@ -236,6 +239,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoFromGooglePhotos(Long bookId, byte[] imageBytes, String contentType, String permanentId) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new LibraryException("Book not found"));
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
@@ -431,7 +435,7 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo photo = new Photo();
             photo.setAuthor(author);
             photo.setImage(imageBytes);
@@ -456,6 +460,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addAuthorPhotoFromBytes(Long authorId, byte[] imageBytes, String contentType) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Author author = authorRepository.findById(authorId)
                     .orElseThrow(() -> new LibraryException("Author not found"));
             List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
@@ -489,6 +494,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addAuthorPhotoFromGooglePhotos(Long authorId, byte[] imageBytes, String contentType, String permanentId) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Author author = authorRepository.findById(authorId)
                     .orElseThrow(() -> new LibraryException("Author not found"));
             List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
@@ -676,7 +682,11 @@ public class PhotoService {
     public byte[] getImage(Long photoId) {
         try {
             Photo photo = photoRepository.findById(photoId).orElse(null);
-            return photo != null ? photo.getImage() : null;
+            if (photo == null || photo.getImage() == null) {
+                return null;
+            }
+            // Correct EXIF orientation for existing photos that may not have been corrected at upload time
+            return correctImageOrientation(photo.getImage(), photo.getContentType());
         } catch (Exception e) {
             logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
@@ -733,7 +743,7 @@ public class PhotoService {
             photoRepository.saveAll(photosToShift);
 
             // Create a new photo with the edited image at the original's position
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo newPhoto = new Photo();
             newPhoto.setBook(book);
             newPhoto.setAuthor(author);
@@ -752,6 +762,45 @@ public class PhotoService {
         } catch (Exception e) {
             logger.error("Failed to add edited photo for original ID {}: {}", photoId, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Correct image orientation based on EXIF data and return the corrected bytes.
+     * This should be called on all incoming images before storing them, so that
+     * thumbnails, full-size views, and exports all display correctly.
+     *
+     * @param imageBytes raw image bytes (may contain EXIF orientation)
+     * @param contentType the MIME type (e.g., "image/jpeg")
+     * @return corrected image bytes with orientation applied and EXIF stripped, or original if no correction needed
+     */
+    byte[] correctImageOrientation(byte[] imageBytes, String contentType) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return imageBytes;
+        }
+        try {
+            int orientation = getExifOrientation(imageBytes);
+            if (orientation == 1) {
+                return imageBytes; // No correction needed
+            }
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (image == null) {
+                return imageBytes; // Not a readable image format
+            }
+            BufferedImage corrected = applyExifOrientation(image, orientation);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String format = "jpg";
+            if (contentType != null) {
+                if (contentType.contains("png")) format = "png";
+                else if (contentType.contains("gif")) format = "gif";
+                else if (contentType.contains("webp")) format = "webp";
+            }
+            ImageIO.write(corrected, format, baos);
+            logger.debug("Corrected EXIF orientation {} for image ({} -> {} bytes)", orientation, imageBytes.length, baos.size());
+            return baos.toByteArray();
+        } catch (Exception e) {
+            logger.debug("Could not correct image orientation: {}", e.getMessage());
+            return imageBytes; // Return original on error
         }
     }
 

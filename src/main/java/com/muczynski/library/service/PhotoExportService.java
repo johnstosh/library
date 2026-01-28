@@ -51,6 +51,9 @@ public class PhotoExportService {
     private com.muczynski.library.repository.BookRepository bookRepository;
 
     @Autowired
+    private PhotoService photoService;
+
+    @Autowired
     private GooglePhotosService googlePhotosService;
 
     @Autowired
@@ -829,6 +832,10 @@ public class PhotoExportService {
 
             logger.info("Downloaded {} bytes for photo {}", imageBytes.length, photoId);
 
+            // Correct EXIF orientation before storing
+            String mimeType = mediaItem.getMimeType() != null ? mediaItem.getMimeType() : photo.getContentType();
+            imageBytes = photoService.correctImageOrientation(imageBytes, mimeType);
+
             // Update the photo with downloaded image
             photo.setImage(imageBytes);
             if (mediaItem.getMimeType() != null) {
@@ -1004,6 +1011,10 @@ public class PhotoExportService {
                 }
 
                 logger.debug("Downloaded {} bytes for photo {}", imageBytes.length, photo.getId());
+
+                // Correct EXIF orientation before storing
+                String batchMimeType = mediaItem.getMimeType() != null ? mediaItem.getMimeType() : photo.getContentType();
+                imageBytes = photoService.correctImageOrientation(imageBytes, batchMimeType);
 
                 // Update the photo with downloaded image
                 photo.setImage(imageBytes);
@@ -1227,6 +1238,9 @@ public class PhotoExportService {
                         errorCount++;
                         continue;
                     }
+
+                    // Correct EXIF orientation for existing photos
+                    imageBytes = photoService.correctImageOrientation(imageBytes, photo.getContentType());
 
                     // Backfill checksum if missing
                     if (photo.getImageChecksum() == null) {
