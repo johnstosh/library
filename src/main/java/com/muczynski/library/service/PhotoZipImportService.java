@@ -122,6 +122,10 @@ public class PhotoZipImportService {
         int failureCount = 0;
         int skippedCount = 0;
 
+        // Pre-load all books and authors to avoid repeated queries per file
+        List<Book> allBooks = bookRepository.findAll();
+        List<Author> allAuthors = authorRepository.findAll();
+
         try (ZipInputStream zis = new ZipInputStream(inputStream)) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
@@ -130,7 +134,7 @@ public class PhotoZipImportService {
                 }
 
                 String filename = getFilenameFromPath(entry.getName());
-                PhotoZipImportItemDto item = processEntry(filename, zis);
+                PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors);
                 items.add(item);
 
                 switch (item.getStatus()) {
@@ -163,7 +167,8 @@ public class PhotoZipImportService {
     /**
      * Process a single ZIP entry.
      */
-    private PhotoZipImportItemDto processEntry(String filename, InputStream inputStream) {
+    private PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
+                                                List<Book> allBooks, List<Author> allAuthors) {
         Matcher matcher = FILENAME_PATTERN.matcher(filename);
 
         if (!matcher.matches()) {
@@ -217,8 +222,8 @@ public class PhotoZipImportService {
 
         try {
             return switch (type) {
-                case "book" -> importBookPhoto(filename, name, imageBytes, contentType, photoOrder);
-                case "author" -> importAuthorPhoto(filename, name, imageBytes, contentType, photoOrder);
+                case "book" -> importBookPhoto(filename, name, imageBytes, contentType, photoOrder, allBooks);
+                case "author" -> importAuthorPhoto(filename, name, imageBytes, contentType, photoOrder, allAuthors);
                 case "loan" -> importLoanPhoto(filename, name, imageBytes, contentType);
                 default -> PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -245,10 +250,11 @@ public class PhotoZipImportService {
      * - If no photo exists at that order: add new photo
      */
     private PhotoZipImportItemDto importBookPhoto(String filename, String sanitizedTitle,
-                                                   byte[] imageBytes, String contentType, int photoOrder) {
+                                                   byte[] imageBytes, String contentType, int photoOrder,
+                                                   List<Book> allBooks) {
         // Try to find book by title using multiple strategies
         String searchTitle = unsanitizeName(sanitizedTitle);
-        List<Book> books = findBooksByTitle(searchTitle, sanitizedTitle);
+        List<Book> books = findBooksByTitle(searchTitle, sanitizedTitle, allBooks);
 
         if (books.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -327,9 +333,10 @@ public class PhotoZipImportService {
      * - If no photo exists at that order: add new photo
      */
     private PhotoZipImportItemDto importAuthorPhoto(String filename, String sanitizedName,
-                                                     byte[] imageBytes, String contentType, int photoOrder) {
+                                                     byte[] imageBytes, String contentType, int photoOrder,
+                                                     List<Author> allAuthors) {
         String searchName = unsanitizeName(sanitizedName);
-        List<Author> authors = findAuthorsByName(searchName, sanitizedName);
+        List<Author> authors = findAuthorsByName(searchName, sanitizedName, allAuthors);
 
         if (authors.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -469,11 +476,11 @@ public class PhotoZipImportService {
      * Within each strategy, exact matches are preferred over substring matches.
      * Tries: 1) substring match, 2) word-based match, 3) sanitized comparison
      */
-    private List<Book> findBooksByTitle(String searchTitle, String sanitizedTitle) {
+    private List<Book> findBooksByTitle(String searchTitle, String sanitizedTitle, List<Book> allBooks) {
         String searchLower = searchTitle.toLowerCase();
 
         // Strategy 1: Direct substring match (works for simple cases)
-        List<Book> books = bookRepository.findAll().stream()
+        List<Book> books = allBooks.stream()
                 .filter(b -> b.getTitle().toLowerCase().contains(searchLower))
                 .toList();
 
@@ -490,7 +497,7 @@ public class PhotoZipImportService {
                 .toList();
 
         if (!significantWords.isEmpty()) {
-            books = bookRepository.findAll().stream()
+            books = allBooks.stream()
                     .filter(b -> {
                         String titleLower = b.getTitle().toLowerCase();
                         long matchCount = significantWords.stream()
@@ -506,7 +513,7 @@ public class PhotoZipImportService {
         }
 
         // Strategy 3: Sanitized comparison (legacy format)
-        return bookRepository.findAll().stream()
+        return allBooks.stream()
                 .filter(b -> sanitizeName(b.getTitle()).equalsIgnoreCase(sanitizedTitle))
                 .toList();
     }
@@ -545,11 +552,11 @@ public class PhotoZipImportService {
      * Find authors by name using multiple matching strategies.
      * Within each strategy, exact matches are preferred over substring matches.
      */
-    private List<Author> findAuthorsByName(String searchName, String sanitizedName) {
+    private List<Author> findAuthorsByName(String searchName, String sanitizedName, List<Author> allAuthors) {
         String searchLower = searchName.toLowerCase();
 
         // Strategy 1: Direct substring match
-        List<Author> authors = authorRepository.findAll().stream()
+        List<Author> authors = allAuthors.stream()
                 .filter(a -> a.getName().toLowerCase().contains(searchLower))
                 .toList();
 
@@ -576,7 +583,7 @@ public class PhotoZipImportService {
                 .toList();
 
         if (!significantWords.isEmpty()) {
-            authors = authorRepository.findAll().stream()
+            authors = allAuthors.stream()
                     .filter(a -> {
                         String nameLower = a.getName().toLowerCase();
                         long matchCount = significantWords.stream()
@@ -592,7 +599,7 @@ public class PhotoZipImportService {
         }
 
         // Strategy 3: Sanitized comparison (legacy format)
-        return authorRepository.findAll().stream()
+        return allAuthors.stream()
                 .filter(a -> sanitizeName(a.getName()).equalsIgnoreCase(sanitizedName))
                 .toList();
     }

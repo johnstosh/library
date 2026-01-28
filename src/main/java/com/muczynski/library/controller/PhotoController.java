@@ -198,8 +198,9 @@ public class PhotoController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to import photos from ZIP: {}", e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos: " + e.getMessage()));
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos from ZIP: " + detail));
         }
     }
 
@@ -226,8 +227,9 @@ public class PhotoController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to import photos from ZIP stream: {}", e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos: " + e.getMessage()));
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos from ZIP: " + detail));
         }
     }
 }
