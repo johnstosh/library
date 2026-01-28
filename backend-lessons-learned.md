@@ -31,6 +31,44 @@
 
 ---
 
+### Database Unique Constraints with Hibernate ddl-auto=update
+
+**Issue**: Startup warnings like `constraint "uk_author_name" of relation "author" does not exist, skipping` and `constraint "ukhl8cmkyvgqsgelu76p0x79wjb" of relation "users" does not exist, skipping`.
+
+**Root Cause**: Using both `@Column(unique = true)` on a field AND `@UniqueConstraint` at the `@Table` level creates two competing constraint definitions. Hibernate generates an auto-named constraint from `@Column(unique = true)` (e.g., `ukhl8cmkyvgqsgelu76p0x79wjb`) and a named constraint from `@UniqueConstraint`. During schema update, Hibernate tries to drop constraints by specific names that may not match what actually exists in the production database.
+
+**What Didn't Work**:
+- Having both `@Column(unique = true)` and `@UniqueConstraint` on the same column — creates redundant constraints with unpredictable names
+- Using only `@Column(unique = true)` — constraint name is auto-generated and uncontrollable, making it impossible to reference or manage
+
+**Solution**: Use ONLY `@UniqueConstraint` at the `@Table` level with an explicit name. Remove `@Column(unique = true)` from the field. This gives Hibernate a single, predictable constraint name that matches across environments.
+
+```java
+// INCORRECT - Dual constraint, causes warnings
+@Table(uniqueConstraints = {
+    @UniqueConstraint(name = "uk_author_name", columnNames = "name")
+})
+public class Author {
+    @Column(unique = true)  // BAD: creates second auto-named constraint
+    private String name;
+}
+
+// CORRECT - Single named constraint
+@Table(uniqueConstraints = {
+    @UniqueConstraint(name = "uk_author_name", columnNames = "name")
+})
+public class Author {
+    private String name;  // No @Column(unique = true)
+}
+```
+
+**Best Practice**:
+- Always use `@UniqueConstraint` at `@Table` level with explicit `name` parameter
+- Never combine `@Column(unique = true)` with `@UniqueConstraint` on the same column
+- Use descriptive constraint names like `uk_entity_field` for easy debugging
+
+---
+
 ### Form Field Persistence Issue
 
 **Issue**: User settings fields (like Google Photos API key) were not being saved or would disappear after saving.

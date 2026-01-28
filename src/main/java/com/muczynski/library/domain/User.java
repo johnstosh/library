@@ -17,6 +17,9 @@ import java.util.UUID;
     indexes = {
         @Index(name = "idx_user_username", columnList = "username"),
         @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier")
     }
 )
 @Getter
@@ -28,7 +31,6 @@ public class User implements Serializable {
     private Long id;
 
     // Unique identifier for the user (UUID) - used for identification across systems
-    @Column(unique = true)
     private String userIdentifier;
 
     private String username;
