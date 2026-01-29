@@ -257,41 +257,21 @@ export function useImportPhotosFromZip() {
 
   return useMutation({
     mutationFn: async (file: File): Promise<PhotoZipImportResultDto> => {
-      const STREAMING_THRESHOLD = 100 * 1024 * 1024 // 100MB
+      // Always use the streaming endpoint to avoid multipart size limits
+      const response = await fetch('/api/photos/import-zip-stream', {
+        method: 'POST',
+        body: file, // Send raw file bytes, not FormData
+        headers: {
+          'Content-Type': 'application/zip',
+        },
+        credentials: 'include',
+      })
 
-      if (file.size > STREAMING_THRESHOLD) {
-        // Use streaming endpoint for large files
-        const response = await fetch('/api/photos/import-zip-stream', {
-          method: 'POST',
-          body: file, // Send raw file bytes, not FormData
-          headers: {
-            'Content-Type': 'application/zip',
-          },
-          credentials: 'include',
-        })
-
-        if (!response.ok) {
-          throw new Error(await extractErrorMessage(response, file))
-        }
-
-        return response.json()
-      } else {
-        // Use standard multipart endpoint for smaller files
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const response = await fetch('/api/photos/import-zip', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        })
-
-        if (!response.ok) {
-          throw new Error(await extractErrorMessage(response, file))
-        }
-
-        return response.json()
+      if (!response.ok) {
+        throw new Error(await extractErrorMessage(response, file))
       }
+
+      return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })
@@ -328,7 +308,7 @@ async function extractErrorMessage(response: Response, file: File): Promise<stri
 
   if (response.status === 413) {
     const sizeInfo = `File "${file.name}" is ${formatFileSize(file.size)}.`
-    return detail || `${sizeInfo} The file exceeds the server's maximum upload size of 100 MB. Try using a smaller ZIP file.`
+    return detail || `${sizeInfo} The file exceeds the server's maximum upload size. Try using a smaller ZIP file or splitting it into multiple uploads.`
   }
 
   return detail || `Server returned ${response.status} ${response.statusText}`
