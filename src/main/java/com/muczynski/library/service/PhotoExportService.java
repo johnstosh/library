@@ -1149,11 +1149,12 @@ public class PhotoExportService {
 
     /**
      * Get photo IDs for ZIP export (lightweight query).
+     * Returns ALL active photos, including those that need to be downloaded from Google Photos.
      */
     @Transactional(readOnly = true)
     public List<Long> getPhotoIdsForZipExport() {
         logger.info("Querying photo IDs for ZIP export...");
-        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
+        List<Long> photoIds = photoRepository.findAllActivePhotoIds();
         logger.info("Found {} photo IDs for ZIP export", photoIds.size());
         return photoIds;
     }
@@ -1199,21 +1200,35 @@ public class PhotoExportService {
     public void streamPhotosToZip(java.io.OutputStream outputStream) throws java.io.IOException {
         logger.info("Starting streaming photo ZIP export...");
 
-        // Get just the IDs first - very lightweight
-        List<Long> photoIds = photoRepository.findActivePhotoIdsWithImages();
-
-        // Also get count of all photos for comparison
-        long totalPhotos = photoRepository.countActivePhotos();
-        long photosWithImages = photoIds.size();
-        long photosPendingImport = totalPhotos - photosWithImages;
+        // Get ALL active photo IDs - including those needing download from Google Photos
+        List<Long> photoIds = photoRepository.findAllActivePhotoIds();
+        long photosWithImages = photoRepository.findActivePhotoIdsWithImages().size();
+        long photosPendingImport = photoIds.size() - photosWithImages;
 
         if (photoIds.isEmpty()) {
-            throw new LibraryException("No photos with local image data available for export. " +
-                    totalPhotos + " photos exist but need to be imported from Google Photos first.");
+            throw new LibraryException("No photos available for export.");
         }
 
-        logger.info("Streaming {} photos to ZIP (total: {}, pending import: {})",
-                photosWithImages, totalPhotos, photosPendingImport);
+        logger.info("Streaming {} photos to ZIP ({} with local images, {} will be downloaded from Google Photos)",
+                photoIds.size(), photosWithImages, photosPendingImport);
+
+        // Get access token for downloading photos from Google Photos (if needed)
+        String accessToken = null;
+        if (photosPendingImport > 0) {
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null && authentication.isAuthenticated()) {
+                    Long userId = Long.parseLong(authentication.getName());
+                    User user = userRepository.findById(userId).orElse(null);
+                    if (user != null) {
+                        accessToken = googlePhotosService.getValidAccessToken(user);
+                        logger.info("Got access token for downloading {} photos from Google Photos", photosPendingImport);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
+            }
+        }
 
         // Track filename counts for handling multiple photos of same entity
         Map<String, Integer> filenameCount = new HashMap<>();
@@ -1231,10 +1246,32 @@ public class PhotoExportService {
                         continue;
                     }
 
-                    // Now load the image bytes (triggers LAZY load)
+                    // Get image bytes - from local storage or Google Photos
                     byte[] imageBytes = photo.getImage();
+                    if ((imageBytes == null || imageBytes.length == 0) && accessToken != null
+                            && photo.getPermanentId() != null && !photo.getPermanentId().isEmpty()) {
+                        // Download from Google Photos
+                        try {
+                            var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
+                            if (mediaItem != null && mediaItem.getBaseUrl() != null) {
+                                imageBytes = photosLibraryClient.downloadPhoto(accessToken, mediaItem.getBaseUrl());
+                                if (imageBytes != null && imageBytes.length > 0) {
+                                    logger.info("Downloaded photo {} from Google Photos ({} bytes)", photoId, imageBytes.length);
+                                    // Save locally for future use
+                                    photo.setImage(imageBytes);
+                                    photo.setImageChecksum(computeChecksum(imageBytes));
+                                    if (mediaItem.getMimeType() != null) {
+                                        photo.setContentType(mediaItem.getMimeType());
+                                    }
+                                    photoRepository.save(photo);
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.warn("Failed to download photo {} from Google Photos: {}", photoId, e.getMessage());
+                        }
+                    }
                     if (imageBytes == null || imageBytes.length == 0) {
-                        logger.warn("Skipping photo {} - no image data", photoId);
+                        logger.warn("Skipping photo {} - no image data and could not download", photoId);
                         errorCount++;
                         continue;
                     }

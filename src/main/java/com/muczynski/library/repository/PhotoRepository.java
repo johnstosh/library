@@ -109,4 +109,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // Include photos with image data even if checksum hasn't been computed yet
     @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND (p.imageChecksum IS NOT NULL OR p.image IS NOT NULL) ORDER BY p.id")
     List<Long> findActivePhotoIdsWithImages();
+
+    // Find ALL active photo IDs (for ZIP export that downloads missing images from Google Photos)
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL ORDER BY p.id")
+    List<Long> findAllActivePhotoIds();
 }
