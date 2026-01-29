@@ -271,8 +271,9 @@ export function useImportPhotosFromZip() {
         })
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
-          throw new Error(error.message || error.error || 'Failed to import photos')
+          const error = await response.json().catch(() => null)
+          const detail = error?.message || error?.error
+          throw new Error(detail || `Server returned ${response.status} ${response.statusText}`)
         }
 
         return response.json()
@@ -288,8 +289,9 @@ export function useImportPhotosFromZip() {
         })
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Failed to import photos' }))
-          throw new Error(error.message || error.error || 'Failed to import photos')
+          const error = await response.json().catch(() => null)
+          const detail = error?.message || error?.error
+          throw new Error(detail || `Server returned ${response.status} ${response.statusText}`)
         }
 
         return response.json()

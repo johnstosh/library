@@ -222,7 +222,7 @@ export function DataManagementPage() {
     } catch (error) {
       console.error('Failed to import photos from ZIP:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      setErrorMessage(`Failed to import photos from ZIP: ${errorMessage}`)
+      setErrorMessage(errorMessage)
     }
   }
 
