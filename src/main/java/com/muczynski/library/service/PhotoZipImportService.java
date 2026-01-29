@@ -14,6 +14,8 @@ import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,9 @@ import java.util.zip.ZipInputStream;
 @Slf4j
 @Transactional
 public class PhotoZipImportService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final PhotoService photoService;
     private final BookRepository bookRepository;
@@ -149,6 +154,16 @@ public class PhotoZipImportService {
                     case "SUCCESS" -> successCount++;
                     case "FAILURE" -> failureCount++;
                     case "SKIPPED" -> skippedCount++;
+                }
+
+                // Periodically flush and clear the persistence context to release memory
+                // The pre-loaded allBooks and allAuthors lists become detached but are only
+                // used for in-memory matching, so no lazy loading issues
+                int processed = successCount + failureCount + skippedCount;
+                if (processed > 0 && processed % 50 == 0) {
+                    entityManager.flush();
+                    entityManager.clear();
+                    log.info("Cleared persistence context after {} entries to free memory", processed);
                 }
 
                 zis.closeEntry();

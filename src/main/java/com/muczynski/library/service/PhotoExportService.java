@@ -21,6 +21,8 @@ import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -58,6 +60,9 @@ public class PhotoExportService {
 
     @Autowired
     private GooglePhotosLibraryClient photosLibraryClient;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Value("${google.oauth.client-id}")
     private String clientId;
@@ -1309,9 +1314,17 @@ public class PhotoExportService {
                     zos.closeEntry();
                     zos.flush();
 
+                    // Detach entity to release memory from persistence context
+                    entityManager.detach(photo);
+
                     successCount++;
                     if (successCount % 10 == 0) {
                         logger.info("Progress: {} photos exported", successCount);
+                    }
+
+                    // Periodically clear the entire persistence context to free first-level cache
+                    if (successCount % 50 == 0) {
+                        entityManager.clear();
                     }
 
                 } catch (Exception e) {
