@@ -271,9 +271,7 @@ export function useImportPhotosFromZip() {
         })
 
         if (!response.ok) {
-          const error = await response.json().catch(() => null)
-          const detail = error?.message || error?.error
-          throw new Error(detail || `Server returned ${response.status} ${response.statusText}`)
+          throw new Error(await extractErrorMessage(response, file))
         }
 
         return response.json()
@@ -289,9 +287,7 @@ export function useImportPhotosFromZip() {
         })
 
         if (!response.ok) {
-          const error = await response.json().catch(() => null)
-          const detail = error?.message || error?.error
-          throw new Error(detail || `Server returned ${response.status} ${response.statusText}`)
+          throw new Error(await extractErrorMessage(response, file))
         }
 
         return response.json()
@@ -317,4 +313,23 @@ export function getImageUrl(photoId: number): string {
 
 export function getThumbnailUrl(photoId: number, width: number): string {
   return `/api/photos/${photoId}/thumbnail?width=${width}`
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${bytes} bytes`
+}
+
+async function extractErrorMessage(response: Response, file: File): Promise<string> {
+  const error = await response.json().catch(() => null)
+  const detail = error?.message || error?.error
+
+  if (response.status === 413) {
+    const sizeInfo = `File "${file.name}" is ${formatFileSize(file.size)}.`
+    return detail || `${sizeInfo} The file exceeds the server's maximum upload size of 100 MB. Try using a smaller ZIP file.`
+  }
+
+  return detail || `Server returned ${response.status} ${response.statusText}`
 }

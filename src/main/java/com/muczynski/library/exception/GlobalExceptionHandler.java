@@ -17,6 +17,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Global exception handler for all controllers
@@ -115,6 +116,30 @@ public class GlobalExceptionHandler {
 
         ErrorResponse response = new ErrorResponse("ACCESS_DENIED", "You do not have permission to access this resource");
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle file upload size exceeded (413 Payload Too Large)
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException ex, WebRequest request) {
+        long maxSize = ex.getMaxUploadSize();
+        String maxSizeStr = maxSize > 0 ? formatBytes(maxSize) : "100 MB";
+        String message = "File size exceeds the maximum upload limit of " + maxSizeStr
+                + ". Use the streaming endpoint for larger files, or reduce file size.";
+        logger.warn("Upload size exceeded on path {}: {} (max: {})",
+                request.getDescription(false), ex.getMessage(), maxSizeStr);
+
+        ErrorResponse response = new ErrorResponse("UPLOAD_TOO_LARGE", message);
+        return new ResponseEntity<>(response, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes >= 1024 * 1024 * 1024) return String.format("%.0f GB", bytes / (1024.0 * 1024 * 1024));
+        if (bytes >= 1024 * 1024) return String.format("%.0f MB", bytes / (1024.0 * 1024));
+        if (bytes >= 1024) return String.format("%.0f KB", bytes / 1024.0);
+        return bytes + " bytes";
     }
 
     /**
