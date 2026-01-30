@@ -131,7 +131,6 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory 384Mi \
   --cpu 1 \
-  --max-request-body-size=1200Mi \
   --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
   $SERVICE_ACCOUNT_ARG \
