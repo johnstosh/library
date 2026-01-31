@@ -324,16 +324,34 @@ public class PhotoZipImportService {
             String existingChecksum = existingPhoto.getImageChecksum();
 
             if (newChecksum != null && newChecksum.equals(existingChecksum)) {
-                // Same photo already exists - skip
-                log.info("Skipping duplicate photo for book '{}' at order {} (same checksum)", book.getTitle(), photoOrder);
+                // Same checksum - but verify the database actually has the bytes
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for book '{}' at order {} (same checksum)", book.getTitle(), photoOrder);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("book")
+                            .entityName(book.getTitle())
+                            .entityId(book.getId())
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for book '{}' at order {} (same checksum, bytes missing)", book.getTitle(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
-                        .status("SKIPPED")
+                        .status("SUCCESS")
                         .entityType("book")
                         .entityName(book.getTitle())
                         .entityId(book.getId())
-                        .photoId(existingPhoto.getId())
-                        .errorMessage("Duplicate photo (same checksum)")
+                        .photoId(photoId)
                         .build();
             } else {
                 // Different photo at same order - replace
@@ -341,7 +359,7 @@ public class PhotoZipImportService {
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
-                Photo savedPhoto = photoRepository.save(existingPhoto);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
                 Long photoId = savedPhoto.getId();
                 // Detach to free memory - the photo's image byte[] can be large
                 entityManager.detach(savedPhoto);
@@ -411,16 +429,34 @@ public class PhotoZipImportService {
             String existingChecksum = existingPhoto.getImageChecksum();
 
             if (newChecksum != null && newChecksum.equals(existingChecksum)) {
-                // Same photo already exists - skip
-                log.info("Skipping duplicate photo for author '{}' at order {} (same checksum)", author.getName(), photoOrder);
+                // Same checksum - but verify the database actually has the bytes
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for author '{}' at order {} (same checksum)", author.getName(), photoOrder);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("author")
+                            .entityName(author.getName())
+                            .entityId(author.getId())
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for author '{}' at order {} (same checksum, bytes missing)", author.getName(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
-                        .status("SKIPPED")
+                        .status("SUCCESS")
                         .entityType("author")
                         .entityName(author.getName())
                         .entityId(author.getId())
-                        .photoId(existingPhoto.getId())
-                        .errorMessage("Duplicate photo (same checksum)")
+                        .photoId(photoId)
                         .build();
             } else {
                 // Different photo at same order - replace
@@ -428,7 +464,7 @@ public class PhotoZipImportService {
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
-                Photo savedPhoto = photoRepository.save(existingPhoto);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
                 Long photoId = savedPhoto.getId();
                 // Detach to free memory - the photo's image byte[] can be large
                 entityManager.detach(savedPhoto);

@@ -533,6 +533,39 @@ class PhotoZipExportImportTest {
                 "Image checksum should match after round-trip");
     }
 
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importFromZipChunked_restoresMissingBytes_whenChecksumMatches() throws Exception {
+        // Create a photo with known content and checksum
+        Photo originalPhoto = createBookPhoto(testBook, "Test", 0);
+        String originalChecksum = originalPhoto.getImageChecksum();
+        assertNotNull(originalChecksum);
+
+        // Export the photo to a ZIP
+        MvcResult exportResult = mockMvc.perform(get("/api/photo-export"))
+                .andExpect(status().isOk())
+                .andReturn();
+        byte[] exportedZipBytes = exportResult.getResponse().getContentAsByteArray();
+
+        // Clear the image bytes but keep the checksum (simulating photo exported to Google Photos)
+        originalPhoto.setImage(null);
+        photoRepository.save(originalPhoto);
+
+        // Verify bytes are gone
+        assertFalse(photoRepository.hasImageData(originalPhoto.getId()));
+
+        // Import the ZIP - should restore bytes even though checksum matches
+        ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
+        assertEquals(1, result.getFinalResult().getSuccessCount(),
+                "Should succeed (restore bytes) not skip");
+        assertEquals(0, result.getFinalResult().getSkippedCount(),
+                "Should not skip when bytes are missing");
+
+        // Verify bytes were restored
+        assertTrue(photoRepository.hasImageData(originalPhoto.getId()),
+                "Image bytes should be restored");
+    }
+
     // ===========================================
     // Long Title Tests (from branch-archive.json)
     // ===========================================

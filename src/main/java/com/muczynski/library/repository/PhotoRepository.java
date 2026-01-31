@@ -71,8 +71,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
            "AND p.imageChecksum IS NULL")
     List<Long> findIdsNeedingImport();
 
-    // Check if a photo has image data without loading the bytes
-    @Query("SELECT CASE WHEN p.imageChecksum IS NOT NULL THEN true ELSE false END FROM Photo p WHERE p.id = :id")
+    // Check if a photo has image data without loading the bytes (checks actual bytes, not just checksum)
+    @Query(value = "SELECT CASE WHEN image IS NOT NULL THEN true ELSE false END FROM photo WHERE id = :id", nativeQuery = true)
     boolean hasImageData(@Param("id") Long id);
 
     // Get first photo ID for a book without loading the photos collection
