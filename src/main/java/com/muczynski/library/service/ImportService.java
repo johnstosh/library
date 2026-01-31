@@ -10,6 +10,8 @@ import com.muczynski.library.dto.BranchDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.BranchMapper;
 import com.muczynski.library.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,9 @@ import java.util.stream.Collectors;
 public class ImportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportService.class);
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public static final String DEFAULT_PASSWORD = "divinemercy";
 
@@ -506,6 +511,10 @@ public class ImportService {
                 photo.setAuthor(author);
 
                 photoRepository.save(photo);
+                // Detach photo from persistence context to release image bytes from memory.
+                // Without this, all Photo entities (with their @Lob image data) accumulate
+                // in the persistence context, causing OutOfMemoryError on large imports.
+                entityManager.detach(photo);
                 photoCount++;
             }
         }
