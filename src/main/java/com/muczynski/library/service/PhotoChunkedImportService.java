@@ -10,8 +10,6 @@ import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -36,7 +33,6 @@ import java.util.zip.ZipInputStream;
 @Slf4j
 public class PhotoChunkedImportService {
 
-    private final EntityManagerFactory entityManagerFactory;
     private final PhotoZipImportService photoZipImportService;
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
@@ -81,16 +77,14 @@ public class PhotoChunkedImportService {
 
             Thread bgThread = new Thread(() -> {
                 ChunkedUploadState s = activeUploads.get(uploadId);
-                EntityManager em = entityManagerFactory.createEntityManager();
                 try {
-                    processZipStream(pipedIn, allBooks, allAuthors, em, s);
+                    processZipStream(pipedIn, allBooks, allAuthors, s);
                 } catch (Exception e) {
                     if (s != null) {
                         s.backgroundError = e;
                     }
                     log.error("Background ZIP processing failed for upload {}: {}", uploadId, e.getMessage(), e);
                 } finally {
-                    em.close();
                     try {
                         pipedIn.close();
                     } catch (IOException ignored) {
@@ -197,7 +191,7 @@ public class PhotoChunkedImportService {
     }
 
     private void processZipStream(PipedInputStream pipedIn, List<Book> allBooks, List<Author> allAuthors,
-                                   EntityManager em, ChunkedUploadState state) throws IOException {
+                                   ChunkedUploadState state) throws IOException {
         int entryCount = 0;
 
         try (ZipInputStream zis = new ZipInputStream(pipedIn)) {
@@ -216,8 +210,10 @@ public class PhotoChunkedImportService {
 
                 String filename = photoZipImportService.getFilenameFromPath(entryPath);
 
-                // Process within a transaction
-                em.getTransaction().begin();
+                // processEntry is public and @Transactional (via class-level annotation on
+                // PhotoZipImportService), so Spring's proxy manages the transaction.
+                // This ensures the EntityManager used for saves is the same one cleared by
+                // clearPersistenceContext(), preventing memory leaks and data issues.
                 try {
                     PhotoZipImportItemDto item = photoZipImportService.processEntry(filename, zis, allBooks, allAuthors);
 
@@ -228,16 +224,11 @@ public class PhotoChunkedImportService {
                     }
                     state.totalProcessed.incrementAndGet();
                     state.resultsQueue.add(item);
-
-                    em.getTransaction().commit();
                 } catch (Exception e) {
-                    if (em.getTransaction().isActive()) {
-                        em.getTransaction().rollback();
-                    }
                     PhotoZipImportItemDto errorItem = PhotoZipImportItemDto.builder()
                             .filename(filename)
                             .status("FAILURE")
-                            .errorMessage("Transaction failed: " + e.getMessage())
+                            .errorMessage("Processing failed: " + e.getMessage())
                             .build();
                     state.failureCount.incrementAndGet();
                     state.totalProcessed.incrementAndGet();
@@ -247,8 +238,7 @@ public class PhotoChunkedImportService {
 
                 entryCount++;
                 // Periodically clear the persistence context to release memory
-                // This clears the Spring-managed EntityManager used by photoZipImportService
-                if (entryCount % 50 == 0) {
+                if (entryCount % 20 == 0) {
                     photoZipImportService.clearPersistenceContext();
                     log.info("Cleared entity manager after {} entries", entryCount);
                 }

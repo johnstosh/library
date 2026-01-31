@@ -202,8 +202,13 @@ public class PhotoService {
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType, LocalDateTime dateTaken) {
         try {
             imageBytes = correctImageOrientation(imageBytes, contentType);
-            Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new LibraryException("Book not found"));
+            if (!bookRepository.existsById(bookId)) {
+                throw new LibraryException("Book not found");
+            }
+            // Use getReference to avoid loading the full Book entity into the persistence context.
+            // This prevents Hibernate from dirty-checking the book and triggering @PreUpdate,
+            // which would change the book's lastModified/dateAddedToLibrary timestamps.
+            Book book = entityManager.getReference(Book.class, bookId);
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)
@@ -461,8 +466,12 @@ public class PhotoService {
     public PhotoDto addAuthorPhotoFromBytes(Long authorId, byte[] imageBytes, String contentType) {
         try {
             imageBytes = correctImageOrientation(imageBytes, contentType);
-            Author author = authorRepository.findById(authorId)
-                    .orElseThrow(() -> new LibraryException("Author not found"));
+            if (!authorRepository.existsById(authorId)) {
+                throw new LibraryException("Author not found");
+            }
+            // Use getReference to avoid loading the full Author entity into the persistence context.
+            // This prevents Hibernate from dirty-checking and triggering @PreUpdate.
+            Author author = entityManager.getReference(Author.class, authorId);
             List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)

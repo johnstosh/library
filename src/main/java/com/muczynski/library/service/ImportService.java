@@ -498,8 +498,10 @@ public class ImportService {
                 photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
-                // Note: imageChecksum is not updated here - it's a reference field, not a value to import
-                // The actual imageChecksum is computed from the photo binary during upload
+                // Import imageChecksum so ZIP photo import can match by checksum for deduplication
+                if (pDto.getImageChecksum() != null && !pDto.getImageChecksum().trim().isEmpty()) {
+                    photo.setImageChecksum(pDto.getImageChecksum());
+                }
                 photo.setBook(book);
                 photo.setAuthor(author);
 

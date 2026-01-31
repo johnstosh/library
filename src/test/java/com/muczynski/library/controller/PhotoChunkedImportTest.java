@@ -33,6 +33,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
@@ -221,6 +223,71 @@ class PhotoChunkedImportTest {
 
         // Verify photos saved to DB
         assertTrue(photoRepository.count() >= 2);
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_doesNotChangeBookDateAdded() throws Exception {
+        // Set a specific dateAddedToLibrary and record lastModified
+        LocalDateTime originalDateAdded = LocalDateTime.of(2020, 6, 15, 10, 0, 0);
+        testBook.setDateAddedToLibrary(originalDateAdded);
+        testBook = bookRepository.save(testBook);
+        LocalDateTime originalLastModified = testBook.getLastModified();
+
+        // Wait a moment to ensure any timestamp changes would be detectable
+        Thread.sleep(100);
+
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+
+        MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Total-Size", zipData.length)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipData))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ChunkUploadResultDto response = objectMapper.readValue(
+                result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+        assertTrue(response.isComplete());
+        assertTrue(response.getFinalResult().getSuccessCount() >= 2);
+
+        // Verify book dates were NOT changed by photo import
+        // Truncate to micros to account for DB precision differences
+        Book reloadedBook = bookRepository.findById(testBook.getId()).orElseThrow();
+        assertEquals(originalDateAdded, reloadedBook.getDateAddedToLibrary(),
+                "Photo import should not change dateAddedToLibrary");
+        assertEquals(originalLastModified.truncatedTo(ChronoUnit.MICROS),
+                reloadedBook.getLastModified().truncatedTo(ChronoUnit.MICROS),
+                "Photo import should not change lastModified");
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_photosHaveImageData() throws Exception {
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+
+        mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Total-Size", zipData.length)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipData))
+                .andExpect(status().isOk());
+
+        // Verify all imported photos have image data
+        var photos = photoRepository.findAll();
+        assertFalse(photos.isEmpty(), "Should have imported photos");
+        for (var photo : photos) {
+            assertNotNull(photo.getImage(), "Photo ID " + photo.getId() + " should have image data");
+            assertTrue(photo.getImage().length > 0, "Photo ID " + photo.getId() + " image should not be empty");
+            assertNotNull(photo.getImageChecksum(), "Photo ID " + photo.getId() + " should have checksum");
+        }
     }
 
     @Test

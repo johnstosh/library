@@ -159,7 +159,7 @@ public class PhotoZipImportService {
                 // The pre-loaded allBooks and allAuthors lists become detached but are only
                 // used for in-memory matching, so no lazy loading issues
                 int processed = successCount + failureCount + skippedCount;
-                if (processed > 0 && processed % 50 == 0) {
+                if (processed > 0 && processed % 20 == 0) {
                     entityManager.flush();
                     entityManager.clear();
                     log.info("Cleared persistence context after {} entries to free memory", processed);
@@ -204,8 +204,9 @@ public class PhotoZipImportService {
 
     /**
      * Process a single ZIP entry.
+     * Must be public so Spring's @Transactional proxy applies when called from other beans.
      */
-    PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
+    public PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
                                        List<Book> allBooks, List<Author> allAuthors) {
         Matcher matcher = FILENAME_PATTERN.matcher(filename);
 

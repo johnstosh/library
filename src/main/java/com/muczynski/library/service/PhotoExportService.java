@@ -1323,7 +1323,7 @@ public class PhotoExportService {
                     }
 
                     // Periodically clear the entire persistence context to free first-level cache
-                    if (successCount % 50 == 0) {
+                    if (successCount % 20 == 0) {
                         entityManager.clear();
                     }
 
