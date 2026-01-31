@@ -844,6 +844,9 @@ export function DataManagementPage() {
                 <h4 className="font-medium text-gray-900">
                   Import Results: {zipImportResult.totalFiles} file(s) processed
                 </h4>
+                <div className="text-sm text-gray-600 mt-1">
+                  {zipImportResult.successCount} updated, {zipImportResult.failureCount} failed, {zipImportResult.skippedCount} skipped
+                </div>
               </div>
               <div className="max-h-64 overflow-y-auto">
                 <table className="min-w-full divide-y divide-gray-200">
