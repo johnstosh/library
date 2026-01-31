@@ -346,68 +346,79 @@ export function useImportPhotosFromZipChunked() {
       let chunkIndex = 0
       let finalResult: PhotoZipImportResultDto | undefined
 
-      for (let offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
-        const end = Math.min(offset + CHUNK_SIZE, totalSize)
-        const chunk = file.slice(offset, end)
-        const isLastChunk = end >= totalSize
-        const chunkBytes = await chunk.arrayBuffer()
-
-        const response = await fetch('/api/photos/import-zip-chunk', {
-          method: 'PUT',
-          body: chunkBytes,
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            'X-Upload-Id': uploadId,
-            'X-Chunk-Index': String(chunkIndex),
-            'X-Total-Size': String(totalSize),
-            'X-Is-Last-Chunk': String(isLastChunk),
-          },
+      const cleanupUpload = () => {
+        fetch(`/api/photos/import-zip-chunk/${uploadId}`, {
+          method: 'DELETE',
           credentials: 'include',
-        })
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => null)
-          throw new Error(error?.message || `Server returned ${response.status}`)
-        }
-
-        const result: ChunkUploadResultDto = await response.json()
-        allItems.push(...result.processedPhotos)
-
-        const mbSent = end / (1024 * 1024)
-        setProgress({
-          mbSent,
-          totalMb,
-          percentage: (end / totalSize) * 100,
-          imagesProcessed: result.totalProcessedSoFar,
-          imagesSuccess: result.totalSuccessSoFar,
-          imagesFailure: result.totalFailureSoFar,
-          imagesSkipped: result.totalSkippedSoFar,
-          isUploading: !result.complete,
-          currentItems: allItems,
-        })
-
-        if (result.complete && result.finalResult) {
-          finalResult = result.finalResult
-        }
-
-        if (result.errorMessage) {
-          // Server returned stats with an error — build result from what we have, then throw
-          if (!finalResult && result.finalResult) {
-            finalResult = result.finalResult
-          }
-          const statsMsg = `${result.totalSuccessSoFar} succeeded, ${result.totalFailureSoFar} failed, ${result.totalSkippedSoFar} skipped`
-          throw new Error(`Import failed after processing ${result.totalProcessedSoFar} photos (${statsMsg}): ${result.errorMessage}`)
-        }
-
-        chunkIndex++
+        }).catch(() => {}) // best-effort cleanup
       }
 
-      return finalResult || {
-        totalFiles: allItems.length,
-        successCount: allItems.filter(i => i.status === 'SUCCESS').length,
-        failureCount: allItems.filter(i => i.status === 'FAILURE').length,
-        skippedCount: allItems.filter(i => i.status === 'SKIPPED').length,
-        items: allItems,
+      try {
+        for (let offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
+          const end = Math.min(offset + CHUNK_SIZE, totalSize)
+          const chunk = file.slice(offset, end)
+          const isLastChunk = end >= totalSize
+          const chunkBytes = await chunk.arrayBuffer()
+
+          const response = await fetch('/api/photos/import-zip-chunk', {
+            method: 'PUT',
+            body: chunkBytes,
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              'X-Upload-Id': uploadId,
+              'X-Chunk-Index': String(chunkIndex),
+              'X-Total-Size': String(totalSize),
+              'X-Is-Last-Chunk': String(isLastChunk),
+            },
+            credentials: 'include',
+          })
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => null)
+            throw new Error(error?.message || `Server returned ${response.status}`)
+          }
+
+          const result: ChunkUploadResultDto = await response.json()
+          allItems.push(...result.processedPhotos)
+
+          const mbSent = end / (1024 * 1024)
+          setProgress({
+            mbSent,
+            totalMb,
+            percentage: (end / totalSize) * 100,
+            imagesProcessed: result.totalProcessedSoFar,
+            imagesSuccess: result.totalSuccessSoFar,
+            imagesFailure: result.totalFailureSoFar,
+            imagesSkipped: result.totalSkippedSoFar,
+            isUploading: !result.complete,
+            currentItems: allItems,
+          })
+
+          if (result.complete && result.finalResult) {
+            finalResult = result.finalResult
+          }
+
+          if (result.errorMessage) {
+            // Server returned stats with an error — build result from what we have, then throw
+            if (!finalResult && result.finalResult) {
+              finalResult = result.finalResult
+            }
+            const statsMsg = `${result.totalSuccessSoFar} succeeded, ${result.totalFailureSoFar} failed, ${result.totalSkippedSoFar} skipped`
+            throw new Error(`Import failed after processing ${result.totalProcessedSoFar} photos (${statsMsg}): ${result.errorMessage}`)
+          }
+
+          chunkIndex++
+        }
+
+        return finalResult || {
+          totalFiles: allItems.length,
+          successCount: allItems.filter(i => i.status === 'SUCCESS').length,
+          failureCount: allItems.filter(i => i.status === 'FAILURE').length,
+          skippedCount: allItems.filter(i => i.status === 'SKIPPED').length,
+          items: allItems,
+        }
+      } finally {
+        cleanupUpload()
       }
     },
     onSuccess: () => {

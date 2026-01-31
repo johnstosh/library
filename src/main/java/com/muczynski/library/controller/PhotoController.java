@@ -271,4 +271,16 @@ public class PhotoController {
                     .body(new ErrorResponse("Internal Server Error", "Failed to process chunk: " + detail));
         }
     }
+
+    /**
+     * Remove a completed or failed chunked upload session.
+     * Called by the frontend after it has read the final stats.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @DeleteMapping("/import-zip-chunk/{uploadId}")
+    public ResponseEntity<?> removeChunkedUpload(@PathVariable String uploadId) {
+        logger.info("Remove upload request: uploadId={}", uploadId);
+        photoChunkedImportService.removeUpload(uploadId);
+        return ResponseEntity.noContent().build();
+    }
 }

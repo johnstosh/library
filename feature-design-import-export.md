@@ -386,8 +386,16 @@ This allows re-importing a ZIP without creating duplicates, and updating changed
 The chunked ZIP import (`PUT /api/photos/import-zip-chunk`) preserves accumulated stats when errors occur:
 
 - **Background thread failure**: If the ZIP processing thread fails (OOM, timeout, etc.), the response includes `errorMessage` alongside the accumulated stats (`totalProcessedSoFar`, `totalSuccessSoFar`, etc.) and `complete=true`. This allows the frontend to display partial results.
-- **Trailing chunks after completion**: If a chunk arrives after the upload session was already completed or expired (`chunkIndex > 0` with no active state), a graceful response with `complete=true` and `errorMessage` is returned instead of a 500 error.
+- **Trailing chunks after cleanup**: If a chunk arrives after the upload session was cleaned up (`chunkIndex > 0` with no active state), a graceful response with `complete=true` and `errorMessage` is returned instead of a 500 error.
 - **`ChunkUploadResultDto.errorMessage`**: When non-null, indicates the upload ended due to an error. The response still contains valid stats for all photos processed before the failure.
+
+### Chunked Upload Lifecycle
+Upload state is **not** automatically removed on completion or error. The frontend is responsible for cleanup:
+
+1. Upload chunks via `PUT /api/photos/import-zip-chunk`
+2. Read the final response with stats (state remains available for re-reads)
+3. Call `DELETE /api/photos/import-zip-chunk/{uploadId}` to release server-side state
+4. The scheduled `cleanupStaleUploads` task removes any sessions older than 30 minutes as a safety net
 
 ## Related Files
 - `ImportService.java` - Core import/export logic

@@ -42,6 +42,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -292,7 +293,7 @@ class PhotoChunkedImportTest {
 
     @Test
     @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
-    void testChunkedImport_trailingChunkAfterCompletion() throws Exception {
+    void testChunkedImport_trailingChunkAfterCleanup() throws Exception {
         byte[] zipData = createTestZip();
         String uploadId = UUID.randomUUID().toString();
 
@@ -306,7 +307,11 @@ class PhotoChunkedImportTest {
                         .content(zipData))
                 .andExpect(status().isOk());
 
-        // Send a trailing chunk with the same uploadId — state was already removed
+        // Client cleans up the upload session
+        mockMvc.perform(delete("/api/photos/import-zip-chunk/" + uploadId))
+                .andExpect(status().isNoContent());
+
+        // Send a trailing chunk after cleanup — state is gone
         MvcResult trailingResult = mockMvc.perform(put("/api/photos/import-zip-chunk")
                         .header("X-Upload-Id", uploadId)
                         .header("X-Chunk-Index", 1)
@@ -323,6 +328,31 @@ class PhotoChunkedImportTest {
         assertTrue(response.isComplete());
         assertNotNull(response.getErrorMessage());
         assertTrue(response.getErrorMessage().contains("expired"));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_cleanupEndpoint() throws Exception {
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+
+        // Complete an upload
+        mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Total-Size", zipData.length)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipData))
+                .andExpect(status().isOk());
+
+        // Cleanup should succeed
+        mockMvc.perform(delete("/api/photos/import-zip-chunk/" + uploadId))
+                .andExpect(status().isNoContent());
+
+        // Second cleanup is also fine (idempotent)
+        mockMvc.perform(delete("/api/photos/import-zip-chunk/" + uploadId))
+                .andExpect(status().isNoContent());
     }
 
     @Test

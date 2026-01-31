@@ -199,7 +199,6 @@ public class PhotoChunkedImportService {
                                 .items(new ArrayList<>(state.allItems))
                                 .build());
             }
-            activeUploads.remove(uploadId);
         } else {
             synchronized (state.allItems) {
                 state.allItems.addAll(newItems);
@@ -207,6 +206,15 @@ public class PhotoChunkedImportService {
         }
 
         return builder.build();
+    }
+
+    public boolean removeUpload(String uploadId) {
+        ChunkedUploadState removed = activeUploads.remove(uploadId);
+        if (removed != null) {
+            log.info("Upload {} removed by client", uploadId);
+            return true;
+        }
+        return false;
     }
 
     private void processZipStream(PipedInputStream pipedIn, List<Book> allBooks, List<Author> allAuthors,
