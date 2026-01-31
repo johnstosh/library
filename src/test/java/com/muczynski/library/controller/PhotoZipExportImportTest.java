@@ -31,6 +31,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -69,6 +70,9 @@ class PhotoZipExportImportTest {
 
     @Autowired
     private PhotoRepository photoRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Autowired
     private BookRepository bookRepository;
@@ -366,9 +370,11 @@ class PhotoZipExportImportTest {
         assertEquals("book", finalResult.getItems().get(0).getEntityType());
         assertEquals("The Adventures of Tom Sawyer", finalResult.getItems().get(0).getEntityName());
 
-        // Verify photo was created
-        var photos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
-        assertEquals(1, photos.size(), "Book should have 1 photo");
+        // Verify photo was created (within transaction for OID LOB access)
+        transactionTemplate.executeWithoutResult(status -> {
+            var photos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
+            assertEquals(1, photos.size(), "Book should have 1 photo");
+        });
     }
 
     @Test
@@ -385,9 +391,11 @@ class PhotoZipExportImportTest {
         assertEquals("author", finalResult.getItems().get(0).getEntityType());
         assertEquals("Mark Twain", finalResult.getItems().get(0).getEntityName());
 
-        // Verify photo was created
-        var photos = photoRepository.findByAuthorId(testAuthor.getId());
-        assertEquals(1, photos.size(), "Author should have 1 photo");
+        // Verify photo was created (within transaction for OID LOB access)
+        transactionTemplate.executeWithoutResult(status -> {
+            var photos = photoRepository.findByAuthorId(testAuthor.getId());
+            assertEquals(1, photos.size(), "Author should have 1 photo");
+        });
     }
 
     @Test
@@ -469,7 +477,7 @@ class PhotoZipExportImportTest {
         createBookPhoto(testBook, "Back", 1);
         createAuthorPhoto(testAuthor, "Portrait");
 
-        int originalPhotoCount = photoRepository.findAll().size();
+        long originalPhotoCount = transactionTemplate.execute(status -> (long) photoRepository.findAll().size());
         assertEquals(3, originalPhotoCount);
 
         // Step 2: Export to ZIP
@@ -481,8 +489,8 @@ class PhotoZipExportImportTest {
         assertTrue(exportedZipBytes.length > 0);
 
         // Step 3: Delete all photos (simulate restore scenario)
-        photoRepository.deleteAll();
-        assertEquals(0, photoRepository.findAll().size());
+        transactionTemplate.executeWithoutResult(status -> photoRepository.deleteAll());
+        assertEquals(0L, (long) transactionTemplate.execute(status -> (long) photoRepository.findAll().size()));
 
         // Step 4: Import via chunked endpoint
         ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
@@ -491,17 +499,17 @@ class PhotoZipExportImportTest {
         assertEquals(3, finalResult.getSuccessCount());
         assertEquals(0, finalResult.getFailureCount());
 
-        // Step 5: Verify photos were restored
-        var restoredPhotos = photoRepository.findAll();
-        assertEquals(3, restoredPhotos.size(), "All 3 photos should be restored");
+        // Step 5: Verify photos were restored (within transaction for OID LOB access)
+        transactionTemplate.executeWithoutResult(status -> {
+            var restoredPhotos = photoRepository.findAll();
+            assertEquals(3, restoredPhotos.size(), "All 3 photos should be restored");
 
-        // Verify book photos
-        var bookPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
-        assertEquals(2, bookPhotos.size(), "Book should have 2 photos");
+            var bookPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
+            assertEquals(2, bookPhotos.size(), "Book should have 2 photos");
 
-        // Verify author photo
-        var authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
-        assertEquals(1, authorPhotos.size(), "Author should have 1 photo");
+            var authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
+            assertEquals(1, authorPhotos.size(), "Author should have 1 photo");
+        });
     }
 
     @Test
@@ -520,17 +528,19 @@ class PhotoZipExportImportTest {
         byte[] exportedZipBytes = exportResult.getResponse().getContentAsByteArray();
 
         // Delete photos
-        photoRepository.deleteAll();
+        transactionTemplate.executeWithoutResult(status -> photoRepository.deleteAll());
 
         // Import via chunked endpoint
         ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
         assertEquals(1, result.getFinalResult().getSuccessCount());
 
-        // Verify checksum matches
-        var restoredPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
-        assertEquals(1, restoredPhotos.size());
-        assertEquals(originalChecksum, restoredPhotos.get(0).getImageChecksum(),
-                "Image checksum should match after round-trip");
+        // Verify checksum matches (within transaction for OID LOB access)
+        transactionTemplate.executeWithoutResult(status -> {
+            var restoredPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
+            assertEquals(1, restoredPhotos.size());
+            assertEquals(originalChecksum, restoredPhotos.get(0).getImageChecksum(),
+                    "Image checksum should match after round-trip");
+        });
     }
 
     @Test
@@ -617,7 +627,7 @@ class PhotoZipExportImportTest {
         }
 
         // Verify we have photos for all titles
-        assertEquals(LONGEST_TITLES.length, photoRepository.findAll().size());
+        assertEquals((long) LONGEST_TITLES.length, (long) transactionTemplate.execute(status -> (long) photoRepository.findAll().size()));
 
         // Export to ZIP
         MvcResult exportResult = mockMvc.perform(get("/api/photo-export"))
@@ -644,8 +654,8 @@ class PhotoZipExportImportTest {
         assertEquals(LONGEST_TITLES.length, fileCount, "Should have " + LONGEST_TITLES.length + " files in ZIP");
 
         // Delete all photos
-        photoRepository.deleteAll();
-        assertEquals(0, photoRepository.findAll().size());
+        transactionTemplate.executeWithoutResult(status -> photoRepository.deleteAll());
+        assertEquals(0L, (long) transactionTemplate.execute(status -> (long) photoRepository.findAll().size()));
 
         // Import via chunked endpoint
         ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
@@ -654,19 +664,21 @@ class PhotoZipExportImportTest {
         assertEquals(LONGEST_TITLES.length, finalResult.getSuccessCount());
         assertEquals(0, finalResult.getFailureCount());
 
-        // Verify all photos were restored to the correct books
-        var restoredPhotos = photoRepository.findAll();
-        assertEquals(LONGEST_TITLES.length, restoredPhotos.size(), "All photos should be restored");
+        // Verify all photos were restored to the correct books (within transaction for OID LOB access)
+        transactionTemplate.executeWithoutResult(status -> {
+            var restoredPhotos = photoRepository.findAll();
+            assertEquals(LONGEST_TITLES.length, restoredPhotos.size(), "All photos should be restored");
 
-        // Verify each title got its photo back
-        for (String title : LONGEST_TITLES) {
-            Book book = bookRepository.findAll().stream()
-                    .filter(b -> b.getTitle().equals(title))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("Book not found: " + title));
-            var photos = photoRepository.findByBookIdOrderByPhotoOrder(book.getId());
-            assertEquals(1, photos.size(), "Book should have 1 photo: " + title);
-        }
+            // Verify each title got its photo back
+            for (String title : LONGEST_TITLES) {
+                Book book = bookRepository.findAll().stream()
+                        .filter(b -> b.getTitle().equals(title))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("Book not found: " + title));
+                var photos = photoRepository.findByBookIdOrderByPhotoOrder(book.getId());
+                assertEquals(1, photos.size(), "Book should have 1 photo: " + title);
+            }
+        });
     }
 
     @Test

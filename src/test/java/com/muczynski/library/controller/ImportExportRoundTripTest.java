@@ -329,6 +329,39 @@ class ImportExportRoundTripTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_updatesExistingPhotoWithImageBytes() throws Exception {
+        // Regression test: JSON import must be able to save/update Photo entities
+        // that have OID-type image data without "column 'image' is of type oid but
+        // expression is of type bytea" errors.
+        Book book = new Book();
+        book.setTitle("OID Test Book");
+        book.setAuthor(authors.get(0));
+        book.setStatus(BookStatus.ACTIVE);
+        book.setLibrary(testLibrary);
+        book = bookRepository.save(book);
+
+        Photo photo = randomPhoto.createForBook(book, 1);
+        photo = photoRepository.save(photo);
+        assertNotNull(photo.getImage(), "Photo should have image bytes");
+        assertNotNull(photo.getImageChecksum(), "Photo should have checksum");
+
+        // Export (includes photo metadata with checksum)
+        MvcResult exportResult = mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String exportedJson = exportResult.getResponse().getContentAsString();
+
+        // Re-import: ImportService finds the existing photo by checksum and calls
+        // photoRepository.save(photo), which issues an UPDATE including the image column.
+        // This must work with OID column type.
+        mockMvc.perform(post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(exportedJson))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
     void testImportPreservesUserFieldDefaults() throws Exception {
         // Create a user with empty API keys
         User user = new User();
