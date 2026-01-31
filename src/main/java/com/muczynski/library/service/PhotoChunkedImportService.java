@@ -49,7 +49,7 @@ public class PhotoChunkedImportService {
         final AtomicInteger skippedCount = new AtomicInteger(0);
         final AtomicInteger totalProcessed = new AtomicInteger(0);
         final List<PhotoZipImportItemDto> allItems = new ArrayList<>();
-        final Instant createdAt = Instant.now();
+        volatile Instant lastActivityAt = Instant.now();
         volatile Exception backgroundError;
 
         ChunkedUploadState(PipedOutputStream pipedOut, PipedInputStream pipedIn,
@@ -112,6 +112,8 @@ public class PhotoChunkedImportService {
                 throw new IllegalStateException("No active upload found for ID: " + uploadId);
             }
         }
+
+        state.lastActivityAt = Instant.now();
 
         String errorMessage = null;
 
@@ -279,7 +281,7 @@ public class PhotoChunkedImportService {
     public void cleanupStaleUploads() {
         Instant cutoff = Instant.now().minusSeconds(1800); // 30 minutes
         activeUploads.entrySet().removeIf(entry -> {
-            if (entry.getValue().createdAt.isBefore(cutoff)) {
+            if (entry.getValue().lastActivityAt.isBefore(cutoff)) {
                 log.warn("Cleaning up stale upload: {}", entry.getKey());
                 try {
                     entry.getValue().pipedOut.close();
