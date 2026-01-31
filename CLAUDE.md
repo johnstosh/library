@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Backend:**
 - Java 17 with Spring Boot 3.5+
 - Spring Data JPA with Hibernate ORM
-- PostgreSQL (production) with Cloud SQL / H2 (testing)
+- PostgreSQL everywhere: Cloud SQL (production), Docker (development), embedded Testcontainers (testing)
 - Spring Security with OAuth2 (Google SSO)
 - MapStruct 1.5.5 for DTO mapping
 - iText 8 for PDF generation (library cards, labels)
@@ -52,15 +52,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - JUnit 5 with Spring Boot Test
 - Playwright for UI testing
 - REST Assured for API testing
-- H2 in-memory database for tests
+- Embedded PostgreSQL via Testcontainers (no H2)
 
 ## Common Development Commands
 
 ```bash
-# Run with H2 database (default for development)
+# Start PostgreSQL in Docker for local development
+./docker-bootrun.sh
+
+# Run the application (requires PostgreSQL running via docker-bootrun.sh)
 ./gradlew bootRun
 
-# Run tests (shows only failures for cleaner output)
+# Run tests (uses embedded PostgreSQL via Testcontainers, no Docker needed)
 ./gradlew test
 
 # Run a single test class
@@ -69,7 +72,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Clean build
 ./gradlew clean build
 
-# Run with production profile (PostgreSQL)
+# Run with production profile (Cloud SQL PostgreSQL)
 ./gradlew bootRun --args='--spring.profiles.active=prod'
 ```
 
@@ -178,9 +181,11 @@ See `feature-design-frontend.md` for complete details.
 ## Key Configuration
 
 ### Database
+PostgreSQL is used in all environments. H2 is not used anywhere.
 - **Production**: PostgreSQL via Google Cloud SQL (application-prod.properties)
   - Socket factory: `com.google.cloud.sql.postgres.SocketFactory`
-- **Testing**: H2 in-memory database (application-test.properties)
+- **Development**: PostgreSQL via Docker (`./docker-bootrun.sh` starts a container with persistent volume)
+- **Testing**: Embedded PostgreSQL via Testcontainers (auto-configured by `TestcontainersConfiguration`)
 - Schema auto-updated via `spring.jpa.hibernate.ddl-auto=update`
 
 ### Jackson / JSON Serialization

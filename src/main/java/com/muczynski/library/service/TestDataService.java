@@ -2,7 +2,6 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
-import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
@@ -28,9 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,9 +35,6 @@ import java.util.stream.Collectors;
 public class TestDataService {
 
     private static final Logger logger = LoggerFactory.getLogger(TestDataService.class);
-
-    @Autowired
-    private DataSource dataSource;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -146,20 +139,6 @@ public class TestDataService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void totalPurge() {
-        try (Connection connection = dataSource.getConnection()) {
-            String dbProductName = connection.getMetaData().getDatabaseProductName();
-            if ("PostgreSQL".equals(dbProductName)) {
-                purgePostgres();
-            } else {
-                purgeH2();
-            }
-        } catch (SQLException e) {
-            logger.debug("Failed to obtain database product name during total purge: {}", e.getMessage(), e);
-            throw new LibraryException("Failed to obtain database product name", e);
-        }
-    }
-
-    private void purgePostgres() {
         jdbcTemplate.execute("DROP TABLE IF EXISTS users_roles CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS loan CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS photo CASCADE");
@@ -169,12 +148,5 @@ public class TestDataService {
         jdbcTemplate.execute("DROP TABLE IF EXISTS author CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS library CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS applied CASCADE");
-    }
-
-    private void purgeH2() {
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        List<String> tableNames = jdbcTemplate.queryForList("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'", String.class);
-        tableNames.forEach(tableName -> jdbcTemplate.execute("DROP TABLE " + tableName));
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
     }
 }

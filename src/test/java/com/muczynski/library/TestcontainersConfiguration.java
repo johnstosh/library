@@ -1,22 +1,30 @@
 // (c) Copyright 2025 by Muczynski
 package com.muczynski.library;
 
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Auto-configuration that provides an embedded PostgreSQL database for all Spring Boot
- * tests via Testcontainers. This replaces the previous H2 in-memory database to ensure
- * tests run against the same database engine as production.
+ * Provides an embedded PostgreSQL database for all Spring Boot tests via Testcontainers.
+ * Registered globally via spring.factories as an ApplicationContextInitializer so that
+ * all {@code @SpringBootTest} contexts automatically use the Testcontainers PostgreSQL.
  */
-@AutoConfiguration
-public class TestcontainersConfiguration {
+public class TestcontainersConfiguration implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-    @Bean
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgresContainer() {
-        return new PostgreSQLContainer<>("postgres:16-alpine");
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    static {
+        postgres.start();
+    }
+
+    @Override
+    public void initialize(ConfigurableApplicationContext ctx) {
+        TestPropertyValues.of(
+                "spring.datasource.url=" + postgres.getJdbcUrl(),
+                "spring.datasource.username=" + postgres.getUsername(),
+                "spring.datasource.password=" + postgres.getPassword()
+        ).applyTo(ctx.getEnvironment());
     }
 }

@@ -33,7 +33,6 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'com.h2database:h2' // for development with file-based H2
     implementation 'com.google.cloud.sql:postgres-socket-factory:1.13.+'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

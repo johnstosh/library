@@ -26,25 +26,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TestDataServiceTest {
-
-    @Mock
-    private DataSource dataSource;
 
     @Mock
     private JdbcTemplate jdbcTemplate;
@@ -298,15 +289,7 @@ class TestDataServiceTest {
     }
 
     @Test
-    void testTotalPurge_PostgreSQL() throws Exception {
-        // Arrange
-        Connection mockConnection = mock(Connection.class);
-        DatabaseMetaData mockMetaData = mock(DatabaseMetaData.class);
-
-        when(dataSource.getConnection()).thenReturn(mockConnection);
-        when(mockConnection.getMetaData()).thenReturn(mockMetaData);
-        when(mockMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
-
+    void testTotalPurge() {
         // Act
         testDataService.totalPurge();
 
@@ -320,45 +303,5 @@ class TestDataServiceTest {
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS author CASCADE");
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS library CASCADE");
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS applied CASCADE");
-        verify(mockConnection, times(1)).close();
-    }
-
-    @Test
-    void testTotalPurge_H2() throws Exception {
-        // Arrange
-        Connection mockConnection = mock(Connection.class);
-        DatabaseMetaData mockMetaData = mock(DatabaseMetaData.class);
-
-        when(dataSource.getConnection()).thenReturn(mockConnection);
-        when(mockConnection.getMetaData()).thenReturn(mockMetaData);
-        when(mockMetaData.getDatabaseProductName()).thenReturn("H2");
-
-        List<String> tableNames = List.of("BOOK", "AUTHOR", "LIBRARY", "LOAN", "PHOTO", "USERS");
-        when(jdbcTemplate.queryForList(anyString(), eq(String.class))).thenReturn(tableNames);
-
-        // Act
-        testDataService.totalPurge();
-
-        // Assert
-        verify(jdbcTemplate, times(1)).execute("SET REFERENTIAL_INTEGRITY FALSE");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE BOOK");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE AUTHOR");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE LIBRARY");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE LOAN");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE PHOTO");
-        verify(jdbcTemplate, times(1)).execute("DROP TABLE USERS");
-        verify(jdbcTemplate, times(1)).execute("SET REFERENTIAL_INTEGRITY TRUE");
-        verify(mockConnection, times(1)).close();
-    }
-
-    @Test
-    void testTotalPurge_ThrowsExceptionOnDatabaseError() throws Exception {
-        // Arrange
-        when(dataSource.getConnection()).thenThrow(new SQLException("Connection failed"));
-
-        // Act & Assert
-        assertThrows(com.muczynski.library.exception.LibraryException.class, () -> {
-            testDataService.totalPurge();
-        });
     }
 }
