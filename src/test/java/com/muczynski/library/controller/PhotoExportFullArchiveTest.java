@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -33,15 +34,16 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -53,15 +55,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * exports as ZIP, and verifies all photos are included. Then re-imports the ZIP
  * via the chunked upload endpoint and verifies the round-trip.
  * Skips if branch-archive.json does not exist.
+ *
+ * The export is streamed to a temp file in 1MB chunks to avoid OutOfMemory errors.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @ActiveProfiles("test")
 @EnabledIf("archiveFileExists")
 class PhotoExportFullArchiveTest {
 
     private static final Logger log = LoggerFactory.getLogger(PhotoExportFullArchiveTest.class);
-    private static final int CHUNK_SIZE = 256 * 1024; // 256KB chunks for tests
+    private static final int CHUNK_SIZE = 1024 * 1024; // 1MB chunks
 
     static boolean archiveFileExists() {
         return Files.exists(Path.of("branch-archive.json"));
@@ -99,19 +103,19 @@ class PhotoExportFullArchiveTest {
 
     @BeforeEach
     void setUp() {
-        // Clean slate
-        loanRepository.deleteAll();
-        photoRepository.deleteAll();
-        bookRepository.deleteAll();
-        authorRepository.deleteAll();
+        // Clean slate - use deleteAllInBatch to avoid loading entities into memory
+        loanRepository.deleteAllInBatch();
+        photoRepository.deleteAllInBatch();
+        bookRepository.deleteAllInBatch();
+        authorRepository.deleteAllInBatch();
     }
 
     @AfterEach
     void tearDown() {
-        loanRepository.deleteAll();
-        photoRepository.deleteAll();
-        bookRepository.deleteAll();
-        authorRepository.deleteAll();
+        loanRepository.deleteAllInBatch();
+        photoRepository.deleteAllInBatch();
+        bookRepository.deleteAllInBatch();
+        authorRepository.deleteAllInBatch();
     }
 
     private byte[] createDummyImage(int width, int height) throws Exception {
@@ -139,7 +143,7 @@ class PhotoExportFullArchiveTest {
     }
 
     private Photo createBookPhoto(Book book, int order) throws Exception {
-        byte[] imageBytes = createDummyImage(100 + order, 150 + order);
+        byte[] imageBytes = createDummyImage(1000 + order, 1500 + order);
         Photo photo = new Photo();
         photo.setBook(book);
         photo.setImage(imageBytes);
@@ -152,60 +156,79 @@ class PhotoExportFullArchiveTest {
     }
 
     /**
-     * Send a ZIP byte array via the chunked upload endpoint, splitting into CHUNK_SIZE pieces.
-     * Prints a blow-by-blow of each chunk response to stdout.
+     * Count entries in a ZIP file by streaming from disk.
+     */
+    private int countZipEntries(Path zipFile) throws IOException {
+        int count = 0;
+        try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile.toFile())))) {
+            while (zis.getNextEntry() != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Import a ZIP file via the chunked upload endpoint, reading from disk in CHUNK_SIZE pieces.
      * Returns the final ChunkUploadResultDto (with complete=true and finalResult).
      */
-    private ChunkUploadResultDto importZipChunked(byte[] zipBytes) throws Exception {
+    private ChunkUploadResultDto importZipChunkedFromFile(Path zipFile) throws Exception {
+        long totalSize = Files.size(zipFile);
         String uploadId = UUID.randomUUID().toString();
-        int totalChunks = (int) Math.ceil((double) zipBytes.length / CHUNK_SIZE);
-        double totalMb = zipBytes.length / (1024.0 * 1024.0);
+        int totalChunks = (int) Math.ceil((double) totalSize / CHUNK_SIZE);
+        double totalMb = totalSize / (1024.0 * 1024.0);
 
         log.info("=== Chunked ZIP Import: {} MB in {} chunk(s) of {} KB ===",
                 String.format("%.2f", totalMb), totalChunks, CHUNK_SIZE / 1024);
 
         ChunkUploadResultDto lastResponse = null;
         int chunkIndex = 0;
+        byte[] buffer = new byte[CHUNK_SIZE];
 
-        for (int offset = 0; offset < zipBytes.length; offset += CHUNK_SIZE) {
-            int end = Math.min(offset + CHUNK_SIZE, zipBytes.length);
-            byte[] chunk = Arrays.copyOfRange(zipBytes, offset, end);
-            boolean isLast = end >= zipBytes.length;
-            double sentMb = end / (1024.0 * 1024.0);
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(zipFile.toFile()))) {
+            long bytesSent = 0;
+            int bytesRead;
 
-            long startMs = System.currentTimeMillis();
+            while ((bytesRead = bis.read(buffer)) != -1) {
+                byte[] chunk = (bytesRead == CHUNK_SIZE) ? buffer : Arrays.copyOf(buffer, bytesRead);
+                bytesSent += bytesRead;
+                boolean isLast = bytesSent >= totalSize;
+                double sentMb = bytesSent / (1024.0 * 1024.0);
 
-            MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
-                            .header("X-Upload-Id", uploadId)
-                            .header("X-Chunk-Index", chunkIndex)
-                            .header("X-Total-Size", zipBytes.length)
-                            .header("X-Is-Last-Chunk", isLast)
-                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                            .content(chunk))
-                    .andExpect(status().isOk())
-                    .andReturn();
+                long startMs = System.currentTimeMillis();
 
-            long elapsedMs = System.currentTimeMillis() - startMs;
+                MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                                .header("X-Upload-Id", uploadId)
+                                .header("X-Chunk-Index", chunkIndex)
+                                .header("X-Total-Size", totalSize)
+                                .header("X-Is-Last-Chunk", isLast)
+                                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                                .content(chunk))
+                        .andExpect(status().isOk())
+                        .andReturn();
 
-            lastResponse = objectMapper.readValue(
-                    result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+                long elapsedMs = System.currentTimeMillis() - startMs;
 
-            int newPhotos = lastResponse.getProcessedPhotos() != null
-                    ? lastResponse.getProcessedPhotos().size() : 0;
+                lastResponse = objectMapper.readValue(
+                        result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
 
-            log.info("  Chunk {}/{} | {} / {} MB ({}%) | {} ms | +{} photos this chunk | total: {} processed, {} success, {} failed, {} skipped{}",
-                    String.format("%3d", chunkIndex + 1), totalChunks,
-                    String.format("%6.2f", sentMb), String.format("%.2f", totalMb),
-                    String.format("%3.0f", (end * 100.0) / zipBytes.length),
-                    String.format("%4d", elapsedMs),
-                    newPhotos,
-                    lastResponse.getTotalProcessedSoFar(),
-                    lastResponse.getTotalSuccessSoFar(),
-                    lastResponse.getTotalFailureSoFar(),
-                    lastResponse.getTotalSkippedSoFar(),
-                    isLast ? "  [LAST]" : "");
+                int newPhotos = lastResponse.getProcessedPhotos() != null
+                        ? lastResponse.getProcessedPhotos().size() : 0;
 
-            chunkIndex++;
+                log.info("  Chunk {}/{} | {} / {} MB ({}%) | {} ms | +{} photos | total: {} processed, {} success, {} failed, {} skipped{}",
+                        String.format("%3d", chunkIndex + 1), totalChunks,
+                        String.format("%6.2f", sentMb), String.format("%.2f", totalMb),
+                        String.format("%3.0f", (bytesSent * 100.0) / totalSize),
+                        String.format("%4d", elapsedMs),
+                        newPhotos,
+                        lastResponse.getTotalProcessedSoFar(),
+                        lastResponse.getTotalSuccessSoFar(),
+                        lastResponse.getTotalFailureSoFar(),
+                        lastResponse.getTotalSkippedSoFar(),
+                        isLast ? "  [LAST]" : "");
+
+                chunkIndex++;
+            }
         }
 
         assertNotNull(lastResponse);
@@ -244,7 +267,7 @@ class PhotoExportFullArchiveTest {
         log.info("[Step 2] Creating photos for {} books...", allBooks.size());
 
         // Delete any metadata-only photos from the import (they have no image data)
-        photoRepository.deleteAll();
+        photoRepository.deleteAllInBatch();
 
         int expectedPhotoCount = 0;
         for (Book book : allBooks) {
@@ -274,62 +297,68 @@ class PhotoExportFullArchiveTest {
                 "All photos should have image data");
         log.info("[Step 2] Verified: {} photos in DB, {} with image data.", dbPhotoCount, activeWithImages);
 
-        // 4. Export as ZIP
+        // 4. Export as ZIP - write directly to temp file to avoid holding full ZIP in memory
         log.info("[Step 3] Exporting photos as ZIP...");
-        MvcResult result = mockMvc.perform(get("/api/photo-export"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/zip"))
-                .andReturn();
+        Path tempZipFile = Files.createTempFile("photo-export-test-", ".zip");
+        try {
+            MvcResult result = mockMvc.perform(get("/api/photo-export"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Type", "application/zip"))
+                    .andReturn();
 
-        byte[] zipBytes = result.getResponse().getContentAsByteArray();
-        assertTrue(zipBytes.length > 0, "ZIP file should not be empty");
-        log.info("[Step 3] ZIP exported: {} MB.", String.format("%.2f", zipBytes.length / (1024.0 * 1024.0)));
+            // Write response to temp file immediately
+            byte[] responseBytes = result.getResponse().getContentAsByteArray();
+            Files.write(tempZipFile, responseBytes);
+            responseBytes = null; // Allow GC to reclaim
 
-        // 5. Count photos in the ZIP
-        int zipFileCount = 0;
-        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                zipFileCount++;
+            long zipSize = Files.size(tempZipFile);
+            assertTrue(zipSize > 0, "ZIP file should not be empty");
+            log.info("[Step 3] ZIP exported to temp file: {} MB.", String.format("%.2f", zipSize / (1024.0 * 1024.0)));
+
+            // 5. Count photos in the ZIP by streaming from file
+            int zipFileCount = countZipEntries(tempZipFile);
+            log.info("[Step 4] ZIP contains {} files (expected {}).", zipFileCount, expectedPhotoCount);
+
+            assertEquals(expectedPhotoCount, zipFileCount,
+                    "ZIP should contain all " + expectedPhotoCount + " photos, but only has " + zipFileCount);
+
+            // 6. Delete all photos and re-import via chunked upload from file
+            log.info("[Step 5] Deleting all photos from DB...");
+            photoRepository.deleteAllInBatch();
+            assertEquals(0, photoRepository.count(), "All photos should be deleted before re-import");
+
+            log.info("[Step 6] Re-importing ZIP via chunked upload from file...");
+            ChunkUploadResultDto chunkedResult = importZipChunkedFromFile(tempZipFile);
+            PhotoZipImportResultDto finalResult = chunkedResult.getFinalResult();
+
+            assertEquals(expectedPhotoCount, finalResult.getSuccessCount(),
+                    "Chunked import should succeed for all " + expectedPhotoCount + " photos");
+            assertEquals(0, finalResult.getFailureCount(),
+                    "Chunked import should have no failures");
+
+            // 7. Verify all photos restored to correct books
+            long restoredCount = photoRepository.count();
+            assertEquals(expectedPhotoCount, restoredCount,
+                    "All " + expectedPhotoCount + " photos should be restored after chunked import");
+            log.info("[Step 7] Verified: {} photos restored in DB.", restoredCount);
+
+            // Verify first two books still have 3 photos each (if applicable)
+            if (allBooks.size() >= 2) {
+                var book0Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(0).getId());
+                assertEquals(3, book0Photos.size(),
+                        "First book should have 3 photos after round-trip");
+                var book1Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(1).getId());
+                assertEquals(3, book1Photos.size(),
+                        "Second book should have 3 photos after round-trip");
+                log.info("[Step 7] Book '{}': {} photos. Book '{}': {} photos.",
+                        allBooks.get(0).getTitle(), book0Photos.size(),
+                        allBooks.get(1).getTitle(), book1Photos.size());
             }
+            log.info("[PASS] Full archive export -> chunked import round-trip succeeded.");
+
+        } finally {
+            // Clean up temp file
+            Files.deleteIfExists(tempZipFile);
         }
-        log.info("[Step 4] ZIP contains {} files (expected {}).", zipFileCount, expectedPhotoCount);
-
-        assertEquals(expectedPhotoCount, zipFileCount,
-                "ZIP should contain all " + expectedPhotoCount + " photos, but only has " + zipFileCount);
-
-        // 6. Delete all photos and re-import via chunked upload
-        log.info("[Step 5] Deleting all photos from DB...");
-        photoRepository.deleteAll();
-        assertEquals(0, photoRepository.count(), "All photos should be deleted before re-import");
-
-        log.info("[Step 6] Re-importing ZIP via chunked upload...");
-        ChunkUploadResultDto chunkedResult = importZipChunked(zipBytes);
-        PhotoZipImportResultDto finalResult = chunkedResult.getFinalResult();
-
-        assertEquals(expectedPhotoCount, finalResult.getSuccessCount(),
-                "Chunked import should succeed for all " + expectedPhotoCount + " photos");
-        assertEquals(0, finalResult.getFailureCount(),
-                "Chunked import should have no failures");
-
-        // 7. Verify all photos restored to correct books
-        long restoredCount = photoRepository.count();
-        assertEquals(expectedPhotoCount, restoredCount,
-                "All " + expectedPhotoCount + " photos should be restored after chunked import");
-        log.info("[Step 7] Verified: {} photos restored in DB.", restoredCount);
-
-        // Verify first two books still have 3 photos each (if applicable)
-        if (allBooks.size() >= 2) {
-            var book0Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(0).getId());
-            assertEquals(3, book0Photos.size(),
-                    "First book should have 3 photos after round-trip");
-            var book1Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(1).getId());
-            assertEquals(3, book1Photos.size(),
-                    "Second book should have 3 photos after round-trip");
-            log.info("[Step 7] Book '{}': {} photos. Book '{}': {} photos.",
-                    allBooks.get(0).getTitle(), book0Photos.size(),
-                    allBooks.get(1).getTitle(), book1Photos.size());
-        }
-        log.info("[PASS] Full archive export -> chunked import round-trip succeeded.");
     }
 }

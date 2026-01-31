@@ -77,6 +77,8 @@ test {
             excludeTags project.property('excludeTags').split(',')
         }
     }
+    // Increase heap for tests that handle large files (photo ZIP export/import)
+    maxHeapSize = '2g'
     testLogging {
         // Only show detailed output for failed tests
         events 'failed'
@@ -84,6 +86,6 @@ test {
         showCauses true
         showStackTraces true
         // Optionally include standard streams (e.g., System.out) for failed tests
-        showStandardStreams false
+        showStandardStreams true
     }
 }
