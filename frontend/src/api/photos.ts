@@ -251,37 +251,6 @@ export function useCropPhoto() {
   })
 }
 
-// Import photos from ZIP file
-// Uses streaming endpoint for large files (> 100MB) to avoid upload size limits
-export function useImportPhotosFromZip() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (file: File): Promise<PhotoZipImportResultDto> => {
-      // Always use the streaming endpoint to avoid multipart size limits
-      const response = await fetch('/api/photos/import-zip-stream', {
-        method: 'POST',
-        body: file, // Send raw file bytes, not FormData
-        headers: {
-          'Content-Type': 'application/zip',
-        },
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        throw new Error(await extractErrorMessage(response, file))
-      }
-
-      return response.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
-    },
-  })
-}
-
 // Chunked upload progress state
 export interface ChunkUploadProgress {
   mbSent: number
@@ -448,21 +417,3 @@ export function getThumbnailUrl(photoId: number, width: number): string {
   return `/api/photos/${photoId}/thumbnail?width=${width}`
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${bytes} bytes`
-}
-
-async function extractErrorMessage(response: Response, file: File): Promise<string> {
-  const error = await response.json().catch(() => null)
-  const detail = error?.message || error?.error
-
-  if (response.status === 413) {
-    const sizeInfo = `File "${file.name}" is ${formatFileSize(file.size)}.`
-    return detail || `${sizeInfo} The file exceeds the server's maximum upload size. Try using a smaller ZIP file or splitting it into multiple uploads.`
-  }
-
-  return detail || `Server returned ${response.status} ${response.statusText}`
-}
