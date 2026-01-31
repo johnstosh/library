@@ -1,8 +1,12 @@
 // (c) Copyright 2025 by Muczynski
 package com.muczynski.library.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.dto.ChunkUploadResultDto;
+import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.BranchRepository;
@@ -32,12 +36,11 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -45,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration test that imports a full branch archive, assigns photos to all books,
- * exports as ZIP, and verifies all photos are included.
+ * exports as ZIP, and verifies all photos are included. Then re-imports the ZIP
+ * via the chunked upload endpoint and verifies the round-trip.
  * Skips if branch-archive.json does not exist.
  */
 @SpringBootTest
@@ -54,12 +58,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnabledIf("archiveFileExists")
 class PhotoExportFullArchiveTest {
 
+    private static final int CHUNK_SIZE = 256 * 1024; // 256KB chunks for tests
+
     static boolean archiveFileExists() {
         return Files.exists(Path.of("branch-archive.json"));
     }
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -139,6 +148,41 @@ class PhotoExportFullArchiveTest {
         return photoRepository.save(photo);
     }
 
+    /**
+     * Send a ZIP byte array via the chunked upload endpoint, splitting into CHUNK_SIZE pieces.
+     * Returns the final ChunkUploadResultDto (with complete=true and finalResult).
+     */
+    private ChunkUploadResultDto importZipChunked(byte[] zipBytes) throws Exception {
+        String uploadId = UUID.randomUUID().toString();
+        ChunkUploadResultDto lastResponse = null;
+        int chunkIndex = 0;
+
+        for (int offset = 0; offset < zipBytes.length; offset += CHUNK_SIZE) {
+            int end = Math.min(offset + CHUNK_SIZE, zipBytes.length);
+            byte[] chunk = Arrays.copyOfRange(zipBytes, offset, end);
+            boolean isLast = end >= zipBytes.length;
+
+            MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                            .header("X-Upload-Id", uploadId)
+                            .header("X-Chunk-Index", chunkIndex)
+                            .header("X-Total-Size", zipBytes.length)
+                            .header("X-Is-Last-Chunk", isLast)
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .content(chunk))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            lastResponse = objectMapper.readValue(
+                    result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+            chunkIndex++;
+        }
+
+        assertNotNull(lastResponse);
+        assertTrue(lastResponse.isComplete(), "Final chunk response should be complete");
+        assertNotNull(lastResponse.getFinalResult(), "Final chunk should have finalResult");
+        return lastResponse;
+    }
+
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void exportZip_containsAllPhotos_afterArchiveImport() throws Exception {
@@ -207,5 +251,32 @@ class PhotoExportFullArchiveTest {
 
         assertEquals(expectedPhotoCount, zipFileCount,
                 "ZIP should contain all " + expectedPhotoCount + " photos, but only has " + zipFileCount);
+
+        // 6. Delete all photos and re-import via chunked upload
+        photoRepository.deleteAll();
+        assertEquals(0, photoRepository.count(), "All photos should be deleted before re-import");
+
+        ChunkUploadResultDto chunkedResult = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = chunkedResult.getFinalResult();
+
+        assertEquals(expectedPhotoCount, finalResult.getSuccessCount(),
+                "Chunked import should succeed for all " + expectedPhotoCount + " photos");
+        assertEquals(0, finalResult.getFailureCount(),
+                "Chunked import should have no failures");
+
+        // 7. Verify all photos restored to correct books
+        long restoredCount = photoRepository.count();
+        assertEquals(expectedPhotoCount, restoredCount,
+                "All " + expectedPhotoCount + " photos should be restored after chunked import");
+
+        // Verify first two books still have 3 photos each (if applicable)
+        if (allBooks.size() >= 2) {
+            var book0Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(0).getId());
+            assertEquals(3, book0Photos.size(),
+                    "First book should have 3 photos after round-trip");
+            var book1Photos = photoRepository.findByBookIdOrderByPhotoOrder(allBooks.get(1).getId());
+            assertEquals(3, book1Photos.size(),
+                    "Second book should have 3 photos after round-trip");
+        }
     }
 }

@@ -3,11 +3,14 @@
  */
 package com.muczynski.library.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.dto.ChunkUploadResultDto;
+import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -23,7 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -35,9 +37,12 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Set;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,16 +50,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Integration tests for photo ZIP export and import functionality.
- * Tests the round-trip capability of exporting photos to ZIP and importing them back.
+ * Integration tests for photo ZIP export and chunked import functionality.
+ * Tests the round-trip capability of exporting photos to ZIP and importing them back
+ * via the chunked upload endpoint.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class PhotoZipExportImportTest {
 
+    private static final int CHUNK_SIZE = 64 * 1024; // 64KB chunks for tests
+
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -178,6 +189,62 @@ class PhotoZipExportImportTest {
         return photoRepository.save(photo);
     }
 
+    /**
+     * Build a ZIP file in memory from entries.
+     */
+    private byte[] buildZip(ZipEntryData... entries) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (ZipEntryData entry : entries) {
+                zos.putNextEntry(new ZipEntry(entry.filename));
+                zos.write(entry.data);
+                zos.closeEntry();
+            }
+        }
+        return baos.toByteArray();
+    }
+
+    private record ZipEntryData(String filename, byte[] data) {}
+
+    /**
+     * Send a ZIP byte array via the chunked upload endpoint, splitting into CHUNK_SIZE pieces.
+     * Returns the final ChunkUploadResultDto (with complete=true and finalResult).
+     */
+    private ChunkUploadResultDto importZipChunked(byte[] zipBytes) throws Exception {
+        return importZipChunked(zipBytes, CHUNK_SIZE);
+    }
+
+    private ChunkUploadResultDto importZipChunked(byte[] zipBytes, int chunkSize) throws Exception {
+        String uploadId = UUID.randomUUID().toString();
+        ChunkUploadResultDto lastResponse = null;
+        int chunkIndex = 0;
+
+        for (int offset = 0; offset < zipBytes.length; offset += chunkSize) {
+            int end = Math.min(offset + chunkSize, zipBytes.length);
+            byte[] chunk = Arrays.copyOfRange(zipBytes, offset, end);
+            boolean isLast = end >= zipBytes.length;
+
+            MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                            .header("X-Upload-Id", uploadId)
+                            .header("X-Chunk-Index", chunkIndex)
+                            .header("X-Total-Size", zipBytes.length)
+                            .header("X-Is-Last-Chunk", isLast)
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .content(chunk))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            lastResponse = objectMapper.readValue(
+                    result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+            chunkIndex++;
+        }
+
+        assertNotNull(lastResponse);
+        assertTrue(lastResponse.isComplete(), "Final chunk response should be complete");
+        assertNotNull(lastResponse.getFinalResult(), "Final chunk should have finalResult");
+        return lastResponse;
+    }
+
     // ===========================================
     // ZIP Export Tests
     // ===========================================
@@ -280,36 +347,25 @@ class PhotoZipExportImportTest {
     }
 
     // ===========================================
-    // ZIP Import Tests
+    // Chunked ZIP Import Tests
     // ===========================================
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void importFromZip_importsBookPhotos() throws Exception {
-        // Create a ZIP file with a book photo
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
-            byte[] imageBytes = createDummyImage(100, 100);
-            zos.putNextEntry(new ZipEntry("book-the-adventures-of-tom-sawyer.jpg"));
-            zos.write(imageBytes);
-            zos.closeEntry();
-        }
-
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "photos.zip",
-                "application/zip",
-                baos.toByteArray()
+    void importFromZipChunked_importsBookPhotos() throws Exception {
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("book-the-adventures-of-tom-sawyer.jpg", createDummyImage(100, 100))
         );
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalFiles", is(1)))
-                .andExpect(jsonPath("$.successCount", is(1)))
-                .andExpect(jsonPath("$.failureCount", is(0)))
-                .andExpect(jsonPath("$.items[0].status", is("SUCCESS")))
-                .andExpect(jsonPath("$.items[0].entityType", is("book")))
-                .andExpect(jsonPath("$.items[0].entityName", is("The Adventures of Tom Sawyer")));
+        ChunkUploadResultDto result = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(1, finalResult.getTotalFiles());
+        assertEquals(1, finalResult.getSuccessCount());
+        assertEquals(0, finalResult.getFailureCount());
+        assertEquals("SUCCESS", finalResult.getItems().get(0).getStatus());
+        assertEquals("book", finalResult.getItems().get(0).getEntityType());
+        assertEquals("The Adventures of Tom Sawyer", finalResult.getItems().get(0).getEntityName());
 
         // Verify photo was created
         var photos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
@@ -318,27 +374,17 @@ class PhotoZipExportImportTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void importFromZip_importsAuthorPhotos() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
-            byte[] imageBytes = createDummyImage(100, 100);
-            zos.putNextEntry(new ZipEntry("author-mark-twain.jpg"));
-            zos.write(imageBytes);
-            zos.closeEntry();
-        }
-
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "photos.zip",
-                "application/zip",
-                baos.toByteArray()
+    void importFromZipChunked_importsAuthorPhotos() throws Exception {
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("author-mark-twain.jpg", createDummyImage(100, 100))
         );
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.successCount", is(1)))
-                .andExpect(jsonPath("$.items[0].entityType", is("author")))
-                .andExpect(jsonPath("$.items[0].entityName", is("Mark Twain")));
+        ChunkUploadResultDto result = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(1, finalResult.getSuccessCount());
+        assertEquals("author", finalResult.getItems().get(0).getEntityType());
+        assertEquals("Mark Twain", finalResult.getItems().get(0).getEntityName());
 
         // Verify photo was created
         var photos = photoRepository.findByAuthorId(testAuthor.getId());
@@ -347,88 +393,83 @@ class PhotoZipExportImportTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void importFromZip_skipsUnrecognizedFilenames() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
-            byte[] imageBytes = createDummyImage(100, 100);
-            // Valid book photo
-            zos.putNextEntry(new ZipEntry("book-the-adventures-of-tom-sawyer.jpg"));
-            zos.write(imageBytes);
-            zos.closeEntry();
-            // Invalid: no prefix
-            zos.putNextEntry(new ZipEntry("random-photo.jpg"));
-            zos.write(imageBytes);
-            zos.closeEntry();
-            // Invalid: text file
-            zos.putNextEntry(new ZipEntry("readme.txt"));
-            zos.write("Hello".getBytes());
-            zos.closeEntry();
-        }
-
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "photos.zip",
-                "application/zip",
-                baos.toByteArray()
+    void importFromZipChunked_skipsUnrecognizedFilenames() throws Exception {
+        byte[] imageBytes = createDummyImage(100, 100);
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("book-the-adventures-of-tom-sawyer.jpg", imageBytes),
+                new ZipEntryData("random-photo.jpg", imageBytes),
+                new ZipEntryData("readme.txt", "Hello".getBytes())
         );
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalFiles", is(3)))
-                .andExpect(jsonPath("$.successCount", is(1)))
-                .andExpect(jsonPath("$.skippedCount", is(2)));
+        ChunkUploadResultDto result = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(3, finalResult.getTotalFiles());
+        assertEquals(1, finalResult.getSuccessCount());
+        assertEquals(2, finalResult.getSkippedCount());
     }
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void importFromZip_failsForUnknownEntity() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
-            byte[] imageBytes = createDummyImage(100, 100);
-            zos.putNextEntry(new ZipEntry("book-nonexistent-book-title.jpg"));
-            zos.write(imageBytes);
-            zos.closeEntry();
-        }
-
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "photos.zip",
-                "application/zip",
-                baos.toByteArray()
+    void importFromZipChunked_failsForUnknownEntity() throws Exception {
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("book-nonexistent-book-title.jpg", createDummyImage(100, 100))
         );
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.failureCount", is(1)))
-                .andExpect(jsonPath("$.items[0].status", is("FAILURE")))
-                .andExpect(jsonPath("$.items[0].errorMessage", containsString("No book found")));
+        ChunkUploadResultDto result = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(1, finalResult.getFailureCount());
+        assertEquals("FAILURE", finalResult.getItems().get(0).getStatus());
+        assertTrue(finalResult.getItems().get(0).getErrorMessage().contains("No book found"));
     }
 
     @Test
     @WithMockUser(username = "1")
-    void importFromZip_requiresLibrarianAuthority() throws Exception {
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "photos.zip",
-                "application/zip",
-                new byte[10]
+    void importFromZipChunked_requiresLibrarianAuthority() throws Exception {
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("book-test.jpg", createDummyImage(100, 100))
         );
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
+        mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", UUID.randomUUID().toString())
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Total-Size", zipBytes.length)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipBytes))
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importFromZipChunked_multipleChunks_processesCorrectly() throws Exception {
+        byte[] imageBytes = createDummyImage(100, 100);
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("book-the-adventures-of-tom-sawyer.jpg", imageBytes),
+                new ZipEntryData("author-mark-twain.jpg", imageBytes)
+        );
+
+        // Use very small chunks to force multiple round-trips
+        ChunkUploadResultDto result = importZipChunked(zipBytes, zipBytes.length / 5 + 1);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(2, finalResult.getTotalFiles());
+        assertEquals(2, finalResult.getSuccessCount());
+        assertEquals(0, finalResult.getFailureCount());
+    }
+
     // ===========================================
-    // Round-Trip Test: Export -> Import
+    // Round-Trip Test: Export -> Chunked Import
     // ===========================================
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void exportThenImport_roundTrip_preservesPhotos() throws Exception {
+    void exportThenChunkedImport_roundTrip_preservesPhotos() throws Exception {
         // Step 1: Create some photos
-        Photo bookPhoto1 = createBookPhoto(testBook, "Cover", 0);
-        Photo bookPhoto2 = createBookPhoto(testBook, "Back", 1);
-        Photo authorPhoto = createAuthorPhoto(testAuthor, "Portrait");
+        createBookPhoto(testBook, "Cover", 0);
+        createBookPhoto(testBook, "Back", 1);
+        createAuthorPhoto(testAuthor, "Portrait");
 
         int originalPhotoCount = photoRepository.findAll().size();
         assertEquals(3, originalPhotoCount);
@@ -445,18 +486,12 @@ class PhotoZipExportImportTest {
         photoRepository.deleteAll();
         assertEquals(0, photoRepository.findAll().size());
 
-        // Step 4: Import from the exported ZIP
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "library-photos.zip",
-                "application/zip",
-                exportedZipBytes
-        );
+        // Step 4: Import via chunked endpoint
+        ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.successCount", is(3)))
-                .andExpect(jsonPath("$.failureCount", is(0)));
+        assertEquals(3, finalResult.getSuccessCount());
+        assertEquals(0, finalResult.getFailureCount());
 
         // Step 5: Verify photos were restored
         var restoredPhotos = photoRepository.findAll();
@@ -473,7 +508,7 @@ class PhotoZipExportImportTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void exportThenImport_preservesImageContent() throws Exception {
+    void exportThenChunkedImport_preservesImageContent() throws Exception {
         // Create a photo with specific image content
         Photo originalPhoto = createBookPhoto(testBook, "Test", 0);
         String originalChecksum = originalPhoto.getImageChecksum();
@@ -489,17 +524,9 @@ class PhotoZipExportImportTest {
         // Delete photos
         photoRepository.deleteAll();
 
-        // Import
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "library-photos.zip",
-                "application/zip",
-                exportedZipBytes
-        );
-
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.successCount", is(1)));
+        // Import via chunked endpoint
+        ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
+        assertEquals(1, result.getFinalResult().getSuccessCount());
 
         // Verify checksum matches
         var restoredPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
@@ -540,7 +567,7 @@ class PhotoZipExportImportTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void exportThenImport_longestTitles_roundTrip() throws Exception {
+    void exportThenChunkedImport_longestTitles_roundTrip() throws Exception {
         // Create books with the 12 longest titles
         for (int i = 0; i < LONGEST_TITLES.length; i++) {
             Book book = new Book();
@@ -589,18 +616,12 @@ class PhotoZipExportImportTest {
         photoRepository.deleteAll();
         assertEquals(0, photoRepository.findAll().size());
 
-        // Import from the exported ZIP
-        MockMultipartFile zipFile = new MockMultipartFile(
-                "file",
-                "library-photos.zip",
-                "application/zip",
-                exportedZipBytes
-        );
+        // Import via chunked endpoint
+        ChunkUploadResultDto result = importZipChunked(exportedZipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
 
-        mockMvc.perform(multipart("/api/photos/import-zip").file(zipFile))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.successCount", is(LONGEST_TITLES.length)))
-                .andExpect(jsonPath("$.failureCount", is(0)));
+        assertEquals(LONGEST_TITLES.length, finalResult.getSuccessCount());
+        assertEquals(0, finalResult.getFailureCount());
 
         // Verify all photos were restored to the correct books
         var restoredPhotos = photoRepository.findAll();
