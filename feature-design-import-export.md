@@ -382,6 +382,13 @@ The photo ZIP import uses merge behavior based on checksum and photo order:
 
 This allows re-importing a ZIP without creating duplicates, and updating changed photos.
 
+### Chunked Upload Error Handling
+The chunked ZIP import (`PUT /api/photos/import-zip-chunk`) preserves accumulated stats when errors occur:
+
+- **Background thread failure**: If the ZIP processing thread fails (OOM, timeout, etc.), the response includes `errorMessage` alongside the accumulated stats (`totalProcessedSoFar`, `totalSuccessSoFar`, etc.) and `complete=true`. This allows the frontend to display partial results.
+- **Trailing chunks after completion**: If a chunk arrives after the upload session was already completed or expired (`chunkIndex > 0` with no active state), a graceful response with `complete=true` and `errorMessage` is returned instead of a 500 error.
+- **`ChunkUploadResultDto.errorMessage`**: When non-null, indicates the upload ended due to an error. The response still contains valid stats for all photos processed before the failure.
+
 ## Related Files
 - `ImportService.java` - Core import/export logic
 - `ImportController.java` - REST API

@@ -99,49 +99,67 @@ public class PhotoChunkedImportService {
         } else {
             state = activeUploads.get(uploadId);
             if (state == null) {
+                // Upload session expired or was already completed — return graceful response
+                if (chunkIndex > 0) {
+                    return ChunkUploadResultDto.builder()
+                            .uploadId(uploadId)
+                            .chunkIndex(chunkIndex)
+                            .processedPhotos(List.of())
+                            .complete(true)
+                            .errorMessage("Upload session expired or was already completed")
+                            .build();
+                }
                 throw new IllegalStateException("No active upload found for ID: " + uploadId);
             }
         }
 
-        // Check for background errors
+        String errorMessage = null;
+
+        // Check for background errors — preserve stats instead of throwing
         if (state.backgroundError != null) {
-            activeUploads.remove(uploadId);
-            throw new IOException("Background processing failed: " + state.backgroundError.getMessage(),
-                    state.backgroundError);
+            errorMessage = "Background processing failed: " + state.backgroundError.getMessage();
+            log.warn("Background error detected for upload {}: {}", uploadId, errorMessage);
         }
 
-        // Write chunk bytes to pipe
-        try {
-            state.pipedOut.write(chunkBytes);
-            state.pipedOut.flush();
-        } catch (IOException e) {
-            // If the background thread died, get its error
-            if (state.backgroundError != null) {
-                activeUploads.remove(uploadId);
-                throw new IOException("Background processing failed: " + state.backgroundError.getMessage(),
-                        state.backgroundError);
+        // Write chunk bytes to pipe (only if no background error)
+        if (errorMessage == null) {
+            try {
+                state.pipedOut.write(chunkBytes);
+                state.pipedOut.flush();
+            } catch (IOException e) {
+                if (state.backgroundError != null) {
+                    errorMessage = "Background processing failed: " + state.backgroundError.getMessage();
+                    log.warn("Write failed due to background error for upload {}: {}", uploadId, errorMessage);
+                } else {
+                    throw e;
+                }
             }
-            throw e;
         }
 
-        if (isLastChunk) {
+        if (isLastChunk || errorMessage != null) {
             // Close the pipe to signal end of data
-            state.pipedOut.close();
+            try {
+                state.pipedOut.close();
+            } catch (IOException ignored) {
+                // Pipe may already be closed if background thread failed
+            }
 
             // Wait for background thread to finish
             try {
                 state.backgroundThread.join(60000); // 60 second timeout
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IOException("Interrupted while waiting for ZIP processing to complete");
+                if (errorMessage == null) {
+                    errorMessage = "Interrupted while waiting for ZIP processing to complete";
+                }
             }
 
-            if (state.backgroundError != null) {
-                activeUploads.remove(uploadId);
-                throw new IOException("Background processing failed: " + state.backgroundError.getMessage(),
-                        state.backgroundError);
+            if (errorMessage == null && state.backgroundError != null) {
+                errorMessage = "Background processing failed: " + state.backgroundError.getMessage();
             }
         }
+
+        boolean isComplete = isLastChunk || errorMessage != null;
 
         // Drain results queue
         List<PhotoZipImportItemDto> newItems = new ArrayList<>();
@@ -156,9 +174,10 @@ public class PhotoChunkedImportService {
                 .totalSuccessSoFar(state.successCount.get())
                 .totalFailureSoFar(state.failureCount.get())
                 .totalSkippedSoFar(state.skippedCount.get())
-                .complete(isLastChunk);
+                .complete(isComplete)
+                .errorMessage(errorMessage);
 
-        if (isLastChunk) {
+        if (isComplete) {
             // Drain any remaining items
             List<PhotoZipImportItemDto> remaining = new ArrayList<>();
             state.resultsQueue.drainTo(remaining);

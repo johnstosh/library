@@ -291,6 +291,41 @@ class PhotoChunkedImportTest {
     }
 
     @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_trailingChunkAfterCompletion() throws Exception {
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+
+        // Send the complete upload as a single chunk
+        mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Total-Size", zipData.length)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipData))
+                .andExpect(status().isOk());
+
+        // Send a trailing chunk with the same uploadId — state was already removed
+        MvcResult trailingResult = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 1)
+                        .header("X-Total-Size", zipData.length)
+                        .header("X-Is-Last-Chunk", false)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(new byte[]{0}))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ChunkUploadResultDto response = objectMapper.readValue(
+                trailingResult.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+
+        assertTrue(response.isComplete());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("expired"));
+    }
+
+    @Test
     @WithMockUser(username = "testuser", authorities = {"USER"})
     void testChunkedImport_forbiddenForNonLibrarian() throws Exception {
         byte[] zipData = createTestZip();

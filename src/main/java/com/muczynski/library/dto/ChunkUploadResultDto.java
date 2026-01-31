@@ -25,4 +25,5 @@ public class ChunkUploadResultDto {
     private int totalSkippedSoFar;
     private boolean complete;
     private PhotoZipImportResultDto finalResult;
+    private String errorMessage;
 }

@@ -305,6 +305,7 @@ interface ChunkUploadResultDto {
   totalSkippedSoFar: number
   complete: boolean
   finalResult?: PhotoZipImportResultDto
+  errorMessage?: string
 }
 
 // Import photos from ZIP file using chunked upload (supports 2GB+ files with progress)
@@ -381,12 +382,21 @@ export function useImportPhotosFromZipChunked() {
           imagesSuccess: result.totalSuccessSoFar,
           imagesFailure: result.totalFailureSoFar,
           imagesSkipped: result.totalSkippedSoFar,
-          isUploading: !isLastChunk,
+          isUploading: !result.complete,
           currentItems: allItems,
         })
 
         if (result.complete && result.finalResult) {
           finalResult = result.finalResult
+        }
+
+        if (result.errorMessage) {
+          // Server returned stats with an error — build result from what we have, then throw
+          if (!finalResult && result.finalResult) {
+            finalResult = result.finalResult
+          }
+          const statsMsg = `${result.totalSuccessSoFar} succeeded, ${result.totalFailureSoFar} failed, ${result.totalSkippedSoFar} skipped`
+          throw new Error(`Import failed after processing ${result.totalProcessedSoFar} photos (${statsMsg}): ${result.errorMessage}`)
         }
 
         chunkIndex++
