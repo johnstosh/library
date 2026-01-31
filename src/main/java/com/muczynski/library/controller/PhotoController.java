@@ -248,17 +248,16 @@ public class PhotoController {
     public ResponseEntity<?> importFromZipChunk(
             @RequestHeader("X-Upload-Id") String uploadId,
             @RequestHeader("X-Chunk-Index") int chunkIndex,
-            @RequestHeader("X-Total-Size") long totalSize,
             @RequestHeader("X-Is-Last-Chunk") boolean isLastChunk,
             HttpServletRequest request) {
         try {
-            logger.info("Chunk upload received: uploadId={}, chunk={}, totalSize={}, isLast={}",
-                    uploadId, chunkIndex, totalSize, isLastChunk);
+            logger.info("Chunk upload received: uploadId={}, chunk={}, isLast={}",
+                    uploadId, chunkIndex, isLastChunk);
 
             byte[] chunkBytes = request.getInputStream().readAllBytes();
 
             ChunkUploadResultDto result = photoChunkedImportService.processChunk(
-                    uploadId, chunkIndex, totalSize, isLastChunk, chunkBytes);
+                    uploadId, chunkIndex, isLastChunk, chunkBytes);
 
             logger.info("Chunk {} processed: {} items so far, complete={}",
                     chunkIndex, result.getTotalProcessedSoFar(), result.isComplete());

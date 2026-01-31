@@ -336,7 +336,6 @@ export function useImportPhotosFromZipChunked() {
               'Content-Type': 'application/octet-stream',
               'X-Upload-Id': uploadId,
               'X-Chunk-Index': String(chunkIndex),
-              'X-Total-Size': String(totalSize),
               'X-Is-Last-Chunk': String(isLastChunk),
             },
             credentials: 'include',

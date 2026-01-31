@@ -61,7 +61,7 @@ public class PhotoChunkedImportService {
         }
     }
 
-    public ChunkUploadResultDto processChunk(String uploadId, int chunkIndex, long totalSize,
+    public ChunkUploadResultDto processChunk(String uploadId, int chunkIndex,
                                               boolean isLastChunk, byte[] chunkBytes) throws IOException {
         ChunkedUploadState state;
 

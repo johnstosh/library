@@ -200,7 +200,6 @@ class PhotoExportFullArchiveTest {
                 MvcResult result = mockMvc.perform(put("/api/photos/import-zip-chunk")
                                 .header("X-Upload-Id", uploadId)
                                 .header("X-Chunk-Index", chunkIndex)
-                                .header("X-Total-Size", totalSize)
                                 .header("X-Is-Last-Chunk", isLast)
                                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                                 .content(chunk))
