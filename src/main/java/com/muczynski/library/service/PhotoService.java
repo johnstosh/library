@@ -631,6 +631,14 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Detach a photo entity from the persistence context to free memory.
+     * Used during bulk imports to prevent OutOfMemory errors.
+     */
+    public void detachPhoto(Long photoId) {
+        photoRepository.findById(photoId).ifPresent(entityManager::detach);
+    }
+
     private void reorderPhotos(List<Photo> photos) {
         try {
             for (int i = 0; i < photos.size(); i++) {

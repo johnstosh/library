@@ -179,6 +179,15 @@ public class PhotoZipImportService {
     }
 
     /**
+     * Clear the persistence context to release memory.
+     * Call this periodically during large imports to prevent OutOfMemory errors.
+     */
+    public void clearPersistenceContext() {
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    /**
      * Check if a ZIP entry path should be skipped (macOS resource forks, hidden files).
      */
     boolean shouldSkipEntry(String entryPath) {
@@ -331,20 +340,25 @@ public class PhotoZipImportService {
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
-                photoRepository.save(existingPhoto);
+                Photo savedPhoto = photoRepository.save(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                // Detach to free memory - the photo's image byte[] can be large
+                entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
                         .status("SUCCESS")
                         .entityType("book")
                         .entityName(book.getTitle())
                         .entityId(book.getId())
-                        .photoId(existingPhoto.getId())
+                        .photoId(photoId)
                         .build();
             }
         }
 
         // No existing photo at this order - add new
         PhotoDto photo = photoService.addPhotoFromBytes(book.getId(), imageBytes, contentType);
+        // Detach the saved photo entity to free memory
+        photoService.detachPhoto(photo.getId());
 
         log.info("Imported photo for book '{}' (ID: {}) at order {}", book.getTitle(), book.getId(), photoOrder);
 
@@ -413,20 +427,25 @@ public class PhotoZipImportService {
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
-                photoRepository.save(existingPhoto);
+                Photo savedPhoto = photoRepository.save(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                // Detach to free memory - the photo's image byte[] can be large
+                entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
                         .status("SUCCESS")
                         .entityType("author")
                         .entityName(author.getName())
                         .entityId(author.getId())
-                        .photoId(existingPhoto.getId())
+                        .photoId(photoId)
                         .build();
             }
         }
 
         // No existing photo at this order - add new
         PhotoDto photo = photoService.addAuthorPhotoFromBytes(author.getId(), imageBytes, contentType);
+        // Detach the saved photo entity to free memory
+        photoService.detachPhoto(photo.getId());
 
         log.info("Imported photo for author '{}' (ID: {}) at order {}", author.getName(), author.getId(), photoOrder);
 

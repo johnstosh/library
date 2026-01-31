@@ -246,9 +246,10 @@ public class PhotoChunkedImportService {
                 }
 
                 entryCount++;
-                // Periodically clear the entity manager to release memory
+                // Periodically clear the persistence context to release memory
+                // This clears the Spring-managed EntityManager used by photoZipImportService
                 if (entryCount % 50 == 0) {
-                    em.clear();
+                    photoZipImportService.clearPersistenceContext();
                     log.info("Cleared entity manager after {} entries", entryCount);
                 }
 

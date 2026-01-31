@@ -115,9 +115,9 @@ public class AuthorService {
             name = "John Doe";
         }
 
-        Author existingAuthor = authorRepository.findByName(name);
-        if (existingAuthor != null) {
-            return existingAuthor;
+        List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(name);
+        if (!existingAuthors.isEmpty()) {
+            return existingAuthors.get(0);
         }
 
         // Create new author

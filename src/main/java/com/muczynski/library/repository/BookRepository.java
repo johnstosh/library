@@ -111,6 +111,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findBooksWithoutGrokipediaUrl();
 
     long countByLibraryId(Long libraryId);
+    List<Book> findAllByLibraryId(Long libraryId);
 
     /**
      * Get summaries (id + lastModified) for books without LOC number.

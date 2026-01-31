@@ -60,8 +60,9 @@ public class ImportService {
         Map<String, Library> libMap = new HashMap<>();
         if (dto.getBranches() != null) {
             for (BranchDto lDto : dto.getBranches()) {
-                // Check if library with same branch name already exists
-                Library lib = branchRepository.findByBranchName(lDto.getBranchName()).orElse(null);
+                // Check if library with same branch name already exists (select first by ID if duplicates)
+                List<Library> existingLibraries = branchRepository.findAllByBranchNameOrderByIdAsc(lDto.getBranchName());
+                Library lib = existingLibraries.isEmpty() ? null : existingLibraries.get(0);
                 if (lib == null) {
                     // Create new library without copying ID from import
                     lib = new Library();
@@ -70,6 +71,31 @@ public class ImportService {
                 } else {
                     // Update existing library
                     lib.setLibrarySystemName(lDto.getLibrarySystemName());
+
+                    // Merge duplicates: reassign books from duplicate branches to primary and delete duplicates
+                    if (existingLibraries.size() > 1) {
+                        logger.info("Merging {} duplicate libraries with branch name '{}' into library ID: {}",
+                                   existingLibraries.size(), lDto.getBranchName(), lib.getId());
+
+                        for (int i = 1; i < existingLibraries.size(); i++) {
+                            Library duplicate = existingLibraries.get(i);
+                            // Reassign all books from duplicate to primary library
+                            List<Book> booksToReassign = bookRepository.findAllByLibraryId(duplicate.getId());
+                            for (Book book : booksToReassign) {
+                                book.setLibrary(lib);
+                                bookRepository.save(book);
+                                logger.debug("Reassigned book '{}' (ID: {}) from library {} to library {}",
+                                           book.getTitle(), book.getId(), duplicate.getId(), lib.getId());
+                            }
+                            logger.info("Reassigned {} books from duplicate library ID {} to primary library ID {}",
+                                       booksToReassign.size(), duplicate.getId(), lib.getId());
+
+                            // Delete the duplicate library
+                            branchRepository.delete(duplicate);
+                            logger.info("Deleted duplicate library ID {} (branch name: '{}')",
+                                       duplicate.getId(), duplicate.getBranchName());
+                        }
+                    }
                 }
                 lib = branchRepository.save(lib);
                 libMap.put(lDto.getBranchName(), lib);
@@ -81,8 +107,9 @@ public class ImportService {
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
             for (ImportAuthorDto aDto : dto.getAuthors()) {
-                // Check if author with same name already exists
-                Author auth = authorRepository.findByName(aDto.getName());
+                // Check if author with same name already exists (select first by ID if duplicates)
+                List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(aDto.getName());
+                Author auth = existingAuthors.isEmpty() ? null : existingAuthors.get(0);
                 if (auth == null) {
                     auth = new Author();
                     auth.setName(aDto.getName());
@@ -354,7 +381,15 @@ public class ImportService {
                 // Check if loan already exists (same book, user, and loan date)
                 Loan loan = null;
                 if (book != null && user != null) {
-                    loan = loanRepository.findByBookIdAndUserIdAndLoanDate(book.getId(), user.getId(), loanDate).orElse(null);
+                    List<Loan> existingLoans = loanRepository.findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(book.getId(), user.getId(), loanDate);
+                    if (!existingLoans.isEmpty()) {
+                        loan = existingLoans.get(0);
+                        if (existingLoans.size() > 1) {
+                            logger.warn("Found {} duplicate loans for book ID {}, user ID {}, date {}. Using loan with lowest ID: {}. " +
+                                       "Consider cleaning up duplicate entries in the database.",
+                                       existingLoans.size(), book.getId(), user.getId(), loanDate, loan.getId());
+                        }
+                    }
                 }
                 if (loan == null) {
                     loan = new Loan();
