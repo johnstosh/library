@@ -354,6 +354,29 @@ class PhotoExportFullArchiveTest {
                         allBooks.get(0).getTitle(), book0Photos.size(),
                         allBooks.get(1).getTitle(), book1Photos.size());
             }
+
+            // 8. Re-import the same ZIP a second time - all should be skipped as duplicates
+            log.info("[Step 8] Re-importing ZIP a second time (should all be skipped as duplicates)...");
+            ChunkUploadResultDto secondImportResult = importZipChunkedFromFile(tempZipFile);
+            PhotoZipImportResultDto secondFinalResult = secondImportResult.getFinalResult();
+
+            assertEquals(expectedPhotoCount, secondFinalResult.getTotalFiles(),
+                    "Second import should receive all " + expectedPhotoCount + " photos");
+            assertEquals(0, secondFinalResult.getSuccessCount(),
+                    "Second import should have 0 new photos (all duplicates)");
+            assertEquals(expectedPhotoCount, secondFinalResult.getSkippedCount(),
+                    "Second import should skip all " + expectedPhotoCount + " photos as duplicates");
+            assertEquals(0, secondFinalResult.getFailureCount(),
+                    "Second import should have no failures");
+
+            // Verify photo count unchanged after second import
+            long countAfterSecondImport = photoRepository.count();
+            assertEquals(expectedPhotoCount, countAfterSecondImport,
+                    "Photo count should be unchanged after second import");
+            log.info("[Step 8] Verified: second import received {} photos, {} skipped, {} new, DB count unchanged at {}.",
+                    secondFinalResult.getTotalFiles(), secondFinalResult.getSkippedCount(),
+                    secondFinalResult.getSuccessCount(), countAfterSecondImport);
+
             log.info("[PASS] Full archive export -> chunked import round-trip succeeded.");
 
         } finally {
