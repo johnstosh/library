@@ -176,6 +176,49 @@ export interface GenreLookupResultDto {
   errorMessage?: string
 }
 
+// Chunked Upload DTOs
+export interface ChunkUploadResultDto {
+  uploadId: string
+  chunkIndex: number
+  processedPhotos: PhotoZipImportItemDto[]
+  totalProcessedSoFar: number
+  totalSuccessSoFar: number
+  totalFailureSoFar: number
+  totalSkippedSoFar: number
+  complete: boolean
+  finalResult?: PhotoZipImportResultDto
+}
+
+export interface PhotoZipImportItemDto {
+  filename: string
+  status: 'SUCCESS' | 'FAILURE' | 'SKIPPED'
+  entityType?: string
+  entityName?: string
+  entityId?: number
+  photoId?: number
+  errorMessage?: string
+}
+
+export interface PhotoZipImportResultDto {
+  totalFiles: number
+  successCount: number
+  failureCount: number
+  skippedCount: number
+  items: PhotoZipImportItemDto[]
+}
+
+export interface ChunkUploadProgress {
+  mbSent: number
+  totalMb: number
+  percentage: number
+  imagesProcessed: number
+  imagesSuccess: number
+  imagesFailure: number
+  imagesSkipped: number
+  isUploading: boolean
+  currentItems: PhotoZipImportItemDto[]
+}
+
 // Settings DTOs
 export interface GlobalSettingsDto {
   googleClientSecret?: string

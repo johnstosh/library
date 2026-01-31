@@ -19,7 +19,7 @@ import {
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
-import { getThumbnailUrl, useImportPhotosFromZip, type PhotoZipImportResultDto } from '@/api/photos'
+import { getThumbnailUrl, useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
 import { ThrottledThumbnail, clearThumbnailQueue } from '@/components/ui/ThrottledThumbnail'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import {
@@ -51,7 +51,7 @@ export function DataManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
-  const importPhotosFromZip = useImportPhotosFromZip()
+  const { progress: zipUploadProgress, ...importPhotosFromZip } = useImportPhotosFromZipChunked()
 
   // Fetch database statistics (total counts from backend)
   const { data: dbStats } = useDatabaseStats()
@@ -810,6 +810,31 @@ export function DataManagementPage() {
             </div>
           </div>
         </div>
+
+        {/* ZIP Upload Progress */}
+        {zipUploadProgress.isUploading && (
+          <div className="px-6 pb-4">
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900">
+                  Uploading ZIP file...
+                </span>
+                <span className="text-sm text-blue-700">
+                  {zipUploadProgress.mbSent.toFixed(1)} / {zipUploadProgress.totalMb.toFixed(1)} MB ({zipUploadProgress.percentage.toFixed(0)}%)
+                </span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-3 mb-2">
+                <div
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${zipUploadProgress.percentage}%` }}
+                />
+              </div>
+              <div className="text-xs text-blue-700">
+                {zipUploadProgress.imagesProcessed} images processed: {zipUploadProgress.imagesSuccess} updated, {zipUploadProgress.imagesFailure} failed, {zipUploadProgress.imagesSkipped} skipped
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ZIP Import Results */}
         {zipImportResult && (

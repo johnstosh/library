@@ -1,4 +1,5 @@
 // (c) Copyright 2025 by Muczynski
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
@@ -279,6 +280,137 @@ export function useImportPhotosFromZip() {
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },
   })
+}
+
+// Chunked upload progress state
+export interface ChunkUploadProgress {
+  mbSent: number
+  totalMb: number
+  percentage: number
+  imagesProcessed: number
+  imagesSuccess: number
+  imagesFailure: number
+  imagesSkipped: number
+  isUploading: boolean
+  currentItems: PhotoZipImportItemDto[]
+}
+
+interface ChunkUploadResultDto {
+  uploadId: string
+  chunkIndex: number
+  processedPhotos: PhotoZipImportItemDto[]
+  totalProcessedSoFar: number
+  totalSuccessSoFar: number
+  totalFailureSoFar: number
+  totalSkippedSoFar: number
+  complete: boolean
+  finalResult?: PhotoZipImportResultDto
+}
+
+// Import photos from ZIP file using chunked upload (supports 2GB+ files with progress)
+export function useImportPhotosFromZipChunked() {
+  const queryClient = useQueryClient()
+  const [progress, setProgress] = useState<ChunkUploadProgress>({
+    mbSent: 0,
+    totalMb: 0,
+    percentage: 0,
+    imagesProcessed: 0,
+    imagesSuccess: 0,
+    imagesFailure: 0,
+    imagesSkipped: 0,
+    isUploading: false,
+    currentItems: [],
+  })
+
+  const mutation = useMutation({
+    mutationFn: async (file: File): Promise<PhotoZipImportResultDto> => {
+      const CHUNK_SIZE = 10 * 1024 * 1024 // 10MB
+      const totalSize = file.size
+      const totalMb = totalSize / (1024 * 1024)
+      const uploadId = crypto.randomUUID()
+      const allItems: PhotoZipImportItemDto[] = []
+
+      setProgress({
+        mbSent: 0,
+        totalMb,
+        percentage: 0,
+        imagesProcessed: 0,
+        imagesSuccess: 0,
+        imagesFailure: 0,
+        imagesSkipped: 0,
+        isUploading: true,
+        currentItems: [],
+      })
+
+      let chunkIndex = 0
+      let finalResult: PhotoZipImportResultDto | undefined
+
+      for (let offset = 0; offset < totalSize; offset += CHUNK_SIZE) {
+        const end = Math.min(offset + CHUNK_SIZE, totalSize)
+        const chunk = file.slice(offset, end)
+        const isLastChunk = end >= totalSize
+        const chunkBytes = await chunk.arrayBuffer()
+
+        const response = await fetch('/api/photos/import-zip-chunk', {
+          method: 'PUT',
+          body: chunkBytes,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'X-Upload-Id': uploadId,
+            'X-Chunk-Index': String(chunkIndex),
+            'X-Total-Size': String(totalSize),
+            'X-Is-Last-Chunk': String(isLastChunk),
+          },
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => null)
+          throw new Error(error?.message || `Server returned ${response.status}`)
+        }
+
+        const result: ChunkUploadResultDto = await response.json()
+        allItems.push(...result.processedPhotos)
+
+        const mbSent = end / (1024 * 1024)
+        setProgress({
+          mbSent,
+          totalMb,
+          percentage: (end / totalSize) * 100,
+          imagesProcessed: result.totalProcessedSoFar,
+          imagesSuccess: result.totalSuccessSoFar,
+          imagesFailure: result.totalFailureSoFar,
+          imagesSkipped: result.totalSkippedSoFar,
+          isUploading: !isLastChunk,
+          currentItems: allItems,
+        })
+
+        if (result.complete && result.finalResult) {
+          finalResult = result.finalResult
+        }
+
+        chunkIndex++
+      }
+
+      return finalResult || {
+        totalFiles: allItems.length,
+        successCount: allItems.filter(i => i.status === 'SUCCESS').length,
+        failureCount: allItems.filter(i => i.status === 'FAILURE').length,
+        skippedCount: allItems.filter(i => i.status === 'SKIPPED').length,
+        items: allItems,
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+    onSettled: () => {
+      setProgress(prev => ({ ...prev, isUploading: false }))
+    },
+  })
+
+  return { ...mutation, progress }
 }
 
 // Helper functions to get photo URLs

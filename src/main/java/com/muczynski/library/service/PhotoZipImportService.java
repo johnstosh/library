@@ -138,9 +138,8 @@ public class PhotoZipImportService {
                     continue;
                 }
 
-                // Skip macOS resource fork files and hidden files
                 String entryPath = entry.getName();
-                if (entryPath.contains("__MACOSX/") || entryPath.contains("/.") || getFilenameFromPath(entryPath).startsWith(".")) {
+                if (shouldSkipEntry(entryPath)) {
                     log.debug("Skipping hidden/resource fork file: {}", entryPath);
                     zis.closeEntry();
                     continue;
@@ -180,9 +179,16 @@ public class PhotoZipImportService {
     }
 
     /**
+     * Check if a ZIP entry path should be skipped (macOS resource forks, hidden files).
+     */
+    boolean shouldSkipEntry(String entryPath) {
+        return entryPath.contains("__MACOSX/") || entryPath.contains("/.") || getFilenameFromPath(entryPath).startsWith(".");
+    }
+
+    /**
      * Extract just the filename from a path that might include directories.
      */
-    private String getFilenameFromPath(String path) {
+    String getFilenameFromPath(String path) {
         int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
         return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
     }
@@ -190,8 +196,8 @@ public class PhotoZipImportService {
     /**
      * Process a single ZIP entry.
      */
-    private PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
-                                                List<Book> allBooks, List<Author> allAuthors) {
+    PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
+                                       List<Book> allBooks, List<Author> allAuthors) {
         Matcher matcher = FILENAME_PATTERN.matcher(filename);
 
         if (!matcher.matches()) {

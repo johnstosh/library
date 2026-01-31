@@ -7,6 +7,8 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.ErrorResponse;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.dto.ChunkUploadResultDto;
+import com.muczynski.library.service.PhotoChunkedImportService;
 import com.muczynski.library.service.PhotoService;
 import com.muczynski.library.service.PhotoZipImportService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +34,9 @@ public class PhotoController {
 
     @Autowired
     private PhotoZipImportService photoZipImportService;
+
+    @Autowired
+    private PhotoChunkedImportService photoChunkedImportService;
 
     @PreAuthorize("permitAll()")
     @GetMapping("/{id}/image")
@@ -230,6 +235,40 @@ public class PhotoController {
             String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", "Failed to import photos from ZIP: " + detail));
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file using chunked upload.
+     * Each chunk is a raw byte slice of the ZIP file, sent sequentially.
+     * Headers provide chunk metadata; body is raw octet-stream bytes.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PutMapping(value = "/import-zip-chunk", consumes = "application/octet-stream")
+    public ResponseEntity<?> importFromZipChunk(
+            @RequestHeader("X-Upload-Id") String uploadId,
+            @RequestHeader("X-Chunk-Index") int chunkIndex,
+            @RequestHeader("X-Total-Size") long totalSize,
+            @RequestHeader("X-Is-Last-Chunk") boolean isLastChunk,
+            HttpServletRequest request) {
+        try {
+            logger.info("Chunk upload received: uploadId={}, chunk={}, totalSize={}, isLast={}",
+                    uploadId, chunkIndex, totalSize, isLastChunk);
+
+            byte[] chunkBytes = request.getInputStream().readAllBytes();
+
+            ChunkUploadResultDto result = photoChunkedImportService.processChunk(
+                    uploadId, chunkIndex, totalSize, isLastChunk, chunkBytes);
+
+            logger.info("Chunk {} processed: {} items so far, complete={}",
+                    chunkIndex, result.getTotalProcessedSoFar(), result.isComplete());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to process chunk {} for upload {}: {}", chunkIndex, uploadId, e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to process chunk: " + detail));
         }
     }
 }
