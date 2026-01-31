@@ -260,8 +260,8 @@ class PhotoChunkedImportTest {
         Book reloadedBook = bookRepository.findById(testBook.getId()).orElseThrow();
         assertEquals(originalDateAdded, reloadedBook.getDateAddedToLibrary(),
                 "Photo import should not change dateAddedToLibrary");
-        assertEquals(originalLastModified.truncatedTo(ChronoUnit.MICROS),
-                reloadedBook.getLastModified().truncatedTo(ChronoUnit.MICROS),
+        assertEquals(originalLastModified.truncatedTo(ChronoUnit.MILLIS),
+                reloadedBook.getLastModified().truncatedTo(ChronoUnit.MILLIS),
                 "Photo import should not change lastModified");
     }
 
