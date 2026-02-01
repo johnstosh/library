@@ -364,7 +364,77 @@ export function useImportPhotosFromZipChunked() {
         return { result: await response.json(), end }
       }
 
-      const tryResume = async (): Promise<boolean> => {
+      const MAX_RESUME_ATTEMPTS = 3
+
+      /** Send all chunks from byte 0, with resume headers on the first chunk. Returns true if completed. */
+      const sendAllChunksWithResume = async (resumeInfo: ResumeInfoDto): Promise<boolean> => {
+        chunkIndex = 0
+
+        // Send the first chunk with resume headers
+        const { result, end } = await sendChunk(0, {
+          'X-Resume-From-Processed': String(resumeInfo.totalProcessed),
+          'X-Bytes-To-Skip': String(resumeInfo.bytesToSkipInChunk),
+        })
+        allItems.push(...result.processedPhotos)
+
+        setProgress({
+          mbSent: end / (1024 * 1024),
+          totalMb,
+          percentage: (end / totalSize) * 100,
+          imagesProcessed: result.totalProcessedSoFar,
+          imagesSuccess: result.totalSuccessSoFar,
+          imagesFailure: result.totalFailureSoFar,
+          imagesSkipped: result.totalSkippedSoFar,
+          isUploading: !result.complete,
+          currentItems: allItems,
+        })
+
+        if (result.complete && result.finalResult) {
+          finalResult = result.finalResult
+          return true
+        }
+
+        chunkIndex++
+
+        // Continue sending remaining chunks
+        for (let offset = end; offset < totalSize; offset += CHUNK_SIZE) {
+          const resp = await sendChunk(offset)
+          allItems.push(...resp.result.processedPhotos)
+
+          setProgress({
+            mbSent: resp.end / (1024 * 1024),
+            totalMb,
+            percentage: (resp.end / totalSize) * 100,
+            imagesProcessed: resp.result.totalProcessedSoFar,
+            imagesSuccess: resp.result.totalSuccessSoFar,
+            imagesFailure: resp.result.totalFailureSoFar,
+            imagesSkipped: resp.result.totalSkippedSoFar,
+            isUploading: !resp.result.complete,
+            currentItems: allItems,
+          })
+
+          if (resp.result.complete && resp.result.finalResult) {
+            finalResult = resp.result.finalResult
+          }
+
+          if (resp.result.errorMessage) {
+            if (resp.result.errorMessage.includes('expired')) {
+              // Session lost again — signal caller to retry
+              return false
+            }
+            if (!finalResult && resp.result.finalResult) finalResult = resp.result.finalResult
+            const statsMsg = `${resp.result.totalSuccessSoFar} succeeded, ${resp.result.totalFailureSoFar} failed, ${resp.result.totalSkippedSoFar} skipped`
+            throw new Error(`Import failed after processing ${resp.result.totalProcessedSoFar} photos (${statsMsg}): ${resp.result.errorMessage}`)
+          }
+
+          chunkIndex++
+        }
+
+        return true
+      }
+
+      const tryResume = async (attemptsLeft: number): Promise<boolean> => {
+        if (attemptsLeft <= 0) return false
         try {
           const resumeResponse = await fetch(
             `/api/photos/import-zip-chunk-resume/${uploadId}`,
@@ -373,69 +443,11 @@ export function useImportPhotosFromZipChunked() {
           if (!resumeResponse.ok) return false
 
           const resumeInfo: ResumeInfoDto = await resumeResponse.json()
+          const completed = await sendAllChunksWithResume(resumeInfo)
+          if (completed) return true
 
-          // Reset loop position to resume point
-          chunkIndex = resumeInfo.resumeFromChunkIndex
-          const resumeOffset = chunkIndex * CHUNK_SIZE
-
-          // Send the first resumed chunk with resume headers
-          const { result, end } = await sendChunk(resumeOffset, {
-            'X-Resume-From-Processed': String(resumeInfo.totalProcessed),
-            'X-Bytes-To-Skip': String(resumeInfo.bytesToSkipInChunk),
-          })
-          allItems.push(...result.processedPhotos)
-
-          const mbSent = end / (1024 * 1024)
-          setProgress({
-            mbSent,
-            totalMb,
-            percentage: (end / totalSize) * 100,
-            imagesProcessed: result.totalProcessedSoFar,
-            imagesSuccess: result.totalSuccessSoFar,
-            imagesFailure: result.totalFailureSoFar,
-            imagesSkipped: result.totalSkippedSoFar,
-            isUploading: !result.complete,
-            currentItems: allItems,
-          })
-
-          if (result.complete && result.finalResult) {
-            finalResult = result.finalResult
-          }
-
-          chunkIndex++
-
-          // Continue sending remaining chunks normally
-          for (let offset = end; offset < totalSize; offset += CHUNK_SIZE) {
-            const resp = await sendChunk(offset)
-            allItems.push(...resp.result.processedPhotos)
-
-            const mb = resp.end / (1024 * 1024)
-            setProgress({
-              mbSent: mb,
-              totalMb,
-              percentage: (resp.end / totalSize) * 100,
-              imagesProcessed: resp.result.totalProcessedSoFar,
-              imagesSuccess: resp.result.totalSuccessSoFar,
-              imagesFailure: resp.result.totalFailureSoFar,
-              imagesSkipped: resp.result.totalSkippedSoFar,
-              isUploading: !resp.result.complete,
-              currentItems: allItems,
-            })
-
-            if (resp.result.complete && resp.result.finalResult) {
-              finalResult = resp.result.finalResult
-            }
-
-            if (resp.result.errorMessage) {
-              if (!finalResult && resp.result.finalResult) finalResult = resp.result.finalResult
-              const statsMsg = `${resp.result.totalSuccessSoFar} succeeded, ${resp.result.totalFailureSoFar} failed, ${resp.result.totalSkippedSoFar} skipped`
-              throw new Error(`Import failed after processing ${resp.result.totalProcessedSoFar} photos (${statsMsg}): ${resp.result.errorMessage}`)
-            }
-
-            chunkIndex++
-          }
-
-          return true
+          // Session expired again during resumed upload — retry
+          return tryResume(attemptsLeft - 1)
         } catch {
           return false
         }
@@ -466,7 +478,7 @@ export function useImportPhotosFromZipChunked() {
           if (result.errorMessage) {
             // Check if this is a session expired error that we can resume from
             if (result.errorMessage.includes('expired') && chunkIndex > 0) {
-              const resumed = await tryResume()
+              const resumed = await tryResume(MAX_RESUME_ATTEMPTS)
               if (resumed) break
             }
 

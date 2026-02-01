@@ -440,91 +440,81 @@ class PhotoChunkedImportTest {
     void testChunkedImport_resumeActuallySendsResumedChunks() throws Exception {
         byte[] zipData = createTestZip();
         String uploadId = UUID.randomUUID().toString();
-        int chunkSize = zipData.length / 3 + 1;
 
-        // Send first chunk (not last) to start processing
-        byte[] chunk0 = Arrays.copyOfRange(zipData, 0, Math.min(chunkSize, zipData.length));
-        mockMvc.perform(put("/api/photos/import-zip-chunk")
-                        .header("X-Upload-Id", uploadId)
-                        .header("X-Chunk-Index", 0)
-                        .header("X-Is-Last-Chunk", false)
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .content(chunk0))
-                .andExpect(status().isOk());
+        // === First attempt: send entire ZIP as non-last chunk, let it process, then reboot ===
+        sendChunk(uploadId, 0, false, zipData, -1, 0);
+        Thread.sleep(2000); // Let background thread process entries and persist to DB
+        simulateReboot(uploadId);
 
-        // Give background thread time to process and persist to DB
+        // === Resume #1: resend all data, but interrupt after first chunk again ===
+        ResumeInfoDto resumeInfo1 = getResumeInfo(uploadId);
+        int processed1 = resumeInfo1.getTotalProcessed();
+        assertTrue(processed1 > 0, "Should have processed some entries before first reboot");
+
+        // Resume by resending the full ZIP as non-last, then reboot again
+        sendChunk(uploadId, 0, false, zipData, processed1, resumeInfo1.getBytesToSkipInChunk());
         Thread.sleep(2000);
+        simulateReboot(uploadId);
 
-        // Simulate Cloud Run reboot: clear in-memory state
+        // === Resume #2: resend all data and complete ===
+        ResumeInfoDto resumeInfo2 = getResumeInfo(uploadId);
+        int processed2 = resumeInfo2.getTotalProcessed();
+        assertTrue(processed2 >= processed1,
+                "Second resume should have at least as many processed (" + processed2 + " >= " + processed1 + ")");
+
+        // Send full ZIP as last chunk to complete
+        ChunkUploadResultDto lastResponse = sendChunk(uploadId, 0, true, zipData,
+                processed2, resumeInfo2.getBytesToSkipInChunk());
+
+        if (lastResponse.getErrorMessage() != null) {
+            assertFalse(lastResponse.getErrorMessage().contains("Pipe closed"),
+                    "Resume #2 should not fail with 'Pipe closed': " + lastResponse.getErrorMessage());
+        }
+
+        assertTrue(lastResponse.isComplete(), "Upload should complete after second resume");
+        assertEquals(3, lastResponse.getTotalProcessedSoFar(),
+                "All 3 ZIP entries should be processed across resumes");
+    }
+
+    /** Send a single chunk and assert 200. Returns the parsed response. */
+    private ChunkUploadResultDto sendChunk(String uploadId, int chunkIndex, boolean isLast,
+                                            byte[] chunk, int resumeFromProcessed, long bytesToSkip) throws Exception {
+        var reqBuilder = put("/api/photos/import-zip-chunk")
+                .header("X-Upload-Id", uploadId)
+                .header("X-Chunk-Index", chunkIndex)
+                .header("X-Is-Last-Chunk", isLast)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .content(chunk);
+
+        if (resumeFromProcessed >= 0) {
+            reqBuilder = reqBuilder
+                    .header("X-Resume-From-Processed", resumeFromProcessed)
+                    .header("X-Bytes-To-Skip", bytesToSkip);
+        }
+
+        MvcResult result = mockMvc.perform(reqBuilder).andReturn();
+        assertEquals(200, result.getResponse().getStatus(),
+                "Chunk " + chunkIndex + " should succeed. Response: "
+                        + result.getResponse().getContentAsString());
+        return objectMapper.readValue(result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+    }
+
+    /** Simulate a Cloud Run reboot: remove in-memory state and mark DB session incomplete. */
+    private void simulateReboot(String uploadId) {
         photoChunkedImportService.removeUpload(uploadId);
+        uploadSessionRepository.findByUploadId(uploadId).ifPresent(session -> {
+            session.setComplete(false);
+            uploadSessionRepository.save(session);
+        });
+    }
 
-        // Mark session as not complete so resume works
-        var dbSession = uploadSessionRepository.findByUploadId(uploadId);
-        assertTrue(dbSession.isPresent(), "Upload session should be persisted in DB");
-        var session = dbSession.get();
-        session.setComplete(false);
-        uploadSessionRepository.save(session);
-
-        // Get resume info
-        MvcResult resumeResult = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+    /** Fetch resume info and assert it's available. */
+    private ResumeInfoDto getResumeInfo(String uploadId) throws Exception {
+        MvcResult result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .get("/api/photos/import-zip-chunk-resume/" + uploadId))
                 .andExpect(status().isOk())
                 .andReturn();
-
-        ResumeInfoDto resumeInfo = objectMapper.readValue(
-                resumeResult.getResponse().getContentAsString(), ResumeInfoDto.class);
-
-        int resumeChunkIndex = resumeInfo.getResumeFromChunkIndex();
-        long bytesToSkip = resumeInfo.getBytesToSkipInChunk();
-        int totalProcessedBefore = resumeInfo.getTotalProcessed();
-
-        // Now actually resume: send remaining chunks starting from resumeChunkIndex
-        ChunkUploadResultDto lastResponse = null;
-        int chunkIndex = resumeChunkIndex;
-        for (int offset = resumeChunkIndex * chunkSize; offset < zipData.length; offset += chunkSize) {
-            int end = Math.min(offset + chunkSize, zipData.length);
-            byte[] chunk = Arrays.copyOfRange(zipData, offset, end);
-            boolean isLast = end >= zipData.length;
-
-            var reqBuilder = put("/api/photos/import-zip-chunk")
-                    .header("X-Upload-Id", uploadId)
-                    .header("X-Chunk-Index", chunkIndex)
-                    .header("X-Is-Last-Chunk", isLast)
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .content(chunk);
-
-            // First resumed chunk carries resume headers
-            if (chunkIndex == resumeChunkIndex) {
-                reqBuilder = reqBuilder
-                        .header("X-Resume-From-Processed", totalProcessedBefore)
-                        .header("X-Bytes-To-Skip", bytesToSkip);
-            }
-
-            MvcResult result = mockMvc.perform(reqBuilder)
-                    .andReturn();
-
-            // The resumed chunk should succeed (200), not fail with 500 "Pipe closed"
-            assertEquals(200, result.getResponse().getStatus(),
-                    "Resume chunk " + chunkIndex + " should not fail. Response: "
-                            + result.getResponse().getContentAsString());
-
-            lastResponse = objectMapper.readValue(
-                    result.getResponse().getContentAsString(), ChunkUploadResultDto.class);
-
-            // Should not get "Pipe closed" error
-            if (lastResponse.getErrorMessage() != null) {
-                assertFalse(lastResponse.getErrorMessage().contains("Pipe closed"),
-                        "Resume should not fail with 'Pipe closed': " + lastResponse.getErrorMessage());
-            }
-
-            chunkIndex++;
-        }
-
-        assertNotNull(lastResponse);
-        assertTrue(lastResponse.isComplete(), "Resumed upload should complete");
-        // Total processed should be at least what we had before resume
-        assertTrue(lastResponse.getTotalProcessedSoFar() >= totalProcessedBefore,
-                "Should have processed at least as many entries as before resume");
+        return objectMapper.readValue(result.getResponse().getContentAsString(), ResumeInfoDto.class);
     }
 
     @Test
