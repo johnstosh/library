@@ -311,10 +311,11 @@ public class ImportService {
                 book.setDetailedDescription(bDto.getDetailedDescription());
                 book.setGrokipediaUrl(bDto.getGrokipediaUrl());
                 book.setFreeTextUrl(bDto.getFreeTextUrl());
-                if (bDto.getDateAddedToLibrary() != null) {
-                    book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
-                } else if (book.getDateAddedToLibrary() == null) {
-                    book.setDateAddedToLibrary(LocalDateTime.now());
+                // dateAddedToLibrary is a one-time field: set once, never updated.
+                // Only set it if the book doesn't already have one.
+                if (book.getDateAddedToLibrary() == null) {
+                    book.setDateAddedToLibrary(bDto.getDateAddedToLibrary() != null
+                            ? bDto.getDateAddedToLibrary() : LocalDateTime.now());
                 }
                 if (bDto.getLastModified() != null) {
                     book.setLastModified(bDto.getLastModified());
