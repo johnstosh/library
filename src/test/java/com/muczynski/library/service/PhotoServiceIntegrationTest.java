@@ -6,8 +6,10 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +22,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,8 +42,25 @@ class PhotoServiceIntegrationTest {
     @Autowired
     private BookRepository bookRepository;
 
+    @Autowired
+    private LoanRepository loanRepository;
+
+    // Unique suffix to avoid conflicts with other tests
+    private String uniqueSuffix;
+
+    @BeforeEach
+    void setUp() {
+        uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        // Clean up any leftover data
+        loanRepository.deleteAll();
+        photoRepository.deleteAll();
+        bookRepository.deleteAll();
+    }
+
     @AfterEach
     void tearDown() {
+        // Delete in correct order: loans -> photos -> books
+        loanRepository.deleteAll();
         photoRepository.deleteAll();
         bookRepository.deleteAll();
     }
@@ -65,7 +85,7 @@ class PhotoServiceIntegrationTest {
     void getThumbnail_withJpegImage_shouldGenerateCorrectSizeAndColor() throws Exception {
         // Given: A book with a red JPEG photo
         Book book = new Book();
-        book.setTitle("Test Book");
+        book.setTitle("Test Book JPEG " + uniqueSuffix);
         bookRepository.save(book);
 
         byte[] jpegBytes = createColoredImage(800, 1200, Color.RED, "jpg");
@@ -106,7 +126,7 @@ class PhotoServiceIntegrationTest {
     void getThumbnail_withPngImage_shouldGenerateCorrectSizeAndColor() throws Exception {
         // Given: A book with a blue PNG photo
         Book book = new Book();
-        book.setTitle("Test Book");
+        book.setTitle("Test Book PNG " + uniqueSuffix);
         bookRepository.save(book);
 
         byte[] pngBytes = createColoredImage(600, 800, Color.BLUE, "png");
@@ -147,7 +167,7 @@ class PhotoServiceIntegrationTest {
     void getThumbnail_withGreenImage_shouldMaintainColor() throws Exception {
         // Given: A book with a green JPEG photo
         Book book = new Book();
-        book.setTitle("Test Book");
+        book.setTitle("Test Book Green " + uniqueSuffix);
         bookRepository.save(book);
 
         byte[] jpegBytes = createColoredImage(400, 600, Color.GREEN, "jpg");
@@ -182,7 +202,7 @@ class PhotoServiceIntegrationTest {
     void getThumbnail_withDifferentWidths_shouldScaleCorrectly() throws Exception {
         // Given: A book with a photo
         Book book = new Book();
-        book.setTitle("Test Book");
+        book.setTitle("Test Book Widths " + uniqueSuffix);
         bookRepository.save(book);
 
         byte[] jpegBytes = createColoredImage(1000, 500, Color.YELLOW, "jpg");
