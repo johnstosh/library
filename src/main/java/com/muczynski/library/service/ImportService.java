@@ -442,7 +442,8 @@ public class ImportService {
 
                 // 1. If photo has imageChecksum (SHA-256), try to find existing photo with same checksum
                 if (pDto.getImageChecksum() != null && !pDto.getImageChecksum().trim().isEmpty()) {
-                    photo = photoRepository.findByImageChecksum(pDto.getImageChecksum()).orElse(null);
+                    List<Photo> checksumMatches = photoRepository.findAllByImageChecksumOrderByIdAsc(pDto.getImageChecksum());
+                    photo = checksumMatches.isEmpty() ? null : checksumMatches.get(0);
                     if (photo != null) {
                         logger.info("Found existing photo with imageChecksum: {} (Photo ID: {})", pDto.getImageChecksum(), photo.getId());
                     }
@@ -450,7 +451,8 @@ public class ImportService {
 
                 // 2. If photo has a permanentId and not found by checksum, try permanentId
                 if (photo == null && pDto.getPermanentId() != null && !pDto.getPermanentId().trim().isEmpty()) {
-                    photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
+                    List<Photo> permIdMatches = photoRepository.findAllByPermanentIdOrderByIdAsc(pDto.getPermanentId());
+                    photo = permIdMatches.isEmpty() ? null : permIdMatches.get(0);
                     if (photo != null) {
                         logger.info("Found existing photo with permanentId: {} (Photo ID: {})", pDto.getPermanentId(), photo.getId());
                     }

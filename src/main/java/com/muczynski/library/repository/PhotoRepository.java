@@ -18,6 +18,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     Optional<Photo> findByLoanId(Long loanId);
     Optional<Photo> findByPermanentId(String permanentId);
     Optional<Photo> findByImageChecksum(String imageChecksum);
+    List<Photo> findAllByPermanentIdOrderByIdAsc(String permanentId);
+    List<Photo> findAllByImageChecksumOrderByIdAsc(String imageChecksum);
     List<Photo> findByImageChecksumIsNull();
     List<Photo> findByBookIdAndPhotoOrderOrderByIdAsc(Long bookId, Integer photoOrder);
     List<Photo> findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(Long authorId, Integer photoOrder);
