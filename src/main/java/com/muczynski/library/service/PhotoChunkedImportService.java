@@ -125,18 +125,8 @@ public class PhotoChunkedImportService {
             activeUploads.put(uploadId, state);
             bgThread.start();
 
-            // If resuming, skip leading bytes of first chunk before piping
-            if (isResume && bytesToSkip > 0) {
-                if (bytesToSkip < chunkBytes.length) {
-                    byte[] trimmed = new byte[chunkBytes.length - (int) bytesToSkip];
-                    System.arraycopy(chunkBytes, (int) bytesToSkip, trimmed, 0, trimmed.length);
-                    chunkBytes = trimmed;
-                } else {
-                    // Entire first chunk is within already-consumed bytes; skip it
-                    chunkBytes = new byte[0];
-                }
-                log.info("Resume: skipped {} bytes from first chunk for upload {}", bytesToSkip, uploadId);
-            }
+            // Note: no byte trimming on resume. ZIP must be parsed from byte 0;
+            // the background thread skips already-processed entries instead.
         } else {
             state = activeUploads.get(uploadId);
             if (state == null) {
@@ -264,12 +254,13 @@ public class PhotoChunkedImportService {
         if (s.isComplete()) {
             return null;
         }
-        int resumeChunk = (int) (s.getTotalBytesConsumed() / CHUNK_SIZE);
-        long bytesToSkip = s.getTotalBytesConsumed() % CHUNK_SIZE;
+        // Always resume from chunk 0 with no byte skipping.
+        // ZIP is a streaming format that must be parsed from byte 0;
+        // the background thread uses entriesToSkip to skip already-processed entries.
         return ResumeInfoDto.builder()
                 .uploadId(uploadId)
-                .resumeFromChunkIndex(resumeChunk)
-                .bytesToSkipInChunk(bytesToSkip)
+                .resumeFromChunkIndex(0)
+                .bytesToSkipInChunk(0)
                 .totalProcessed(s.getTotalProcessed())
                 .successCount(s.getSuccessCount())
                 .failureCount(s.getFailureCount())
