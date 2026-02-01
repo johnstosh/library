@@ -7,6 +7,7 @@ import com.muczynski.library.dto.ErrorResponse;
 import com.muczynski.library.dto.ValidationErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -140,6 +141,43 @@ public class GlobalExceptionHandler {
         if (bytes >= 1024 * 1024) return String.format("%.0f MB", bytes / (1024.0 * 1024));
         if (bytes >= 1024) return String.format("%.0f KB", bytes / 1024.0);
         return bytes + " bytes";
+    }
+
+    /**
+     * Handle database unique constraint violations (409 Conflict)
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex, WebRequest request) {
+        String message = extractConstraintMessage(ex);
+        logger.warn("Data integrity violation on path {}: {}", request.getDescription(false), message);
+
+        ErrorResponse response = new ErrorResponse("DUPLICATE_ENTITY", message);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Extract a user-friendly message from a DataIntegrityViolationException.
+     * Attempts to identify the constraint name from the root cause.
+     */
+    private String extractConstraintMessage(DataIntegrityViolationException ex) {
+        String rootMessage = ex.getMostSpecificCause().getMessage();
+        if (rootMessage == null) {
+            return "A duplicate entry was detected";
+        }
+
+        // Try to extract constraint name from PostgreSQL error message
+        // Format: "ERROR: duplicate key value violates unique constraint "uk_xxx""
+        if (rootMessage.contains("unique constraint")) {
+            int start = rootMessage.indexOf('"');
+            int end = rootMessage.indexOf('"', start + 1);
+            if (start >= 0 && end > start) {
+                String constraintName = rootMessage.substring(start + 1, end);
+                return "Duplicate entry violates constraint: " + constraintName;
+            }
+        }
+
+        return "A duplicate entry was detected: " + rootMessage;
     }
 
     /**

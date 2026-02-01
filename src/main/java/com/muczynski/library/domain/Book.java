@@ -10,9 +10,14 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(indexes = {
-    @Index(name = "idx_book_title", columnList = "title")
-})
+@Table(
+    indexes = {
+        @Index(name = "idx_book_title", columnList = "title")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_book_title", columnNames = "title")
+    }
+)
 @Getter
 @Setter
 public class Book {

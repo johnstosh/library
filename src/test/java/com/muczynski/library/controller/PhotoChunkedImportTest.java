@@ -89,9 +89,14 @@ class PhotoChunkedImportTest {
 
     @BeforeEach
     void setUp() {
-        Authority librarianAuth = new Authority();
-        librarianAuth.setName("LIBRARIAN");
-        librarianAuth = authorityRepository.save(librarianAuth);
+        // Clean up from previous tests (non-transactional tests don't roll back)
+        loanRepository.deleteAll();
+        photoRepository.deleteAll();
+        bookRepository.deleteAll();
+        authorRepository.deleteAll();
+        userRepository.deleteAll();
+
+        Authority librarianAuth = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "LIBRARIAN");
 
         User testUser = new User();
         testUser.setUsername("testuser");
@@ -115,6 +120,7 @@ class PhotoChunkedImportTest {
         photoRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     private byte[] createDummyImage(int width, int height) throws Exception {

@@ -270,9 +270,7 @@ class ImportControllerIntegrationTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_UserWithMultipleAuthorities() throws Exception {
         // Create additional authority
-        Authority adminAuthority = new Authority();
-        adminAuthority.setName("ADMIN");
-        adminAuthority = authorityRepository.save(adminAuthority);
+        Authority adminAuthority = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "ADMIN");
 
         // Create user with multiple authorities
         User multiAuthorityUser = new User();

@@ -98,12 +98,7 @@ class ImportExportRoundTripTest {
         testLibrary = branchRepository.save(testLibrary);
 
         // Ensure USER authority exists
-        Authority userAuthority = authorityRepository.findByName("USER")
-                .orElseGet(() -> {
-                    Authority a = new Authority();
-                    a.setName("USER");
-                    return authorityRepository.save(a);
-                });
+        Authority userAuthority = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "USER");
 
         // Create 20 authors and 20 books with all fields populated
         for (int i = 0; i < 20; i++) {

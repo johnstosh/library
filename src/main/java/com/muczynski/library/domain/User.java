@@ -19,7 +19,8 @@ import java.util.UUID;
         @Index(name = "idx_user_sso", columnList = "ssoProvider, ssoSubjectId")
     },
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier")
+        @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier"),
+        @UniqueConstraint(name = "uk_user_username", columnNames = "username")
     }
 )
 @Getter

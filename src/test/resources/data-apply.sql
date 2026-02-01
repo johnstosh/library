@@ -5,8 +5,8 @@ DELETE FROM users_roles;
 DELETE FROM users;
 DELETE FROM role;
 
-INSERT INTO role (id, name) VALUES (1, 'USER');
-INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN');
+INSERT INTO role (id, name) VALUES (1, 'USER') ON CONFLICT (name) DO NOTHING;
+INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN') ON CONFLICT (name) DO NOTHING;
 
 -- No pre-existing applications needed for basic apply for card test
 -- Tests will create new applications through the UI
