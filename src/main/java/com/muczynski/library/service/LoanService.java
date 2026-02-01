@@ -57,10 +57,20 @@ public class LoanService {
             throw new BookAlreadyLoanedException(book.getId());
         }
 
+        LocalDate loanDate = loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now();
+
+        // Check for duplicate loan (same book, user, and date)
+        List<Loan> existingLoans = loanRepository.findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(
+                book.getId(), user.getId(), loanDate);
+        if (!existingLoans.isEmpty()) {
+            throw new LibraryException("A loan already exists for book '" + book.getTitle()
+                    + "' and user '" + user.getUsername() + "' on " + loanDate);
+        }
+
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);
-        loan.setLoanDate(loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now());
+        loan.setLoanDate(loanDate);
         loan.setDueDate(loanDto.getDueDate() != null ? loanDto.getDueDate() : loan.getLoanDate().plusWeeks(2));
         loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
@@ -86,11 +96,21 @@ public class LoanService {
             throw new BookAlreadyLoanedException(book.getId());
         }
 
+        LocalDate loanDate = loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now();
+
+        // Check for duplicate loan (same book, user, and date)
+        List<Loan> existingLoans = loanRepository.findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(
+                book.getId(), user.getId(), loanDate);
+        if (!existingLoans.isEmpty()) {
+            throw new LibraryException("A loan already exists for book '" + book.getTitle()
+                    + "' and user '" + user.getUsername() + "' on " + loanDate);
+        }
+
         // Create the loan
         Loan loan = new Loan();
         loan.setBook(book);
         loan.setUser(user);
-        loan.setLoanDate(loanDto.getLoanDate() != null ? loanDto.getLoanDate() : LocalDate.now());
+        loan.setLoanDate(loanDate);
         loan.setDueDate(loanDto.getDueDate() != null ? loanDto.getDueDate() : loan.getLoanDate().plusWeeks(2));
         loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
