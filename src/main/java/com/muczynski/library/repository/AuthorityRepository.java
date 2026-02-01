@@ -12,6 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface AuthorityRepository extends JpaRepository<Authority, Long> {
+    /** @deprecated Use findAllByNameOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Authority> findByName(String name);
     List<Authority> findAllByNameOrderByIdAsc(String name);
 }

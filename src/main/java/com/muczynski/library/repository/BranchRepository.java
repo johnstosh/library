@@ -12,6 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface BranchRepository extends JpaRepository<Library, Long> {
+    /** @deprecated Use findAllByBranchNameOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Library> findByBranchName(String branchName);
     List<Library> findAllByBranchNameOrderByIdAsc(String branchName);
 }

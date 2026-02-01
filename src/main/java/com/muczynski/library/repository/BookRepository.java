@@ -90,8 +90,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);
     List<Book> findByAuthorIdOrderByTitleAsc(Long authorId);
+    /** @deprecated Use findAllByTitleAndAuthor_NameOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Book> findByTitleAndAuthor_Name(String title, String authorName);
     List<Book> findAllByTitleAndAuthor_NameOrderByIdAsc(String title, String authorName);
+    /** @deprecated Use findAllByTitleAndAuthorIsNullOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Book> findByTitleAndAuthorIsNull(String title);
     List<Book> findAllByTitleAndAuthorIsNullOrderByIdAsc(String title);
 

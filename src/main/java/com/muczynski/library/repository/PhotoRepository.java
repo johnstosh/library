@@ -16,7 +16,11 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByAuthorIdOrderByPhotoOrder(Long authorId);
     List<Photo> findByAuthorId(Long authorId);
     Optional<Photo> findByLoanId(Long loanId);
+    /** @deprecated Use findAllByPermanentIdOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Photo> findByPermanentId(String permanentId);
+    /** @deprecated Use findAllByImageChecksumOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Photo> findByImageChecksum(String imageChecksum);
     List<Photo> findAllByPermanentIdOrderByIdAsc(String permanentId);
     List<Photo> findAllByImageChecksumOrderByIdAsc(String imageChecksum);
