@@ -1,6 +1,16 @@
 // (c) Copyright 2025 by Muczynski
 import type { BookStatus } from './enums'
 
+// API Error Response
+export interface ErrorResponse {
+  error: string
+  message: string
+  timestamp: string
+  entityType?: string
+  entityName?: string
+  existingEntityId?: number
+}
+
 // Library Card Design Type
 export type LibraryCardDesign =
   | 'COUNTRYSIDE_YOUTH'

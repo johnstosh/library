@@ -144,6 +144,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle duplicate entity exceptions (409 Conflict) with enriched error details
+     */
+    @ExceptionHandler(DuplicateEntityException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEntityException(
+            DuplicateEntityException ex, WebRequest request) {
+        logger.warn("Duplicate entity on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("DUPLICATE_ENTITY", ex.getMessage(),
+                ex.getEntityType(), ex.getEntityName(), ex.getExistingEntityId());
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
      * Handle database unique constraint violations (409 Conflict)
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
