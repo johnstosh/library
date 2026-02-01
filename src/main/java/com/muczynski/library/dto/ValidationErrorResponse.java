@@ -6,7 +6,6 @@ package com.muczynski.library.dto;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +18,7 @@ public class ValidationErrorResponse extends ErrorResponse {
     private List<FieldError> fieldErrors = new ArrayList<>();
 
     public ValidationErrorResponse(String message) {
-        super("VALIDATION_ERROR", message, LocalDateTime.now());
+        super("VALIDATION_ERROR", message);
     }
 
     public void addFieldError(String field, String message) {
