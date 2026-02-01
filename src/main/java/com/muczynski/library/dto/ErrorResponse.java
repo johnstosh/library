@@ -19,10 +19,22 @@ public class ErrorResponse {
     private String error;
     private String message;
     private LocalDateTime timestamp;
+    private String entityType;
+    private String entityName;
+    private Long existingEntityId;
 
     public ErrorResponse(String error, String message) {
         this.error = error;
         this.message = message;
         this.timestamp = LocalDateTime.now();
+    }
+
+    public ErrorResponse(String error, String message, String entityType, String entityName, Long existingEntityId) {
+        this.error = error;
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+        this.entityType = entityType;
+        this.entityName = entityName;
+        this.existingEntityId = existingEntityId;
     }
 }

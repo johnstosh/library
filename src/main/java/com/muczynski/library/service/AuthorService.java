@@ -6,6 +6,7 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -114,9 +115,9 @@ public class AuthorService {
             name = "John Doe";
         }
 
-        Author existingAuthor = authorRepository.findByName(name);
-        if (existingAuthor != null) {
-            return existingAuthor;
+        List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(name);
+        if (!existingAuthors.isEmpty()) {
+            return existingAuthors.get(0);
         }
 
         // Create new author
@@ -210,6 +211,115 @@ public class AuthorService {
 
         // Get authors for these IDs
         return authorRepository.findAllById(authorIds).stream()
+                .map(author -> {
+                    AuthorDto dto = authorMapper.toDto(author);
+                    dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
+                    return dto;
+                })
+                .sorted(Comparator.comparing(author -> {
+                    if (author == null || author.getName() == null || author.getName().trim().isEmpty()) {
+                        return null;
+                    }
+                    String[] nameParts = author.getName().trim().split("\\s+");
+                    return nameParts.length > 0 ? nameParts[nameParts.length - 1] : "";
+                }, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all author summaries (id + lastModified) for caching.
+     */
+    public List<AuthorSummaryDto> getAllAuthorSummaries() {
+        return authorRepository.findAll().stream()
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries for authors without a brief biography.
+     */
+    public List<AuthorSummaryDto> getSummariesWithoutDescription() {
+        return authorRepository.findAll().stream()
+                .filter(author -> author.getBriefBiography() == null || author.getBriefBiography().trim().isEmpty())
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries for authors with zero books.
+     */
+    public List<AuthorSummaryDto> getSummariesWithZeroBooks() {
+        return authorRepository.findAll().stream()
+                .filter(author -> bookRepository.countByAuthorId(author.getId()) == 0)
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries for authors without a Grokipedia URL.
+     */
+    public List<AuthorSummaryDto> getSummariesWithoutGrokipedia() {
+        return authorRepository.findAll().stream()
+                .filter(author -> author.getGrokipediaUrl() == null || author.getGrokipediaUrl().trim().isEmpty())
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get summaries for authors who have books added on the most recent day.
+     */
+    public List<AuthorSummaryDto> getSummariesFromMostRecentDay() {
+        LocalDateTime maxDateTime = bookRepository.findMaxDateAddedToLibrary();
+        if (maxDateTime == null) {
+            return List.of();
+        }
+        LocalDateTime startOfDay = maxDateTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        List<Long> authorIds = bookRepository.findByDateAddedToLibraryBetweenOrderByDateAddedDesc(startOfDay, endOfDay).stream()
+                .map(book -> book.getAuthor() != null ? book.getAuthor().getId() : null)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+
+        return authorRepository.findAllById(authorIds).stream()
+                .map(author -> {
+                    AuthorSummaryDto dto = new AuthorSummaryDto();
+                    dto.setId(author.getId());
+                    dto.setLastModified(author.getLastModified());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get authors by IDs for batch fetching.
+     */
+    public List<AuthorDto> getAuthorsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return authorRepository.findAllById(ids).stream()
                 .map(author -> {
                     AuthorDto dto = authorMapper.toDto(author);
                     dto.setBookCount(bookRepository.countByAuthorId(author.getId()));

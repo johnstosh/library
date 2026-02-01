@@ -139,6 +139,9 @@ export function Navigation() {
                   <NavLink to="/data-management" data-test="nav-data">
                     Data
                   </NavLink>
+                  <NavLink to="/photos-management" data-test="nav-photos">
+                    Photos
+                  </NavLink>
                   <NavLink to="/global-settings" data-test="nav-global-settings">
                     Global Settings
                   </NavLink>
@@ -270,6 +273,9 @@ export function Navigation() {
                 </NavLink>
                 <NavLink to="/data-management" data-test="nav-data-mobile" onClick={closeMobileMenu}>
                   Data Management
+                </NavLink>
+                <NavLink to="/photos-management" data-test="nav-photos-mobile" onClick={closeMobileMenu}>
+                  Photos
                 </NavLink>
                 <NavLink to="/global-settings" data-test="nav-global-settings-mobile" onClick={closeMobileMenu}>
                   Global Settings

@@ -11,4 +11,4 @@ COPY build/libs/*.jar /app/application.jar
 EXPOSE ${PORT:-8080}
 
 # Run the JAR
-CMD ["java", "-jar", "/app/application.jar"]
+CMD ["java", "-Xmx384m", "-jar", "/app/application.jar"]

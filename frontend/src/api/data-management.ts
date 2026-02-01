@@ -3,11 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 
 export interface ImportExportStats {
-  libraries: number
+  branches: number
   authors: number
   books: number
   users: number
   loans: number
+}
+
+// Import error for per-entity error reporting
+export interface ImportErrorDto {
+  entityType: string
+  entityName: string
+  errorMessage: string
 }
 
 // Import response from backend
@@ -15,18 +22,19 @@ export interface ImportResponseDto {
   success: boolean
   message: string
   counts?: {
-    libraries: number
+    branches: number
     authors: number
     users: number
     books: number
     loans: number
     photos: number
   }
+  errors?: ImportErrorDto[]
 }
 
 // Database statistics from the backend (total counts from database)
 export interface DatabaseStatsDto {
-  libraryCount: number
+  branchCount: number
   bookCount: number
   authorCount: number
   userCount: number
@@ -111,7 +119,7 @@ export function useImportJsonData() {
         throw new Error('Invalid JSON file format. Please check the file and try again.')
       }
       console.log('Importing data:', {
-        libraries: data.libraries?.length || 0,
+        branches: data.libraries?.length || 0,
         authors: data.authors?.length || 0,
         users: data.users?.length || 0,
         books: data.books?.length || 0,
@@ -152,7 +160,20 @@ export async function exportPhotos(): Promise<Blob> {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to export photos')
+    // Try to get error message from response body
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || errorData.error || 'Failed to export photos')
+    }
+    // Handle common HTTP errors
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please log in.')
+    }
+    if (response.status === 403) {
+      throw new Error('Permission denied. Librarian access required.')
+    }
+    throw new Error(`Failed to export photos (HTTP ${response.status})`)
   }
 
   return response.blob()

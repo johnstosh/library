@@ -16,8 +16,14 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByAuthorIdOrderByPhotoOrder(Long authorId);
     List<Photo> findByAuthorId(Long authorId);
     Optional<Photo> findByLoanId(Long loanId);
+    /** @deprecated Use findAllByPermanentIdOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Photo> findByPermanentId(String permanentId);
+    /** @deprecated Use findAllByImageChecksumOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Photo> findByImageChecksum(String imageChecksum);
+    List<Photo> findAllByPermanentIdOrderByIdAsc(String permanentId);
+    List<Photo> findAllByImageChecksumOrderByIdAsc(String imageChecksum);
     List<Photo> findByImageChecksumIsNull();
     List<Photo> findByBookIdAndPhotoOrderOrderByIdAsc(Long bookId, Integer photoOrder);
     List<Photo> findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(Long authorId, Integer photoOrder);
@@ -71,8 +77,8 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
            "AND p.imageChecksum IS NULL")
     List<Long> findIdsNeedingImport();
 
-    // Check if a photo has image data without loading the bytes
-    @Query("SELECT CASE WHEN p.imageChecksum IS NOT NULL THEN true ELSE false END FROM Photo p WHERE p.id = :id")
+    // Check if a photo has image data without loading the bytes (checks actual bytes, not just checksum)
+    @Query(value = "SELECT CASE WHEN image IS NOT NULL THEN true ELSE false END FROM photo WHERE id = :id", nativeQuery = true)
     boolean hasImageData(@Param("id") Long id);
 
     // Get first photo ID for a book without loading the photos collection
@@ -94,4 +100,23 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // Projection query that returns only metadata without image bytes - for export operations
     // Note: Using findBy() with no criteria returns all records with the projection type
     List<PhotoMetadataProjection> findBy();
+
+    // Find active photos that have images for ZIP export
+    // Note: This loads full Photo entities including image bytes - use only for actual export
+    @Query("SELECT DISTINCT p FROM Photo p " +
+           "LEFT JOIN FETCH p.book b LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.loan l LEFT JOIN FETCH l.book LEFT JOIN FETCH l.user " +
+           "WHERE p.deletedAt IS NULL AND (p.imageChecksum IS NOT NULL OR p.image IS NOT NULL) " +
+           "ORDER BY p.id")
+    List<Photo> findActivePhotosWithImages();
+
+    // Find photo IDs that have images (for streaming ZIP export)
+    // Include photos with image data even if checksum hasn't been computed yet
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND (p.imageChecksum IS NOT NULL OR p.image IS NOT NULL) ORDER BY p.id")
+    List<Long> findActivePhotoIdsWithImages();
+
+    // Find ALL active photo IDs (for ZIP export that downloads missing images from Google Photos)
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL ORDER BY p.id")
+    List<Long> findAllActivePhotoIds();
 }

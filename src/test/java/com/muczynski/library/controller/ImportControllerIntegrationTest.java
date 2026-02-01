@@ -270,9 +270,7 @@ class ImportControllerIntegrationTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testExportJson_UserWithMultipleAuthorities() throws Exception {
         // Create additional authority
-        Authority adminAuthority = new Authority();
-        adminAuthority.setName("ADMIN");
-        adminAuthority = authorityRepository.save(adminAuthority);
+        Authority adminAuthority = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "ADMIN");
 
         // Create user with multiple authorities
         User multiAuthorityUser = new User();
@@ -328,7 +326,7 @@ class ImportControllerIntegrationTest {
         mockMvc.perform(get("/api/import/stats"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.libraryCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.branchCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.bookCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.authorCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.userCount", greaterThanOrEqualTo(1)))

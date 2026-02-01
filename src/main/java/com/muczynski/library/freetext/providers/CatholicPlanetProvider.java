@@ -5,11 +5,14 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.freetext.FreeTextProvider;
-import lombok.RequiredArgsConstructor;
+import com.muczynski.library.freetext.TitleMatcher;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,13 +23,14 @@ import java.util.regex.Pattern;
  * Website: https://www.catholicplanet.com/ebooks/
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class CatholicPlanetProvider implements FreeTextProvider {
 
     private static final String INDEX_URL = "https://www.catholicplanet.com/ebooks/";
 
-    private final RestTemplate restTemplate;
+    @Autowired
+    @Qualifier("providerRestTemplate")
+    private RestTemplate restTemplate;
 
     @Override
     public String getProviderName() {
@@ -39,6 +43,11 @@ public class CatholicPlanetProvider implements FreeTextProvider {
     }
 
     @Override
+    public List<String> getExpectedDomains() {
+        return List.of("catholicplanet.com");
+    }
+
+    @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
             String html = restTemplate.getForObject(INDEX_URL, String.class);
@@ -46,14 +55,6 @@ public class CatholicPlanetProvider implements FreeTextProvider {
             if (html == null || html.isEmpty()) {
                 return FreeTextLookupResult.error(getProviderName(), "Unable to fetch index page");
             }
-
-            // Normalize title for searching
-            String normalizedTitle = title.toLowerCase();
-            String[] titleWords = normalizedTitle.split("\\s+");
-
-            // Search for the title in the index page
-            // Catholic Planet uses simple HTML lists with links
-            String htmlLower = html.toLowerCase();
 
             // Find all links and check if any match the title
             Pattern linkPattern = Pattern.compile(
@@ -63,22 +64,27 @@ public class CatholicPlanetProvider implements FreeTextProvider {
             Matcher matcher = linkPattern.matcher(html);
             while (matcher.find()) {
                 String href = matcher.group(1);
-                String linkText = matcher.group(2).toLowerCase();
+                String linkText = matcher.group(2);
 
-                // Check if link text contains key words from title
-                int matchCount = 0;
-                for (String word : titleWords) {
-                    if (word.length() > 3 && linkText.contains(word)) {
-                        matchCount++;
-                    }
+                // Skip external links (only accept catholicplanet.com content)
+                if (href.startsWith("http") && !href.contains("catholicplanet.com")) {
+                    continue;
                 }
 
-                // If enough words match, consider it a hit
-                if (matchCount >= 2 || (titleWords.length <= 2 && matchCount >= 1)) {
+                // Skip non-ebook links (must be .pdf, .htm, .html, or relative path)
+                String hrefLower = href.toLowerCase();
+                if (href.startsWith("http") && !hrefLower.endsWith(".pdf") &&
+                        !hrefLower.endsWith(".htm") && !hrefLower.endsWith(".html")) {
+                    continue;
+                }
+
+                // Use TitleMatcher for accurate title matching
+                if (TitleMatcher.titleMatches(linkText, title)) {
                     String fullUrl = href;
                     if (!href.startsWith("http")) {
                         fullUrl = INDEX_URL + href;
                     }
+                    log.debug("Catholic Planet: Found match '{}' -> {}", linkText, fullUrl);
                     return FreeTextLookupResult.success(getProviderName(), fullUrl);
                 }
             }
@@ -86,8 +92,14 @@ public class CatholicPlanetProvider implements FreeTextProvider {
             return FreeTextLookupResult.error(getProviderName(), "Title not found in Catholic Planet eLibrary");
 
         } catch (Exception e) {
-            log.warn("Catholic Planet search failed: {}", e.getMessage());
-            return FreeTextLookupResult.error(getProviderName(), "Search error: " + e.getMessage());
+            // Get root cause for better error messages (e.g., SocketTimeoutException)
+            Throwable rootCause = e;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                rootCause = rootCause.getCause();
+            }
+            String rootMessage = rootCause.getClass().getSimpleName() + ": " + rootCause.getMessage();
+            log.warn("Catholic Planet search failed: {}", rootMessage);
+            return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
     }
 }

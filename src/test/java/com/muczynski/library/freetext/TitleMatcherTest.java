@@ -129,4 +129,91 @@ class TitleMatcherTest {
                 "War and Peace",
                 "War and Peace: Complete Edition"));
     }
+
+    // Tests for normalizeForSearch
+
+    @Test
+    void normalizeForSearch_removesLeadingArticles() {
+        assertEquals("spiritual exercises", TitleMatcher.normalizeForSearch("The Spiritual Exercises"));
+        assertEquals("tale two cities", TitleMatcher.normalizeForSearch("A Tale of Two Cities"));
+        assertEquals("apple day", TitleMatcher.normalizeForSearch("An Apple a Day"));
+    }
+
+    @Test
+    void normalizeForSearch_removesCommonWords() {
+        // Removes: the, a, an, in, at, to, of, on, by, for, and, or, with, from
+        assertEquals("history world", TitleMatcher.normalizeForSearch("The History of the World"));
+        assertEquals("war peace", TitleMatcher.normalizeForSearch("War and Peace"));
+        assertEquals("journey center earth", TitleMatcher.normalizeForSearch("A Journey to the Center of the Earth"));
+    }
+
+    @Test
+    void normalizeForSearch_removesPunctuation() {
+        assertEquals("hello world", TitleMatcher.normalizeForSearch("Hello, World!"));
+        assertEquals("its wonderful life", TitleMatcher.normalizeForSearch("It's a Wonderful Life"));
+    }
+
+    @Test
+    void normalizeForSearch_handlesNullAndEmpty() {
+        assertEquals("", TitleMatcher.normalizeForSearch(null));
+        assertEquals("", TitleMatcher.normalizeForSearch(""));
+        assertEquals("", TitleMatcher.normalizeForSearch("   "));
+    }
+
+    @Test
+    void normalizeForSearch_preservesSignificantWords() {
+        // "Exercises" should be preserved (not a stop word)
+        String result = TitleMatcher.normalizeForSearch("The Spiritual Exercises of Saint Ignatius");
+        assertTrue(result.contains("spiritual"));
+        assertTrue(result.contains("exercises"));
+        assertTrue(result.contains("saint"));
+        assertTrue(result.contains("ignatius"));
+        assertFalse(result.contains("the"));
+        assertFalse(result.contains("of"));
+    }
+
+    @Test
+    void normalizeForSearch_removesNumbers() {
+        // Pure numbers like publication years should be removed
+        assertEquals("war peace edition", TitleMatcher.normalizeForSearch("War and Peace 1952 Edition"));
+        assertEquals("history world vol", TitleMatcher.normalizeForSearch("A History of the World Vol 2"));
+        assertEquals("collected poems", TitleMatcher.normalizeForSearch("Collected Poems 1909-1962"));
+    }
+
+    @Test
+    void titleMatches_ignoresNumbers_simpleCase() {
+        // Publication years should not affect matching - base title is the same
+        assertTrue(TitleMatcher.titleMatches("War and Peace", "War and Peace 1952"));
+        assertTrue(TitleMatcher.titleMatches("War and Peace 1952", "War and Peace"));
+    }
+
+    @Test
+    void titleMatches_ignoresNumbers_withDifferentSuffixes() {
+        // These have 4 significant words each: war, and, peace, edition/complete
+        // 3 out of 4 match (75% >= 70% threshold) so they should match
+        // The years 1952/1869 are ignored as insignificant
+        assertTrue(TitleMatcher.titleMatches("War and Peace 1952 Edition", "War and Peace 1869 Complete"));
+    }
+
+    @Test
+    void titleMatches_singleWordChristmasDoesNotMatchLongTitle() {
+        // Regression test: Single word should not match a long title containing that word
+        // because bidirectional matching requires 70% in BOTH directions
+        assertFalse(TitleMatcher.titleMatches("Christmas", "How the Grinch Stole Christmas"));
+    }
+
+    @Test
+    void titleMatches_ignoresTrailingParentheticalDates() {
+        // Titles with trailing dates in parentheses should match the base title
+        assertTrue(TitleMatcher.titleMatches("Humanae Vitae (July 25, 1968)", "Humanae Vitae"));
+        assertTrue(TitleMatcher.titleMatches("Humanae Vitae", "Humanae Vitae (July 25, 1968)"));
+        assertTrue(TitleMatcher.titleMatches("Rerum Novarum (May 15, 1891)", "Rerum Novarum"));
+    }
+
+    @Test
+    void titleMatches_ignoresTrailingParentheticalEditions() {
+        // Titles with edition info in parentheses should match
+        assertTrue(TitleMatcher.titleMatches("War and Peace (2nd Edition)", "War and Peace"));
+        assertTrue(TitleMatcher.titleMatches("The Republic (Penguin Classics)", "The Republic"));
+    }
 }

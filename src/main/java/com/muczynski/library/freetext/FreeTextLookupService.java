@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,11 +40,14 @@ public class FreeTextLookupService {
         log.info("Initialized {} free text providers: {}",
                 providers.size(),
                 providers.stream().map(FreeTextProvider::getProviderName).toList());
+        log.info("Free text cache contains {} authors with {} books",
+                FreeTextLookupCache.getAuthorCount(),
+                FreeTextLookupCache.getBookCount());
     }
 
     /**
      * Look up free online text for a single book.
-     * Tries all providers in priority order until one finds a match.
+     * First checks the global cache, then tries all providers in priority order until one finds a match.
      *
      * @param bookId the book ID to look up
      * @return result with URL if found, or error message if not
@@ -64,6 +68,44 @@ public class FreeTextLookupService {
         }
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+
+        // Check global cache first (may return multiple space-separated URLs)
+        // Empty string "" means "searched but not found" - don't search again
+        String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
+        if (cachedUrls != null) {
+            if (!cachedUrls.isBlank()) {
+                // Found URLs in cache
+                book.setFreeTextUrl(cachedUrls);
+                book.setLastModified(LocalDateTime.now());
+                bookRepository.save(book);
+
+                log.info("Found free text for book {} in cache: {}", bookId, cachedUrls);
+
+                return FreeTextBulkLookupResultDto.builder()
+                        .bookId(bookId)
+                        .bookTitle(book.getTitle())
+                        .authorName(authorName)
+                        .success(true)
+                        .freeTextUrl(cachedUrls)
+                        .providerName("Cache")
+                        .providersSearched(List.of("Cache"))
+                        .build();
+            } else {
+                // Cached as "not found" - don't search again
+                log.info("Book {} was previously searched and not found (cached)", bookId);
+
+                return FreeTextBulkLookupResultDto.builder()
+                        .bookId(bookId)
+                        .bookTitle(book.getTitle())
+                        .authorName(authorName)
+                        .success(false)
+                        .errorMessage("Previously searched - not found (cached)")
+                        .providerName("Cache")
+                        .providersSearched(List.of("Cache"))
+                        .build();
+            }
+        }
+
         List<String> searchedProviders = new ArrayList<>();
 
         for (FreeTextProvider provider : providers) {
@@ -76,6 +118,20 @@ public class FreeTextLookupService {
                 FreeTextLookupResult result = provider.search(book.getTitle(), authorName);
 
                 if (result.isFound()) {
+                    // Validate domain if provider specifies expected domains
+                    List<String> expectedDomains = provider.getExpectedDomains();
+                    if (!expectedDomains.isEmpty()) {
+                        String urlDomain = extractDomain(result.getUrl());
+                        boolean domainMatches = expectedDomains.stream()
+                                .anyMatch(expected -> urlDomain != null && urlDomain.contains(expected));
+                        if (!domainMatches) {
+                            log.error("Provider {} returned URL with unexpected domain: {} (expected one of: {})",
+                                    provider.getProviderName(), result.getUrl(), expectedDomains);
+                            // Skip this result and continue to next provider
+                            continue;
+                        }
+                    }
+
                     // Update the book with the found URL
                     book.setFreeTextUrl(result.getUrl());
                     book.setLastModified(LocalDateTime.now());
@@ -152,5 +208,24 @@ public class FreeTextLookupService {
         return providers.stream()
                 .map(FreeTextProvider::getProviderName)
                 .toList();
+    }
+
+    /**
+     * Extract the domain from a URL.
+     *
+     * @param url the URL to extract domain from
+     * @return the domain (e.g., "www.gutenberg.org"), or null if extraction fails
+     */
+    private String extractDomain(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            URI uri = new URI(url);
+            return uri.getHost();
+        } catch (Exception e) {
+            log.warn("Failed to extract domain from URL: {}", url);
+            return null;
+        }
     }
 }

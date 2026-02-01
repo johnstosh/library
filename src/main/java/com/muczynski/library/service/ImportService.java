@@ -10,6 +10,8 @@ import com.muczynski.library.dto.BranchDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.BranchMapper;
 import com.muczynski.library.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,9 @@ public class ImportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportService.class);
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public static final String DEFAULT_PASSWORD = "divinemercy";
 
     private final BranchRepository branchRepository;
@@ -41,7 +46,7 @@ public class ImportService {
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public ImportResponseDto.ImportCounts importData(ImportRequestDto dto) {
+    public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
         logger.info("Starting import. Libraries: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
             dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
@@ -50,7 +55,7 @@ public class ImportService {
             dto.getLoans() != null ? dto.getLoans().size() : 0,
             dto.getPhotos() != null ? dto.getPhotos().size() : 0);
 
-        int libraryCount = 0;
+        int branchCount = 0;
         int authorCount = 0;
         int userCount = 0;
         int bookCount = 0;
@@ -60,8 +65,9 @@ public class ImportService {
         Map<String, Library> libMap = new HashMap<>();
         if (dto.getBranches() != null) {
             for (BranchDto lDto : dto.getBranches()) {
-                // Check if library with same branch name already exists
-                Library lib = branchRepository.findByBranchName(lDto.getBranchName()).orElse(null);
+                // Check if library with same branch name already exists (select first by ID if duplicates)
+                List<Library> existingLibraries = branchRepository.findAllByBranchNameOrderByIdAsc(lDto.getBranchName());
+                Library lib = existingLibraries.isEmpty() ? null : existingLibraries.get(0);
                 if (lib == null) {
                     // Create new library without copying ID from import
                     lib = new Library();
@@ -70,19 +76,45 @@ public class ImportService {
                 } else {
                     // Update existing library
                     lib.setLibrarySystemName(lDto.getLibrarySystemName());
+
+                    // Merge duplicates: reassign books from duplicate branches to primary and delete duplicates
+                    if (existingLibraries.size() > 1) {
+                        logger.info("Merging {} duplicate libraries with branch name '{}' into library ID: {}",
+                                   existingLibraries.size(), lDto.getBranchName(), lib.getId());
+
+                        for (int i = 1; i < existingLibraries.size(); i++) {
+                            Library duplicate = existingLibraries.get(i);
+                            // Reassign all books from duplicate to primary library
+                            List<Book> booksToReassign = bookRepository.findAllByLibraryId(duplicate.getId());
+                            for (Book book : booksToReassign) {
+                                book.setLibrary(lib);
+                                bookRepository.save(book);
+                                logger.debug("Reassigned book '{}' (ID: {}) from library {} to library {}",
+                                           book.getTitle(), book.getId(), duplicate.getId(), lib.getId());
+                            }
+                            logger.info("Reassigned {} books from duplicate library ID {} to primary library ID {}",
+                                       booksToReassign.size(), duplicate.getId(), lib.getId());
+
+                            // Delete the duplicate library
+                            branchRepository.delete(duplicate);
+                            logger.info("Deleted duplicate library ID {} (branch name: '{}')",
+                                       duplicate.getId(), duplicate.getBranchName());
+                        }
+                    }
                 }
                 lib = branchRepository.save(lib);
                 libMap.put(lDto.getBranchName(), lib);
-                libraryCount++;
+                branchCount++;
             }
         }
-        logger.info("Imported {} libraries", libraryCount);
+        logger.info("Imported {} branches", branchCount);
 
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
             for (ImportAuthorDto aDto : dto.getAuthors()) {
-                // Check if author with same name already exists
-                Author auth = authorRepository.findByName(aDto.getName());
+                // Check if author with same name already exists (select first by ID if duplicates)
+                List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(aDto.getName());
+                Author auth = existingAuthors.isEmpty() ? null : existingAuthors.get(0);
                 if (auth == null) {
                     auth = new Author();
                     auth.setName(aDto.getName());
@@ -135,7 +167,8 @@ public class ImportService {
                     // No password and user is new - use default
                     user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
                 }
-                // Update other fields (merge)
+                // Update other fields (merge) - convert null to empty string for string fields
+                // Note: only update if DTO has a non-null value (null in DTO means "not provided")
                 if (uDto.getXaiApiKey() != null) {
                     user.setXaiApiKey(uDto.getXaiApiKey());
                 }
@@ -169,6 +202,14 @@ public class ImportService {
                 if (uDto.getLibraryCardDesign() != null) {
                     user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
+                // Ensure empty fields are initialized properly for new users
+                if (user.getXaiApiKey() == null) user.setXaiApiKey("");
+                if (user.getGooglePhotosApiKey() == null) user.setGooglePhotosApiKey("");
+                if (user.getGooglePhotosRefreshToken() == null) user.setGooglePhotosRefreshToken("");
+                if (user.getGooglePhotosTokenExpiry() == null) user.setGooglePhotosTokenExpiry("");
+                if (user.getGoogleClientSecret() == null) user.setGoogleClientSecret("");
+                if (user.getGooglePhotosAlbumId() == null) user.setGooglePhotosAlbumId("");
+                if (user.getLastPhotoTimestamp() == null) user.setLastPhotoTimestamp("");
                 Set<Authority> authorities = new HashSet<>();
                 // Merge both 'authorities' and 'roles' fields for backwards compatibility
                 List<String> authorityNames = new ArrayList<>();
@@ -270,10 +311,11 @@ public class ImportService {
                 book.setDetailedDescription(bDto.getDetailedDescription());
                 book.setGrokipediaUrl(bDto.getGrokipediaUrl());
                 book.setFreeTextUrl(bDto.getFreeTextUrl());
-                if (bDto.getDateAddedToLibrary() != null) {
-                    book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
-                } else if (book.getDateAddedToLibrary() == null) {
-                    book.setDateAddedToLibrary(LocalDateTime.now());
+                // dateAddedToLibrary is a one-time field: set once, never updated.
+                // Only set it if the book doesn't already have one.
+                if (book.getDateAddedToLibrary() == null) {
+                    book.setDateAddedToLibrary(bDto.getDateAddedToLibrary() != null
+                            ? bDto.getDateAddedToLibrary() : LocalDateTime.now());
                 }
                 if (bDto.getLastModified() != null) {
                     book.setLastModified(bDto.getLastModified());
@@ -345,7 +387,15 @@ public class ImportService {
                 // Check if loan already exists (same book, user, and loan date)
                 Loan loan = null;
                 if (book != null && user != null) {
-                    loan = loanRepository.findByBookIdAndUserIdAndLoanDate(book.getId(), user.getId(), loanDate).orElse(null);
+                    List<Loan> existingLoans = loanRepository.findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(book.getId(), user.getId(), loanDate);
+                    if (!existingLoans.isEmpty()) {
+                        loan = existingLoans.get(0);
+                        if (existingLoans.size() > 1) {
+                            logger.warn("Found {} duplicate loans for book ID {}, user ID {}, date {}. Using loan with lowest ID: {}. " +
+                                       "Consider cleaning up duplicate entries in the database.",
+                                       existingLoans.size(), book.getId(), user.getId(), loanDate, loan.getId());
+                        }
+                    }
                 }
                 if (loan == null) {
                     loan = new Loan();
@@ -370,11 +420,13 @@ public class ImportService {
             for (ImportPhotoDto pDto : dto.getPhotos()) {
                 // First resolve book and author references
                 Book book = null;
-                if (pDto.getBookTitle() != null && pDto.getBookAuthorName() != null) {
-                    String key = pDto.getBookTitle() + "|" + pDto.getBookAuthorName();
+                if (pDto.getBookTitle() != null) {
+                    // Handle books with or without authors (null author means empty string key)
+                    String authorKey = pDto.getBookAuthorName() != null ? pDto.getBookAuthorName() : "";
+                    String key = pDto.getBookTitle() + "|" + authorKey;
                     book = bookMap.get(key);
                     if (book == null) {
-                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + pDto.getBookAuthorName());
+                        throw new LibraryException("Book not found for photo: " + pDto.getBookTitle() + " by " + (pDto.getBookAuthorName() != null ? pDto.getBookAuthorName() : "(no author)"));
                     }
                 }
 
@@ -391,7 +443,8 @@ public class ImportService {
 
                 // 1. If photo has imageChecksum (SHA-256), try to find existing photo with same checksum
                 if (pDto.getImageChecksum() != null && !pDto.getImageChecksum().trim().isEmpty()) {
-                    photo = photoRepository.findByImageChecksum(pDto.getImageChecksum()).orElse(null);
+                    List<Photo> checksumMatches = photoRepository.findAllByImageChecksumOrderByIdAsc(pDto.getImageChecksum());
+                    photo = checksumMatches.isEmpty() ? null : checksumMatches.get(0);
                     if (photo != null) {
                         logger.info("Found existing photo with imageChecksum: {} (Photo ID: {})", pDto.getImageChecksum(), photo.getId());
                     }
@@ -399,7 +452,8 @@ public class ImportService {
 
                 // 2. If photo has a permanentId and not found by checksum, try permanentId
                 if (photo == null && pDto.getPermanentId() != null && !pDto.getPermanentId().trim().isEmpty()) {
-                    photo = photoRepository.findByPermanentId(pDto.getPermanentId()).orElse(null);
+                    List<Photo> permIdMatches = photoRepository.findAllByPermanentIdOrderByIdAsc(pDto.getPermanentId());
+                    photo = permIdMatches.isEmpty() ? null : permIdMatches.get(0);
                     if (photo != null) {
                         logger.info("Found existing photo with permanentId: {} (Photo ID: {})", pDto.getPermanentId(), photo.getId());
                     }
@@ -452,21 +506,29 @@ public class ImportService {
                 photo.setExportedAt(pDto.getExportedAt());
                 photo.setExportStatus(pDto.getExportStatus());
                 photo.setExportErrorMessage(pDto.getExportErrorMessage());
-                // Note: imageChecksum is not updated here - it's a reference field, not a value to import
-                // The actual imageChecksum is computed from the photo binary during upload
+                // Import imageChecksum so ZIP photo import can match by checksum for deduplication
+                if (pDto.getImageChecksum() != null && !pDto.getImageChecksum().trim().isEmpty()) {
+                    photo.setImageChecksum(pDto.getImageChecksum());
+                }
                 photo.setBook(book);
                 photo.setAuthor(author);
 
                 photoRepository.save(photo);
+                // Detach photo from persistence context to release image bytes from memory.
+                // Without this, all Photo entities (with their @Lob image data) accumulate
+                // in the persistence context, causing OutOfMemoryError on large imports.
+                entityManager.detach(photo);
                 photoCount++;
             }
         }
         logger.info("Imported {} photos", photoCount);
 
-        logger.info("Import completed successfully. Total: {} libraries, {} authors, {} users, {} books, {} loans, {} photos",
-            libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos",
+            branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
 
-        return new ImportResponseDto.ImportCounts(libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(
+                branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        return new ImportResponseDto.ImportResult(counts);
     }
 
     public ImportRequestDto exportData() {
@@ -479,38 +541,39 @@ public class ImportService {
         dto.setBranches(libDtos);
 
         // Export authors
+        // Note: Empty strings are converted to null so they're excluded from JSON export
         List<ImportAuthorDto> authDtos = new ArrayList<>();
         for (Author author : authorRepository.findAll()) {
             ImportAuthorDto aDto = new ImportAuthorDto();
             aDto.setName(author.getName());
             aDto.setDateOfBirth(author.getDateOfBirth());
             aDto.setDateOfDeath(author.getDateOfDeath());
-            aDto.setReligiousAffiliation(author.getReligiousAffiliation());
-            aDto.setBirthCountry(author.getBirthCountry());
-            aDto.setNationality(author.getNationality());
-            aDto.setBriefBiography(author.getBriefBiography());
-            aDto.setGrokipediaUrl(author.getGrokipediaUrl());
+            aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
+            aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
+            aDto.setNationality(emptyToNull(author.getNationality()));
+            aDto.setBriefBiography(emptyToNull(author.getBriefBiography()));
+            aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
             authDtos.add(aDto);
         }
         dto.setAuthors(authDtos);
 
         // Export users (including hashed passwords)
+        // Note: Empty strings are converted to null so they're excluded from JSON export
         List<ImportUserDto> userDtos = new ArrayList<>();
         for (User user : userRepository.findAll()) {
             ImportUserDto uDto = new ImportUserDto();
-            uDto.setUserIdentifier(user.getUserIdentifier());
             uDto.setUsername(user.getUsername());
             uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
-            uDto.setXaiApiKey(user.getXaiApiKey());
-            uDto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
-            uDto.setGooglePhotosRefreshToken(user.getGooglePhotosRefreshToken());
-            uDto.setGooglePhotosTokenExpiry(user.getGooglePhotosTokenExpiry());
-            uDto.setGoogleClientSecret(user.getGoogleClientSecret());
-            uDto.setGooglePhotosAlbumId(user.getGooglePhotosAlbumId());
-            uDto.setLastPhotoTimestamp(user.getLastPhotoTimestamp());
-            uDto.setSsoProvider(user.getSsoProvider());
-            uDto.setSsoSubjectId(user.getSsoSubjectId());
-            uDto.setEmail(user.getEmail());
+            uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+            uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
+            uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
+            uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
+            uDto.setGoogleClientSecret(emptyToNull(user.getGoogleClientSecret()));
+            uDto.setGooglePhotosAlbumId(emptyToNull(user.getGooglePhotosAlbumId()));
+            uDto.setLastPhotoTimestamp(emptyToNull(user.getLastPhotoTimestamp()));
+            uDto.setSsoProvider(emptyToNull(user.getSsoProvider()));
+            uDto.setSsoSubjectId(emptyToNull(user.getSsoSubjectId()));
+            uDto.setEmail(emptyToNull(user.getEmail()));
             uDto.setLibraryCardDesign(user.getLibraryCardDesign());
             if (user.getAuthorities() != null) {
                 java.util.List<String> authorityNames = user.getAuthorities().stream()
@@ -518,27 +581,29 @@ public class ImportService {
                         .collect(Collectors.toList());
                 uDto.setAuthorities(authorityNames);
             }
+            uDto.setUserIdentifier(user.getUserIdentifier());  // Set last for JSON ordering
             userDtos.add(uDto);
         }
         dto.setUsers(userDtos);
 
         // Export books (new format: authorName reference instead of embedded author object)
+        // Note: lastModified is NOT exported because it gets updated during import
         List<ImportBookDto> bookDtos = new ArrayList<>();
         for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
-            bDto.setPublisher(book.getPublisher());
-            bDto.setPlotSummary(book.getPlotSummary());
-            bDto.setRelatedWorks(book.getRelatedWorks());
-            bDto.setDetailedDescription(book.getDetailedDescription());
-            bDto.setGrokipediaUrl(book.getGrokipediaUrl());
-            bDto.setFreeTextUrl(book.getFreeTextUrl());
+            bDto.setPublisher(emptyToNull(book.getPublisher()));
+            bDto.setPlotSummary(emptyToNull(book.getPlotSummary()));
+            bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
+            bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
+            bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
+            bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
             bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
-            bDto.setLastModified(book.getLastModified());
+            // Note: lastModified is NOT exported - it will be updated during import
             bDto.setStatus(book.getStatus());
-            bDto.setLocNumber(book.getLocNumber());
-            bDto.setStatusReason(book.getStatusReason());
+            bDto.setLocNumber(emptyToNull(book.getLocNumber()));
+            bDto.setStatusReason(emptyToNull(book.getStatusReason()));
             // New format: reference author by name only (not embedded object)
             if (book.getAuthor() != null) {
                 bDto.setAuthorName(book.getAuthor().getName());
@@ -584,14 +649,14 @@ public class ImportService {
             }
 
             ImportPhotoDto pDto = new ImportPhotoDto();
-            pDto.setContentType(photo.getContentType());
-            pDto.setCaption(photo.getCaption());
+            pDto.setContentType(emptyToNull(photo.getContentType()));
+            pDto.setCaption(emptyToNull(photo.getCaption()));
             pDto.setPhotoOrder(photo.getPhotoOrder());
-            pDto.setPermanentId(photo.getPermanentId());
+            pDto.setPermanentId(emptyToNull(photo.getPermanentId()));
             pDto.setExportedAt(photo.getExportedAt());
             pDto.setExportStatus(photo.getExportStatus());
-            pDto.setExportErrorMessage(photo.getExportErrorMessage());
-            pDto.setImageChecksum(photo.getImageChecksum());
+            pDto.setExportErrorMessage(emptyToNull(photo.getExportErrorMessage()));
+            pDto.setImageChecksum(emptyToNull(photo.getImageChecksum()));
 
             // Set book reference if exists
             if (photo.getBook() != null) {
@@ -611,6 +676,21 @@ public class ImportService {
         dto.setPhotos(photoDtos);
 
         return dto;
+    }
+
+    /**
+     * Converts empty strings to null so they're excluded from JSON export.
+     * This keeps the exported JSON cleaner and smaller.
+     */
+    private String emptyToNull(String value) {
+        return (value == null || value.isEmpty()) ? null : value;
+    }
+
+    /**
+     * Converts null to empty string for fields that require it during import.
+     */
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     /**

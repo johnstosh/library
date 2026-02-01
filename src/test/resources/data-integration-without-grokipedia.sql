@@ -11,7 +11,7 @@ VALUES (999, 'Book Without Grokipedia URL', NULL, CURRENT_TIMESTAMP, CURRENT_TIM
 
 -- Insert test book with empty grokipedia_url (earlier date so it appears second)
 INSERT INTO book (id, title, grokipedia_url, date_added_to_library, last_modified, author_id, library_id, status)
-VALUES (998, 'Book With Empty Grokipedia URL', '', DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), 999, 999, 'ACTIVE');
+VALUES (998, 'Book With Empty Grokipedia URL', '', CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP - INTERVAL '1 day', 999, 999, 'ACTIVE');
 
 -- Insert test book with grokipedia_url (should not be returned)
 INSERT INTO book (id, title, grokipedia_url, date_added_to_library, last_modified, author_id, library_id, status)

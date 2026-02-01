@@ -12,6 +12,23 @@ export interface GrokipediaLookupResultDto {
   errorMessage: string
 }
 
+// Lookup Grokipedia URL for a single book
+export function useLookupSingleBookGrokipedia() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (bookId: number) => {
+      const results = await api.post<GrokipediaLookupResultDto[]>('/books/grokipedia-lookup-bulk', [bookId])
+      return results[0]
+    },
+    onSuccess: (_, bookId) => {
+      // Invalidate the specific book query
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
+  })
+}
+
 // Lookup Grokipedia URLs for multiple books (bulk)
 export function useLookupBulkBooksGrokipedia() {
   const queryClient = useQueryClient()

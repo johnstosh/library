@@ -50,12 +50,15 @@ public class RandomUser {
         // Assign USER authority (most test users are regular users)
         // 20% chance of being a librarian
         String authorityName = RANDOM.nextInt(100) < 20 ? "LIBRARIAN" : "USER";
-        Authority authority = authorityRepository.findByName(authorityName)
-                .orElseGet(() -> {
-                    Authority newAuthority = new Authority();
-                    newAuthority.setName(authorityName);
-                    return authorityRepository.save(newAuthority);
-                });
+        List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(authorityName);
+        Authority authority;
+        if (!existingAuthorities.isEmpty()) {
+            authority = existingAuthorities.get(0);
+        } else {
+            Authority newAuthority = new Authority();
+            newAuthority.setName(authorityName);
+            authority = authorityRepository.save(newAuthority);
+        }
 
         Set<Authority> authorities = new HashSet<>();
         authorities.add(authority);

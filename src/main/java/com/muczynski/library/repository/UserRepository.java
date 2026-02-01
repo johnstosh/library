@@ -14,7 +14,11 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    /** @deprecated Use findAllByUsernameOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<User> findByUsername(String username);
+    /** @deprecated Use findAllByUsernameIgnoreCaseOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<User> findByUsernameIgnoreCase(String username);
     List<User> findAllByUsernameOrderByIdAsc(String username);
     List<User> findAllByUsernameIgnoreCaseOrderByIdAsc(String username);

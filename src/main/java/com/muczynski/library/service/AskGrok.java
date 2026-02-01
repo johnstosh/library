@@ -303,4 +303,91 @@ public class AskGrok {
         );
         return askQuestion(prompt);
     }
+
+    /**
+     * Suggest genres/tags for a book based on its catalog card information.
+     * Uses grok-4-fast model for faster responses.
+     *
+     * @param bookJson JSON string containing book information
+     * @param authorJson JSON string containing author information (can be null)
+     * @return Comma-separated list of suggested genre tags
+     */
+    public String suggestGenres(String bookJson, String authorJson) {
+        String prompt = String.format(
+                "Based on the following book and author information from a library card catalog, " +
+                "suggest genre/category tags for this book. " +
+                "Use ONLY these predefined tags where applicable: " +
+                "fiction, slice-of-life, hagiography, saint, fantasy, family, childrens, adult, " +
+                "philosophy, theology, discernment, talking-animals, biography, history, " +
+                "prayer, classic, poetry, science, music, " +
+                "mystery, adventure, romance, humor. " +
+                "Note: science-fiction should be categorized under 'fantasy'. " +
+                "Return ONLY a comma-separated list of applicable tags, nothing else. " +
+                "For example: fiction, fantasy, childrens\n\n" +
+                "Book Information:\n%s\n\n" +
+                "%s",
+                bookJson,
+                authorJson != null && !authorJson.isBlank() ? "Author Information:\n" + authorJson : ""
+        );
+        return askQuestionFast(prompt);
+    }
+
+    /**
+     * Ask a text-only question to Grok AI using grok-4-fast model.
+     * @param question The question to ask
+     * @return AI response as String
+     */
+    public String askQuestionFast(String question) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new LibraryException("No authenticated user found");
+        }
+        // The principal name is the database user ID (not username)
+        Long userId = Long.parseLong(authentication.getName());
+        UserDto userDto = userSettingsService.getUserSettings(userId);
+        String apiKey = userDto.getXaiApiKey();
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new LibraryException("xAI API key not configured for user ID: " + userId);
+        }
+
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", question);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", MODEL_GROK_4_FAST);
+        request.put("messages", Arrays.asList(message));
+        request.put("max_tokens", 500);
+        request.put("temperature", 0.3);  // Lower temperature for more consistent results
+        request.put("stream", false);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://api.x.ai/v1/chat/completions",
+                entity,
+                Map.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            Map<String, Object> body = response.getBody();
+            if (body != null && body.containsKey("choices")) {
+                List<Map> choices = (List<Map>) body.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    if (choice.containsKey("message")) {
+                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
+                        return (String) messageResponse.get("content");
+                    }
+                }
+            }
+            throw new LibraryException("Unexpected response format from xAI API");
+        } else {
+            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
+        }
+    }
 }

@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@Table(uniqueConstraints = {
+    @UniqueConstraint(name = "uk_applied_name", columnNames = "name")
+})
 @Getter
 @Setter
 @AllArgsConstructor

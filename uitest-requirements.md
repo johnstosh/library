@@ -114,7 +114,7 @@ UI testing a Spring Boot + Playwright app like this library system requires bala
    - Leverage `@Sql` scripts for clean, repeatable DB state (e.g., inserting test books/authors). Use `@DirtiesContext` to reset between tests. Keep SQL minimal and version-controlled; combine with mocks (`@MockitoBean`) for external services (e.g., AI API).
 
 4. **Isolation and Environment Setup**:
-   - Run on random ports (`webEnvironment = RANDOM_PORT`) to avoid conflicts. Use profiles (`@ActiveProfiles("test")`) for H2 in-memory DB. Enable headless mode (`setHeadless(true)`) for CI compatibility (e.g., GitHub Actions). Integrate with Gradle/Maven for `./gradlew test`; add `--info` for verbose logs.
+   - Run on random ports (`webEnvironment = RANDOM_PORT`) to avoid conflicts. Use profiles (`@ActiveProfiles("test")`) for embedded PostgreSQL via Testcontainers. Enable headless mode (`setHeadless(true)`) for CI compatibility (e.g., GitHub Actions). Integrate with Gradle/Maven for `./gradlew test`; add `--info` for verbose logs.
 
 5. **Coverage and Edge Cases**:
    - Cover happy paths (CRUD) plus errors (e.g., invalid login, no API key). Test role-based access (public vs. librarian). Aim for 80%+ UI coverage on critical flows (login, search, forms); use tools like Playwright Trace Viewer for debugging.

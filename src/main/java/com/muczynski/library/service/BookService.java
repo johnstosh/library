@@ -14,6 +14,7 @@ import com.muczynski.library.domain.RandomAuthor;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
+import com.muczynski.library.dto.GenreLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -101,6 +102,36 @@ public class BookService {
 
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
+    }
+
+    /**
+     * Find or create a book by title and author name.
+     * @param title Book title
+     * @param authorName Author name (null for books without author)
+     * @param library Library to assign if creating
+     * @return The existing or newly created book
+     */
+    public Book findOrCreateBook(String title, String authorName, Library library) {
+        List<Book> existing;
+        if (authorName != null) {
+            existing = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(title, authorName);
+        } else {
+            existing = bookRepository.findAllByTitleAndAuthorIsNullOrderByIdAsc(title);
+        }
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Book book = new Book();
+        book.setTitle(title);
+        if (authorName != null) {
+            List<Author> authors = authorRepository.findAllByNameOrderByIdAsc(authorName);
+            if (!authors.isEmpty()) {
+                book.setAuthor(authors.get(0));
+            }
+        }
+        book.setLibrary(library);
+        book.setLastModified(LocalDateTime.now());
+        return bookRepository.save(book);
     }
 
     public List<BookDto> getAllBooks() {
@@ -204,7 +235,12 @@ public class BookService {
         book.setPlotSummary(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
-        book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
+        book.setFreeTextUrl(bookDto.getFreeTextUrl());
+        // Preserve dateAddedToLibrary if not provided in DTO (don't overwrite with null)
+        if (bookDto.getDateAddedToLibrary() != null) {
+            book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
+        }
         if (bookDto.getStatus() != null) {
             book.setStatus(bookDto.getStatus());
         }
@@ -215,6 +251,17 @@ public class BookService {
         }
         if (bookDto.getLibraryId() != null) {
             book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
+        }
+        // Update tags list - normalize to lowercase with only allowed characters
+        if (bookDto.getTagsList() != null) {
+            book.setTagsList(bookDto.getTagsList().stream()
+                    .filter(tag -> tag != null && !tag.isBlank())
+                    .map(tag -> tag.toLowerCase().replaceAll("[^a-z0-9-]", ""))
+                    .filter(tag -> !tag.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList()));
+        } else {
+            book.setTagsList(new ArrayList<>());
         }
         // Update lastModified to current time
         book.setLastModified(LocalDateTime.now());
@@ -953,6 +1000,117 @@ public class BookService {
                 .map(bookMapper::toDto)
                 .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lookup genres for a single book using Grok AI.
+     * Skips books with blank descriptions.
+     *
+     * @param bookId The book ID to look up genres for
+     * @return GenreLookupResultDto with suggested genres
+     */
+    public GenreLookupResultDto lookupGenresForBook(Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null) {
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .success(false)
+                    .errorMessage("Book not found")
+                    .build();
+        }
+
+        // Skip books with blank descriptions
+        String description = book.getDetailedDescription();
+        if (description == null || description.isBlank()) {
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(false)
+                    .errorMessage("Book has no description - cannot suggest genres")
+                    .build();
+        }
+
+        try {
+            // Serialize book to JSON
+            BookDto bookDto = bookMapper.toDto(book);
+            String bookJson = objectMapper.writeValueAsString(bookDto);
+
+            // Serialize author to JSON if present
+            String authorJson = null;
+            if (book.getAuthor() != null) {
+                Map<String, Object> authorMap = new HashMap<>();
+                authorMap.put("name", book.getAuthor().getName());
+                authorMap.put("religiousAffiliation", book.getAuthor().getReligiousAffiliation());
+                authorMap.put("birthCountry", book.getAuthor().getBirthCountry());
+                authorMap.put("nationality", book.getAuthor().getNationality());
+                authorMap.put("briefBiography", book.getAuthor().getBriefBiography());
+                authorJson = objectMapper.writeValueAsString(authorMap);
+            }
+
+            // Call Grok AI for genre suggestions
+            String response = askGrok.suggestGenres(bookJson, authorJson);
+
+            // Parse the comma-separated response into a list
+            List<String> genres = parseGenreResponse(response);
+
+            // Merge suggested genres into book's existing tags and save
+            if (!genres.isEmpty()) {
+                List<String> existingTags = book.getTagsList() != null ? book.getTagsList() : new ArrayList<>();
+                java.util.Set<String> mergedTags = new java.util.LinkedHashSet<>(existingTags);
+                mergedTags.addAll(genres);
+                book.setTagsList(new ArrayList<>(mergedTags));
+                bookRepository.save(book);
+                logger.info("Saved {} genre tags to book '{}' (ID: {})", genres.size(), book.getTitle(), bookId);
+            }
+
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(true)
+                    .suggestedGenres(genres)
+                    .build();
+
+        } catch (Exception e) {
+            logger.error("Failed to lookup genres for book ID {}: {}", bookId, e.getMessage(), e);
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(book.getTitle())
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * Lookup genres for multiple books using Grok AI.
+     * Skips books with blank descriptions.
+     *
+     * @param bookIds List of book IDs to look up genres for
+     * @return List of GenreLookupResultDto with suggested genres
+     */
+    public List<GenreLookupResultDto> lookupGenresForBooks(List<Long> bookIds) {
+        List<GenreLookupResultDto> results = new ArrayList<>();
+        for (Long bookId : bookIds) {
+            results.add(lookupGenresForBook(bookId));
+        }
+        return results;
+    }
+
+    /**
+     * Parse the comma-separated genre response from Grok AI.
+     * Normalizes tags to lowercase with only letters, numbers, and dashes.
+     */
+    private List<String> parseGenreResponse(String response) {
+        if (response == null || response.isBlank()) {
+            return List.of();
+        }
+
+        return java.util.Arrays.stream(response.split(","))
+                .map(String::trim)
+                .map(tag -> tag.toLowerCase().replaceAll("[^a-z0-9-]", ""))
+                .filter(tag -> !tag.isEmpty())
+                .distinct()
                 .collect(Collectors.toList());
     }
 

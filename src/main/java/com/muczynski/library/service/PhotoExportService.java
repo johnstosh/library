@@ -21,6 +21,8 @@ import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -51,10 +53,16 @@ public class PhotoExportService {
     private com.muczynski.library.repository.BookRepository bookRepository;
 
     @Autowired
+    private PhotoService photoService;
+
+    @Autowired
     private GooglePhotosService googlePhotosService;
 
     @Autowired
     private GooglePhotosLibraryClient photosLibraryClient;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Value("${google.oauth.client-id}")
     private String clientId;
@@ -680,10 +688,8 @@ public class PhotoExportService {
                     photoInfo.setBookTitle(photo.getBook().getTitle());
                     photoInfo.setBookId(photo.getBook().getId());
                     photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
-                    // Fetch dateAddedToLibrary separately since it's not in the projection
-                    bookRepository.findById(photo.getBook().getId()).ifPresent(book -> {
-                        photoInfo.setBookDateAdded(book.getDateAddedToLibrary());
-                    });
+                    // Use dateAddedToLibrary from projection (no need to load full Book entity)
+                    photoInfo.setBookDateAdded(photo.getBook().getDateAddedToLibrary());
                     // Include book's author if available
                     if (photo.getBook().getAuthor() != null) {
                         photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
@@ -830,6 +836,10 @@ public class PhotoExportService {
             }
 
             logger.info("Downloaded {} bytes for photo {}", imageBytes.length, photoId);
+
+            // Correct EXIF orientation before storing
+            String mimeType = mediaItem.getMimeType() != null ? mediaItem.getMimeType() : photo.getContentType();
+            imageBytes = photoService.correctImageOrientation(imageBytes, mimeType);
 
             // Update the photo with downloaded image
             photo.setImage(imageBytes);
@@ -1007,6 +1017,10 @@ public class PhotoExportService {
 
                 logger.debug("Downloaded {} bytes for photo {}", imageBytes.length, photo.getId());
 
+                // Correct EXIF orientation before storing
+                String batchMimeType = mediaItem.getMimeType() != null ? mediaItem.getMimeType() : photo.getContentType();
+                imageBytes = photoService.correctImageOrientation(imageBytes, batchMimeType);
+
                 // Update the photo with downloaded image
                 photo.setImage(imageBytes);
                 if (mediaItem.getMimeType() != null) {
@@ -1113,5 +1127,271 @@ public class PhotoExportService {
         photoRepository.save(photo);
 
         logger.info("Unlinked photo ID: {} from permanent ID: {}", photoId, oldPermanentId);
+    }
+
+    /**
+     * Data class containing metadata needed for ZIP filename generation.
+     * Does not include image bytes to minimize memory usage.
+     */
+    public static class PhotoZipMetadata {
+        public final Long id;
+        public final String contentType;
+        public final String bookTitle;
+        public final String authorName;
+        public final String loanBookTitle;
+        public final String loanUsername;
+
+        public PhotoZipMetadata(Long id, String contentType, String bookTitle, String authorName,
+                               String loanBookTitle, String loanUsername) {
+            this.id = id;
+            this.contentType = contentType;
+            this.bookTitle = bookTitle;
+            this.authorName = authorName;
+            this.loanBookTitle = loanBookTitle;
+            this.loanUsername = loanUsername;
+        }
+    }
+
+    /**
+     * Get photo IDs for ZIP export (lightweight query).
+     * Returns ALL active photos, including those that need to be downloaded from Google Photos.
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getPhotoIdsForZipExport() {
+        logger.info("Querying photo IDs for ZIP export...");
+        List<Long> photoIds = photoRepository.findAllActivePhotoIds();
+        logger.info("Found {} photo IDs for ZIP export", photoIds.size());
+        return photoIds;
+    }
+
+    /**
+     * Get metadata for all photos that can be exported (have images).
+     * This loads photo metadata efficiently, one at a time.
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoZipMetadata> getPhotoMetadataForZipExport() {
+        List<Long> photoIds = getPhotoIdsForZipExport();
+
+        // Build metadata list by loading each photo individually
+        // This avoids loading all Photo objects into memory at once
+        List<PhotoZipMetadata> metadata = new ArrayList<>();
+        for (Long id : photoIds) {
+            photoRepository.findById(id).ifPresent(photo -> {
+                String bookTitle = photo.getBook() != null ? photo.getBook().getTitle() : null;
+                String authorName = photo.getAuthor() != null ? photo.getAuthor().getName() : null;
+                String loanBookTitle = null;
+                String loanUsername = null;
+                if (photo.getLoan() != null) {
+                    loanBookTitle = photo.getLoan().getBook() != null ? photo.getLoan().getBook().getTitle() : null;
+                    loanUsername = photo.getLoan().getUser() != null ? photo.getLoan().getUser().getUsername() : null;
+                }
+                metadata.add(new PhotoZipMetadata(id, photo.getContentType(),
+                        bookTitle, authorName, loanBookTitle, loanUsername));
+            });
+        }
+
+        return metadata;
+    }
+
+    /**
+     * Stream photos to a ZIP output stream, loading one photo at a time.
+     * This is memory-efficient for large photo collections.
+     * Note: Not transactional to avoid timeout issues with large exports.
+     * Each photo is loaded individually with its own database access.
+     *
+     * @param outputStream the output stream to write the ZIP to
+     * @throws IOException if writing fails
+     */
+    public void streamPhotosToZip(java.io.OutputStream outputStream) throws java.io.IOException {
+        logger.info("Starting streaming photo ZIP export...");
+
+        // Get ALL active photo IDs - including those needing download from Google Photos
+        List<Long> photoIds = photoRepository.findAllActivePhotoIds();
+        long photosWithImages = photoRepository.findActivePhotoIdsWithImages().size();
+        long photosPendingImport = photoIds.size() - photosWithImages;
+
+        if (photoIds.isEmpty()) {
+            throw new LibraryException("No photos available for export.");
+        }
+
+        logger.info("Streaming {} photos to ZIP ({} with local images, {} will be downloaded from Google Photos)",
+                photoIds.size(), photosWithImages, photosPendingImport);
+
+        // Get access token for downloading photos from Google Photos (if needed)
+        String accessToken = null;
+        if (photosPendingImport > 0) {
+            try {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null && authentication.isAuthenticated()) {
+                    Long userId = Long.parseLong(authentication.getName());
+                    User user = userRepository.findById(userId).orElse(null);
+                    if (user != null) {
+                        accessToken = googlePhotosService.getValidAccessToken(user);
+                        logger.info("Got access token for downloading {} photos from Google Photos", photosPendingImport);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
+            }
+        }
+
+        // Track filename counts for handling multiple photos of same entity
+        Map<String, Integer> filenameCount = new HashMap<>();
+        int successCount = 0;
+        int errorCount = 0;
+
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(outputStream)) {
+            for (Long photoId : photoIds) {
+                try {
+                    // Load this photo with relationships (image is LAZY loaded)
+                    Photo photo = photoRepository.findById(photoId).orElse(null);
+                    if (photo == null) {
+                        logger.warn("Photo {} not found during export", photoId);
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Get image bytes - from local storage or Google Photos
+                    byte[] imageBytes = photo.getImage();
+                    if ((imageBytes == null || imageBytes.length == 0) && accessToken != null
+                            && photo.getPermanentId() != null && !photo.getPermanentId().isEmpty()) {
+                        // Download from Google Photos
+                        try {
+                            var mediaItem = photosLibraryClient.getMediaItem(accessToken, photo.getPermanentId());
+                            if (mediaItem != null && mediaItem.getBaseUrl() != null) {
+                                imageBytes = photosLibraryClient.downloadPhoto(accessToken, mediaItem.getBaseUrl());
+                                if (imageBytes != null && imageBytes.length > 0) {
+                                    logger.info("Downloaded photo {} from Google Photos ({} bytes)", photoId, imageBytes.length);
+                                    // Save locally for future use
+                                    photo.setImage(imageBytes);
+                                    photo.setImageChecksum(computeChecksum(imageBytes));
+                                    if (mediaItem.getMimeType() != null) {
+                                        photo.setContentType(mediaItem.getMimeType());
+                                    }
+                                    photoRepository.save(photo);
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.warn("Failed to download photo {} from Google Photos: {}", photoId, e.getMessage());
+                        }
+                    }
+                    if (imageBytes == null || imageBytes.length == 0) {
+                        logger.warn("Skipping photo {} - no image data and could not download", photoId);
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Correct EXIF orientation for existing photos
+                    imageBytes = photoService.correctImageOrientation(imageBytes, photo.getContentType());
+
+                    // Backfill checksum if missing
+                    if (photo.getImageChecksum() == null) {
+                        String checksum = computeChecksum(imageBytes);
+                        photo.setImageChecksum(checksum);
+                        photoRepository.save(photo);
+                        logger.info("Backfilled checksum for photo {}", photoId);
+                    }
+
+                    // Generate filename from the loaded photo
+                    String baseFilename = generateZipFilename(photo);
+                    String extension = getFileExtension(photo.getContentType());
+
+                    // Handle multiple photos for same entity
+                    int count = filenameCount.getOrDefault(baseFilename, 0);
+                    filenameCount.put(baseFilename, count + 1);
+
+                    String filename;
+                    if (count == 0) {
+                        filename = baseFilename + extension;
+                    } else {
+                        filename = baseFilename + "-" + (count + 1) + extension;
+                    }
+
+                    // Add to ZIP and immediately release memory
+                    java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(filename);
+                    zos.putNextEntry(entry);
+                    zos.write(imageBytes);
+                    zos.closeEntry();
+                    zos.flush();
+
+                    // Detach entity to release memory from persistence context
+                    entityManager.detach(photo);
+
+                    successCount++;
+                    if (successCount % 10 == 0) {
+                        logger.info("Progress: {} photos exported", successCount);
+                    }
+
+                    // Periodically clear the entire persistence context to free first-level cache
+                    if (successCount % 20 == 0) {
+                        entityManager.clear();
+                    }
+
+                } catch (Exception e) {
+                    logger.error("Failed to add photo {} to ZIP: {}", photoId, e.getMessage(), e);
+                    errorCount++;
+                    // Continue with other photos
+                }
+            }
+
+            zos.finish();
+            logger.info("Photo ZIP export completed: {} succeeded, {} failed", successCount, errorCount);
+        }
+    }
+
+    /**
+     * Export all photos as a ZIP file (legacy method for tests).
+     * Uses the same filename format as the ZIP import feature.
+     * WARNING: This loads all photos into memory - use streamPhotosToZip for production.
+     *
+     * @return byte array containing the ZIP file
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportPhotosAsZip() {
+        logger.info("Starting photo ZIP export (in-memory)...");
+
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        try {
+            streamPhotosToZip(baos);
+            return baos.toByteArray();
+        } catch (java.io.IOException e) {
+            logger.error("Failed to create ZIP file: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to create ZIP file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate a filename for a photo in the ZIP archive.
+     * Format matches the import filename format for round-trip compatibility.
+     */
+    private String generateZipFilename(Photo photo) {
+        if (photo.getBook() != null) {
+            return "book-" + sanitizeName(photo.getBook().getTitle());
+        } else if (photo.getAuthor() != null) {
+            return "author-" + sanitizeName(photo.getAuthor().getName());
+        } else if (photo.getLoan() != null) {
+            String bookTitle = photo.getLoan().getBook() != null
+                    ? photo.getLoan().getBook().getTitle() : "unknown";
+            String username = photo.getLoan().getUser() != null
+                    ? photo.getLoan().getUser().getUsername() : "unknown";
+            return "loan-" + sanitizeName(bookTitle) + "-" + sanitizeName(username);
+        } else {
+            return "photo-" + photo.getId();
+        }
+    }
+
+    /**
+     * Sanitize a name for use in filenames.
+     * Preserves the complete name but removes/replaces characters that are
+     * invalid in filenames across different operating systems.
+     * Invalid chars: / \ : * ? " < > |
+     */
+    private String sanitizeName(String name) {
+        if (name == null) return "unknown";
+        return name
+                .replaceAll("[/\\\\:*?\"<>|]+", "-")  // Replace invalid filename chars with dash
+                .replaceAll("\\s+", " ")              // Normalize whitespace
+                .trim()
+                .replaceAll("^-+|-+$", "");           // Remove leading/trailing dashes
     }
 }

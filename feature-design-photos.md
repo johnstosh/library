@@ -368,6 +368,24 @@ Librarians can configure Google Photos OAuth credentials through the Global Sett
 - ✅ `PhotoGallery.tsx` - Uses `object-contain` for aspect ratio preservation
 - ✅ `DataManagementPage.tsx` - Uses `object-cover` on 48x48px table thumbnails (acceptable)
 
+## Resumable Chunked Upload
+
+Chunked ZIP imports persist progress to the database (`photo_upload_session` table) after each processed ZIP entry. This allows imports to survive Cloud Run reboots.
+
+**Resume Flow:**
+1. Frontend sends a chunk and gets "Upload session expired" error (in-memory state lost)
+2. Frontend calls `GET /api/photos/import-zip-chunk-resume/{uploadId}` to get resume info
+3. Backend reads persisted progress: `resumeFromChunkIndex`, `bytesToSkipInChunk`, `totalProcessed`, counts
+4. Frontend resends from the indicated chunk with `X-Resume-From-Processed` and `X-Bytes-To-Skip` headers
+5. Backend creates a new pipe session, skips already-consumed bytes from the first chunk, then creates a new `ZipInputStream`
+6. Background thread skips already-processed entries, then continues normally
+
+**Key Implementation Details:**
+- `CountingInputStream` wraps `PipedInputStream` to track exact byte position after each `zis.closeEntry()`
+- `PhotoUploadSession` entity stores progress: `totalBytesConsumed`, `totalProcessed`, success/failure/skipped counts
+- Resume chunk index = `totalBytesConsumed / CHUNK_SIZE`; bytes to skip = `totalBytesConsumed % CHUNK_SIZE`
+- Old DB sessions cleaned up after 24 hours by the scheduled cleanup task
+
 ## Known Limitations
 
 1. **IndexedDB Caching Not Implemented** - Original design included browser-based IndexedDB caching for thumbnails and book data. Current implementation uses TanStack Query caching instead.

@@ -3,14 +3,62 @@
  */
 package com.muczynski.library.freetext;
 
+import java.util.Set;
+
 /**
  * Utility class for matching book titles with various normalization strategies.
  * Handles case differences, subtitles, articles, and punctuation variations.
  */
 public final class TitleMatcher {
 
+    /**
+     * Common words to remove from search queries.
+     * Includes articles and short prepositions that often differ between title variations.
+     */
+    private static final Set<String> STOP_WORDS = Set.of(
+            "the", "a", "an",           // Articles
+            "in", "at", "to", "of",     // Common prepositions
+            "on", "by", "for", "and",   // More prepositions/conjunctions
+            "or", "with", "from"        // Additional common words
+    );
+
     private TitleMatcher() {
         // Utility class
+    }
+
+    /**
+     * Normalize a title for use in API search queries.
+     * Removes articles, common short words, pure numbers, and punctuation to improve search matches.
+     * <p>
+     * Example: "The History of the World" -> "History World"
+     * Example: "A Tale of Two Cities" -> "Tale Two Cities"
+     * Example: "War and Peace 1952 Edition" -> "War Peace Edition"
+     *
+     * @param title the original title
+     * @return normalized title suitable for API searches
+     */
+    public static String normalizeForSearch(String title) {
+        if (title == null || title.isBlank()) {
+            return "";
+        }
+
+        // Remove punctuation, convert to lowercase, split into words
+        String[] words = title.toLowerCase()
+                .replaceAll("[^a-z0-9\\s]", "")
+                .split("\\s+");
+
+        // Keep only significant words (not in stop words list and not pure numbers)
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty() && !STOP_WORDS.contains(word) && !word.matches("\\d+")) {
+                if (result.length() > 0) {
+                    result.append(" ");
+                }
+                result.append(word);
+            }
+        }
+
+        return result.toString();
     }
 
     /**
@@ -47,22 +95,39 @@ public final class TitleMatcher {
 
         // Contains match for longer titles (to handle slight variations)
         if (candidateMain.length() > 15 && targetMain.length() > 15) {
-            return candidateMain.contains(targetMain) || targetMain.contains(candidateMain);
+            if (candidateMain.contains(targetMain) || targetMain.contains(candidateMain)) {
+                return true;
+            }
+            // If no contains match, continue to word-based matching below
         }
 
-        // Word-based matching for shorter titles
+        // Prefix match: if one title starts with the other, it's likely the same book
+        // with different subtitle (e.g., "War and Peace" vs "War and Peace: Complete Edition")
+        // Note: The colon is removed during normalization, so we check startsWith instead
+        if (normalizedCandidate.startsWith(normalizedTarget) || normalizedTarget.startsWith(normalizedCandidate)) {
+            // Only accept if the shorter one has at least 2 significant words
+            // to prevent single words from matching everything
+            String shorter = normalizedCandidate.length() <= normalizedTarget.length() ? normalizedCandidate : normalizedTarget;
+            if (countSignificantWords(shorter.split("\\s+")) >= 2) {
+                return true;
+            }
+        }
+
+        // Word-based matching for shorter titles with bidirectional verification
         return wordsMatch(candidateMain, targetMain);
     }
 
     /**
      * Normalize a title for comparison:
      * - Convert to lowercase
+     * - Remove trailing parenthetical content (dates, editions, etc.)
      * - Remove leading articles (the, a, an)
      * - Remove punctuation except spaces
      * - Collapse multiple spaces
      */
     private static String normalize(String title) {
         return title.toLowerCase()
+                .replaceAll("\\s*\\([^)]*\\)\\s*$", "") // Remove trailing (date), (edition), etc.
                 .replaceAll("^(the|a|an)\\s+", "")
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", " ")
@@ -80,29 +145,82 @@ public final class TitleMatcher {
     /**
      * Check if the significant words in two titles match.
      * Ignores common filler words.
+     * Requires bidirectional matching to prevent false positives where
+     * a short title (like "Christmas") matches a long title containing that word.
      */
     private static boolean wordsMatch(String title1, String title2) {
         String[] words1 = title1.split("\\s+");
         String[] words2 = title2.split("\\s+");
 
-        // Count matching significant words
-        int matchCount = 0;
-        int significantWords = 0;
+        // Count significant words in each title
+        int significant1 = countSignificantWords(words1);
+        int significant2 = countSignificantWords(words2);
 
-        for (String word : words1) {
-            if (word.length() > 2) { // Skip very short words
-                significantWords++;
-                for (String word2 : words2) {
-                    if (word.equals(word2)) {
+        // If either has no significant words, no match
+        if (significant1 == 0 || significant2 == 0) {
+            return false;
+        }
+
+        // Count how many significant words from title1 appear in title2
+        int matchCount1to2 = countMatchingWords(words1, words2);
+
+        // Count how many significant words from title2 appear in title1
+        int matchCount2to1 = countMatchingWords(words2, words1);
+
+        // Calculate match percentages in both directions
+        double ratio1to2 = (double) matchCount1to2 / significant1;
+        double ratio2to1 = (double) matchCount2to1 / significant2;
+
+        // BOTH directions must meet the threshold to prevent false positives
+        // This prevents "Christmas" from matching "How the Grinch Stole Christmas"
+        // because while 100% of "Christmas" is in the target, only 25% of target is in "Christmas"
+        return ratio1to2 >= 0.7 && ratio2to1 >= 0.7;
+    }
+
+    /**
+     * Check if a word is significant for matching purposes.
+     * A word is significant if:
+     * - It has more than 2 characters
+     * - It is NOT a pure number (like publication years 1952, 1999)
+     */
+    private static boolean isSignificantWord(String word) {
+        if (word.length() <= 2) {
+            return false;
+        }
+        // Treat pure numbers as insignificant (publication years, edition numbers, etc.)
+        return !word.matches("\\d+");
+    }
+
+    /**
+     * Count significant words in a word array.
+     * Significant words have length > 2 and are not pure numbers.
+     */
+    private static int countSignificantWords(String[] words) {
+        int count = 0;
+        for (String word : words) {
+            if (isSignificantWord(word)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Count how many significant words from source appear in target.
+     */
+    private static int countMatchingWords(String[] source, String[] target) {
+        int matchCount = 0;
+        for (String word : source) {
+            if (isSignificantWord(word)) { // Only count significant words
+                for (String targetWord : target) {
+                    if (word.equals(targetWord)) {
                         matchCount++;
                         break;
                     }
                 }
             }
         }
-
-        // Consider a match if at least 70% of significant words match
-        return significantWords > 0 && (double) matchCount / significantWords >= 0.7;
+        return matchCount;
     }
 
     /**

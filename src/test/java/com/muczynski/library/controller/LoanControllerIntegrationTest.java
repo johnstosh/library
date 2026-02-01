@@ -77,14 +77,9 @@ class LoanControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Create authorities
-        userAuthority = new Authority();
-        userAuthority.setName("USER");
-        userAuthority = authorityRepository.save(userAuthority);
-
-        librarianAuthority = new Authority();
-        librarianAuthority.setName("LIBRARIAN");
-        librarianAuthority = authorityRepository.save(librarianAuthority);
+        // Find or create authorities (respect unique constraints)
+        userAuthority = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "USER");
+        librarianAuthority = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "LIBRARIAN");
 
         // Create test library
         testLibrary = new Library();

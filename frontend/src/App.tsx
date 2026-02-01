@@ -42,6 +42,8 @@ const UserSettingsPage = lazy(() => import('@/pages/settings/UserSettingsPage').
 const GlobalSettingsPage = lazy(() => import('@/pages/settings/GlobalSettingsPage').then(m => ({ default: m.GlobalSettingsPage })))
 const TestDataPage = lazy(() => import('@/pages/test-data/TestDataPage').then(m => ({ default: m.TestDataPage })))
 const BooksFromFeedPage = lazy(() => import('@/pages/books-from-feed/BooksFromFeedPage').then(m => ({ default: m.BooksFromFeedPage })))
+const PhotosPage = lazy(() => import('@/pages/photos/PhotosPage').then(m => ({ default: m.PhotosPage })))
+const PhotoViewPage = lazy(() => import('@/pages/photos/PhotoViewPage').then(m => ({ default: m.PhotoViewPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -85,6 +87,9 @@ function App() {
             <Route path="/apply" element={<ApplyForCardPage />} />
           </Route>
 
+          {/* Public photo view (no navigation, full screen) */}
+          <Route path="/photos/:id" element={<PhotoViewPage />} />
+
           {/* Protected routes (authenticated users) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
@@ -111,6 +116,7 @@ function App() {
                 <Route path="/branches/:id" element={<BranchViewPage />} />
                 <Route path="/branches/:id/edit" element={<BranchEditPage />} />
                 <Route path="/data-management" element={<DataManagementPage />} />
+                <Route path="/photos-management" element={<PhotosPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/new" element={<UserNewPage />} />
                 <Route path="/users/:id" element={<UserViewPage />} />

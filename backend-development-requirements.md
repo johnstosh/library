@@ -53,7 +53,7 @@ class UserSettingsServiceTest {
 - Test request/response serialization
 - Test authentication and authorization
 - Test error responses and status codes
-- Use actual database (H2 in-memory for tests)
+- Use actual database (embedded PostgreSQL via Testcontainers for tests)
 
 **Location**: `src/test/java/com/muczynski/library/controller/`
 

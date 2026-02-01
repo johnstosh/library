@@ -1,6 +1,16 @@
 // (c) Copyright 2025 by Muczynski
 import type { BookStatus } from './enums'
 
+// API Error Response
+export interface ErrorResponse {
+  error: string
+  message: string
+  timestamp: string
+  entityType?: string
+  entityName?: string
+  existingEntityId?: number
+}
+
 // Library Card Design Type
 export type LibraryCardDesign =
   | 'COUNTRYSIDE_YOUTH'
@@ -53,7 +63,7 @@ export interface AuthorDto {
 
 export interface AuthorSummaryDto {
   id: number
-  name: string
+  lastModified: string
 }
 
 // Book DTOs
@@ -79,6 +89,7 @@ export interface BookDto {
   firstPhotoChecksum?: string
   loanCount?: number
   lastModified: string
+  tagsList?: string[]
 }
 
 export interface BookSummaryDto {
@@ -164,6 +175,58 @@ export interface BulkDeleteResultDto {
   failedCount: number
   deletedIds: number[]
   failures: BulkDeleteFailureDto[]
+}
+
+// Genre Lookup DTOs
+export interface GenreLookupResultDto {
+  bookId: number
+  title?: string
+  success: boolean
+  suggestedGenres?: string[]
+  errorMessage?: string
+}
+
+// Chunked Upload DTOs
+export interface ChunkUploadResultDto {
+  uploadId: string
+  chunkIndex: number
+  processedPhotos: PhotoZipImportItemDto[]
+  totalProcessedSoFar: number
+  totalSuccessSoFar: number
+  totalFailureSoFar: number
+  totalSkippedSoFar: number
+  complete: boolean
+  finalResult?: PhotoZipImportResultDto
+}
+
+export interface PhotoZipImportItemDto {
+  filename: string
+  status: 'SUCCESS' | 'FAILURE' | 'SKIPPED'
+  entityType?: string
+  entityName?: string
+  entityId?: number
+  photoId?: number
+  errorMessage?: string
+}
+
+export interface PhotoZipImportResultDto {
+  totalFiles: number
+  successCount: number
+  failureCount: number
+  skippedCount: number
+  items: PhotoZipImportItemDto[]
+}
+
+export interface ChunkUploadProgress {
+  mbSent: number
+  totalMb: number
+  percentage: number
+  imagesProcessed: number
+  imagesSuccess: number
+  imagesFailure: number
+  imagesSkipped: number
+  isUploading: boolean
+  currentItems: PhotoZipImportItemDto[]
 }
 
 // Settings DTOs

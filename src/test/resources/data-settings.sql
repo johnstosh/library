@@ -13,8 +13,8 @@ DELETE FROM library;
 DELETE FROM global_settings;
 
 -- Insert roles
-INSERT INTO role (id, name) VALUES (1, 'USER');
-INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN');
+INSERT INTO role (id, name) VALUES (1, 'USER') ON CONFLICT (name) DO NOTHING;
+INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN') ON CONFLICT (name) DO NOTHING;
 
 -- Insert a test library
 INSERT INTO library (id, name, library_system_name) VALUES (1, 'Test Library', 'Test Library System');

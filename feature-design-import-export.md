@@ -13,7 +13,7 @@ The application supports importing and exporting library data for backup, migrat
 
 ### What's Included
 The JSON export includes:
-- Libraries
+- Branches
 - Authors
 - Users (including hashed passwords)
 - Books
@@ -42,7 +42,7 @@ Photo metadata is now included in JSON export for complete backup:
 
 ### Database Statistics Display
 The Data Management page displays real-time database statistics showing:
-- **Libraries** - Total number of library branches
+- **Branches** - Total number of library branches
 - **Books** - Total number of books in the catalog
 - **Authors** - Total number of authors
 - **Users** - Total number of user accounts
@@ -53,7 +53,7 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
 **API Response (DatabaseStatsDto)**:
 ```json
 {
-  "libraryCount": 5,
+  "branchCount": 5,
   "bookCount": 300,
   "authorCount": 150,
   "userCount": 25,
@@ -72,6 +72,23 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
   - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-42-photos-2025-12-29.json`
   - Library name is sanitized (lowercase, special chars replaced with hyphens)
   - Photo count represents the total photo records in the database (photo-metadata, not binary data which is stored in Google Photos)
+
+### Null/Empty String Handling
+- **Export**: Empty strings are converted to null, and null fields are omitted from JSON
+  - Uses `@JsonInclude(JsonInclude.Include.NON_EMPTY)` on all DTOs
+  - Produces cleaner, smaller JSON without `":null"` or `":""` fields
+- **Import**: Null values are converted back to empty strings for fields that require it
+  - User fields like `xaiApiKey`, `googlePhotosApiKey`, etc. are initialized to empty strings if null
+
+### Excluded from Export
+- **`lastModified` fields**: Not exported because they are automatically updated during import
+  - Both Book and Author entities have `@PreUpdate` hooks that set `lastModified`
+  - Exporting these fields would be misleading since they change on import
+
+### User Field Ordering
+- **`userIdentifier`** appears at the end of each user object in JSON export
+  - Uses `@JsonPropertyOrder` annotation to ensure consistent ordering
+  - Makes JSON more readable with identifying info (username) first
 
 ### New vs Old Format
 The export format changed to use lightweight references instead of embedded objects:
@@ -120,7 +137,7 @@ The export format changed to use lightweight references instead of embedded obje
   - For loans: Checks reference fields first (`bookTitle`, `username`), falls back to embedded objects
   - For photos: Matches by `imageChecksum` (SHA-256) first, then `permanentId`, then book/author + photoOrder
 - Matches entities by natural keys:
-  - Libraries: by name
+  - Branches: by name
   - Authors: by name
   - Books: by title + author name
   - Users: by username
@@ -310,11 +327,84 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - Existing entities matched by natural keys
 - Updates existing entities rather than creating duplicates
 
+### Error Messages
+- **Frontend**: Shows specific error messages from backend when import fails
+  - Changed from generic "Failed to import JSON data. Please check the file format and try again."
+  - Now shows: "Failed to import JSON data: {specific error from backend}"
+  - Examples: "Author not found for book: The Red Dog Runs - Unknown Author"
+  - Helps users identify and fix issues in their import files
+
+## Testing
+
+### Integration Test
+- `ImportExportRoundTripTest.java` - Comprehensive export/import round-trip test
+  - Creates 20 authors with all fields populated
+  - Creates 20 books with all fields populated
+  - Creates 20 users with all fields populated
+  - Creates 20 loans (half with return dates)
+  - Creates photos for half the books and authors
+  - Verifies export contains all data
+  - Verifies re-import doesn't create duplicates (merge behavior)
+  - Verifies null/empty string handling
+  - Verifies userIdentifier ordering in JSON
+
+## Photo ZIP Export/Import
+
+### Endpoints
+- `GET /api/photo-export` - Download all photos as ZIP file
+- `POST /api/photos/import-zip` - Import photos from ZIP file
+- **Authentication**: Librarian only
+
+### ZIP Export Behavior
+- Only exports photos that have local image data (`imageChecksum IS NOT NULL`)
+- Photos that only have `permanentId` (uploaded to Google Photos) but no local image need to be imported first
+- To export all photos: first use "Import All" to download from Google Photos, then export ZIP
+- Logs show how many photos have local data vs. how many need import
+
+### ZIP Filename Format
+Uses the complete entity name with invalid filename characters replaced:
+- `book-{Book Title}[-{n}].{ext}` - Book photos with full title preserved
+- `author-{Author Name}[-{n}].{ext}` - Author photos with full name preserved
+- `loan-{Book Title}-{Username}[-{n}].{ext}` - Loan photos
+
+Invalid filename characters (`/\:*?"<>|`) are replaced with dashes.
+
+### ZIP Import with Merge/Deduplication
+The photo ZIP import uses merge behavior based on checksum and photo order:
+- **Match by entity**: Find book/author by name (case-insensitive partial match)
+- **Match by order**: The `-{n}` suffix indicates photo position (1-based in filename, 0-based internally)
+- **Deduplication by checksum**: SHA-256 hash of image bytes
+
+**Merge logic for each photo:**
+1. If photo exists at same order with **same checksum** → Skip (duplicate)
+2. If photo exists at same order with **different checksum** → Replace existing
+3. If no photo exists at that order → Add new photo
+
+This allows re-importing a ZIP without creating duplicates, and updating changed photos.
+
+### Chunked Upload Error Handling
+The chunked ZIP import (`PUT /api/photos/import-zip-chunk`) preserves accumulated stats when errors occur:
+
+- **Background thread failure**: If the ZIP processing thread fails (OOM, timeout, etc.), the response includes `errorMessage` alongside the accumulated stats (`totalProcessedSoFar`, `totalSuccessSoFar`, etc.) and `complete=true`. This allows the frontend to display partial results.
+- **Trailing chunks after cleanup**: If a chunk arrives after the upload session was cleaned up (`chunkIndex > 0` with no active state), a graceful response with `complete=true` and `errorMessage` is returned instead of a 500 error.
+- **`ChunkUploadResultDto.errorMessage`**: When non-null, indicates the upload ended due to an error. The response still contains valid stats for all photos processed before the failure.
+
+### Chunked Upload Lifecycle
+Upload state is **not** automatically removed on completion or error. The frontend is responsible for cleanup:
+
+1. Upload chunks via `PUT /api/photos/import-zip-chunk`
+2. Read the final response with stats (state remains available for re-reads)
+3. Call `DELETE /api/photos/import-zip-chunk/{uploadId}` to release server-side state
+4. The scheduled `cleanupStaleUploads` task removes any sessions older than 30 minutes as a safety net
+
 ## Related Files
 - `ImportService.java` - Core import/export logic
 - `ImportController.java` - REST API
 - `ImportRequestDto.java` - JSON structure
 - `PhotoExportService.java` - Photo export functionality
+- `PhotoZipImportService.java` - Photo ZIP import with merge support
 - `BooksFromFeedController.java` - Google Photos feed import
+- `RandomBook.java`, `RandomAuthor.java`, `RandomUser.java`, `RandomPhoto.java` - Test data generators
+- `ImportExportRoundTripTest.java` - Comprehensive integration test
 - `endpoints.md` - API documentation
 - `feature-design-photos.md` - Photo storage details

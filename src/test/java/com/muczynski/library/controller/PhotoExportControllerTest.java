@@ -30,11 +30,16 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
@@ -83,12 +88,17 @@ class PhotoExportControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Create test authority
-        Authority librarianAuth = new Authority();
-        librarianAuth.setName("LIBRARIAN");
-        librarianAuth = authorityRepository.save(librarianAuth);
+        // Clean up from previous tests (non-transactional tests don't roll back)
+        loanRepository.deleteAll();
+        photoRepository.deleteAll();
+        bookRepository.deleteAll();
+        authorRepository.deleteAll();
+        userRepository.deleteAll();
 
-        // Create test user (JPA will assign ID 1, matches @WithMockUser(username = "1"))
+        // Find or create test authority (respect unique constraints)
+        Authority librarianAuth = com.muczynski.library.TestEntityHelper.findOrCreateAuthority(authorityRepository, "LIBRARIAN");
+
+        // Create test user
         testUser = new User();
         testUser.setUsername("testuser");
         testUser.setPassword("{bcrypt}$2a$10$..."); // Dummy encoded password
@@ -109,10 +119,28 @@ class PhotoExportControllerTest {
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         loanRepository.deleteAll();
         photoRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
+    /**
+     * Set up authentication with the test user's actual database ID.
+     * This is needed for tests where the service looks up the user by ID from authentication.getName().
+     */
+    private void setUpAuthenticationWithTestUser(String... authorities) {
+        var grantedAuthorities = authorities.length > 0
+                ? List.of(authorities).stream().map(SimpleGrantedAuthority::new).toList()
+                : List.of(new SimpleGrantedAuthority("LIBRARIAN"));
+        var auth = new UsernamePasswordAuthenticationToken(
+                testUser.getId().toString(),  // Principal name is the user ID
+                null,
+                grantedAuthorities
+        );
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     private byte[] createDummyImage(int width, int height) throws Exception {
@@ -441,8 +469,8 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importPhoto_withoutPermanentId_returnsError() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
         // importPhotoById returns error message in response body, not via exception
@@ -465,8 +493,8 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importAllPhotos_noPhotosNeedImport_returnsMessage() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         // Create only photos with images (no photos needing import)
         createPhotoWithImage(testBook, "Has image");
 
@@ -489,8 +517,8 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void verifyPhoto_withoutPermanentId_returnsError() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
         // Controller catches exception and returns 500 with error message
@@ -621,8 +649,8 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importPhoto_usesBatchFallbackOn404() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoNeedingImport(testBook, "permanent-for-import");
 
         // Mock GooglePhotosService to return valid access token
@@ -651,8 +679,8 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importPhoto_failsWhenBothEndpointsFail() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoNeedingImport(testBook, "permanent-not-found");
 
         // Mock GooglePhotosService to return valid access token
@@ -681,8 +709,8 @@ class PhotoExportControllerTest {
     // ===========================================
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importPhoto_multiplePhotosForSameBook_succeedsSequentially() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         // Create multiple photos for the same book that need import
         Photo photo1 = createPhotoNeedingImport(testBook, "permanent-1");
         photo1.setPhotoOrder(0);
@@ -805,8 +833,8 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importAllPhotos_processesPhotosInBatches() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         // Create 45 photos needing import to verify batch processing (should be 3 batches of 20, 20, 5)
         for (int i = 0; i < 45; i++) {
             createPhotoNeedingImport(testBook, "permanent-import-" + i);
@@ -830,8 +858,8 @@ class PhotoExportControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importAllPhotos_partialSuccess_reportsCorrectCounts() throws Exception {
+        setUpAuthenticationWithTestUser("LIBRARIAN");
         // Create 5 photos needing import
         for (int i = 0; i < 5; i++) {
             createPhotoNeedingImport(testBook, "permanent-" + i);

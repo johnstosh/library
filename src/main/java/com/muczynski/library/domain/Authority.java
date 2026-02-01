@@ -10,7 +10,9 @@ import lombok.Setter;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "role")
+@Table(name = "role", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_authority_name", columnNames = "name")
+})
 @Getter
 @Setter
 public class Authority implements Serializable {

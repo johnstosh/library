@@ -64,6 +64,8 @@ class LocCatalogServiceIntegrationTest {
      *
      * Note: This book may not be easily findable in the LOC catalog with exact title match.
      * Manual verification recommended for this specific edition.
+     *
+     * This test is flaky due to LOC service intermittent failures, so we use retries.
      */
     @Test
     void testGetLocCallNumber_CatholicStudyBible() {
@@ -72,8 +74,31 @@ class LocCatalogServiceIntegrationTest {
         request.setTitle("Bible");
         request.setAuthor(""); // Start with a broader search
 
-        // Act
-        LocCallNumberResponse response = locCatalogService.getLocCallNumber(request);
+        // Act with retries (LOC service is sometimes flaky)
+        int maxRetries = 3;
+        Exception lastException = null;
+        LocCallNumberResponse response = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                response = locCatalogService.getLocCallNumber(request);
+                break; // Success, exit retry loop
+            } catch (Exception e) {
+                lastException = e;
+                System.out.println("Attempt " + attempt + " failed: " + e.getMessage());
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(2000); // Wait 2 seconds before retry
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        }
+
+        if (response == null && lastException != null) {
+            fail("All " + maxRetries + " attempts failed. Last error: " + lastException.getMessage());
+        }
 
         // Assert
         assertNotNull(response, "Response should not be null");

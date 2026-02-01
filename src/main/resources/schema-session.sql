@@ -1,4 +1,4 @@
--- Spring Session JDBC Schema for H2 Database
+-- Spring Session JDBC Schema for PostgreSQL
 -- This schema is automatically applied when the application starts
 
 CREATE TABLE IF NOT EXISTS SPRING_SESSION (

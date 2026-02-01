@@ -125,8 +125,7 @@ Deletes all generated test data (books, authors, loans).
 - 500: Internal server error
 
 **Behavior:**
-- PostgreSQL: Drops all tables with CASCADE
-- H2: Disables referential integrity, drops all tables, re-enables integrity
+- Drops all tables with CASCADE (PostgreSQL)
 - **Destroys ALL data** including users, libraries, books, authors, loans, photos, etc.
 - Cannot be undone
 - Database schema will be recreated on next application startup

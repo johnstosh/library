@@ -4,6 +4,7 @@
 package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
+import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.BranchDto;
 import com.muczynski.library.dto.BranchStatisticsDto;
@@ -65,7 +66,39 @@ public class BranchService {
         if (!branchRepository.existsById(id)) {
             throw new LibraryException("Branch not found: " + id);
         }
+
+        // If the branch has books, move them to another branch before deleting
+        List<Book> books = bookRepository.findAllByLibraryId(id);
+        if (!books.isEmpty()) {
+            Library targetBranch = branchRepository.findAll().stream()
+                    .filter(b -> !b.getId().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new LibraryException(
+                            "Cannot delete the only branch when it has books. Create another branch first."));
+            for (Book book : books) {
+                book.setLibrary(targetBranch);
+            }
+            bookRepository.saveAll(books);
+        }
+
         branchRepository.deleteById(id);
+    }
+
+    /**
+     * Find or create a branch by name.
+     * @param branchName Branch name
+     * @param librarySystemName Library system name (used only when creating)
+     * @return The existing or newly created branch
+     */
+    public Library findOrCreateBranch(String branchName, String librarySystemName) {
+        List<Library> existing = branchRepository.findAllByBranchNameOrderByIdAsc(branchName);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Library branch = new Library();
+        branch.setBranchName(branchName);
+        branch.setLibrarySystemName(librarySystemName);
+        return branchRepository.save(branch);
     }
 
     /**

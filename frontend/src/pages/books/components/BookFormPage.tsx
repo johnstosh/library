@@ -1,18 +1,28 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
+import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
+import { GenreLookupResultsModal } from './GenreLookupResultsModal'
+import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
-import { useCreateBook, useUpdateBook, useSuggestLocNumber } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
-import type { BookDto } from '@/types/dtos'
+import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
+import { generateLabelsPdf } from '@/api/labels'
+import { useAuthStore } from '@/stores/authStore'
+import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle } from 'react-icons/pi'
+import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag } from 'react-icons/pi'
 
 interface BookFormPageProps {
   title: string
@@ -22,7 +32,10 @@ interface BookFormPageProps {
 }
 
 export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageProps) {
+  const navigate = useNavigate()
   const isEditing = !!book
+  const { user } = useAuthStore()
+  const isLibrarian = user?.authority === 'LIBRARIAN'
 
   const [formData, setFormData] = useState({
     title: '',
@@ -38,10 +51,21 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     locNumber: '',
     authorId: '',
     libraryId: '',
+    tagsList: '',  // Comma-separated tags for editing
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  // Operations state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
+  const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
+  const [showFreeTextResults, setShowFreeTextResults] = useState(false)
+  const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
+  const [isGeneratingLabel, setIsGeneratingLabel] = useState(false)
+  const [showGenreResults, setShowGenreResults] = useState(false)
+  const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
   const { data: authors, isLoading: authorsLoading } = useAuthors()
   const { data: libraries, isLoading: librariesLoading } = useBranches()
@@ -49,6 +73,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
   const suggestLoc = useSuggestLocNumber()
+
+  // Operations hooks
+  const deleteBook = useDeleteBook()
+  const cloneBook = useCloneBook()
+  const bookFromImage = useBookFromImage()
+  const lookupGrokipedia = useLookupSingleBookGrokipedia()
+  const lookupFreeText = useLookupSingleFreeText()
+  const lookupGenres = useLookupGenres()
 
   useEffect(() => {
     if (book) {
@@ -66,6 +98,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         libraryId: book.libraryId?.toString() || '',
+        tagsList: book.tagsList?.join(', ') || '',
       })
     } else {
       setFormData({
@@ -82,6 +115,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: '',
         authorId: '',
         libraryId: '',
+        tagsList: '',
       })
     }
   }, [book])
@@ -156,6 +190,153 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  // Operations handlers
+  const handleDelete = async () => {
+    if (!book?.id) return
+
+    try {
+      await deleteBook.mutateAsync(book.id)
+      setShowDeleteConfirm(false)
+      navigate('/books')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete book')
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleClone = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const cloned = await cloneBook.mutateAsync(book.id)
+      setSuccessMessage('Book cloned successfully')
+      // Navigate to the cloned book's edit page
+      navigate(`/books/${cloned.id}/edit`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clone book')
+    }
+  }
+
+  const handleGenerateLabel = async () => {
+    if (!book?.id) return
+
+    setIsGeneratingLabel(true)
+    try {
+      const blob = await generateLabelsPdf([book.id])
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `book-label-${book.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      setSuccessMessage('Label PDF generated')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate label PDF')
+    } finally {
+      setIsGeneratingLabel(false)
+    }
+  }
+
+  const handleGrokipediaLookup = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupGrokipedia.mutateAsync(book.id)
+      setGrokipediaResults([result])
+      setShowGrokipediaResults(true)
+      if (result.success && result.grokipediaUrl) {
+        setFormData({ ...formData, grokipediaUrl: result.grokipediaUrl })
+        setHasUnsavedChanges(true)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup Grokipedia URL')
+    }
+  }
+
+  const handleFreeTextLookup = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupFreeText.mutateAsync(book.id)
+      setFreeTextResults([result])
+      setShowFreeTextResults(true)
+      if (result.success && result.freeTextUrl) {
+        setFormData({ ...formData, freeTextUrl: result.freeTextUrl })
+        setHasUnsavedChanges(true)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup free text URL')
+    }
+  }
+
+  const handleBookFromImage = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updated = await bookFromImage.mutateAsync(book.id)
+      // Update form with the extracted data
+      setFormData({
+        title: updated.title || formData.title,
+        publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
+        publisher: updated.publisher || formData.publisher,
+        plotSummary: updated.plotSummary || formData.plotSummary,
+        relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        detailedDescription: updated.detailedDescription || formData.detailedDescription,
+        grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
+        freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
+        status: updated.status || formData.status,
+        statusReason: updated.statusReason || formData.statusReason,
+        locNumber: updated.locNumber || formData.locNumber,
+        authorId: updated.authorId?.toString() || formData.authorId,
+        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Book metadata extracted from image')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract book from image')
+    }
+  }
+
+  const handleGenreLookup = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupGenres.mutateAsync(book.id)
+      setGenreResults([result])
+      setShowGenreResults(true)
+      if (result.success && result.suggestedGenres && result.suggestedGenres.length > 0) {
+        // Merge suggested genres with existing tags
+        const existingTags = formData.tagsList
+          ? formData.tagsList.split(',').map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0)
+          : []
+        const newTags = [...new Set([...existingTags, ...result.suggestedGenres])]
+        setFormData({ ...formData, tagsList: newTags.join(', ') })
+        setHasUnsavedChanges(true)
+        setSuccessMessage(`Added ${result.suggestedGenres.length} suggested genre(s) to tags`)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup genres')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -167,6 +348,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
 
     try {
+      // Parse tags from comma-separated string to array, normalize to lowercase
+      const tagsList = formData.tagsList
+        ? formData.tagsList
+            .split(',')
+            .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''))
+            .filter((tag) => tag.length > 0)
+        : undefined
+
       const bookData = {
         title: formData.title,
         publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
@@ -181,6 +370,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.libraryId),
+        tagsList,
       }
 
       if (isEditing) {
@@ -231,11 +421,103 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isLookingUp = lookupLoc.isPending
   const isSuggesting = suggestLoc.isPending
 
+  const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
+    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
+
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+
+        {/* Operations Toolbar - visible for librarians when editing */}
+        {isEditing && isLibrarian && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClone}
+              isLoading={cloneBook.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiCopy />}
+              data-test="book-operation-clone"
+            >
+              Clone
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateLabel}
+              isLoading={isGeneratingLabel}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiFilePdf />}
+              data-test="book-operation-generate-label"
+            >
+              Generate Label
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGrokipediaLookup}
+              isLoading={lookupGrokipedia.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<span>🌐</span>}
+              data-test="book-operation-grokipedia"
+            >
+              Find Grokipedia URL
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFreeTextLookup}
+              isLoading={lookupFreeText.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiBookOpen />}
+              data-test="book-operation-free-text"
+            >
+              Find Free Text URL
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBookFromImage}
+              isLoading={bookFromImage.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiCamera />}
+              data-test="book-operation-book-from-image"
+            >
+              Book from Image
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenreLookup}
+              isLoading={lookupGenres.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiTag />}
+              data-test="book-operation-lookup-genres"
+            >
+              Lookup Genres
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiTrash />}
+              data-test="book-operation-delete"
+            >
+              Delete
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Form */}
@@ -252,15 +534,29 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Author"
-            value={formData.authorId}
-            onChange={(e) => handleFieldChange('authorId', e.target.value)}
-            options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
-            required
-            disabled={authorsLoading}
-            data-test="book-author"
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Select
+                label="Author"
+                value={formData.authorId}
+                onChange={(e) => handleFieldChange('authorId', e.target.value)}
+                options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
+                required
+                isLoading={authorsLoading}
+                data-test="book-author"
+              />
+            </div>
+            {formData.authorId && (
+              <Link
+                to={`/authors/${formData.authorId}`}
+                className="mb-0.5 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded inline-flex items-center gap-1"
+                data-test="book-see-author"
+                title="View Author"
+              >
+                <span>👤</span>
+              </Link>
+            )}
+          </div>
 
           <Select
             label="Branch"
@@ -268,7 +564,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             onChange={(e) => handleFieldChange('libraryId', e.target.value)}
             options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
             required
-            disabled={librariesLoading}
+            isLoading={librariesLoading}
             data-test="book-library"
           />
         </div>
@@ -322,13 +618,27 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-grokipedia-url"
         />
 
-        <Input
-          label="Free Text URL"
-          value={formData.freeTextUrl}
-          onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
-          placeholder="https://www.gutenberg.org/ebooks/123"
-          data-test="book-free-text-url"
-        />
+        <div>
+          <Input
+            label="Free Text URLs"
+            value={formData.freeTextUrl}
+            onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
+            placeholder="https://gutenberg.org/123 https://archive.org/456"
+            data-test="book-free-text-url"
+          />
+          <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
+        </div>
+
+        <div>
+          <Input
+            label="Tags"
+            value={formData.tagsList}
+            onChange={(e) => handleFieldChange('tagsList', e.target.value)}
+            placeholder="fiction, fantasy, childrens"
+            data-test="book-tags"
+          />
+          <p className="text-xs text-gray-500 mt-1">Comma-separated tags (e.g., fiction, theology, childrens)</p>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-end gap-2">
@@ -411,6 +721,48 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           </Button>
         </div>
       </div>
+
+      {/* Operation Modals */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Book"
+        message="Are you sure you want to delete this book? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteBook.isPending}
+      />
+
+      <GrokipediaLookupResultsModal
+        isOpen={showGrokipediaResults}
+        onClose={() => setShowGrokipediaResults(false)}
+        results={grokipediaResults}
+        entityType="book"
+      />
+
+      <FreeTextLookupResultsModal
+        isOpen={showFreeTextResults}
+        onClose={() => setShowFreeTextResults(false)}
+        results={freeTextResults}
+      />
+
+      <GenreLookupResultsModal
+        isOpen={showGenreResults}
+        onClose={() => setShowGenreResults(false)}
+        results={genreResults}
+      />
+
+      {/* Photos Section - only show when editing */}
+      {isEditing && book && (
+        <div className="mt-8">
+          <PhotoSection
+            entityType="book"
+            entityId={book.id}
+            entityName={book.title}
+          />
+        </div>
+      )}
     </div>
   )
 }

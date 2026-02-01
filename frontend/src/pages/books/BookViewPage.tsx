@@ -1,9 +1,9 @@
 // (c) Copyright 2025 by Muczynski
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
-import { formatBookStatus, parseISODateSafe } from '@/utils/formatters'
+import { formatBookStatus, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -161,7 +161,18 @@ export function BookViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
-                <p className="text-gray-900">{book.author}</p>
+                {book.authorId ? (
+                  <Link
+                    to={`/authors/${book.authorId}`}
+                    className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                    data-test="book-author-link"
+                  >
+                    <span>👤</span>
+                    <span className="underline">{book.author}</span>
+                  </Link>
+                ) : (
+                  <p className="text-gray-900">{book.author}</p>
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Branch</p>
@@ -199,18 +210,23 @@ export function BookViewPage() {
                   </a>
                 </div>
               )}
-              {book.freeTextUrl && (
+              {book.freeTextUrl && parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Free Online Text</p>
-                  <a
-                    href={book.freeTextUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
-                    data-test="book-free-text-link"
-                  >
-                    Read Online
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
+                      <a
+                        key={index}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                        data-test={`book-free-text-link-${index}`}
+                      >
+                        {extractDomain(url)}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
               <div>
@@ -223,6 +239,22 @@ export function BookViewPage() {
                   <p className="text-gray-900">
                     {parseISODateSafe(book.dateAddedToLibrary).toLocaleDateString()}
                   </p>
+                </div>
+              )}
+              {book.tagsList && book.tagsList.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Tags</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {book.tagsList.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
+                        data-test={`book-tag-${tag}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

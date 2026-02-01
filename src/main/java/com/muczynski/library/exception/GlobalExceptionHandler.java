@@ -7,6 +7,7 @@ import com.muczynski.library.dto.ErrorResponse;
 import com.muczynski.library.dto.ValidationErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Global exception handler for all controllers
@@ -118,6 +120,80 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle file upload size exceeded (413 Payload Too Large)
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException ex, WebRequest request) {
+        long maxSize = ex.getMaxUploadSize();
+        String maxSizeStr = maxSize > 0 ? formatBytes(maxSize) : "100 MB";
+        String message = "File size exceeds the maximum upload limit of " + maxSizeStr
+                + ". Use the streaming endpoint for larger files, or reduce file size.";
+        logger.warn("Upload size exceeded on path {}: {} (max: {})",
+                request.getDescription(false), ex.getMessage(), maxSizeStr);
+
+        ErrorResponse response = new ErrorResponse("UPLOAD_TOO_LARGE", message);
+        return new ResponseEntity<>(response, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes >= 1024 * 1024 * 1024) return String.format("%.0f GB", bytes / (1024.0 * 1024 * 1024));
+        if (bytes >= 1024 * 1024) return String.format("%.0f MB", bytes / (1024.0 * 1024));
+        if (bytes >= 1024) return String.format("%.0f KB", bytes / 1024.0);
+        return bytes + " bytes";
+    }
+
+    /**
+     * Handle duplicate entity exceptions (409 Conflict) with enriched error details
+     */
+    @ExceptionHandler(DuplicateEntityException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEntityException(
+            DuplicateEntityException ex, WebRequest request) {
+        logger.warn("Duplicate entity on path {}: {}", request.getDescription(false), ex.getMessage());
+
+        ErrorResponse response = new ErrorResponse("DUPLICATE_ENTITY", ex.getMessage(),
+                ex.getEntityType(), ex.getEntityName(), ex.getExistingEntityId());
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle database unique constraint violations (409 Conflict)
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex, WebRequest request) {
+        String message = extractConstraintMessage(ex);
+        logger.warn("Data integrity violation on path {}: {}", request.getDescription(false), message);
+
+        ErrorResponse response = new ErrorResponse("DUPLICATE_ENTITY", message);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Extract a user-friendly message from a DataIntegrityViolationException.
+     * Attempts to identify the constraint name from the root cause.
+     */
+    private String extractConstraintMessage(DataIntegrityViolationException ex) {
+        String rootMessage = ex.getMostSpecificCause().getMessage();
+        if (rootMessage == null) {
+            return "A duplicate entry was detected";
+        }
+
+        // Try to extract constraint name from PostgreSQL error message
+        // Format: "ERROR: duplicate key value violates unique constraint "uk_xxx""
+        if (rootMessage.contains("unique constraint")) {
+            int start = rootMessage.indexOf('"');
+            int end = rootMessage.indexOf('"', start + 1);
+            if (start >= 0 && end > start) {
+                String constraintName = rootMessage.substring(start + 1, end);
+                return "Duplicate entry violates constraint: " + constraintName;
+            }
+        }
+
+        return "A duplicate entry was detected: " + rootMessage;
+    }
+
+    /**
      * Handle illegal argument exceptions (bad requests)
      */
     @ExceptionHandler(IllegalArgumentException.class)
@@ -162,7 +238,12 @@ public class GlobalExceptionHandler {
             Exception ex, WebRequest request) {
         logger.error("Unexpected exception on path {}: {}", request.getDescription(false), ex.getMessage(), ex);
 
-        ErrorResponse response = new ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred");
+        // Include the actual error message to help with debugging
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            message = "An unexpected error occurred: " + ex.getClass().getSimpleName();
+        }
+        ErrorResponse response = new ErrorResponse("INTERNAL_ERROR", message);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

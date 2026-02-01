@@ -38,6 +38,12 @@ public class AppliedService {
     }
 
     public Applied createApplied(Applied applied) {
+        // Check for duplicate application by name
+        List<Applied> existing = appliedRepository.findAllByNameOrderByIdAsc(applied.getName());
+        if (!existing.isEmpty()) {
+            throw new LibraryException("An application already exists for '" + applied.getName() + "'");
+        }
+
         // Validate password is SHA-256 hash from frontend
         if (!PasswordHashingUtil.isValidSHA256Hash(applied.getPassword())) {
             throw new IllegalArgumentException("Invalid password format - expected SHA-256 hash");

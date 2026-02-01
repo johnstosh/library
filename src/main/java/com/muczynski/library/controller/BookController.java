@@ -7,6 +7,7 @@ import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
+import com.muczynski.library.dto.GenreLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
@@ -455,5 +456,21 @@ public class BookController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping("/{id}/lookup-genres")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GenreLookupResultDto> lookupGenresForBook(@PathVariable Long id) {
+        logger.info("Looking up genres for book ID {}", id);
+        GenreLookupResultDto result = bookService.lookupGenresForBook(id);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/lookup-genres-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<GenreLookupResultDto>> lookupGenresBulk(@RequestBody List<Long> bookIds) {
+        logger.info("Looking up genres for {} books", bookIds.size());
+        List<GenreLookupResultDto> results = bookService.lookupGenresForBooks(bookIds);
+        return ResponseEntity.ok(results);
     }
 }

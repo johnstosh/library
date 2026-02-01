@@ -1,0 +1,767 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
+package com.muczynski.library.service;
+
+import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Loan;
+import com.muczynski.library.domain.Photo;
+import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.dto.PhotoZipImportResultDto;
+import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
+import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.PhotoRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+/**
+ * Service for importing photos from a ZIP file with merge/deduplication support.
+ *
+ * Filename format:
+ * - book-{title}[-{n}].{ext} - Associates photo with a book by title
+ * - author-{name}[-{n}].{ext} - Associates photo with an author by name
+ * - loan-{title}-{username}[-{n}].{ext} - Associates photo with a loan
+ *
+ * The optional [-{n}] is the 1-based photo order (position) for the entity.
+ * The title/name is sanitized (lowercase, special chars replaced with dashes).
+ *
+ * Merge behavior (for book and author photos):
+ * - Uses SHA-256 checksum for deduplication
+ * - If photo exists at same order with same checksum: skip (duplicate)
+ * - If photo exists at same order with different checksum: replace existing
+ * - If no photo exists at that order: add new photo
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class PhotoZipImportService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private final PhotoService photoService;
+    private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
+    private final LoanRepository loanRepository;
+    private final PhotoRepository photoRepository;
+
+    // Pattern: type-name[-number].ext
+    // Groups: 1=type, 2=name, 3=optional number, 4=extension
+    private static final Pattern FILENAME_PATTERN = Pattern.compile(
+            "^(book|author|loan)-(.+?)(?:-(\\d+))?\\.([a-zA-Z]+)$",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    // Supported image extensions
+    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
+            "jpg", "jpeg", "png", "gif", "webp"
+    );
+
+    /**
+     * Compute SHA-256 checksum of image bytes for deduplication.
+     */
+    private String computeChecksum(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBytes);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("SHA-256 algorithm not available", e);
+            return null;
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file.
+     *
+     * @param zipFile the uploaded ZIP file
+     * @return result containing import statistics and details
+     */
+    public PhotoZipImportResultDto importFromZip(MultipartFile zipFile) throws IOException {
+        return importFromZipStream(zipFile.getInputStream());
+    }
+
+    /**
+     * Import photos from a ZIP input stream.
+     * This method processes the ZIP as it streams in, without buffering the entire file.
+     * Supports files of any size.
+     *
+     * @param inputStream the ZIP input stream
+     * @return result containing import statistics and details
+     */
+    public PhotoZipImportResultDto importFromZipStream(InputStream inputStream) throws IOException {
+        List<PhotoZipImportItemDto> items = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+        int skippedCount = 0;
+
+        // Pre-load all books and authors to avoid repeated queries per file
+        List<Book> allBooks = bookRepository.findAll();
+        List<Author> allAuthors = authorRepository.findAll();
+
+        try (ZipInputStream zis = new ZipInputStream(inputStream)) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+
+                String entryPath = entry.getName();
+                if (shouldSkipEntry(entryPath)) {
+                    log.debug("Skipping hidden/resource fork file: {}", entryPath);
+                    zis.closeEntry();
+                    continue;
+                }
+
+                String filename = getFilenameFromPath(entryPath);
+                PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors);
+                items.add(item);
+
+                switch (item.getStatus()) {
+                    case "SUCCESS" -> successCount++;
+                    case "FAILURE" -> failureCount++;
+                    case "SKIPPED" -> skippedCount++;
+                }
+
+                // Periodically flush and clear the persistence context to release memory
+                // The pre-loaded allBooks and allAuthors lists become detached but are only
+                // used for in-memory matching, so no lazy loading issues
+                int processed = successCount + failureCount + skippedCount;
+                if (processed > 0 && processed % 20 == 0) {
+                    entityManager.flush();
+                    entityManager.clear();
+                    log.info("Cleared persistence context after {} entries to free memory", processed);
+                }
+
+                zis.closeEntry();
+            }
+        }
+
+        return PhotoZipImportResultDto.builder()
+                .totalFiles(items.size())
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .skippedCount(skippedCount)
+                .items(items)
+                .build();
+    }
+
+    /**
+     * Clear the persistence context to release memory.
+     * Call this periodically during large imports to prevent OutOfMemory errors.
+     */
+    public void clearPersistenceContext() {
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    /**
+     * Check if a ZIP entry path should be skipped (macOS resource forks, hidden files).
+     */
+    boolean shouldSkipEntry(String entryPath) {
+        return entryPath.contains("__MACOSX/") || entryPath.contains("/.") || getFilenameFromPath(entryPath).startsWith(".");
+    }
+
+    /**
+     * Extract just the filename from a path that might include directories.
+     */
+    String getFilenameFromPath(String path) {
+        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+    }
+
+    /**
+     * Process a single ZIP entry.
+     * Must be public so Spring's @Transactional proxy applies when called from other beans.
+     */
+    public PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
+                                       List<Book> allBooks, List<Author> allAuthors) {
+        Matcher matcher = FILENAME_PATTERN.matcher(filename);
+
+        if (!matcher.matches()) {
+            log.debug("Skipping file with unrecognized format: {}", filename);
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("SKIPPED")
+                    .errorMessage("Filename format not recognized. Expected: type-name[-n].ext")
+                    .build();
+        }
+
+        String type = matcher.group(1).toLowerCase();
+        String name = matcher.group(2);
+        String numberStr = matcher.group(3); // Optional photo order number
+        String extension = matcher.group(4).toLowerCase();
+
+        // Parse photo order: if number is present, use it; otherwise default to 0 (first photo)
+        // Photo order in filename is 1-based (for user friendliness), but stored as 0-based
+        int photoOrder = 0;
+        if (numberStr != null && !numberStr.isEmpty()) {
+            photoOrder = Integer.parseInt(numberStr) - 1; // Convert to 0-based
+            if (photoOrder < 0) photoOrder = 0;
+        }
+
+        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("SKIPPED")
+                    .entityType(type)
+                    .entityName(name)
+                    .errorMessage("Unsupported file extension: " + extension)
+                    .build();
+        }
+
+        // Read the image bytes
+        byte[] imageBytes;
+        try {
+            imageBytes = readAllBytes(inputStream);
+        } catch (IOException e) {
+            log.error("Failed to read file bytes: {}", filename, e);
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType(type)
+                    .entityName(name)
+                    .errorMessage("Failed to read file: " + e.getMessage())
+                    .build();
+        }
+
+        String contentType = getContentType(extension);
+
+        // Correct EXIF orientation before storing
+        imageBytes = photoService.correctImageOrientation(imageBytes, contentType);
+
+        try {
+            return switch (type) {
+                case "book" -> importBookPhoto(filename, name, imageBytes, contentType, photoOrder, allBooks);
+                case "author" -> importAuthorPhoto(filename, name, imageBytes, contentType, photoOrder, allAuthors);
+                case "loan" -> importLoanPhoto(filename, name, imageBytes, contentType);
+                default -> PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SKIPPED")
+                        .errorMessage("Unknown entity type: " + type)
+                        .build();
+            };
+        } catch (Exception e) {
+            log.error("Failed to import photo: {}", filename, e);
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType(type)
+                    .entityName(name)
+                    .errorMessage("Import failed: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * Import a photo for a book with merge/deduplication support.
+     * - If photo exists at same order with same checksum: skip (duplicate)
+     * - If photo exists at same order with different checksum: replace
+     * - If no photo exists at that order: add new photo
+     */
+    private PhotoZipImportItemDto importBookPhoto(String filename, String sanitizedTitle,
+                                                   byte[] imageBytes, String contentType, int photoOrder,
+                                                   List<Book> allBooks) {
+        // Try to find book by title using multiple strategies
+        String searchTitle = unsanitizeName(sanitizedTitle);
+        List<Book> books = findBooksByTitle(searchTitle, sanitizedTitle, allBooks);
+
+        if (books.isEmpty()) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType("book")
+                    .entityName(searchTitle)
+                    .errorMessage("No book found matching: " + searchTitle)
+                    .build();
+        }
+
+        if (books.size() > 1) {
+            log.warn("Multiple books found for '{}', using first match", searchTitle);
+        }
+
+        Book book = books.get(0);
+
+        // Compute checksum for deduplication
+        String newChecksum = computeChecksum(imageBytes);
+
+        // Check if photo already exists at this order for the book
+        List<Photo> existingPhotos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), photoOrder);
+        if (!existingPhotos.isEmpty()) {
+            Photo existingPhoto = existingPhotos.get(0);
+            String existingChecksum = existingPhoto.getImageChecksum();
+
+            if (newChecksum != null && newChecksum.equals(existingChecksum)) {
+                // Same checksum - but verify the database actually has the bytes
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for book '{}' at order {} (same checksum)", book.getTitle(), photoOrder);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("book")
+                            .entityName(book.getTitle())
+                            .entityId(book.getId())
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for book '{}' at order {} (same checksum, bytes missing)", book.getTitle(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("book")
+                        .entityName(book.getTitle())
+                        .entityId(book.getId())
+                        .photoId(photoId)
+                        .build();
+            } else {
+                // Different photo at same order - replace
+                log.info("Replacing photo for book '{}' at order {} (different checksum)", book.getTitle(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                existingPhoto.setImageChecksum(newChecksum);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                // Detach to free memory - the photo's image byte[] can be large
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("book")
+                        .entityName(book.getTitle())
+                        .entityId(book.getId())
+                        .photoId(photoId)
+                        .build();
+            }
+        }
+
+        // No existing photo at this order - add new
+        PhotoDto photo = photoService.addPhotoFromBytes(book.getId(), imageBytes, contentType);
+        // Detach the saved photo entity to free memory
+        photoService.detachPhoto(photo.getId());
+
+        log.info("Imported photo for book '{}' (ID: {}) at order {}", book.getTitle(), book.getId(), photoOrder);
+
+        return PhotoZipImportItemDto.builder()
+                .filename(filename)
+                .status("SUCCESS")
+                .entityType("book")
+                .entityName(book.getTitle())
+                .entityId(book.getId())
+                .photoId(photo.getId())
+                .build();
+    }
+
+    /**
+     * Import a photo for an author with merge/deduplication support.
+     * - If photo exists at same order with same checksum: skip (duplicate)
+     * - If photo exists at same order with different checksum: replace
+     * - If no photo exists at that order: add new photo
+     */
+    private PhotoZipImportItemDto importAuthorPhoto(String filename, String sanitizedName,
+                                                     byte[] imageBytes, String contentType, int photoOrder,
+                                                     List<Author> allAuthors) {
+        String searchName = unsanitizeName(sanitizedName);
+        List<Author> authors = findAuthorsByName(searchName, sanitizedName, allAuthors);
+
+        if (authors.isEmpty()) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType("author")
+                    .entityName(searchName)
+                    .errorMessage("No author found matching: " + searchName)
+                    .build();
+        }
+
+        if (authors.size() > 1) {
+            log.warn("Multiple authors found for '{}', using first match", searchName);
+        }
+
+        Author author = authors.get(0);
+
+        // Compute checksum for deduplication
+        String newChecksum = computeChecksum(imageBytes);
+
+        // Check if photo already exists at this order for the author (author photos have book=null)
+        List<Photo> existingPhotos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), photoOrder);
+        if (!existingPhotos.isEmpty()) {
+            Photo existingPhoto = existingPhotos.get(0);
+            String existingChecksum = existingPhoto.getImageChecksum();
+
+            if (newChecksum != null && newChecksum.equals(existingChecksum)) {
+                // Same checksum - but verify the database actually has the bytes
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for author '{}' at order {} (same checksum)", author.getName(), photoOrder);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("author")
+                            .entityName(author.getName())
+                            .entityId(author.getId())
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for author '{}' at order {} (same checksum, bytes missing)", author.getName(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("author")
+                        .entityName(author.getName())
+                        .entityId(author.getId())
+                        .photoId(photoId)
+                        .build();
+            } else {
+                // Different photo at same order - replace
+                log.info("Replacing photo for author '{}' at order {} (different checksum)", author.getName(), photoOrder);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                existingPhoto.setImageChecksum(newChecksum);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                // Detach to free memory - the photo's image byte[] can be large
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("author")
+                        .entityName(author.getName())
+                        .entityId(author.getId())
+                        .photoId(photoId)
+                        .build();
+            }
+        }
+
+        // No existing photo at this order - add new
+        PhotoDto photo = photoService.addAuthorPhotoFromBytes(author.getId(), imageBytes, contentType);
+        // Detach the saved photo entity to free memory
+        photoService.detachPhoto(photo.getId());
+
+        log.info("Imported photo for author '{}' (ID: {}) at order {}", author.getName(), author.getId(), photoOrder);
+
+        return PhotoZipImportItemDto.builder()
+                .filename(filename)
+                .status("SUCCESS")
+                .entityType("author")
+                .entityName(author.getName())
+                .entityId(author.getId())
+                .photoId(photo.getId())
+                .build();
+    }
+
+    /**
+     * Import a photo for a loan (checkout card).
+     * Format: loan-{title}-{username}[-n].ext
+     */
+    private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
+                                                   byte[] imageBytes, String contentType) {
+        // Try to split title and username
+        // The format should be: title-username
+        int lastDash = combined.lastIndexOf('-');
+        if (lastDash <= 0) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType("loan")
+                    .entityName(combined)
+                    .errorMessage("Invalid loan filename format. Expected: loan-title-username[-n].ext")
+                    .build();
+        }
+
+        String titlePart = combined.substring(0, lastDash);
+        String usernamePart = combined.substring(lastDash + 1);
+
+        String searchTitle = unsanitizeName(titlePart);
+        String searchUsername = unsanitizeName(usernamePart);
+
+        // Find loans matching book title and username
+        List<Loan> loans = loanRepository.findAll().stream()
+                .filter(loan -> {
+                    if (loan.getBook() == null || loan.getUser() == null) return false;
+                    boolean titleMatches = loan.getBook().getTitle().toLowerCase()
+                            .contains(searchTitle.toLowerCase());
+                    boolean userMatches = loan.getUser().getUsername().toLowerCase()
+                            .contains(searchUsername.toLowerCase());
+                    return titleMatches && userMatches;
+                })
+                .toList();
+
+        if (loans.isEmpty()) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType("loan")
+                    .entityName(searchTitle + " by " + searchUsername)
+                    .errorMessage("No loan found for book '" + searchTitle + "' and user '" + searchUsername + "'")
+                    .build();
+        }
+
+        Loan loan = loans.get(0);
+        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+
+        log.info("Imported photo for loan {} (book: '{}', user: '{}')",
+                loan.getId(), loan.getBook().getTitle(), loan.getUser().getUsername());
+
+        return PhotoZipImportItemDto.builder()
+                .filename(filename)
+                .status("SUCCESS")
+                .entityType("loan")
+                .entityName(loan.getBook().getTitle() + " - " + loan.getUser().getUsername())
+                .entityId(loan.getId())
+                .photoId(photo.getId())
+                .build();
+    }
+
+    /**
+     * Find books by title using multiple matching strategies.
+     * Within each strategy, exact matches are preferred over substring matches.
+     * Tries: 1) substring match, 2) word-based match, 3) sanitized comparison
+     */
+    private List<Book> findBooksByTitle(String searchTitle, String sanitizedTitle, List<Book> allBooks) {
+        String searchLower = searchTitle.toLowerCase();
+
+        // Strategy 1: Direct substring match (works for simple cases)
+        List<Book> books = allBooks.stream()
+                .filter(b -> b.getTitle().toLowerCase().contains(searchLower))
+                .toList();
+
+        if (!books.isEmpty()) {
+            return preferExactMatch(books, searchLower);
+        }
+
+        // Strategy 2: Word-based match (handles cases where punctuation differs)
+        // Extract significant words (3+ chars) and require most to match
+        String[] searchWords = searchLower.split("\\s+");
+        List<String> significantWords = java.util.Arrays.stream(searchWords)
+                .filter(w -> w.length() >= 3)
+                .limit(5) // Use first 5 significant words
+                .toList();
+
+        if (!significantWords.isEmpty()) {
+            books = allBooks.stream()
+                    .filter(b -> {
+                        String titleLower = b.getTitle().toLowerCase();
+                        long matchCount = significantWords.stream()
+                                .filter(titleLower::contains)
+                                .count();
+                        return matchCount >= Math.ceil(significantWords.size() * 0.8);
+                    })
+                    .toList();
+
+            if (!books.isEmpty()) {
+                return preferExactMatch(books, searchLower);
+            }
+        }
+
+        // Strategy 3: Sanitized comparison (legacy format)
+        return allBooks.stream()
+                .filter(b -> sanitizeName(b.getTitle()).equalsIgnoreCase(sanitizedTitle))
+                .toList();
+    }
+
+    /**
+     * When multiple books match, prefer the one whose title length is closest
+     * to the search string. This handles the case where "Foo" and "Foo Bar"
+     * both match a search for "Foo" — we want the shorter (exact) match.
+     */
+    private List<Book> preferExactMatch(List<Book> candidates, String searchLower) {
+        if (candidates.size() <= 1) {
+            return candidates;
+        }
+
+        // Strip all non-alphanumeric to compare core content length
+        String searchNorm = searchLower.replaceAll("[^a-z0-9]", "");
+        int searchLen = searchNorm.length();
+
+        // Sort by how close the title length is to the search length (closest first)
+        List<Book> sorted = new java.util.ArrayList<>(candidates);
+        sorted.sort(java.util.Comparator.comparingInt(b -> {
+            String titleNorm = b.getTitle().toLowerCase().replaceAll("[^a-z0-9]", "");
+            return Math.abs(titleNorm.length() - searchLen);
+        }));
+
+        // Return only the best match (or ties)
+        int bestDiff = Math.abs(sorted.get(0).getTitle().toLowerCase()
+                .replaceAll("[^a-z0-9]", "").length() - searchLen);
+        return sorted.stream()
+                .filter(b -> Math.abs(b.getTitle().toLowerCase()
+                        .replaceAll("[^a-z0-9]", "").length() - searchLen) == bestDiff)
+                .toList();
+    }
+
+    /**
+     * Find authors by name using multiple matching strategies.
+     * Within each strategy, exact matches are preferred over substring matches.
+     */
+    private List<Author> findAuthorsByName(String searchName, String sanitizedName, List<Author> allAuthors) {
+        String searchLower = searchName.toLowerCase();
+
+        // Strategy 1: Direct substring match
+        List<Author> authors = allAuthors.stream()
+                .filter(a -> a.getName().toLowerCase().contains(searchLower))
+                .toList();
+
+        if (!authors.isEmpty()) {
+            if (authors.size() > 1) {
+                // Prefer closest length match
+                String searchNorm = searchLower.replaceAll("[^a-z0-9]", "");
+                int searchLen = searchNorm.length();
+                List<Author> sorted = new java.util.ArrayList<>(authors);
+                sorted.sort(java.util.Comparator.comparingInt(a -> {
+                    String nameNorm = a.getName().toLowerCase().replaceAll("[^a-z0-9]", "");
+                    return Math.abs(nameNorm.length() - searchLen);
+                }));
+                return List.of(sorted.get(0));
+            }
+            return authors;
+        }
+
+        // Strategy 2: Word-based match
+        String[] searchWords = searchLower.split("\\s+");
+        List<String> significantWords = java.util.Arrays.stream(searchWords)
+                .filter(w -> w.length() >= 3)
+                .limit(3)
+                .toList();
+
+        if (!significantWords.isEmpty()) {
+            authors = allAuthors.stream()
+                    .filter(a -> {
+                        String nameLower = a.getName().toLowerCase();
+                        long matchCount = significantWords.stream()
+                                .filter(nameLower::contains)
+                                .count();
+                        return matchCount >= Math.ceil(significantWords.size() * 0.8);
+                    })
+                    .toList();
+
+            if (!authors.isEmpty()) {
+                return authors;
+            }
+        }
+
+        // Strategy 3: Sanitized comparison (legacy format)
+        return allAuthors.stream()
+                .filter(a -> sanitizeName(a.getName()).equalsIgnoreCase(sanitizedName))
+                .toList();
+    }
+
+    /**
+     * Convert filename-safe name to search-friendly format.
+     * Handles both old format (lowercase-with-dashes) and new format (preserves original name).
+     *
+     * Old format: "the-adventures-of-tom-sawyer" -> "the adventures of tom sawyer"
+     * New format: "The Adventures of Tom Sawyer" -> "The Adventures of Tom Sawyer"
+     *
+     * For new format, dashes that replace invalid chars (like :) become spaces.
+     * For hyphens within words (like "Error-Correcting"), preserve them.
+     */
+    private String unsanitizeName(String sanitized) {
+        if (sanitized == null || sanitized.isEmpty()) {
+            return "";
+        }
+
+        // Check if this is the old format (all lowercase with dashes)
+        boolean isOldFormat = sanitized.equals(sanitized.toLowerCase()) &&
+                              sanitized.contains("-") &&
+                              !sanitized.contains(" ");
+
+        if (isOldFormat) {
+            // Old format: replace all dashes with spaces
+            return sanitized.replace("-", " ").trim();
+        } else {
+            // New format: only replace dashes that are surrounded by spaces or at edges
+            // These are likely replacements for invalid chars like ":"
+            // Preserve hyphens within words (e.g., "Error-Correcting")
+            return sanitized
+                    .replaceAll("(^-+|-+$)", "")           // Remove leading/trailing dashes
+                    .replaceAll("\\s+-\\s+", " ")          // " - " -> " "
+                    .replaceAll("\\s+-", " ")              // " -" -> " "
+                    .replaceAll("-\\s+", " ")              // "- " -> " "
+                    .trim();
+        }
+    }
+
+    /**
+     * Sanitize a name for use in filenames.
+     * Lowercase, replace spaces and special chars with dashes.
+     */
+    public static String sanitizeName(String name) {
+        if (name == null) return "";
+        return name.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", ""); // Remove leading/trailing dashes
+    }
+
+    /**
+     * Read all bytes from an input stream without closing it.
+     */
+    private byte[] readAllBytes(InputStream is) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = is.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, bytesRead);
+        }
+        return buffer.toByteArray();
+    }
+
+    /**
+     * Get content type from file extension.
+     */
+    private String getContentType(String extension) {
+        return switch (extension.toLowerCase()) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "webp" -> "image/webp";
+            default -> "application/octet-stream";
+        };
+    }
+}

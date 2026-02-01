@@ -308,9 +308,9 @@ public class BooksFromFeedService {
                 // Check if this photo already exists in the database by checksum
                 String checksum = computeChecksum(photoBytes);
                 if (checksum != null) {
-                    java.util.Optional<Photo> existingPhoto = photoRepository.findByImageChecksum(checksum);
-                    if (existingPhoto.isPresent()) {
-                        Photo existing = existingPhoto.get();
+                    java.util.List<Photo> existingPhotos = photoRepository.findAllByImageChecksumOrderByIdAsc(checksum);
+                    if (!existingPhotos.isEmpty()) {
+                        Photo existing = existingPhotos.get(0);
                         Long existingBookId = existing.getBook() != null ? existing.getBook().getId() : null;
                         String existingTitle = existing.getBook() != null ? existing.getBook().getTitle() : "Unknown";
                         String existingAuthor = existing.getBook() != null && existing.getBook().getAuthor() != null

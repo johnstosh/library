@@ -10,9 +10,14 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(indexes = {
-    @Index(name = "idx_book_title", columnList = "title")
-})
+@Table(
+    indexes = {
+        @Index(name = "idx_book_title", columnList = "title")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_book_title", columnNames = "title")
+    }
+)
 @Getter
 @Setter
 public class Book {
@@ -37,6 +42,13 @@ public class Book {
 
     private String grokipediaUrl;
 
+    /**
+     * Space-separated list of URLs where free online text can be found.
+     * Using @Lob with explicit LONGVARCHAR type for PostgreSQL compatibility.
+     * This avoids Hibernate 6's default OID handling for LOBs in PostgreSQL.
+     */
+    @Lob
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String freeTextUrl;
 
     private LocalDateTime dateAddedToLibrary;
@@ -49,6 +61,15 @@ public class Book {
     private String locNumber;
 
     private String statusReason;
+
+    /**
+     * List of tags for categorizing the book (e.g., fiction, fantasy, theology).
+     * Tags should be lowercase with only letters, numbers, and dashes.
+     */
+    @ElementCollection
+    @CollectionTable(name = "book_tags", joinColumns = @JoinColumn(name = "book_id"))
+    @Column(name = "tag")
+    private java.util.List<String> tagsList = new java.util.ArrayList<>();
 
     @ManyToOne
     private Author author;

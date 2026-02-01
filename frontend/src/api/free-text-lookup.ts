@@ -15,6 +15,24 @@ export interface FreeTextLookupResultDto {
 }
 
 /**
+ * Lookup free online text URL for a single book.
+ */
+export function useLookupSingleFreeText() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (bookId: number) =>
+      api.post<FreeTextLookupResultDto>(`/free-text/lookup/${bookId}`),
+    onSuccess: (_, bookId) => {
+      // Invalidate the specific book query
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+    },
+  })
+}
+
+/**
  * Lookup free online text URLs for multiple books with progress tracking.
  * Processes books sequentially to provide definite progress indicator.
  *

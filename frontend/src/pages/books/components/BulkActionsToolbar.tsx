@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
-import { useDeleteBooks, useBulkBookFromImage } from '@/api/books'
+import { useDeleteBooks, useBulkBookFromImage, useLookupGenres } from '@/api/books'
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
@@ -12,10 +12,12 @@ import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
+import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
-import type { BulkDeleteResultDto } from '@/types/dtos'
+import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
+import { PiTag } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -38,6 +40,10 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [showFreeTextResults, setShowFreeTextResults] = useState(false)
   const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
   const [freeTextProgress, setFreeTextProgress] = useState(0)
+  const [showGenreResults, setShowGenreResults] = useState(false)
+  const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
+  const [genreProgress, setGenreProgress] = useState(0)
+  const [isGenreLookupRunning, setIsGenreLookupRunning] = useState(false)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
@@ -46,6 +52,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     setFreeTextProgress(completed)
   })
   const bulkBookFromImage = useBulkBookFromImage()
+  const lookupGenres = useLookupGenres()
 
   const handleBulkDelete = async () => {
     try {
@@ -128,6 +135,30 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
+  const handleGenreLookup = async () => {
+    const ids = Array.from(selectedIds)
+    setGenreProgress(0)
+    setGenreResults([])
+    setShowGenreResults(true)
+    setIsGenreLookupRunning(true)
+    try {
+      for (let i = 0; i < ids.length; i++) {
+        try {
+          const result = await lookupGenres.mutateAsync(ids[i])
+          setGenreResults((prev) => [...prev, result])
+        } catch (error) {
+          setGenreResults((prev) => [
+            ...prev,
+            { bookId: ids[i], success: false, errorMessage: String(error) } as GenreLookupResultDto,
+          ])
+        }
+        setGenreProgress(i + 1)
+      }
+    } finally {
+      setIsGenreLookupRunning(false)
+    }
+  }
+
   if (selectedIds.size === 0) return null
 
   return (
@@ -206,6 +237,19 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               Book from Images
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenreLookup}
+              isLoading={isGenreLookupRunning}
+              disabled={isGenreLookupRunning}
+              leftIcon={<PiTag />}
+              data-test="bulk-lookup-genres"
+            >
+              {isGenreLookupRunning
+                ? `Genres... (${genreProgress}/${selectedIds.size})`
+                : 'Lookup Genres'}
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -253,6 +297,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showFreeTextResults}
         onClose={() => setShowFreeTextResults(false)}
         results={freeTextResults}
+      />
+
+      <GenreLookupResultsModal
+        isOpen={showGenreResults}
+        onClose={() => setShowGenreResults(false)}
+        results={genreResults}
       />
 
       <Modal

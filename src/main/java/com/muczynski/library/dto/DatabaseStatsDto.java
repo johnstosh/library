@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DatabaseStatsDto {
-    private Long libraryCount;
+    private Long branchCount;
     private Long bookCount;
     private Long authorCount;
     private Long userCount;

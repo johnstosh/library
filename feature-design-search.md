@@ -78,7 +78,7 @@ Returns paginated search results for books and authors.
 
 ### Search Strategy
 
-1. **Case-Insensitive Matching**: Uses SQL `ILIKE` (PostgreSQL) or case-insensitive matching (H2)
+1. **Case-Insensitive Matching**: Uses SQL `ILIKE` (PostgreSQL)
 2. **Partial Matching**: Searches for the query string anywhere within the field
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
 4. **Search Type Filtering**: Books can be filtered by availability type:

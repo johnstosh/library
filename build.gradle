@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.0.1'
+version = '2.1.0'
 
 java {
     sourceCompatibility = '17'
@@ -33,7 +33,6 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'com.h2database:h2' // for development with file-based H2
     implementation 'com.google.cloud.sql:postgres-socket-factory:1.13.+'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -41,6 +40,10 @@ dependencies {
     testImplementation 'com.microsoft.playwright:playwright:1.+'
     testImplementation 'io.rest-assured:rest-assured:5.+'
     testImplementation 'io.rest-assured:spring-mock-mvc:5.+'
+
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
 
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
@@ -70,6 +73,15 @@ tasks.named('test') {
 }
 
 test {
+    useJUnitPlatform {
+        // Exclude tests tagged with 'manual' by default
+        // These are long-running tests that should only be run explicitly
+        if (project.hasProperty('excludeTags')) {
+            excludeTags project.property('excludeTags').split(',')
+        }
+    }
+    // Increase heap for tests that handle large files (photo ZIP export/import)
+    maxHeapSize = '2g'
     testLogging {
         // Only show detailed output for failed tests
         events 'failed'
@@ -77,6 +89,6 @@ test {
         showCauses true
         showStackTraces true
         // Optionally include standard streams (e.g., System.out) for failed tests
-        showStandardStreams false
+        showStandardStreams true
     }
 }

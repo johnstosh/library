@@ -88,7 +88,7 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo photo = new Photo();
             photo.setBook(book);
             photo.setImage(imageBytes);
@@ -118,10 +118,12 @@ public class PhotoService {
     /**
      * Add checkout card photo to a loan using raw image bytes
      * Used by loan-by-photo feature to store the checkout card image
+     * Note: This version does NOT set the loan - caller must use associatePhotoWithLoan
      */
     @Transactional
     public PhotoDto addPhotoToLoan(Long loanId, byte[] imageBytes, String contentType) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Photo photo = new Photo();
             // Note: Loan will be set by the caller (LoanService) after loan creation
             photo.setImage(imageBytes);
@@ -135,6 +137,31 @@ public class PhotoService {
             return photoMapper.toDto(savedPhoto);
         } catch (Exception e) {
             logger.error("Failed to add checkout card photo: {}", e.getMessage(), e);
+            throw new LibraryException("Failed to store checkout card photo: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Add checkout card photo directly associated with an existing loan
+     * Used by zip import to attach photos to existing loans
+     */
+    @Transactional
+    public PhotoDto addPhotoToExistingLoan(com.muczynski.library.domain.Loan loan, byte[] imageBytes, String contentType) {
+        try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
+            Photo photo = new Photo();
+            photo.setLoan(loan);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("Checkout card photo");
+            photo.setPhotoOrder(0);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.info("Added checkout card photo to loan ID {} with checksum: {}", loan.getId(), savedPhoto.getImageChecksum());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add checkout card photo to loan ID {}: {}", loan.getId(), e.getMessage(), e);
             throw new LibraryException("Failed to store checkout card photo: " + e.getMessage(), e);
         }
     }
@@ -174,8 +201,14 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoFromBytes(Long bookId, byte[] imageBytes, String contentType, LocalDateTime dateTaken) {
         try {
-            Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new LibraryException("Book not found"));
+            imageBytes = correctImageOrientation(imageBytes, contentType);
+            if (!bookRepository.existsById(bookId)) {
+                throw new LibraryException("Book not found");
+            }
+            // Use getReference to avoid loading the full Book entity into the persistence context.
+            // This prevents Hibernate from dirty-checking the book and triggering @PreUpdate,
+            // which would change the book's lastModified/dateAddedToLibrary timestamps.
+            Book book = entityManager.getReference(Book.class, bookId);
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
             int maxOrder = existingPhotos.stream()
                     .mapToInt(Photo::getPhotoOrder)
@@ -211,6 +244,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoFromGooglePhotos(Long bookId, byte[] imageBytes, String contentType, String permanentId) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new LibraryException("Book not found"));
             List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
@@ -338,8 +372,31 @@ public class PhotoService {
             int newWidth = (int) Math.floor(width * cos + height * sin);
             int newHeight = (int) Math.floor(height * cos + width * sin);
 
-            BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
+            // Determine the appropriate BufferedImage type based on content type
+            // JPEG doesn't support alpha channel, so use TYPE_INT_RGB for JPEG
+            // Using originalImage.getType() can return 0 (TYPE_CUSTOM) which causes issues
+            String contentType = photo.getContentType() != null ? photo.getContentType().toLowerCase() : "";
+            int imageType;
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                imageType = BufferedImage.TYPE_INT_RGB;
+            } else {
+                imageType = BufferedImage.TYPE_INT_ARGB;
+            }
+
+            BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, imageType);
             Graphics2D g2d = rotatedImage.createGraphics();
+
+            // Set rendering hints for better quality
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Fill background with white for JPEG (since alpha not supported)
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                g2d.setColor(Color.WHITE);
+                g2d.fillRect(0, 0, newWidth, newHeight);
+            }
+
             AffineTransform at = new AffineTransform();
             at.setToRotation(radians, newWidth / 2.0, newHeight / 2.0);
             at.translate((newWidth - width) / 2.0, (newHeight - height) / 2.0);
@@ -349,11 +406,23 @@ public class PhotoService {
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             String formatName = photo.getContentType().substring(photo.getContentType().lastIndexOf("/") + 1);
-            ImageIO.write(rotatedImage, formatName, baos);
+
+            // Handle common format name variations
+            if (formatName.equalsIgnoreCase("jpeg")) {
+                formatName = "jpg";
+            }
+
+            boolean writeSuccess = ImageIO.write(rotatedImage, formatName, baos);
+            if (!writeSuccess) {
+                logger.error("ImageIO.write returned false for format {} during rotation", formatName);
+                throw new LibraryException("Failed to write rotated image - unsupported format: " + formatName);
+            }
+
             byte[] rotatedBytes = baos.toByteArray();
             photo.setImage(rotatedBytes);
             // Recalculate checksum after rotation since image bytes changed
             photo.setImageChecksum(computeChecksum(rotatedBytes));
+            logger.debug("Rotated image by {} degrees, new size: {} bytes", degrees, rotatedBytes.length);
         } catch (IOException e) {
             logger.error("IO error rotating image: {}", e.getMessage(), e);
             throw new LibraryException("Failed to rotate image", e);
@@ -371,7 +440,7 @@ public class PhotoService {
                     .max()
                     .orElse(-1);
 
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo photo = new Photo();
             photo.setAuthor(author);
             photo.setImage(imageBytes);
@@ -390,6 +459,43 @@ public class PhotoService {
     }
 
     /**
+     * Add photo to author using raw image bytes and content type
+     * Used by zip import for batch importing author photos
+     */
+    @Transactional
+    public PhotoDto addAuthorPhotoFromBytes(Long authorId, byte[] imageBytes, String contentType) {
+        try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
+            if (!authorRepository.existsById(authorId)) {
+                throw new LibraryException("Author not found");
+            }
+            // Use getReference to avoid loading the full Author entity into the persistence context.
+            // This prevents Hibernate from dirty-checking and triggering @PreUpdate.
+            Author author = entityManager.getReference(Author.class, authorId);
+            List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
+            int maxOrder = existingPhotos.stream()
+                    .mapToInt(Photo::getPhotoOrder)
+                    .max()
+                    .orElse(-1);
+
+            Photo photo = new Photo();
+            photo.setAuthor(author);
+            photo.setImage(imageBytes);
+            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setCaption("");
+            photo.setPhotoOrder(maxOrder + 1);
+            photo.setImageChecksum(computeChecksum(imageBytes));
+
+            Photo savedPhoto = photoRepository.save(photo);
+            logger.debug("Added photo to author ID {} with order {}", authorId, savedPhoto.getPhotoOrder());
+            return photoMapper.toDto(savedPhoto);
+        } catch (Exception e) {
+            logger.error("Failed to add photo from bytes to author ID {}: {}", authorId, e.getMessage(), e);
+            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Add photo to author from Google Photos with permanent ID
      * Used when importing photos directly from Google Photos Picker
      * The photo is marked as already exported since it comes from Google Photos
@@ -397,6 +503,7 @@ public class PhotoService {
     @Transactional
     public PhotoDto addAuthorPhotoFromGooglePhotos(Long authorId, byte[] imageBytes, String contentType, String permanentId) {
         try {
+            imageBytes = correctImageOrientation(imageBytes, contentType);
             Author author = authorRepository.findById(authorId)
                     .orElseThrow(() -> new LibraryException("Author not found"));
             List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
@@ -533,6 +640,14 @@ public class PhotoService {
         }
     }
 
+    /**
+     * Detach a photo entity from the persistence context to free memory.
+     * Used during bulk imports to prevent OutOfMemory errors.
+     */
+    public void detachPhoto(Long photoId) {
+        photoRepository.findById(photoId).ifPresent(entityManager::detach);
+    }
+
     private void reorderPhotos(List<Photo> photos) {
         try {
             for (int i = 0; i < photos.size(); i++) {
@@ -584,7 +699,11 @@ public class PhotoService {
     public byte[] getImage(Long photoId) {
         try {
             Photo photo = photoRepository.findById(photoId).orElse(null);
-            return photo != null ? photo.getImage() : null;
+            if (photo == null || photo.getImage() == null) {
+                return null;
+            }
+            // Correct EXIF orientation for existing photos that may not have been corrected at upload time
+            return correctImageOrientation(photo.getImage(), photo.getContentType());
         } catch (Exception e) {
             logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
@@ -641,7 +760,7 @@ public class PhotoService {
             photoRepository.saveAll(photosToShift);
 
             // Create a new photo with the edited image at the original's position
-            byte[] imageBytes = file.getBytes();
+            byte[] imageBytes = correctImageOrientation(file.getBytes(), file.getContentType());
             Photo newPhoto = new Photo();
             newPhoto.setBook(book);
             newPhoto.setAuthor(author);
@@ -660,6 +779,45 @@ public class PhotoService {
         } catch (Exception e) {
             logger.error("Failed to add edited photo for original ID {}: {}", photoId, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Correct image orientation based on EXIF data and return the corrected bytes.
+     * This should be called on all incoming images before storing them, so that
+     * thumbnails, full-size views, and exports all display correctly.
+     *
+     * @param imageBytes raw image bytes (may contain EXIF orientation)
+     * @param contentType the MIME type (e.g., "image/jpeg")
+     * @return corrected image bytes with orientation applied and EXIF stripped, or original if no correction needed
+     */
+    byte[] correctImageOrientation(byte[] imageBytes, String contentType) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return imageBytes;
+        }
+        try {
+            int orientation = getExifOrientation(imageBytes);
+            if (orientation == 1) {
+                return imageBytes; // No correction needed
+            }
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (image == null) {
+                return imageBytes; // Not a readable image format
+            }
+            BufferedImage corrected = applyExifOrientation(image, orientation);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String format = "jpg";
+            if (contentType != null) {
+                if (contentType.contains("png")) format = "png";
+                else if (contentType.contains("gif")) format = "gif";
+                else if (contentType.contains("webp")) format = "webp";
+            }
+            ImageIO.write(corrected, format, baos);
+            logger.debug("Corrected EXIF orientation {} for image ({} -> {} bytes)", orientation, imageBytes.length, baos.size());
+            return baos.toByteArray();
+        } catch (Exception e) {
+            logger.debug("Could not correct image orientation: {}", e.getMessage());
+            return imageBytes; // Return original on error
         }
     }
 

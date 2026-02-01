@@ -3,12 +3,14 @@
  */
 package com.muczynski.library.dto.importdtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.muczynski.library.domain.Photo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ImportPhotoDto {
     // SHA-256 checksum of image bytes for photo identification/matching
     private String imageChecksum;

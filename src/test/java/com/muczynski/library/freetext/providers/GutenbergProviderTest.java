@@ -4,9 +4,9 @@
 package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
@@ -21,12 +21,8 @@ class GutenbergProviderTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @InjectMocks
     private GutenbergProvider provider;
-
-    @BeforeEach
-    void setUp() {
-        provider = new GutenbergProvider(restTemplate);
-    }
 
     @Test
     void getProviderName_returnsCorrectName() {
@@ -62,6 +58,8 @@ class GutenbergProviderTest {
     @Test
     void search_constructsCorrectSearchUrl() {
         // Verify the search URL is correctly constructed
+        // Note: TitleMatcher.normalizeForSearch removes articles and short words,
+        // and author is reduced to last name only
         when(restTemplate.getForObject(
                 argThat((String url) -> url != null &&
                         url.contains("gutendex.com/books/") &&
@@ -72,10 +70,9 @@ class GutenbergProviderTest {
 
         verify(restTemplate).getForObject(
                 argThat((String url) -> url != null &&
-                        url.contains("Pride") &&
-                        url.contains("Prejudice") &&
-                        url.contains("Jane") &&
-                        url.contains("Austen")),
+                        url.contains("pride") &&      // normalized: lowercase
+                        url.contains("prejudice") &&  // normalized: "and" removed
+                        url.contains("Austen")),      // author last name only
                 any());
     }
 }

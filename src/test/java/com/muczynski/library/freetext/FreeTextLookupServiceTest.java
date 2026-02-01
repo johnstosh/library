@@ -209,6 +209,86 @@ class FreeTextLookupServiceTest {
         assertEquals("Provider2", names.get(1)); // Priority 20
     }
 
+    @Test
+    void lookupBook_acceptsUrlWhenDomainMatchesExpected() {
+        Book book = createBook(1L, "Test Book", "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.getExpectedDomains()).thenReturn(List.of("example.com"));
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://www.example.com/book"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://www.example.com/book", result.getFreeTextUrl());
+        assertEquals("Provider1", result.getProviderName());
+    }
+
+    @Test
+    void lookupBook_rejectsUrlWhenDomainDoesNotMatchExpected() {
+        Book book = createBook(1L, "Test Book", "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // Provider1 expects gutenberg.org but returns adobe.com
+        when(mockProvider1.getExpectedDomains()).thenReturn(List.of("gutenberg.org"));
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://adobe.com/bad-url"));
+        // Provider2 has no domain restrictions and succeeds
+        when(mockProvider2.getExpectedDomains()).thenReturn(List.of());
+        when(mockProvider2.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider2", "https://archive.org/book"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        // Should fall back to Provider2 since Provider1's URL didn't match expected domain
+        assertTrue(result.isSuccess());
+        assertEquals("https://archive.org/book", result.getFreeTextUrl());
+        assertEquals("Provider2", result.getProviderName());
+        assertEquals(2, result.getProvidersSearched().size());
+    }
+
+    @Test
+    void lookupBook_acceptsAnyUrlWhenNoExpectedDomains() {
+        Book book = createBook(1L, "Test Book", "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // Provider has no expected domains (empty list)
+        when(mockProvider1.getExpectedDomains()).thenReturn(List.of());
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://random-site.com/book"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://random-site.com/book", result.getFreeTextUrl());
+    }
+
+    @Test
+    void lookupBook_failsWhenAllProvidersReturnInvalidDomains() {
+        // Use UUID to ensure this title is never in the global cache
+        String uniqueTitle = "Domain Validation Test " + java.util.UUID.randomUUID();
+        Book book = createBook(1L, uniqueTitle, "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // Both providers return URLs with wrong domains
+        when(mockProvider1.getExpectedDomains()).thenReturn(List.of("gutenberg.org"));
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://adobe.com/bad"));
+        when(mockProvider2.getExpectedDomains()).thenReturn(List.of("archive.org"));
+        when(mockProvider2.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider2", "https://malicious.com/bad"));
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not found in any provider", result.getErrorMessage());
+        verify(bookRepository, never()).save(any());
+    }
+
     private Book createBook(Long id, String title, String authorName) {
         Book book = new Book();
         book.setId(id);

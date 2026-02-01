@@ -48,7 +48,17 @@ public class GoogleOAuthController {
     @Autowired
     private GlobalSettingsService globalSettingsService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    {
+        // Configure RestTemplate with 60-second timeouts
+        restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(60000); // 60 seconds
+        factory.setReadTimeout(60000); // 60 seconds
+        restTemplate.setRequestFactory(factory);
+    }
 
     // Store state tokens temporarily (in production, use Redis or similar)
     // Maps state token to "username:origin"

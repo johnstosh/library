@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import type { FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { PiCheckCircle, PiXCircle, PiCaretDown, PiCaretRight } from 'react-icons/pi'
 import { useState } from 'react'
+import { parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 
 interface FreeTextLookupResultsModalProps {
   isOpen: boolean
@@ -127,15 +128,20 @@ export function FreeTextLookupResultsModal({
                     </td>
                     <td className="px-4 py-3 overflow-hidden text-sm">
                       {result.success && result.freeTextUrl ? (
-                        <a
-                          href={result.freeTextUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate block"
-                          title={result.freeTextUrl}
-                        >
-                          {result.freeTextUrl}
-                        </a>
+                        <div className="flex flex-wrap gap-2">
+                          {parseSpaceSeparatedUrls(result.freeTextUrl).map((url, idx) => (
+                            <a
+                              key={idx}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                              title={url}
+                            >
+                              {extractDomain(url)}
+                            </a>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-gray-600">{result.errorMessage || '—'}</span>
                       )}

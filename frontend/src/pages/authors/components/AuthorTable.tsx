@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -118,6 +119,15 @@ export function AuthorTable({
                 <span className="text-lg font-bold">Ø</span>
               </a>
             )}
+            <Link
+              to={`/authors/${author.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-teal-600 hover:text-teal-900"
+              data-test={`see-books-${author.id}`}
+              title="See Books"
+            >
+              <span className="text-lg">📚</span>
+            </Link>
             <button
               onClick={(e) => {
                 e.stopPropagation()

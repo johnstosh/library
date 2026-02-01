@@ -68,7 +68,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     long countByBookIdAndReturnDateIsNull(Long bookId);
     long countByUserIdAndReturnDateIsNull(Long userId);
     void deleteByUserId(Long userId);
+    /** @deprecated Use findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc() instead to handle duplicates safely. */
+    @Deprecated
     Optional<Loan> findByBookIdAndUserIdAndLoanDate(Long bookId, Long userId, LocalDate loanDate);
+    List<Loan> findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(Long bookId, Long userId, LocalDate loanDate);
     long countByReturnDateIsNull();
     long countByBookLibraryIdAndReturnDateIsNull(Long libraryId);
 

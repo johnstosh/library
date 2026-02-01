@@ -129,21 +129,86 @@ class SearchServiceTest {
     }
 
     @Test
-    void searchWithEmptyQueryThrowsException() {
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search("", 0, 20, "IN_LIBRARY"));
+    void searchWithEmptyQueryReturnsAllBooks() {
+        // Arrange
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        List<Book> bookList = Arrays.asList(book);
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Test Author");
+        List<Author> authorList = Arrays.asList(author);
+        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 1);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Test Book");
+
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setId(1L);
+        authorDto.setName("Test Author");
+
+        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+        when(authorMapper.toDto(author)).thenReturn(authorDto);
+
+        // Act
+        SearchResponseDto result = searchService.search("", page, size, "IN_LIBRARY");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals(1, result.getAuthors().size());
     }
 
     @Test
-    void searchWithNullQueryThrowsException() {
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search(null, 0, 20, "IN_LIBRARY"));
+    void searchWithNullQueryReturnsAllBooks() {
+        // Arrange
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Book> bookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+
+        // Act
+        SearchResponseDto result = searchService.search(null, page, size, "IN_LIBRARY");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(0, result.getBooks().size());
+        assertEquals(0, result.getAuthors().size());
     }
 
     @Test
-    void searchWithWhitespaceQueryThrowsException() {
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> searchService.search("   ", 0, 20, "IN_LIBRARY"));
+    void searchWithWhitespaceQueryReturnsAllBooks() {
+        // Arrange
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Book> bookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
+        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+
+        // Act
+        SearchResponseDto result = searchService.search("   ", page, size, "IN_LIBRARY");
+
+        // Assert
+        assertNotNull(result);
     }
 
     @Test

@@ -29,4 +29,8 @@ src/main/resources/static/
 # Book lookup statistics output
 book-lookup/
 book-lookup-statistics.json
-branch-archive.json
+book-lookup-progress.log
+book-lookup-reference-backup/
+*.zip
+*.json
+

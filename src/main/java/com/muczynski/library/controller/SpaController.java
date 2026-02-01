@@ -30,6 +30,8 @@ public class SpaController {
             "/authors/**",
             "/libraries",
             "/libraries/**",
+            "/branches",
+            "/branches/**",
             "/data-management",
             "/loans",
             "/loans/**",
@@ -51,7 +53,9 @@ public class SpaController {
             "/test-data",
             "/test-data/**",
             "/login",
-            "/apply"
+            "/apply",
+            "/photos",
+            "/photos/**"
     })
     public String forward() {
         return "forward:/index.html";

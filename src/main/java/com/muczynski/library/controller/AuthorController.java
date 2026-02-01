@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
@@ -69,12 +70,36 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/summaries")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<AuthorSummaryDto>> getAllAuthorSummaries() {
+        try {
+            List<AuthorSummaryDto> summaries = authorService.getAllAuthorSummaries();
+            return ResponseEntity.ok(summaries);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve author summaries: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/by-ids")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<AuthorDto>> getAuthorsByIds(@RequestBody List<Long> ids) {
+        try {
+            List<AuthorDto> authors = authorService.getAuthorsByIds(ids);
+            return ResponseEntity.ok(authors);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve authors by IDs {}: {}", ids, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/without-description")
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithoutDescription() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithoutDescription();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithoutDescription();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors without description: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -85,8 +110,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithZeroBooks() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithZeroBooks();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithZeroBooks();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors with zero books: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -97,8 +122,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsFromMostRecentDay() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsFromMostRecentDay();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesFromMostRecentDay();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors from most recent day: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -109,8 +134,8 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAuthorsWithoutGrokipedia() {
         try {
-            List<AuthorDto> authors = authorService.getAuthorsWithoutGrokipedia();
-            return ResponseEntity.ok(authors);
+            List<AuthorSummaryDto> summaries = authorService.getSummariesWithoutGrokipedia();
+            return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors without grokipedia: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

@@ -8,6 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@Table(uniqueConstraints = {
+    @UniqueConstraint(name = "uk_library_branch_name", columnNames = "name")
+})
 @Getter
 @Setter
 public class Library {

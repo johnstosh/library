@@ -19,6 +19,7 @@ import java.util.Collections;
 public class AppConfig {
 
     @Bean
+    @Primary
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -27,6 +28,28 @@ public class AppConfig {
         restTemplate.setRequestFactory(factory);
 
         // Add User-Agent header for all requests to comply with sites like Wikimedia
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+
+        return restTemplate;
+    }
+
+    /**
+     * RestTemplate for free text providers with shorter timeouts.
+     * Uses 10-second read timeout to fail fast on slow/unresponsive sites.
+     */
+    @Bean("providerRestTemplate")
+    public RestTemplate providerRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000); // 10 seconds
+        factory.setReadTimeout(10000); // 10 seconds
+        restTemplate.setRequestFactory(factory);
+
+        // Add User-Agent header for all requests
         ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
             request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
             return execution.execute(request, body);

@@ -5,8 +5,14 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.ErrorResponse;
+import com.muczynski.library.dto.PhotoZipImportResultDto;
+import com.muczynski.library.dto.ResumeInfoDto;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.dto.ChunkUploadResultDto;
+import com.muczynski.library.service.PhotoChunkedImportService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.service.PhotoZipImportService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +32,12 @@ public class PhotoController {
 
     @Autowired
     private PhotoService photoService;
+
+    @Autowired
+    private PhotoZipImportService photoZipImportService;
+
+    @Autowired
+    private PhotoChunkedImportService photoChunkedImportService;
 
     @PreAuthorize("permitAll()")
     @GetMapping("/{id}/image")
@@ -79,6 +91,11 @@ public class PhotoController {
                 logger.warn("Photo not found for thumbnail request: ID {}", id);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ErrorResponse("Not Found", "Photo not found"));
+            }
+            if (e.getMessage() != null && e.getMessage().contains("Photo has no image data")) {
+                logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Internal Server Error", e.getMessage()));
             }
             logger.error("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -157,5 +174,144 @@ public class PhotoController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", e.getMessage()));
         }
+    }
+
+    /**
+     * Import photos from a ZIP file (small files, < 500MB).
+     * Filename format determines which entity the photo is associated with:
+     * - book-{title}[-{n}].{ext} - Associates photo with a book by title
+     * - author-{name}[-{n}].{ext} - Associates photo with an author by name
+     * - loan-{title}-{username}[-{n}].{ext} - Associates photo with a loan
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping("/import-zip")
+    public ResponseEntity<?> importFromZip(@RequestParam("file") MultipartFile file) {
+        try {
+            logger.info("ZIP import request received: {}", file.getOriginalFilename());
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("Bad Request", "File is empty"));
+            }
+
+            String filename = file.getOriginalFilename();
+            if (filename == null || !filename.toLowerCase().endsWith(".zip")) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("Bad Request", "File must be a ZIP archive"));
+            }
+
+            PhotoZipImportResultDto result = photoZipImportService.importFromZip(file);
+
+            logger.info("ZIP import completed: {} total, {} success, {} failed, {} skipped",
+                    result.getTotalFiles(), result.getSuccessCount(),
+                    result.getFailureCount(), result.getSkippedCount());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import photos from ZIP: {}", e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos from ZIP: " + detail));
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file using streaming (for large files).
+     * This endpoint processes the ZIP as it streams in, without buffering the entire file.
+     * Supports files of any size (tested with 6GB+).
+     *
+     * Usage: POST /api/photos/import-zip-stream with raw ZIP bytes in request body
+     * Content-Type: application/zip or application/octet-stream
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping(value = "/import-zip-stream", consumes = {"application/zip", "application/octet-stream"})
+    public ResponseEntity<?> importFromZipStream(HttpServletRequest request) {
+        try {
+            logger.info("Streaming ZIP import request received");
+
+            PhotoZipImportResultDto result = photoZipImportService.importFromZipStream(request.getInputStream());
+
+            logger.info("Streaming ZIP import completed: {} total, {} success, {} failed, {} skipped",
+                    result.getTotalFiles(), result.getSuccessCount(),
+                    result.getFailureCount(), result.getSkippedCount());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import photos from ZIP stream: {}", e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to import photos from ZIP: " + detail));
+        }
+    }
+
+    /**
+     * Import photos from a ZIP file using chunked upload.
+     * Each chunk is a raw byte slice of the ZIP file, sent sequentially.
+     * Headers provide chunk metadata; body is raw octet-stream bytes.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PutMapping(value = "/import-zip-chunk", consumes = "application/octet-stream")
+    public ResponseEntity<?> importFromZipChunk(
+            @RequestHeader("X-Upload-Id") String uploadId,
+            @RequestHeader("X-Chunk-Index") int chunkIndex,
+            @RequestHeader("X-Is-Last-Chunk") boolean isLastChunk,
+            @RequestHeader(value = "X-Resume-From-Processed", required = false, defaultValue = "-1") int resumeFromProcessed,
+            @RequestHeader(value = "X-Bytes-To-Skip", required = false, defaultValue = "0") long bytesToSkip,
+            HttpServletRequest request) {
+        try {
+            logger.info("Chunk upload received: uploadId={}, chunk={}, isLast={}, resume={}",
+                    uploadId, chunkIndex, isLastChunk, resumeFromProcessed >= 0);
+
+            byte[] chunkBytes = request.getInputStream().readAllBytes();
+
+            ChunkUploadResultDto result = photoChunkedImportService.processChunk(
+                    uploadId, chunkIndex, isLastChunk, chunkBytes, resumeFromProcessed, bytesToSkip);
+
+            logger.info("Chunk {} processed: {} items so far, complete={}",
+                    chunkIndex, result.getTotalProcessedSoFar(), result.isComplete());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to process chunk {} for upload {}: {}", chunkIndex, uploadId, e.getMessage(), e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", "Failed to process chunk: " + detail));
+        }
+    }
+
+    /**
+     * Get resume info for a chunked upload that was interrupted (e.g., by a Cloud Run reboot).
+     * Returns the chunk index and byte offset to resume from.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @GetMapping("/import-zip-chunk-resume/{uploadId}")
+    public ResponseEntity<?> getResumeInfo(@PathVariable String uploadId) {
+        try {
+            ResumeInfoDto resumeInfo = photoChunkedImportService.getResumeInfo(uploadId);
+            if (resumeInfo == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("Not Found", "No resumable session found for upload ID: " + uploadId));
+            }
+            logger.info("Resume info for upload {}: chunk={}, bytesToSkip={}, processed={}",
+                    uploadId, resumeInfo.getResumeFromChunkIndex(), resumeInfo.getBytesToSkipInChunk(),
+                    resumeInfo.getTotalProcessed());
+            return ResponseEntity.ok(resumeInfo);
+        } catch (Exception e) {
+            logger.error("Failed to get resume info for upload {}: {}", uploadId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove a completed or failed chunked upload session.
+     * Called by the frontend after it has read the final stats.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @DeleteMapping("/import-zip-chunk/{uploadId}")
+    public ResponseEntity<?> removeChunkedUpload(@PathVariable String uploadId) {
+        logger.info("Remove upload request: uploadId={}", uploadId);
+        photoChunkedImportService.removeUpload(uploadId);
+        return ResponseEntity.noContent().build();
     }
 }
