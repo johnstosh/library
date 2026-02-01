@@ -32,9 +32,12 @@ public class ImportController {
     public ResponseEntity<ImportResponseDto> importJson(@RequestBody ImportRequestDto dto) {
         logger.info("Import request received");
         try {
-            ImportResponseDto.ImportCounts counts = importService.importData(dto);
-            logger.info("Import completed successfully");
-            return ResponseEntity.ok(ImportResponseDto.success("Import completed successfully", counts));
+            ImportResponseDto.ImportResult result = importService.importData(dto);
+            String message = result.hasErrors()
+                    ? "Import completed with " + result.getErrors().size() + " error(s)"
+                    : "Import completed successfully";
+            logger.info("Import completed. Errors: {}", result.hasErrors() ? result.getErrors().size() : 0);
+            return ResponseEntity.ok(ImportResponseDto.success(message, result.getCounts(), result.getErrors()));
         } catch (Exception e) {
             logger.error("Import failed: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(ImportResponseDto.error("Import failed: " + e.getMessage()));

@@ -10,6 +10,13 @@ export interface ImportExportStats {
   loans: number
 }
 
+// Import error for per-entity error reporting
+export interface ImportErrorDto {
+  entityType: string
+  entityName: string
+  errorMessage: string
+}
+
 // Import response from backend
 export interface ImportResponseDto {
   success: boolean
@@ -22,6 +29,7 @@ export interface ImportResponseDto {
     loans: number
     photos: number
   }
+  errors?: ImportErrorDto[]
 }
 
 // Database statistics from the backend (total counts from database)

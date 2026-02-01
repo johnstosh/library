@@ -59,7 +59,8 @@ class ImportControllerTest {
         importDto.setBranches(List.of());
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
+        ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 
         // Act & Assert
         given()
@@ -124,7 +125,8 @@ class ImportControllerTest {
         importDto.setBranches(List.of());
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(counts);
+        ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
+        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 
         // Act & Assert - Should still succeed with empty data
         given()

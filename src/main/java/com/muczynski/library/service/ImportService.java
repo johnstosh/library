@@ -46,7 +46,7 @@ public class ImportService {
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public ImportResponseDto.ImportCounts importData(ImportRequestDto dto) {
+    public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
         logger.info("Starting import. Libraries: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
             dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
@@ -525,7 +525,9 @@ public class ImportService {
         logger.info("Import completed successfully. Total: {} libraries, {} authors, {} users, {} books, {} loans, {} photos",
             libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
 
-        return new ImportResponseDto.ImportCounts(libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(
+                libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        return new ImportResponseDto.ImportResult(counts);
     }
 
     public ImportRequestDto exportData() {
