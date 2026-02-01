@@ -27,7 +27,7 @@ public class ImportResponseDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class ImportCounts {
-        private int libraries;
+        private int branches;
         private int authors;
         private int users;
         private int books;

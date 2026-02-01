@@ -326,7 +326,7 @@ class ImportControllerIntegrationTest {
         mockMvc.perform(get("/api/import/stats"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.libraryCount", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.branchCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.bookCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.authorCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.userCount", greaterThanOrEqualTo(1)))

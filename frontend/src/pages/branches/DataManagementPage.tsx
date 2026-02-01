@@ -151,9 +151,9 @@ export function DataManagementPage() {
         {/* Database Statistics */}
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <div className="grid grid-cols-5 gap-4 text-center">
-            <div data-test="stat-libraries">
-              <div className="text-2xl font-bold text-gray-900">{dbStats?.libraryCount ?? 0}</div>
-              <div className="text-sm text-gray-600">Libraries</div>
+            <div data-test="stat-branches">
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.branchCount ?? 0}</div>
+              <div className="text-sm text-gray-600">Branches</div>
             </div>
             <div data-test="stat-books">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.bookCount ?? 0}</div>

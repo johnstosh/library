@@ -55,7 +55,7 @@ public class ImportService {
             dto.getLoans() != null ? dto.getLoans().size() : 0,
             dto.getPhotos() != null ? dto.getPhotos().size() : 0);
 
-        int libraryCount = 0;
+        int branchCount = 0;
         int authorCount = 0;
         int userCount = 0;
         int bookCount = 0;
@@ -104,10 +104,10 @@ public class ImportService {
                 }
                 lib = branchRepository.save(lib);
                 libMap.put(lDto.getBranchName(), lib);
-                libraryCount++;
+                branchCount++;
             }
         }
-        logger.info("Imported {} libraries", libraryCount);
+        logger.info("Imported {} branches", branchCount);
 
         Map<String, Author> authMap = new HashMap<>();
         if (dto.getAuthors() != null) {
@@ -522,11 +522,11 @@ public class ImportService {
         }
         logger.info("Imported {} photos", photoCount);
 
-        logger.info("Import completed successfully. Total: {} libraries, {} authors, {} users, {} books, {} loans, {} photos",
-            libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos",
+            branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(
-                libraryCount, authorCount, userCount, bookCount, loanCount, photoCount);
+                branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
         return new ImportResponseDto.ImportResult(counts);
     }
 

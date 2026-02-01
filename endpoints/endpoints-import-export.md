@@ -8,7 +8,7 @@ Exports database to JSON format for backup/migration.
 **Authentication:** Librarian only
 
 **Response:** ImportRequestDto containing:
-- Libraries
+- Branches
 - Authors
 - Users (including hashed passwords)
 - Books
@@ -43,7 +43,7 @@ Returns database statistics with total counts for each entity type.
 **Authentication:** Librarian only
 
 **Response:** DatabaseStatsDto containing:
-- `libraryCount` - Total number of libraries
+- `branchCount` - Total number of branches
 - `bookCount` - Total number of books
 - `authorCount` - Total number of authors
 - `userCount` - Total number of users
@@ -52,7 +52,7 @@ Returns database statistics with total counts for each entity type.
 **Example Response:**
 ```json
 {
-  "libraryCount": 5,
+  "branchCount": 5,
   "bookCount": 300,
   "authorCount": 150,
   "userCount": 25,

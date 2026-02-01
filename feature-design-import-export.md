@@ -13,7 +13,7 @@ The application supports importing and exporting library data for backup, migrat
 
 ### What's Included
 The JSON export includes:
-- Libraries
+- Branches
 - Authors
 - Users (including hashed passwords)
 - Books
@@ -42,7 +42,7 @@ Photo metadata is now included in JSON export for complete backup:
 
 ### Database Statistics Display
 The Data Management page displays real-time database statistics showing:
-- **Libraries** - Total number of library branches
+- **Branches** - Total number of library branches
 - **Books** - Total number of books in the catalog
 - **Authors** - Total number of authors
 - **Users** - Total number of user accounts
@@ -53,7 +53,7 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
 **API Response (DatabaseStatsDto)**:
 ```json
 {
-  "libraryCount": 5,
+  "branchCount": 5,
   "bookCount": 300,
   "authorCount": 150,
   "userCount": 25,
@@ -137,7 +137,7 @@ The export format changed to use lightweight references instead of embedded obje
   - For loans: Checks reference fields first (`bookTitle`, `username`), falls back to embedded objects
   - For photos: Matches by `imageChecksum` (SHA-256) first, then `permanentId`, then book/author + photoOrder
 - Matches entities by natural keys:
-  - Libraries: by name
+  - Branches: by name
   - Authors: by name
   - Books: by title + author name
   - Users: by username
