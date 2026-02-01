@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.ErrorResponse;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
+import com.muczynski.library.dto.ResumeInfoDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.dto.ChunkUploadResultDto;
 import com.muczynski.library.service.PhotoChunkedImportService;
@@ -254,15 +255,17 @@ public class PhotoController {
             @RequestHeader("X-Upload-Id") String uploadId,
             @RequestHeader("X-Chunk-Index") int chunkIndex,
             @RequestHeader("X-Is-Last-Chunk") boolean isLastChunk,
+            @RequestHeader(value = "X-Resume-From-Processed", required = false, defaultValue = "-1") int resumeFromProcessed,
+            @RequestHeader(value = "X-Bytes-To-Skip", required = false, defaultValue = "0") long bytesToSkip,
             HttpServletRequest request) {
         try {
-            logger.info("Chunk upload received: uploadId={}, chunk={}, isLast={}",
-                    uploadId, chunkIndex, isLastChunk);
+            logger.info("Chunk upload received: uploadId={}, chunk={}, isLast={}, resume={}",
+                    uploadId, chunkIndex, isLastChunk, resumeFromProcessed >= 0);
 
             byte[] chunkBytes = request.getInputStream().readAllBytes();
 
             ChunkUploadResultDto result = photoChunkedImportService.processChunk(
-                    uploadId, chunkIndex, isLastChunk, chunkBytes);
+                    uploadId, chunkIndex, isLastChunk, chunkBytes, resumeFromProcessed, bytesToSkip);
 
             logger.info("Chunk {} processed: {} items so far, complete={}",
                     chunkIndex, result.getTotalProcessedSoFar(), result.isComplete());
@@ -273,6 +276,30 @@ public class PhotoController {
             String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", "Failed to process chunk: " + detail));
+        }
+    }
+
+    /**
+     * Get resume info for a chunked upload that was interrupted (e.g., by a Cloud Run reboot).
+     * Returns the chunk index and byte offset to resume from.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @GetMapping("/import-zip-chunk-resume/{uploadId}")
+    public ResponseEntity<?> getResumeInfo(@PathVariable String uploadId) {
+        try {
+            ResumeInfoDto resumeInfo = photoChunkedImportService.getResumeInfo(uploadId);
+            if (resumeInfo == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("Not Found", "No resumable session found for upload ID: " + uploadId));
+            }
+            logger.info("Resume info for upload {}: chunk={}, bytesToSkip={}, processed={}",
+                    uploadId, resumeInfo.getResumeFromChunkIndex(), resumeInfo.getBytesToSkipInChunk(),
+                    resumeInfo.getTotalProcessed());
+            return ResponseEntity.ok(resumeInfo);
+        } catch (Exception e) {
+            logger.error("Failed to get resume info for upload {}: {}", uploadId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", e.getMessage()));
         }
     }
 

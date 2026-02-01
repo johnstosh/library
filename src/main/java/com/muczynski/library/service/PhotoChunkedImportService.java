@@ -5,22 +5,25 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PhotoUploadSession;
 import com.muczynski.library.dto.ChunkUploadResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
+import com.muczynski.library.dto.ResumeInfoDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.PhotoUploadSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,9 +36,12 @@ import java.util.zip.ZipInputStream;
 @Slf4j
 public class PhotoChunkedImportService {
 
+    static final long CHUNK_SIZE = 10L * 1024 * 1024; // 10MB - must match frontend
+
     private final PhotoZipImportService photoZipImportService;
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
+    private final PhotoUploadSessionRepository uploadSessionRepository;
 
     private final ConcurrentHashMap<String, ChunkedUploadState> activeUploads = new ConcurrentHashMap<>();
 
@@ -51,6 +57,10 @@ public class PhotoChunkedImportService {
         final List<PhotoZipImportItemDto> allItems = new ArrayList<>();
         volatile Instant lastActivityAt = Instant.now();
         volatile Exception backgroundError;
+        /** Bytes consumed by ZipInputStream through the last completed entry */
+        volatile long totalBytesConsumed;
+        /** Last chunk index that was successfully received */
+        volatile int lastChunkIndex;
 
         ChunkedUploadState(PipedOutputStream pipedOut, PipedInputStream pipedIn,
                            Thread backgroundThread, BlockingQueue<PhotoZipImportItemDto> resultsQueue) {
@@ -63,10 +73,17 @@ public class PhotoChunkedImportService {
 
     public ChunkUploadResultDto processChunk(String uploadId, int chunkIndex,
                                               boolean isLastChunk, byte[] chunkBytes) throws IOException {
-        ChunkedUploadState state;
+        return processChunk(uploadId, chunkIndex, isLastChunk, chunkBytes, -1, 0);
+    }
 
-        if (chunkIndex == 0) {
-            // First chunk: create pipe pair and start background thread
+    public ChunkUploadResultDto processChunk(String uploadId, int chunkIndex,
+                                              boolean isLastChunk, byte[] chunkBytes,
+                                              int resumeFromProcessed, long bytesToSkip) throws IOException {
+        ChunkedUploadState state;
+        boolean isResume = resumeFromProcessed >= 0;
+
+        if (chunkIndex == 0 || isResume) {
+            // First chunk (or first chunk of a resume): create pipe pair and start background thread
             PipedOutputStream pipedOut = new PipedOutputStream();
             PipedInputStream pipedIn = new PipedInputStream(pipedOut, 1024 * 1024); // 1MB buffer
             BlockingQueue<PhotoZipImportItemDto> resultsQueue = new LinkedBlockingQueue<>();
@@ -75,10 +92,12 @@ public class PhotoChunkedImportService {
             List<Book> allBooks = bookRepository.findAll();
             List<Author> allAuthors = authorRepository.findAll();
 
+            int entriesToSkip = isResume ? resumeFromProcessed : 0;
+
             Thread bgThread = new Thread(() -> {
                 ChunkedUploadState s = activeUploads.get(uploadId);
                 try {
-                    processZipStream(pipedIn, allBooks, allAuthors, s);
+                    processZipStream(pipedIn, allBooks, allAuthors, s, uploadId, entriesToSkip);
                 } catch (Exception e) {
                     if (s != null) {
                         s.backgroundError = e;
@@ -94,8 +113,30 @@ public class PhotoChunkedImportService {
             bgThread.setDaemon(true);
 
             state = new ChunkedUploadState(pipedOut, pipedIn, bgThread, resultsQueue);
+
+            if (isResume) {
+                // Restore counters from the DB session
+                state.successCount.set(getResumeCountFromDb(uploadId, "success"));
+                state.failureCount.set(getResumeCountFromDb(uploadId, "failure"));
+                state.skippedCount.set(getResumeCountFromDb(uploadId, "skipped"));
+                state.totalProcessed.set(resumeFromProcessed);
+            }
+
             activeUploads.put(uploadId, state);
             bgThread.start();
+
+            // If resuming, skip leading bytes of first chunk before piping
+            if (isResume && bytesToSkip > 0) {
+                if (bytesToSkip < chunkBytes.length) {
+                    byte[] trimmed = new byte[chunkBytes.length - (int) bytesToSkip];
+                    System.arraycopy(chunkBytes, (int) bytesToSkip, trimmed, 0, trimmed.length);
+                    chunkBytes = trimmed;
+                } else {
+                    // Entire first chunk is within already-consumed bytes; skip it
+                    chunkBytes = new byte[0];
+                }
+                log.info("Resume: skipped {} bytes from first chunk for upload {}", bytesToSkip, uploadId);
+            }
         } else {
             state = activeUploads.get(uploadId);
             if (state == null) {
@@ -114,6 +155,7 @@ public class PhotoChunkedImportService {
         }
 
         state.lastActivityAt = Instant.now();
+        state.lastChunkIndex = chunkIndex;
 
         String errorMessage = null;
 
@@ -123,8 +165,8 @@ public class PhotoChunkedImportService {
             log.warn("Background error detected for upload {}: {}", uploadId, errorMessage);
         }
 
-        // Write chunk bytes to pipe (only if no background error)
-        if (errorMessage == null) {
+        // Write chunk bytes to pipe (only if no background error and bytes to write)
+        if (errorMessage == null && chunkBytes.length > 0) {
             try {
                 state.pipedOut.write(chunkBytes);
                 state.pipedOut.flush();
@@ -159,6 +201,9 @@ public class PhotoChunkedImportService {
             if (errorMessage == null && state.backgroundError != null) {
                 errorMessage = "Background processing failed: " + state.backgroundError.getMessage();
             }
+
+            // Mark DB session as complete
+            markSessionComplete(uploadId);
         }
 
         boolean isComplete = isLastChunk || errorMessage != null;
@@ -210,6 +255,28 @@ public class PhotoChunkedImportService {
         return builder.build();
     }
 
+    public ResumeInfoDto getResumeInfo(String uploadId) {
+        Optional<PhotoUploadSession> session = uploadSessionRepository.findByUploadId(uploadId);
+        if (session.isEmpty()) {
+            return null;
+        }
+        PhotoUploadSession s = session.get();
+        if (s.isComplete()) {
+            return null;
+        }
+        int resumeChunk = (int) (s.getTotalBytesConsumed() / CHUNK_SIZE);
+        long bytesToSkip = s.getTotalBytesConsumed() % CHUNK_SIZE;
+        return ResumeInfoDto.builder()
+                .uploadId(uploadId)
+                .resumeFromChunkIndex(resumeChunk)
+                .bytesToSkipInChunk(bytesToSkip)
+                .totalProcessed(s.getTotalProcessed())
+                .successCount(s.getSuccessCount())
+                .failureCount(s.getFailureCount())
+                .skippedCount(s.getSkippedCount())
+                .build();
+    }
+
     public boolean removeUpload(String uploadId) {
         ChunkedUploadState removed = activeUploads.remove(uploadId);
         if (removed != null) {
@@ -220,10 +287,11 @@ public class PhotoChunkedImportService {
     }
 
     private void processZipStream(PipedInputStream pipedIn, List<Book> allBooks, List<Author> allAuthors,
-                                   ChunkedUploadState state) throws IOException {
+                                   ChunkedUploadState state, String uploadId, int entriesToSkip) throws IOException {
         int entryCount = 0;
+        CountingInputStream countingIn = new CountingInputStream(pipedIn);
 
-        try (ZipInputStream zis = new ZipInputStream(pipedIn)) {
+        try (ZipInputStream zis = new ZipInputStream(countingIn)) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.isDirectory()) {
@@ -239,10 +307,21 @@ public class PhotoChunkedImportService {
 
                 String filename = photoZipImportService.getFilenameFromPath(entryPath);
 
-                // processEntry is public and @Transactional (via class-level annotation on
-                // PhotoZipImportService), so Spring's proxy manages the transaction.
-                // This ensures the EntityManager used for saves is the same one cleared by
-                // clearPersistenceContext(), preventing memory leaks and data issues.
+                // If resuming, skip entries that were already processed
+                if (entryCount < entriesToSkip) {
+                    // Read and discard the entry data so ZipInputStream advances
+                    byte[] buf = new byte[8192];
+                    while (zis.read(buf) != -1) {
+                        // discard
+                    }
+                    zis.closeEntry();
+                    entryCount++;
+                    log.debug("Resume: skipped already-processed entry {} ({}/{})", filename, entryCount, entriesToSkip);
+                    // Update byte position after skipping
+                    state.totalBytesConsumed = countingIn.getCount();
+                    continue;
+                }
+
                 try {
                     PhotoZipImportItemDto item = photoZipImportService.processEntry(filename, zis, allBooks, allAuthors);
 
@@ -273,8 +352,50 @@ public class PhotoChunkedImportService {
                 }
 
                 zis.closeEntry();
+
+                // Record byte position after each completed entry for resume capability
+                state.totalBytesConsumed = countingIn.getCount();
+                saveProgressToDb(uploadId, state);
             }
         }
+    }
+
+    private void saveProgressToDb(String uploadId, ChunkedUploadState state) {
+        PhotoUploadSession session = uploadSessionRepository.findByUploadId(uploadId)
+                .orElseGet(() -> {
+                    PhotoUploadSession s = new PhotoUploadSession();
+                    s.setUploadId(uploadId);
+                    return s;
+                });
+        session.setTotalProcessed(state.totalProcessed.get());
+        session.setSuccessCount(state.successCount.get());
+        session.setFailureCount(state.failureCount.get());
+        session.setSkippedCount(state.skippedCount.get());
+        session.setLastChunkIndex(state.lastChunkIndex);
+        session.setTotalBytesConsumed(state.totalBytesConsumed);
+        uploadSessionRepository.save(session);
+    }
+
+    private void markSessionComplete(String uploadId) {
+        try {
+            uploadSessionRepository.findByUploadId(uploadId).ifPresent(session -> {
+                session.setComplete(true);
+                uploadSessionRepository.save(session);
+            });
+        } catch (Exception e) {
+            log.warn("Failed to mark session {} as complete in DB: {}", uploadId, e.getMessage());
+        }
+    }
+
+    private int getResumeCountFromDb(String uploadId, String type) {
+        return uploadSessionRepository.findByUploadId(uploadId)
+                .map(s -> switch (type) {
+                    case "success" -> s.getSuccessCount();
+                    case "failure" -> s.getFailureCount();
+                    case "skipped" -> s.getSkippedCount();
+                    default -> 0;
+                })
+                .orElse(0);
     }
 
     @Scheduled(fixedRate = 300000) // Every 5 minutes
@@ -292,5 +413,13 @@ public class PhotoChunkedImportService {
             }
             return false;
         });
+
+        // Also clean up old DB sessions (24 hours)
+        try {
+            Instant dbCutoff = Instant.now().minusSeconds(86400);
+            uploadSessionRepository.deleteByLastActivityAtBefore(dbCutoff);
+        } catch (Exception e) {
+            log.warn("Failed to clean up old DB upload sessions: {}", e.getMessage());
+        }
     }
 }

@@ -10,11 +10,14 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.ChunkUploadResultDto;
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.dto.ResumeInfoDto;
 import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.PhotoUploadSessionRepository;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.service.PhotoChunkedImportService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
 import org.junit.jupiter.api.AfterEach;
@@ -84,6 +87,12 @@ class PhotoChunkedImportTest {
     @MockitoBean
     private GooglePhotosLibraryClient googlePhotosLibraryClient;
 
+    @Autowired
+    private PhotoUploadSessionRepository uploadSessionRepository;
+
+    @Autowired
+    private PhotoChunkedImportService photoChunkedImportService;
+
     private Book testBook;
     private Author testAuthor;
 
@@ -121,6 +130,7 @@ class PhotoChunkedImportTest {
         bookRepository.deleteAll();
         authorRepository.deleteAll();
         userRepository.deleteAll();
+        uploadSessionRepository.deleteAll();
     }
 
     private byte[] createDummyImage(int width, int height) throws Exception {
@@ -352,6 +362,85 @@ class PhotoChunkedImportTest {
         // Second cleanup is also fine (idempotent)
         mockMvc.perform(delete("/api/photos/import-zip-chunk/" + uploadId))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_resumeInfoEndpoint() throws Exception {
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+
+        // Upload as a single chunk to populate DB session
+        mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Is-Last-Chunk", true)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(zipData))
+                .andExpect(status().isOk());
+
+        // Session is complete, so resume info should return 404
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/photos/import-zip-chunk-resume/" + uploadId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_resumeAfterSessionLoss() throws Exception {
+        byte[] zipData = createTestZip();
+        String uploadId = UUID.randomUUID().toString();
+        int chunkSize = zipData.length / 3 + 1;
+
+        // Send first chunk to start processing and persist state
+        byte[] chunk0 = Arrays.copyOfRange(zipData, 0, Math.min(chunkSize, zipData.length));
+        MvcResult result0 = mockMvc.perform(put("/api/photos/import-zip-chunk")
+                        .header("X-Upload-Id", uploadId)
+                        .header("X-Chunk-Index", 0)
+                        .header("X-Is-Last-Chunk", false)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(chunk0))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ChunkUploadResultDto response0 = objectMapper.readValue(
+                result0.getResponse().getContentAsString(), ChunkUploadResultDto.class);
+        assertFalse(response0.isComplete());
+
+        // Give background thread time to process entries and persist to DB
+        Thread.sleep(2000);
+
+        // Simulate Cloud Run reboot: clear in-memory state
+        photoChunkedImportService.removeUpload(uploadId);
+
+        // Verify session was persisted to DB
+        var dbSession = uploadSessionRepository.findByUploadId(uploadId);
+        assertTrue(dbSession.isPresent(), "Upload session should be persisted in DB");
+
+        // Mark session as not complete so resume works (it was still in progress)
+        var session = dbSession.get();
+        session.setComplete(false);
+        uploadSessionRepository.save(session);
+
+        // Get resume info
+        MvcResult resumeResult = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/photos/import-zip-chunk-resume/" + uploadId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        ResumeInfoDto resumeInfo = objectMapper.readValue(
+                resumeResult.getResponse().getContentAsString(), ResumeInfoDto.class);
+
+        assertEquals(uploadId, resumeInfo.getUploadId());
+        assertTrue(resumeInfo.getTotalProcessed() >= 0);
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", authorities = {"LIBRARIAN"})
+    void testChunkedImport_resumeInfoNotFound() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/photos/import-zip-chunk-resume/nonexistent-id"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
