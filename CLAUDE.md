@@ -88,9 +88,9 @@ The application deploys to Google Cloud Run with PostgreSQL on Cloud SQL. Deploy
 - **Development**: `dev` branch → https://library-dev.muczynskifamily.com
 
 ### Deployment Process
-There are two deploy scripts that **must be updated in parallel**: `./deploy.sh` (standard JVM) and `./deploy-graalvm.sh` (GraalVM native image). Any Cloud Run configuration changes (memory, CPU, max-request-body-size, env vars, etc.) must be applied to both.
+There is a single unified `./deploy.sh` script with three modes: `standard` (JVM), `graalvm` (native image), and `redeploy` (skip build/push). Run `./deploy.sh` with no arguments to see usage help.
 
-The `./deploy.sh` script handles the full deployment:
+The `./deploy.sh standard` command handles the full deployment:
 1. Builds React frontend using `./build-frontend.sh`
 2. Builds Spring Boot backend with Gradle
 3. Creates Docker image with version tag from `build.gradle`
