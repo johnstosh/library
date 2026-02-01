@@ -69,6 +69,23 @@ public class BranchService {
     }
 
     /**
+     * Find or create a branch by name.
+     * @param branchName Branch name
+     * @param librarySystemName Library system name (used only when creating)
+     * @return The existing or newly created branch
+     */
+    public Library findOrCreateBranch(String branchName, String librarySystemName) {
+        List<Library> existing = branchRepository.findAllByBranchNameOrderByIdAsc(branchName);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Library branch = new Library();
+        branch.setBranchName(branchName);
+        branch.setLibrarySystemName(librarySystemName);
+        return branchRepository.save(branch);
+    }
+
+    /**
      * Get the default branch, creating it if it doesn't exist
      * This ensures there's always at least one branch available
      */

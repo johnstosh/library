@@ -100,21 +100,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
-        // Use list-based query to handle potential duplicates gracefully
-        java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(dto.getAuthority());
-        Authority authority;
-        if (existingAuthorities.isEmpty()) {
-            Authority newAuthority = new Authority();
-            newAuthority.setName(dto.getAuthority());
-            authority = authorityRepository.save(newAuthority);
-        } else {
-            authority = existingAuthorities.get(0); // Select the one with the lowest ID
-            if (existingAuthorities.size() > 1) {
-                logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}. " +
-                           "Consider cleaning up duplicate entries in the database.",
-                           existingAuthorities.size(), dto.getAuthority(), authority.getId());
-            }
-        }
+        Authority authority = findOrCreateAuthority(dto.getAuthority());
         user.setAuthorities(Collections.singleton(authority));
 
         User savedUser = userRepository.save(user);
@@ -134,21 +120,7 @@ public class UserService {
         user.setPassword(applied.getPassword()); // Already encoded from Applied creation
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
 
-        // Use list-based query to handle potential duplicates gracefully
-        java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc("USER");
-        Authority authority;
-        if (existingAuthorities.isEmpty()) {
-            Authority newAuthority = new Authority();
-            newAuthority.setName("USER");
-            authority = authorityRepository.save(newAuthority);
-        } else {
-            authority = existingAuthorities.get(0); // Select the one with the lowest ID
-            if (existingAuthorities.size() > 1) {
-                logger.warn("Found {} duplicate authorities with name 'USER'. Using authority with lowest ID: {}. " +
-                           "Consider cleaning up duplicate entries in the database.",
-                           existingAuthorities.size(), authority.getId());
-            }
-        }
+        Authority authority = findOrCreateAuthority("USER");
         user.setAuthorities(Collections.singleton(authority));
 
         User savedUser = userRepository.save(user);
@@ -181,21 +153,7 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
         if (dto.getAuthority() != null && !dto.getAuthority().isEmpty()) {
-            // Use list-based query to handle potential duplicates gracefully
-            java.util.List<Authority> existingAuthorities = authorityRepository.findAllByNameOrderByIdAsc(dto.getAuthority());
-            Authority authority;
-            if (existingAuthorities.isEmpty()) {
-                Authority newAuthority = new Authority();
-                newAuthority.setName(dto.getAuthority());
-                authority = authorityRepository.save(newAuthority);
-            } else {
-                authority = existingAuthorities.get(0); // Select the one with the lowest ID
-                if (existingAuthorities.size() > 1) {
-                    logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}. " +
-                               "Consider cleaning up duplicate entries in the database.",
-                               existingAuthorities.size(), dto.getAuthority(), authority.getId());
-                }
-            }
+            Authority authority = findOrCreateAuthority(dto.getAuthority());
             user.setAuthorities(Collections.singleton(authority));
         }
         User savedUser = userRepository.save(user);
@@ -215,6 +173,25 @@ public class UserService {
         User user = userRepository.findById(id).orElseThrow(() -> new LibraryException("User not found: " + id));
         user.setXaiApiKey(xaiApiKey);
         userRepository.save(user);
+    }
+
+    /**
+     * Find or create an authority by name.
+     * @param name Authority name (e.g. "USER", "LIBRARIAN")
+     * @return The existing or newly created authority
+     */
+    public Authority findOrCreateAuthority(String name) {
+        List<Authority> existing = authorityRepository.findAllByNameOrderByIdAsc(name);
+        if (!existing.isEmpty()) {
+            if (existing.size() > 1) {
+                logger.warn("Found {} duplicate authorities with name '{}'. Using authority with lowest ID: {}.",
+                        existing.size(), name, existing.get(0).getId());
+            }
+            return existing.get(0);
+        }
+        Authority newAuthority = new Authority();
+        newAuthority.setName(name);
+        return authorityRepository.save(newAuthority);
     }
 
     public void deleteUser(Long id) {

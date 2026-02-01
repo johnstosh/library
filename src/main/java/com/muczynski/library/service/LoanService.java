@@ -78,6 +78,28 @@ public class LoanService {
     }
 
     /**
+     * Find or create a loan by book, user, and date.
+     * @param bookId Book ID
+     * @param userId User ID
+     * @param loanDate Loan date
+     * @return The existing or newly created loan
+     */
+    public Loan findOrCreateLoan(Long bookId, Long userId, LocalDate loanDate) {
+        List<Loan> existing = loanRepository.findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc(bookId, userId, loanDate);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Book book = bookRepository.findById(bookId).orElseThrow(() -> new LibraryException("Book not found: " + bookId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new LibraryException("User not found: " + userId));
+        Loan loan = new Loan();
+        loan.setBook(book);
+        loan.setUser(user);
+        loan.setLoanDate(loanDate);
+        loan.setDueDate(loanDate.plusWeeks(2));
+        return loanRepository.save(loan);
+    }
+
+    /**
      * Checkout a book with an associated checkout card photo.
      * The photo is stored and linked to the loan.
      *

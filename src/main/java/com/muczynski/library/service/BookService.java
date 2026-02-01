@@ -104,6 +104,36 @@ public class BookService {
         return bookMapper.toDto(savedBook);
     }
 
+    /**
+     * Find or create a book by title and author name.
+     * @param title Book title
+     * @param authorName Author name (null for books without author)
+     * @param library Library to assign if creating
+     * @return The existing or newly created book
+     */
+    public Book findOrCreateBook(String title, String authorName, Library library) {
+        List<Book> existing;
+        if (authorName != null) {
+            existing = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(title, authorName);
+        } else {
+            existing = bookRepository.findAllByTitleAndAuthorIsNullOrderByIdAsc(title);
+        }
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Book book = new Book();
+        book.setTitle(title);
+        if (authorName != null) {
+            List<Author> authors = authorRepository.findAllByNameOrderByIdAsc(authorName);
+            if (!authors.isEmpty()) {
+                book.setAuthor(authors.get(0));
+            }
+        }
+        book.setLibrary(library);
+        book.setLastModified(LocalDateTime.now());
+        return bookRepository.save(book);
+    }
+
     public List<BookDto> getAllBooks() {
         return bookRepository.findAll().stream()
                 .map(bookMapper::toDto)
