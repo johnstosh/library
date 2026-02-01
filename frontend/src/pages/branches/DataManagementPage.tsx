@@ -184,7 +184,7 @@ export function DataManagementPage() {
                   Export Data
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Download all library data as a JSON file. Includes libraries, authors,
+                  Download all library data as a JSON file. Includes branches, authors,
                   books, users, and loans. Photos are excluded.
                 </p>
                 <Button
