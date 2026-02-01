@@ -91,6 +91,11 @@ public class PhotoController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ErrorResponse("Not Found", "Photo not found"));
             }
+            if (e.getMessage() != null && e.getMessage().contains("Photo has no image data")) {
+                logger.warn("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Internal Server Error", e.getMessage()));
+            }
             logger.error("Failed to generate thumbnail for photo ID {} with width {}: {}", id, width, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error", e.getMessage()));
