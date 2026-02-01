@@ -31,4 +31,6 @@ book-lookup/
 book-lookup-statistics.json
 book-lookup-progress.log
 book-lookup-reference-backup/
-branch-archive.json
+*.zip
+*.json
+
