@@ -428,3 +428,20 @@ google.oauth.scope=https://www.googleapis.com/auth/photoslibrary.readonly
 **Reference**:
 - Google Photos Library API: https://developers.google.com/photos/library/guides/get-started
 - OAuth 2.0 Authorization Code Flow: https://developers.google.com/identity/protocols/oauth2/web-server
+
+### Data Integrity: Duplicate Entity Prevention
+
+**Issue**: `NonUniqueResultException: Query did not return a unique result` during JSON import when duplicate entities existed in the database.
+
+**Root Cause**: Optional-returning repository methods (`findByName()`, `findByUsername()`, etc.) throw when multiple rows match. Duplicates accumulated over time from imports without uniqueness checks.
+
+**Solution**: Multi-layered defense:
+1. **Database unique constraints** on all natural keys (catches anything that slips through)
+2. **Service-layer checks** before `save()` for key operations
+3. **findOrCreate methods** for import and creation paths
+4. **List-based lookups** (`findAllBy*OrderByIdAsc()`) that handle duplicates gracefully by selecting the oldest entity
+5. **`DuplicateEntityException`** for enriched 409 CONFLICT responses
+
+**Key Lesson**: Never use Optional-returning repository methods for natural-key lookups. Always use list-based queries with `OrderByIdAsc` and take the first result. Mark Optional methods as `@Deprecated`.
+
+**Reference**: See `feature-design-data-integrity.md` for full details.
