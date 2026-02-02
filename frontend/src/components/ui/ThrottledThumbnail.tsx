@@ -108,8 +108,15 @@ interface ThrottledThumbnailProps {
 }
 
 export function ThrottledThumbnail({ photoId, url, alt, className, checksum, respectOrientation }: ThrottledThumbnailProps) {
-  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(() => {
+    if (checksum && checksumCache.has(checksum)) {
+      return checksumCache.get(checksum)!
+    }
+    return null
+  })
+  const [isLoading, setIsLoading] = useState(() => {
+    return !(checksum && checksumCache.has(checksum))
+  })
   const [error, setError] = useState(false)
   const mountedRef = useRef(true)
 

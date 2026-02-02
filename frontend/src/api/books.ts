@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import React, { useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
@@ -56,6 +56,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
       return []
     },
     enabled: summaries !== undefined && booksToFetch.length > 0,
+    placeholderData: keepPreviousData,
   })
 
   // Populate individual book caches when books are fetched
