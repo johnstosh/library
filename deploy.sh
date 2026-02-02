@@ -167,6 +167,7 @@ if [ "$MODE" != "redeploy" ]; then
     else
       echo "Push attempt $attempt failed."
       if [ "$attempt" -lt 20 ]; then
+        echo "Retrying..."
       fi
     fi
   done
