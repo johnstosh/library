@@ -367,6 +367,10 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-date-added']")).isVisible();
         assertThat(page.locator("[data-test='book-form-last-modified']")).isVisible();
         assertThat(page.locator("[data-test='book-form-loan-count']")).isVisible();
+
+        // Verify AI operation buttons are visible on edit form
+        assertThat(page.locator("[data-test='book-operation-title-author-from-photo']")).isVisible();
+        assertThat(page.locator("[data-test='book-operation-book-from-title-author']")).isVisible();
     }
 
     @Test

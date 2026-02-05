@@ -268,6 +268,37 @@ export function useLookupGenres() {
   })
 }
 
+// Hook to extract title and author from book's photo using AI
+export function useTitleAuthorFromPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/title-author-from-photo`),
+    onSuccess: (data, id) => {
+      queryClient.setQueryData(queryKeys.books.detail(id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+// Hook to generate full book metadata from title and author using AI
+export function useBookFromTitleAuthor() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, title, authorName }: { id: number; title: string; authorName: string }) =>
+      api.put<BookDto>(`/books/${id}/book-from-title-author`, { title, authorName }),
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
 // Hook to lookup genres for multiple books using Grok AI
 export function useLookupGenresBulk() {
   const queryClient = useQueryClient()

@@ -14,7 +14,7 @@ import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
-import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useLookupGenres } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
@@ -80,6 +80,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const deleteBook = useDeleteBook()
   const cloneBook = useCloneBook()
   const bookFromImage = useBookFromImage()
+  const titleAuthorFromPhoto = useTitleAuthorFromPhoto()
+  const bookFromTitleAuthor = useBookFromTitleAuthor()
   const lookupGrokipedia = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
@@ -317,6 +319,71 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  const handleTitleAuthorFromPhoto = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updated = await titleAuthorFromPhoto.mutateAsync(book.id)
+      setFormData({
+        ...formData,
+        title: updated.title || formData.title,
+        authorId: updated.authorId?.toString() || formData.authorId,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Title and author extracted from photo')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract title and author from photo')
+    }
+  }
+
+  const handleBookFromTitleAuthor = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    if (!formData.title) {
+      setError('Title is required to generate book metadata')
+      return
+    }
+
+    const authorName = formData.authorId
+      ? authors?.find((a) => a.id === parseInt(formData.authorId))?.name || ''
+      : ''
+
+    try {
+      const updated = await bookFromTitleAuthor.mutateAsync({
+        id: book.id,
+        title: formData.title,
+        authorName,
+      })
+      setFormData({
+        title: updated.title || formData.title,
+        publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
+        publisher: updated.publisher || formData.publisher,
+        plotSummary: updated.plotSummary || formData.plotSummary,
+        relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        detailedDescription: updated.detailedDescription || formData.detailedDescription,
+        grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
+        freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
+        status: updated.status || formData.status,
+        statusReason: updated.statusReason || formData.statusReason,
+        locNumber: updated.locNumber || formData.locNumber,
+        authorId: updated.authorId?.toString() || formData.authorId,
+        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Book metadata generated from title and author')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate book metadata')
+    }
+  }
+
   const handleGenreLookup = async () => {
     if (!book?.id) return
 
@@ -428,6 +495,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isSuggesting = suggestLoc.isPending
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
+    titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
 
   return (
@@ -498,6 +566,30 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-book-from-image"
             >
               Book from Image
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTitleAuthorFromPhoto}
+              isLoading={titleAuthorFromPhoto.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiCamera />}
+              data-test="book-operation-title-author-from-photo"
+            >
+              Title & Author from First Photo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBookFromTitleAuthor}
+              isLoading={bookFromTitleAuthor.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiSparkle />}
+              data-test="book-operation-book-from-title-author"
+            >
+              Book from Title & Author
             </Button>
             <Button
               type="button"
