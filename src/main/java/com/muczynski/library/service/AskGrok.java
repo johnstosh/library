@@ -33,7 +33,7 @@ public class AskGrok {
 
     // Model constants
     public static final String MODEL_GROK_4 = "grok-4";
-    public static final String MODEL_GROK_4_FAST = "grok-4-fast";
+    public static final String MODEL_GROK_4_FAST = "grok-4-1-fast-reasoning";
 
     /**
      * Analyze a single photo using Grok AI vision model with grok-4-fast.
