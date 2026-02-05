@@ -362,6 +362,11 @@ public class BooksUITest {
         // Verify LOC lookup button is visible (only for editing)
         assertThat(page.locator("[data-test='lookup-loc-button']")).isVisible();
         assertThat(page.locator("[data-test='lookup-loc-button']")).containsText("Lookup");
+
+        // Verify date added, last modified, and loan count fields are visible on edit form
+        assertThat(page.locator("[data-test='book-date-added']")).isVisible();
+        assertThat(page.locator("[data-test='book-form-last-modified']")).isVisible();
+        assertThat(page.locator("[data-test='book-form-loan-count']")).isVisible();
     }
 
     @Test

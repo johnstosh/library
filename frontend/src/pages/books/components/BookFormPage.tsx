@@ -20,6 +20,7 @@ import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
+import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag } from 'react-icons/pi'
@@ -52,6 +53,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     authorId: '',
     libraryId: '',
     tagsList: '',  // Comma-separated tags for editing
+    dateAddedToLibrary: '',
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -99,6 +101,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: book.authorId?.toString() || '',
         libraryId: book.libraryId?.toString() || '',
         tagsList: book.tagsList?.join(', ') || '',
+        dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.split('T')[0] : '',
       })
     } else {
       setFormData({
@@ -116,6 +119,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: '',
         libraryId: '',
         tagsList: '',
+        dateAddedToLibrary: '',
       })
     }
   }, [book])
@@ -304,6 +308,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: updated.authorId?.toString() || formData.authorId,
         libraryId: updated.libraryId?.toString() || formData.libraryId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -371,6 +376,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.libraryId),
         tagsList,
+        dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
       }
 
       if (isEditing) {
@@ -697,6 +703,29 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             placeholder="Optional reason for status (e.g., why book is withdrawn)"
             data-test="book-status-reason"
           />
+
+          <Input
+            label="Date Added to Library"
+            type="date"
+            value={formData.dateAddedToLibrary}
+            onChange={(e) => handleFieldChange('dateAddedToLibrary', e.target.value)}
+            data-test="book-date-added"
+          />
+
+          {isEditing && book && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div data-test="book-form-last-modified">
+                <p className="text-sm font-medium text-gray-500">Last Modified</p>
+                <p className="text-gray-900">
+                  {book.lastModified ? parseISODateSafe(book.lastModified).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+              <div data-test="book-form-loan-count">
+                <p className="text-sm font-medium text-gray-500">Active Loans</p>
+                <p className="text-gray-900">{book.loanCount ?? 0}</p>
+              </div>
+            </div>
+          )}
         </div>
       </form>
 
