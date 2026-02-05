@@ -535,30 +535,6 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<span>🌐</span>}
-              data-test="book-operation-grokipedia"
-            >
-              Find Grokipedia URL
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleFreeTextLookup}
-              isLoading={lookupFreeText.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<PiBookOpen />}
-              data-test="book-operation-free-text"
-            >
-              Find Free Text URL
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
               onClick={handleBookFromImage}
               isLoading={bookFromImage.isPending}
               disabled={isOperationPending || isLoading}
@@ -590,18 +566,6 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-book-from-title-author"
             >
               Book from Title & Author
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleGenreLookup}
-              isLoading={lookupGenres.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<PiTag />}
-              data-test="book-operation-lookup-genres"
-            >
-              Lookup Genres
             </Button>
             <Button
               type="button"
@@ -708,34 +672,91 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-detailed-description"
         />
 
-        <Input
-          label="Grokipedia URL"
-          value={formData.grokipediaUrl}
-          onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
-          placeholder="https://grokipedia.example.com/book/123"
-          data-test="book-grokipedia-url"
-        />
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Input
+              label="Grokipedia URL"
+              value={formData.grokipediaUrl}
+              onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
+              placeholder="https://grokipedia.example.com/book/123"
+              data-test="book-grokipedia-url"
+            />
+          </div>
+          {isEditing && isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={handleGrokipediaLookup}
+              isLoading={lookupGrokipedia.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<span>🌐</span>}
+              data-test="book-operation-grokipedia"
+              className="mb-0"
+            >
+              Find Grokipedia URL
+            </Button>
+          )}
+        </div>
 
         <div>
-          <Input
-            label="Free Text URLs"
-            value={formData.freeTextUrl}
-            onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
-            placeholder="https://gutenberg.org/123 https://archive.org/456"
-            data-test="book-free-text-url"
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="Free Text URLs"
+                value={formData.freeTextUrl}
+                onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
+                placeholder="https://gutenberg.org/123 https://archive.org/456"
+                data-test="book-free-text-url"
+              />
+            </div>
+            {isEditing && isLibrarian && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleFreeTextLookup}
+                isLoading={lookupFreeText.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<PiBookOpen />}
+                data-test="book-operation-free-text"
+                className="mb-0"
+              >
+                Find Free Text URL
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
         </div>
 
         <div>
-          <Input
-            label="Tags"
-            value={formData.tagsList}
-            onChange={(e) => handleFieldChange('tagsList', e.target.value)}
-            placeholder="fiction, fantasy, childrens"
-            data-test="book-tags"
-          />
-          <p className="text-xs text-gray-500 mt-1">Comma-separated tags (e.g., fiction, theology, childrens)</p>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="Genres"
+                value={formData.tagsList}
+                onChange={(e) => handleFieldChange('tagsList', e.target.value)}
+                placeholder="fiction, fantasy, childrens"
+                data-test="book-tags"
+              />
+            </div>
+            {isEditing && isLibrarian && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleGenreLookup}
+                isLoading={lookupGenres.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<PiTag />}
+                data-test="book-operation-lookup-genres"
+                className="mb-0"
+              >
+                Lookup Genres
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Comma-separated genres (e.g., fiction, theology, childrens)</p>
         </div>
 
         <div className="space-y-4">

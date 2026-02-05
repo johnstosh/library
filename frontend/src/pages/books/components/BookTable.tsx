@@ -146,7 +146,7 @@ export function BookTable({
     },
     {
       key: 'tags',
-      header: 'Tags',
+      header: 'Genres',
       accessor: (book) => (
         <div className="flex flex-wrap gap-1">
           {book.tagsList?.map((tag) => (
