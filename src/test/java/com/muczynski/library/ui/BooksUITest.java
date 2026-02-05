@@ -451,6 +451,10 @@ public class BooksUITest {
 
         // Verify Back button is visible
         assertThat(page.locator("[data-test='back-to-books']")).isVisible();
+
+        // Verify last modified and loan count fields are visible
+        assertThat(page.locator("[data-test='book-last-modified']")).isVisible();
+        assertThat(page.locator("[data-test='book-loan-count']")).isVisible();
     }
 
     @Test

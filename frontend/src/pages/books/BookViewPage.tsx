@@ -241,6 +241,18 @@ export function BookViewPage() {
                   </p>
                 </div>
               )}
+              {book.lastModified && (
+                <div data-test="book-last-modified">
+                  <p className="text-sm font-medium text-gray-500">Last Modified</p>
+                  <p className="text-gray-900">
+                    {parseISODateSafe(book.lastModified).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              <div data-test="book-loan-count">
+                <p className="text-sm font-medium text-gray-500">Active Loans</p>
+                <p className="text-gray-900">{book.loanCount ?? 0}</p>
+              </div>
               {book.tagsList && book.tagsList.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Tags</p>
