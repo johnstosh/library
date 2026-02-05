@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
@@ -60,6 +60,14 @@ export function Navigation() {
   // Get branch name for display
   const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
   const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
+
+  useEffect(() => {
+    if (branches.length > 0) {
+      document.title = `The ${branchName} Branch of the ${librarySystemName}`
+    } else {
+      document.title = 'Library'
+    }
+  }, [branches, branchName, librarySystemName])
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
