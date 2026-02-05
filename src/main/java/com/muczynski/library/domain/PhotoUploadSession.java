@@ -13,7 +13,9 @@ import java.time.Instant;
  * Persists chunked photo upload progress so imports can resume after Cloud Run reboots.
  */
 @Entity
-@Table(name = "photo_upload_session")
+@Table(name = "photo_upload_session", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_upload_session_upload_id", columnNames = "uploadId")
+})
 @Getter
 @Setter
 public class PhotoUploadSession {
@@ -21,7 +23,7 @@ public class PhotoUploadSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String uploadId;
 
     private int totalProcessed;

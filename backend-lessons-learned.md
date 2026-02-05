@@ -67,6 +67,8 @@ public class Author {
 - Never combine `@Column(unique = true)` with `@UniqueConstraint` on the same column
 - Use descriptive constraint names like `uk_entity_field` for easy debugging
 
+**Status**: All entities now use `@UniqueConstraint` only. `PhotoUploadSession` was the last entity fixed (had `@Column(unique = true)` without a table-level constraint, producing auto-named constraint `uk9mm1kvw0ep5gboxxky2e21pbj`). Note: Warnings like `constraint "..." does not exist, skipping` are also expected on fresh databases (e.g., Testcontainers) because Hibernate's `ddl-auto=update` tries to drop constraints before recreating them, and on a brand-new database there is nothing to drop yet. These are harmless.
+
 ---
 
 ### Form Field Persistence Issue
