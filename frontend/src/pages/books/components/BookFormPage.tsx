@@ -12,6 +12,7 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
+import { AuthorCombobox } from './AuthorCombobox'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
 import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useBookFromFirstPhoto, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
@@ -69,7 +70,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
-  const { data: authors, isLoading: authorsLoading } = useAuthors()
+  const { data: authors } = useAuthors()
   const { data: libraries, isLoading: librariesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
@@ -503,13 +504,6 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
-  const authorOptions = authors
-    ? authors.map((a) => ({
-        value: a.id,
-        label: a.name,
-      }))
-    : []
-
   const libraryOptions = libraries
     ? libraries.map((l) => ({
         value: l.id,
@@ -644,13 +638,10 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <Select
-                label="Author"
+              <AuthorCombobox
                 value={formData.authorId}
-                onChange={(e) => handleFieldChange('authorId', e.target.value)}
-                options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
+                onChange={(value) => handleFieldChange('authorId', value)}
                 required
-                isLoading={authorsLoading}
                 data-test="book-author"
               />
             </div>
