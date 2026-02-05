@@ -498,4 +498,37 @@ class BookControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string("xAI API key not configured for user ID: 1"));
     }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto() throws Exception {
+        BookDto updatedBook = new BookDto();
+        updatedBook.setId(1L);
+        updatedBook.setTitle("AI Generated Title from First Photo");
+        updatedBook.setAuthorId(1L);
+
+        when(bookService.generateBookFromFirstPhoto(1L)).thenReturn(updatedBook);
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("AI Generated Title from First Photo"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void bookFromFirstPhoto_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto_returnsErrorMessage() throws Exception {
+        when(bookService.generateBookFromFirstPhoto(1L))
+                .thenThrow(new RuntimeException("xAI API key not configured for user ID: 1"));
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("xAI API key not configured for user ID: 1"));
+    }
 }

@@ -225,6 +225,22 @@ export function useBookFromImage() {
   })
 }
 
+// Hook to generate book metadata from first photo only using AI
+export function useBookFromFirstPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/book-from-first-photo`),
+    onSuccess: (data, id) => {
+      // Update the detail cache and invalidate summaries
+      queryClient.setQueryData(queryKeys.books.detail(id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
 // Hook to generate book metadata from images for multiple books
 export function useBulkBookFromImage() {
   const queryClient = useQueryClient()

@@ -14,7 +14,7 @@ import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
-import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useBookFromFirstPhoto, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
@@ -80,6 +80,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const deleteBook = useDeleteBook()
   const cloneBook = useCloneBook()
   const bookFromImage = useBookFromImage()
+  const bookFromFirstPhoto = useBookFromFirstPhoto()
   const titleAuthorFromPhoto = useTitleAuthorFromPhoto()
   const bookFromTitleAuthor = useBookFromTitleAuthor()
   const lookupGrokipedia = useLookupSingleBookGrokipedia()
@@ -319,6 +320,39 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  const handleBookFromFirstPhoto = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updated = await bookFromFirstPhoto.mutateAsync(book.id)
+      // Update form with the extracted data
+      setFormData({
+        title: updated.title || formData.title,
+        publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
+        publisher: updated.publisher || formData.publisher,
+        plotSummary: updated.plotSummary || formData.plotSummary,
+        relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        detailedDescription: updated.detailedDescription || formData.detailedDescription,
+        grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
+        freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
+        status: updated.status || formData.status,
+        statusReason: updated.statusReason || formData.statusReason,
+        locNumber: updated.locNumber || formData.locNumber,
+        authorId: updated.authorId?.toString() || formData.authorId,
+        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Book metadata extracted from first photo')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract book from first photo')
+    }
+  }
+
   const handleTitleAuthorFromPhoto = async () => {
     if (!book?.id) return
 
@@ -495,7 +529,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isSuggesting = suggestLoc.isPending
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
-    titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
+    bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
 
   return (
@@ -535,13 +569,25 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               type="button"
               variant="outline"
               size="sm"
+              onClick={handleBookFromFirstPhoto}
+              isLoading={bookFromFirstPhoto.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiCamera />}
+              data-test="book-operation-book-from-first-photo"
+            >
+              Book from First Photo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={handleBookFromImage}
               isLoading={bookFromImage.isPending}
               disabled={isOperationPending || isLoading}
               leftIcon={<PiCamera />}
-              data-test="book-operation-book-from-image"
+              data-test="book-operation-book-from-all-photos"
             >
-              Book from Image
+              Book from All Photos
             </Button>
             <Button
               type="button"
