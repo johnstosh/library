@@ -31,11 +31,15 @@
 
 ---
 
-### Database Unique Constraints with Hibernate ddl-auto=update
+### Database Unique Constraint Warnings with Hibernate ddl-auto=update
 
-**Issue**: Startup warnings like `constraint "uk_author_name" of relation "author" does not exist, skipping` and `constraint "ukhl8cmkyvgqsgelu76p0x79wjb" of relation "users" does not exist, skipping`.
+These "constraint does not exist, skipping" warnings have **two distinct causes**. They look identical in the logs but arise from different problems.
 
-**Root Cause**: Using both `@Column(unique = true)` on a field AND `@UniqueConstraint` at the `@Table` level creates two competing constraint definitions. Hibernate generates an auto-named constraint from `@Column(unique = true)` (e.g., `ukhl8cmkyvgqsgelu76p0x79wjb`) and a named constraint from `@UniqueConstraint`. During schema update, Hibernate tries to drop constraints by specific names that may not match what actually exists in the production database.
+#### Cause 1: Dual Constraint Definitions (fixed)
+
+**Symptom**: Warnings with auto-generated constraint names like `ukhl8cmkyvgqsgelu76p0x79wjb`.
+
+**Root Cause**: Using both `@Column(unique = true)` on a field AND `@UniqueConstraint` at the `@Table` level creates two competing constraint definitions. Hibernate generates an auto-named constraint from `@Column(unique = true)` and a named constraint from `@UniqueConstraint`. During schema update, Hibernate tries to drop constraints by specific names that may not match what actually exists in the database.
 
 **What Didn't Work**:
 - Having both `@Column(unique = true)` and `@UniqueConstraint` on the same column — creates redundant constraints with unpredictable names
@@ -44,7 +48,7 @@
 **Solution**: Use ONLY `@UniqueConstraint` at the `@Table` level with an explicit name. Remove `@Column(unique = true)` from the field. This gives Hibernate a single, predictable constraint name that matches across environments.
 
 ```java
-// INCORRECT - Dual constraint, causes warnings
+// INCORRECT - Dual constraint, causes warnings on any database
 @Table(uniqueConstraints = {
     @UniqueConstraint(name = "uk_author_name", columnNames = "name")
 })
@@ -67,7 +71,22 @@ public class Author {
 - Never combine `@Column(unique = true)` with `@UniqueConstraint` on the same column
 - Use descriptive constraint names like `uk_entity_field` for easy debugging
 
-**Status**: All entities now use `@UniqueConstraint` only. `PhotoUploadSession` was the last entity fixed (had `@Column(unique = true)` without a table-level constraint, producing auto-named constraint `uk9mm1kvw0ep5gboxxky2e21pbj`). Note: Warnings like `constraint "..." does not exist, skipping` are also expected on fresh databases (e.g., Testcontainers) because Hibernate's `ddl-auto=update` tries to drop constraints before recreating them, and on a brand-new database there is nothing to drop yet. These are harmless.
+**Status**: All entities now use `@UniqueConstraint` only. `PhotoUploadSession` was the last entity fixed (had `@Column(unique = true)` without a table-level constraint, producing auto-named constraint `uk9mm1kvw0ep5gboxxky2e21pbj`).
+
+#### Cause 2: Fresh Database with ddl-auto=update (cosmetic, harmless)
+
+**Symptom**: Warnings with properly named constraints like `uk_author_name`, `uk_book_title`, `uk_applied_name`, etc. — appearing on Docker test runs or any fresh Testcontainers database.
+
+**Root Cause**: This is unrelated to dual constraints. Hibernate's `ddl-auto=update` strategy always runs `ALTER TABLE ... DROP CONSTRAINT IF EXISTS "uk_xyz"` before adding each unique constraint. On a **fresh database** (like Testcontainers creates for every test run, or `docker-test.sh` with a new container), the constraints don't exist yet because the tables were just created. PostgreSQL responds with a NOTICE that the constraint doesn't exist, which Hibernate logs as a WARN.
+
+**Why it only appears on fresh databases**: On an existing database (like the dev Docker volume or production Cloud SQL), the constraints already exist from a previous run, so the DROP succeeds silently and no warning is logged.
+
+**This is expected behavior** — the constraints are still created correctly after the failed drop. The warnings are cosmetic.
+
+**Options to suppress** (if desired):
+- Use `ddl-auto=create` instead of `update` for Docker test environments — creates schema from scratch without the drop-then-recreate dance
+- Set log level `logging.level.org.hibernate.engine.jdbc.spi.SqlExceptionHelper=ERROR` in test properties
+- Accept them as harmless (current approach)
 
 ---
 
