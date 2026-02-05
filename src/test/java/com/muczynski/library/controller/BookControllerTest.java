@@ -91,6 +91,24 @@ class BookControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void createBook_withDateOnlyString_succeeds() throws Exception {
+        // HTML date inputs send date-only strings like "2026-01-01" without a time component
+        String jsonWithDateOnly = "{\"title\":\"Date Test Book\",\"dateAddedToLibrary\":\"2026-01-01\",\"libraryId\":1}";
+
+        BookDto returnedDto = new BookDto();
+        returnedDto.setId(2L);
+        returnedDto.setTitle("Date Test Book");
+        returnedDto.setDateAddedToLibrary(LocalDateTime.of(2026, 1, 1, 0, 0, 0));
+        when(bookService.createBook(any(BookDto.class))).thenReturn(returnedDto);
+
+        mockMvc.perform(post("/api/books")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonWithDateOnly))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     @WithMockUser
     void getAllBooks() throws Exception {
         BookDto dto = new BookDto();
