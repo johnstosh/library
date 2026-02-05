@@ -71,22 +71,16 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
         <table className="min-w-full table-fixed divide-y divide-gray-200" data-test="saved-books-table">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '35%' }}>
                 Title
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
-                Author
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>
-                Library
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                 Photos
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
                 Status
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '10%' }}>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>
                 Actions
               </th>
             </tr>
@@ -95,13 +89,10 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
             {books.map((book) => (
               <tr key={book.id} className="hover:bg-gray-50" data-entity-id={book.id}>
                 <td className="px-6 py-4 overflow-hidden truncate">
-                  <div className="text-sm font-medium text-gray-900">{book.title}</div>
-                </td>
-                <td className="px-6 py-4 overflow-hidden truncate">
-                  <div className="text-sm text-gray-900">{book.author || '—'}</div>
-                </td>
-                <td className="px-6 py-4 overflow-hidden truncate">
-                  <div className="text-sm text-gray-900">{book.library || '—'}</div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{book.title}</div>
+                    {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
+                  </div>
                 </td>
                 <td className="px-6 py-4 overflow-hidden truncate">
                   <div className="text-sm text-gray-900">{book.photoCount}</div>
