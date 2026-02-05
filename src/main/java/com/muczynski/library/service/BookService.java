@@ -725,7 +725,7 @@ public class BookService {
 
             Do not include any other text before or after the JSON.""";
 
-        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_4);
+        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_4_FAST);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         String title = (String) jsonData.get("title");
