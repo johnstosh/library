@@ -73,7 +73,7 @@ export function Navigation() {
         <div className="flex justify-between h-16">
           {/* Left side - Main navigation */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex flex-col items-start" data-test="library-name">
+            <Link to="/" className="flex flex-col items-start" data-test="branch-name">
               <span className="text-base font-bold text-gray-900 leading-tight">
                 The {branchName} Branch
               </span>

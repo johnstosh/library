@@ -57,7 +57,7 @@ export function BranchesPage() {
         <button
           onClick={() => handleView(library)}
           className="font-medium text-blue-600 hover:text-blue-900 text-left"
-          data-test={`view-library-${library.id}`}
+          data-test={`view-branch-${library.id}`}
         >
           {library.branchName}
         </button>
@@ -102,7 +102,7 @@ export function BranchesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Branches</h1>
-        <Button variant="primary" onClick={handleAdd} data-test="add-library">
+        <Button variant="primary" onClick={handleAdd} data-test="add-branch">
           Add Branch
         </Button>
       </div>
@@ -118,7 +118,7 @@ export function BranchesPage() {
                 <button
                   onClick={() => handleView(library)}
                   className="text-gray-600 hover:text-gray-900"
-                  data-test={`view-library-details-${library.id}`}
+                  data-test={`view-branch-details-${library.id}`}
                   title="View Details"
                 >
                   <PiEye className="w-5 h-5" />
@@ -126,7 +126,7 @@ export function BranchesPage() {
                 <button
                   onClick={() => handleEdit(library)}
                   className="text-blue-600 hover:text-blue-900"
-                  data-test={`edit-library-${library.id}`}
+                  data-test={`edit-branch-${library.id}`}
                   title="Edit"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,7 +141,7 @@ export function BranchesPage() {
                 <button
                   onClick={() => setDeleteLibraryId(library.id)}
                   className="text-red-600 hover:text-red-900"
-                  data-test={`delete-library-${library.id}`}
+                  data-test={`delete-branch-${library.id}`}
                   title="Delete"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

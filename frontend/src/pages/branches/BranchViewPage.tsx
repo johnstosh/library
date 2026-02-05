@@ -80,7 +80,7 @@ export function BranchViewPage() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
-            <h1 className="text-2xl font-bold text-gray-900" data-test="library-name">
+            <h1 className="text-2xl font-bold text-gray-900" data-test="branch-name">
               {branch.branchName}
             </h1>
             <div className="flex gap-3">
@@ -88,7 +88,7 @@ export function BranchViewPage() {
                 variant="outline"
                 onClick={handleEdit}
                 leftIcon={<PiPencil />}
-                data-test="library-view-edit"
+                data-test="branch-view-edit"
               >
                 Edit
               </Button>
@@ -96,7 +96,7 @@ export function BranchViewPage() {
                 variant="danger"
                 onClick={() => setShowDeleteConfirm(true)}
                 leftIcon={<PiTrash />}
-                data-test="library-view-delete"
+                data-test="branch-view-delete"
               >
                 Delete
               </Button>
