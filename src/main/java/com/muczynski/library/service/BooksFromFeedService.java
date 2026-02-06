@@ -56,7 +56,7 @@ public class BooksFromFeedService {
     private PhotoService photoService;
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
@@ -271,8 +271,8 @@ public class BooksFromFeedService {
         List<Map<String, Object>> skippedPhotos = new ArrayList<>();
 
         // Get default branch once
-        Library library = branchService.getOrCreateDefaultBranch();
-        Long libraryId = library.getId();
+        Library branch = branchService.getOrCreateDefaultBranch();
+        Long branchId = branch.getId();
 
         int photoIndex = 0;
         for (Map<String, Object> photo : photos) {
@@ -363,7 +363,7 @@ public class BooksFromFeedService {
                 BookDto tempBook = new BookDto();
                 tempBook.setTitle(tempTitle);
                 tempBook.setAuthorId(null);  // Author will be set during AI processing
-                tempBook.setLibraryId(libraryId);
+                tempBook.setLibraryId(branchId);
                 tempBook.setStatus(BookStatus.ACTIVE);
                 tempBook.setDateAddedToLibrary(dateAdded);
 

@@ -43,7 +43,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void createLibrary() throws Exception {
+    void createBranch() throws Exception {
         BranchDto inputDto = new BranchDto();
         inputDto.setBranchName("St. Martin de Porres");
         inputDto.setLibrarySystemName("library.muczynskifamily.com");
@@ -61,7 +61,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser
-    void getAllLibraries() throws Exception {
+    void getAllBranches() throws Exception {
         BranchDto dto = new BranchDto();
         dto.setId(1L);
         dto.setBranchName("St. Martin de Porres");
@@ -73,11 +73,11 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser
-    void getLibraryById() throws Exception {
-        BranchDto libraryDto = new BranchDto();
-        libraryDto.setId(1L);
-        libraryDto.setBranchName("St. Martin de Porres");
-        when(branchService.getBranchById(1L)).thenReturn(libraryDto);
+    void getBranchById() throws Exception {
+        BranchDto branchDto = new BranchDto();
+        branchDto.setId(1L);
+        branchDto.setBranchName("St. Martin de Porres");
+        when(branchService.getBranchById(1L)).thenReturn(branchDto);
 
         mockMvc.perform(get("/api/branches/1"))
                 .andExpect(status().isOk());
@@ -85,7 +85,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void updateLibrary() throws Exception {
+    void updateBranch() throws Exception {
         BranchDto inputDto = new BranchDto();
         inputDto.setBranchName("Updated Library");
         inputDto.setLibrarySystemName("updated.example.com");
@@ -103,7 +103,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void deleteLibrary() throws Exception {
+    void deleteBranch() throws Exception {
         doNothing().when(branchService).deleteBranch(1L);
 
         mockMvc.perform(delete("/api/branches/1"))
@@ -112,7 +112,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void getLibraryStatistics() throws Exception {
+    void getBranchStatistics() throws Exception {
         BranchStatisticsDto statsDto = new BranchStatisticsDto(
                 1L,
                 "St. Martin de Porres",
@@ -127,7 +127,7 @@ class BranchControllerTest {
 
     @Test
     @WithMockUser(authorities = "USER")
-    void getLibraryStatistics_accessDeniedForNonLibrarian() throws Exception {
+    void getBranchStatistics_accessDeniedForNonLibrarian() throws Exception {
         // USER authority should not be able to access statistics
         mockMvc.perform(get("/api/branches/statistics"))
                 .andExpect(status().isForbidden());

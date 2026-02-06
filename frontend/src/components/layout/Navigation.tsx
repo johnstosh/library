@@ -133,7 +133,7 @@ export function Navigation() {
               {isLibrarian && (
                 <>
                   <div className="w-px h-6 bg-gray-300 mx-2" />
-                  <NavLink to="/branches" data-test="nav-libraries">
+                  <NavLink to="/branches" data-test="nav-branches">
                     Branches
                   </NavLink>
                   <NavLink to="/users" data-test="nav-users">
@@ -263,7 +263,7 @@ export function Navigation() {
             {isLibrarian && (
               <>
                 <div className="border-t border-gray-200 my-2" />
-                <NavLink to="/branches" data-test="nav-libraries-mobile" onClick={closeMobileMenu}>
+                <NavLink to="/branches" data-test="nav-branches-mobile" onClick={closeMobileMenu}>
                   Branches
                 </NavLink>
                 <NavLink to="/users" data-test="nav-users-mobile" onClick={closeMobileMenu}>

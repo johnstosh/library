@@ -46,7 +46,7 @@ public class TestDataService {
     private BookRepository bookRepository;
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -70,11 +70,11 @@ public class TestDataService {
     private UserRepository userRepository;
 
     public void generateTestData(int count) {
-        if (libraryRepository.findAll().isEmpty()) {
-            Library library = new Library();
-            library.setBranchName("St. Martin de Porres");
-            library.setLibrarySystemName("Sacred Heart Library System");
-            libraryRepository.save(library);
+        if (branchRepository.findAll().isEmpty()) {
+            Library branch = new Library();
+            branch.setBranchName("St. Martin de Porres");
+            branch.setLibrarySystemName("Sacred Heart Library System");
+            branchRepository.save(branch);
         }
 
         for (int i = 0; i < count; i++) {

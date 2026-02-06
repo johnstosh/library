@@ -37,13 +37,13 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     statusReason: '',
     locNumber: '',
     authorId: '',
-    libraryId: '',
+    branchId: '',
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
   const { data: authors, isLoading: authorsLoading } = useAuthors()
-  const { data: libraries, isLoading: librariesLoading } = useBranches()
+  const { data: branches, isLoading: branchesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
@@ -64,7 +64,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
-        libraryId: book.libraryId?.toString() || '',
+        branchId: book.libraryId?.toString() || '',
       })
     } else {
       setFormData({
@@ -80,7 +80,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         statusReason: '',
         locNumber: '',
         authorId: '',
-        libraryId: '',
+        branchId: '',
       })
     }
     setError('')
@@ -142,7 +142,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     setError('')
     setSuccessMessage('')
 
-    if (!formData.title || !formData.authorId || !formData.libraryId) {
+    if (!formData.title || !formData.authorId || !formData.branchId) {
       setError('Title, Author, and Branch are required')
       return
     }
@@ -161,7 +161,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
-        libraryId: parseInt(formData.libraryId),
+        libraryId: parseInt(formData.branchId),
       }
 
       if (isEditing) {
@@ -183,8 +183,8 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
       }))
     : []
 
-  const libraryOptions = libraries
-    ? libraries.map((l) => ({
+  const branchOptions = branches
+    ? branches.map((l) => ({
         value: l.id,
         label: l.branchName,
       }))
@@ -248,12 +248,12 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
 
           <Select
             label="Branch"
-            value={formData.libraryId}
-            onChange={(e) => setFormData({ ...formData, libraryId: e.target.value })}
-            options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
+            value={formData.branchId}
+            onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+            options={[{ value: '', label: 'Select Branch' }, ...branchOptions]}
             required
-            disabled={librariesLoading}
-            data-test="book-library"
+            disabled={branchesLoading}
+            data-test="book-branch"
           />
         </div>
 

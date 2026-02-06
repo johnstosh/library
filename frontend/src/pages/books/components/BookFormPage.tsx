@@ -52,7 +52,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     statusReason: '',
     locNumber: '',
     authorId: '',
-    libraryId: '',
+    branchId: '',
     tagsList: '',  // Comma-separated tags for editing
     dateAddedToLibrary: '',
   })
@@ -71,7 +71,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
   const { data: authors } = useAuthors()
-  const { data: libraries, isLoading: librariesLoading } = useBranches()
+  const { data: branches, isLoading: branchesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
@@ -103,7 +103,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
-        libraryId: book.libraryId?.toString() || '',
+        branchId: book.libraryId?.toString() || '',
         tagsList: book.tagsList?.join(', ') || '',
         dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.split('T')[0] : '',
       })
@@ -121,7 +121,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: '',
         locNumber: '',
         authorId: '',
-        libraryId: '',
+        branchId: '',
         tagsList: '',
         dateAddedToLibrary: '',
       })
@@ -310,7 +310,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: updated.statusReason || formData.statusReason,
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
-        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
       })
@@ -343,7 +343,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: updated.statusReason || formData.statusReason,
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
-        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
       })
@@ -408,7 +408,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: updated.statusReason || formData.statusReason,
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
-        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
       })
@@ -449,7 +449,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     setError('')
     setSuccessMessage('')
 
-    if (!formData.title || !formData.authorId || !formData.libraryId) {
+    if (!formData.title || !formData.authorId || !formData.branchId) {
       setError('Title, Author, and Branch are required')
       return
     }
@@ -476,7 +476,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
-        libraryId: parseInt(formData.libraryId),
+        libraryId: parseInt(formData.branchId),
         tagsList,
         dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
       }
@@ -504,8 +504,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
-  const libraryOptions = libraries
-    ? libraries.map((l) => ({
+  const branchOptions = branches
+    ? branches.map((l) => ({
         value: l.id,
         label: l.branchName,
       }))
@@ -659,12 +659,12 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
           <Select
             label="Branch"
-            value={formData.libraryId}
-            onChange={(e) => handleFieldChange('libraryId', e.target.value)}
-            options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
+            value={formData.branchId}
+            onChange={(e) => handleFieldChange('branchId', e.target.value)}
+            options={[{ value: '', label: 'Select Branch' }, ...branchOptions]}
             required
-            isLoading={librariesLoading}
-            data-test="book-library"
+            isLoading={branchesLoading}
+            data-test="book-branch"
           />
         </div>
 

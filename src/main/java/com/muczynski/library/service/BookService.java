@@ -59,7 +59,7 @@ public class BookService {
     private AuthorRepository authorRepository;
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private LoanRepository loanRepository;
@@ -94,7 +94,7 @@ public class BookService {
         if (bookDto.getLibraryId() == null) {
             throw new LibraryException("Library ID is required");
         }
-        book.setLibrary(libraryRepository.findById(bookDto.getLibraryId())
+        book.setLibrary(branchRepository.findById(bookDto.getLibraryId())
                 .orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
 
         // Set lastModified to current time
@@ -250,7 +250,7 @@ public class BookService {
             book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
         }
         if (bookDto.getLibraryId() != null) {
-            book.setLibrary(libraryRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
+            book.setLibrary(branchRepository.findById(bookDto.getLibraryId()).orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
         }
         // Update tags list - normalize to lowercase with only allowed characters
         if (bookDto.getTagsList() != null) {
@@ -696,9 +696,9 @@ public class BookService {
         }
 
         if (dto.getLibraryId() == null) {
-            List<Library> libraries = libraryRepository.findAll();
-            if (!libraries.isEmpty()) {
-                dto.setLibraryId(libraries.get(0).getId());
+            List<Library> branches = branchRepository.findAll();
+            if (!branches.isEmpty()) {
+                dto.setLibraryId(branches.get(0).getId());
             }
         }
 
@@ -949,9 +949,9 @@ public class BookService {
         }
 
         if (dto.getLibraryId() == null) {
-            List<Library> libraries = libraryRepository.findAll();
-            if (!libraries.isEmpty()) {
-                dto.setLibraryId(libraries.get(0).getId());
+            List<Library> branches = branchRepository.findAll();
+            if (!branches.isEmpty()) {
+                dto.setLibraryId(branches.get(0).getId());
             }
         }
 

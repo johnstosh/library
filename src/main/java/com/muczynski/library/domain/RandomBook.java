@@ -15,7 +15,7 @@ import java.util.Random;
 public class RandomBook {
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     private static final List<String> COLORS = List.of(
             "Red", "Green", "Blue", "Yellow", "Black",
@@ -47,7 +47,7 @@ public class RandomBook {
         Book book = new Book();
         book.setTitle(generateRandomTitle());
         book.setAuthor(author);
-        book.setLibrary(libraryRepository.findAll().get(0));
+        book.setLibrary(branchRepository.findAll().get(0));
         book.setPublisher("test-data - " + PUBLISHERS.get(RANDOM.nextInt(PUBLISHERS.size())));
         book.setPublicationYear(1900 + RANDOM.nextInt(125));
         book.setPlotSummary(generateRandomSummary());

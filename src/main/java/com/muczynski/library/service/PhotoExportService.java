@@ -47,7 +47,7 @@ public class PhotoExportService {
     private UserRepository userRepository;
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private com.muczynski.library.repository.BookRepository bookRepository;
@@ -429,25 +429,25 @@ public class PhotoExportService {
             return cachedAlbumName;
         }
 
-        // Get the first library from the database
-        List<Library> libraries = libraryRepository.findAll();
-        String libraryName = "Library";
+        // Get the first branch from the database
+        List<Library> branches = branchRepository.findAll();
+        String branchName = "Library";
 
-        if (!libraries.isEmpty()) {
-            libraryName = libraries.get(0).getBranchName();
+        if (!branches.isEmpty()) {
+            branchName = branches.get(0).getBranchName();
         } else {
-            logger.warn("No library found in database, using default name: {}", libraryName);
+            logger.warn("No branch found in database, using default name: {}", branchName);
         }
 
         // Prefix with "test-" if in staging environment
         if ("staging".equalsIgnoreCase(appEnv)) {
-            libraryName = "test-" + libraryName;
-            logger.info("Staging environment detected. Using album name: {}", libraryName);
+            branchName = "test-" + branchName;
+            logger.info("Staging environment detected. Using album name: {}", branchName);
         } else {
-            logger.info("Production environment. Using album name: {}", libraryName);
+            logger.info("Production environment. Using album name: {}", branchName);
         }
 
-        cachedAlbumName = libraryName;
+        cachedAlbumName = branchName;
         return cachedAlbumName;
     }
 

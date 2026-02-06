@@ -70,7 +70,7 @@ export function BranchViewPage() {
           variant="ghost"
           onClick={handleBack}
           leftIcon={<PiArrowLeft />}
-          data-test="back-to-libraries"
+          data-test="back-to-branches"
         >
           Back to Branches
         </Button>
@@ -120,14 +120,14 @@ export function BranchViewPage() {
                   variant="danger"
                   onClick={handleDelete}
                   isLoading={deleteBranch.isPending}
-                  data-test="confirm-delete-library"
+                  data-test="confirm-delete-branch"
                 >
                   Yes, Delete
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setShowDeleteConfirm(false)}
-                  data-test="cancel-delete-library"
+                  data-test="cancel-delete-branch"
                 >
                   Cancel
                 </Button>
