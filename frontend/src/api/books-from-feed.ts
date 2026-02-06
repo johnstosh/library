@@ -122,17 +122,9 @@ export function useSavePhotosFromPicker() {
   })
 }
 
-// Process all saved photos
-export function useProcessSavedPhotos() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: () => api.post<ProcessResultDto>('/books-from-feed/process-saved', {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['books-from-feed', 'saved-books'] })
-      queryClient.invalidateQueries({ queryKey: ['books'] })
-    },
-  })
+// Process a single book (standalone function for use in iterative processing)
+export function processSingleBookApi(bookId: number) {
+  return api.post<SingleProcessResultDto>(`/books-from-feed/process-single/${bookId}`, {})
 }
 
 // Process a single saved book
