@@ -56,9 +56,11 @@ public class BooksFromFeedController {
             Map<String, Object> result = booksFromFeedService.processSingleBook(bookId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "error", e.getMessage()
+                    "bookId", bookId,
+                    "error", message
             ));
         }
     }

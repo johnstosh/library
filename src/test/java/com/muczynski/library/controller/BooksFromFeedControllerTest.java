@@ -92,4 +92,85 @@ class BooksFromFeedControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertTrue(response.getBody().isEmpty());
     }
+
+    @Test
+    void processSingleBook_returnsSuccessResult() {
+        Map<String, Object> serviceResult = new HashMap<>();
+        serviceResult.put("success", true);
+        serviceResult.put("bookId", 42L);
+        serviceResult.put("title", "The Great Book");
+        serviceResult.put("author", "John Author");
+        serviceResult.put("originalTitle", "2025-01-10_14:30:00");
+
+        when(booksFromFeedService.processSingleBook(42L)).thenReturn(serviceResult);
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSingleBook(42L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals("The Great Book", response.getBody().get("title"));
+        assertEquals("John Author", response.getBody().get("author"));
+    }
+
+    @Test
+    void processSingleBook_returnsErrorFromService() {
+        Map<String, Object> serviceResult = new HashMap<>();
+        serviceResult.put("success", false);
+        serviceResult.put("bookId", 42L);
+        serviceResult.put("error", "AI analysis failed (caused by: Connection timeout)");
+
+        when(booksFromFeedService.processSingleBook(42L)).thenReturn(serviceResult);
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSingleBook(42L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertTrue(response.getBody().get("error").toString().contains("Connection timeout"));
+    }
+
+    @Test
+    void processSingleBook_handlesUnexpectedException() {
+        when(booksFromFeedService.processSingleBook(42L)).thenThrow(new RuntimeException("Unexpected error"));
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSingleBook(42L);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertEquals(42L, response.getBody().get("bookId"));
+        assertEquals("Unexpected error", response.getBody().get("error"));
+    }
+
+    @Test
+    void processSavedPhotos_returnsResults() {
+        Map<String, Object> serviceResult = new HashMap<>();
+        serviceResult.put("processedCount", 3);
+        serviceResult.put("failedCount", 1);
+        serviceResult.put("totalBooks", 4);
+
+        when(booksFromFeedService.processSavedPhotos()).thenReturn(serviceResult);
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSavedPhotos();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(3, response.getBody().get("processedCount"));
+        assertEquals(1, response.getBody().get("failedCount"));
+        assertEquals(4, response.getBody().get("totalBooks"));
+    }
+
+    @Test
+    void processSavedPhotos_handlesException() {
+        when(booksFromFeedService.processSavedPhotos()).thenThrow(new RuntimeException("Processing failed"));
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSavedPhotos();
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(0, response.getBody().get("processedCount"));
+        assertEquals(0, response.getBody().get("failedCount"));
+        assertEquals(0, response.getBody().get("totalBooks"));
+    }
 }

@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -114,10 +115,15 @@ public class BooksFromFeedService {
     }
 
     /**
-     * Process a single saved book using AI book-by-photo workflow
+     * Process a single saved book using AI book-by-photo workflow.
+     * Uses NOT_SUPPORTED propagation so that inner service calls (generateTempBook)
+     * each run in their own transaction. If AI processing fails, the exception
+     * propagates cleanly without marking an outer transaction as rollback-only.
+     *
      * @param bookId The ID of the book to process
      * @return Map containing result of the processing
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Map<String, Object> processSingleBook(Long bookId) {
         logger.info("Processing single book: {}", bookId);
 
@@ -153,20 +159,45 @@ public class BooksFromFeedService {
             return result;
 
         } catch (Exception e) {
-            logger.error("Error processing book {}: {}", bookId, e.getMessage(), e);
+            String rootMessage = getRootCauseMessage(e);
+            logger.error("Error processing book {}: {}", bookId, rootMessage, e);
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("bookId", bookId);
-            result.put("error", e.getMessage());
+            result.put("error", rootMessage);
             return result;
         }
     }
 
     /**
+     * Extract the root cause message from a potentially nested exception chain.
+     * Returns the deepest cause's message for more useful error reporting.
+     */
+    private String getRootCauseMessage(Exception e) {
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String rootMessage = root.getMessage();
+        if (rootMessage == null || rootMessage.isBlank()) {
+            rootMessage = root.getClass().getSimpleName();
+        }
+        // If the root cause is different from the top-level exception, include both
+        if (root != e && e.getMessage() != null && !e.getMessage().equals(rootMessage)) {
+            return e.getMessage() + " (caused by: " + rootMessage + ")";
+        }
+        return rootMessage;
+    }
+
+    /**
      * Phase 2: Process saved photos using the book-by-photo AI workflow
-     * This can run independently after photos are saved to the database
+     * This can run independently after photos are saved to the database.
+     * Uses NOT_SUPPORTED propagation so each book's AI processing runs in its own
+     * transaction, preventing one failure from rolling back all successfully processed books.
+     *
      * @return Map containing results of the processing
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Map<String, Object> processSavedPhotos() {
         logger.info("===== Phase 2: Processing saved photos with AI =====");
 
@@ -220,11 +251,12 @@ public class BooksFromFeedService {
                 logger.info("Successfully processed book {}", bookId);
 
             } catch (Exception e) {
-                logger.error("Error processing book {}: {}", bookId, e.getMessage(), e);
+                String rootMessage = getRootCauseMessage(e);
+                logger.error("Error processing book {}: {}", bookId, rootMessage, e);
                 failedBooks.add(Map.of(
                         "bookId", bookId,
                         "originalTitle", tempTitle,
-                        "reason", "Error: " + e.getMessage()
+                        "reason", "Error: " + rootMessage
                 ));
             }
         }

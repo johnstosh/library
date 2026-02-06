@@ -48,11 +48,26 @@ Processes a single saved book with AI to extract metadata.
 **Path Parameter:** `bookId` - Saved book ID to process
 
 **Response:** Processed book data with AI-extracted metadata:
-- Title
-- Author
-- Publication year
-- Publisher
-- Other metadata
+```json
+{
+  "success": true,
+  "bookId": 123,
+  "title": "The Great Gatsby",
+  "author": "F. Scott Fitzgerald",
+  "originalTitle": "2025-01-10_14:30:00"
+}
+```
+
+On error:
+```json
+{
+  "success": false,
+  "bookId": 123,
+  "error": "AI analysis failed (caused by: Connection refused to AI service)"
+}
+```
+
+**Transaction behavior:** This method runs outside any transaction (`NOT_SUPPORTED` propagation). Inner service calls (e.g., `generateTempBook`) each run in their own transaction, so a failure returns a clean error instead of a generic "Transaction silently rolled back" message. The error includes the root cause for easier debugging.
 
 **Requirements:**
 - User must have xAI API key configured
@@ -66,20 +81,29 @@ Processes a single saved book with AI to extract metadata.
 **Use Case:**
 - Extract book metadata from photos using AI
 - Convert saved photos into catalog entries
+- Called iteratively by the frontend "Process All" button (one book at a time with progress updates)
 
 ---
 
 ## POST /api/books-from-feed/process-saved
-Processes all saved books with AI in batch.
+Processes all saved books with AI in batch (server-side).
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
-**Response:** Array of processed books with AI-extracted metadata
+**Response:** Processing results with success/failure counts:
+```json
+{
+  "processedCount": 3,
+  "failedCount": 1,
+  "totalBooks": 4,
+  "processedBooks": [...],
+  "failedBooks": [...]
+}
+```
 
-**Behavior:**
-- Processes each saved book sequentially
-- Uses AI to extract metadata from **all photos** for each book (not just the first photo)
-- Updates processing status for each book
+**Transaction behavior:** Runs outside any transaction (`NOT_SUPPORTED` propagation). Each book's AI processing runs in its own transaction, so one failure doesn't roll back other successfully processed books. Error messages include root cause details.
+
+**Note:** The frontend "Process All" button now iterates client-side using `process-single/{bookId}` for each book, providing real-time progress updates. This batch endpoint remains available for programmatic use.
 
 **Photo Analysis:**
 - **All photos** associated with each book are analyzed together by AI
@@ -87,8 +111,8 @@ Processes all saved books with AI in batch.
 - AI receives all images in a single request for better context
 
 **Use Case:**
-- Bulk process imported photos from Google Photos feed
-- Automated book cataloging from photos
+- Server-side bulk processing of imported photos
+- Programmatic batch cataloging
 
 ---
 
