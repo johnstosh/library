@@ -41,6 +41,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,6 +98,9 @@ public class BookService {
         }
         book.setLibrary(branchRepository.findById(bookDto.getLibraryId())
                 .orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
+
+        // Ensure title uniqueness
+        book.setTitle(ensureUniqueTitle(book.getTitle(), null));
 
         // Set lastModified to current time
         book.setLastModified(LocalDateTime.now());
@@ -229,7 +234,7 @@ public class BookService {
 
     public BookDto updateBook(Long id, BookDto bookDto) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
-        book.setTitle(bookDto.getTitle());
+        book.setTitle(ensureUniqueTitle(bookDto.getTitle(), id));
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
         book.setPlotSummary(bookDto.getPlotSummary());
@@ -319,8 +324,8 @@ public class BookService {
         Book original = bookRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Book not found: " + id));
 
-        // Generate new title with copy number
-        String newTitle = generateCloneTitle(original.getTitle());
+        // Generate unique title — since the original exists, this naturally produces ", c. 2"
+        String newTitle = ensureUniqueTitle(original.getTitle(), null);
 
         // Create new book with same data but new title
         Book clone = new Book();
@@ -343,44 +348,6 @@ public class BookService {
         return bookMapper.toDto(savedClone);
     }
 
-    private String generateCloneTitle(String originalTitle) {
-        // Extract base title by removing any existing ", c. N" suffix
-        String baseTitle = originalTitle;
-        int copyIndex = 1;
-
-        // Check if title already ends with ", c. N" pattern (case insensitive)
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("^(.+),\\s*[cC]\\.\\s*(\\d+)$");
-        java.util.regex.Matcher matcher = pattern.matcher(originalTitle);
-        if (matcher.matches()) {
-            baseTitle = matcher.group(1);
-        }
-
-        // Find all existing books with the same base title
-        List<Book> allBooks = bookRepository.findAll();
-        int maxCopyNumber = 0;
-
-        for (Book book : allBooks) {
-            String bookTitle = book.getTitle();
-
-            // Check if this book's title matches the base title exactly (the original)
-            if (bookTitle.equals(baseTitle)) {
-                maxCopyNumber = Math.max(maxCopyNumber, 0);
-            }
-
-            // Check if this book's title matches the pattern "baseTitle, c. N"
-            java.util.regex.Matcher bookMatcher = java.util.regex.Pattern
-                    .compile("^" + java.util.regex.Pattern.quote(baseTitle) + ",\\s*[cC]\\.\\s*(\\d+)$")
-                    .matcher(bookTitle);
-            if (bookMatcher.matches()) {
-                int num = Integer.parseInt(bookMatcher.group(1));
-                maxCopyNumber = Math.max(maxCopyNumber, num);
-            }
-        }
-
-        // Return the next copy number
-        return baseTitle + ", c. " + (maxCopyNumber + 1);
-    }
-
     private void handleRandomAuthor(BookDto dto) {
         Author randomAuthorEntity = randomAuthor.create();
 
@@ -397,6 +364,62 @@ public class BookService {
 
         dto.setAuthorId(selectedAuthorId);
         dto.setTitle("temporary title");
+    }
+
+    /**
+     * Ensure a book title is unique by appending ", c. N" suffix if needed.
+     * Strips any existing ", c. N" suffix to get the base title, then finds the
+     * next available copy number.
+     *
+     * @param desiredTitle The desired title
+     * @param excludeBookId Book ID to exclude from conflict check (for updates), or null for creates
+     * @return A unique title, either the original or with ", c. N" appended
+     */
+    public String ensureUniqueTitle(String desiredTitle, Long excludeBookId) {
+        if (desiredTitle == null || desiredTitle.isBlank()) {
+            return desiredTitle;
+        }
+
+        // Check if there's a conflict
+        boolean conflict;
+        if (excludeBookId != null) {
+            conflict = bookRepository.existsByTitleAndIdNot(desiredTitle, excludeBookId);
+        } else {
+            conflict = bookRepository.existsByTitle(desiredTitle);
+        }
+
+        if (!conflict) {
+            return desiredTitle;
+        }
+
+        // Strip any existing ", c. N" suffix to get the base title
+        String baseTitle = desiredTitle;
+        Pattern copyPattern = Pattern.compile("^(.+),\\s*c\\.\\s*\\d+$");
+        Matcher matcher = copyPattern.matcher(desiredTitle);
+        if (matcher.matches()) {
+            baseTitle = matcher.group(1);
+        }
+
+        // Find all titles matching the base or "base, c. N" pattern
+        String titlePattern = baseTitle + ", c. %";
+        List<String> existingTitles = bookRepository.findTitlesByBasePattern(baseTitle, titlePattern);
+
+        // Parse copy numbers from existing titles
+        int maxCopyNumber = 0;
+        Pattern numberedPattern = Pattern.compile(
+                "^" + Pattern.quote(baseTitle) + ",\\s*c\\.\\s*(\\d+)$");
+        for (String title : existingTitles) {
+            if (title.equals(baseTitle)) {
+                // The base title exists, count as copy 1
+                maxCopyNumber = Math.max(maxCopyNumber, 1);
+            }
+            Matcher m = numberedPattern.matcher(title);
+            if (m.matches()) {
+                maxCopyNumber = Math.max(maxCopyNumber, Integer.parseInt(m.group(1)));
+            }
+        }
+
+        return baseTitle + ", c. " + (maxCopyNumber + 1);
     }
 
     private Map<String, Object> extractJsonFromResponse(String response) {

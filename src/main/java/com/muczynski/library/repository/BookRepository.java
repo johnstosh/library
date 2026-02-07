@@ -114,6 +114,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''")
     List<Book> findBooksWithoutGrokipediaUrl();
 
+    boolean existsByTitle(String title);
+    boolean existsByTitleAndIdNot(String title, Long id);
+
+    @Query("SELECT b.title FROM Book b WHERE b.title = :title OR b.title LIKE :titlePattern")
+    List<String> findTitlesByBasePattern(String title, String titlePattern);
+
     long countByLibraryId(Long libraryId);
     List<Book> findAllByLibraryId(Long libraryId);
 

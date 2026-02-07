@@ -19,6 +19,7 @@ import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -70,8 +71,17 @@ class TestDataServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private BookService bookService;
+
     @InjectMocks
     private TestDataService testDataService;
+
+    @BeforeEach
+    void setUp() {
+        // ensureUniqueTitle returns the title as-is by default
+        lenient().when(bookService.ensureUniqueTitle(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     @Test
     void testGenerateTestData_CreatesLibraryIfNoneExists() {

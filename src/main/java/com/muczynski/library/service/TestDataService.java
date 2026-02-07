@@ -69,6 +69,9 @@ public class TestDataService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BookService bookService;
+
     public void generateTestData(int count) {
         if (branchRepository.findAll().isEmpty()) {
             Library branch = new Library();
@@ -83,6 +86,7 @@ public class TestDataService {
             authorRepository.save(author);
 
             Book book = randomBook.create(author);
+            book.setTitle(bookService.ensureUniqueTitle(book.getTitle(), null));
             book.setGrokipediaUrl("https://grokipedia.example.com/book/" + book.getId());
             bookRepository.save(book);
         }
