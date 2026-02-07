@@ -79,8 +79,9 @@ async function saveWithRetry(
       }
       onRetry?.(attempt + 1)
     }
-    // Exponential backoff: 1s, 2s, 4s
-    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)))
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, then capped at 30s (~3 min total for 10 retries)
+    const delay = Math.min(1000 * Math.pow(2, attempt), 30000)
+    await new Promise(resolve => setTimeout(resolve, delay))
   }
   // Should not reach here, but TypeScript needs it
   return { success: false, skipped: false, error: 'Max retries exceeded' }
@@ -203,7 +204,7 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
       setCurrentPhotoName(photoName)
       setRetryAttempt(0)
 
-      const result = await saveWithRetry(photo, 3, (attempt) => {
+      const result = await saveWithRetry(photo, 10, (attempt) => {
         setRetryAttempt(attempt)
       })
 
@@ -266,7 +267,7 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
       case 'saving': {
         const base = `Saving photo ${saveProgress.current} of ${saveProgress.total}...`
         const file = currentPhotoName ? ` (${currentPhotoName})` : ''
-        const retry = retryAttempt > 0 ? ` (retry ${retryAttempt}/3)` : ''
+        const retry = retryAttempt > 0 ? ` (retry ${retryAttempt}/10)` : ''
         return base + file + retry
       }
       case 'complete':
