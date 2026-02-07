@@ -54,6 +54,19 @@ export interface ProcessResultDto {
   error?: string
 }
 
+export interface SaveSingleFromPickerResult {
+  success: boolean
+  skipped: boolean
+  photoId?: string
+  photoName?: string
+  bookId?: number
+  title?: string
+  author?: string
+  existingPhoto?: boolean
+  reason?: string
+  error?: string
+}
+
 export interface SingleProcessResultDto {
   success: boolean
   bookId: number
@@ -120,6 +133,11 @@ export function useSavePhotosFromPicker() {
       queryClient.invalidateQueries({ queryKey: ['books'] })
     },
   })
+}
+
+// Save a single photo from picker (standalone function for use in iterative processing)
+export function saveSinglePhotoFromPickerApi(photo: Record<string, unknown>): Promise<SaveSingleFromPickerResult> {
+  return api.post<SaveSingleFromPickerResult>('/books-from-feed/save-single-from-picker', photo)
 }
 
 // Process a single book (standalone function for use in iterative processing)

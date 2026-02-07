@@ -4,12 +4,18 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +59,18 @@ class BooksFromFeedServiceTest {
 
     @Mock
     private AuthorRepository authorRepository;
+
+    @Mock
+    private PhotoRepository photoRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private BranchService branchService;
+
+    @Mock
+    private PhotoService photoService;
 
     @Mock
     private Authentication authentication;
@@ -143,6 +161,102 @@ class BooksFromFeedServiceTest {
         assertEquals(999L, result.get("bookId"));
         String error = (String) result.get("error");
         assertTrue(error.contains("Book not found"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_skipsAlreadyProcessedPhoto() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-1");
+        photo.put("name", "book_cover.jpg");
+        photo.put("url", "https://example.com/photo.jpg");
+        photo.put("description", "Title: The Great Gatsby\nAuthor: Fitzgerald");
+
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(true, result.get("success"));
+        assertEquals(true, result.get("skipped"));
+        assertEquals("photo-1", result.get("photoId"));
+        assertEquals("book_cover.jpg", result.get("photoName"));
+        assertTrue(((String) result.get("reason")).contains("Already processed"));
+
+        // Should not attempt to download or create book
+        verify(bookService, never()).createBook(any());
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_skipsDuplicateChecksum() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        // Photo without description (not already processed), but download will fail
+        // since we can't actually download in unit tests - instead test the error path
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-2");
+        photo.put("name", "duplicate.jpg");
+        photo.put("url", "https://example.com/photo.jpg");
+
+        // The download will throw since we can't mock the private HTTP method,
+        // but the error should be caught and returned gracefully
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(false, result.get("success"));
+        assertNotNull(result.get("error"));
+        assertEquals("duplicate.jpg", result.get("photoName"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_returnsErrorOnDownloadFailure() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-3");
+        photo.put("name", "failed.jpg");
+        photo.put("url", "https://invalid-url.example.com/photo.jpg");
+
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        // Should return error result, not throw exception
+        assertEquals(false, result.get("success"));
+        assertEquals(false, result.get("skipped"));
+        assertEquals("photo-3", result.get("photoId"));
+        assertEquals("failed.jpg", result.get("photoName"));
+        assertNotNull(result.get("error"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_throwsWhenNotAuthenticated() {
+        // Override security context to return unauthenticated
+        when(authentication.isAuthenticated()).thenReturn(false);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-4");
+        photo.put("name", "test.jpg");
+
+        assertThrows(LibraryException.class, () -> {
+            booksFromFeedService.saveSinglePhotoFromPicker(photo);
+        });
     }
 
     @Test

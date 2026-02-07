@@ -144,6 +144,74 @@ class BooksFromFeedControllerTest {
     }
 
     @Test
+    void saveSinglePhotoFromPicker_returnsSuccessResult() {
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-1");
+        photo.put("name", "book_cover.jpg");
+        photo.put("url", "https://example.com/photo.jpg");
+
+        Map<String, Object> serviceResult = new HashMap<>();
+        serviceResult.put("success", true);
+        serviceResult.put("skipped", false);
+        serviceResult.put("photoId", "photo-1");
+        serviceResult.put("photoName", "book_cover.jpg");
+        serviceResult.put("bookId", 42L);
+        serviceResult.put("title", "2025-01-15_10:30:00");
+
+        when(booksFromFeedService.saveSinglePhotoFromPicker(photo)).thenReturn(serviceResult);
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals(false, response.getBody().get("skipped"));
+        assertEquals(42L, response.getBody().get("bookId"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_returnsSkippedResult() {
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-2");
+        photo.put("name", "already_processed.jpg");
+        photo.put("description", "Title: Book\nAuthor: Author");
+
+        Map<String, Object> serviceResult = new HashMap<>();
+        serviceResult.put("success", true);
+        serviceResult.put("skipped", true);
+        serviceResult.put("photoId", "photo-2");
+        serviceResult.put("photoName", "already_processed.jpg");
+        serviceResult.put("reason", "Already processed");
+
+        when(booksFromFeedService.saveSinglePhotoFromPicker(photo)).thenReturn(serviceResult);
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals(true, response.getBody().get("skipped"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_handlesException() {
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-3");
+        photo.put("name", "error.jpg");
+
+        when(booksFromFeedService.saveSinglePhotoFromPicker(photo))
+                .thenThrow(new RuntimeException("Auth failed"));
+
+        ResponseEntity<Map<String, Object>> response = booksFromFeedController.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertEquals("Auth failed", response.getBody().get("error"));
+        assertEquals("error.jpg", response.getBody().get("photoName"));
+    }
+
+    @Test
     void processSavedPhotos_returnsResults() {
         Map<String, Object> serviceResult = new HashMap<>();
         serviceResult.put("processedCount", 3);

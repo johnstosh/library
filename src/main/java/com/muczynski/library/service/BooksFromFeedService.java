@@ -277,10 +277,153 @@ public class BooksFromFeedService {
 
 
     /**
+     * Save a single photo selected via Google Photos Picker API to database (Phase 1 - No AI).
+     * Each call runs in its own transaction (class-level @Transactional), so failures
+     * are isolated per-photo and don't corrupt the Hibernate session for other photos.
+     *
+     * @param photo Single photo metadata from the Picker
+     * @return Map containing result: {success, photoId, photoName, bookId, title} or {success: false, skipped: true} or {success: false, error}
+     */
+    public Map<String, Object> saveSinglePhotoFromPicker(Map<String, Object> photo) {
+        logger.info("===== Phase 1: Saving single photo from Picker to database =====");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            logger.error("Attempted to save photo without authentication");
+            throw new LibraryException("No authenticated user found");
+        }
+        Long userId = Long.parseLong(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LibraryException("User not found"));
+
+        String accessToken = googlePhotosService.getValidAccessToken(user);
+        Library branch = branchService.getOrCreateDefaultBranch();
+        Long branchId = branch.getId();
+
+        String photoId = (String) photo.get("id");
+        String photoName = (String) photo.get("name");
+        String photoUrl = (String) photo.get("url");
+
+        logger.info("Saving photo: name={}, id={}", photoName, photoId);
+
+        try {
+            // Check if photo already has description with book metadata
+            String description = (String) photo.get("description");
+            if (description != null && (description.contains("Title:") || description.contains("Author:"))) {
+                logger.info("Skipping photo {} - already processed (has book metadata in description)", photoName);
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", true);
+                result.put("skipped", true);
+                result.put("photoId", photoId);
+                result.put("photoName", photoName);
+                result.put("reason", "Already processed (has book metadata in description)");
+                return result;
+            }
+
+            // Download the photo from the URL provided by Picker
+            String mimeType = (String) photo.get("mimeType");
+            if (mimeType == null || mimeType.trim().isEmpty()) {
+                mimeType = "image/jpeg";
+            }
+            logger.debug("Downloading photo {} from URL: {} (mimeType: {})", photoName, photoUrl, mimeType);
+            byte[] photoBytes = downloadPhotoFromUrl(photoUrl, accessToken);
+            logger.info("Downloaded photo {} ({} bytes, mimeType: {})", photoName, photoBytes.length, mimeType);
+
+            // Check if this photo already exists in the database by checksum
+            String checksum = computeChecksum(photoBytes);
+            if (checksum != null) {
+                java.util.List<Photo> existingPhotos = photoRepository.findAllByImageChecksumOrderByIdAsc(checksum);
+                if (!existingPhotos.isEmpty()) {
+                    Photo existing = existingPhotos.get(0);
+                    Long existingBookId = existing.getBook() != null ? existing.getBook().getId() : null;
+                    String existingTitle = existing.getBook() != null ? existing.getBook().getTitle() : "Unknown";
+                    String existingAuthor = existing.getBook() != null && existing.getBook().getAuthor() != null
+                            ? existing.getBook().getAuthor().getName() : "Unknown";
+
+                    logger.info("Photo {} already exists in database (book ID: {}, title: '{}')",
+                            photoName, existingBookId, existingTitle);
+
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("success", true);
+                    result.put("skipped", true);
+                    result.put("photoId", photoId);
+                    result.put("photoName", photoName);
+                    result.put("bookId", existingBookId != null ? existingBookId : -1);
+                    result.put("title", existingTitle);
+                    result.put("author", existingAuthor);
+                    result.put("existingPhoto", true);
+                    return result;
+                }
+            }
+
+            // Create temporary book with timestamp title for processing later
+            String tempTitle = generateTemporaryTitle();
+
+            // Try to get photo creation time from mediaMetadata, otherwise use current time
+            LocalDateTime dateAdded = LocalDateTime.now();
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
+                String creationTime = null;
+
+                if (mediaMetadata != null) {
+                    creationTime = (String) mediaMetadata.get("creationTime");
+                }
+
+                if (creationTime == null || creationTime.isEmpty()) {
+                    creationTime = (String) photo.get("creationTime");
+                }
+
+                if (creationTime != null && !creationTime.isEmpty()) {
+                    dateAdded = LocalDateTime.parse(creationTime.replace("Z", ""));
+                    logger.debug("Using photo creation time for book: {}", dateAdded);
+                }
+            } catch (Exception e) {
+                logger.debug("Could not parse photo creation time, using current time: {}", e.getMessage());
+            }
+
+            BookDto tempBook = new BookDto();
+            tempBook.setTitle(tempTitle);
+            tempBook.setAuthorId(null);
+            tempBook.setLibraryId(branchId);
+            tempBook.setStatus(BookStatus.ACTIVE);
+            tempBook.setDateAddedToLibrary(dateAdded);
+
+            BookDto savedBook = bookService.createBook(tempBook);
+            Long bookId = savedBook.getId();
+            logger.info("Created temporary book with ID: {} (title: {})", bookId, tempTitle);
+
+            photoService.addPhotoFromBytes(bookId, photoBytes, mimeType, dateAdded);
+            logger.info("Saved photo to database for book {} (dateTaken: {})", bookId, dateAdded);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("skipped", false);
+            result.put("photoId", photoId);
+            result.put("photoName", photoName);
+            result.put("bookId", bookId);
+            result.put("title", tempTitle);
+            return result;
+
+        } catch (Exception e) {
+            logger.error("Error saving photo {}: {}", photoName, e.getMessage(), e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("skipped", false);
+            result.put("photoId", photoId);
+            result.put("photoName", photoName);
+            result.put("error", e.getMessage());
+            return result;
+        }
+    }
+
+    /**
      * Save photos selected via Google Photos Picker API to database (Phase 1 - No AI)
+     * @deprecated Use {@link #saveSinglePhotoFromPicker(Map)} instead for per-photo transaction isolation.
      * @param photos List of photo metadata from the Picker
      * @return Map containing results of the save operation
      */
+    @Deprecated
     public Map<String, Object> savePhotosFromPicker(List<Map<String, Object>> photos) {
         logger.info("===== Phase 1: Saving photos from Picker to database =====");
         logger.info("Saving {} photos selected from Picker", photos.size());
