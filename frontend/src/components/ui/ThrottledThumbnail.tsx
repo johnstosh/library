@@ -14,8 +14,26 @@ const thumbnailQueue: Array<{
 let isProcessing = false
 
 // Global cache for photos keyed by checksum
-// This persists across component unmounts and page navigation
-const checksumCache = new Map<string, string>()
+// Stores blob URL and reference count for proper lifecycle management
+const checksumCache = new Map<string, { url: string; count: number }>()
+
+function retainCachedUrl(checksum: string): void {
+  const entry = checksumCache.get(checksum)
+  if (entry) {
+    entry.count++
+  }
+}
+
+function releaseCachedUrl(checksum: string): void {
+  const entry = checksumCache.get(checksum)
+  if (entry) {
+    entry.count--
+    if (entry.count <= 0) {
+      URL.revokeObjectURL(entry.url)
+      checksumCache.delete(checksum)
+    }
+  }
+}
 
 async function processQueue() {
   if (isProcessing || thumbnailQueue.length === 0) {
@@ -31,8 +49,8 @@ async function processQueue() {
     try {
       // Check cache first if checksum is provided
       if (item.checksum && checksumCache.has(item.checksum)) {
-        const cachedUrl = checksumCache.get(item.checksum)!
-        item.resolve(cachedUrl)
+        const cached = checksumCache.get(item.checksum)!
+        item.resolve(cached.url)
         continue
       }
 
@@ -45,9 +63,9 @@ async function processQueue() {
       const blob = await response.blob()
       const blobUrl = URL.createObjectURL(blob)
 
-      // Store in cache if checksum is provided
+      // Store in cache if checksum is provided (count starts at 0, component retains on use)
       if (item.checksum) {
-        checksumCache.set(item.checksum, blobUrl)
+        checksumCache.set(item.checksum, { url: blobUrl, count: 0 })
       }
 
       item.resolve(blobUrl)
@@ -62,7 +80,7 @@ async function processQueue() {
 function queueThumbnail(id: number, url: string, checksum?: string): Promise<string> {
   // Check cache first if checksum is provided
   if (checksum && checksumCache.has(checksum)) {
-    return Promise.resolve(checksumCache.get(checksum)!)
+    return Promise.resolve(checksumCache.get(checksum)!.url)
   }
 
   return new Promise((resolve, reject) => {
@@ -92,10 +110,21 @@ export function clearThumbnailQueue(): void {
  * Use with caution - typically only for memory management.
  */
 export function clearThumbnailCache(): void {
-  checksumCache.forEach((blobUrl) => {
-    URL.revokeObjectURL(blobUrl)
+  checksumCache.forEach((entry) => {
+    URL.revokeObjectURL(entry.url)
   })
   checksumCache.clear()
+}
+
+// Test-only exports for unit testing
+export function _resetForTesting(): void {
+  thumbnailQueue.length = 0
+  checksumCache.clear()
+  isProcessing = false
+}
+
+export function _getCacheEntryForTesting(checksum: string) {
+  return checksumCache.get(checksum) ?? null
 }
 
 interface ThrottledThumbnailProps {
@@ -110,7 +139,7 @@ interface ThrottledThumbnailProps {
 export function ThrottledThumbnail({ photoId, url, alt, className, checksum, respectOrientation }: ThrottledThumbnailProps) {
   const [loadedUrl, setLoadedUrl] = useState<string | null>(() => {
     if (checksum && checksumCache.has(checksum)) {
-      return checksumCache.get(checksum)!
+      return checksumCache.get(checksum)!.url
     }
     return null
   })
@@ -119,15 +148,29 @@ export function ThrottledThumbnail({ photoId, url, alt, className, checksum, res
   })
   const [error, setError] = useState(false)
   const mountedRef = useRef(true)
+  // Bug 4 fix: refs to track current values for cleanup (avoids stale closures)
+  const loadedUrlRef = useRef<string | null>(null)
+  const checksumRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     mountedRef.current = true
+    checksumRef.current = checksum
 
-    // Check cache first for immediate display
+    // Check cache first for immediate display (Bug 6: always return cleanup)
     if (checksum && checksumCache.has(checksum)) {
-      setLoadedUrl(checksumCache.get(checksum)!)
+      const cachedUrl = checksumCache.get(checksum)!.url
+      setLoadedUrl(cachedUrl)
       setIsLoading(false)
-      return
+      loadedUrlRef.current = cachedUrl
+      retainCachedUrl(checksum)
+
+      return () => {
+        mountedRef.current = false
+        if (checksumRef.current) {
+          releaseCachedUrl(checksumRef.current)
+        }
+        loadedUrlRef.current = null
+      }
     }
 
     setIsLoading(true)
@@ -140,8 +183,11 @@ export function ThrottledThumbnail({ photoId, url, alt, className, checksum, res
           setLoadedUrl(blobUrl)
           setIsLoading(false)
         }
-        // Don't revoke blob URL if it's cached by checksum
-        // The cache manages the lifecycle
+        // Track the URL in the ref for cleanup (Bug 4 fix)
+        loadedUrlRef.current = blobUrl
+        if (checksum) {
+          retainCachedUrl(checksum)
+        }
       })
       .catch((err) => {
         // Ignore "Queue cleared" errors - they're expected during navigation
@@ -153,12 +199,15 @@ export function ThrottledThumbnail({ photoId, url, alt, className, checksum, res
 
     return () => {
       mountedRef.current = false
-      // Only revoke if NOT cached (no checksum provided)
-      if (loadedUrl && !checksum) {
-        URL.revokeObjectURL(loadedUrl)
+      // Bug 4 fix: read from refs instead of stale closure values
+      if (checksumRef.current) {
+        releaseCachedUrl(checksumRef.current)
+      } else if (loadedUrlRef.current) {
+        URL.revokeObjectURL(loadedUrlRef.current)
       }
+      loadedUrlRef.current = null
     }
-  }, [photoId, url, checksum])
+  }, [url, checksum]) // Bug 5 fix: removed photoId from deps
 
   if (isLoading) {
     return (
