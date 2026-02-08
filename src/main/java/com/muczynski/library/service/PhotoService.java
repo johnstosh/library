@@ -932,13 +932,16 @@ public class PhotoService {
             // Check if image data exists
             if (photo.getImage() == null || photo.getImage().length == 0) {
                 logger.error("Photo ID {} has no image data (null or empty)", photoId);
-                throw new LibraryException("Photo has no image data");
+                throw new LibraryException("Photo " + photoId + " has no image data"
+                        + " (contentType=" + photo.getContentType() + ")");
             }
 
             BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(photo.getImage()));
             if (originalImage == null) {
                 logger.error("Failed to read image data for photo ID {}", photoId);
-                throw new LibraryException("Failed to read image data");
+                throw new LibraryException("Failed to read image data for photo " + photoId
+                        + " (contentType=" + photo.getContentType()
+                        + ", imageSize=" + photo.getImage().length + ")");
             }
 
             // Read and apply EXIF orientation to correct rotated images
@@ -998,13 +1001,13 @@ public class PhotoService {
 
         } catch (IOException e) {
             logger.error("IO error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
-            throw new LibraryException("Failed to create thumbnail due to IO error", e);
+            throw new LibraryException("Failed to generate thumbnail for photo " + photoId + ": " + e.getMessage(), e);
         } catch (LibraryException e) {
             logger.error("Library error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
             logger.error("Unexpected error generating thumbnail for photo ID {} with width {}: {}", photoId, width, e.getMessage(), e);
-            throw new LibraryException("Failed to generate thumbnail", e);
+            throw new LibraryException("Failed to generate thumbnail for photo " + photoId + ": " + e.getMessage(), e);
         }
     }
 

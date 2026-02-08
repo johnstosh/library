@@ -24,6 +24,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.UUID;
 
+import com.muczynski.library.exception.LibraryException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -230,5 +232,28 @@ class PhotoServiceIntegrationTest {
         BufferedImage img400 = ImageIO.read(new ByteArrayInputStream(thumbnail400.getFirst()));
         assertEquals(400, img400.getWidth());
         assertEquals(200, img400.getHeight());
+    }
+
+    @Test
+    void getThumbnail_withCorruptImageData_errorIncludesDiagnosticInfo() {
+        // Given: A photo with corrupt (non-image) data
+        Book book = new Book();
+        book.setTitle("Test Book Corrupt " + uniqueSuffix);
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(new byte[]{0x00, 0x01, 0x02, 0x03}); // not valid image data
+        photo.setContentType("image/jpeg");
+        photoRepository.save(photo);
+
+        // When/Then: getThumbnail should throw with diagnostic info
+        LibraryException exception = assertThrows(LibraryException.class, () -> {
+            photoService.getThumbnail(photo.getId(), 200);
+        });
+
+        String message = exception.getMessage();
+        assertTrue(message.contains(String.valueOf(photo.getId())),
+                "Error should include photo ID, got: " + message);
     }
 }
