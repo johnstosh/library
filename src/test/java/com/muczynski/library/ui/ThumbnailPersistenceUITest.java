@@ -104,7 +104,7 @@ public class ThumbnailPersistenceUITest {
     }
 
     @Test
-    @DisplayName("Books with photos should display thumbnail images that persist")
+    @DisplayName("Books with photos should display thumbnail images that persist after background refetch")
     void testThumbnailsPersistAfterLoading() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
@@ -137,16 +137,25 @@ public class ThumbnailPersistenceUITest {
         // Verify showing correct book count
         assertThat(page.locator("text=Showing 5 books")).isVisible();
 
-        // Wait for any background refetches to settle
+        // Trigger a background refetch by dispatching 'online' event.
+        // TanStack Query's refetchOnReconnect fires for all stale queries
+        // (summaries has staleTime: 0, so it's always stale).
+        // This is the most common trigger for the thumbnail disappearance bug.
+        page.evaluate("window.dispatchEvent(new Event('online'))");
+
+        // Wait for the refetch cascade to settle
         page.waitForTimeout(3000);
 
-        // After waiting, verify books and thumbnails are still present (not replaced by spinner)
+        // After refetch, verify books and thumbnails are still present (not replaced by spinner)
         assertThat(page.locator("text=Thumbnail Book One")).isVisible();
+        assertThat(page.locator("text=Thumbnail Book Two")).isVisible();
+        assertThat(page.locator("text=Thumbnail Book Three")).isVisible();
+        assertThat(page.locator("text=Thumbnail Book Four")).isVisible();
         assertThat(page.locator("text=Thumbnail Book Five")).isVisible();
 
         int finalThumbnailCount = thumbnails.count();
         Assertions.assertTrue(finalThumbnailCount >= thumbnailCount,
                 "Thumbnail count decreased from " + thumbnailCount + " to " + finalThumbnailCount +
-                " after waiting, suggesting the table was re-rendered and thumbnails were lost.");
+                " after online event triggered refetch, suggesting thumbnails were lost.");
     }
 }
