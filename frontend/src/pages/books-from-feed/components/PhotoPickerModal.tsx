@@ -143,6 +143,7 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
         thumbnailUrl: item.mediaFile?.baseUrl,
         description: '',
         mimeType: item.mediaFile?.mimeType,
+        creationTime: item.createTime || new Date().toISOString(),
         lastEditedUtc: item.createTime || new Date().toISOString(),
       }))
       handleSavePhotos(transformedPhotos)

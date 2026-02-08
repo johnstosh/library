@@ -29,14 +29,21 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional
 public class BooksFromFeedService {
 
     private static final Logger logger = LoggerFactory.getLogger(BooksFromFeedService.class);
+    private static final ZoneId EASTERN = ZoneId.of("America/New_York");
+    private static final Pattern FILENAME_DATESTAMP = Pattern.compile("(2[01]\\d{12})");
 
     @Autowired
     private GooglePhotosService googlePhotosService;
@@ -72,13 +79,81 @@ public class BooksFromFeedService {
     private UserRepository userRepository;
 
     /**
-     * Generate a temporary title for a book from feed.
+     * Generate a temporary title for a book from feed using the best available date.
+     * Priority: filename datestamp > Google creationTime > server now().
      * Format: yyyy-MM-dd_HH:mm:ss
-     * Example: 2025-01-15_14:30:45
+     *
+     * @param filename Photo filename (e.g., "20260205_180822.jpg"), may be null
+     * @param creationTime ISO-8601 creation time from Google Photos (e.g., "2026-02-05T23:08:22Z"), may be null
+     * @return Formatted timestamp string
      */
-    public static String generateTemporaryTitle() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
-        return timestamp;
+    public static String generateTemporaryTitle(String filename, String creationTime) {
+        DateTimeFormatter outputFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss");
+
+        // 1. Try to parse datestamp from filename
+        LocalDateTime fromFilename = parseDateFromFilename(filename);
+        if (fromFilename != null) {
+            return fromFilename.format(outputFormat);
+        }
+
+        // 2. Try to parse Google creationTime (UTC) and convert to Eastern
+        LocalDateTime fromCreation = parseCreationTime(creationTime);
+        if (fromCreation != null) {
+            return fromCreation.format(outputFormat);
+        }
+
+        // 3. Fallback to server now
+        return LocalDateTime.now().format(outputFormat);
+    }
+
+    /**
+     * Parse a datestamp from a photo filename.
+     * Strips all non-alphanumeric characters, then finds the first run of 14+ digits
+     * starting with "20" or "21" and parses as yyyyMMddHHmmss.
+     *
+     * @param filename The photo filename (e.g., "20260205_180822.jpg")
+     * @return Parsed LocalDateTime, or null if no datestamp found
+     */
+    static LocalDateTime parseDateFromFilename(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return null;
+        }
+        // Strip non-alphanumeric characters to normalize filenames like "IMG-2026-02-05 18_08_22.png"
+        String digitsOnly = filename.replaceAll("[^0-9]", "");
+        Matcher matcher = FILENAME_DATESTAMP.matcher(digitsOnly);
+        if (matcher.find()) {
+            try {
+                return LocalDateTime.parse(matcher.group(1),
+                        DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            } catch (DateTimeParseException e) {
+                logger.debug("Found 14-digit sequence but failed to parse as date: {}", matcher.group(1));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Parse an ISO-8601 creation time from Google Photos and convert from UTC to Eastern.
+     *
+     * @param creationTime ISO-8601 string (e.g., "2026-02-05T23:08:22Z")
+     * @return LocalDateTime in US Eastern time, or null if parsing fails
+     */
+    static LocalDateTime parseCreationTime(String creationTime) {
+        if (creationTime == null || creationTime.isEmpty()) {
+            return null;
+        }
+        try {
+            ZonedDateTime utc = ZonedDateTime.parse(creationTime);
+            return utc.withZoneSameInstant(EASTERN).toLocalDateTime();
+        } catch (DateTimeParseException e) {
+            // Try without timezone suffix
+            try {
+                return LocalDateTime.parse(creationTime.replace("Z", ""));
+            } catch (DateTimeParseException e2) {
+                logger.debug("Could not parse creation time: {}", creationTime);
+                return null;
+            }
+        }
     }
 
     /**
@@ -356,30 +431,19 @@ public class BooksFromFeedService {
                 }
             }
 
-            // Create temporary book with timestamp title for processing later
-            String tempTitle = generateTemporaryTitle();
+            // Extract creation time from photo metadata
+            String creationTime = extractCreationTime(photo);
 
-            // Try to get photo creation time from mediaMetadata, otherwise use current time
-            LocalDateTime dateAdded = LocalDateTime.now();
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
-                String creationTime = null;
+            // Create temporary book with best available date as title
+            String tempTitle = generateTemporaryTitle(photoName, creationTime);
 
-                if (mediaMetadata != null) {
-                    creationTime = (String) mediaMetadata.get("creationTime");
-                }
-
-                if (creationTime == null || creationTime.isEmpty()) {
-                    creationTime = (String) photo.get("creationTime");
-                }
-
-                if (creationTime != null && !creationTime.isEmpty()) {
-                    dateAdded = LocalDateTime.parse(creationTime.replace("Z", ""));
-                    logger.debug("Using photo creation time for book: {}", dateAdded);
-                }
-            } catch (Exception e) {
-                logger.debug("Could not parse photo creation time, using current time: {}", e.getMessage());
+            // Use parsed date for dateAddedToLibrary (same priority as title)
+            LocalDateTime dateAdded = parseDateFromFilename(photoName);
+            if (dateAdded == null) {
+                dateAdded = parseCreationTime(creationTime);
+            }
+            if (dateAdded == null) {
+                dateAdded = LocalDateTime.now();
             }
 
             BookDto tempBook = new BookDto();
@@ -506,33 +570,19 @@ public class BooksFromFeedService {
                     }
                 }
 
-                // Create temporary book with timestamp title for processing later
-                String tempTitle = generateTemporaryTitle();
+                // Extract creation time from photo metadata
+                String creationTime = extractCreationTime(photo);
 
-                // Try to get photo creation time from mediaMetadata, otherwise use current time
-                LocalDateTime dateAdded = LocalDateTime.now();
-                try {
-                    // First try to get from mediaMetadata.creationTime (Google Photos Picker API format)
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
-                    String creationTime = null;
+                // Create temporary book with best available date as title
+                String tempTitle = generateTemporaryTitle(photoName, creationTime);
 
-                    if (mediaMetadata != null) {
-                        creationTime = (String) mediaMetadata.get("creationTime");
-                    }
-
-                    // Fallback to root level creationTime if mediaMetadata doesn't have it
-                    if (creationTime == null || creationTime.isEmpty()) {
-                        creationTime = (String) photo.get("creationTime");
-                    }
-
-                    if (creationTime != null && !creationTime.isEmpty()) {
-                        // Google Photos API returns ISO 8601 format: "2024-12-15T10:30:00Z"
-                        dateAdded = LocalDateTime.parse(creationTime.replace("Z", ""));
-                        logger.debug("Using photo creation time for book: {}", dateAdded);
-                    }
-                } catch (Exception e) {
-                    logger.debug("Could not parse photo creation time, using current time: {}", e.getMessage());
+                // Use parsed date for dateAddedToLibrary (same priority as title)
+                LocalDateTime dateAdded = parseDateFromFilename(photoName);
+                if (dateAdded == null) {
+                    dateAdded = parseCreationTime(creationTime);
+                }
+                if (dateAdded == null) {
+                    dateAdded = LocalDateTime.now();
                 }
 
                 BookDto tempBook = new BookDto();
@@ -580,6 +630,31 @@ public class BooksFromFeedService {
         return result;
     }
 
+
+    /**
+     * Extract the best available creation time string from a photo metadata map.
+     * Checks mediaMetadata.creationTime, then root creationTime, then lastEditedUtc.
+     */
+    private String extractCreationTime(Map<String, Object> photo) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mediaMetadata = (Map<String, Object>) photo.get("mediaMetadata");
+            if (mediaMetadata != null) {
+                String ct = (String) mediaMetadata.get("creationTime");
+                if (ct != null && !ct.isEmpty()) return ct;
+            }
+        } catch (Exception e) {
+            // ignore cast errors
+        }
+
+        String ct = (String) photo.get("creationTime");
+        if (ct != null && !ct.isEmpty()) return ct;
+
+        ct = (String) photo.get("lastEditedUtc");
+        if (ct != null && !ct.isEmpty()) return ct;
+
+        return null;
+    }
 
     /**
      * Download photo from a URL (from Google Photos Picker)

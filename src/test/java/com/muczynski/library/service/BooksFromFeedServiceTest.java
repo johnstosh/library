@@ -27,6 +27,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -257,6 +258,70 @@ class BooksFromFeedServiceTest {
         assertThrows(LibraryException.class, () -> {
             booksFromFeedService.saveSinglePhotoFromPicker(photo);
         });
+    }
+
+    // --- generateTemporaryTitle tests ---
+
+    @Test
+    void generateTemporaryTitle_usesFilenameDatestampWhenPresent() {
+        String result = BooksFromFeedService.generateTemporaryTitle("20260205_180822.jpg", null);
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_parsesFilenameWithExtraChars() {
+        String result = BooksFromFeedService.generateTemporaryTitle("IMG-2026-02-05 18_08_22.png", null);
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fallsBackToCreationTimeWhenNoFilenameDate() {
+        // 2026-02-05T23:08:22Z in UTC = 2026-02-05T18:08:22 in Eastern (EST = UTC-5)
+        String result = BooksFromFeedService.generateTemporaryTitle(null, "2026-02-05T23:08:22Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fallsBackToServerNowWhenNothingAvailable() {
+        String result = BooksFromFeedService.generateTemporaryTitle(null, null);
+        assertNotNull(result);
+        // Should match yyyy-MM-dd_HH:mm:ss format
+        assertTrue(result.matches("\\d{4}-\\d{2}-\\d{2}_\\d{2}:\\d{2}:\\d{2}"),
+                "Should match date format, got: " + result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fewerThan14DigitsFallsThrough() {
+        // "IMG_123.jpg" has only 3 digits, should fall through to creationTime
+        String result = BooksFromFeedService.generateTemporaryTitle("IMG_123.jpg", "2026-02-05T23:08:22Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_filenameTakesPriorityOverCreationTime() {
+        // When both are available, filename wins
+        String result = BooksFromFeedService.generateTemporaryTitle(
+                "20260205_180822.jpg", "2026-01-01T00:00:00Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void parseDateFromFilename_returnsNullForEmptyFilename() {
+        assertNull(BooksFromFeedService.parseDateFromFilename(null));
+        assertNull(BooksFromFeedService.parseDateFromFilename(""));
+    }
+
+    @Test
+    void parseCreationTime_handlesNullAndEmpty() {
+        assertNull(BooksFromFeedService.parseCreationTime(null));
+        assertNull(BooksFromFeedService.parseCreationTime(""));
+    }
+
+    @Test
+    void parseCreationTime_convertsUtcToEastern() {
+        LocalDateTime result = BooksFromFeedService.parseCreationTime("2026-02-05T23:08:22Z");
+        assertNotNull(result);
+        assertEquals(LocalDateTime.of(2026, 2, 5, 18, 8, 22), result);
     }
 
     @Test
