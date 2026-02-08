@@ -106,7 +106,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
 
   return {
     data: allBooks,
-    isLoading: summariesLoading || fetchingBooks,
+    isLoading: allBooks.length === 0 && (summariesLoading || fetchingBooks),
   }
 }
 

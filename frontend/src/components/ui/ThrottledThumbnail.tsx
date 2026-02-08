@@ -185,6 +185,7 @@ export function ThrottledThumbnail({ photoId, url, alt, className, checksum, res
       alt={alt}
       className={className}
       style={style}
+      data-test="thumbnail-img"
     />
   )
 }
