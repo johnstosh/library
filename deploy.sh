@@ -14,7 +14,7 @@ Usage: ./deploy.sh <mode>
 
 Modes:
   standard    Build and deploy using standard JVM (Dockerfile, 512Mi memory)
-  graalvm     Build and deploy using GraalVM native image (Dockerfile-graalvm, 384Mi memory)
+  graalvm     Build and deploy using GraalVM native image (Dockerfile-graalvm, 512Mi memory)
   redeploy    Redeploy the existing image without rebuilding (skip build and push)
 
 Required environment variables:
@@ -105,7 +105,7 @@ DOCKERFILE="Dockerfile"
 if [ "$MODE" = "graalvm" ]; then
   IMAGE_NAME="${IMAGE_NAME}-graalvm"
   SERVICE_VERSION="${SERVICE_VERSION}-graalvm"
-  MEMORY="384Mi"
+  MEMORY="512Mi"
   DOCKERFILE="Dockerfile-graalvm"
 fi
 
