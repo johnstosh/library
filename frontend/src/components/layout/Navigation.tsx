@@ -1,10 +1,9 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { clsx } from 'clsx'
-import { useTestDataPageVisibility } from '@/api/global-properties'
 import { useBranches } from '@/api/branches'
 
 interface NavLinkProps {
@@ -41,7 +40,6 @@ export function Navigation() {
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
-  const { data: testDataVisibility } = useTestDataPageVisibility()
   const { data: branches = [] } = useBranches()
 
   const handleLogout = () => {
@@ -61,13 +59,21 @@ export function Navigation() {
   const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
   const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
 
+  useEffect(() => {
+    if (branches.length > 0) {
+      document.title = `The ${branchName} Branch of the ${librarySystemName}`
+    } else {
+      document.title = 'Library'
+    }
+  }, [branches, branchName, librarySystemName])
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
       <div className="mx-[2%]">
         <div className="flex justify-between h-16">
           {/* Left side - Main navigation */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex flex-col items-start" data-test="library-name">
+            <Link to="/" className="flex flex-col items-start" data-test="branch-name">
               <span className="text-base font-bold text-gray-900 leading-tight">
                 The {branchName} Branch
               </span>
@@ -127,7 +133,7 @@ export function Navigation() {
               {isLibrarian && (
                 <>
                   <div className="w-px h-6 bg-gray-300 mx-2" />
-                  <NavLink to="/branches" data-test="nav-libraries">
+                  <NavLink to="/branches" data-test="nav-branches">
                     Branches
                   </NavLink>
                   <NavLink to="/users" data-test="nav-users">
@@ -145,11 +151,6 @@ export function Navigation() {
                   <NavLink to="/global-settings" data-test="nav-global-settings">
                     Global Settings
                   </NavLink>
-                  {testDataVisibility?.showTestDataPage && (
-                    <NavLink to="/test-data" data-test="nav-test-data">
-                      Test Data
-                    </NavLink>
-                  )}
                 </>
               )}
             </div>
@@ -262,7 +263,7 @@ export function Navigation() {
             {isLibrarian && (
               <>
                 <div className="border-t border-gray-200 my-2" />
-                <NavLink to="/branches" data-test="nav-libraries-mobile" onClick={closeMobileMenu}>
+                <NavLink to="/branches" data-test="nav-branches-mobile" onClick={closeMobileMenu}>
                   Branches
                 </NavLink>
                 <NavLink to="/users" data-test="nav-users-mobile" onClick={closeMobileMenu}>
@@ -280,11 +281,6 @@ export function Navigation() {
                 <NavLink to="/global-settings" data-test="nav-global-settings-mobile" onClick={closeMobileMenu}>
                   Global Settings
                 </NavLink>
-                {testDataVisibility?.showTestDataPage && (
-                  <NavLink to="/test-data" data-test="nav-test-data-mobile" onClick={closeMobileMenu}>
-                    Test Data
-                  </NavLink>
-                )}
               </>
             )}
           </div>

@@ -104,7 +104,7 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
           value={formData.branchName}
           onChange={(e) => handleFieldChange('branchName', e.target.value)}
           required
-          data-test="library-branch-name"
+          data-test="branch-branch-name"
         />
 
         <Input
@@ -113,7 +113,7 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
           onChange={(e) => handleFieldChange('librarySystemName', e.target.value)}
           required
           helpText="The name of the library system this branch belongs to"
-          data-test="library-system-name"
+          data-test="branch-system-name"
         />
       </form>
 
@@ -124,7 +124,7 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
             variant="ghost"
             onClick={handleCancel}
             disabled={isLoading}
-            data-test="library-form-cancel"
+            data-test="branch-form-cancel"
           >
             Cancel
           </Button>
@@ -132,7 +132,7 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
             variant="primary"
             onClick={handleSubmit}
             isLoading={isLoading}
-            data-test="library-form-submit"
+            data-test="branch-form-submit"
           >
             {isEditing ? 'Update' : 'Create'}
           </Button>

@@ -7,15 +7,15 @@ import { Spinner } from '@/components/progress/Spinner'
 export function BranchEditPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const libraryId = id ? parseInt(id, 10) : 0
-  const { data: branch, isLoading } = useBranch(libraryId)
+  const branchId = id ? parseInt(id, 10) : 0
+  const { data: branch, isLoading } = useBranch(branchId)
 
   const handleSuccess = () => {
-    navigate(`/branches/${libraryId}`)
+    navigate(`/branches/${branchId}`)
   }
 
   const handleCancel = () => {
-    navigate(`/branches/${libraryId}`)
+    navigate(`/branches/${branchId}`)
   }
 
   if (isLoading) {

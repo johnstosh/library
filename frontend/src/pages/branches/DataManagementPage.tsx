@@ -35,8 +35,8 @@ export function DataManagementPage() {
 
   // Fetch database statistics (total counts from backend)
   const { data: dbStats } = useDatabaseStats()
-  // Fetch libraries for filename generation (this is a small list)
-  const { data: libraries = [] } = useBranches()
+  // Fetch branches for filename generation (this is a small list)
+  const { data: branches = [] } = useBranches()
 
   // Photo stats for filename generation
   const { data: photoStats } = usePhotoExportStats()
@@ -50,10 +50,10 @@ export function DataManagementPage() {
       const blob = await exportJsonData()
 
       // Generate filename with statistics from database
-      let libraryName = 'library'
-      if (libraries.length > 0) {
-        // Sanitize library branch name for use as filename
-        libraryName = libraries[0].branchName
+      let exportBranchName = 'branch'
+      if (branches.length > 0) {
+        // Sanitize branch name for use as filename
+        exportBranchName = branches[0].branchName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '')
@@ -66,7 +66,7 @@ export function DataManagementPage() {
       const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${libraryName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos-${date}.json`
+      const filename = `${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos-${date}.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
@@ -126,14 +126,14 @@ export function DataManagementPage() {
       const a = document.createElement('a')
       a.href = url
       let branchName = 'branch'
-      if (libraries.length > 0) {
-        branchName = libraries[0].branchName
+      if (branches.length > 0) {
+        branchName = branches[0].branchName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '')
       }
       const date = new Date().toISOString().split('T')[0]
-      a.download = `${date}-library-photos-${branchName}.zip`
+      a.download = `${date}-branch-photos-${branchName}.zip`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -212,7 +212,7 @@ export function DataManagementPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Data Management</h1>
         <p className="text-gray-600">
-          Export and import library data for backup or migration
+          Export and import branch data for backup or migration
         </p>
       </div>
 
@@ -224,7 +224,7 @@ export function DataManagementPage() {
             <div>
               <h2 className="text-xl font-bold">Database Export/Import</h2>
               <p className="text-sm text-blue-100">
-                Export all library data to JSON or import from a backup file
+                Export all branch data to JSON or import from a backup file
               </p>
             </div>
           </div>
@@ -266,7 +266,7 @@ export function DataManagementPage() {
                   Export Data
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Download all library data as a JSON file. Includes branches, authors,
+                  Download all branch data as a JSON file. Includes branches, authors,
                   books, users, and loans. Photos are excluded.
                 </p>
                 <Button

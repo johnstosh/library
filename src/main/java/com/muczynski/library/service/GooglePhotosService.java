@@ -205,9 +205,22 @@ public class GooglePhotosService {
         String accessToken = user.getGooglePhotosApiKey();
         String tokenExpiry = user.getGooglePhotosTokenExpiry();
 
+        String refreshToken = user.getGooglePhotosRefreshToken();
+
         if (accessToken == null || accessToken.trim().isEmpty()) {
-            logger.error("User ID {} has not authorized Google Photos. Access token is empty.", user.getId());
-            throw new LibraryException("Google Photos not authorized. Please authorize in Settings.");
+            if (refreshToken == null || refreshToken.trim().isEmpty()) {
+                logger.error("User ID {} has no access token or refresh token for Google Photos.", user.getId());
+                throw new LibraryException("Google Photos has not been connected. Go to Settings > Google Photos to authorize.");
+            }
+            // Has refresh token but no access token — try to refresh
+            logger.info("User ID {} has no access token but has refresh token. Attempting refresh...", user.getId());
+            try {
+                return refreshAccessToken(user);
+            } catch (Exception e) {
+                logger.error("Failed to refresh expired token for user ID {}: {}", user.getId(), e.getMessage());
+                throw new LibraryException(
+                        "Google Photos authorization expired and could not be refreshed. Please re-authorize in Settings > Google Photos.");
+            }
         }
 
         logger.debug("Access token found for user ID: {} (length: {} chars)", user.getId(), accessToken.length());
@@ -324,7 +337,8 @@ public class GooglePhotosService {
 
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             logger.error("No refresh token available for user: {}. User must re-authorize.", username);
-            throw new LibraryException("No refresh token available. Please re-authorize Google Photos in Settings.");
+            throw new LibraryException(
+                    "Google Photos refresh token is missing. Please re-authorize in Settings > Google Photos.");
         }
 
         logger.debug("Refresh token found for user: {} (length: {} chars)", username, refreshToken.length());

@@ -363,6 +363,18 @@ public class BookController {
         }
     }
 
+    @PutMapping("/{id}/book-from-first-photo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> generateBookFromFirstPhoto(@PathVariable Long id) {
+        try {
+            BookDto updated = bookService.generateBookFromFirstPhoto(id);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            logger.warn("Failed to generate book from first photo for ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {

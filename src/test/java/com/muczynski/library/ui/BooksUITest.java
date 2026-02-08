@@ -137,7 +137,7 @@ public class BooksUITest {
         // Verify all form fields are present
         assertThat(page.locator("[data-test='book-title']")).isVisible();
         assertThat(page.locator("[data-test='book-author']")).isVisible();
-        assertThat(page.locator("[data-test='book-library']")).isVisible();
+        assertThat(page.locator("[data-test='book-branch']")).isVisible();
         assertThat(page.locator("[data-test='book-year']")).isVisible();
         assertThat(page.locator("[data-test='book-publisher']")).isVisible();
         assertThat(page.locator("[data-test='book-loc']")).isVisible();
@@ -162,7 +162,7 @@ public class BooksUITest {
         // Fill in the form
         page.fill("[data-test='book-title']", "New Test Book");
         page.selectOption("[data-test='book-author']", "1"); // Select first author
-        page.selectOption("[data-test='book-library']", "1"); // Select first library
+        page.selectOption("[data-test='book-branch']", "1"); // Select first branch
         page.fill("[data-test='book-year']", "2024");
         page.fill("[data-test='book-publisher']", "Test Publisher");
         page.fill("[data-test='book-loc']", "BX1234 .T45 2024");
@@ -362,6 +362,15 @@ public class BooksUITest {
         // Verify LOC lookup button is visible (only for editing)
         assertThat(page.locator("[data-test='lookup-loc-button']")).isVisible();
         assertThat(page.locator("[data-test='lookup-loc-button']")).containsText("Lookup");
+
+        // Verify date added, last modified, and loan count fields are visible on edit form
+        assertThat(page.locator("[data-test='book-date-added']")).isVisible();
+        assertThat(page.locator("[data-test='book-form-last-modified']")).isVisible();
+        assertThat(page.locator("[data-test='book-form-loan-count']")).isVisible();
+
+        // Verify AI operation buttons are visible on edit form
+        assertThat(page.locator("[data-test='book-operation-title-author-from-photo']")).isVisible();
+        assertThat(page.locator("[data-test='book-operation-book-from-title-author']")).isVisible();
     }
 
     @Test
@@ -451,6 +460,10 @@ public class BooksUITest {
 
         // Verify Back button is visible
         assertThat(page.locator("[data-test='back-to-books']")).isVisible();
+
+        // Verify last modified and loan count fields are visible
+        assertThat(page.locator("[data-test='book-last-modified']")).isVisible();
+        assertThat(page.locator("[data-test='book-loan-count']")).isVisible();
     }
 
     @Test

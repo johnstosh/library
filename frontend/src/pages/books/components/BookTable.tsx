@@ -9,10 +9,10 @@ import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { getThumbnailUrl } from '@/api/photos'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { formatBookStatus, truncate, isValidUrl, formatDate } from '@/utils/formatters'
+import { formatBookStatus, truncate, isValidUrl, formatDate, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
-import { PiCopy, PiEye } from 'react-icons/pi'
+import { PiBookOpen, PiCopy, PiEye } from 'react-icons/pi'
 import { useAuthStore } from '@/stores/authStore'
 
 interface BookTableProps {
@@ -146,7 +146,7 @@ export function BookTable({
     },
     {
       key: 'tags',
-      header: 'Tags',
+      header: 'Genres',
       accessor: (book) => (
         <div className="flex flex-wrap gap-1">
           {book.tagsList?.map((tag) => (
@@ -188,6 +188,20 @@ export function BookTable({
             >
               <PiEye className="w-5 h-5" />
             </button>
+            {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
+              <a
+                key={index}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-green-600 hover:text-green-900"
+                data-test={`free-text-book-${book.id}-${index}`}
+                title={`Free text: ${extractDomain(url)}`}
+              >
+                <PiBookOpen className="w-5 h-5" />
+              </a>
+            ))}
             {isValidUrl(book.grokipediaUrl) && (
               <a
                 href={book.grokipediaUrl}

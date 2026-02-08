@@ -12,7 +12,7 @@ import org.mapstruct.Mapping;
 public interface BranchMapper {
     // Ignore "name" - it's only for backward-compatible JSON import, not entity mapping
     @Mapping(target = "name", ignore = true)
-    BranchDto toDto(Library library);
+    BranchDto toDto(Library branch);
 
     Library toEntity(BranchDto dto);
 }

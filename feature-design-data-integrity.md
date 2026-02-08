@@ -18,6 +18,7 @@ Every entity with a natural key has a unique constraint:
 | Authority | uk_authority_name | name |
 | Applied | uk_applied_name | name |
 | User | uk_user_username | username |
+| PhotoUploadSession | uk_upload_session_upload_id | uploadId |
 | Author | uk_author_name | name (pre-existing) |
 
 Any constraint violation caught at the DB level returns **409 CONFLICT** via `DataIntegrityViolationException` handler in `GlobalExceptionHandler`.

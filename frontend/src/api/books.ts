@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import React, { useMemo, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
@@ -30,6 +30,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
     queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
     staleTime: 0, // Always check for fresh data when filter changes
     refetchOnMount: true, // Always refetch when component mounts or filter changes
+    placeholderData: keepPreviousData, // Prevent summaries from becoming undefined during refetches
   })
 
   // Step 2: Determine which books need fetching based on cache
@@ -56,6 +57,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
       return []
     },
     enabled: summaries !== undefined && booksToFetch.length > 0,
+    placeholderData: keepPreviousData,
   })
 
   // Populate individual book caches when books are fetched
@@ -71,11 +73,6 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   // so reading from cache would return stale/missing data on first render.
   const allBooks = useMemo(() => {
     if (!summaries) return []
-
-    // Wait for fetchedBooks to complete if we have books to fetch
-    if (booksToFetch.length > 0 && !fetchedBooks) {
-      return []
-    }
 
     // Build a map of newly fetched books for quick lookup
     const fetchedBooksMap = new Map<number, BookDto>()
@@ -101,11 +98,24 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
       const dateB = b.dateAddedToLibrary ? new Date(b.dateAddedToLibrary).getTime() : 0
       return dateB - dateA // Descending order (most recent first)
     })
-  }, [summaries, queryClient, fetchedBooks, booksToFetch])
+  }, [summaries, queryClient, fetchedBooks])
+
+  // Stabilize: prevent transient empty states from causing thumbnail disappearance.
+  // During refetch cascades (e.g., 'online' event → summaries refetch → query key change),
+  // allBooks can briefly become [] before new data arrives. The ref preserves the last
+  // good data so the UI never flickers.
+  const previousBooksRef = useRef<BookDto[]>([])
+  React.useEffect(() => {
+    if (allBooks.length > 0) {
+      previousBooksRef.current = allBooks
+    }
+  }, [allBooks])
+
+  const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
 
   return {
-    data: allBooks,
-    isLoading: summariesLoading || fetchingBooks,
+    data: stableBooks,
+    isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
   }
 }
 
@@ -224,6 +234,22 @@ export function useBookFromImage() {
   })
 }
 
+// Hook to generate book metadata from first photo only using AI
+export function useBookFromFirstPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/book-from-first-photo`),
+    onSuccess: (data, id) => {
+      // Update the detail cache and invalidate summaries
+      queryClient.setQueryData(queryKeys.books.detail(id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
 // Hook to generate book metadata from images for multiple books
 export function useBulkBookFromImage() {
   const queryClient = useQueryClient()
@@ -263,6 +289,37 @@ export function useLookupGenres() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
+  })
+}
+
+// Hook to extract title and author from book's photo using AI
+export function useTitleAuthorFromPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/title-author-from-photo`),
+    onSuccess: (data, id) => {
+      queryClient.setQueryData(queryKeys.books.detail(id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+// Hook to generate full book metadata from title and author using AI
+export function useBookFromTitleAuthor() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, title, authorName }: { id: number; title: string; authorName: string }) =>
+      api.put<BookDto>(`/books/${id}/book-from-title-author`, { title, authorName }),
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },
   })
 }

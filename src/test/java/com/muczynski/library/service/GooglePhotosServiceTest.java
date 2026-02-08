@@ -123,12 +123,13 @@ class GooglePhotosServiceTest {
     }
 
     @Test
-    void downloadPhoto_withoutApiKey_throwsException() {
-        // Arrange
+    void downloadPhoto_withoutApiKeyOrRefreshToken_throwsNotConnected() {
+        // Arrange - no access token, no refresh token
         User userEntity = new User();
         userEntity.setId(1L);
         userEntity.setUsername("testuser");
         userEntity.setGooglePhotosApiKey(null);
+        userEntity.setGooglePhotosRefreshToken(null);
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(userEntity));
 
@@ -137,7 +138,56 @@ class GooglePhotosServiceTest {
             googlePhotosService.downloadPhoto("https://example.com/photo");
         });
 
-        assertTrue(exception.getMessage().contains("Google Photos not authorized"));
+        assertTrue(exception.getMessage().contains("has not been connected"),
+                "Expected 'has not been connected' message, got: " + exception.getMessage());
+    }
+
+    @Test
+    void getValidAccessToken_noTokenNoRefresh_throwsNotConnected() {
+        User user = new User();
+        user.setId(2L);
+        user.setUsername("notoken");
+        user.setGooglePhotosApiKey(null);
+        user.setGooglePhotosRefreshToken(null);
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            googlePhotosService.getValidAccessToken(user);
+        });
+
+        assertTrue(exception.getMessage().contains("has not been connected"),
+                "Expected 'has not been connected' message, got: " + exception.getMessage());
+    }
+
+    @Test
+    void getValidAccessToken_noTokenButHasRefresh_attemptsRefresh() {
+        User user = new User();
+        user.setId(3L);
+        user.setUsername("expireduser");
+        user.setGooglePhotosApiKey(null);
+        user.setGooglePhotosRefreshToken("valid-refresh-token");
+
+        // Refresh will fail because GlobalSettingsService is not mocked
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            googlePhotosService.getValidAccessToken(user);
+        });
+
+        // Should get "expired and could not be refreshed" since refresh fails
+        assertTrue(exception.getMessage().contains("expired and could not be refreshed"),
+                "Expected 'expired and could not be refreshed' message, got: " + exception.getMessage());
+    }
+
+    @Test
+    void getValidAccessToken_validToken_returnsToken() {
+        User user = new User();
+        user.setId(4L);
+        user.setUsername("validuser");
+        user.setGooglePhotosApiKey("valid-access-token");
+        user.setGooglePhotosRefreshToken("refresh-token");
+        user.setGooglePhotosTokenExpiry(Instant.now().plusSeconds(3600).toString());
+
+        String result = googlePhotosService.getValidAccessToken(user);
+
+        assertEquals("valid-access-token", result);
     }
 
     @Test

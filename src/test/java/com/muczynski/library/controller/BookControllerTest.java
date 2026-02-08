@@ -91,6 +91,24 @@ class BookControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void createBook_withDateOnlyString_succeeds() throws Exception {
+        // HTML date inputs send date-only strings like "2026-01-01" without a time component
+        String jsonWithDateOnly = "{\"title\":\"Date Test Book\",\"dateAddedToLibrary\":\"2026-01-01\",\"libraryId\":1}";
+
+        BookDto returnedDto = new BookDto();
+        returnedDto.setId(2L);
+        returnedDto.setTitle("Date Test Book");
+        returnedDto.setDateAddedToLibrary(LocalDateTime.of(2026, 1, 1, 0, 0, 0));
+        when(bookService.createBook(any(BookDto.class))).thenReturn(returnedDto);
+
+        mockMvc.perform(post("/api/books")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonWithDateOnly))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     @WithMockUser
     void getAllBooks() throws Exception {
         BookDto dto = new BookDto();
@@ -495,6 +513,39 @@ class BookControllerTest {
                 .thenThrow(new RuntimeException("xAI API key not configured for user ID: 1"));
 
         mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("xAI API key not configured for user ID: 1"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto() throws Exception {
+        BookDto updatedBook = new BookDto();
+        updatedBook.setId(1L);
+        updatedBook.setTitle("AI Generated Title from First Photo");
+        updatedBook.setAuthorId(1L);
+
+        when(bookService.generateBookFromFirstPhoto(1L)).thenReturn(updatedBook);
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("AI Generated Title from First Photo"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void bookFromFirstPhoto_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto_returnsErrorMessage() throws Exception {
+        when(bookService.generateBookFromFirstPhoto(1L))
+                .thenThrow(new RuntimeException("xAI API key not configured for user ID: 1"));
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string("xAI API key not configured for user ID: 1"));
     }

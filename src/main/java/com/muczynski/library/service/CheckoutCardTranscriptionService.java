@@ -77,8 +77,8 @@ public class CheckoutCardTranscriptionService {
     public CheckoutCardTranscriptionDto transcribeCheckoutCard(byte[] imageBytes, String contentType) {
         log.info("Transcribing checkout card photo ({} bytes, type: {})", imageBytes.length, contentType);
 
-        // Call Grok AI with the transcription prompt using grok-4 for better accuracy
-        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT, AskGrok.MODEL_GROK_4);
+        // Call Grok AI with the transcription prompt 
+        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT, AskGrok.MODEL_GROK_4_FAST);
         log.debug("Grok response: {}", grokResponse);
 
         // Parse JSON response

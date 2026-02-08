@@ -33,4 +33,4 @@ jobs:
           export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           export BRANCH_NAME=${{ github.ref_name }}
           chmod +x deploy.sh  # Make script executable if needed
-          ./deploy.sh
+          ./deploy.sh graalvm

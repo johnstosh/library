@@ -47,7 +47,7 @@ public class ImportService {
     private final PasswordEncoder passwordEncoder;
 
     public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
-        logger.info("Starting import. Libraries: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
+        logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
             dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
             dto.getUsers() != null ? dto.getUsers().size() : 0,
@@ -62,48 +62,48 @@ public class ImportService {
         int loanCount = 0;
         int photoCount = 0;
 
-        Map<String, Library> libMap = new HashMap<>();
+        Map<String, Library> branchMap = new HashMap<>();
         if (dto.getBranches() != null) {
-            for (BranchDto lDto : dto.getBranches()) {
-                // Check if library with same branch name already exists (select first by ID if duplicates)
-                List<Library> existingLibraries = branchRepository.findAllByBranchNameOrderByIdAsc(lDto.getBranchName());
-                Library lib = existingLibraries.isEmpty() ? null : existingLibraries.get(0);
-                if (lib == null) {
-                    // Create new library without copying ID from import
-                    lib = new Library();
-                    lib.setBranchName(lDto.getBranchName());
-                    lib.setLibrarySystemName(lDto.getLibrarySystemName());
+            for (BranchDto branchDto : dto.getBranches()) {
+                // Check if branch with same branch name already exists (select first by ID if duplicates)
+                List<Library> existingBranches = branchRepository.findAllByBranchNameOrderByIdAsc(branchDto.getBranchName());
+                Library branch = existingBranches.isEmpty() ? null : existingBranches.get(0);
+                if (branch == null) {
+                    // Create new branch without copying ID from import
+                    branch = new Library();
+                    branch.setBranchName(branchDto.getBranchName());
+                    branch.setLibrarySystemName(branchDto.getLibrarySystemName());
                 } else {
-                    // Update existing library
-                    lib.setLibrarySystemName(lDto.getLibrarySystemName());
+                    // Update existing branch
+                    branch.setLibrarySystemName(branchDto.getLibrarySystemName());
 
                     // Merge duplicates: reassign books from duplicate branches to primary and delete duplicates
-                    if (existingLibraries.size() > 1) {
-                        logger.info("Merging {} duplicate libraries with branch name '{}' into library ID: {}",
-                                   existingLibraries.size(), lDto.getBranchName(), lib.getId());
+                    if (existingBranches.size() > 1) {
+                        logger.info("Merging {} duplicate branches with branch name '{}' into branch ID: {}",
+                                   existingBranches.size(), branchDto.getBranchName(), branch.getId());
 
-                        for (int i = 1; i < existingLibraries.size(); i++) {
-                            Library duplicate = existingLibraries.get(i);
-                            // Reassign all books from duplicate to primary library
+                        for (int i = 1; i < existingBranches.size(); i++) {
+                            Library duplicate = existingBranches.get(i);
+                            // Reassign all books from duplicate to primary branch
                             List<Book> booksToReassign = bookRepository.findAllByLibraryId(duplicate.getId());
                             for (Book book : booksToReassign) {
-                                book.setLibrary(lib);
+                                book.setLibrary(branch);
                                 bookRepository.save(book);
-                                logger.debug("Reassigned book '{}' (ID: {}) from library {} to library {}",
-                                           book.getTitle(), book.getId(), duplicate.getId(), lib.getId());
+                                logger.debug("Reassigned book '{}' (ID: {}) from branch {} to branch {}",
+                                           book.getTitle(), book.getId(), duplicate.getId(), branch.getId());
                             }
-                            logger.info("Reassigned {} books from duplicate library ID {} to primary library ID {}",
-                                       booksToReassign.size(), duplicate.getId(), lib.getId());
+                            logger.info("Reassigned {} books from duplicate branch ID {} to primary branch ID {}",
+                                       booksToReassign.size(), duplicate.getId(), branch.getId());
 
-                            // Delete the duplicate library
+                            // Delete the duplicate branch
                             branchRepository.delete(duplicate);
-                            logger.info("Deleted duplicate library ID {} (branch name: '{}')",
+                            logger.info("Deleted duplicate branch ID {} (branch name: '{}')",
                                        duplicate.getId(), duplicate.getBranchName());
                         }
                     }
                 }
-                lib = branchRepository.save(lib);
-                libMap.put(lDto.getBranchName(), lib);
+                branch = branchRepository.save(branch);
+                branchMap.put(branchDto.getBranchName(), branch);
                 branchCount++;
             }
         }
@@ -268,9 +268,9 @@ public class ImportService {
                         throw new LibraryException("Author not found for book: " + bDto.getTitle() + " - " + authorNameToLookup);
                     }
                 }
-                Library library = libMap.get(bDto.getLibraryName());
-                if (library == null) {
-                    throw new LibraryException("Library not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
+                Library branch = branchMap.get(bDto.getLibraryName());
+                if (branch == null) {
+                    throw new LibraryException("Branch not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
                 }
 
                 // Check if book with same title and author already exists
@@ -324,7 +324,7 @@ public class ImportService {
                 book.setLocNumber(bDto.getLocNumber());
                 book.setStatusReason(bDto.getStatusReason());
                 book.setAuthor(author);
-                book.setLibrary(library);
+                book.setLibrary(branch);
                 book = bookRepository.save(book);
 
                 String key = bDto.getTitle() + "|" + (authorNameToLookup != null ? authorNameToLookup : "");
@@ -535,10 +535,10 @@ public class ImportService {
         ImportRequestDto dto = new ImportRequestDto();
 
         // Export branches
-        List<BranchDto> libDtos = branchRepository.findAll().stream()
+        List<BranchDto> branchDtos = branchRepository.findAll().stream()
                 .map(branchMapper::toDto)
                 .collect(Collectors.toList());
-        dto.setBranches(libDtos);
+        dto.setBranches(branchDtos);
 
         // Export authors
         // Note: Empty strings are converted to null so they're excluded from JSON export

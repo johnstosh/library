@@ -15,51 +15,51 @@ import { PiEye } from 'react-icons/pi'
 
 export function BranchesPage() {
   const navigate = useNavigate()
-  const [deleteLibraryId, setDeleteLibraryId] = useState<number | null>(null)
+  const [deleteBranchId, setDeleteBranchId] = useState<number | null>(null)
 
-  const { data: libraries = [], isLoading } = useBranches()
+  const { data: branches = [], isLoading } = useBranches()
   const { data: statistics = [] } = useBranchStatistics()
-  const deleteLibrary = useDeleteBranch()
+  const deleteBranch = useDeleteBranch()
 
   const handleAdd = () => {
     navigate('/branches/new')
   }
 
-  const handleEdit = (library: BranchDto) => {
-    navigate(`/branches/${library.id}/edit`)
+  const handleEdit = (branch: BranchDto) => {
+    navigate(`/branches/${branch.id}/edit`)
   }
 
-  const handleView = (library: BranchDto) => {
-    navigate(`/branches/${library.id}`)
+  const handleView = (branch: BranchDto) => {
+    navigate(`/branches/${branch.id}`)
   }
 
   const handleDelete = async () => {
-    if (deleteLibraryId === null) return
+    if (deleteBranchId === null) return
 
     try {
-      await deleteLibrary.mutateAsync(deleteLibraryId)
-      setDeleteLibraryId(null)
+      await deleteBranch.mutateAsync(deleteBranchId)
+      setDeleteBranchId(null)
     } catch (error) {
-      console.error('Failed to delete library:', error)
+      console.error('Failed to delete branch:', error)
     }
   }
 
-  // Get statistics for a library
-  const getLibraryStats = (libraryId: number) => {
-    return statistics.find((s) => s.branchId === libraryId)
+  // Get statistics for a branch
+  const getBranchStats = (branchId: number) => {
+    return statistics.find((s) => s.branchId === branchId)
   }
 
   const columns: Column<BranchDto>[] = [
     {
       key: 'name',
       header: 'Branch Name',
-      accessor: (library) => (
+      accessor: (branch) => (
         <button
-          onClick={() => handleView(library)}
+          onClick={() => handleView(branch)}
           className="font-medium text-blue-600 hover:text-blue-900 text-left"
-          data-test={`view-library-${library.id}`}
+          data-test={`view-branch-${branch.id}`}
         >
-          {library.branchName}
+          {branch.branchName}
         </button>
       ),
       width: '30%',
@@ -67,14 +67,14 @@ export function BranchesPage() {
     {
       key: 'librarySystemName',
       header: 'Library System',
-      accessor: (library) => <div className="text-gray-600">{library.librarySystemName}</div>,
+      accessor: (branch) => <div className="text-gray-600">{branch.librarySystemName}</div>,
       width: '30%',
     },
     {
       key: 'bookCount',
       header: 'Books',
-      accessor: (library) => {
-        const stats = getLibraryStats(library.id)
+      accessor: (branch) => {
+        const stats = getBranchStats(branch.id)
         return (
           <div className="text-gray-900">
             {stats?.bookCount !== undefined ? stats.bookCount.toLocaleString() : '-'}
@@ -86,8 +86,8 @@ export function BranchesPage() {
     {
       key: 'activeLoans',
       header: 'Active Loans',
-      accessor: (library) => {
-        const stats = getLibraryStats(library.id)
+      accessor: (branch) => {
+        const stats = getBranchStats(branch.id)
         return (
           <div className="text-gray-900">
             {stats?.activeLoansCount !== undefined ? stats.activeLoansCount.toLocaleString() : '-'}
@@ -102,7 +102,7 @@ export function BranchesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Branches</h1>
-        <Button variant="primary" onClick={handleAdd} data-test="add-library">
+        <Button variant="primary" onClick={handleAdd} data-test="add-branch">
           Add Branch
         </Button>
       </div>
@@ -110,23 +110,23 @@ export function BranchesPage() {
       <div className="bg-white rounded-lg shadow">
         <div className="p-4">
           <DataTable
-            data={libraries}
+            data={branches}
             columns={columns}
-            keyExtractor={(library) => library.id}
-            actions={(library) => (
+            keyExtractor={(branch) => branch.id}
+            actions={(branch) => (
               <>
                 <button
-                  onClick={() => handleView(library)}
+                  onClick={() => handleView(branch)}
                   className="text-gray-600 hover:text-gray-900"
-                  data-test={`view-library-details-${library.id}`}
+                  data-test={`view-branch-details-${branch.id}`}
                   title="View Details"
                 >
                   <PiEye className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => handleEdit(library)}
+                  onClick={() => handleEdit(branch)}
                   className="text-blue-600 hover:text-blue-900"
-                  data-test={`edit-library-${library.id}`}
+                  data-test={`edit-branch-${branch.id}`}
                   title="Edit"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,9 +139,9 @@ export function BranchesPage() {
                   </svg>
                 </button>
                 <button
-                  onClick={() => setDeleteLibraryId(library.id)}
+                  onClick={() => setDeleteBranchId(branch.id)}
                   className="text-red-600 hover:text-red-900"
-                  data-test={`delete-library-${library.id}`}
+                  data-test={`delete-branch-${branch.id}`}
                   title="Delete"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,24 +160,24 @@ export function BranchesPage() {
           />
         </div>
 
-        {!isLoading && libraries.length > 0 && (
+        {!isLoading && branches.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-700">
-              Showing {libraries.length} {libraries.length === 1 ? 'branch' : 'branches'}
+              Showing {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
             </p>
           </div>
         )}
       </div>
 
       <ConfirmDialog
-        isOpen={deleteLibraryId !== null}
-        onClose={() => setDeleteLibraryId(null)}
+        isOpen={deleteBranchId !== null}
+        onClose={() => setDeleteBranchId(null)}
         onConfirm={handleDelete}
         title="Delete Branch"
         message="Are you sure you want to delete this branch? This action cannot be undone."
         confirmText="Delete"
         variant="danger"
-        isLoading={deleteLibrary.isPending}
+        isLoading={deleteBranch.isPending}
       />
     </div>
   )

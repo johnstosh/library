@@ -6,6 +6,8 @@ package com.muczynski.library.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import java.time.LocalDateTime;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -70,7 +72,11 @@ public class AppConfig {
         ObjectMapper mapper = new ObjectMapper();
 
         // Register JavaTimeModule for Java 8+ date/time types (LocalDateTime, etc.)
-        mapper.registerModule(new JavaTimeModule());
+        // Add custom deserializer to handle date-only strings ("2026-01-01") for LocalDateTime fields,
+        // since HTML date inputs don't include a time component.
+        JavaTimeModule timeModule = new JavaTimeModule();
+        timeModule.addDeserializer(LocalDateTime.class, new FlexibleLocalDateTimeDeserializer());
+        mapper.registerModule(timeModule);
 
         // Disable writing dates as timestamps (arrays)
         // This makes LocalDateTime serialize as "2025-12-06T14:30:00" instead of [2025,12,6,14,30,0]

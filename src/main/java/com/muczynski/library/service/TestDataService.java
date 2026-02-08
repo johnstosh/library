@@ -46,7 +46,7 @@ public class TestDataService {
     private BookRepository bookRepository;
 
     @Autowired
-    private BranchRepository libraryRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -69,12 +69,15 @@ public class TestDataService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BookService bookService;
+
     public void generateTestData(int count) {
-        if (libraryRepository.findAll().isEmpty()) {
-            Library library = new Library();
-            library.setBranchName("St. Martin de Porres");
-            library.setLibrarySystemName("Sacred Heart Library System");
-            libraryRepository.save(library);
+        if (branchRepository.findAll().isEmpty()) {
+            Library branch = new Library();
+            branch.setBranchName("St. Martin de Porres");
+            branch.setLibrarySystemName("Sacred Heart Library System");
+            branchRepository.save(branch);
         }
 
         for (int i = 0; i < count; i++) {
@@ -83,6 +86,7 @@ public class TestDataService {
             authorRepository.save(author);
 
             Book book = randomBook.create(author);
+            book.setTitle(bookService.ensureUniqueTitle(book.getTitle(), null));
             book.setGrokipediaUrl("https://grokipedia.example.com/book/" + book.getId());
             bookRepository.save(book);
         }

@@ -56,9 +56,11 @@ public class BooksFromFeedController {
             Map<String, Object> result = booksFromFeedService.processSingleBook(bookId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "error", e.getMessage()
+                    "bookId", bookId,
+                    "error", message
             ));
         }
     }
@@ -84,10 +86,36 @@ public class BooksFromFeedController {
     }
 
     /**
+     * Save a single photo selected via Google Photos Picker API to database (Phase 1 - No AI).
+     * Each request runs in its own transaction for per-photo isolation.
+     * Frontend iterates photos one at a time, showing progress bar.
+     *
+     * @param photo Single photo metadata from the Picker
+     * @return Result map: {success, photoId, photoName, bookId, title} or {success: false, error}
+     */
+    @PostMapping("/save-single-from-picker")
+    public ResponseEntity<Map<String, Object>> saveSinglePhotoFromPicker(@RequestBody Map<String, Object> photo) {
+        try {
+            Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            String photoName = photo.get("name") != null ? photo.get("name").toString() : "unknown";
+            return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "skipped", false,
+                    "photoName", photoName,
+                    "error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()
+            ));
+        }
+    }
+
+    /**
      * Save photos selected via Google Photos Picker API to database (Phase 1 - No AI)
+     * @deprecated Use /save-single-from-picker instead for per-photo transaction isolation.
      * @param request Contains 'photos' array with photo metadata from Picker
      * @return Save results
      */
+    @Deprecated
     @PostMapping("/save-from-picker")
     public ResponseEntity<Map<String, Object>> savePhotosFromPicker(@RequestBody Map<String, Object> request) {
         try {

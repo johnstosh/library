@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
@@ -8,10 +9,16 @@ import { PhotoPickerModal } from './components/PhotoPickerModal'
 import { ProcessingResultsModal } from './components/ProcessingResultsModal'
 import {
   useSavedBooks,
-  useProcessSavedPhotos,
+  processSingleBookApi,
   type ProcessResultDto,
 } from '@/api/books-from-feed'
 import { PiUpload, PiMagicWand } from 'react-icons/pi'
+
+interface ProcessingProgress {
+  current: number
+  total: number
+  currentBookTitle: string
+}
 
 export function BooksFromFeedPage() {
   const [showPickerModal, setShowPickerModal] = useState(false)
@@ -19,22 +26,71 @@ export function BooksFromFeedPage() {
   const [processingResults, setProcessingResults] = useState<ProcessResultDto | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [isProcessingAll, setIsProcessingAll] = useState(false)
+  const [progress, setProgress] = useState<ProcessingProgress | null>(null)
+  const cancelRef = useRef(false)
 
+  const queryClient = useQueryClient()
   const { data: savedBooks = [], isLoading, refetch } = useSavedBooks()
-  const processAll = useProcessSavedPhotos()
 
   const handleProcessAll = async () => {
     setSuccessMessage('')
     setErrorMessage('')
+    cancelRef.current = false
 
-    try {
-      const result = await processAll.mutateAsync()
-      setProcessingResults(result)
-      setShowResultsModal(true)
+    const booksToProcess = savedBooks.filter((b) => b.needsProcessing)
+    if (booksToProcess.length === 0) return
+
+    setIsProcessingAll(true)
+    let processedCount = 0
+    let failedCount = 0
+    const totalBooks = booksToProcess.length
+
+    for (let i = 0; i < booksToProcess.length; i++) {
+      if (cancelRef.current) break
+
+      const book = booksToProcess[i]
+      setProgress({
+        current: i + 1,
+        total: totalBooks,
+        currentBookTitle: book.title,
+      })
+
+      try {
+        const result = await processSingleBookApi(book.id)
+        if (result.success) {
+          processedCount++
+        } else {
+          failedCount++
+        }
+      } catch {
+        failedCount++
+      }
+
+      // Refresh the table after each book so the UI updates
       await refetch()
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to process photos')
     }
+
+    // Invalidate books query so the main Books page also refreshes
+    queryClient.invalidateQueries({ queryKey: ['books'] })
+
+    setIsProcessingAll(false)
+    setProgress(null)
+
+    if (!cancelRef.current) {
+      const results: ProcessResultDto = {
+        success: failedCount === 0,
+        processedCount,
+        failedCount,
+        totalBooks,
+      }
+      setProcessingResults(results)
+      setShowResultsModal(true)
+    }
+  }
+
+  const handleCancelProcessing = () => {
+    cancelRef.current = true
   }
 
   const handlePickerSuccess = (count: number) => {
@@ -57,21 +113,29 @@ export function BooksFromFeedPage() {
           <Button
             variant="outline"
             onClick={() => setShowPickerModal(true)}
+            disabled={isProcessingAll}
             leftIcon={<PiUpload />}
             data-test="open-picker"
           >
             Select Photos
           </Button>
-          {booksNeedingProcessing.length > 0 && (
+          {booksNeedingProcessing.length > 0 && !isProcessingAll && (
             <Button
               variant="primary"
               onClick={handleProcessAll}
-              isLoading={processAll.isPending}
-              disabled={processAll.isPending}
               leftIcon={<PiMagicWand />}
               data-test="process-all"
             >
               Process All ({booksNeedingProcessing.length})
+            </Button>
+          )}
+          {isProcessingAll && (
+            <Button
+              variant="outline"
+              onClick={handleCancelProcessing}
+              data-test="cancel-processing"
+            >
+              Cancel
             </Button>
           )}
         </div>
@@ -79,6 +143,29 @@ export function BooksFromFeedPage() {
 
       {successMessage && <SuccessMessage message={successMessage} />}
       {errorMessage && <ErrorMessage message={errorMessage} />}
+
+      {/* Processing Progress */}
+      {progress && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6" data-test="processing-progress">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-indigo-900">
+              Processing book {progress.current} of {progress.total}...
+            </span>
+            <span className="text-sm font-bold text-indigo-900">
+              {Math.round((progress.current / progress.total) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-indigo-200 rounded-full h-2.5">
+            <div
+              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+            />
+          </div>
+          <p className="text-xs text-indigo-700 mt-1 truncate">
+            {progress.currentBookTitle}
+          </p>
+        </div>
+      )}
 
       {/* Info Section */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">

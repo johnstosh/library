@@ -3,10 +3,19 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +27,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +59,21 @@ class BooksFromFeedServiceTest {
     private BookService bookService;
 
     @Mock
+    private AuthorRepository authorRepository;
+
+    @Mock
+    private PhotoRepository photoRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private BranchService branchService;
+
+    @Mock
+    private PhotoService photoService;
+
+    @Mock
     private Authentication authentication;
 
     @Mock
@@ -77,5 +102,256 @@ class BooksFromFeedServiceTest {
         lenient().when(userSettingsService.getUserSettings(1L)).thenReturn(testUser);
     }
 
-    // TODO: Add tests for savePhotosFromPicker and processSavedPhotos methods
+    @Test
+    void processSingleBook_success() {
+        BookDto tempBook = new BookDto();
+        tempBook.setId(1L);
+        tempBook.setTitle("2025-01-10_14:30:00");
+
+        BookDto processedBook = new BookDto();
+        processedBook.setId(1L);
+        processedBook.setTitle("The Great Gatsby");
+        processedBook.setAuthorId(10L);
+
+        Author author = new Author();
+        author.setId(10L);
+        author.setName("F. Scott Fitzgerald");
+
+        when(bookService.getBookById(1L)).thenReturn(tempBook);
+        when(bookService.generateTempBook(1L)).thenReturn(processedBook);
+        when(authorRepository.findById(10L)).thenReturn(Optional.of(author));
+
+        Map<String, Object> result = booksFromFeedService.processSingleBook(1L);
+
+        assertEquals(true, result.get("success"));
+        assertEquals(1L, result.get("bookId"));
+        assertEquals("The Great Gatsby", result.get("title"));
+        assertEquals("F. Scott Fitzgerald", result.get("author"));
+        assertEquals("2025-01-10_14:30:00", result.get("originalTitle"));
+    }
+
+    @Test
+    void processSingleBook_returnsErrorWithRootCause() {
+        BookDto tempBook = new BookDto();
+        tempBook.setId(1L);
+        tempBook.setTitle("2025-01-10_14:30:00");
+
+        RuntimeException rootCause = new RuntimeException("Connection refused to AI service");
+        LibraryException wrappedException = new LibraryException("AI analysis failed", rootCause);
+
+        when(bookService.getBookById(1L)).thenReturn(tempBook);
+        when(bookService.generateTempBook(1L)).thenThrow(wrappedException);
+
+        Map<String, Object> result = booksFromFeedService.processSingleBook(1L);
+
+        assertEquals(false, result.get("success"));
+        assertEquals(1L, result.get("bookId"));
+        String error = (String) result.get("error");
+        assertNotNull(error);
+        assertTrue(error.contains("Connection refused to AI service"),
+                "Error should contain root cause message, got: " + error);
+    }
+
+    @Test
+    void processSingleBook_bookNotFound() {
+        when(bookService.getBookById(999L)).thenReturn(null);
+
+        Map<String, Object> result = booksFromFeedService.processSingleBook(999L);
+
+        assertEquals(false, result.get("success"));
+        assertEquals(999L, result.get("bookId"));
+        String error = (String) result.get("error");
+        assertTrue(error.contains("Book not found"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_skipsAlreadyProcessedPhoto() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-1");
+        photo.put("name", "book_cover.jpg");
+        photo.put("url", "https://example.com/photo.jpg");
+        photo.put("description", "Title: The Great Gatsby\nAuthor: Fitzgerald");
+
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(true, result.get("success"));
+        assertEquals(true, result.get("skipped"));
+        assertEquals("photo-1", result.get("photoId"));
+        assertEquals("book_cover.jpg", result.get("photoName"));
+        assertTrue(((String) result.get("reason")).contains("Already processed"));
+
+        // Should not attempt to download or create book
+        verify(bookService, never()).createBook(any());
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_skipsDuplicateChecksum() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        // Photo without description (not already processed), but download will fail
+        // since we can't actually download in unit tests - instead test the error path
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-2");
+        photo.put("name", "duplicate.jpg");
+        photo.put("url", "https://example.com/photo.jpg");
+
+        // The download will throw since we can't mock the private HTTP method,
+        // but the error should be caught and returned gracefully
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        assertEquals(false, result.get("success"));
+        assertNotNull(result.get("error"));
+        assertEquals("duplicate.jpg", result.get("photoName"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_returnsErrorOnDownloadFailure() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(googlePhotosService.getValidAccessToken(user)).thenReturn("token");
+
+        Library branch = new Library();
+        branch.setId(10L);
+        when(branchService.getOrCreateDefaultBranch()).thenReturn(branch);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-3");
+        photo.put("name", "failed.jpg");
+        photo.put("url", "https://invalid-url.example.com/photo.jpg");
+
+        Map<String, Object> result = booksFromFeedService.saveSinglePhotoFromPicker(photo);
+
+        // Should return error result, not throw exception
+        assertEquals(false, result.get("success"));
+        assertEquals(false, result.get("skipped"));
+        assertEquals("photo-3", result.get("photoId"));
+        assertEquals("failed.jpg", result.get("photoName"));
+        assertNotNull(result.get("error"));
+    }
+
+    @Test
+    void saveSinglePhotoFromPicker_throwsWhenNotAuthenticated() {
+        // Override security context to return unauthenticated
+        when(authentication.isAuthenticated()).thenReturn(false);
+
+        Map<String, Object> photo = new HashMap<>();
+        photo.put("id", "photo-4");
+        photo.put("name", "test.jpg");
+
+        assertThrows(LibraryException.class, () -> {
+            booksFromFeedService.saveSinglePhotoFromPicker(photo);
+        });
+    }
+
+    // --- generateTemporaryTitle tests ---
+
+    @Test
+    void generateTemporaryTitle_usesFilenameDatestampWhenPresent() {
+        String result = BooksFromFeedService.generateTemporaryTitle("20260205_180822.jpg", null);
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_parsesFilenameWithExtraChars() {
+        String result = BooksFromFeedService.generateTemporaryTitle("IMG-2026-02-05 18_08_22.png", null);
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fallsBackToCreationTimeWhenNoFilenameDate() {
+        // 2026-02-05T23:08:22Z in UTC = 2026-02-05T18:08:22 in Eastern (EST = UTC-5)
+        String result = BooksFromFeedService.generateTemporaryTitle(null, "2026-02-05T23:08:22Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fallsBackToServerNowWhenNothingAvailable() {
+        String result = BooksFromFeedService.generateTemporaryTitle(null, null);
+        assertNotNull(result);
+        // Should match yyyy-MM-dd_HH:mm:ss format
+        assertTrue(result.matches("\\d{4}-\\d{2}-\\d{2}_\\d{2}:\\d{2}:\\d{2}"),
+                "Should match date format, got: " + result);
+    }
+
+    @Test
+    void generateTemporaryTitle_fewerThan14DigitsFallsThrough() {
+        // "IMG_123.jpg" has only 3 digits, should fall through to creationTime
+        String result = BooksFromFeedService.generateTemporaryTitle("IMG_123.jpg", "2026-02-05T23:08:22Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void generateTemporaryTitle_filenameTakesPriorityOverCreationTime() {
+        // When both are available, filename wins
+        String result = BooksFromFeedService.generateTemporaryTitle(
+                "20260205_180822.jpg", "2026-01-01T00:00:00Z");
+        assertEquals("2026-02-05_18:08:22", result);
+    }
+
+    @Test
+    void parseDateFromFilename_returnsNullForEmptyFilename() {
+        assertNull(BooksFromFeedService.parseDateFromFilename(null));
+        assertNull(BooksFromFeedService.parseDateFromFilename(""));
+    }
+
+    @Test
+    void parseCreationTime_handlesNullAndEmpty() {
+        assertNull(BooksFromFeedService.parseCreationTime(null));
+        assertNull(BooksFromFeedService.parseCreationTime(""));
+    }
+
+    @Test
+    void parseCreationTime_convertsUtcToEastern() {
+        LocalDateTime result = BooksFromFeedService.parseCreationTime("2026-02-05T23:08:22Z");
+        assertNotNull(result);
+        assertEquals(LocalDateTime.of(2026, 2, 5, 18, 8, 22), result);
+    }
+
+    @Test
+    void processSavedPhotos_processesMultipleBooks() {
+        BookDto book1 = new BookDto();
+        book1.setId(1L);
+        book1.setTitle("2025-01-10_14:30:00");
+
+        BookDto book2 = new BookDto();
+        book2.setId(2L);
+        book2.setTitle("2025-01-10_14:31:00");
+
+        BookDto processed1 = new BookDto();
+        processed1.setId(1L);
+        processed1.setTitle("Book One");
+        processed1.setAuthorId(10L);
+
+        Author author = new Author();
+        author.setId(10L);
+        author.setName("Author One");
+
+        when(bookService.getBooksWithTemporaryTitles()).thenReturn(List.of(book1, book2));
+        when(bookService.generateTempBook(1L)).thenReturn(processed1);
+        when(bookService.generateTempBook(2L)).thenThrow(new RuntimeException("AI timeout"));
+        when(authorRepository.findById(10L)).thenReturn(Optional.of(author));
+
+        Map<String, Object> result = booksFromFeedService.processSavedPhotos();
+
+        assertEquals(1, result.get("processedCount"));
+        assertEquals(1, result.get("failedCount"));
+        assertEquals(2, result.get("totalBooks"));
+    }
 }

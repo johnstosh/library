@@ -12,14 +12,16 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
+import { AuthorCombobox } from './AuthorCombobox'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
-import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useLookupGenres } from '@/api/books'
+import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useBookFromFirstPhoto, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
+import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag } from 'react-icons/pi'
@@ -50,8 +52,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     statusReason: '',
     locNumber: '',
     authorId: '',
-    libraryId: '',
+    branchId: '',
     tagsList: '',  // Comma-separated tags for editing
+    dateAddedToLibrary: '',
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -67,8 +70,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
-  const { data: authors, isLoading: authorsLoading } = useAuthors()
-  const { data: libraries, isLoading: librariesLoading } = useBranches()
+  const { data: authors } = useAuthors()
+  const { data: branches, isLoading: branchesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
   const lookupLoc = useLookupSingleBook()
@@ -78,6 +81,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const deleteBook = useDeleteBook()
   const cloneBook = useCloneBook()
   const bookFromImage = useBookFromImage()
+  const bookFromFirstPhoto = useBookFromFirstPhoto()
+  const titleAuthorFromPhoto = useTitleAuthorFromPhoto()
+  const bookFromTitleAuthor = useBookFromTitleAuthor()
   const lookupGrokipedia = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
@@ -97,8 +103,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: book.statusReason || '',
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
-        libraryId: book.libraryId?.toString() || '',
+        branchId: book.libraryId?.toString() || '',
         tagsList: book.tagsList?.join(', ') || '',
+        dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.split('T')[0] : '',
       })
     } else {
       setFormData({
@@ -114,8 +121,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: '',
         locNumber: '',
         authorId: '',
-        libraryId: '',
+        branchId: '',
         tagsList: '',
+        dateAddedToLibrary: '',
       })
     }
   }, [book])
@@ -302,13 +310,112 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: updated.statusReason || formData.statusReason,
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
-        libraryId: updated.libraryId?.toString() || formData.libraryId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to extract book from image')
+    }
+  }
+
+  const handleBookFromFirstPhoto = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updated = await bookFromFirstPhoto.mutateAsync(book.id)
+      // Update form with the extracted data
+      setFormData({
+        title: updated.title || formData.title,
+        publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
+        publisher: updated.publisher || formData.publisher,
+        plotSummary: updated.plotSummary || formData.plotSummary,
+        relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        detailedDescription: updated.detailedDescription || formData.detailedDescription,
+        grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
+        freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
+        status: updated.status || formData.status,
+        statusReason: updated.statusReason || formData.statusReason,
+        locNumber: updated.locNumber || formData.locNumber,
+        authorId: updated.authorId?.toString() || formData.authorId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Book metadata extracted from first photo')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract book from first photo')
+    }
+  }
+
+  const handleTitleAuthorFromPhoto = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const updated = await titleAuthorFromPhoto.mutateAsync(book.id)
+      setFormData({
+        ...formData,
+        title: updated.title || formData.title,
+        authorId: updated.authorId?.toString() || formData.authorId,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Title and author extracted from photo')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract title and author from photo')
+    }
+  }
+
+  const handleBookFromTitleAuthor = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    if (!formData.title) {
+      setError('Title is required to generate book metadata')
+      return
+    }
+
+    const authorName = formData.authorId
+      ? authors?.find((a) => a.id === parseInt(formData.authorId))?.name || ''
+      : ''
+
+    try {
+      const updated = await bookFromTitleAuthor.mutateAsync({
+        id: book.id,
+        title: formData.title,
+        authorName,
+      })
+      setFormData({
+        title: updated.title || formData.title,
+        publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
+        publisher: updated.publisher || formData.publisher,
+        plotSummary: updated.plotSummary || formData.plotSummary,
+        relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        detailedDescription: updated.detailedDescription || formData.detailedDescription,
+        grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
+        freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
+        status: updated.status || formData.status,
+        statusReason: updated.statusReason || formData.statusReason,
+        locNumber: updated.locNumber || formData.locNumber,
+        authorId: updated.authorId?.toString() || formData.authorId,
+        branchId: updated.libraryId?.toString() || formData.branchId,
+        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+      })
+      setHasUnsavedChanges(true)
+      setSuccessMessage('Book metadata generated from title and author')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate book metadata')
     }
   }
 
@@ -342,7 +449,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     setError('')
     setSuccessMessage('')
 
-    if (!formData.title || !formData.authorId || !formData.libraryId) {
+    if (!formData.title || !formData.authorId || !formData.branchId) {
       setError('Title, Author, and Branch are required')
       return
     }
@@ -369,8 +476,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
         authorId: parseInt(formData.authorId),
-        libraryId: parseInt(formData.libraryId),
+        libraryId: parseInt(formData.branchId),
         tagsList,
+        dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
       }
 
       if (isEditing) {
@@ -396,15 +504,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
-  const authorOptions = authors
-    ? authors.map((a) => ({
-        value: a.id,
-        label: a.name,
-      }))
-    : []
-
-  const libraryOptions = libraries
-    ? libraries.map((l) => ({
+  const branchOptions = branches
+    ? branches.map((l) => ({
         value: l.id,
         label: l.branchName,
       }))
@@ -422,6 +523,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isSuggesting = suggestLoc.isPending
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
+    bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
 
   return (
@@ -461,25 +563,13 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
+              onClick={handleBookFromFirstPhoto}
+              isLoading={bookFromFirstPhoto.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<span>🌐</span>}
-              data-test="book-operation-grokipedia"
+              leftIcon={<PiCamera />}
+              data-test="book-operation-book-from-first-photo"
             >
-              Find Grokipedia URL
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleFreeTextLookup}
-              isLoading={lookupFreeText.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<PiBookOpen />}
-              data-test="book-operation-free-text"
-            >
-              Find Free Text URL
+              Book from First Photo
             </Button>
             <Button
               type="button"
@@ -489,21 +579,33 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               isLoading={bookFromImage.isPending}
               disabled={isOperationPending || isLoading}
               leftIcon={<PiCamera />}
-              data-test="book-operation-book-from-image"
+              data-test="book-operation-book-from-all-photos"
             >
-              Book from Image
+              Book from All Photos
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGenreLookup}
-              isLoading={lookupGenres.isPending}
+              onClick={handleTitleAuthorFromPhoto}
+              isLoading={titleAuthorFromPhoto.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<PiTag />}
-              data-test="book-operation-lookup-genres"
+              leftIcon={<PiCamera />}
+              data-test="book-operation-title-author-from-photo"
             >
-              Lookup Genres
+              Title & Author from First Photo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleBookFromTitleAuthor}
+              isLoading={bookFromTitleAuthor.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiSparkle />}
+              data-test="book-operation-book-from-title-author"
+            >
+              Book from Title & Author
             </Button>
             <Button
               type="button"
@@ -536,13 +638,10 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <Select
-                label="Author"
+              <AuthorCombobox
                 value={formData.authorId}
-                onChange={(e) => handleFieldChange('authorId', e.target.value)}
-                options={[{ value: '', label: 'Select Author' }, ...authorOptions]}
+                onChange={(value) => handleFieldChange('authorId', value)}
                 required
-                isLoading={authorsLoading}
                 data-test="book-author"
               />
             </div>
@@ -560,12 +659,12 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
           <Select
             label="Branch"
-            value={formData.libraryId}
-            onChange={(e) => handleFieldChange('libraryId', e.target.value)}
-            options={[{ value: '', label: 'Select Branch' }, ...libraryOptions]}
+            value={formData.branchId}
+            onChange={(e) => handleFieldChange('branchId', e.target.value)}
+            options={[{ value: '', label: 'Select Branch' }, ...branchOptions]}
             required
-            isLoading={librariesLoading}
-            data-test="book-library"
+            isLoading={branchesLoading}
+            data-test="book-branch"
           />
         </div>
 
@@ -610,34 +709,91 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-detailed-description"
         />
 
-        <Input
-          label="Grokipedia URL"
-          value={formData.grokipediaUrl}
-          onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
-          placeholder="https://grokipedia.example.com/book/123"
-          data-test="book-grokipedia-url"
-        />
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Input
+              label="Grokipedia URL"
+              value={formData.grokipediaUrl}
+              onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
+              placeholder="https://grokipedia.example.com/book/123"
+              data-test="book-grokipedia-url"
+            />
+          </div>
+          {isEditing && isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={handleGrokipediaLookup}
+              isLoading={lookupGrokipedia.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<span>🌐</span>}
+              data-test="book-operation-grokipedia"
+              className="mb-0"
+            >
+              Find Grokipedia URL
+            </Button>
+          )}
+        </div>
 
         <div>
-          <Input
-            label="Free Text URLs"
-            value={formData.freeTextUrl}
-            onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
-            placeholder="https://gutenberg.org/123 https://archive.org/456"
-            data-test="book-free-text-url"
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="Free Text URLs"
+                value={formData.freeTextUrl}
+                onChange={(e) => handleFieldChange('freeTextUrl', e.target.value)}
+                placeholder="https://gutenberg.org/123 https://archive.org/456"
+                data-test="book-free-text-url"
+              />
+            </div>
+            {isEditing && isLibrarian && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleFreeTextLookup}
+                isLoading={lookupFreeText.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<PiBookOpen />}
+                data-test="book-operation-free-text"
+                className="mb-0"
+              >
+                Find Free Text URL
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
         </div>
 
         <div>
-          <Input
-            label="Tags"
-            value={formData.tagsList}
-            onChange={(e) => handleFieldChange('tagsList', e.target.value)}
-            placeholder="fiction, fantasy, childrens"
-            data-test="book-tags"
-          />
-          <p className="text-xs text-gray-500 mt-1">Comma-separated tags (e.g., fiction, theology, childrens)</p>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="Genres"
+                value={formData.tagsList}
+                onChange={(e) => handleFieldChange('tagsList', e.target.value)}
+                placeholder="fiction, fantasy, childrens"
+                data-test="book-tags"
+              />
+            </div>
+            {isEditing && isLibrarian && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleGenreLookup}
+                isLoading={lookupGenres.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<PiTag />}
+                data-test="book-operation-lookup-genres"
+                className="mb-0"
+              >
+                Lookup Genres
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Comma-separated genres (e.g., fiction, theology, childrens)</p>
         </div>
 
         <div className="space-y-4">
@@ -697,6 +853,29 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             placeholder="Optional reason for status (e.g., why book is withdrawn)"
             data-test="book-status-reason"
           />
+
+          <Input
+            label="Date Added to Library"
+            type="date"
+            value={formData.dateAddedToLibrary}
+            onChange={(e) => handleFieldChange('dateAddedToLibrary', e.target.value)}
+            data-test="book-date-added"
+          />
+
+          {isEditing && book && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div data-test="book-form-last-modified">
+                <p className="text-sm font-medium text-gray-500">Last Modified</p>
+                <p className="text-gray-900">
+                  {book.lastModified ? parseISODateSafe(book.lastModified).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+              <div data-test="book-form-loan-count">
+                <p className="text-sm font-medium text-gray-500">Active Loans</p>
+                <p className="text-gray-900">{book.loanCount ?? 0}</p>
+              </div>
+            </div>
+          )}
         </div>
       </form>
 

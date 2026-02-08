@@ -140,7 +140,7 @@ export function useImportJsonData() {
       queryClient.invalidateQueries({ queryKey: ['authors'] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['loans'] })
-      queryClient.invalidateQueries({ queryKey: ['libraries'] })
+      queryClient.invalidateQueries({ queryKey: ['branches'] })
     },
   })
 }
