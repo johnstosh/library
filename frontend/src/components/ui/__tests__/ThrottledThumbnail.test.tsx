@@ -47,10 +47,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// --- Bug 7: Reference Counting ---
+// --- Cache Behavior ---
 
-describe('Bug 7: Reference counting for cached blob URLs', () => {
-  it('should track reference count (count=1 after first mount)', async () => {
+describe('Checksum cache', () => {
+  it('should cache blob URL by checksum after first load', async () => {
     render(
       <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
     )
@@ -62,10 +62,9 @@ describe('Bug 7: Reference counting for cached blob URLs', () => {
     const entry = _getCacheEntryForTesting('abc123')
     expect(entry).not.toBeNull()
     expect(entry!.url).toBe('blob:mock-1')
-    expect(entry!.count).toBe(1)
   })
 
-  it('should track reference count (count=2 after second mount with same checksum)', async () => {
+  it('should reuse cached blob URL for same checksum (no extra fetch)', async () => {
     render(
       <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
     )
@@ -73,6 +72,8 @@ describe('Bug 7: Reference counting for cached blob URLs', () => {
     await waitFor(() => {
       expect(screen.getByAltText('photo1')).toBeInTheDocument()
     })
+
+    const fetchCountBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     // Mount a second component with the same checksum
     render(
@@ -83,40 +84,8 @@ describe('Bug 7: Reference counting for cached blob URLs', () => {
       expect(screen.getByAltText('photo2')).toBeInTheDocument()
     })
 
-    const entry = _getCacheEntryForTesting('abc123')
-    expect(entry).not.toBeNull()
-    expect(entry!.count).toBe(2)
-  })
-
-  it('should revoke blob URL only when reference count reaches zero', async () => {
-    const { unmount: unmount1 } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    const { unmount: unmount2 } = render(
-      <ThrottledThumbnail photoId={2} url="/api/photos/2/thumbnail" alt="photo2" checksum="abc123" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo2')).toBeInTheDocument()
-    })
-
-    // Unmount first — count should go to 1, URL NOT revoked
-    unmount1()
-    expect(revokedUrls).not.toContain('blob:mock-1')
-    const entryAfterFirst = _getCacheEntryForTesting('abc123')
-    expect(entryAfterFirst).not.toBeNull()
-    expect(entryAfterFirst!.count).toBe(1)
-
-    // Unmount second — count should go to 0, URL IS revoked
-    unmount2()
-    expect(revokedUrls).toContain('blob:mock-1')
-    const entryAfterSecond = _getCacheEntryForTesting('abc123')
-    expect(entryAfterSecond).toBeNull()
+    const fetchCountAfter = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
+    expect(fetchCountAfter).toBe(fetchCountBefore) // no extra fetch
   })
 
   it('clearThumbnailCache should revoke all URLs and clear cache', async () => {
@@ -136,65 +105,10 @@ describe('Bug 7: Reference counting for cached blob URLs', () => {
   })
 })
 
-// --- Bug 6: Always Return Cleanup ---
+// --- Blob URL Stability ---
 
-describe('Bug 6: Always return cleanup from useEffect', () => {
-  it('should decrement reference count on unmount even after cache hit path', async () => {
-    // First render to populate cache
-    const { unmount: unmount1 } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    // Second render — should hit cache immediately
-    const { unmount: unmount2 } = render(
-      <ThrottledThumbnail photoId={2} url="/api/photos/2/thumbnail" alt="photo2" checksum="abc123" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo2')).toBeInTheDocument()
-    })
-
-    const entryBefore = _getCacheEntryForTesting('abc123')
-    expect(entryBefore!.count).toBe(2)
-
-    // Unmount the cache-hit component — should still decrement
-    unmount2()
-
-    const entryAfter = _getCacheEntryForTesting('abc123')
-    expect(entryAfter).not.toBeNull()
-    expect(entryAfter!.count).toBe(1)
-
-    // Unmount the original — should revoke
-    unmount1()
-    expect(revokedUrls).toContain('blob:mock-1')
-    expect(_getCacheEntryForTesting('abc123')).toBeNull()
-  })
-})
-
-// --- Bug 4: Stale Closure Fix ---
-
-describe('Bug 4: Stale closure in useEffect cleanup', () => {
-  it('should revoke uncached blob URL on unmount (using current value, not stale null)', async () => {
-    const { unmount } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    unmount()
-
-    // The blob URL should be revoked — without the fix, the stale closure
-    // captures loadedUrl=null and never calls revokeObjectURL
-    expect(revokedUrls).toContain('blob:mock-1')
-  })
-
-  it('should not revoke cached blob URL when other components still reference it', async () => {
+describe('Blob URL stability (no premature revocation)', () => {
+  it('should NOT revoke blob URL when one of two components sharing a checksum unmounts', async () => {
     // Mount first component
     render(
       <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="shared" />
@@ -213,18 +127,51 @@ describe('Bug 4: Stale closure in useEffect cleanup', () => {
       expect(screen.getByAltText('photo2')).toBeInTheDocument()
     })
 
-    // Unmount second — should NOT revoke since first still uses it
+    // Unmount second — blob URL should NOT be revoked
     unmount2()
     expect(revokedUrls).not.toContain('blob:mock-1')
 
     // First component's img should still be functional
     expect(screen.getByAltText('photo1')).toHaveAttribute('src', 'blob:mock-1')
   })
+
+  it('should NOT revoke blob URL when single component unmounts', async () => {
+    const { unmount } = render(
+      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc" />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByAltText('photo1')).toBeInTheDocument()
+    })
+
+    unmount()
+
+    // Blob URL should NOT be revoked — it stays in cache for potential reuse
+    expect(revokedUrls).not.toContain('blob:mock-1')
+    // Cache should still have the entry
+    expect(_getCacheEntryForTesting('abc')).not.toBeNull()
+  })
+
+  it('should NOT revoke uncached blob URL on unmount', async () => {
+    const { unmount } = render(
+      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByAltText('photo1')).toBeInTheDocument()
+    })
+
+    unmount()
+
+    // Even uncached blob URLs are not revoked — the minor memory cost
+    // is acceptable to avoid the disappearing thumbnail bug
+    expect(revokedUrls.length).toBe(0)
+  })
 })
 
-// --- Bug 5: Remove photoId from Deps ---
+// --- Deps Behavior ---
 
-describe('Bug 5: Remove photoId from deps array', () => {
+describe('Effect deps (url and checksum only)', () => {
   it('should not refetch when only photoId changes but url and checksum stay the same', async () => {
     const { rerender } = render(
       <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="stable" />
