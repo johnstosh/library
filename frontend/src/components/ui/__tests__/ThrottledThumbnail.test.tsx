@@ -1,221 +1,82 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
-import {
-  ThrottledThumbnail,
-  clearThumbnailCache,
-  _resetForTesting,
-  _getCacheEntryForTesting,
-} from '../ThrottledThumbnail'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Thumbnail, ThrottledThumbnail } from '../ThrottledThumbnail'
+import { getThumbnailUrl } from '@/api/photos'
 
-// --- Mock Setup ---
-
-let blobCounter = 0
-const revokedUrls: string[] = []
-
-beforeEach(() => {
-  _resetForTesting()
-  blobCounter = 0
-  revokedUrls.length = 0
-
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        blob: () => Promise.resolve(new Blob(['fake-image'], { type: 'image/png' })),
-      })
-    )
-  )
-
-  vi.stubGlobal(
-    'URL',
-    {
-      ...globalThis.URL,
-      createObjectURL: vi.fn(() => {
-        blobCounter++
-        return `blob:mock-${blobCounter}`
-      }),
-      revokeObjectURL: vi.fn((url: string) => {
-        revokedUrls.push(url)
-      }),
-    }
-  )
-})
-
-afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
-
-// --- Cache Behavior ---
-
-describe('Checksum cache', () => {
-  it('should cache blob URL by checksum after first load', async () => {
+describe('Thumbnail', () => {
+  it('renders loading placeholder initially', () => {
     render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
+      <Thumbnail photoId={1} url="/api/photos/1/thumbnail?width=70" alt="photo1" />
     )
 
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
+    // Spinner should be visible
+    const spinner = document.querySelector('.animate-spin')
+    expect(spinner).toBeInTheDocument()
 
-    const entry = _getCacheEntryForTesting('abc123')
-    expect(entry).not.toBeNull()
-    expect(entry!.url).toBe('blob:mock-1')
+    // Image should be hidden
+    const img = screen.getByAltText('photo1')
+    expect(img).toHaveClass('hidden')
   })
 
-  it('should reuse cached blob URL for same checksum (no extra fetch)', async () => {
+  it('renders img with correct src/alt/data-test after onLoad fires', () => {
     render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
+      <Thumbnail photoId={1} url="/api/photos/1/thumbnail?width=70" alt="photo1" className="w-14" />
     )
 
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
+    const img = screen.getByAltText('photo1')
+    fireEvent.load(img)
 
-    const fetchCountBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
+    expect(img).toHaveAttribute('src', '/api/photos/1/thumbnail?width=70')
+    expect(img).toHaveAttribute('data-test', 'thumbnail-img')
+    expect(img).toHaveClass('w-14')
+    expect(img).not.toHaveClass('hidden')
 
-    // Mount a second component with the same checksum
-    render(
-      <ThrottledThumbnail photoId={2} url="/api/photos/2/thumbnail" alt="photo2" checksum="abc123" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo2')).toBeInTheDocument()
-    })
-
-    const fetchCountAfter = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-    expect(fetchCountAfter).toBe(fetchCountBefore) // no extra fetch
+    // Spinner should be gone
+    const spinner = document.querySelector('.animate-spin')
+    expect(spinner).not.toBeInTheDocument()
   })
 
-  it('clearThumbnailCache should revoke all URLs and clear cache', async () => {
+  it('renders error state (dash) after onError fires', () => {
     render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc123" />
+      <Thumbnail photoId={1} url="/api/photos/1/thumbnail?width=70" alt="photo1" />
     )
 
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
+    const img = screen.getByAltText('photo1')
+    fireEvent.error(img)
 
-    clearThumbnailCache()
+    // Error state should show a dash
+    expect(screen.getByText('-')).toBeInTheDocument()
 
-    expect(revokedUrls).toContain('blob:mock-1')
-    const entry = _getCacheEntryForTesting('abc123')
-    expect(entry).toBeNull()
+    // Image should be gone
+    expect(screen.queryByAltText('photo1')).not.toBeInTheDocument()
+  })
+
+  it('applies imageOrientation: from-image style when respectOrientation is true', () => {
+    render(
+      <Thumbnail
+        photoId={1}
+        url="/api/photos/1/thumbnail?width=70"
+        alt="photo1"
+        respectOrientation
+      />
+    )
+
+    const img = screen.getByAltText('photo1')
+    expect(img).toHaveStyle({ imageOrientation: 'from-image' })
+  })
+
+  it('exports ThrottledThumbnail as backward-compatible alias', () => {
+    expect(ThrottledThumbnail).toBeDefined()
+    expect(ThrottledThumbnail).toBe(Thumbnail)
   })
 })
 
-// --- Blob URL Stability ---
-
-describe('Blob URL stability (no premature revocation)', () => {
-  it('should NOT revoke blob URL when one of two components sharing a checksum unmounts', async () => {
-    // Mount first component
-    render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="shared" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    // Mount second component with same checksum
-    const { unmount: unmount2 } = render(
-      <ThrottledThumbnail photoId={2} url="/api/photos/2/thumbnail" alt="photo2" checksum="shared" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo2')).toBeInTheDocument()
-    })
-
-    // Unmount second — blob URL should NOT be revoked
-    unmount2()
-    expect(revokedUrls).not.toContain('blob:mock-1')
-
-    // First component's img should still be functional
-    expect(screen.getByAltText('photo1')).toHaveAttribute('src', 'blob:mock-1')
+describe('getThumbnailUrl', () => {
+  it('builds URL with checksum', () => {
+    expect(getThumbnailUrl(1, 70, 'abc123')).toBe('/api/photos/1/thumbnail?width=70&v=abc123')
   })
 
-  it('should NOT revoke blob URL when single component unmounts', async () => {
-    const { unmount } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="abc" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    unmount()
-
-    // Blob URL should NOT be revoked — it stays in cache for potential reuse
-    expect(revokedUrls).not.toContain('blob:mock-1')
-    // Cache should still have the entry
-    expect(_getCacheEntryForTesting('abc')).not.toBeNull()
-  })
-
-  it('should NOT revoke uncached blob URL on unmount', async () => {
-    const { unmount } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    unmount()
-
-    // Even uncached blob URLs are not revoked — the minor memory cost
-    // is acceptable to avoid the disappearing thumbnail bug
-    expect(revokedUrls.length).toBe(0)
-  })
-})
-
-// --- Deps Behavior ---
-
-describe('Effect deps (url and checksum only)', () => {
-  it('should not refetch when only photoId changes but url and checksum stay the same', async () => {
-    const { rerender } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" checksum="stable" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    const fetchCountBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-
-    // Rerender with different photoId but same url and checksum
-    rerender(
-      <ThrottledThumbnail photoId={999} url="/api/photos/1/thumbnail" alt="photo1" checksum="stable" />
-    )
-
-    // Wait a tick for any potential effect re-run
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    const fetchCountAfter = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-    expect(fetchCountAfter).toBe(fetchCountBefore)
-  })
-
-  it('should refetch when url changes', async () => {
-    const { rerender } = render(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail" alt="photo1" />
-    )
-
-    await waitFor(() => {
-      expect(screen.getByAltText('photo1')).toBeInTheDocument()
-    })
-
-    const fetchCountBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-
-    // Rerender with different url
-    rerender(
-      <ThrottledThumbnail photoId={1} url="/api/photos/1/thumbnail?v=2" alt="photo1" />
-    )
-
-    await waitFor(() => {
-      const fetchCountAfter = (fetch as ReturnType<typeof vi.fn>).mock.calls.length
-      expect(fetchCountAfter).toBeGreaterThan(fetchCountBefore)
-    })
+  it('builds URL without checksum', () => {
+    expect(getThumbnailUrl(1, 70)).toBe('/api/photos/1/thumbnail?width=70')
   })
 })

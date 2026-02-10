@@ -90,10 +90,9 @@ export function BookTable({
           >
             <ThrottledThumbnail
               photoId={book.firstPhotoId}
-              url={getThumbnailUrl(book.firstPhotoId, 70)}
+              url={getThumbnailUrl(book.firstPhotoId, 70, book.firstPhotoChecksum)}
               alt={`Cover of ${book.title}`}
               className="w-14 h-20 object-cover rounded hover:opacity-80 transition-opacity cursor-pointer"
-              checksum={book.firstPhotoChecksum}
             />
           </a>
         ) : (

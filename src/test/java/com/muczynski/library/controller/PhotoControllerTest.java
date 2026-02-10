@@ -80,6 +80,13 @@ class PhotoControllerTest {
         BufferedImage thumbnailImage = ImageIO.read(new ByteArrayInputStream(thumbnailBytes));
         assertEquals(100, thumbnailImage.getWidth());
         assertEquals(150, thumbnailImage.getHeight());
+
+        // Verify Cache-Control header
+        String cacheControl = result.getResponse().getHeader("Cache-Control");
+        assertNotNull(cacheControl, "Cache-Control header should be present");
+        assertTrue(cacheControl.contains("max-age=86400"), "Should have max-age=86400");
+        assertTrue(cacheControl.contains("public"), "Should be public");
+        assertTrue(cacheControl.contains("immutable"), "Should be immutable");
     }
 
     @Test
@@ -161,8 +168,31 @@ class PhotoControllerTest {
     @Test
     @WithMockUser
     void getThumbnail_notFound() throws Exception {
-        mockMvc.perform(get("/api/photos/99999/thumbnail?width=100"))
-                .andExpect(status().isNotFound());
+        MvcResult notFoundResult = mockMvc.perform(get("/api/photos/99999/thumbnail?width=100"))
+                .andExpect(status().isNotFound())
+                .andReturn();
+
+        // Error responses should NOT have the long-lived cache header
+        String cacheControl = notFoundResult.getResponse().getHeader("Cache-Control");
+        assertTrue(cacheControl == null || !cacheControl.contains("max-age=86400"),
+                "Error response should not have max-age=86400");
+    }
+
+    @Test
+    @WithMockUser
+    void getThumbnail_withVersionParam() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo = new Photo();
+        photo.setBook(book);
+        photo.setImage(createDummyImage(200, 300));
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photoRepository.save(photo);
+
+        // The 'v' param should be ignored gracefully by the endpoint
+        mockMvc.perform(get("/api/photos/" + photo.getId() + "/thumbnail?width=100&v=abc123"))
+                .andExpect(status().isOk());
     }
 
     @Test
