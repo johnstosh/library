@@ -8,6 +8,8 @@ export interface Column<T> {
   accessor: (item: T) => ReactNode
   sortable?: boolean
   width?: string
+  minWidth?: string
+  cellClassName?: string
 }
 
 export interface DataTableProps<T> {
@@ -73,7 +75,7 @@ export function DataTable<T>({
               <th
                 key={column.key}
                 className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                style={{ width: column.width }}
+                style={{ width: column.width, minWidth: column.minWidth }}
               >
                 {column.header}
               </th>
@@ -114,7 +116,7 @@ export function DataTable<T>({
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column.key} className="px-3 sm:px-6 py-3 sm:py-4 overflow-hidden truncate text-sm">
+                  <td key={column.key} className={column.cellClassName || "px-3 sm:px-6 py-3 sm:py-4 overflow-hidden truncate text-sm"}>
                     {column.accessor(item)}
                   </td>
                 ))}

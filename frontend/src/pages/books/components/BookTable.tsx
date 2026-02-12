@@ -77,7 +77,7 @@ export function BookTable({
   const columns: Column<BookDto>[] = [
     {
       key: 'photo',
-      header: '',
+      header: 'Cover',
       accessor: (book) =>
         book.firstPhotoId ? (
           <a
@@ -86,6 +86,7 @@ export function BookTable({
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="block"
+            style={{ width: '3.5rem', minWidth: '3.5rem' }}
             title="View full-size photo"
           >
             <ThrottledThumbnail
@@ -101,6 +102,8 @@ export function BookTable({
           </div>
         ),
       width: '70px',
+      minWidth: '70px',
+      cellClassName: 'px-3 py-3 sm:py-4 overflow-hidden text-sm',
     },
     {
       key: 'title',
