@@ -61,7 +61,7 @@ export function PhotoGallery({
             {/* Photo */}
             <div className="bg-gray-100 flex items-center justify-center min-h-[200px]">
               <img
-                src={getThumbnailUrl(photo.id, 400)}
+                src={getThumbnailUrl(photo.id, 400, photo.imageChecksum)}
                 alt={photo.caption || `Photo ${index + 1}`}
                 className="w-full h-auto object-contain cursor-pointer"
                 onClick={() => setLightboxPhoto(photo)}

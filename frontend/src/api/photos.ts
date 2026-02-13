@@ -527,7 +527,8 @@ export function getImageUrl(photoId: number): string {
   return `/api/photos/${photoId}/image`
 }
 
-export function getThumbnailUrl(photoId: number, width: number): string {
-  return `/api/photos/${photoId}/thumbnail?width=${width}`
+export function getThumbnailUrl(photoId: number, width: number, checksum?: string): string {
+  const base = `/api/photos/${photoId}/thumbnail?width=${width}`
+  return checksum ? `${base}&v=${checksum}` : base
 }
 

@@ -10,23 +10,7 @@ Another important lesson learned was the value of using percentage-based column 
 
 ## TanStack Query isLoading vs Data Availability
 
-A subtle but impactful bug arose from conflating TanStack Query v5's `isLoading` state with whether data was available for display. In TanStack Query v5, `isLoading` is `isPending && isFetching` — `isPending` reflects whether actual data exists, ignoring placeholder data. When using a multi-step caching approach (summaries → batch fetch → cache), the `isLoading` from the batch fetch query would flip to `true` during background refetches even when the application already had all the books to display. This caused the DataTable to replace the entire table with a loading spinner, unmounting all ThrottledThumbnail components and losing their loaded images. The fix was to gate `isLoading` on whether there's actually data to show: `isLoading: allBooks.length === 0 && (summariesLoading || fetchingBooks)`. This ensures the loading spinner only appears during the initial load when no data is available, not during background refetches when books are already displayed. The key insight: `isLoading` from TanStack Query tells you about the query's internal state, but the UI should decide whether to show a spinner based on whether it has data to render.
-
-## Query Key Instability and useRef Stabilization in Multi-Step Queries
-
-When using TanStack Query with multi-step data loading (summaries → batch fetch by IDs → cache), query key instability can cause cascading failures. Specifically, if the query key for a batch fetch includes the IDs being fetched (e.g., `['books', 'byIds', ids.join(',')]`), the key changes every time the ID set changes. During refetches triggered by `staleTime: 0` or reconnect events (`online`), this cascade occurs:
-
-1. Summaries refetch returns same data → `booksToFetch` becomes `[]` (all cached)
-2. The byIds query key changes from `[1,2,3,4,5]` to `[]`
-3. With `keepPreviousData`, `fetchedBooks` temporarily holds the OLD data (wrong IDs)
-4. The `allBooks` useMemo builds from wrong `fetchedBooks` map → books fall through to cache lookup → some return `undefined` → filtered out → `allBooks` shrinks or becomes `[]`
-
-Three fixes work together to prevent this:
-- **`placeholderData: keepPreviousData` on summaries query**: Prevents summaries from becoming `undefined` during refetches, which would wipe `allBooks` immediately
-- **Remove the guard `if (booksToFetch.length > 0 && !fetchedBooks) return []`**: This guard hides ALL cached books while waiting for new books, causing unnecessary blank states
-- **`useRef` stabilization**: A ref preserves the last good `allBooks` array. When `allBooks` transiently becomes `[]` during refetch cascades, the ref provides the previous data so the UI never flickers. The returned data is `allBooks.length > 0 ? allBooks : previousBooksRef.current`
-
-The key insight: in complex multi-step queries, transient empty states are inevitable during refetch cascades. Rather than trying to prevent every edge case, use a ref to guarantee the UI always has data to render. See `grok4-thumbnail-analysis.md` for the full analysis.
+A subtle but impactful bug arose from conflating TanStack Query v5's `isLoading` state with whether data was available for display. The UI should decide whether to show a loading indicator based on whether it has data to render.
 
 ## Photo Aspect Ratio Preservation
 

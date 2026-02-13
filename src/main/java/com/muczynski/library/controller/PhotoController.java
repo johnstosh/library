@@ -17,9 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
+import java.time.Duration;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,6 +88,7 @@ public class PhotoController {
             logger.debug("Successfully generated thumbnail for photo ID {}", id);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(thumbnailData.getSecond()))
+                    .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePublic().immutable())
                     .body(thumbnailData.getFirst());
         } catch (LibraryException e) {
             if (e.getMessage() != null && e.getMessage().contains("Photo not found")) {

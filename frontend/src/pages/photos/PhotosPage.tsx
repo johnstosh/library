@@ -15,7 +15,7 @@ import {
   type PhotoExportInfoDto,
 } from '@/api/data-management'
 import { getThumbnailUrl } from '@/api/photos'
-import { ThrottledThumbnail, clearThumbnailQueue } from '@/components/ui/ThrottledThumbnail'
+import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import {
   PiDownload,
@@ -45,13 +45,6 @@ export function PhotosPage() {
   const unlinkPhoto = useUnlinkPhoto()
   const deletePhoto = useDeletePhoto()
   const uploadPhotoImage = useUploadPhotoImage()
-
-  // Clear thumbnail loading queue when leaving the page
-  useEffect(() => {
-    return () => {
-      clearThumbnailQueue()
-    }
-  }, [])
 
   // Photo Export Handlers
   const handleRefreshPhotoStatus = () => {
@@ -628,10 +621,9 @@ export function PhotosPage() {
                           {photo.id && photo.hasImage ? (
                             <ThrottledThumbnail
                               photoId={photo.id}
-                              url={getThumbnailUrl(photo.id, 48)}
+                              url={getThumbnailUrl(photo.id, 48, photo.checksum)}
                               alt={`Photo #${photo.id}`}
                               className="w-12 rounded"
-                              checksum={photo.checksum}
                             />
                           ) : (
                             <span className="text-gray-400">-</span>

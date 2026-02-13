@@ -1,11 +1,9 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { BookFilters } from './components/BookFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
-import { clearThumbnailQueue } from '@/components/ui/ThrottledThumbnail'
 import { useBooks } from '@/api/books'
 import { useUiStore, useBooksFilter, useBooksTableSelection } from '@/stores/uiStore'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -19,13 +17,6 @@ export function BooksPage() {
   const isLibrarian = useIsLibrarian()
 
   const { data: books = [], isLoading } = useBooks(filter)
-
-  // Clear thumbnail queue when navigating away to prevent unnecessary network requests
-  useEffect(() => {
-    return () => {
-      clearThumbnailQueue()
-    }
-  }, [])
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
