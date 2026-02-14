@@ -86,6 +86,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findAllWithAuthorAndLibrary();
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(String title, Pageable pageable);
+    Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrue(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(String title, Pageable pageable);
     void deleteByPublisher(String publisher);
     long countByAuthorId(Long authorId);

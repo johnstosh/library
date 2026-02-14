@@ -57,7 +57,7 @@ Returns paginated search results for books and authors.
 - `page` (int, required) - Zero-based page number
 - `size` (int, required) - Number of results per page (default: 20)
 - `searchType` (string, optional) - Filter for book search scope:
-  - `ONLINE` - Only books with a free text URL (online books)
+  - `ONLINE` - Only books with `electronicResource = true`
   - `ALL` - All books (no filtering)
   - `IN_LIBRARY` - Only books with a LOC call number (in-library materials) - **default**
 
