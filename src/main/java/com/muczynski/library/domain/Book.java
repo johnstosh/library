@@ -60,6 +60,8 @@ public class Book {
 
     private String locNumber;
 
+    private Boolean electronicResource = false;
+
     private String statusReason;
 
     /**
