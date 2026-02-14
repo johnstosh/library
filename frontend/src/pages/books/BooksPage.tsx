@@ -16,7 +16,7 @@ export function BooksPage() {
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
-  const { data: books = [], isLoading } = useBooks(filter)
+  const { data: books = [], isLoading, isFetching } = useBooks(filter)
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
@@ -81,7 +81,7 @@ export function BooksPage() {
 
           <BookTable
             books={books}
-            isLoading={isLoading}
+            isLoading={isLoading || isFetching}
             selectedIds={selectedIds}
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}

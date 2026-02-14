@@ -8,6 +8,7 @@ import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto
 // Hook to get all books with optimized lastModified caching
 export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia') {
   const queryClient = useQueryClient()
+  const previousFilterRef = useRef(filter)
 
   // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
   // For 'all' filter, we also use the summaries endpoint to enable caching
@@ -25,7 +26,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
   // For all filters including 'all', we use the summaries endpoint to enable caching
   const filterEndpoint = getFilterEndpoint(filter)
-  const { data: summaries, isLoading: summariesLoading } = useQuery({
+  const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
     queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
     queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
     staleTime: 0, // Always check for fresh data when filter changes
@@ -113,9 +114,16 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
 
   const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
 
+  // Track filter changes to show loading indicator during transitions
+  const filterChanged = previousFilterRef.current !== filter
+  React.useEffect(() => {
+    previousFilterRef.current = filter
+  }, [filter])
+
   return {
     data: stableBooks,
     isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
+    isFetching: filterChanged && summariesFetching,
   }
 }
 
