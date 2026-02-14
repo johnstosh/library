@@ -48,7 +48,7 @@ public class LabelsPdfService {
     private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
     private static final float BOTTOM_MARGIN = 0;//0.125f * 72;  // 9 points (0.125" instead of 0.5")
     private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
-    private static final float RIGHT_MARGIN = 0.1875f * 72;  // 13.5 points (0.1875")
+    private static final float RIGHT_MARGIN = 0;//0.1875f * 72;  // 13.5 points (0.1875")
 
     // Font sizes (configurable via application.properties)
     @Value("${app.labels.font-size.title:11}")
@@ -90,7 +90,7 @@ public class LabelsPdfService {
                         document.add(currentTable);
 
                         // Force page break before starting next page of labels
-                        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+                        //document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
                     }
 
                     // Create table with fixed column widths matching label dimensions
@@ -98,7 +98,7 @@ public class LabelsPdfService {
                     float[] columnWidths = new float[LABELS_PER_ROW];
                     columnWidths[0] = LABEL_WIDTH;  // Column 1
                     columnWidths[1] = LABEL_WIDTH;  // Column 2
-                    columnWidths[2] = LABEL_WIDTH; // + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
+                    columnWidths[2] = LABEL_WIDTH;
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     // Remove all table spacing to prevent overflow
@@ -114,7 +114,8 @@ public class LabelsPdfService {
 
                 // Add label cell
                 boolean isLastRow = (rowIndex == LABELS_PER_COL - 1);
-                Cell labelCell = createLabelCell(book, isLastRow);
+                boolean isLastCol = colIndex >= LABELS_PER_ROW; 
+                Cell labelCell = createLabelCell(book, isLastRow, isLastCol);
                 currentTable.addCell(labelCell);
 
                 colIndex++;
@@ -155,7 +156,7 @@ public class LabelsPdfService {
      * Create a label cell for a book
      * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createLabelCell(Book book, boolean isLastRow) {
+    private Cell createLabelCell(Book book, boolean isLastRow, boolean isLastCol) {
         float paddingTop = 6;
         float paddingBottom = isLastRow ? 0 : 6;
 
@@ -166,7 +167,11 @@ public class LabelsPdfService {
         cell.setPaddingTop(paddingTop);
         cell.setPaddingBottom(paddingBottom);
         cell.setPaddingLeft(10);
-        cell.setPaddingRight(10);
+        if (isLastCol) {
+            cell.setPaddingRight(10);
+        } else {
+            cell.setPaddingRight(10);
+        }
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
