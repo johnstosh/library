@@ -18,7 +18,7 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
  * Disabled for tests (which use spring.session.store-type=none).
  */
 @Configuration
-@EnableJdbcHttpSession
+@EnableJdbcHttpSession(maxInactiveIntervalInSeconds = 77 * 24 * 60 * 60) // 77 days
 @ConditionalOnProperty(name = "spring.session.store-type", havingValue = "jdbc")
 public class SessionConfig {
     // Spring Session will automatically create the necessary session tables
