@@ -36,7 +36,7 @@ public class LabelsPdfService {
     // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
     // Reduced height by 1/8" to account for printing/spacing
     private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
-    private static final float LABEL_HEIGHT = 1.875f * 72;  // 135 points (1.875" = 2.0" - 0.125")
+    private static final float LABEL_HEIGHT = 1.875f * 72 - 2;  // 135 points (1.875" = 2.0" - 0.125")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
@@ -46,7 +46,7 @@ public class LabelsPdfService {
     // The official 0.5" bottom margin combined with label padding and borders
     // was causing table overflow and resulting in every other page being blank.
     private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
-    private static final float BOTTOM_MARGIN = 0.125f * 72;  // 9 points (0.125" instead of 0.5")
+    private static final float BOTTOM_MARGIN = 0;//0.125f * 72;  // 9 points (0.125" instead of 0.5")
     private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
     private static final float RIGHT_MARGIN = 0.1875f * 72;  // 13.5 points (0.1875")
 
@@ -98,7 +98,7 @@ public class LabelsPdfService {
                     float[] columnWidths = new float[LABELS_PER_ROW];
                     columnWidths[0] = LABEL_WIDTH;  // Column 1
                     columnWidths[1] = LABEL_WIDTH;  // Column 2
-                    columnWidths[2] = LABEL_WIDTH + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
+                    columnWidths[2] = LABEL_WIDTH; // + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     // Remove all table spacing to prevent overflow
