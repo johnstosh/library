@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -82,11 +83,15 @@ public class LabelsService {
             throw new LibraryException("No books selected for labels");
         }
 
-        List<Book> books = bookRepository.findAllById(bookIds);
+        List<Book> books = new java.util.ArrayList<>(bookRepository.findAllById(bookIds));
 
         if (books.isEmpty()) {
             throw new LibraryException("No books found for the given IDs");
         }
+
+        // Sort by dateAddedToLibrary descending (most recent first)
+        books.sort(Comparator.comparing(Book::getDateAddedToLibrary,
+                Comparator.nullsLast(Comparator.reverseOrder())));
 
         log.info("Generating labels PDF for {} books", books.size());
 
