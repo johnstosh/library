@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
@@ -8,7 +8,6 @@ import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto
 // Hook to get all books with optimized lastModified caching
 export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia') {
   const queryClient = useQueryClient()
-  const previousFilterRef = useRef(filter)
 
   // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
   // For 'all' filter, we also use the summaries endpoint to enable caching
@@ -114,16 +113,19 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
 
   const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
 
-  // Track filter changes to show loading indicator during transitions
-  const filterChanged = previousFilterRef.current !== filter
+  // Track filter transitions using state so isFetching stays true for the full fetch duration.
+  // A ref-based approach resets after one render cycle; state persists until summaries arrive.
+  const [settledFilter, setSettledFilter] = useState(filter)
   React.useEffect(() => {
-    previousFilterRef.current = filter
-  }, [filter])
+    if (!summariesFetching) {
+      setSettledFilter(filter)
+    }
+  }, [filter, summariesFetching])
 
   return {
     data: stableBooks,
     isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
-    isFetching: filterChanged && summariesFetching,
+    isFetching: settledFilter !== filter,
   }
 }
 

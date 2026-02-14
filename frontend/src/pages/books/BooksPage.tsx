@@ -68,7 +68,7 @@ export function BooksPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow relative">
         <div className="p-4 border-b border-gray-200">
           <BookFilters />
         </div>
@@ -81,7 +81,7 @@ export function BooksPage() {
 
           <BookTable
             books={books}
-            isLoading={isLoading || isFetching}
+            isLoading={isLoading}
             selectedIds={selectedIds}
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
@@ -90,6 +90,12 @@ export function BooksPage() {
             onView={handleViewBook}
           />
         </div>
+
+        {isFetching && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          </div>
+        )}
 
         {!isLoading && books.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">

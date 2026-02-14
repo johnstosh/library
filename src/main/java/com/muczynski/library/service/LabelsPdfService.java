@@ -82,8 +82,9 @@ public class LabelsPdfService {
                 if (labelIndex % LABELS_PER_PAGE == 0) {
                     if (currentTable != null) {
                         // Fill remaining cells in the last row if needed
+                        boolean lastRowFill = (rowIndex == LABELS_PER_COL);
                         while (colIndex < LABELS_PER_ROW) {
-                            currentTable.addCell(createEmptyCell());
+                            currentTable.addCell(createEmptyCell(lastRowFill));
                             colIndex++;
                         }
                         document.add(currentTable);
@@ -105,14 +106,15 @@ public class LabelsPdfService {
                     currentTable.setPadding(0);
                     currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
                     // Account for horizontal dead zone between labels on physical sheet
-                    currentTable.setHorizontalBorderSpacing(13);  // 13 points
+                    currentTable.setHorizontalBorderSpacing(15);  // 15 points
                     currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
                 }
 
                 // Add label cell
-                Cell labelCell = createLabelCell(book);
+                boolean isLastRow = (rowIndex == LABELS_PER_COL - 1);
+                Cell labelCell = createLabelCell(book, isLastRow);
                 currentTable.addCell(labelCell);
 
                 colIndex++;
@@ -128,8 +130,9 @@ public class LabelsPdfService {
             if (currentTable != null) {
                 // Only fill remaining cells in the current row if we started a row
                 if (colIndex > 0) {
+                    boolean lastRowFill = (rowIndex == LABELS_PER_COL - 1);
                     while (colIndex < LABELS_PER_ROW) {
-                        currentTable.addCell(createEmptyCell());
+                        currentTable.addCell(createEmptyCell(lastRowFill));
                         colIndex++;
                     }
                 }
@@ -150,14 +153,18 @@ public class LabelsPdfService {
 
     /**
      * Create a label cell for a book
+     * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createLabelCell(Book book) {
+    private Cell createLabelCell(Book book, boolean isLastRow) {
+        float paddingTop = 6;
+        float paddingBottom = isLastRow ? 0 : 6;
+
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
-        cell.setPaddingTop(6);
-        cell.setPaddingBottom(6);
+        cell.setPaddingTop(paddingTop);
+        cell.setPaddingBottom(paddingBottom);
         cell.setPaddingLeft(10);
         cell.setPaddingRight(10);
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
@@ -227,13 +234,17 @@ public class LabelsPdfService {
 
     /**
      * Create an empty label cell
+     * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createEmptyCell() {
+    private Cell createEmptyCell(boolean isLastRow) {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
         cell.setPadding(0);
+        if (isLastRow) {
+            cell.setPaddingBottom(0);
+        }
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
         return cell;
     }
