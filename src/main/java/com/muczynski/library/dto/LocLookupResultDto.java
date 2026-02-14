@@ -18,4 +18,5 @@ public class LocLookupResultDto {
     private String locNumber;
     private String errorMessage;
     private int matchCount;
+    private boolean aiSuggested;
 }

@@ -38,6 +38,7 @@ public class LocBulkLookupService {
     private final BookRepository bookRepository;
     private final PhotoRepository photoRepository;
     private final LocCatalogService locCatalogService;
+    private final AskGrok askGrok;
 
     /**
      * Get all books with their current LOC status, sorted by date added (most recent first)
@@ -278,16 +279,30 @@ public class LocBulkLookupService {
 
                 } catch (Exception truncatedOnlyException) {
                     log.warn("LOC truncated title-only fallback also failed for book {}: {}", book.getId(), truncatedOnlyException.getMessage());
+
+                    // Strategy 5: Try AI suggestion as last resort
+                    LocLookupResultDto aiResult = attemptAiSuggest(book);
+                    if (aiResult != null) {
+                        return aiResult;
+                    }
+
                     return LocLookupResultDto.builder()
                             .bookId(book.getId())
                             .success(false)
-                            .errorMessage("All lookup strategies failed (including truncated title)")
+                            .errorMessage("All lookup strategies failed (including truncated title and AI suggest)")
                             .build();
                 }
             }
 
-            // No colon in title, all strategies exhausted
+            // No colon in title, all strategies exhausted - try AI suggestion
             log.warn("LOC lookup failed for book {}: {}", book.getId(), e.getReason());
+
+            // Strategy 5: Try AI suggestion as last resort
+            LocLookupResultDto aiResult = attemptAiSuggest(book);
+            if (aiResult != null) {
+                return aiResult;
+            }
+
             return LocLookupResultDto.builder()
                     .bookId(book.getId())
                     .success(false)
@@ -301,6 +316,35 @@ public class LocBulkLookupService {
                     .errorMessage("Unexpected error: " + e.getMessage())
                     .build();
         }
+    }
+
+    /**
+     * Strategy 5: Attempt AI-based LOC suggestion using AskGrok as a last resort.
+     * Returns a successful result if AI provides a suggestion, or null if AI also fails.
+     */
+    private LocLookupResultDto attemptAiSuggest(Book book) {
+        try {
+            String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+            String suggestion = askGrok.suggestLocNumber(book.getTitle(), authorName);
+
+            if (suggestion != null && !suggestion.trim().isEmpty()) {
+                book.setLocNumber(suggestion.trim());
+                book.setLastModified(LocalDateTime.now());
+                bookRepository.save(book);
+
+                log.info("AI suggested LOC number for book {}: {}", book.getId(), suggestion.trim());
+
+                return LocLookupResultDto.builder()
+                        .bookId(book.getId())
+                        .success(true)
+                        .locNumber(suggestion.trim())
+                        .aiSuggested(true)
+                        .build();
+            }
+        } catch (Exception aiException) {
+            log.warn("AI LOC suggestion also failed for book {}: {}", book.getId(), aiException.getMessage());
+        }
+        return null;
     }
 
     /**
