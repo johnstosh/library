@@ -236,11 +236,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     setIsGeneratingLabel(true)
     try {
-      const blob = await generateLabelsPdf([book.id])
+      const { blob, filename } = await generateLabelsPdf([book.id])
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `book-label-${book.id}.pdf`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
