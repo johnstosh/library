@@ -250,6 +250,7 @@ public class BookService {
             book.setStatus(bookDto.getStatus());
         }
         book.setLocNumber(bookDto.getLocNumber());
+        book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
         if (bookDto.getAuthorId() != null) {
             book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));

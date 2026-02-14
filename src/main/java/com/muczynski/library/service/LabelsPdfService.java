@@ -104,8 +104,8 @@ public class LabelsPdfService {
                     currentTable.setMargin(0);
                     currentTable.setPadding(0);
                     currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
-                    // Account for 1/8" horizontal dead zone between labels on physical sheet
-                    currentTable.setHorizontalBorderSpacing(0.125f * 72);  // 9 points (1/8")
+                    // Account for horizontal dead zone between labels on physical sheet
+                    currentTable.setHorizontalBorderSpacing(13);  // 13 points
                     currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
@@ -156,7 +156,10 @@ public class LabelsPdfService {
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
-        cell.setPadding(10);
+        cell.setPaddingTop(6);
+        cell.setPaddingBottom(6);
+        cell.setPaddingLeft(10);
+        cell.setPaddingRight(10);
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
@@ -176,7 +179,7 @@ public class LabelsPdfService {
         leftCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         leftCell.setPadding(3);
-        leftCell.setVerticalAlignment(VerticalAlignment.MIDDLE);
+        leftCell.setVerticalAlignment(VerticalAlignment.TOP);
 
         // Title (bold, slightly larger) - no truncation, will wrap naturally
         Paragraph titlePara = new Paragraph(book.getTitle())
@@ -201,7 +204,7 @@ public class LabelsPdfService {
         rightCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         rightCell.setPadding(3);
-        rightCell.setVerticalAlignment(VerticalAlignment.MIDDLE);
+        rightCell.setVerticalAlignment(VerticalAlignment.TOP);
         rightCell.setTextAlignment(TextAlignment.CENTER);
 
         String locNumber = book.getLocNumber() != null ? book.getLocNumber() : "";
