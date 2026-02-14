@@ -38,6 +38,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     locNumber: '',
     authorId: '',
     branchId: '',
+    electronicResource: false,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -65,6 +66,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         branchId: book.libraryId?.toString() || '',
+        electronicResource: book.electronicResource ?? false,
       })
     } else {
       setFormData({
@@ -81,6 +83,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         locNumber: '',
         authorId: '',
         branchId: '',
+        electronicResource: false,
       })
     }
     setError('')
@@ -160,6 +163,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         status: formData.status as BookDto['status'],
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
+        electronicResource: formData.electronicResource,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
       }
@@ -315,6 +319,20 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
             data-test="book-free-text-url"
           />
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="electronicResource"
+            checked={formData.electronicResource}
+            onChange={(e) => setFormData({ ...formData, electronicResource: e.target.checked })}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            data-test="book-electronic-resource"
+          />
+          <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">
+            Electronic Resource
+          </label>
         </div>
 
         <div className="space-y-4">
