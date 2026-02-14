@@ -62,7 +62,7 @@ class LabelsControllerTest {
         .then()
             .statusCode(200)
             .contentType("application/pdf")
-            .header("Content-Disposition", "form-data; name=\"attachment\"; filename=\"book-labels.pdf\"");
+            .header("Content-Disposition", org.hamcrest.Matchers.matchesPattern("form-data; name=\"attachment\"; filename=\"\\d{4}-\\d{2}-\\d{2}-book-labels-3-books\\.pdf\""));
     }
 
     @Test

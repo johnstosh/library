@@ -156,18 +156,23 @@ public class LabelsPdfService {
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
-        cell.setPadding(5);
+        cell.setPadding(10);
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
         // Ratio 3:1 to give more space to title/author, less to LOC
         // Use fixed layout to ensure consistent column widths across all labels
+        // Inner table height = label height minus padding on top and bottom (10pt each)
+        float innerHeight = LABEL_HEIGHT - 20;
+
         Table innerTable = new Table(new float[]{3, 1});
         innerTable.setWidth(UnitValue.createPercentValue(100));
+        innerTable.setHeight(innerHeight);
         innerTable.setFixedLayout();
 
         // Left side: Title and Author (with solid border)
         Cell leftCell = new Cell();
+        leftCell.setHeight(innerHeight);
         leftCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         leftCell.setPadding(3);
@@ -192,6 +197,7 @@ public class LabelsPdfService {
 
         // Right side: LOC call number (multi-line, with solid border)
         Cell rightCell = new Cell();
+        rightCell.setHeight(innerHeight);
         rightCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         rightCell.setPadding(3);
