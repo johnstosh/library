@@ -47,7 +47,7 @@ public class LabelsPdfService {
     // was causing table overflow and resulting in every other page being blank.
     private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
     private static final float BOTTOM_MARGIN = 0;//0.125f * 72;  // 9 points (0.125" instead of 0.5")
-    private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
+    private static final float LEFT_MARGIN = 0.1875f * 72 - 7;   // 13.5 points (0.1875" = 3/16")
     private static final float RIGHT_MARGIN = 0;//0.1875f * 72;  // 13.5 points (0.1875")
 
     // Font sizes (configurable via application.properties)
@@ -106,7 +106,7 @@ public class LabelsPdfService {
                     currentTable.setPadding(0);
                     currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
                     // Account for horizontal dead zone between labels on physical sheet
-                    currentTable.setHorizontalBorderSpacing(15);  // 15 points
+                    currentTable.setHorizontalBorderSpacing(17);
                     currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
