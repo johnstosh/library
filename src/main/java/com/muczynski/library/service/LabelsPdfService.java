@@ -90,7 +90,7 @@ public class LabelsPdfService {
                         document.add(currentTable);
 
                         // Force page break before starting next page of labels
-                        //document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+                        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
                     }
 
                     // Create table with fixed column widths matching label dimensions
