@@ -55,6 +55,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     branchId: '',
     tagsList: '',  // Comma-separated tags for editing
     dateAddedToLibrary: '',
+    electronicResource: false,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -106,6 +107,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         branchId: book.libraryId?.toString() || '',
         tagsList: book.tagsList?.join(', ') || '',
         dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.split('T')[0] : '',
+        electronicResource: book.electronicResource ?? false,
       })
     } else {
       setFormData({
@@ -124,6 +126,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         branchId: '',
         tagsList: '',
         dateAddedToLibrary: '',
+        electronicResource: false,
       })
     }
   }, [book])
@@ -233,11 +236,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     setIsGeneratingLabel(true)
     try {
-      const blob = await generateLabelsPdf([book.id])
+      const { blob, filename } = await generateLabelsPdf([book.id])
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `book-label-${book.id}.pdf`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -313,6 +316,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -346,6 +350,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from first photo')
@@ -411,6 +416,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata generated from title and author')
@@ -475,6 +481,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         status: formData.status as BookDto['status'],
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
+        electronicResource: formData.electronicResource,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
         tagsList,
@@ -764,6 +771,23 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="electronicResource"
+            checked={formData.electronicResource}
+            onChange={(e) => {
+              setFormData({ ...formData, electronicResource: e.target.checked })
+              setHasUnsavedChanges(true)
+            }}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            data-test="book-electronic-resource"
+          />
+          <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">
+            Electronic Resource
+          </label>
         </div>
 
         <div>

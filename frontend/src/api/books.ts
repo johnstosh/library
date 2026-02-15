@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
@@ -25,7 +25,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
   // For all filters including 'all', we use the summaries endpoint to enable caching
   const filterEndpoint = getFilterEndpoint(filter)
-  const { data: summaries, isLoading: summariesLoading } = useQuery({
+  const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
     queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
     queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
     staleTime: 0, // Always check for fresh data when filter changes
@@ -113,9 +113,19 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
 
   const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
 
+  // Track filter transitions using state so isFetching stays true for the full fetch duration.
+  // A ref-based approach resets after one render cycle; state persists until summaries arrive.
+  const [settledFilter, setSettledFilter] = useState(filter)
+  React.useEffect(() => {
+    if (!summariesFetching) {
+      setSettledFilter(filter)
+    }
+  }, [filter, summariesFetching])
+
   return {
     data: stableBooks,
     isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
+    isFetching: settledFilter !== filter,
   }
 }
 

@@ -95,13 +95,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
 
     setIsGeneratingLabels(true)
     try {
-      const blob = await generateLabelsPdf(Array.from(selectedIds))
+      const { blob, filename } = await generateLabelsPdf(Array.from(selectedIds))
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'book-labels.pdf'
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

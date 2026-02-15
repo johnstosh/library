@@ -41,6 +41,7 @@ public class BookMapper {
         bookDto.setLastModified(book.getLastModified());
         bookDto.setStatus(book.getStatus());
         bookDto.setLocNumber(book.getLocNumber());
+        bookDto.setElectronicResource(book.getElectronicResource());
         bookDto.setStatusReason(book.getStatusReason());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
@@ -89,6 +90,7 @@ public class BookMapper {
         book.setLastModified(bookDto.getLastModified());
         book.setStatus(bookDto.getStatus());
         book.setLocNumber(bookDto.getLocNumber());
+        book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
 
         if (bookDto.getAuthorId() != null) {

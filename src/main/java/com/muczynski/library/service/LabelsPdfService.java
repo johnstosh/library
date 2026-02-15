@@ -36,7 +36,7 @@ public class LabelsPdfService {
     // Avery 6572 specifications (2.625" W x 2" H labels, 3 cols x 5 rows = 15 per sheet)
     // Reduced height by 1/8" to account for printing/spacing
     private static final float LABEL_WIDTH = 2.625f * 72;   // 189 points (2.625")
-    private static final float LABEL_HEIGHT = 1.875f * 72;  // 135 points (1.875" = 2.0" - 0.125")
+    private static final float LABEL_HEIGHT = 1.875f * 72 - 2;  // 135 points (1.875" = 2.0" - 0.125")
     private static final int LABELS_PER_ROW = 3;
     private static final int LABELS_PER_COL = 5;
     private static final int LABELS_PER_PAGE = LABELS_PER_ROW * LABELS_PER_COL; // 15
@@ -46,9 +46,9 @@ public class LabelsPdfService {
     // The official 0.5" bottom margin combined with label padding and borders
     // was causing table overflow and resulting in every other page being blank.
     private static final float TOP_MARGIN = 0.5f * 72;       // 36 points (0.5")
-    private static final float BOTTOM_MARGIN = 0.125f * 72;  // 9 points (0.125" instead of 0.5")
-    private static final float LEFT_MARGIN = 0.1875f * 72;   // 13.5 points (0.1875" = 3/16")
-    private static final float RIGHT_MARGIN = 0.1875f * 72;  // 13.5 points (0.1875")
+    private static final float BOTTOM_MARGIN = 0;//0.125f * 72;  // 9 points (0.125" instead of 0.5")
+    private static final float LEFT_MARGIN = 0.1875f * 72 - 7;   // 13.5 points (0.1875" = 3/16")
+    private static final float RIGHT_MARGIN = 0;//0.1875f * 72;  // 13.5 points (0.1875")
 
     // Font sizes (configurable via application.properties)
     @Value("${app.labels.font-size.title:11}")
@@ -82,8 +82,9 @@ public class LabelsPdfService {
                 if (labelIndex % LABELS_PER_PAGE == 0) {
                     if (currentTable != null) {
                         // Fill remaining cells in the last row if needed
+                        boolean lastRowFill = (rowIndex == LABELS_PER_COL);
                         while (colIndex < LABELS_PER_ROW) {
-                            currentTable.addCell(createEmptyCell());
+                            currentTable.addCell(createEmptyCell(lastRowFill));
                             colIndex++;
                         }
                         document.add(currentTable);
@@ -97,22 +98,24 @@ public class LabelsPdfService {
                     float[] columnWidths = new float[LABELS_PER_ROW];
                     columnWidths[0] = LABEL_WIDTH;  // Column 1
                     columnWidths[1] = LABEL_WIDTH;  // Column 2
-                    columnWidths[2] = LABEL_WIDTH + (0.1f * 72);  // Column 3 + 0.1" adjustment (7.2 points)
+                    columnWidths[2] = LABEL_WIDTH;
                     currentTable = new Table(columnWidths);
                     currentTable.setFixedLayout();
                     // Remove all table spacing to prevent overflow
                     currentTable.setMargin(0);
                     currentTable.setPadding(0);
                     currentTable.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
-                    // Account for 1/8" horizontal dead zone between labels on physical sheet
-                    currentTable.setHorizontalBorderSpacing(0.125f * 72);  // 9 points (1/8")
+                    // Account for horizontal dead zone between labels on physical sheet
+                    currentTable.setHorizontalBorderSpacing(17);
                     currentTable.setVerticalBorderSpacing(0);
                     rowIndex = 0;
                     colIndex = 0;
                 }
 
                 // Add label cell
-                Cell labelCell = createLabelCell(book);
+                boolean isLastRow = (rowIndex == LABELS_PER_COL - 1);
+                boolean isLastCol = colIndex >= LABELS_PER_ROW; 
+                Cell labelCell = createLabelCell(book, isLastRow, isLastCol);
                 currentTable.addCell(labelCell);
 
                 colIndex++;
@@ -128,8 +131,9 @@ public class LabelsPdfService {
             if (currentTable != null) {
                 // Only fill remaining cells in the current row if we started a row
                 if (colIndex > 0) {
+                    boolean lastRowFill = (rowIndex == LABELS_PER_COL - 1);
                     while (colIndex < LABELS_PER_ROW) {
-                        currentTable.addCell(createEmptyCell());
+                        currentTable.addCell(createEmptyCell(lastRowFill));
                         colIndex++;
                     }
                 }
@@ -150,28 +154,44 @@ public class LabelsPdfService {
 
     /**
      * Create a label cell for a book
+     * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createLabelCell(Book book) {
+    private Cell createLabelCell(Book book, boolean isLastRow, boolean isLastCol) {
+        float paddingTop = 6;
+        float paddingBottom = isLastRow ? 0 : 6;
+
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
-        cell.setPadding(5);
+        cell.setPaddingTop(paddingTop);
+        cell.setPaddingBottom(paddingBottom);
+        cell.setPaddingLeft(10);
+        if (isLastCol) {
+            cell.setPaddingRight(10);
+        } else {
+            cell.setPaddingRight(10);
+        }
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);  // No border around label edge
 
         // Create a 2-column table within the cell (left: title/author, right: LOC)
         // Ratio 3:1 to give more space to title/author, less to LOC
         // Use fixed layout to ensure consistent column widths across all labels
+        // Inner table height = label height minus padding on top and bottom (10pt each)
+        float innerHeight = LABEL_HEIGHT - 20;
+
         Table innerTable = new Table(new float[]{3, 1});
         innerTable.setWidth(UnitValue.createPercentValue(100));
+        innerTable.setHeight(innerHeight);
         innerTable.setFixedLayout();
 
         // Left side: Title and Author (with solid border)
         Cell leftCell = new Cell();
+        leftCell.setHeight(innerHeight);
         leftCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         leftCell.setPadding(3);
-        leftCell.setVerticalAlignment(VerticalAlignment.MIDDLE);
+        leftCell.setVerticalAlignment(VerticalAlignment.TOP);
 
         // Title (bold, slightly larger) - no truncation, will wrap naturally
         Paragraph titlePara = new Paragraph(book.getTitle())
@@ -192,10 +212,11 @@ public class LabelsPdfService {
 
         // Right side: LOC call number (multi-line, with solid border)
         Cell rightCell = new Cell();
+        rightCell.setHeight(innerHeight);
         rightCell.setBorder(new com.itextpdf.layout.borders.SolidBorder(
                 com.itextpdf.kernel.colors.ColorConstants.BLACK, 1));
         rightCell.setPadding(3);
-        rightCell.setVerticalAlignment(VerticalAlignment.MIDDLE);
+        rightCell.setVerticalAlignment(VerticalAlignment.TOP);
         rightCell.setTextAlignment(TextAlignment.CENTER);
 
         String locNumber = book.getLocNumber() != null ? book.getLocNumber() : "";
@@ -218,13 +239,17 @@ public class LabelsPdfService {
 
     /**
      * Create an empty label cell
+     * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createEmptyCell() {
+    private Cell createEmptyCell(boolean isLastRow) {
         Cell cell = new Cell();
         cell.setWidth(LABEL_WIDTH);
         cell.setHeight(LABEL_HEIGHT);
         cell.setMargin(0);  // No margin to prevent overflow
         cell.setPadding(0);
+        if (isLastRow) {
+            cell.setPaddingBottom(0);
+        }
         cell.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
         return cell;
     }

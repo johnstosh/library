@@ -51,7 +51,7 @@ public class SearchService {
         } else {
             switch (searchType) {
                 case "ONLINE":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(query, pageable);
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrue(query, pageable);
                     break;
                 case "IN_LIBRARY":
                     bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable);

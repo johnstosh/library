@@ -230,6 +230,12 @@ export function BookViewPage() {
                 </div>
               )}
               <div>
+                <p className="text-sm font-medium text-gray-500">Electronic Resource</p>
+                <p className="text-gray-900" data-test="book-electronic-resource">
+                  {book.electronicResource ? 'Yes' : 'No'}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm font-medium text-gray-500">Status</p>
                 <p className="text-gray-900">{formatBookStatus(book.status)}</p>
               </div>

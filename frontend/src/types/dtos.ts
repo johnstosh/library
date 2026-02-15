@@ -81,6 +81,7 @@ export interface BookDto {
   status: BookStatus
   statusReason?: string
   locNumber?: string
+  electronicResource?: boolean
   libraryId?: number
   library?: string
   authorId?: number

@@ -257,7 +257,7 @@ class SearchServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Online Book");
-        book.setFreeTextUrl("https://example.com/book");
+        book.setElectronicResource(true);
         List<Book> bookList = Arrays.asList(book);
         Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
         Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
@@ -266,7 +266,7 @@ class SearchServiceTest {
         bookDto.setId(1L);
         bookDto.setTitle("Online Book");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
+        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrue(eq(query), any(Pageable.class))).thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 

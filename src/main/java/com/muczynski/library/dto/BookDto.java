@@ -39,6 +39,7 @@ public class BookDto {
     private String firstPhotoChecksum;
     private Long loanCount;
     private String locNumber;
+    private Boolean electronicResource;
     private String statusReason;
 
     /**
