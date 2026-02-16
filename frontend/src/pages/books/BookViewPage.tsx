@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
-import { formatBookStatus, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -243,7 +243,7 @@ export function BookViewPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Date Added</p>
                   <p className="text-gray-900">
-                    {parseISODateSafe(book.dateAddedToLibrary).toLocaleDateString()}
+                    {formatDateTime(book.dateAddedToLibrary)}
                   </p>
                 </div>
               )}

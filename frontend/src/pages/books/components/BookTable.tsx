@@ -9,7 +9,7 @@ import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { getThumbnailUrl } from '@/api/photos'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
-import { formatBookStatus, truncate, isValidUrl, formatDate, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
 import { PiBookOpen, PiCopy, PiEye } from 'react-icons/pi'
@@ -125,7 +125,7 @@ export function BookTable({
     {
       key: 'dateAdded',
       header: 'Date Added',
-      accessor: (book) => formatDate(book.dateAddedToLibrary) || '—',
+      accessor: (book) => formatDateTime(book.dateAddedToLibrary) || '—',
       width: '15%',
     },
     {

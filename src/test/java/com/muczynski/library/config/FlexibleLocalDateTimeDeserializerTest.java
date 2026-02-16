@@ -62,6 +62,15 @@ class FlexibleLocalDateTimeDeserializerTest {
     }
 
     @Test
+    void deserialize_dateTimeLocalFormat_withoutSeconds_parsesCorrectly() throws Exception {
+        String json = "{\"title\":\"Test\",\"dateAddedToLibrary\":\"2025-01-15T14:30\"}";
+
+        BookDto dto = objectMapper.readValue(json, BookDto.class);
+
+        assertEquals(LocalDateTime.of(2025, 1, 15, 14, 30, 0), dto.getDateAddedToLibrary());
+    }
+
+    @Test
     void deserialize_dateTimeWithSeconds_parsesCorrectly() throws Exception {
         String json = "{\"title\":\"Test\",\"dateAddedToLibrary\":\"2025-12-06T09:15:30\"}";
 
