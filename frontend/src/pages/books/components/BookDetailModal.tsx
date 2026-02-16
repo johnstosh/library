@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook } from '@/api/books'
-import { formatBookStatus, parseISODateSafe } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -130,7 +130,7 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                 <div>
                   <p className="text-sm font-medium text-gray-500">Date Added</p>
                   <p className="text-gray-900">
-                    {parseISODateSafe(book.dateAddedToLibrary).toLocaleDateString()}
+                    {formatDateTime(book.dateAddedToLibrary)}
                   </p>
                 </div>
               )}

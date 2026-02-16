@@ -106,7 +106,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: book.authorId?.toString() || '',
         branchId: book.libraryId?.toString() || '',
         tagsList: book.tagsList?.join(', ') || '',
-        dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.split('T')[0] : '',
+        dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.slice(0, 16) : '',
         electronicResource: book.electronicResource ?? false,
       })
     } else {
@@ -315,7 +315,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
-        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
@@ -349,7 +349,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
-        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
@@ -415,7 +415,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
-        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.split('T')[0] : formData.dateAddedToLibrary,
+        dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
       })
       setHasUnsavedChanges(true)
@@ -880,7 +880,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
           <Input
             label="Date Added to Library"
-            type="date"
+            type="datetime-local"
             value={formData.dateAddedToLibrary}
             onChange={(e) => handleFieldChange('dateAddedToLibrary', e.target.value)}
             data-test="book-date-added"
