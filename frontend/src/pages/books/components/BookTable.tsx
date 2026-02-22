@@ -121,11 +121,20 @@ export function BookTable({
       header: 'LOC',
       accessor: (book) => book.locNumber || '—',
       width: '15%',
+      cellClassName: 'px-3 sm:px-6 py-3 sm:py-4 overflow-hidden text-sm break-words',
     },
     {
       key: 'dateAdded',
       header: 'Date Added',
-      accessor: (book) => formatDateTime(book.dateAddedToLibrary) || '—',
+      accessor: (book) =>
+        book.dateAddedToLibrary ? (
+          <div>
+            <div>{formatDateTime(book.dateAddedToLibrary, 'MMM d, yyyy')}</div>
+            <div className="text-gray-500">{formatDateTime(book.dateAddedToLibrary, 'h:mm a')}</div>
+          </div>
+        ) : (
+          '—'
+        ),
       width: '15%',
     },
     {
@@ -178,58 +187,64 @@ export function BookTable({
         onSelectAll={onSelectAll}
         onRowClick={onView}
         actions={(book) => (
-          <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onView(book)
-              }}
-              className="text-gray-600 hover:text-gray-900"
-              data-test={`view-book-${book.id}`}
-              title="View Details"
-            >
-              <PiEye className="w-5 h-5" />
-            </button>
-            {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
-              <a
-                key={index}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-green-600 hover:text-green-900"
-                data-test={`free-text-book-${book.id}-${index}`}
-                title={`Free text: ${extractDomain(url)}`}
-              >
-                <PiBookOpen className="w-5 h-5" />
-              </a>
-            ))}
-            {isValidUrl(book.grokipediaUrl) && (
-              <a
-                href={book.grokipediaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-orange-600 hover:text-orange-900"
-                data-test={`grokipedia-book-${book.id}`}
-                title="View on Grokipedia"
-              >
-                <span className="text-lg font-bold">Ø</span>
-              </a>
+          <div className="flex flex-col gap-1 items-end">
+            {/* Line 1: URL-type links (free text, grokipedia) */}
+            {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || isValidUrl(book.grokipediaUrl)) && (
+              <div className="flex gap-1 justify-end">
+                {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-green-600 hover:text-green-900"
+                    data-test={`free-text-book-${book.id}-${index}`}
+                    title={`Free text: ${extractDomain(url)}`}
+                  >
+                    <PiBookOpen className="w-5 h-5" />
+                  </a>
+                ))}
+                {isValidUrl(book.grokipediaUrl) && (
+                  <a
+                    href={book.grokipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-orange-600 hover:text-orange-900"
+                    data-test={`grokipedia-book-${book.id}`}
+                    title="View on Grokipedia"
+                  >
+                    <span className="text-lg font-bold">Ø</span>
+                  </a>
+                )}
+              </div>
             )}
-            {book.authorId && (
-              <Link
-                to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-teal-600 hover:text-teal-900"
-                data-test={`see-author-${book.id}`}
-                title="See Author"
+            {/* Line 2: view, author, loc */}
+            <div className="flex gap-1 justify-end">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onView(book)
+                }}
+                className="text-gray-600 hover:text-gray-900"
+                data-test={`view-book-${book.id}`}
+                title="View Details"
               >
-                <span className="text-lg">👤</span>
-              </Link>
-            )}
-            {isLibrarian && (
-              <>
+                <PiEye className="w-5 h-5" />
+              </button>
+              {book.authorId && (
+                <Link
+                  to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-teal-600 hover:text-teal-900"
+                  data-test={`see-author-${book.id}`}
+                  title="See Author"
+                >
+                  <span className="text-lg">👤</span>
+                </Link>
+              )}
+              {isLibrarian && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -242,6 +257,11 @@ export function BookTable({
                 >
                   <span className="text-lg">🗃️</span>
                 </button>
+              )}
+            </div>
+            {/* Line 3: clone, edit, delete */}
+            <div className="flex gap-1 justify-end">
+              {isLibrarian && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -254,45 +274,45 @@ export function BookTable({
                 >
                   <PiCopy className="w-5 h-5" />
                 </button>
-              </>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit(book)
-              }}
-              className="text-blue-600 hover:text-blue-900"
-              data-test={`edit-book-${book.id}`}
-              title="Edit"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setDeleteBookId(book.id)
-              }}
-              className="text-red-600 hover:text-red-900"
-              data-test={`delete-book-${book.id}`}
-              title="Delete"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          </>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(book)
+                }}
+                className="text-blue-600 hover:text-blue-900"
+                data-test={`edit-book-${book.id}`}
+                title="Edit"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDeleteBookId(book.id)
+                }}
+                className="text-red-600 hover:text-red-900"
+                data-test={`delete-book-${book.id}`}
+                title="Delete"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
         isLoading={isLoading}
         emptyMessage="No books found"
