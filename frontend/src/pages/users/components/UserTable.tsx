@@ -28,7 +28,7 @@ export function UserTable({
   const columns: Column<UserDto>[] = [
     {
       key: 'username',
-      header: 'Username',
+      header: 'Name',
       accessor: (user) => (
         <div className="flex items-center gap-2">
           <span className="font-medium text-gray-900">{user.username}</span>

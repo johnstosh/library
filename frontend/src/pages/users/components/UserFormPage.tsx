@@ -64,7 +64,7 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
 
     // Validation
     if (!formData.username.trim()) {
-      setError('Username is required')
+      setError('Name is required')
       return
     }
 
@@ -141,20 +141,20 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
               <strong>SSO User:</strong> This user authenticates via Google OAuth.
-              Username and password cannot be changed.
+              Name and password cannot be changed.
             </p>
           </div>
         )}
 
         <Input
-          label="Username"
+          label="Name"
           value={formData.username}
           onChange={(e) => handleFieldChange('username', e.target.value)}
           required
-          placeholder="Enter username"
+          placeholder="Enter name"
           data-test="user-username"
           disabled={isSsoUser}
-          {...(isSsoUser && { helpText: 'Cannot change username for SSO users' })}
+          {...(isSsoUser && { helpText: 'Cannot change name for SSO users' })}
         />
 
         <Input

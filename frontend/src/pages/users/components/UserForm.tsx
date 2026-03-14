@@ -61,7 +61,7 @@ export function UserForm({
 
     // Validation
     if (!formData.username.trim()) {
-      setError('Username is required')
+      setError('Name is required')
       return
     }
 
@@ -109,18 +109,18 @@ export function UserForm({
         {error && <ErrorMessage message={error} />}
 
         <Input
-          label="Username"
+          label="Name"
           value={formData.username}
           onChange={(e) =>
             setFormData({ ...formData, username: e.target.value })
           }
           required
-          placeholder="Enter username"
+          placeholder="Enter name"
           data-test="user-username"
           disabled={isEditMode && !!initialData?.ssoSubjectId} // Disable username edit for SSO users
           helpText={
             isEditMode && initialData?.ssoSubjectId
-              ? 'Cannot change username for SSO users'
+              ? 'Cannot change name for SSO users'
               : undefined
           }
         />
