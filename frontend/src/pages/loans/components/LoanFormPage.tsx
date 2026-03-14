@@ -601,7 +601,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                     label="Borrower Filter"
                     value={userFilter}
                     onChange={(e) => handleUserFilterChange(e.target.value)}
-                    placeholder="Filter borrowers by username"
+                    placeholder="Filter borrowers by name"
                     data-test="loan-user-filter"
                   />
                 </div>

@@ -193,7 +193,7 @@ export function UserSettingsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Information</h2>
             <div className="space-y-2">
               <div>
-                <span className="text-sm font-medium text-gray-500">Username:</span>
+                <span className="text-sm font-medium text-gray-500">Name:</span>
                 <span className="ml-2 text-gray-900">{user?.username}</span>
               </div>
               <div>
@@ -389,7 +389,7 @@ export function UserSettingsPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
           <div className="space-y-2">
             <div>
-              <span className="text-sm font-medium text-gray-500">Username:</span>
+              <span className="text-sm font-medium text-gray-500">Name:</span>
               <span className="ml-2 text-gray-900">{user?.username}</span>
             </div>
             <div>
