@@ -285,6 +285,38 @@ public class LoanService {
         return loanMapper.toDto(savedLoan);
     }
 
+    /**
+     * Add or replace the checkout card photo for a loan.
+     * If a photo already exists, it is deleted before the new one is added.
+     *
+     * @param loanId      The loan ID
+     * @param imageBytes  The image bytes
+     * @param contentType The image content type (e.g., "image/jpeg")
+     * @return Updated LoanDto, or null if loan not found
+     */
+    public LoanDto addOrReplaceLoanPhoto(Long loanId, byte[] imageBytes, String contentType) {
+        Loan loan = loanRepository.findById(loanId).orElse(null);
+        if (loan == null) {
+            return null;
+        }
+        // Delete existing photo if present
+        photoRepository.findByLoanId(loanId).ifPresent(existingPhoto -> {
+            logger.info("Replacing existing checkout card photo {} for loan {}", existingPhoto.getId(), loanId);
+            photoRepository.delete(existingPhoto);
+        });
+        // Create new photo
+        Photo photo = new Photo();
+        photo.setLoan(loan);
+        photo.setImage(imageBytes);
+        photo.setContentType(contentType != null ? contentType : "image/jpeg");
+        photo.setCaption("Checkout card photo");
+        photo.setPhotoOrder(0);
+        photo.setImageChecksum(computeChecksum(imageBytes));
+        photoRepository.save(photo);
+        logger.info("Added/replaced checkout card photo for loan ID {} with checksum {}", loanId, photo.getImageChecksum());
+        return loanMapper.toDto(loan);
+    }
+
     public void deleteLoan(Long id) {
         if (!loanRepository.existsById(id)) {
             throw new LibraryException("Loan not found: " + id);

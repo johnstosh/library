@@ -361,6 +361,60 @@ class LoanControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ==================== POST /api/loans/{id}/photo Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testAddLoanPhoto_Success_AsLibrarian() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+        LoanDto returnedDto = new LoanDto();
+        returnedDto.setId(1L);
+        returnedDto.setBookId(1L);
+        returnedDto.setUserId(1L);
+        returnedDto.setPhotoId(5L);
+        when(loanService.addOrReplaceLoanPhoto(eq(1L), any(byte[].class), eq("image/jpeg")))
+                .thenReturn(returnedDto);
+
+        mockMvc.perform(multipart("/api/loans/1/photo").file(photo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.photoId").value(5L));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "USER")
+    void testAddLoanPhoto_Unauthorized_AsRegularUser() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/loans/1/photo").file(photo))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testAddLoanPhoto_NotFound() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "checkout-card.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+        when(loanService.addOrReplaceLoanPhoto(eq(999L), any(byte[].class), eq("image/jpeg")))
+                .thenReturn(null);
+
+        mockMvc.perform(multipart("/api/loans/999/photo").file(photo))
+                .andExpect(status().isNotFound());
+    }
+
     // ==================== POST /api/loans/transcribe-checkout-card Tests ====================
 
     @Test

@@ -104,6 +104,39 @@ export function useDeleteLoan() {
   })
 }
 
+// Hook to update a loan's dates
+export function useUpdateLoan() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { id: number; bookId: number; userId: number; loanDate: string; dueDate: string; returnDate?: string }) => {
+      const { id, ...body } = data
+      return api.put<LoanDto>(`/loans/${id}`, body)
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.loans.detail(id) })
+    },
+  })
+}
+
+// Hook to add or replace a loan's checkout card photo
+export function useAddLoanPhoto() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, photo }: { id: number; photo: File }) => {
+      const formData = new FormData()
+      formData.append('photo', photo)
+      return api.postFormData<LoanDto>(`/loans/${id}/photo`, formData)
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.loans.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
+    },
+  })
+}
+
 // Hook to transcribe a checkout card photo using Grok AI
 export function useTranscribeCheckoutCard() {
   return useMutation({
