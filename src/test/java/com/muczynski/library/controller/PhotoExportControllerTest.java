@@ -402,8 +402,9 @@ class PhotoExportControllerTest {
 
         mockMvc.perform(post("/api/photo-export/unlink/" + photo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", is("Photo unlinked successfully")))
-                .andExpect(jsonPath("$.photoId", is(photo.getId().intValue())));
+                .andExpect(jsonPath("$.id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$.permanentId").doesNotExist())
+                .andExpect(jsonPath("$.exportStatus", is("PENDING")));
 
         // Verify the photo was updated
         Photo updatedPhoto = photoRepository.findById(photo.getId()).orElseThrow();
@@ -482,10 +483,9 @@ class PhotoExportControllerTest {
         setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
-        // importPhotoById returns error message in response body, not via exception
+        // importPhotoById returns 500 when photo has no permanent ID
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message", containsString("does not have a permanent ID")));
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
@@ -680,8 +680,8 @@ class PhotoExportControllerTest {
 
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")))
-                .andExpect(jsonPath("$.photoId", is(photo.getId().intValue())));
+                .andExpect(jsonPath("$.id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Verify getMediaItem was called (which internally handles fallback)
         verify(googlePhotosLibraryClient).getMediaItem(ArgumentMatchers.anyString(), eq("permanent-for-import"));
@@ -703,8 +703,7 @@ class PhotoExportControllerTest {
                 ));
 
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message", notNullValue()));
+                .andExpect(status().isInternalServerError());
 
         // Verify photo was marked as failed
         Photo updatedPhoto = photoRepository.findById(photo.getId()).orElseThrow();
@@ -777,17 +776,20 @@ class PhotoExportControllerTest {
         // Import first photo
         mockMvc.perform(post("/api/photo-export/import/" + photo1.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo1.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Import second photo
         mockMvc.perform(post("/api/photo-export/import/" + photo2.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo2.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Import third photo
         mockMvc.perform(post("/api/photo-export/import/" + photo3.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo3.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Verify all photos were imported successfully
         Photo updatedPhoto1 = photoRepository.findById(photo1.getId()).orElseThrow();

@@ -144,6 +144,39 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
             nativeQuery = true)
     List<PhotoExportFlatProjection> findAllForExportPage();
 
+    /**
+     * Efficient flat projection for a single photo on the export page.
+     * Same query as findAllForExportPage but filtered to one photo ID.
+     */
+    @Query(value = """
+            SELECT
+                p.id             AS id,
+                p.content_type   AS contentType,
+                p.caption        AS caption,
+                p.permanent_id   AS permanentId,
+                p.exported_at    AS exportedAt,
+                p.export_status  AS exportStatus,
+                p.export_error_message AS exportErrorMessage,
+                p.image_checksum AS imageChecksum,
+                p.deleted_at     AS deletedAt,
+                b.id             AS bookId,
+                b.title          AS bookTitle,
+                b.loc_number     AS bookLocNumber,
+                b.date_added_to_library AS bookDateAdded,
+                ba.id            AS bookAuthorId,
+                ba.name          AS bookAuthorName,
+                a.id             AS authorId,
+                a.name           AS authorName
+            FROM photo p
+            LEFT JOIN book b   ON p.book_id   = b.id
+            LEFT JOIN author ba ON b.author_id = ba.id
+            LEFT JOIN author a  ON p.author_id = a.id
+            WHERE p.deleted_at IS NULL
+              AND p.id = :photoId
+            """,
+            nativeQuery = true)
+    Optional<PhotoExportFlatProjection> findByIdForExportPage(@Param("photoId") Long photoId);
+
     // Find active photos that have images for ZIP export
     // Note: This loads full Photo entities including image bytes - use only for actual export
     @Query("SELECT DISTINCT p FROM Photo p " +

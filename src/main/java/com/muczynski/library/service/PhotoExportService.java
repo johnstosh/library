@@ -708,6 +708,58 @@ public class PhotoExportService {
     }
 
     /**
+     * Get export info for a single photo by ID.
+     * Used after a single-photo export/import to refresh only that row in the frontend cache.
+     */
+    @Transactional(readOnly = true)
+    public PhotoExportInfoDto getPhotoExportInfoById(Long photoId) {
+        com.muczynski.library.repository.PhotoExportFlatProjection photo =
+                photoRepository.findByIdForExportPage(photoId)
+                        .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+
+        PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
+        photoInfo.setId(photo.getId());
+        photoInfo.setCaption(photo.getCaption());
+
+        boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
+        boolean hasChecksum = photo.getImageChecksum() != null;
+        String storedStatus = photo.getExportStatus();
+
+        String derivedStatus;
+        if ("FAILED".equals(storedStatus)) {
+            derivedStatus = "FAILED";
+        } else if ("IN_PROGRESS".equals(storedStatus)) {
+            derivedStatus = "IN_PROGRESS";
+        } else if (hasPermanentId && hasChecksum) {
+            derivedStatus = "COMPLETED";
+        } else if (hasPermanentId && !hasChecksum) {
+            derivedStatus = "PENDING_IMPORT";
+        } else if (hasChecksum && !hasPermanentId) {
+            derivedStatus = "PENDING";
+        } else {
+            derivedStatus = "NO_IMAGE";
+        }
+        photoInfo.setExportStatus(derivedStatus);
+        photoInfo.setExportedAt(photo.getExportedAt());
+        photoInfo.setPermanentId(photo.getPermanentId());
+        photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
+        photoInfo.setContentType(photo.getContentType());
+        photoInfo.setHasImage(photo.getImageChecksum() != null);
+        photoInfo.setChecksum(photo.getImageChecksum());
+
+        photoInfo.setBookId(photo.getBookId());
+        photoInfo.setBookTitle(photo.getBookTitle());
+        photoInfo.setBookLocNumber(photo.getBookLocNumber());
+        photoInfo.setBookDateAdded(photo.getBookDateAdded());
+        photoInfo.setBookAuthorName(photo.getBookAuthorName());
+
+        photoInfo.setAuthorId(photo.getAuthorId());
+        photoInfo.setAuthorName(photo.getAuthorName());
+
+        return photoInfo;
+    }
+
+    /**
      * Manually trigger export for a specific photo
      */
     @Transactional
