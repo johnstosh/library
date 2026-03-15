@@ -40,16 +40,21 @@ import java.util.zip.ZipInputStream;
  * Filename format:
  * - book-{title}[-{n}].{ext} - Associates photo with a book by title
  * - author-{name}[-{n}].{ext} - Associates photo with an author by name
- * - loan-{title}-{username}[-{n}].{ext} - Associates photo with a loan
+ * - loan-{loanId}-{bookTitle}[-{n}].{ext} - Associates photo with a loan by ID
  *
  * The optional [-{n}] is the 1-based photo order (position) for the entity.
- * The title/name is sanitized (lowercase, special chars replaced with dashes).
+ * The title/name is sanitized (spaces and special chars removed/replaced).
  *
  * Merge behavior (for book and author photos):
  * - Uses SHA-256 checksum for deduplication
  * - If photo exists at same order with same checksum: skip (duplicate)
  * - If photo exists at same order with different checksum: replace existing
  * - If no photo exists at that order: add new photo
+ *
+ * Merge behavior for loan photos:
+ * - If the loan already has a photo with the same checksum: skip (duplicate)
+ * - If the loan already has a photo with a different checksum: replace
+ * - If the loan has no photo: add new photo
  */
 @Service
 @RequiredArgsConstructor
@@ -498,63 +503,128 @@ public class PhotoZipImportService {
 
     /**
      * Import a photo for a loan (checkout card).
-     * Format: loan-{title}-{username}[-n].ext
+     * New format: loan-{loanId}-{bookTitle}[-n].ext
+     *
+     * Uses the loan ID embedded in the filename for reliable lookup.
+     * Supports deduplication: if the loan already has a photo with the same checksum,
+     * the import is skipped; if a different photo exists, it is replaced.
      */
     private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
                                                    byte[] imageBytes, String contentType) {
-        // Try to split title and username
-        // The format should be: title-username
-        int lastDash = combined.lastIndexOf('-');
-        if (lastDash <= 0) {
+        // New format: {loanId}-{bookTitle}
+        // The loan ID is a numeric prefix before the first dash.
+        int firstDash = combined.indexOf('-');
+        if (firstDash <= 0) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
                     .entityName(combined)
-                    .errorMessage("Invalid loan filename format. Expected: loan-title-username[-n].ext")
+                    .errorMessage("Invalid loan filename format. Expected: loan-{loanId}-{bookTitle}[-n].ext")
                     .build();
         }
 
-        String titlePart = combined.substring(0, lastDash);
-        String usernamePart = combined.substring(lastDash + 1);
-
-        String searchTitle = unsanitizeName(titlePart);
-        String searchUsername = unsanitizeName(usernamePart);
-
-        // Find loans matching book title and username
-        List<Loan> loans = loanRepository.findAll().stream()
-                .filter(loan -> {
-                    if (loan.getBook() == null || loan.getUser() == null) return false;
-                    boolean titleMatches = loan.getBook().getTitle().toLowerCase()
-                            .contains(searchTitle.toLowerCase());
-                    boolean userMatches = loan.getUser().getUsername().toLowerCase()
-                            .contains(searchUsername.toLowerCase());
-                    return titleMatches && userMatches;
-                })
-                .toList();
-
-        if (loans.isEmpty()) {
+        String idPart = combined.substring(0, firstDash);
+        Long loanId;
+        try {
+            loanId = Long.parseLong(idPart);
+        } catch (NumberFormatException e) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
-                    .entityName(searchTitle + " by " + searchUsername)
-                    .errorMessage("No loan found for book '" + searchTitle + "' and user '" + searchUsername + "'")
+                    .entityName(combined)
+                    .errorMessage("Invalid loan ID in filename (expected numeric): '" + idPart + "'")
                     .build();
         }
 
-        Loan loan = loans.get(0);
-        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+        String bookTitlePart = combined.substring(firstDash + 1);
 
-        log.info("Imported photo for loan {} (book: '{}', user: '{}')",
-                loan.getId(), loan.getBook().getTitle(), loan.getUser().getUsername());
+        Loan loan = loanRepository.findById(loanId).orElse(null);
+        if (loan == null) {
+            return PhotoZipImportItemDto.builder()
+                    .filename(filename)
+                    .status("FAILURE")
+                    .entityType("loan")
+                    .entityName(bookTitlePart + " (loan ID " + loanId + ")")
+                    .errorMessage("No loan found with ID " + loanId)
+                    .build();
+        }
+
+        String loanDisplayName = (loan.getBook() != null ? loan.getBook().getTitle() : bookTitlePart)
+                + (loan.getUser() != null ? " - " + loan.getUser().getUsername() : "");
+
+        // Compute checksum for deduplication
+        String newChecksum = computeChecksum(imageBytes);
+
+        // Check if the loan already has a photo (loans have at most one photo)
+        Optional<Photo> existingPhotoOpt = photoRepository.findByLoanId(loanId);
+        if (existingPhotoOpt.isPresent()) {
+            Photo existingPhoto = existingPhotoOpt.get();
+            String existingChecksum = existingPhoto.getImageChecksum();
+
+            if (newChecksum != null && newChecksum.equals(existingChecksum)) {
+                // Same checksum - verify bytes are present
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for loan {} (same checksum)", loanId);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("loan")
+                            .entityName(loanDisplayName)
+                            .entityId(loanId)
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for loan {} (same checksum, bytes missing)", loanId);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("loan")
+                        .entityName(loanDisplayName)
+                        .entityId(loanId)
+                        .photoId(photoId)
+                        .build();
+            } else {
+                // Different photo - replace existing
+                log.info("Replacing photo for loan {} (different checksum)", loanId);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                existingPhoto.setImageChecksum(newChecksum);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("loan")
+                        .entityName(loanDisplayName)
+                        .entityId(loanId)
+                        .photoId(photoId)
+                        .build();
+            }
+        }
+
+        // No existing photo - add new
+        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+        photoService.detachPhoto(photo.getId());
+
+        log.info("Imported photo for loan {} ({})", loanId, loanDisplayName);
 
         return PhotoZipImportItemDto.builder()
                 .filename(filename)
                 .status("SUCCESS")
                 .entityType("loan")
-                .entityName(loan.getBook().getTitle() + " - " + loan.getUser().getUsername())
-                .entityId(loan.getId())
+                .entityName(loanDisplayName)
+                .entityId(loanId)
                 .photoId(photo.getId())
                 .build();
     }

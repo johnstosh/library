@@ -1363,6 +1363,10 @@ public class PhotoExportService {
     /**
      * Generate a filename for a photo in the ZIP archive.
      * Format matches the import filename format for round-trip compatibility.
+     *
+     * Loan photo format: loan-{loanId}-{sanitizedBookTitle}
+     * The loan ID is embedded so the import can reliably find the correct loan
+     * without ambiguity caused by splitting title+username on a dash.
      */
     private String generateZipFilename(Photo photo) {
         if (photo.getBook() != null) {
@@ -1372,9 +1376,7 @@ public class PhotoExportService {
         } else if (photo.getLoan() != null) {
             String bookTitle = photo.getLoan().getBook() != null
                     ? photo.getLoan().getBook().getTitle() : "unknown";
-            String username = photo.getLoan().getUser() != null
-                    ? photo.getLoan().getUser().getUsername() : "unknown";
-            return "loan-" + sanitizeName(bookTitle) + "-" + sanitizeName(username);
+            return "loan-" + photo.getLoan().getId() + "-" + sanitizeName(bookTitle);
         } else {
             return "photo-" + photo.getId();
         }

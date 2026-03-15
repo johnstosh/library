@@ -16,6 +16,15 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByAuthorIdOrderByPhotoOrder(Long authorId);
     List<Photo> findByAuthorId(Long authorId);
     Optional<Photo> findByLoanId(Long loanId);
+    long countByLoanId(Long loanId);
+
+    // Get first photo ID for a loan without loading the photo (avoids LOB issue in tests)
+    @Query("SELECT p.id FROM Photo p WHERE p.loan.id = :loanId ORDER BY p.id ASC LIMIT 1")
+    Long findFirstPhotoIdByLoanId(@Param("loanId") Long loanId);
+
+    // Get first photo checksum for a loan without loading the photo
+    @Query("SELECT p.imageChecksum FROM Photo p WHERE p.loan.id = :loanId ORDER BY p.id ASC LIMIT 1")
+    String findFirstPhotoChecksumByLoanId(@Param("loanId") Long loanId);
     /** @deprecated Use findAllByPermanentIdOrderByIdAsc() instead to handle duplicates safely. */
     @Deprecated
     Optional<Photo> findByPermanentId(String permanentId);
