@@ -111,7 +111,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const { data: books = [] } = useBooks('all')
+  const { data: books = [], isFetching: booksFetching } = useBooks('all')
   const { data: users = [] } = useUsers()
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
@@ -489,7 +489,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   return (
     <div className={`flex gap-6 ${showPhotoPanel ? '' : ''}`}>
       {/* Main Form */}
-      <div className={`bg-white rounded-lg shadow ${showPhotoPanel ? 'flex-1' : 'w-full'}`}>
+      <div className={`bg-white rounded-lg shadow relative ${showPhotoPanel ? 'flex-1' : 'w-full'}`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
@@ -663,6 +663,13 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
             )}
           </div>
         </div>
+
+        {/* Loading overlay: visible for the entire duration of the summaries + by-ids fetch sequence */}
+        {booksFetching && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          </div>
+        )}
       </div>
 
       {/* Photo Panel - shown when captureMode is set or photo is selected */}

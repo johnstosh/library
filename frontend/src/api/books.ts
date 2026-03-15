@@ -47,7 +47,7 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
 
   // Step 3: Batch fetch changed books using /books/by-ids
   // For all filters (including 'all'), we now use the optimized caching approach
-  const { data: fetchedBooks, isLoading: fetchingBooks } = useQuery({
+  const { data: fetchedBooks, isLoading: fetchingBooks, isFetching: byIdsFetching } = useQuery({
     queryKey: queryKeys.books.byIds(booksToFetch, filter),
     queryFn: async () => {
       if (booksToFetch.length > 0) {
@@ -122,10 +122,15 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
     }
   }, [filter, summariesFetching])
 
+  // isFetching is true for the ENTIRE duration of both network calls:
+  // - summaries fetch (phase 1) AND by-ids fetch (phase 2) must both complete before hiding the indicator.
+  // Also remains true during filter transitions (settledFilter !== filter).
+  const isFetching = summariesFetching || byIdsFetching || settledFilter !== filter
+
   return {
     data: stableBooks,
     isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
-    isFetching: settledFilter !== filter,
+    isFetching,
   }
 }
 
