@@ -40,10 +40,13 @@ import java.util.zip.ZipInputStream;
  * Filename format:
  * - book-{title}[-{n}].{ext} - Associates photo with a book by title
  * - author-{name}[-{n}].{ext} - Associates photo with an author by name
- * - loan-{loanId}-{bookTitle}[-{n}].{ext} - Associates photo with a loan by ID
+ * - loan-{sanitizedTitle}-{sanitizedUsername}[-{n}].{ext} - Associates photo with a loan by title+username
  *
  * The optional [-{n}] is the 1-based photo order (position) for the entity.
  * The title/name is sanitized (spaces and special chars removed/replaced).
+ *
+ * For loan filenames the title and username are sanitized with sanitizeForLoanFilename(),
+ * which removes ALL dashes so the single dash separator between the two parts is unambiguous.
  *
  * Merge behavior (for book and author photos):
  * - Uses SHA-256 checksum for deduplication
@@ -503,56 +506,56 @@ public class PhotoZipImportService {
 
     /**
      * Import a photo for a loan (checkout card).
-     * New format: loan-{loanId}-{bookTitle}[-n].ext
+     * Format: loan-{sanitizedTitle}-{sanitizedUsername}[-n].ext
      *
-     * Uses the loan ID embedded in the filename for reliable lookup.
+     * Both title and username are sanitized with sanitizeForLoanFilename() which removes ALL
+     * dashes, making the single dash separator between the two parts unambiguous.
+     * Matches are done by comparing sanitized values, so this works across systems regardless
+     * of database IDs.
+     *
      * Supports deduplication: if the loan already has a photo with the same checksum,
      * the import is skipped; if a different photo exists, it is replaced.
      */
     private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
                                                    byte[] imageBytes, String contentType) {
-        // New format: {loanId}-{bookTitle}
-        // The loan ID is a numeric prefix before the first dash.
-        int firstDash = combined.indexOf('-');
-        if (firstDash <= 0) {
+        // Format: {sanitizedTitle}-{sanitizedUsername}
+        // Neither part contains dashes (sanitizeForLoanFilename removes them), so splitting on
+        // the single dash is unambiguous.
+        int separatorDash = combined.indexOf('-');
+        if (separatorDash <= 0) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
                     .entityName(combined)
-                    .errorMessage("Invalid loan filename format. Expected: loan-{loanId}-{bookTitle}[-n].ext")
+                    .errorMessage("Invalid loan filename format. Expected: loan-{sanitizedTitle}-{sanitizedUsername}[-n].ext")
                     .build();
         }
 
-        String idPart = combined.substring(0, firstDash);
-        Long loanId;
-        try {
-            loanId = Long.parseLong(idPart);
-        } catch (NumberFormatException e) {
-            return PhotoZipImportItemDto.builder()
-                    .filename(filename)
-                    .status("FAILURE")
-                    .entityType("loan")
-                    .entityName(combined)
-                    .errorMessage("Invalid loan ID in filename (expected numeric): '" + idPart + "'")
-                    .build();
-        }
+        String sanitizedTitle = combined.substring(0, separatorDash);
+        String sanitizedUsername = combined.substring(separatorDash + 1);
 
-        String bookTitlePart = combined.substring(firstDash + 1);
+        // Find a matching loan by comparing sanitized book title and username
+        List<Loan> allLoans = loanRepository.findAll();
+        Loan loan = allLoans.stream()
+                .filter(l -> l.getBook() != null && l.getUser() != null)
+                .filter(l -> sanitizeForLoanFilename(l.getBook().getTitle()).equals(sanitizedTitle)
+                          && sanitizeForLoanFilename(l.getUser().getUsername()).equals(sanitizedUsername))
+                .findFirst()
+                .orElse(null);
 
-        Loan loan = loanRepository.findById(loanId).orElse(null);
         if (loan == null) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
-                    .entityName(bookTitlePart + " (loan ID " + loanId + ")")
-                    .errorMessage("No loan found with ID " + loanId)
+                    .entityName(sanitizedTitle + " / " + sanitizedUsername)
+                    .errorMessage("No loan found matching title '" + sanitizedTitle + "' and username '" + sanitizedUsername + "'")
                     .build();
         }
 
-        String loanDisplayName = (loan.getBook() != null ? loan.getBook().getTitle() : bookTitlePart)
-                + (loan.getUser() != null ? " - " + loan.getUser().getUsername() : "");
+        Long loanId = loan.getId();
+        String loanDisplayName = loan.getBook().getTitle() + " - " + loan.getUser().getUsername();
 
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
@@ -807,6 +810,24 @@ public class PhotoZipImportService {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("^-+|-+$", ""); // Remove leading/trailing dashes
+    }
+
+    /**
+     * Sanitize a name for use in the loan photo filename segment.
+     * Removes ALL dashes and other non-alphanumeric characters (keeping only a-z and 0-9)
+     * so that the single dash separator between the title and username parts of the filename
+     * remains unambiguous during both export and import.
+     *
+     * Examples:
+     *   "The Call-to-Action"  → "thecalltoaction"
+     *   "St. Bernard's"       → "stbernards"
+     *   "john.doe"            → "johndoe"
+     */
+    static String sanitizeForLoanFilename(String name) {
+        if (name == null) return "unknown";
+        return name.toLowerCase()
+                .trim()
+                .replaceAll("[^a-z0-9]", "");  // Remove everything except lowercase letters and digits
     }
 
     /**

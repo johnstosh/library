@@ -1396,9 +1396,10 @@ public class PhotoExportService {
      * Generate a filename for a photo in the ZIP archive.
      * Format matches the import filename format for round-trip compatibility.
      *
-     * Loan photo format: loan-{loanId}-{sanitizedBookTitle}
-     * The loan ID is embedded so the import can reliably find the correct loan
-     * without ambiguity caused by splitting title+username on a dash.
+     * Loan photo format: loan-{sanitizedTitle}-{sanitizedUsername}
+     * Both title and username are sanitized with {@link #sanitizeForLoanFilename} which removes
+     * ALL dashes (and other non-alphanumeric characters), so the single dash separator between
+     * them is unambiguous when parsing during import.
      */
     private String generateZipFilename(Photo photo) {
         if (photo.getBook() != null) {
@@ -1408,7 +1409,9 @@ public class PhotoExportService {
         } else if (photo.getLoan() != null) {
             String bookTitle = photo.getLoan().getBook() != null
                     ? photo.getLoan().getBook().getTitle() : "unknown";
-            return "loan-" + photo.getLoan().getId() + "-" + sanitizeName(bookTitle);
+            String username = photo.getLoan().getUser() != null
+                    ? photo.getLoan().getUser().getUsername() : "unknown";
+            return "loan-" + sanitizeForLoanFilename(bookTitle) + "-" + sanitizeForLoanFilename(username);
         } else {
             return "photo-" + photo.getId();
         }
@@ -1427,5 +1430,23 @@ public class PhotoExportService {
                 .replaceAll("\\s+", " ")              // Normalize whitespace
                 .trim()
                 .replaceAll("^-+|-+$", "");           // Remove leading/trailing dashes
+    }
+
+    /**
+     * Sanitize a name for use in the loan photo filename segment.
+     * Unlike {@link #sanitizeName}, this removes ALL dashes and other non-alphanumeric characters
+     * (keeping only a-z, 0-9, and underscores for readability) so that the single dash used as
+     * a separator between the title and username parts of the filename remains unambiguous.
+     *
+     * Examples:
+     *   "The Call-to-Action"  → "thecalltoaction"
+     *   "St. Bernard's"       → "stbernards"
+     *   "john.doe"            → "johndoe"
+     */
+    private String sanitizeForLoanFilename(String name) {
+        if (name == null) return "unknown";
+        return name.toLowerCase()
+                .trim()
+                .replaceAll("[^a-z0-9]", "");  // Remove everything except lowercase letters and digits
     }
 }

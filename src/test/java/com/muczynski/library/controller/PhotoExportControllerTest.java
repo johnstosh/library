@@ -905,12 +905,13 @@ class PhotoExportControllerTest {
     // ===========================================
     // Loan Photo ZIP Import Tests
     // Verify loan checkout card photos are correctly imported from a ZIP
-    // using the loan-{id}-{title}.ext filename format.
+    // using the loan-{sanitizedTitle}-{sanitizedUsername}.ext filename format.
     // ===========================================
 
     /**
-     * Build a ZIP with the correct loan filename format (loan-{loanId}-{bookTitle}.jpg),
+     * Build a ZIP with the correct loan filename format (loan-{sanitizedTitle}-{sanitizedUsername}.jpg),
      * import it, and verify the photo is associated with the correct loan.
+     * sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
      */
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
@@ -922,9 +923,10 @@ class PhotoExportControllerTest {
         loan = loanRepository.save(loan);
         Long loanId = loan.getId();
 
-        // Build a ZIP with the correct loan filename format: loan-{loanId}-{sanitizedTitle}.jpg
+        // Build a ZIP with the correct loan filename format: loan-{sanitizedTitle}-{sanitizedUsername}.jpg
+        // sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
         byte[] imageBytes = createDummyImage(200, 300);
-        String loanFilename = "loan-" + loanId + "-Test Book.jpg";
+        String loanFilename = "loan-testbook-testuser.jpg";
         byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
 
         // Import the ZIP
@@ -953,6 +955,7 @@ class PhotoExportControllerTest {
 
     /**
      * Re-importing a ZIP with the same loan photo (same checksum) should skip it as a duplicate.
+     * sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
      */
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
@@ -965,7 +968,8 @@ class PhotoExportControllerTest {
         Long loanId = loan.getId();
 
         byte[] imageBytes = createDummyImage(200, 300);
-        String loanFilename = "loan-" + loanId + "-Test Book.jpg";
+        // Use the correct loan-{sanitizedTitle}-{sanitizedUsername} format (no dashes in either part)
+        String loanFilename = "loan-testbook-testuser.jpg";
         byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
 
         // First import - should succeed
@@ -1001,14 +1005,15 @@ class PhotoExportControllerTest {
     }
 
     /**
-     * Importing a loan photo for a non-existent loan ID should fail gracefully.
+     * Importing a loan photo where no matching loan exists should fail gracefully.
+     * sanitizeForLoanFilename("nonexistentbook") = "nonexistentbook", etc.
      */
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
-    void loanPhotoZipImport_failsGracefullyForUnknownLoanId() throws Exception {
+    void loanPhotoZipImport_failsGracefullyForUnknownLoan() throws Exception {
         byte[] imageBytes = createDummyImage(100, 100);
-        // Use a loan ID that doesn't exist
-        String loanFilename = "loan-99999-Some Book.jpg";
+        // Use a title+username that doesn't match any loan in the database
+        String loanFilename = "loan-nonexistentbook-unknownuser.jpg";
         byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
 
         MvcResult importResult = mockMvc.perform(
@@ -1021,7 +1026,7 @@ class PhotoExportControllerTest {
 
         String importJson = importResult.getResponse().getContentAsString();
         assertTrue(importJson.contains("\"failureCount\":1"),
-                "Import should fail for unknown loan ID. Response: " + importJson);
+                "Import should fail for unknown loan. Response: " + importJson);
         assertTrue(importJson.contains("\"successCount\":0"),
                 "Import should have 0 successes. Response: " + importJson);
     }
