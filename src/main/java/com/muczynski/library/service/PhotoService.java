@@ -23,7 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.util.Pair;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
@@ -34,6 +38,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +50,9 @@ import com.drew.metadata.exif.ExifIFD0Directory;
 @RequiredArgsConstructor
 public class PhotoService {
     private static final Logger logger = LoggerFactory.getLogger(PhotoService.class);
+
+    /** Maximum pixel dimension (width or height) for stored loan/checkout card photos. */
+    private static final int MAX_LOAN_PHOTO_DIMENSION = 1920;
 
     private final PhotoRepository photoRepository;
     private final BookRepository bookRepository;
@@ -123,7 +131,8 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoToLoan(Long loanId, byte[] imageBytes, String contentType) {
         try {
-            imageBytes = correctImageOrientation(imageBytes, contentType);
+            // Correct orientation and resize to MAX_LOAN_PHOTO_DIMENSION to prevent OOM when serving
+            imageBytes = processLoanPhoto(imageBytes, contentType);
             Photo photo = new Photo();
             // Note: Loan will be set by the caller (LoanService) after loan creation
             photo.setImage(imageBytes);
@@ -148,7 +157,8 @@ public class PhotoService {
     @Transactional
     public PhotoDto addPhotoToExistingLoan(com.muczynski.library.domain.Loan loan, byte[] imageBytes, String contentType) {
         try {
-            imageBytes = correctImageOrientation(imageBytes, contentType);
+            // Correct orientation and resize to MAX_LOAN_PHOTO_DIMENSION to prevent OOM when serving
+            imageBytes = processLoanPhoto(imageBytes, contentType);
             Photo photo = new Photo();
             photo.setLoan(loan);
             photo.setImage(imageBytes);
@@ -819,6 +829,109 @@ public class PhotoService {
             logger.debug("Could not correct image orientation: {}", e.getMessage());
             return imageBytes; // Return original on error
         }
+    }
+
+    /**
+     * Correct EXIF orientation AND resize the image so its longest dimension does not exceed
+     * {@code maxDimension} pixels. Both operations are performed in a single decode/encode cycle
+     * to minimise memory pressure.
+     *
+     * <p>If the image is already within the size limit (and orientation is 1), the original bytes
+     * are returned unchanged. Otherwise the result is re-encoded as JPEG at 0.85 quality.</p>
+     *
+     * @param imageBytes   raw image bytes (may contain EXIF orientation)
+     * @param contentType  the MIME type (e.g., "image/jpeg")
+     * @param maxDimension maximum allowed pixel dimension on the longest side
+     * @return corrected and/or resized image bytes
+     */
+    byte[] resizeImageIfNeeded(byte[] imageBytes, String contentType, int maxDimension) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return imageBytes;
+        }
+        try {
+            int orientation = getExifOrientation(imageBytes);
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (image == null) {
+                logger.debug("Could not decode image for resize; returning original bytes");
+                return imageBytes;
+            }
+
+            // Apply EXIF orientation first so width/height reflect the display orientation
+            if (orientation != 1) {
+                image = applyExifOrientation(image, orientation);
+            }
+
+            int origWidth = image.getWidth();
+            int origHeight = image.getHeight();
+            int maxOrig = Math.max(origWidth, origHeight);
+
+            if (orientation == 1 && maxOrig <= maxDimension) {
+                // No orientation fix needed and already within size limit – skip re-encode
+                return imageBytes;
+            }
+
+            BufferedImage resized;
+            if (maxOrig > maxDimension) {
+                double scale = (double) maxDimension / maxOrig;
+                int newWidth = (int) Math.round(origWidth * scale);
+                int newHeight = (int) Math.round(origHeight * scale);
+                logger.debug("Resizing loan photo from {}x{} to {}x{}", origWidth, origHeight, newWidth, newHeight);
+
+                Image scaled = image.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+                resized = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = resized.createGraphics();
+                g2d.drawImage(scaled, 0, 0, null);
+                g2d.dispose();
+            } else {
+                // Only orientation needed resizing; convert to RGB so JPEG write works
+                resized = new BufferedImage(origWidth, origHeight, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = resized.createGraphics();
+                g2d.drawImage(image, 0, 0, null);
+                g2d.dispose();
+            }
+
+            // Re-encode as JPEG at 0.85 quality
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if (!writers.hasNext()) {
+                // Fall back to basic write if no JPEG writer found
+                ImageIO.write(resized, "jpg", baos);
+            } else {
+                ImageWriter writer = writers.next();
+                ImageWriteParam param = writer.getDefaultWriteParam();
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(0.85f);
+                try (MemoryCacheImageOutputStream mcios = new MemoryCacheImageOutputStream(baos)) {
+                    writer.setOutput(mcios);
+                    writer.write(null, new IIOImage(resized, null, null), param);
+                }
+                writer.dispose();
+            }
+
+            byte[] result = baos.toByteArray();
+            logger.debug("processLoanPhoto: {} bytes -> {} bytes (orientation={}, maxDim={})",
+                    imageBytes.length, result.length, orientation, maxDimension);
+            return result;
+        } catch (Exception e) {
+            logger.warn("Could not resize/orient loan photo; returning original bytes: {}", e.getMessage());
+            return imageBytes;
+        }
+    }
+
+    /**
+     * Apply orientation correction and resize a loan checkout card photo to at most
+     * {@value #MAX_LOAN_PHOTO_DIMENSION} pixels on the longest side.
+     *
+     * <p>Large phone photos (5–10 MB, 4000+ px) can cause OutOfMemoryErrors when a
+     * BufferedImage is materialised for every view request. Storing a pre-scaled image
+     * avoids allocating multi-megabyte arrays at serving time.</p>
+     *
+     * @param imageBytes  raw image bytes from the upload
+     * @param contentType MIME type (e.g., "image/jpeg")
+     * @return processed image bytes, safe to store in the database
+     */
+    byte[] processLoanPhoto(byte[] imageBytes, String contentType) {
+        return resizeImageIfNeeded(imageBytes, contentType, MAX_LOAN_PHOTO_DIMENSION);
     }
 
     /**

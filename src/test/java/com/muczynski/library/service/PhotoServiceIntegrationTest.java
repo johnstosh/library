@@ -256,4 +256,55 @@ class PhotoServiceIntegrationTest {
         assertTrue(message.contains(String.valueOf(photo.getId())),
                 "Error should include photo ID, got: " + message);
     }
+
+    @Test
+    void resizeImageIfNeeded_smallImage_returnedUnchanged() throws Exception {
+        // Given: a 100x100 JPEG – well within the 1920px limit and no EXIF rotation
+        byte[] original = createColoredImage(100, 100, Color.BLUE, "jpg");
+
+        // When
+        byte[] result = photoService.resizeImageIfNeeded(original, "image/jpeg", 1920);
+
+        // Then: same bytes returned (no re-encode needed)
+        assertArrayEquals(original, result, "Small image should be returned unchanged");
+    }
+
+    @Test
+    void resizeImageIfNeeded_largeImage_isDownscaled() throws Exception {
+        // Given: a 2400x1800 JPEG – exceeds 1920px on the longest side
+        byte[] original = createColoredImage(2400, 1800, Color.RED, "jpg");
+
+        // When
+        byte[] result = photoService.resizeImageIfNeeded(original, "image/jpeg", 1920);
+
+        // Then: result is a valid JPEG whose longest dimension is <= 1920
+        assertNotNull(result);
+        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(result));
+        assertNotNull(decoded, "Result must be a readable image");
+        int maxDim = Math.max(decoded.getWidth(), decoded.getHeight());
+        assertTrue(maxDim <= 1920, "Longest dimension should be <= 1920, was: " + maxDim);
+    }
+
+    @Test
+    void processLoanPhoto_largeImage_isDownscaledTo1920() throws Exception {
+        // Given: a 3000x2000 JPEG simulating a phone photo
+        byte[] original = createColoredImage(3000, 2000, Color.GREEN, "jpg");
+
+        // When
+        byte[] result = photoService.processLoanPhoto(original, "image/jpeg");
+
+        // Then: result is a valid JPEG no larger than 1920px on the longest side
+        assertNotNull(result);
+        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(result));
+        assertNotNull(decoded);
+        int maxDim = Math.max(decoded.getWidth(), decoded.getHeight());
+        assertTrue(maxDim <= 1920, "Loan photo longest dimension should be <= 1920, was: " + maxDim);
+    }
+
+    @Test
+    void processLoanPhoto_nullBytes_returnsNull() {
+        // When/Then: null input should not throw, just return null
+        byte[] result = photoService.processLoanPhoto(null, "image/jpeg");
+        assertNull(result);
+    }
 }

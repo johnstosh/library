@@ -47,6 +47,9 @@ public class LoanService {
     @Autowired
     private PhotoRepository photoRepository;
 
+    @Autowired
+    private PhotoService photoService;
+
     public LoanDto checkoutBook(LoanDto loanDto) {
         Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
         User user = userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId()));
@@ -139,13 +142,15 @@ public class LoanService {
 
         // Create and associate the checkout card photo
         if (imageBytes != null && imageBytes.length > 0) {
+            // Correct orientation and resize to prevent OOM errors when serving large phone photos
+            byte[] processedBytes = photoService.processLoanPhoto(imageBytes, contentType);
             Photo photo = new Photo();
             photo.setLoan(savedLoan);
-            photo.setImage(imageBytes);
-            photo.setContentType(contentType != null ? contentType : "image/jpeg");
+            photo.setImage(processedBytes);
+            photo.setContentType("image/jpeg");
             photo.setCaption("Checkout card photo");
             photo.setPhotoOrder(0);
-            photo.setImageChecksum(computeChecksum(imageBytes));
+            photo.setImageChecksum(computeChecksum(processedBytes));
             photoRepository.save(photo);
             logger.info("Created checkout card photo for loan ID {} with checksum {}", savedLoan.getId(), photo.getImageChecksum());
         }
@@ -304,14 +309,15 @@ public class LoanService {
             logger.info("Replacing existing checkout card photo {} for loan {}", existingPhoto.getId(), loanId);
             photoRepository.delete(existingPhoto);
         });
-        // Create new photo
+        // Create new photo — correct orientation and resize to prevent OOM when serving large phone photos
+        byte[] processedBytes = photoService.processLoanPhoto(imageBytes, contentType);
         Photo photo = new Photo();
         photo.setLoan(loan);
-        photo.setImage(imageBytes);
-        photo.setContentType(contentType != null ? contentType : "image/jpeg");
+        photo.setImage(processedBytes);
+        photo.setContentType("image/jpeg");
         photo.setCaption("Checkout card photo");
         photo.setPhotoOrder(0);
-        photo.setImageChecksum(computeChecksum(imageBytes));
+        photo.setImageChecksum(computeChecksum(processedBytes));
         photoRepository.save(photo);
         logger.info("Added/replaced checkout card photo for loan ID {} with checksum {}", loanId, photo.getImageChecksum());
         return loanMapper.toDto(loan);
