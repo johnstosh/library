@@ -1239,32 +1239,35 @@ public class PhotoExportService {
 
         // Get ALL active photo IDs - including those needing download from Google Photos
         List<Long> photoIds = photoRepository.findAllActivePhotoIds();
-        long photosWithImages = photoRepository.findActivePhotoIdsWithImages().size();
-        long photosPendingImport = photoIds.size() - photosWithImages;
 
         if (photoIds.isEmpty()) {
             throw new LibraryException("No photos available for export.");
         }
 
-        logger.info("Streaming {} photos to ZIP ({} with local images, {} will be downloaded from Google Photos)",
-                photoIds.size(), photosWithImages, photosPendingImport);
+        // Count photos that have actual image bytes stored locally (imageChecksum alone is not sufficient —
+        // a JSON import sets imageChecksum from metadata without storing the image bytes themselves).
+        long photosWithLocalBytes = photoRepository.countPhotosWithActualImageBytes();
+        long photosPendingDownload = photoIds.size() - photosWithLocalBytes;
 
-        // Get access token for downloading photos from Google Photos (if needed)
+        logger.info("Streaming {} photos to ZIP ({} with local image bytes, {} need download from Google Photos)",
+                photoIds.size(), photosWithLocalBytes, photosPendingDownload);
+
+        // Always try to get an access token: photos can have imageChecksum set (from JSON import)
+        // but no actual image bytes stored, so the photosPendingDownload count may undercount
+        // how many photos need to be fetched from Google Photos.
         String accessToken = null;
-        if (photosPendingImport > 0) {
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.isAuthenticated()) {
-                    Long userId = Long.parseLong(authentication.getName());
-                    User user = userRepository.findById(userId).orElse(null);
-                    if (user != null) {
-                        accessToken = googlePhotosService.getValidAccessToken(user);
-                        logger.info("Got access token for downloading {} photos from Google Photos", photosPendingImport);
-                    }
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Long userId = Long.parseLong(authentication.getName());
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null) {
+                    accessToken = googlePhotosService.getValidAccessToken(user);
+                    logger.info("Got Google Photos access token for ZIP export");
                 }
-            } catch (Exception e) {
-                logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
             }
+        } catch (Exception e) {
+            logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
         }
 
         // Track filename counts for handling multiple photos of same entity

@@ -195,4 +195,10 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // Find ALL active photo IDs (for ZIP export that downloads missing images from Google Photos)
     @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL ORDER BY p.id")
     List<Long> findAllActivePhotoIds();
+
+    // Count photos that have actual image bytes stored locally.
+    // Unlike imageChecksum (which can be set by JSON import without storing bytes),
+    // image IS NOT NULL means the bytes are physically present in the database.
+    @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.image IS NOT NULL")
+    long countPhotosWithActualImageBytes();
 }
