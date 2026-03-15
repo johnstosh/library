@@ -632,35 +632,38 @@ public class PhotoExportService {
     }
 
     /**
-     * Get all photos with their export status
-     * Uses PhotoMetadataProjection to avoid loading image bytes and prevent OutOfMemory errors
+     * Get all photos with their export status.
+     * Uses a single native SQL query (findAllForExportPage) that:
+     * - Selects only metadata columns – never loads the image blob
+     * - JOINs book, book's author, and direct author in one round-trip
+     * - Returns a flat projection to avoid N+1 queries from nested projections
+     * Sorting is handled by the SQL query (ORDER BY book.date_added_to_library DESC NULLS LAST).
      */
     @Transactional(readOnly = true)
     public List<PhotoExportInfoDto> getAllPhotosWithExportStatus() {
-        logger.debug("Fetching all photo metadata (without image bytes)");
-        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findBy();
-        logger.info("Found {} photos in database", allPhotos.size());
+        logger.debug("Fetching all photo metadata (without image bytes) via flat projection query");
+        List<com.muczynski.library.repository.PhotoExportFlatProjection> allPhotos =
+                photoRepository.findAllForExportPage();
+        logger.info("Found {} active photos in database", allPhotos.size());
 
         List<PhotoExportInfoDto> result = new ArrayList<>();
 
-        for (com.muczynski.library.repository.PhotoMetadataProjection photo : allPhotos) {
-            // Skip soft-deleted photos
-            if (photo.getDeletedAt() != null) {
-                continue;
-            }
+        for (com.muczynski.library.repository.PhotoExportFlatProjection photo : allPhotos) {
             try {
                 PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
                 photoInfo.setId(photo.getId());
                 photoInfo.setCaption(photo.getCaption());
+
                 // Derive status from actual data to match stats counts exactly
                 // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
                 String derivedStatus;
                 boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
                 boolean hasChecksum = photo.getImageChecksum() != null;
+                String storedStatus = photo.getExportStatus(); // String from native query
 
-                if (photo.getExportStatus() == Photo.ExportStatus.FAILED) {
+                if ("FAILED".equals(storedStatus)) {
                     derivedStatus = "FAILED";
-                } else if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
+                } else if ("IN_PROGRESS".equals(storedStatus)) {
                     derivedStatus = "IN_PROGRESS";
                 } else if (hasPermanentId && hasChecksum) {
                     // Has both permanentId and checksum = fully synced (exported and imported)
@@ -684,22 +687,14 @@ public class PhotoExportService {
                 photoInfo.setHasImage(photo.getImageChecksum() != null);
                 photoInfo.setChecksum(photo.getImageChecksum());
 
-                if (photo.getBook() != null) {
-                    photoInfo.setBookTitle(photo.getBook().getTitle());
-                    photoInfo.setBookId(photo.getBook().getId());
-                    photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
-                    // Use dateAddedToLibrary from projection (no need to load full Book entity)
-                    photoInfo.setBookDateAdded(photo.getBook().getDateAddedToLibrary());
-                    // Include book's author if available
-                    if (photo.getBook().getAuthor() != null) {
-                        photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
-                    }
-                }
+                photoInfo.setBookId(photo.getBookId());
+                photoInfo.setBookTitle(photo.getBookTitle());
+                photoInfo.setBookLocNumber(photo.getBookLocNumber());
+                photoInfo.setBookDateAdded(photo.getBookDateAdded());
+                photoInfo.setBookAuthorName(photo.getBookAuthorName());
 
-                if (photo.getAuthor() != null) {
-                    photoInfo.setAuthorName(photo.getAuthor().getName());
-                    photoInfo.setAuthorId(photo.getAuthor().getId());
-                }
+                photoInfo.setAuthorId(photo.getAuthorId());
+                photoInfo.setAuthorName(photo.getAuthorName());
 
                 result.add(photoInfo);
             } catch (Exception e) {
@@ -707,21 +702,6 @@ public class PhotoExportService {
                 // Continue processing other photos even if one fails
             }
         }
-
-        // Sort by book dateAdded (descending, most recent first) to group photos of the same book together
-        // Photos without books will appear at the end
-        result.sort((p1, p2) -> {
-            LocalDateTime date1 = p1.getBookDateAdded();
-            LocalDateTime date2 = p2.getBookDateAdded();
-
-            // Handle null values - put photos without books at the end
-            if (date1 == null && date2 == null) return 0;
-            if (date1 == null) return 1;  // p1 goes after p2
-            if (date2 == null) return -1; // p1 goes before p2
-
-            // Both dates exist - compare in descending order (most recent first)
-            return date2.compareTo(date1);
-        });
 
         logger.info("Successfully processed {} photos for display", result.size());
         return result;
