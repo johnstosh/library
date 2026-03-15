@@ -28,8 +28,8 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
     queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
     queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
-    staleTime: 0, // Always check for fresh data when filter changes
-    refetchOnMount: true, // Always refetch when component mounts or filter changes
+    staleTime: 30 * 1000, // 30 seconds: prevents duplicate fetches on rapid mounts/re-renders while keeping data reasonably fresh
+    refetchOnMount: true, // Refetch on mount only if data is stale (older than staleTime)
     placeholderData: keepPreviousData, // Prevent summaries from becoming undefined during refetches
   })
 
