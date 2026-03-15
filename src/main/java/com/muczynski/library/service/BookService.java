@@ -1217,8 +1217,8 @@ public class BookService {
     }
 
     public List<BookSummaryDto> getAllBookSummaries() {
-        return bookRepository.findAll().stream()
-                .map(bookMapper::toSummaryDto)
+        return bookRepository.findAllSummaries().stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 

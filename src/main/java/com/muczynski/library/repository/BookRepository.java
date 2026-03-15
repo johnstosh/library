@@ -125,6 +125,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findAllByLibraryId(Long libraryId);
 
     /**
+     * Get summaries (id + lastModified) for all books.
+     * Avoids loading full entities — used by /summaries endpoint for cache validation.
+     */
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b")
+    List<BookSummaryProjection> findAllSummaries();
+
+    /**
      * Get summaries (id + lastModified) for books without LOC number.
      */
     @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.locNumber IS NULL OR b.locNumber = ''")
