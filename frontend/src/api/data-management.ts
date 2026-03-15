@@ -202,11 +202,15 @@ export function useExportSinglePhoto() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (photoId: number) => {
-      return api.post<PhotoExportResponseDto>(`/photo-export/export/${photoId}`)
+      return api.post<PhotoExportInfoDto>(`/photo-export/export/${photoId}`)
     },
-    onSuccess: () => {
+    onSuccess: (updatedPhoto) => {
+      // Patch just the changed row in the list cache – avoids refetching the entire list
+      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
+        if (!old) return old
+        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
+      })
       queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
     },
   })
 }
@@ -216,11 +220,15 @@ export function useImportSinglePhoto() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (photoId: number) => {
-      return api.post<PhotoExportResponseDto>(`/photo-export/import/${photoId}`)
+      return api.post<PhotoExportInfoDto>(`/photo-export/import/${photoId}`)
     },
-    onSuccess: () => {
+    onSuccess: (updatedPhoto) => {
+      // Patch just the changed row in the list cache – avoids refetching the entire list
+      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
+        if (!old) return old
+        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
+      })
       queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
     },
   })
 }
@@ -239,11 +247,15 @@ export function useUnlinkPhoto() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (photoId: number) => {
-      return api.post<PhotoExportResponseDto>(`/photo-export/unlink/${photoId}`)
+      return api.post<PhotoExportInfoDto>(`/photo-export/unlink/${photoId}`)
     },
-    onSuccess: () => {
+    onSuccess: (updatedPhoto) => {
+      // Patch just the changed row in the list cache – avoids refetching the entire list
+      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
+        if (!old) return old
+        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
+      })
       queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
     },
   })
 }

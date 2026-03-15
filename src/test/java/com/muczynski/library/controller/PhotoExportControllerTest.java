@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorRepository;
@@ -20,6 +21,10 @@ import com.muczynski.library.photostorage.dto.MediaItemResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,6 +34,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -41,6 +47,7 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.ZipEntry;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.eq;
@@ -89,8 +96,9 @@ class PhotoExportControllerTest {
     @BeforeEach
     void setUp() {
         // Clean up from previous tests (non-transactional tests don't roll back)
-        loanRepository.deleteAll();
+        // Delete photos before loans to avoid FK constraint violations (photos reference loans)
         photoRepository.deleteAll();
+        loanRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
         userRepository.deleteAll();
@@ -120,8 +128,9 @@ class PhotoExportControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
-        loanRepository.deleteAll();
+        // Delete photos before loans to avoid FK constraint violations (photos reference loans)
         photoRepository.deleteAll();
+        loanRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
         userRepository.deleteAll();
@@ -393,8 +402,9 @@ class PhotoExportControllerTest {
 
         mockMvc.perform(post("/api/photo-export/unlink/" + photo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", is("Photo unlinked successfully")))
-                .andExpect(jsonPath("$.photoId", is(photo.getId().intValue())));
+                .andExpect(jsonPath("$.id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$.permanentId").doesNotExist())
+                .andExpect(jsonPath("$.exportStatus", is("PENDING")));
 
         // Verify the photo was updated
         Photo updatedPhoto = photoRepository.findById(photo.getId()).orElseThrow();
@@ -473,10 +483,9 @@ class PhotoExportControllerTest {
         setUpAuthenticationWithTestUser("LIBRARIAN");
         Photo photo = createPhotoWithImage(testBook, "No permanent ID");
 
-        // importPhotoById returns error message in response body, not via exception
+        // importPhotoById returns 500 when photo has no permanent ID
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message", containsString("does not have a permanent ID")));
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
@@ -671,8 +680,8 @@ class PhotoExportControllerTest {
 
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")))
-                .andExpect(jsonPath("$.photoId", is(photo.getId().intValue())));
+                .andExpect(jsonPath("$.id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Verify getMediaItem was called (which internally handles fallback)
         verify(googlePhotosLibraryClient).getMediaItem(ArgumentMatchers.anyString(), eq("permanent-for-import"));
@@ -694,8 +703,7 @@ class PhotoExportControllerTest {
                 ));
 
         mockMvc.perform(post("/api/photo-export/import/" + photo.getId()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message", notNullValue()));
+                .andExpect(status().isInternalServerError());
 
         // Verify photo was marked as failed
         Photo updatedPhoto = photoRepository.findById(photo.getId()).orElseThrow();
@@ -768,17 +776,20 @@ class PhotoExportControllerTest {
         // Import first photo
         mockMvc.perform(post("/api/photo-export/import/" + photo1.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo1.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Import second photo
         mockMvc.perform(post("/api/photo-export/import/" + photo2.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo2.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Import third photo
         mockMvc.perform(post("/api/photo-export/import/" + photo3.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", containsString("imported")));
+                .andExpect(jsonPath("$.id", is(photo3.getId().intValue())))
+                .andExpect(jsonPath("$.exportStatus", is("COMPLETED")));
 
         // Verify all photos were imported successfully
         Photo updatedPhoto1 = photoRepository.findById(photo1.getId()).orElseThrow();
@@ -889,5 +900,148 @@ class PhotoExportControllerTest {
                 .andExpect(jsonPath("$.message", containsString("Import complete")))
                 .andExpect(jsonPath("$.imported", is(2)))
                 .andExpect(jsonPath("$.failed", is(3)));
+    }
+
+    // ===========================================
+    // Loan Photo ZIP Import Tests
+    // Verify loan checkout card photos are correctly imported from a ZIP
+    // using the loan-{sanitizedTitle}-{sanitizedUsername}.ext filename format.
+    // ===========================================
+
+    /**
+     * Build a ZIP with the correct loan filename format (loan-{sanitizedTitle}-{sanitizedUsername}.jpg),
+     * import it, and verify the photo is associated with the correct loan.
+     * sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
+     */
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void loanPhotoZipImport_associatesPhotoWithCorrectLoan() throws Exception {
+        // Create a loan for testBook / testUser
+        Loan loan = new Loan();
+        loan.setBook(testBook);
+        loan.setUser(testUser);
+        loan = loanRepository.save(loan);
+        Long loanId = loan.getId();
+
+        // Build a ZIP with the correct loan filename format: loan-{sanitizedTitle}-{sanitizedUsername}.jpg
+        // sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
+        byte[] imageBytes = createDummyImage(200, 300);
+        String loanFilename = "loan-testbook-testuser.jpg";
+        byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
+
+        // Import the ZIP
+        MvcResult importResult = mockMvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/photos/import-zip-stream")
+                                .contentType("application/zip")
+                                .content(zipBytes))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String importJson = importResult.getResponse().getContentAsString();
+        assertTrue(importJson.contains("\"successCount\":1"),
+                "Import should succeed for loan photo. Response: " + importJson);
+
+        // Verify loan photo was created and associated with the correct loan.
+        // Use non-LOB queries to avoid PostgreSQL OID large object access errors outside a transaction.
+        long loanPhotoCount = photoRepository.countByLoanId(loanId);
+        assertEquals(1, loanPhotoCount,
+                "After import, loan " + loanId + " should have exactly 1 photo");
+
+        String storedChecksum = photoRepository.findFirstPhotoChecksumByLoanId(loanId);
+        assertNotNull(storedChecksum,
+                "Imported loan photo should have a checksum set (confirms image bytes were stored)");
+    }
+
+    /**
+     * Re-importing a ZIP with the same loan photo (same checksum) should skip it as a duplicate.
+     * sanitizeForLoanFilename("Test Book") = "testbook", sanitizeForLoanFilename("testuser") = "testuser"
+     */
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void loanPhotoZipImport_skipsDuplicateOnReimport() throws Exception {
+        // Create a loan
+        Loan loan = new Loan();
+        loan.setBook(testBook);
+        loan.setUser(testUser);
+        loan = loanRepository.save(loan);
+        Long loanId = loan.getId();
+
+        byte[] imageBytes = createDummyImage(200, 300);
+        // Use the correct loan-{sanitizedTitle}-{sanitizedUsername} format (no dashes in either part)
+        String loanFilename = "loan-testbook-testuser.jpg";
+        byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
+
+        // First import - should succeed
+        mockMvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/photos/import-zip-stream")
+                                .contentType("application/zip")
+                                .content(zipBytes))
+                .andExpect(status().isOk());
+
+        long countAfterFirstImport = photoRepository.count();
+        assertEquals(1, countAfterFirstImport, "Should have 1 photo after first import");
+
+        // Second import of same ZIP - should skip the duplicate
+        MvcResult secondImportResult = mockMvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/photos/import-zip-stream")
+                                .contentType("application/zip")
+                                .content(zipBytes))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String secondImportJson = secondImportResult.getResponse().getContentAsString();
+        assertTrue(secondImportJson.contains("\"skippedCount\":1"),
+                "Second import should skip duplicate loan photo. Response: " + secondImportJson);
+        assertTrue(secondImportJson.contains("\"successCount\":0"),
+                "Second import should have 0 new successes. Response: " + secondImportJson);
+
+        // Photo count should be unchanged
+        long countAfterSecondImport = photoRepository.count();
+        assertEquals(countAfterFirstImport, countAfterSecondImport,
+                "Re-importing same ZIP should not create duplicate loan photos");
+    }
+
+    /**
+     * Importing a loan photo where no matching loan exists should fail gracefully.
+     * sanitizeForLoanFilename("nonexistentbook") = "nonexistentbook", etc.
+     */
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void loanPhotoZipImport_failsGracefullyForUnknownLoan() throws Exception {
+        byte[] imageBytes = createDummyImage(100, 100);
+        // Use a title+username that doesn't match any loan in the database
+        String loanFilename = "loan-nonexistentbook-unknownuser.jpg";
+        byte[] zipBytes = buildZipWithSingleEntry(loanFilename, imageBytes);
+
+        MvcResult importResult = mockMvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .post("/api/photos/import-zip-stream")
+                                .contentType("application/zip")
+                                .content(zipBytes))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String importJson = importResult.getResponse().getContentAsString();
+        assertTrue(importJson.contains("\"failureCount\":1"),
+                "Import should fail for unknown loan. Response: " + importJson);
+        assertTrue(importJson.contains("\"successCount\":0"),
+                "Import should have 0 successes. Response: " + importJson);
+    }
+
+    /**
+     * Helper: Build a ZIP file in memory with a single entry.
+     */
+    private byte[] buildZipWithSingleEntry(String entryName, byte[] entryBytes) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos)) {
+            ZipEntry entry = new ZipEntry(entryName);
+            zos.putNextEntry(entry);
+            zos.write(entryBytes);
+            zos.closeEntry();
+        }
+        return baos.toByteArray();
     }
 }

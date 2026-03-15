@@ -40,16 +40,24 @@ import java.util.zip.ZipInputStream;
  * Filename format:
  * - book-{title}[-{n}].{ext} - Associates photo with a book by title
  * - author-{name}[-{n}].{ext} - Associates photo with an author by name
- * - loan-{title}-{username}[-{n}].{ext} - Associates photo with a loan
+ * - loan-{sanitizedTitle}-{sanitizedUsername}[-{n}].{ext} - Associates photo with a loan by title+username
  *
  * The optional [-{n}] is the 1-based photo order (position) for the entity.
- * The title/name is sanitized (lowercase, special chars replaced with dashes).
+ * The title/name is sanitized (spaces and special chars removed/replaced).
+ *
+ * For loan filenames the title and username are sanitized with sanitizeForLoanFilename(),
+ * which removes ALL dashes so the single dash separator between the two parts is unambiguous.
  *
  * Merge behavior (for book and author photos):
  * - Uses SHA-256 checksum for deduplication
  * - If photo exists at same order with same checksum: skip (duplicate)
  * - If photo exists at same order with different checksum: replace existing
  * - If no photo exists at that order: add new photo
+ *
+ * Merge behavior for loan photos:
+ * - If the loan already has a photo with the same checksum: skip (duplicate)
+ * - If the loan already has a photo with a different checksum: replace
+ * - If the loan has no photo: add new photo
  */
 @Service
 @RequiredArgsConstructor
@@ -498,63 +506,128 @@ public class PhotoZipImportService {
 
     /**
      * Import a photo for a loan (checkout card).
-     * Format: loan-{title}-{username}[-n].ext
+     * Format: loan-{sanitizedTitle}-{sanitizedUsername}[-n].ext
+     *
+     * Both title and username are sanitized with sanitizeForLoanFilename() which removes ALL
+     * dashes, making the single dash separator between the two parts unambiguous.
+     * Matches are done by comparing sanitized values, so this works across systems regardless
+     * of database IDs.
+     *
+     * Supports deduplication: if the loan already has a photo with the same checksum,
+     * the import is skipped; if a different photo exists, it is replaced.
      */
     private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
                                                    byte[] imageBytes, String contentType) {
-        // Try to split title and username
-        // The format should be: title-username
-        int lastDash = combined.lastIndexOf('-');
-        if (lastDash <= 0) {
+        // Format: {sanitizedTitle}-{sanitizedUsername}
+        // Neither part contains dashes (sanitizeForLoanFilename removes them), so splitting on
+        // the single dash is unambiguous.
+        int separatorDash = combined.indexOf('-');
+        if (separatorDash <= 0) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
                     .entityName(combined)
-                    .errorMessage("Invalid loan filename format. Expected: loan-title-username[-n].ext")
+                    .errorMessage("Invalid loan filename format. Expected: loan-{sanitizedTitle}-{sanitizedUsername}[-n].ext")
                     .build();
         }
 
-        String titlePart = combined.substring(0, lastDash);
-        String usernamePart = combined.substring(lastDash + 1);
+        String sanitizedTitle = combined.substring(0, separatorDash);
+        String sanitizedUsername = combined.substring(separatorDash + 1);
 
-        String searchTitle = unsanitizeName(titlePart);
-        String searchUsername = unsanitizeName(usernamePart);
+        // Find a matching loan by comparing sanitized book title and username
+        List<Loan> allLoans = loanRepository.findAll();
+        Loan loan = allLoans.stream()
+                .filter(l -> l.getBook() != null && l.getUser() != null)
+                .filter(l -> sanitizeForLoanFilename(l.getBook().getTitle()).equals(sanitizedTitle)
+                          && sanitizeForLoanFilename(l.getUser().getUsername()).equals(sanitizedUsername))
+                .findFirst()
+                .orElse(null);
 
-        // Find loans matching book title and username
-        List<Loan> loans = loanRepository.findAll().stream()
-                .filter(loan -> {
-                    if (loan.getBook() == null || loan.getUser() == null) return false;
-                    boolean titleMatches = loan.getBook().getTitle().toLowerCase()
-                            .contains(searchTitle.toLowerCase());
-                    boolean userMatches = loan.getUser().getUsername().toLowerCase()
-                            .contains(searchUsername.toLowerCase());
-                    return titleMatches && userMatches;
-                })
-                .toList();
-
-        if (loans.isEmpty()) {
+        if (loan == null) {
             return PhotoZipImportItemDto.builder()
                     .filename(filename)
                     .status("FAILURE")
                     .entityType("loan")
-                    .entityName(searchTitle + " by " + searchUsername)
-                    .errorMessage("No loan found for book '" + searchTitle + "' and user '" + searchUsername + "'")
+                    .entityName(sanitizedTitle + " / " + sanitizedUsername)
+                    .errorMessage("No loan found matching title '" + sanitizedTitle + "' and username '" + sanitizedUsername + "'")
                     .build();
         }
 
-        Loan loan = loans.get(0);
-        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+        Long loanId = loan.getId();
+        String loanDisplayName = loan.getBook().getTitle() + " - " + loan.getUser().getUsername();
 
-        log.info("Imported photo for loan {} (book: '{}', user: '{}')",
-                loan.getId(), loan.getBook().getTitle(), loan.getUser().getUsername());
+        // Compute checksum for deduplication
+        String newChecksum = computeChecksum(imageBytes);
+
+        // Check if the loan already has a photo (loans have at most one photo)
+        Optional<Photo> existingPhotoOpt = photoRepository.findByLoanId(loanId);
+        if (existingPhotoOpt.isPresent()) {
+            Photo existingPhoto = existingPhotoOpt.get();
+            String existingChecksum = existingPhoto.getImageChecksum();
+
+            if (newChecksum != null && newChecksum.equals(existingChecksum)) {
+                // Same checksum - verify bytes are present
+                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                if (hasBytes) {
+                    log.info("Skipping duplicate photo for loan {} (same checksum)", loanId);
+                    return PhotoZipImportItemDto.builder()
+                            .filename(filename)
+                            .status("SKIPPED")
+                            .entityType("loan")
+                            .entityName(loanDisplayName)
+                            .entityId(loanId)
+                            .photoId(existingPhoto.getId())
+                            .errorMessage("Duplicate photo (same checksum)")
+                            .build();
+                }
+                // Same checksum but bytes missing - restore them
+                log.info("Restoring missing image bytes for loan {} (same checksum, bytes missing)", loanId);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("loan")
+                        .entityName(loanDisplayName)
+                        .entityId(loanId)
+                        .photoId(photoId)
+                        .build();
+            } else {
+                // Different photo - replace existing
+                log.info("Replacing photo for loan {} (different checksum)", loanId);
+                existingPhoto.setImage(imageBytes);
+                existingPhoto.setContentType(contentType);
+                existingPhoto.setImageChecksum(newChecksum);
+                Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
+                Long photoId = savedPhoto.getId();
+                entityManager.detach(savedPhoto);
+                return PhotoZipImportItemDto.builder()
+                        .filename(filename)
+                        .status("SUCCESS")
+                        .entityType("loan")
+                        .entityName(loanDisplayName)
+                        .entityId(loanId)
+                        .photoId(photoId)
+                        .build();
+            }
+        }
+
+        // No existing photo - add new
+        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+        photoService.detachPhoto(photo.getId());
+
+        log.info("Imported photo for loan {} ({})", loanId, loanDisplayName);
 
         return PhotoZipImportItemDto.builder()
                 .filename(filename)
                 .status("SUCCESS")
                 .entityType("loan")
-                .entityName(loan.getBook().getTitle() + " - " + loan.getUser().getUsername())
-                .entityId(loan.getId())
+                .entityName(loanDisplayName)
+                .entityId(loanId)
                 .photoId(photo.getId())
                 .build();
     }
@@ -737,6 +810,24 @@ public class PhotoZipImportService {
         return name.toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("^-+|-+$", ""); // Remove leading/trailing dashes
+    }
+
+    /**
+     * Sanitize a name for use in the loan photo filename segment.
+     * Removes ALL dashes and other non-alphanumeric characters (keeping only a-z and 0-9)
+     * so that the single dash separator between the title and username parts of the filename
+     * remains unambiguous during both export and import.
+     *
+     * Examples:
+     *   "The Call-to-Action"  → "thecalltoaction"
+     *   "St. Bernard's"       → "stbernards"
+     *   "john.doe"            → "johndoe"
+     */
+    static String sanitizeForLoanFilename(String name) {
+        if (name == null) return "unknown";
+        return name.toLowerCase()
+                .trim()
+                .replaceAll("[^a-z0-9]", "");  // Remove everything except lowercase letters and digits
     }
 
     /**

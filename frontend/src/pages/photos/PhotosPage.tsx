@@ -205,9 +205,9 @@ export function PhotosPage() {
     setErrorMessage('')
 
     try {
-      const result = await exportSinglePhoto.mutateAsync(photoId)
-      setSuccessMessage(result.message || 'Photo exported successfully!')
-      handleRefreshPhotoStatus()
+      await exportSinglePhoto.mutateAsync(photoId)
+      // Cache is updated by the mutation's onSuccess (setQueryData) – no full list refetch needed
+      setSuccessMessage('Photo exported successfully!')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(`Failed to export photo #${photoId}: ${errorMessage}`)
@@ -219,9 +219,9 @@ export function PhotosPage() {
     setErrorMessage('')
 
     try {
-      const result = await importSinglePhoto.mutateAsync(photoId)
-      setSuccessMessage(result.message || 'Photo imported successfully!')
-      handleRefreshPhotoStatus()
+      await importSinglePhoto.mutateAsync(photoId)
+      // Cache is updated by the mutation's onSuccess (setQueryData) – no full list refetch needed
+      setSuccessMessage('Photo imported successfully!')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(`Failed to import photo #${photoId}: ${errorMessage}`)
@@ -260,9 +260,9 @@ export function PhotosPage() {
     setErrorMessage('')
 
     try {
-      const result = await unlinkPhoto.mutateAsync(photoId)
-      setSuccessMessage(result.message || 'Photo unlinked successfully!')
-      handleRefreshPhotoStatus()
+      await unlinkPhoto.mutateAsync(photoId)
+      // Cache is updated by the mutation's onSuccess (setQueryData) – no full list refetch needed
+      setSuccessMessage('Photo unlinked successfully!')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(`Failed to unlink photo #${photoId}: ${errorMessage}`)

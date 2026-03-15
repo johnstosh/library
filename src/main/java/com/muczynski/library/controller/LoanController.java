@@ -208,6 +208,34 @@ public class LoanController {
         }
     }
 
+    /**
+     * Add or replace the checkout card photo for an existing loan.
+     */
+    @PostMapping(value = "/{id}/photo", consumes = "multipart/form-data")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<?> addLoanPhoto(@PathVariable Long id, @RequestParam("photo") MultipartFile photo) {
+        try {
+            if (photo.isEmpty()) {
+                return ResponseEntity.badRequest().body("Photo file is empty");
+            }
+            byte[] imageBytes = photo.getBytes();
+            String contentType = photo.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body("File must be an image");
+            }
+            LoanDto updated = loanService.addOrReplaceLoanPhoto(id, imageBytes, contentType);
+            return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            logger.error("Failed to read photo file for loan ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to read photo file: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Failed to add loan photo for loan ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to add photo: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/transcribe-checkout-card")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> transcribeCheckoutCard(@RequestParam("photo") MultipartFile photo) {

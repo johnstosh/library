@@ -6,9 +6,10 @@ import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { getThumbnailUrl, getPhotoUrl } from '@/api/photos'
-import { PiArrowLeft, PiCheckCircle, PiTrash, PiCamera } from 'react-icons/pi'
+import { PiArrowLeft, PiCheckCircle, PiTrash, PiCamera, PiPencil } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useIsLibrarian } from '@/stores/authStore'
 
 export function LoanViewPage() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export function LoanViewPage() {
   const deleteLoan = useDeleteLoan()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
+  const isLibrarian = useIsLibrarian()
 
   const handleReturn = async () => {
     try {
@@ -95,6 +97,16 @@ export function LoanViewPage() {
               <p className="text-gray-600 mt-1">Borrowed by: {loan.userName}</p>
             </div>
             <div className="flex gap-3">
+              {isLibrarian && (
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/loans/${loanId}/edit`)}
+                  leftIcon={<PiPencil />}
+                  data-test="loan-view-edit"
+                >
+                  Edit
+                </Button>
+              )}
               {!isReturned && (
                 <Button
                   variant="primary"

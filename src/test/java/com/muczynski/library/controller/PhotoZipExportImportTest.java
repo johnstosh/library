@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.ChunkUploadResultDto;
@@ -100,12 +101,14 @@ class PhotoZipExportImportTest {
     private Book testBook2;
     private Author testAuthor;
     private User testUser;
+    private Loan testLoan;
 
     @BeforeEach
     void setUp() {
         // Clean up from previous tests (non-transactional tests don't roll back)
-        loanRepository.deleteAll();
+        // Photos must be deleted before loans (FK constraint on photo.loan_id)
         photoRepository.deleteAll();
+        loanRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
         userRepository.deleteAll();
@@ -135,12 +138,19 @@ class PhotoZipExportImportTest {
         testBook2.setTitle("Adventures of Huckleberry Finn");
         testBook2.setAuthor(testAuthor);
         testBook2 = bookRepository.save(testBook2);
+
+        // Create test loan: testUser checks out testBook
+        testLoan = new Loan();
+        testLoan.setBook(testBook);
+        testLoan.setUser(testUser);
+        testLoan = loanRepository.save(testLoan);
     }
 
     @AfterEach
     void tearDown() {
-        loanRepository.deleteAll();
+        // Photos must be deleted before loans (FK constraint on photo.loan_id)
         photoRepository.deleteAll();
+        loanRepository.deleteAll();
         bookRepository.deleteAll();
         authorRepository.deleteAll();
         userRepository.deleteAll();
@@ -190,6 +200,19 @@ class PhotoZipExportImportTest {
         byte[] imageBytes = createDummyImage(250, 350);
         Photo photo = new Photo();
         photo.setAuthor(author);
+        photo.setImage(imageBytes);
+        photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photo.setCaption(caption);
+        photo.setPhotoOrder(0);
+        photo.setImageChecksum(computeChecksum(imageBytes));
+        photo.setExportStatus(Photo.ExportStatus.PENDING);
+        return photoRepository.save(photo);
+    }
+
+    private Photo createLoanPhoto(Loan loan, String caption) throws Exception {
+        byte[] imageBytes = createDummyImage(300, 200);
+        Photo photo = new Photo();
+        photo.setLoan(loan);
         photo.setImage(imageBytes);
         photo.setContentType(MediaType.IMAGE_JPEG_VALUE);
         photo.setCaption(caption);
@@ -406,6 +429,32 @@ class PhotoZipExportImportTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void importFromZipChunked_importsLoanPhotos() throws Exception {
+        // sanitizeForLoanFilename("The Adventures of Tom Sawyer") = "theadventuresoftomsawyer"
+        // sanitizeForLoanFilename("testuser") = "testuser"
+        byte[] zipBytes = buildZip(
+                new ZipEntryData("loan-theadventuresoftomsawyer-testuser.jpg", createDummyImage(100, 100))
+        );
+
+        ChunkUploadResultDto result = importZipChunked(zipBytes);
+        PhotoZipImportResultDto finalResult = result.getFinalResult();
+
+        assertEquals(1, finalResult.getTotalFiles());
+        assertEquals(1, finalResult.getSuccessCount());
+        assertEquals(0, finalResult.getFailureCount());
+        assertEquals("SUCCESS", finalResult.getItems().get(0).getStatus());
+        assertEquals("loan", finalResult.getItems().get(0).getEntityType());
+
+        // Verify photo was associated with the correct loan
+        long loanPhotoCount = photoRepository.countByLoanId(testLoan.getId());
+        assertEquals(1, loanPhotoCount, "Loan should have 1 photo after import");
+
+        String storedChecksum = photoRepository.findFirstPhotoChecksumByLoanId(testLoan.getId());
+        assertNotNull(storedChecksum, "Imported loan photo should have a checksum");
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
     void importFromZipChunked_skipsUnrecognizedFilenames() throws Exception {
         byte[] imageBytes = createDummyImage(100, 100);
         byte[] zipBytes = buildZip(
@@ -516,6 +565,86 @@ class PhotoZipExportImportTest {
             var authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
             assertEquals(1, authorPhotos.size(), "Author should have 1 photo");
         });
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void exportThenChunkedImport_allThreeEntityTypes_roundTrip() throws Exception {
+        // Step 1: Create one photo for each entity type
+        createBookPhoto(testBook, "Tom Sawyer cover", 0);
+        createAuthorPhoto(testAuthor, "Mark Twain portrait");
+        createLoanPhoto(testLoan, "Checkout card");
+
+        long originalPhotoCount = transactionTemplate.execute(status -> (long) photoRepository.findAll().size());
+        assertEquals(3, originalPhotoCount, "Should have 3 photos before export");
+
+        // Step 2: Export to ZIP — should contain entries for all three types
+        MvcResult exportResult = mockMvc.perform(get("/api/photo-export"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] exportedZipBytes = exportResult.getResponse().getContentAsByteArray();
+        assertTrue(exportedZipBytes.length > 0, "Exported ZIP should not be empty");
+
+        // Step 3: Verify ZIP contains entries for book, author, and loan
+        boolean hasBook = false;
+        boolean hasAuthor = false;
+        boolean hasLoan = false;
+        int zipFileCount = 0;
+
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(exportedZipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                String filename = entry.getName();
+                zipFileCount++;
+                if (filename.startsWith("book-")) hasBook = true;
+                if (filename.startsWith("author-")) hasAuthor = true;
+                if (filename.startsWith("loan-")) hasLoan = true;
+            }
+        }
+
+        assertEquals(3, zipFileCount, "ZIP should contain 3 files (one per entity type)");
+        assertTrue(hasBook, "ZIP should contain a book photo entry");
+        assertTrue(hasAuthor, "ZIP should contain an author photo entry");
+        assertTrue(hasLoan, "ZIP should contain a loan photo entry");
+
+        // Step 4: Delete all photos (simulate restore scenario)
+        transactionTemplate.executeWithoutResult(status -> photoRepository.deleteAll());
+        assertEquals(0L, (long) transactionTemplate.execute(status -> (long) photoRepository.findAll().size()),
+                "All photos should be deleted before import");
+
+        // Step 5: Import via chunked endpoint
+        ChunkUploadResultDto importResult = importZipChunked(exportedZipBytes);
+        PhotoZipImportResultDto finalResult = importResult.getFinalResult();
+
+        assertEquals(3, finalResult.getTotalFiles(), "Import should process 3 files");
+        assertEquals(3, finalResult.getSuccessCount(), "All 3 photos should be imported successfully");
+        assertEquals(0, finalResult.getFailureCount(), "No import failures expected");
+
+        // Step 6: Verify each entity has its photo re-associated correctly
+        transactionTemplate.executeWithoutResult(status -> {
+            var restoredPhotos = photoRepository.findAll();
+            assertEquals(3, restoredPhotos.size(), "All 3 photos should be restored");
+        });
+
+        // Verify book photo
+        transactionTemplate.executeWithoutResult(status -> {
+            var bookPhotos = photoRepository.findByBookIdOrderByPhotoOrder(testBook.getId());
+            assertEquals(1, bookPhotos.size(), "Book should have 1 restored photo");
+        });
+
+        // Verify author photo
+        transactionTemplate.executeWithoutResult(status -> {
+            var authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
+            assertEquals(1, authorPhotos.size(), "Author should have 1 restored photo");
+        });
+
+        // Verify loan photo (use non-LOB query to avoid OID access outside transaction)
+        long loanPhotoCount = photoRepository.countByLoanId(testLoan.getId());
+        assertEquals(1, loanPhotoCount, "Loan should have 1 restored photo");
+
+        String loanPhotoChecksum = photoRepository.findFirstPhotoChecksumByLoanId(testLoan.getId());
+        assertNotNull(loanPhotoChecksum, "Restored loan photo should have a checksum");
     }
 
     @Test

@@ -638,6 +638,51 @@ public class LoansUITest {
     }
 
     @Test
+    @DisplayName("LIBRARIAN: Should see Edit button on loan view page")
+    void testLibrarianSeesEditButtonOnViewPage() {
+        login("librarian", "password");
+        navigateToLoans();
+
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Loaned Book");
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-view-edit']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("LIBRARIAN: Should navigate to edit page when clicking Edit button")
+    void testLibrarianCanNavigateToEditPage() {
+        login("librarian", "password");
+        navigateToLoans();
+
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Loaned Book");
+        page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.click("[data-test='loan-view-edit']");
+        page.waitForURL("**/loans/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("text=Edit Loan")).isVisible();
+    }
+
+    @Test
+    @DisplayName("USER: Should NOT see Edit button on loan view page")
+    void testUserDoesNotSeeEditButton() {
+        login("testuser", "password");
+        navigateToLoans();
+
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Loaned Book");
+        page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-view-edit']")).not().isVisible();
+    }
+
+    @Test
     @DisplayName("LIBRARIAN: Should display borrower names for all loans")
     void testLibrarianSeesBorrowerNames() {
         login("librarian", "password");

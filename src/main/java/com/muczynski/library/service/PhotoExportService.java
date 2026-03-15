@@ -632,35 +632,38 @@ public class PhotoExportService {
     }
 
     /**
-     * Get all photos with their export status
-     * Uses PhotoMetadataProjection to avoid loading image bytes and prevent OutOfMemory errors
+     * Get all photos with their export status.
+     * Uses a single native SQL query (findAllForExportPage) that:
+     * - Selects only metadata columns – never loads the image blob
+     * - JOINs book, book's author, and direct author in one round-trip
+     * - Returns a flat projection to avoid N+1 queries from nested projections
+     * Sorting is handled by the SQL query (ORDER BY book.date_added_to_library DESC NULLS LAST).
      */
     @Transactional(readOnly = true)
     public List<PhotoExportInfoDto> getAllPhotosWithExportStatus() {
-        logger.debug("Fetching all photo metadata (without image bytes)");
-        List<com.muczynski.library.repository.PhotoMetadataProjection> allPhotos = photoRepository.findBy();
-        logger.info("Found {} photos in database", allPhotos.size());
+        logger.debug("Fetching all photo metadata (without image bytes) via flat projection query");
+        List<com.muczynski.library.repository.PhotoExportFlatProjection> allPhotos =
+                photoRepository.findAllForExportPage();
+        logger.info("Found {} active photos in database", allPhotos.size());
 
         List<PhotoExportInfoDto> result = new ArrayList<>();
 
-        for (com.muczynski.library.repository.PhotoMetadataProjection photo : allPhotos) {
-            // Skip soft-deleted photos
-            if (photo.getDeletedAt() != null) {
-                continue;
-            }
+        for (com.muczynski.library.repository.PhotoExportFlatProjection photo : allPhotos) {
             try {
                 PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
                 photoInfo.setId(photo.getId());
                 photoInfo.setCaption(photo.getCaption());
+
                 // Derive status from actual data to match stats counts exactly
                 // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
                 String derivedStatus;
                 boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
                 boolean hasChecksum = photo.getImageChecksum() != null;
+                String storedStatus = photo.getExportStatus(); // String from native query
 
-                if (photo.getExportStatus() == Photo.ExportStatus.FAILED) {
+                if ("FAILED".equals(storedStatus)) {
                     derivedStatus = "FAILED";
-                } else if (photo.getExportStatus() == Photo.ExportStatus.IN_PROGRESS) {
+                } else if ("IN_PROGRESS".equals(storedStatus)) {
                     derivedStatus = "IN_PROGRESS";
                 } else if (hasPermanentId && hasChecksum) {
                     // Has both permanentId and checksum = fully synced (exported and imported)
@@ -684,22 +687,14 @@ public class PhotoExportService {
                 photoInfo.setHasImage(photo.getImageChecksum() != null);
                 photoInfo.setChecksum(photo.getImageChecksum());
 
-                if (photo.getBook() != null) {
-                    photoInfo.setBookTitle(photo.getBook().getTitle());
-                    photoInfo.setBookId(photo.getBook().getId());
-                    photoInfo.setBookLocNumber(photo.getBook().getLocNumber());
-                    // Use dateAddedToLibrary from projection (no need to load full Book entity)
-                    photoInfo.setBookDateAdded(photo.getBook().getDateAddedToLibrary());
-                    // Include book's author if available
-                    if (photo.getBook().getAuthor() != null) {
-                        photoInfo.setBookAuthorName(photo.getBook().getAuthor().getName());
-                    }
-                }
+                photoInfo.setBookId(photo.getBookId());
+                photoInfo.setBookTitle(photo.getBookTitle());
+                photoInfo.setBookLocNumber(photo.getBookLocNumber());
+                photoInfo.setBookDateAdded(photo.getBookDateAdded());
+                photoInfo.setBookAuthorName(photo.getBookAuthorName());
 
-                if (photo.getAuthor() != null) {
-                    photoInfo.setAuthorName(photo.getAuthor().getName());
-                    photoInfo.setAuthorId(photo.getAuthor().getId());
-                }
+                photoInfo.setAuthorId(photo.getAuthorId());
+                photoInfo.setAuthorName(photo.getAuthorName());
 
                 result.add(photoInfo);
             } catch (Exception e) {
@@ -708,23 +703,60 @@ public class PhotoExportService {
             }
         }
 
-        // Sort by book dateAdded (descending, most recent first) to group photos of the same book together
-        // Photos without books will appear at the end
-        result.sort((p1, p2) -> {
-            LocalDateTime date1 = p1.getBookDateAdded();
-            LocalDateTime date2 = p2.getBookDateAdded();
-
-            // Handle null values - put photos without books at the end
-            if (date1 == null && date2 == null) return 0;
-            if (date1 == null) return 1;  // p1 goes after p2
-            if (date2 == null) return -1; // p1 goes before p2
-
-            // Both dates exist - compare in descending order (most recent first)
-            return date2.compareTo(date1);
-        });
-
         logger.info("Successfully processed {} photos for display", result.size());
         return result;
+    }
+
+    /**
+     * Get export info for a single photo by ID.
+     * Used after a single-photo export/import to refresh only that row in the frontend cache.
+     */
+    @Transactional(readOnly = true)
+    public PhotoExportInfoDto getPhotoExportInfoById(Long photoId) {
+        com.muczynski.library.repository.PhotoExportFlatProjection photo =
+                photoRepository.findByIdForExportPage(photoId)
+                        .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+
+        PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
+        photoInfo.setId(photo.getId());
+        photoInfo.setCaption(photo.getCaption());
+
+        boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
+        boolean hasChecksum = photo.getImageChecksum() != null;
+        String storedStatus = photo.getExportStatus();
+
+        String derivedStatus;
+        if ("FAILED".equals(storedStatus)) {
+            derivedStatus = "FAILED";
+        } else if ("IN_PROGRESS".equals(storedStatus)) {
+            derivedStatus = "IN_PROGRESS";
+        } else if (hasPermanentId && hasChecksum) {
+            derivedStatus = "COMPLETED";
+        } else if (hasPermanentId && !hasChecksum) {
+            derivedStatus = "PENDING_IMPORT";
+        } else if (hasChecksum && !hasPermanentId) {
+            derivedStatus = "PENDING";
+        } else {
+            derivedStatus = "NO_IMAGE";
+        }
+        photoInfo.setExportStatus(derivedStatus);
+        photoInfo.setExportedAt(photo.getExportedAt());
+        photoInfo.setPermanentId(photo.getPermanentId());
+        photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
+        photoInfo.setContentType(photo.getContentType());
+        photoInfo.setHasImage(photo.getImageChecksum() != null);
+        photoInfo.setChecksum(photo.getImageChecksum());
+
+        photoInfo.setBookId(photo.getBookId());
+        photoInfo.setBookTitle(photo.getBookTitle());
+        photoInfo.setBookLocNumber(photo.getBookLocNumber());
+        photoInfo.setBookDateAdded(photo.getBookDateAdded());
+        photoInfo.setBookAuthorName(photo.getBookAuthorName());
+
+        photoInfo.setAuthorId(photo.getAuthorId());
+        photoInfo.setAuthorName(photo.getAuthorName());
+
+        return photoInfo;
     }
 
     /**
@@ -1207,32 +1239,35 @@ public class PhotoExportService {
 
         // Get ALL active photo IDs - including those needing download from Google Photos
         List<Long> photoIds = photoRepository.findAllActivePhotoIds();
-        long photosWithImages = photoRepository.findActivePhotoIdsWithImages().size();
-        long photosPendingImport = photoIds.size() - photosWithImages;
 
         if (photoIds.isEmpty()) {
             throw new LibraryException("No photos available for export.");
         }
 
-        logger.info("Streaming {} photos to ZIP ({} with local images, {} will be downloaded from Google Photos)",
-                photoIds.size(), photosWithImages, photosPendingImport);
+        // Count photos that have actual image bytes stored locally (imageChecksum alone is not sufficient —
+        // a JSON import sets imageChecksum from metadata without storing the image bytes themselves).
+        long photosWithLocalBytes = photoRepository.countPhotosWithActualImageBytes();
+        long photosPendingDownload = photoIds.size() - photosWithLocalBytes;
 
-        // Get access token for downloading photos from Google Photos (if needed)
+        logger.info("Streaming {} photos to ZIP ({} with local image bytes, {} need download from Google Photos)",
+                photoIds.size(), photosWithLocalBytes, photosPendingDownload);
+
+        // Always try to get an access token: photos can have imageChecksum set (from JSON import)
+        // but no actual image bytes stored, so the photosPendingDownload count may undercount
+        // how many photos need to be fetched from Google Photos.
         String accessToken = null;
-        if (photosPendingImport > 0) {
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.isAuthenticated()) {
-                    Long userId = Long.parseLong(authentication.getName());
-                    User user = userRepository.findById(userId).orElse(null);
-                    if (user != null) {
-                        accessToken = googlePhotosService.getValidAccessToken(user);
-                        logger.info("Got access token for downloading {} photos from Google Photos", photosPendingImport);
-                    }
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Long userId = Long.parseLong(authentication.getName());
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null) {
+                    accessToken = googlePhotosService.getValidAccessToken(user);
+                    logger.info("Got Google Photos access token for ZIP export");
                 }
-            } catch (Exception e) {
-                logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
             }
+        } catch (Exception e) {
+            logger.warn("Could not get Google Photos access token, photos without local data will be skipped: {}", e.getMessage());
         }
 
         // Track filename counts for handling multiple photos of same entity
@@ -1363,6 +1398,11 @@ public class PhotoExportService {
     /**
      * Generate a filename for a photo in the ZIP archive.
      * Format matches the import filename format for round-trip compatibility.
+     *
+     * Loan photo format: loan-{sanitizedTitle}-{sanitizedUsername}
+     * Both title and username are sanitized with {@link #sanitizeForLoanFilename} which removes
+     * ALL dashes (and other non-alphanumeric characters), so the single dash separator between
+     * them is unambiguous when parsing during import.
      */
     private String generateZipFilename(Photo photo) {
         if (photo.getBook() != null) {
@@ -1374,7 +1414,7 @@ public class PhotoExportService {
                     ? photo.getLoan().getBook().getTitle() : "unknown";
             String username = photo.getLoan().getUser() != null
                     ? photo.getLoan().getUser().getUsername() : "unknown";
-            return "loan-" + sanitizeName(bookTitle) + "-" + sanitizeName(username);
+            return "loan-" + sanitizeForLoanFilename(bookTitle) + "-" + sanitizeForLoanFilename(username);
         } else {
             return "photo-" + photo.getId();
         }
@@ -1393,5 +1433,23 @@ public class PhotoExportService {
                 .replaceAll("\\s+", " ")              // Normalize whitespace
                 .trim()
                 .replaceAll("^-+|-+$", "");           // Remove leading/trailing dashes
+    }
+
+    /**
+     * Sanitize a name for use in the loan photo filename segment.
+     * Unlike {@link #sanitizeName}, this removes ALL dashes and other non-alphanumeric characters
+     * (keeping only a-z, 0-9, and underscores for readability) so that the single dash used as
+     * a separator between the title and username parts of the filename remains unambiguous.
+     *
+     * Examples:
+     *   "The Call-to-Action"  → "thecalltoaction"
+     *   "St. Bernard's"       → "stbernards"
+     *   "john.doe"            → "johndoe"
+     */
+    private String sanitizeForLoanFilename(String name) {
+        if (name == null) return "unknown";
+        return name.toLowerCase()
+                .trim()
+                .replaceAll("[^a-z0-9]", "");  // Remove everything except lowercase letters and digits
     }
 }
