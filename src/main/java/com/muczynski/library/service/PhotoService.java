@@ -25,8 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
@@ -705,31 +708,45 @@ public class PhotoService {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public byte[] getImage(Long photoId) {
         try {
             Photo photo = photoRepository.findById(photoId).orElse(null);
             if (photo == null || photo.getImage() == null) {
                 return null;
             }
-            // Use resizeImageIfNeeded (applies EXIF correction + caps to MAX_LOAN_PHOTO_DIMENSION)
-            // in a single decode/encode pass. This prevents OOM on large pre-resize photos while
-            // also correcting any EXIF orientation that wasn't fixed at upload time.
-            byte[] processed = resizeImageIfNeeded(photo.getImage(), photo.getContentType(), MAX_LOAN_PHOTO_DIMENSION);
-            // If the image was resized/corrected, save it back so future requests don't re-process.
-            if (processed != photo.getImage()) {
-                int originalLen = photo.getImage().length;
-                photo.setImage(processed);
-                photo.setImageChecksum(computeChecksum(processed));
-                photoRepository.save(photo);
-                logger.info("Backfilled resize/orientation for photo {} ({} → {} bytes)",
-                        photoId, originalLen, processed.length);
-            }
-            return processed;
+            // Return raw stored bytes. EXIF correction and resizing are performed at upload time
+            // (see processLoanPhoto / correctImageOrientation / resizeImageIfNeeded). Attempting
+            // to re-encode here requires decoding the full image into a BufferedImage which can
+            // cause OOM for large pre-existing photos.
+            return photo.getImage();
         } catch (Exception e) {
             logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * Resize and correct EXIF orientation for a stored photo, then save the result.
+     * Call this once to backfill large photos that were uploaded before the resize-at-upload fix.
+     * Returns true if the photo was updated.
+     */
+    @Transactional
+    public boolean resizeStoredPhoto(Long photoId) {
+        Photo photo = photoRepository.findById(photoId).orElse(null);
+        if (photo == null || photo.getImage() == null) {
+            return false;
+        }
+        byte[] processed = resizeImageIfNeeded(photo.getImage(), photo.getContentType(), MAX_LOAN_PHOTO_DIMENSION);
+        if (processed == photo.getImage()) {
+            return false; // No change needed
+        }
+        int originalLen = photo.getImage().length;
+        photo.setImage(processed);
+        photo.setImageChecksum(computeChecksum(processed));
+        photoRepository.save(photo);
+        logger.info("Resized stored photo {} ({} → {} bytes)", photoId, originalLen, processed.length);
+        return true;
     }
 
     @Transactional(readOnly = true)
@@ -844,9 +861,57 @@ public class PhotoService {
     }
 
     /**
+     * Decode image bytes using power-of-2 subsampling to reduce peak heap usage for large images.
+     * Finds the largest subsampling factor (1, 2, 4, …) such that the decoded image's longest
+     * side is still ≥ {@code minResultDimension}, guaranteeing enough pixels to scale down to
+     * that target without upscaling artifacts.
+     *
+     * <p>For a 4032×3024 JPEG with minResultDimension=1920: subsample=2 → decodes to 2016×1512
+     * (~12 MB) instead of the full 4032×3024 (~49 MB).</p>
+     *
+     * <p>Falls back to plain {@link ImageIO#read} if no {@link ImageReader} is available.</p>
+     */
+    private BufferedImage decodeWithSubsampling(byte[] imageBytes, int minResultDimension) throws IOException {
+        ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(imageBytes));
+        if (iis == null) {
+            return ImageIO.read(new ByteArrayInputStream(imageBytes));
+        }
+        Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+        if (!readers.hasNext()) {
+            iis.close();
+            return ImageIO.read(new ByteArrayInputStream(imageBytes));
+        }
+        ImageReader reader = readers.next();
+        try {
+            reader.setInput(iis, true, true);
+            int fullWidth = reader.getWidth(0);
+            int fullHeight = reader.getHeight(0);
+            int maxFull = Math.max(fullWidth, fullHeight);
+
+            // Compute the largest power-of-2 subsample that keeps longest side ≥ minResultDimension
+            int subsample = 1;
+            while (maxFull / (subsample * 2) >= minResultDimension) {
+                subsample *= 2;
+            }
+
+            ImageReadParam param = reader.getDefaultReadParam();
+            if (subsample > 1) {
+                param.setSourceSubsampling(subsample, subsample, 0, 0);
+                logger.debug("Decoding {}x{} image at {}x subsampling to reduce memory pressure",
+                        fullWidth, fullHeight, subsample);
+            }
+            return reader.read(0, param);
+        } finally {
+            reader.dispose();
+            iis.close();
+        }
+    }
+
+    /**
      * Correct EXIF orientation AND resize the image so its longest dimension does not exceed
      * {@code maxDimension} pixels. Both operations are performed in a single decode/encode cycle
-     * to minimise memory pressure.
+     * to minimise memory pressure. Large images are decoded via power-of-2 subsampling so that
+     * the in-memory BufferedImage stays small even for high-resolution phone photos.
      *
      * <p>If the image is already within the size limit (and orientation is 1), the original bytes
      * are returned unchanged. Otherwise the result is re-encoded as JPEG at 0.85 quality.</p>
@@ -862,7 +927,10 @@ public class PhotoService {
         }
         try {
             int orientation = getExifOrientation(imageBytes);
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            // Use subsampled decode to avoid loading the full-resolution image into memory.
+            // Subsample factor is chosen so the decoded image stays ≥ maxDimension pixels
+            // on the longest side, giving enough pixels for the subsequent resize step.
+            BufferedImage image = decodeWithSubsampling(imageBytes, maxDimension);
             if (image == null) {
                 logger.debug("Could not decode image for resize; returning original bytes");
                 return imageBytes;
