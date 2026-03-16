@@ -1319,12 +1319,18 @@ public class PhotoExportService {
                     // Correct EXIF orientation for existing photos
                     imageBytes = photoService.correctImageOrientation(imageBytes, photo.getContentType());
 
-                    // Backfill checksum if missing
+                    // Backfill checksum if missing — save is best-effort and must NOT
+                    // prevent the photo from being written to the ZIP.
                     if (photo.getImageChecksum() == null) {
                         String checksum = computeChecksum(imageBytes);
                         photo.setImageChecksum(checksum);
-                        photoRepository.save(photo);
-                        logger.info("Backfilled checksum for photo {}", photoId);
+                        try {
+                            photoRepository.save(photo);
+                            logger.info("Backfilled checksum for photo {}", photoId);
+                        } catch (Exception saveEx) {
+                            logger.warn("Could not persist backfilled checksum for photo {} (photo will still be in ZIP): {}",
+                                    photoId, saveEx.getMessage());
+                        }
                     }
 
                     // Generate filename from the loaded photo
@@ -1372,6 +1378,38 @@ public class PhotoExportService {
             zos.finish();
             logger.info("Photo ZIP export completed: {} succeeded, {} failed", successCount, errorCount);
         }
+    }
+
+    /**
+     * Backfill imageChecksum for photos that have local image bytes but no checksum.
+     * These arise when photos were uploaded to Google Photos before the checksum field existed,
+     * or when image bytes were stored without computing a checksum.
+     *
+     * @return number of photos whose checksum was successfully backfilled
+     */
+    public int backfillMissingChecksums() {
+        List<Long> ids = photoRepository.findIdsWithLocalImageButNoChecksum();
+        if (ids.isEmpty()) {
+            logger.info("No photos need checksum backfill");
+            return 0;
+        }
+        logger.info("Backfilling checksums for {} photos", ids.size());
+        int count = 0;
+        for (Long photoId : ids) {
+            try {
+                Photo photo = photoRepository.findById(photoId).orElse(null);
+                if (photo == null || photo.getImage() == null) continue;
+                String checksum = computeChecksum(photo.getImage());
+                if (checksum != null) {
+                    photoRepository.updateImageChecksum(photoId, checksum);
+                    count++;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to backfill checksum for photo {}: {}", photoId, e.getMessage());
+            }
+        }
+        logger.info("Checksum backfill complete: {} of {} photos updated", count, ids.size());
+        return count;
     }
 
     /**

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.jpa.repository.Modifying;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -201,4 +203,13 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     // image IS NOT NULL means the bytes are physically present in the database.
     @Query("SELECT COUNT(p) FROM Photo p WHERE p.deletedAt IS NULL AND p.image IS NOT NULL")
     long countPhotosWithActualImageBytes();
+
+    // Find IDs of photos that have local image bytes but no checksum (need checksum backfill)
+    @Query(value = "SELECT id FROM photo WHERE deleted_at IS NULL AND image IS NOT NULL AND image_checksum IS NULL", nativeQuery = true)
+    List<Long> findIdsWithLocalImageButNoChecksum();
+
+    // Update just the checksum for a single photo (efficient — no blob round-trip)
+    @Modifying
+    @Query("UPDATE Photo p SET p.imageChecksum = :checksum WHERE p.id = :id")
+    void updateImageChecksum(@Param("id") Long id, @Param("checksum") String checksum);
 }
