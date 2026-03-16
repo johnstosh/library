@@ -111,6 +111,23 @@ public class PhotoController {
         }
     }
 
+    /**
+     * Resize and EXIF-correct a stored photo in-place (one-time backfill for large legacy photos).
+     * Safe to call multiple times — no-ops if the photo is already within the size limit.
+     */
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PostMapping("/{id}/resize")
+    public ResponseEntity<?> resizePhoto(@PathVariable Long id) {
+        try {
+            boolean updated = photoService.resizeStoredPhoto(id);
+            return ResponseEntity.ok(java.util.Map.of("updated", updated));
+        } catch (Exception e) {
+            logger.error("Failed to resize photo ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error", e.getMessage()));
+        }
+    }
+
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePhoto(@PathVariable Long id) {
