@@ -60,13 +60,11 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # Expose the port (Cloud Run uses PORT env variable, default 8080)
 EXPOSE ${PORT:-8080}
 
-# GraalVM-optimized JVM flags for reduced memory footprint
-# These optimize for startup time and memory at the cost of peak throughput
-ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAM=256m"
+# Let the JVM use up to 75% of the container's available RAM (Cloud Run default is 512Mi).
+# The old -XX:MaxRAM=256m was a placeholder for a true GraalVM native binary that was
+# never actually compiled; running a standard JVM JAR under a 256m cap causes OOM during
+# Hibernate startup and image processing.
+ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=75"
 
-# Run the JAR with GraalVM-optimized settings
+# Run the JAR
 CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/application.jar"]
-
-# When native compilation is working, replace the CMD with:
-# COPY --from=builder /build/build/native/nativeCompile/application /app/application
-# CMD ["/app/application"]
