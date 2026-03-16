@@ -1316,8 +1316,10 @@ public class PhotoExportService {
                         continue;
                     }
 
-                    // Correct EXIF orientation for existing photos
-                    imageBytes = photoService.correctImageOrientation(imageBytes, photo.getContentType());
+                    // NOTE: orientation correction intentionally skipped here.
+                    // Photos are corrected at upload time. Calling correctImageOrientation()
+                    // here decodes the full JPEG into a BufferedImage which can OOM on large
+                    // legacy photos and abort the entire ZIP stream (same reason getImage() skips it).
 
                     // Backfill checksum if missing — save is best-effort and must NOT
                     // prevent the photo from being written to the ZIP.
@@ -1368,10 +1370,10 @@ public class PhotoExportService {
                         entityManager.clear();
                     }
 
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.error("Failed to add photo {} to ZIP: {}", photoId, e.getMessage(), e);
                     errorCount++;
-                    // Continue with other photos
+                    // Continue with other photos (catch Throwable to handle OutOfMemoryError)
                 }
             }
 
