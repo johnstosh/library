@@ -265,6 +265,24 @@ public class PhotoExportController {
     }
 
     /**
+     * Backfill imageChecksum for all photos that have local image bytes but no checksum.
+     * These are photos that were stored before the checksum field was added,
+     * causing them to be skipped in ZIP export. Safe to call multiple times.
+     */
+    @PostMapping("/backfill-checksums")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<java.util.Map<String, Object>> backfillChecksums() {
+        try {
+            logger.info("Starting checksum backfill for photos with missing checksums");
+            int count = photoExportService.backfillMissingChecksums();
+            return ResponseEntity.ok(java.util.Map.of("updated", count));
+        } catch (Exception e) {
+            logger.error("Failed to backfill checksums", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Unlink a photo by removing its permanent ID.
      * Returns the updated PhotoExportInfoDto so the frontend can patch just that row in its cache.
      */
