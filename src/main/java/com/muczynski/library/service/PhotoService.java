@@ -705,15 +705,27 @@ public class PhotoService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] getImage(Long photoId) {
         try {
             Photo photo = photoRepository.findById(photoId).orElse(null);
             if (photo == null || photo.getImage() == null) {
                 return null;
             }
-            // Correct EXIF orientation for existing photos that may not have been corrected at upload time
-            return correctImageOrientation(photo.getImage(), photo.getContentType());
+            // Use resizeImageIfNeeded (applies EXIF correction + caps to MAX_LOAN_PHOTO_DIMENSION)
+            // in a single decode/encode pass. This prevents OOM on large pre-resize photos while
+            // also correcting any EXIF orientation that wasn't fixed at upload time.
+            byte[] processed = resizeImageIfNeeded(photo.getImage(), photo.getContentType(), MAX_LOAN_PHOTO_DIMENSION);
+            // If the image was resized/corrected, save it back so future requests don't re-process.
+            if (processed != photo.getImage()) {
+                int originalLen = photo.getImage().length;
+                photo.setImage(processed);
+                photo.setImageChecksum(computeChecksum(processed));
+                photoRepository.save(photo);
+                logger.info("Backfilled resize/orientation for photo {} ({} → {} bytes)",
+                        photoId, originalLen, processed.length);
+            }
+            return processed;
         } catch (Exception e) {
             logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
