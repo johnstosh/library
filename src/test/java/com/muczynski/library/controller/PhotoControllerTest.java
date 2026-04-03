@@ -3,8 +3,10 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoRepository;
@@ -24,6 +26,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -44,6 +47,9 @@ class PhotoControllerTest {
     private BookRepository bookRepository;
 
     @Autowired
+    private AuthorRepository authorRepository;
+
+    @Autowired
     private LoanRepository loanRepository;
 
     @AfterEach
@@ -51,6 +57,7 @@ class PhotoControllerTest {
         loanRepository.deleteAll();
         photoRepository.deleteAll();
         bookRepository.deleteAll();
+        authorRepository.deleteAll();
     }
 
     private byte[] createDummyImage(int width, int height) throws Exception {
@@ -387,5 +394,85 @@ class PhotoControllerTest {
                             return request;
                         }))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void movePhotoLeft_updatesBookLastModified() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo1 = new Photo();
+        photo1.setBook(book);
+        photo1.setImage(createDummyImage(100, 100));
+        photo1.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photo1.setPhotoOrder(0);
+        photoRepository.save(photo1);
+
+        Photo photo2 = new Photo();
+        photo2.setBook(book);
+        photo2.setImage(createDummyImage(100, 100));
+        photo2.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photo2.setPhotoOrder(1);
+        photoRepository.save(photo2);
+
+        LocalDateTime beforeMove = bookRepository.findById(book.getId()).orElseThrow().getLastModified();
+
+        // Small sleep to ensure timestamp changes
+        Thread.sleep(10);
+
+        mockMvc.perform(put("/api/books/" + book.getId() + "/photos/" + photo2.getId() + "/move-left"))
+                .andExpect(status().isOk());
+
+        LocalDateTime afterMove = bookRepository.findById(book.getId()).orElseThrow().getLastModified();
+
+        assertNotNull(afterMove, "lastModified should be set after photo reorder");
+        assertTrue(
+                afterMove.isAfter(beforeMove) || afterMove.isEqual(beforeMove),
+                "lastModified should be updated after photo reorder"
+        );
+        // Verify the order actually changed
+        Photo reloadedPhoto2 = photoRepository.findById(photo2.getId()).orElseThrow();
+        assertEquals(0, reloadedPhoto2.getPhotoOrder(), "photo2 should have moved to position 0");
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void movePhotoRight_updatesBookLastModified() throws Exception {
+        Book book = new Book();
+        bookRepository.save(book);
+
+        Photo photo1 = new Photo();
+        photo1.setBook(book);
+        photo1.setImage(createDummyImage(100, 100));
+        photo1.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photo1.setPhotoOrder(0);
+        photoRepository.save(photo1);
+
+        Photo photo2 = new Photo();
+        photo2.setBook(book);
+        photo2.setImage(createDummyImage(100, 100));
+        photo2.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        photo2.setPhotoOrder(1);
+        photoRepository.save(photo2);
+
+        LocalDateTime beforeMove = bookRepository.findById(book.getId()).orElseThrow().getLastModified();
+
+        // Small sleep to ensure timestamp changes
+        Thread.sleep(10);
+
+        mockMvc.perform(put("/api/books/" + book.getId() + "/photos/" + photo1.getId() + "/move-right"))
+                .andExpect(status().isOk());
+
+        LocalDateTime afterMove = bookRepository.findById(book.getId()).orElseThrow().getLastModified();
+
+        assertNotNull(afterMove, "lastModified should be set after photo reorder");
+        assertTrue(
+                afterMove.isAfter(beforeMove) || afterMove.isEqual(beforeMove),
+                "lastModified should be updated after photo reorder"
+        );
+        // Verify the order actually changed
+        Photo reloadedPhoto1 = photoRepository.findById(photo1.getId()).orElseThrow();
+        assertEquals(1, reloadedPhoto1.getPhotoOrder(), "photo1 should have moved to position 1");
     }
 }
