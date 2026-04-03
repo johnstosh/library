@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(
@@ -84,7 +85,7 @@ public class Book {
 
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (dateAddedToLibrary == null) {
             dateAddedToLibrary = now;
         }
@@ -93,6 +94,6 @@ public class Book {
 
     @PreUpdate
     protected void onUpdate() {
-        lastModified = LocalDateTime.now();
+        lastModified = LocalDateTime.now(ZoneOffset.UTC);
     }
 }

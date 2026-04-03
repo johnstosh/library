@@ -36,6 +36,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -103,7 +104,7 @@ public class BookService {
         book.setTitle(ensureUniqueTitle(book.getTitle(), null));
 
         // Set lastModified to current time
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
 
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
@@ -135,7 +136,7 @@ public class BookService {
             }
         }
         book.setLibrary(library);
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         return bookRepository.save(book);
     }
 
@@ -270,7 +271,7 @@ public class BookService {
             book.setTagsList(new ArrayList<>());
         }
         // Update lastModified to current time
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -336,8 +337,8 @@ public class BookService {
         clone.setPlotSummary(original.getPlotSummary());
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setDetailedDescription(original.getDetailedDescription());
-        clone.setDateAddedToLibrary(LocalDateTime.now());
-        clone.setLastModified(LocalDateTime.now());
+        clone.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
+        clone.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         clone.setStatus(original.getStatus());
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
@@ -487,7 +488,7 @@ public class BookService {
 
         dto.setStatus(BookStatus.ACTIVE);
         if (dto.getDateAddedToLibrary() == null) {
-            dto.setDateAddedToLibrary(LocalDateTime.now());
+            dto.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
@@ -737,7 +738,7 @@ public class BookService {
 
         dto.setStatus(BookStatus.ACTIVE);
         if (dto.getDateAddedToLibrary() == null) {
-            dto.setDateAddedToLibrary(LocalDateTime.now());
+            dto.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
