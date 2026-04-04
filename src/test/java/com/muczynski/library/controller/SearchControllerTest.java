@@ -23,9 +23,11 @@ import java.util.List;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,7 +65,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(anyString(), anyInt(), anyInt(), anyString())).thenReturn(searchResults);
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), any())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -96,7 +98,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(eq("Test Book"), eq(0), eq(10), eq("IN_LIBRARY"))).thenReturn(searchResults);
+        when(searchService.search(eq("Test Book"), eq(0), eq(10), eq("IN_LIBRARY"), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -124,7 +126,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(eq("book"), eq(2), eq(20), eq("IN_LIBRARY"))).thenReturn(searchResults);
+        when(searchService.search(eq("book"), eq(2), eq(20), eq("IN_LIBRARY"), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -142,14 +144,26 @@ class SearchControllerTest {
 
     @Test
     void testSearch_MissingQueryParameter() {
-        // Act & Assert - Missing required query parameter
+        // Missing query parameter defaults to empty string and returns all results (paginated)
+        PageInfoDto bookPage = new PageInfoDto(1, 10, 0, 10);
+        PageInfoDto authorPage = new PageInfoDto(1, 5, 0, 10);
+        SearchResponseDto searchResults = new SearchResponseDto(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                bookPage,
+                authorPage
+        );
+
+        when(searchService.search(eq(""), eq(0), eq(10), eq("IN_LIBRARY"), isNull())).thenReturn(searchResults);
+
         given()
             .param("page", 0)
             .param("size", 10)
         .when()
             .get("/api/search")
         .then()
-            .statusCode(400); // Bad Request for missing required parameter
+            .statusCode(200) // Missing query defaults to empty string, returns all results
+            .body("bookPage.totalElements", equalTo(10));
     }
 
     @Test
@@ -166,9 +180,17 @@ class SearchControllerTest {
 
     @Test
     void testSearch_EmptyQuery() {
-        // Test empty query string - should throw IllegalArgumentException
-        when(searchService.search(eq(""), eq(0), eq(10), eq("IN_LIBRARY")))
-                .thenThrow(new IllegalArgumentException("Query cannot be empty"));
+        // Empty query string returns all results (paginated) - blank search is valid
+        PageInfoDto bookPage = new PageInfoDto(1, 5, 0, 10);
+        PageInfoDto authorPage = new PageInfoDto(1, 3, 0, 10);
+        SearchResponseDto searchResults = new SearchResponseDto(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                bookPage,
+                authorPage
+        );
+
+        when(searchService.search(eq(""), eq(0), eq(10), eq("IN_LIBRARY"), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -178,13 +200,15 @@ class SearchControllerTest {
         .when()
             .get("/api/search")
         .then()
-            .statusCode(500); // Internal Server Error due to IllegalArgumentException
+            .statusCode(200) // Empty query is valid - returns all results
+            .body("bookPage.totalElements", equalTo(5))
+            .body("authorPage.totalElements", equalTo(3));
     }
 
     @Test
     void testSearch_ServiceThrowsException() {
         // Arrange - Service throws exception
-        when(searchService.search(anyString(), anyInt(), anyInt(), anyString()))
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), any()))
                 .thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
@@ -210,7 +234,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(eq("test"), eq(0), eq(10), eq("ONLINE"))).thenReturn(searchResults);
+        when(searchService.search(eq("test"), eq(0), eq(10), eq("ONLINE"), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -237,7 +261,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(eq("test"), eq(0), eq(10), eq("ALL"))).thenReturn(searchResults);
+        when(searchService.search(eq("test"), eq(0), eq(10), eq("ALL"), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -264,7 +288,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(eq("test"), eq(0), eq(10), eq("IN_LIBRARY"))).thenReturn(searchResults);
+        when(searchService.search(eq("test"), eq(0), eq(10), eq("IN_LIBRARY"), isNull())).thenReturn(searchResults);
 
         // Act & Assert - searchType not passed, should use default IN_LIBRARY
         given()

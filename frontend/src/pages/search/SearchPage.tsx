@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
 import { useSearch, type SearchType } from '@/api/search'
+import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { formatBookStatus } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -19,6 +20,7 @@ export function SearchPage() {
   // Local input state (for typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
   const [searchType, setSearchType] = useState<SearchType>(urlSearchType)
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const pageSize = 20
 
   // Sync input value and searchType when URL changes (e.g., browser back/forward)
@@ -30,29 +32,46 @@ export function SearchPage() {
     setSearchType(urlSearchType)
   }, [urlSearchType])
 
-  const { data, isLoading, error } = useSearch(urlQuery, urlPage, pageSize, urlSearchType)
+  const handleToggleLabel = (label: string) => {
+    setSelectedLabels((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
+    )
+  }
+
+  const handleClearLabels = () => {
+    setSelectedLabels([])
+  }
+
+  const hasSearched = searchParams.has('q')
+  const { data, isLoading, error } = useSearch(
+    urlQuery,
+    urlPage,
+    pageSize,
+    urlSearchType,
+    hasSearched,
+    selectedLabels,
+  )
   const isLibrarian = useIsLibrarian()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (inputValue.trim()) {
-      const params: Record<string, string> = { q: inputValue.trim() }
-      if (searchType !== 'IN_LIBRARY') {
-        params.type = searchType
-      }
-      setSearchParams(params)
+    const params: Record<string, string> = { q: inputValue.trim() }
+    if (searchType !== 'IN_LIBRARY') {
+      params.type = searchType
     }
+    setSearchParams(params)
   }
 
   const handleClear = () => {
     setInputValue('')
     setSearchType('IN_LIBRARY')
+    setSelectedLabels([])
     setSearchParams({})
   }
 
   const handleSearchTypeChange = (newType: SearchType) => {
     setSearchType(newType)
-    if (urlQuery) {
+    if (hasSearched) {
       const params: Record<string, string> = { q: urlQuery }
       if (newType !== 'IN_LIBRARY') {
         params.type = newType
@@ -73,7 +92,7 @@ export function SearchPage() {
   }
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
-  const noResults = urlQuery && data && data.books.length === 0 && data.authors.length === 0
+  const noResults = hasSearched && data && data.books.length === 0 && data.authors.length === 0
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -99,13 +118,13 @@ export function SearchPage() {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={!inputValue.trim() || isLoading}
+            disabled={isLoading}
             leftIcon={<PiMagnifyingGlass />}
             data-test="search-button"
           >
             Search
           </Button>
-          {urlQuery && (
+          {hasSearched && (
             <Button
               type="button"
               variant="ghost"
@@ -157,6 +176,13 @@ export function SearchPage() {
             <span className="text-gray-700">In-library materials</span>
           </label>
         </div>
+
+        {/* Label Filter Buttons */}
+        <BookLabelFilters
+          selectedLabels={selectedLabels}
+          onToggleLabel={handleToggleLabel}
+          onClearLabels={handleClearLabels}
+        />
       </form>
 
       {/* Loading State */}
@@ -178,7 +204,7 @@ export function SearchPage() {
       {noResults && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <p className="text-gray-600 text-lg">
-            No books or authors found for "{urlQuery}"
+            {urlQuery ? `No books or authors found for "${urlQuery}"` : 'No books or authors found'}
           </p>
         </div>
       )}
