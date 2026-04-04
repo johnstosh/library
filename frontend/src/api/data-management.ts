@@ -41,6 +41,12 @@ export interface DatabaseStatsDto {
   loanCount: number
 }
 
+// Label count from backend
+export interface LabelCountDto {
+  label: string
+  count: number
+}
+
 // Photo Export Types
 export interface PhotoExportStatsDto {
   total: number
@@ -150,6 +156,14 @@ export function useDatabaseStats() {
   return useQuery({
     queryKey: ['database-stats'],
     queryFn: () => api.get<DatabaseStatsDto>('/import/stats'),
+  })
+}
+
+// Get label counts (books per label)
+export function useLabelCounts() {
+  return useQuery({
+    queryKey: ['label-counts'],
+    queryFn: () => api.get<LabelCountDto[]>('/import/label-counts'),
   })
 }
 

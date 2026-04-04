@@ -4,6 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.DatabaseStatsDto;
+import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.ImportService;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/import")
@@ -56,5 +59,15 @@ public class ImportController {
     public ResponseEntity<DatabaseStatsDto> getDatabaseStats() {
         DatabaseStatsDto stats = importService.getDatabaseStats();
         return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Returns book counts per label, sorted by count descending then alphabetically.
+     */
+    @GetMapping("/label-counts")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<LabelCountDto>> getLabelCounts() {
+        List<LabelCountDto> labelCounts = importService.getLabelCounts();
+        return ResponseEntity.ok(labelCounts);
     }
 }

@@ -4,6 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.DatabaseStatsDto;
+import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.ImportService;
@@ -328,5 +329,81 @@ class ImportControllerTest {
             .get("/api/import/stats")
         .then()
             .statusCode(500);
+    }
+
+    // ==================== GET /api/import/label-counts Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetLabelCounts_Success() {
+        // Arrange
+        List<LabelCountDto> labelCounts = List.of(
+            new LabelCountDto("fiction", 10L),
+            new LabelCountDto("theology", 5L),
+            new LabelCountDto("history", 0L)
+        );
+        when(importService.getLabelCounts()).thenReturn(labelCounts);
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/label-counts")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("$", hasSize(3))
+            .body("[0].label", equalTo("fiction"))
+            .body("[0].count", equalTo(10))
+            .body("[1].label", equalTo("theology"))
+            .body("[1].count", equalTo(5))
+            .body("[2].label", equalTo("history"))
+            .body("[2].count", equalTo(0));
+    }
+
+    @Test
+    void testGetLabelCounts_Unauthorized() {
+        // Act & Assert - No authentication
+        given()
+        .when()
+            .get("/api/import/label-counts")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetLabelCounts_EmptyResult() {
+        // Arrange
+        when(importService.getLabelCounts()).thenReturn(List.of());
+
+        // Act & Assert
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/label-counts")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("$", hasSize(0));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetLabelCounts_HasLabelAndCountFields() {
+        // Arrange - verify the endpoint returns label+count fields
+        when(importService.getLabelCounts()).thenReturn(
+            List.of(new LabelCountDto("fiction", 42L))
+        );
+
+        // Act & Assert - verify JSON structure has label and count fields
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/label-counts")
+        .then()
+            .statusCode(200)
+            .body("[0].label", notNullValue())
+            .body("[0].count", notNullValue());
     }
 }
