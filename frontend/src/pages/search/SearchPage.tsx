@@ -48,7 +48,7 @@ export function SearchPage() {
     urlPage,
     pageSize,
     urlSearchType,
-    hasSearched,
+    hasSearched || selectedLabels.length > 0,
     selectedLabels,
   )
   const isLibrarian = useIsLibrarian()

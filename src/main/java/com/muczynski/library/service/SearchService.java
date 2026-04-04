@@ -50,22 +50,38 @@ public class SearchService {
         Page<Author> authorPage;
 
         boolean hasLabels = labels != null && !labels.isEmpty();
+        long labelCount = hasLabels ? labels.size() : 0;
 
-        // Empty query returns all books and authors (paginated)
-        if (query == null || query.trim().isEmpty()) {
+        // Empty query with labels: filter by labels only
+        if (hasLabels && (query == null || query.trim().isEmpty())) {
+            switch (searchType) {
+                case "ONLINE":
+                    bookPage = bookRepository.findByElectronicResourceTrueAndAllLabels(labels, labelCount, pageable);
+                    break;
+                case "IN_LIBRARY":
+                    bookPage = bookRepository.findByLocNumberIsNotNullAndAllLabels(labels, labelCount, pageable);
+                    break;
+                case "ALL":
+                default:
+                    bookPage = bookRepository.findByAllLabels(labels, labelCount, pageable);
+                    break;
+            }
+            authorPage = authorRepository.findAll(pageable);
+        } else if (query == null || query.trim().isEmpty()) {
+            // Empty query, no labels: return all
             bookPage = bookRepository.findAll(pageable);
             authorPage = authorRepository.findAll(pageable);
         } else if (hasLabels) {
             switch (searchType) {
                 case "ONLINE":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(query, labels, pageable);
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(query, labels, labelCount, pageable);
                     break;
                 case "IN_LIBRARY":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(query, labels, pageable);
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(query, labels, labelCount, pageable);
                     break;
                 case "ALL":
                 default:
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndTagsIn(query, labels, pageable);
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndAllLabels(query, labels, labelCount, pageable);
                     break;
             }
             authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);

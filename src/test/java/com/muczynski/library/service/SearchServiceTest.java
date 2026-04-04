@@ -365,7 +365,7 @@ class SearchServiceTest {
         bookDto.setId(1L);
         bookDto.setTitle("Fiction Book");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(eq(query), eq(labels), eq(2L), any(Pageable.class)))
                 .thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(book)).thenReturn(bookDto);
@@ -399,7 +399,7 @@ class SearchServiceTest {
         bookDto.setId(2L);
         bookDto.setTitle("Online Fiction");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(eq(query), eq(labels), eq(1L), any(Pageable.class)))
                 .thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(book)).thenReturn(bookDto);
@@ -432,7 +432,7 @@ class SearchServiceTest {
         bookDto.setId(3L);
         bookDto.setTitle("Theology Book");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+        when(bookRepository.findByTitleContainingIgnoreCaseAndAllLabels(eq(query), eq(labels), eq(1L), any(Pageable.class)))
                 .thenReturn(bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
         when(bookMapper.toDto(book)).thenReturn(bookDto);
