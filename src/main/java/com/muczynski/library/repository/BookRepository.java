@@ -167,11 +167,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<BookSummaryProjection> findSummariesFromMostRecentDay();
 
     /**
-     * Get summaries (id + lastModified) for books that have ANY of the given labels.
-     * Books are matched if their tagsList contains at least one of the provided labels.
+     * Get summaries (id + lastModified) for books that have ALL of the given labels.
+     * Books are matched only if their tagsList contains every label in the provided list.
      */
-    @Query("SELECT DISTINCT b.id as id, b.lastModified as lastModified FROM Book b JOIN b.tagsList t WHERE t IN :labels")
-    List<BookSummaryProjection> findSummariesByAnyLabel(List<String> labels);
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    List<BookSummaryProjection> findSummariesByAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount);
 
     /**
      * Find books that have ALL of the given labels, filtered by title query.

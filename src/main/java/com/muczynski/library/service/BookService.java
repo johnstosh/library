@@ -1270,11 +1270,11 @@ public class BookService {
      * @param labels List of labels to filter by (book matches if it has at least one)
      * @return List of BookSummaryDto for matching books
      */
-    public List<BookSummaryDto> getSummariesByAnyLabel(List<String> labels) {
+    public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels) {
         if (labels == null || labels.isEmpty()) {
             return getAllBookSummaries();
         }
-        return bookRepository.findSummariesByAnyLabel(labels).stream()
+        return bookRepository.findSummariesByAllLabels(labels, labels.size()).stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
