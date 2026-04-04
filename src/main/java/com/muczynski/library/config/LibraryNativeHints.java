@@ -121,6 +121,53 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.resources().registerPattern("static/images/library-cards/*.png");
         hints.resources().registerPattern("static/images/*.png");
 
+        // iText 8 reflection hints for renderers, document/layout, and kernel classes
+        for (Class<?> cls : new Class<?>[] {
+                com.itextpdf.layout.renderer.DocumentRenderer.class,
+                com.itextpdf.layout.renderer.TableRenderer.class,
+                com.itextpdf.layout.renderer.CellRenderer.class,
+                com.itextpdf.layout.renderer.ParagraphRenderer.class,
+                com.itextpdf.layout.renderer.ImageRenderer.class,
+                com.itextpdf.layout.Document.class,
+                com.itextpdf.layout.element.Paragraph.class,
+                com.itextpdf.layout.element.Table.class,
+                com.itextpdf.layout.element.Cell.class,
+                com.itextpdf.layout.element.Image.class,
+                com.itextpdf.layout.borders.SolidBorder.class,
+                com.itextpdf.kernel.pdf.PdfWriter.class,
+                com.itextpdf.kernel.pdf.PdfDocument.class,
+                com.itextpdf.kernel.geom.PageSize.class,
+                com.itextpdf.kernel.font.PdfFontFactory.class,
+                com.itextpdf.kernel.colors.ColorConstants.class,
+                com.itextpdf.io.image.ImageDataFactory.class,
+                com.itextpdf.io.font.constants.StandardFonts.class,
+                com.itextpdf.commons.actions.EventManager.class,
+                com.itextpdf.commons.actions.contexts.UnknownContext.class }) {
+            hints.reflection().registerType(cls,
+                MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+                MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                MemberCategory.INVOKE_PUBLIC_METHODS,
+                MemberCategory.INVOKE_DECLARED_METHODS,
+                MemberCategory.DECLARED_FIELDS);
+        }
+
+        // Marc4J reflection hints for MARC record parsing
+        for (Class<?> cls : new Class<?>[] {
+                org.marc4j.marc.impl.RecordImpl.class,
+                org.marc4j.marc.impl.DataFieldImpl.class,
+                org.marc4j.marc.impl.SubfieldImpl.class,
+                org.marc4j.marc.impl.ControlFieldImpl.class,
+                org.marc4j.marc.impl.LeaderImpl.class,
+                org.marc4j.marc.MarcFactory.class,
+                org.marc4j.MarcXmlReader.class }) {
+            hints.reflection().registerType(cls,
+                MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+                MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                MemberCategory.INVOKE_PUBLIC_METHODS,
+                MemberCategory.INVOKE_DECLARED_METHODS,
+                MemberCategory.DECLARED_FIELDS);
+        }
+
         // iText 8 bundles fonts and ICC color profiles as classpath resources
         hints.resources().registerPattern("com/itextpdf/io/font/*.afm");
         hints.resources().registerPattern("com/itextpdf/io/font/*.pfb");
