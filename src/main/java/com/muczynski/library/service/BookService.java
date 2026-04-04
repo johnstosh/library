@@ -1348,14 +1348,11 @@ public class BookService {
             // Parse the comma-separated response into a list
             List<String> genres = parseGenreResponse(response);
 
-            // Merge suggested genres into book's existing tags and save
+            // Replace book's existing tags with the suggested genres and save
             if (!genres.isEmpty()) {
-                List<String> existingTags = book.getTagsList() != null ? book.getTagsList() : new ArrayList<>();
-                java.util.Set<String> mergedTags = new java.util.LinkedHashSet<>(existingTags);
-                mergedTags.addAll(genres);
-                book.setTagsList(new ArrayList<>(mergedTags));
+                book.setTagsList(new ArrayList<>(genres));
                 bookRepository.save(book);
-                logger.info("Saved {} genre tags to book '{}' (ID: {})", genres.size(), book.getTitle(), bookId);
+                logger.info("Replaced genre tags on book '{}' (ID: {}) with {} tags", book.getTitle(), bookId, genres.size());
             }
 
             // Map the saved book to a DTO so the frontend can update its cache immediately,
