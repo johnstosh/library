@@ -1358,11 +1358,16 @@ public class BookService {
                 logger.info("Saved {} genre tags to book '{}' (ID: {})", genres.size(), book.getTitle(), bookId);
             }
 
+            // Map the saved book to a DTO so the frontend can update its cache immediately,
+            // eliminating the need for a follow-up by-ids fetch.
+            BookDto updatedBookDto = bookMapper.toDto(book);
+
             return GenreLookupResultDto.builder()
                     .bookId(bookId)
                     .title(book.getTitle())
                     .success(true)
                     .suggestedGenres(genres)
+                    .updatedBook(updatedBookDto)
                     .build();
 
         } catch (Exception e) {

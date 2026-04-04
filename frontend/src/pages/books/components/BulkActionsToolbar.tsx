@@ -1,5 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/config/queryClient'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
@@ -44,6 +46,8 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
   const [genreProgress, setGenreProgress] = useState(0)
   const [isGenreLookupRunning, setIsGenreLookupRunning] = useState(false)
+
+  const queryClient = useQueryClient()
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooks()
@@ -154,6 +158,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         }
         setGenreProgress(i + 1)
       }
+      // Invalidate once at the end instead of after each book to reduce network calls.
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
     } finally {
       setIsGenreLookupRunning(false)
     }

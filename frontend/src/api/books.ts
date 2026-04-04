@@ -307,14 +307,18 @@ export function useBulkBookFromImage() {
   })
 }
 
-// Hook to lookup genres for a single book using Grok AI
+// Hook to lookup genres for a single book using Grok AI.
+// On success, seeds the individual book cache with the returned BookDto so no follow-up
+// by-ids fetch is needed. Callers are responsible for invalidating the summaries list once
+// all lookups are complete (see BulkActionsToolbar and BookFormPage).
 export function useLookupGenres() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    onSuccess: (data, id) => {
+      if (data.updatedBook) {
+        queryClient.setQueryData(queryKeys.books.detail(id), data.updatedBook)
+      }
     },
   })
 }

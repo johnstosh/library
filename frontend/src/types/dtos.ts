@@ -185,6 +185,8 @@ export interface GenreLookupResultDto {
   success: boolean
   suggestedGenres?: string[]
   errorMessage?: string
+  /** Populated on success so the frontend can seed the book cache without a follow-up by-ids fetch. */
+  updatedBook?: BookDto
 }
 
 // Chunked Upload DTOs
