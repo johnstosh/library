@@ -323,7 +323,7 @@ public class AskGrok {
                 "mystery, adventure, romance, humor. " +
                 "Note: science-fiction should be categorized under 'fantasy'. " +
                 "Return ONLY a comma-separated list of applicable tags, nothing else. " +
-                "For example: fiction, fantasy, childrens\nIf hagiography is used, don't use saint nor biography nor history. Classic should only be used for classic books as in classic literature.\n" +
+                "For example: fiction, fantasy, childrens\nIf hagiography is used, don't use saint nor biography nor history. Classic should only be used for classic books as in classic literature. Use discernment for the discernment of spirits in the sense of Ignatius.\n" +
                 "Book Information:\n%s\n\n" +
                 "%s",
                 bookJson,
