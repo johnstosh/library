@@ -9,8 +9,8 @@ BASE=http://localhost:8080
 PASS=0
 FAIL=0
 
-ok()   { echo "  PASS: $1"; ((PASS++)); }
-fail() { echo "  FAIL: $1"; ((FAIL++)); }
+ok()   { echo "  PASS: $1"; (( ++PASS )); }
+fail() { echo "  FAIL: $1"; (( ++FAIL )); }
 
 # Helper: sha256 of a password (matches frontend hashing)
 sha256() { echo -n "$1" | sha256sum | awk '{print $1}'; }
@@ -61,15 +61,15 @@ AUTHORS_RESP=$(curl -s -o /dev/null -w "%{http_code}" -c "$COOKIE_JAR" -b "$COOK
 echo ""
 echo "--- 6. Library card PDF (iText 8) ---"
 PDF_RESP=$(curl -s -o /dev/null -w "%{http_code}" -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
-  "$BASE/api/library-cards/pdf")
-[ "$PDF_RESP" = "200" ] && ok "GET /api/library-cards/pdf → $PDF_RESP" || fail "GET /api/library-cards/pdf → $PDF_RESP (expected 200)"
+  "$BASE/api/library-card/print")
+[ "$PDF_RESP" = "200" ] && ok "GET /api/library-card/print → $PDF_RESP" || fail "GET /api/library-card/print → $PDF_RESP (expected 200)"
 
 # 7. Branches (libraries) list
 echo ""
 echo "--- 7. Branches list ---"
 LIBS_RESP=$(curl -s -o /dev/null -w "%{http_code}" -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
-  "$BASE/api/libraries")
-[ "$LIBS_RESP" = "200" ] && ok "GET /api/libraries → $LIBS_RESP" || fail "GET /api/libraries → $LIBS_RESP (expected 200)"
+  "$BASE/api/branches")
+[ "$LIBS_RESP" = "200" ] && ok "GET /api/branches → $LIBS_RESP" || fail "GET /api/branches → $LIBS_RESP (expected 200)"
 
 # 8. Users list (librarian only)
 echo ""

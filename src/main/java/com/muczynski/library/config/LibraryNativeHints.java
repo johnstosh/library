@@ -62,6 +62,10 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
             org.springframework.security.oauth2.core.oidc.OidcUserInfo.class);
         hints.serialization().registerType(
             org.springframework.security.oauth2.core.AbstractOAuth2Token.class);
+        // Java serialization support for lambda expressions captured in the session object graph.
+        // Spring Security stores lambdas (e.g., authority predicates) inside serializable objects;
+        // without this, native image throws SerializationConstructorAccessor not found at login.
+        hints.serialization().registerType(java.lang.invoke.SerializedLambda.class);
         // Java collection types used by Spring Security for the authorities list
         hints.serialization().registerType(java.util.ArrayList.class);
         hints.serialization().registerType(java.util.LinkedList.class);
