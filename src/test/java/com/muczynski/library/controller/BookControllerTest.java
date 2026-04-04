@@ -558,7 +558,7 @@ class BookControllerTest {
         BookSummaryDto summary = new BookSummaryDto();
         summary.setId(1L);
 
-        when(bookService.getSummariesByAnyLabel(Arrays.asList("fiction", "fantasy")))
+        when(bookService.getSummariesByAllLabels(Arrays.asList("fiction", "fantasy")))
                 .thenReturn(Collections.singletonList(summary));
 
         mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction,fantasy"))
@@ -575,7 +575,7 @@ class BookControllerTest {
         BookSummaryDto summary2 = new BookSummaryDto();
         summary2.setId(2L);
 
-        when(bookService.getSummariesByAnyLabel(List.of()))
+        when(bookService.getSummariesByAllLabels(List.of()))
                 .thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/by-labels"))
@@ -586,7 +586,7 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksByLabels_serviceThrowsException_returns500() throws Exception {
-        when(bookService.getSummariesByAnyLabel(any()))
+        when(bookService.getSummariesByAllLabels(any()))
                 .thenThrow(new RuntimeException("DB error"));
 
         mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction"))

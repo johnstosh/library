@@ -167,30 +167,48 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<BookSummaryProjection> findSummariesFromMostRecentDay();
 
     /**
-     * Get summaries (id + lastModified) for books that have ANY of the given labels.
-     * Books are matched if their tagsList contains at least one of the provided labels.
+     * Get summaries (id + lastModified) for books that have ALL of the given labels.
+     * Books are matched only if their tagsList contains every label in the provided list.
      */
-    @Query("SELECT DISTINCT b.id as id, b.lastModified as lastModified FROM Book b JOIN b.tagsList t WHERE t IN :labels")
-    List<BookSummaryProjection> findSummariesByAnyLabel(List<String> labels);
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    List<BookSummaryProjection> findSummariesByAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount);
 
     /**
-     * Find books that have ANY of the given labels, filtered by title query.
-     * Returns distinct books whose tagsList overlaps with the provided labels list.
+     * Find books that have ALL of the given labels, filtered by title query.
+     * Returns books whose tagsList contains every label in the provided list.
      */
-    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<Book> findByTitleContainingIgnoreCaseAndTagsIn(String query, List<String> labels, Pageable pageable);
+    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByTitleContainingIgnoreCaseAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
-     * Find books with locNumber, matching title query and ANY of the given labels.
+     * Find books with locNumber, matching title query and ALL of the given labels.
      */
-    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.locNumber IS NOT NULL AND b.locNumber <> ''")
-    Page<Book> findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(String query, List<String> labels, Pageable pageable);
+    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.locNumber IS NOT NULL AND b.locNumber <> '' AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
-     * Find books with electronicResource=true, matching title query and ANY of the given labels.
+     * Find books with electronicResource=true, matching title query and ALL of the given labels.
      */
-    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.electronicResource = true")
-    Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(String query, List<String> labels, Pageable pageable);
+    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.electronicResource = true AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
+
+    /**
+     * Find books that have ALL of the given labels (no title filter).
+     */
+    @Query("SELECT b FROM Book b WHERE (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
+
+    /**
+     * Find books with locNumber and ALL of the given labels (no title filter).
+     */
+    @Query("SELECT b FROM Book b WHERE b.locNumber IS NOT NULL AND b.locNumber <> '' AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByLocNumberIsNotNullAndAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
+
+    /**
+     * Find books with electronicResource=true and ALL of the given labels (no title filter).
+     */
+    @Query("SELECT b FROM Book b WHERE b.electronicResource = true AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    Page<Book> findByElectronicResourceTrueAndAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
      * Count books that have the specified tag in their tagsList.
