@@ -7,9 +7,10 @@ interface GenreLookupResultsModalProps {
   isOpen: boolean
   onClose: () => void
   results: GenreLookupResultDto[]
+  isRunning?: boolean
 }
 
-export function GenreLookupResultsModal({ isOpen, onClose, results }: GenreLookupResultsModalProps) {
+export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }: GenreLookupResultsModalProps) {
   const successCount = results.filter((r) => r.success).length
   const failedCount = results.filter((r) => !r.success).length
 
@@ -28,6 +29,10 @@ export function GenreLookupResultsModal({ isOpen, onClose, results }: GenreLooku
       }
     >
       <div className="space-y-4">
+        {results.length === 0 && isRunning ? (
+          <p className="text-blue-800 font-medium" data-test="genre-lookup-standby">Please stand by...</p>
+        ) : (
+          <>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-blue-800 font-medium">
             {successCount} {successCount === 1 ? 'book' : 'books'} processed successfully
@@ -74,7 +79,8 @@ export function GenreLookupResultsModal({ isOpen, onClose, results }: GenreLooku
             </div>
           ))}
         </div>
-
+          </>
+        )}
       </div>
     </Modal>
   )

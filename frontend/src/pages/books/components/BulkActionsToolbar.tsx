@@ -310,6 +310,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showGenreResults}
         onClose={() => setShowGenreResults(false)}
         results={genreResults}
+        isRunning={isGenreLookupRunning}
       />
 
       <Modal
