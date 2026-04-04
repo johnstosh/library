@@ -34,3 +34,4 @@ book-lookup-reference-backup/
 *.zip
 *.json
 
+.claude
