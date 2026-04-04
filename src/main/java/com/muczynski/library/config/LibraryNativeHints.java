@@ -4,6 +4,9 @@
 package com.muczynski.library.config;
 
 import com.muczynski.library.domain.*;
+import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.PhotoExportFlatProjection;
+import com.muczynski.library.repository.PhotoMetadataProjection;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -201,5 +204,21 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(
             com.drew.metadata.exif.ExifIFD0Directory.class,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS);
+
+        // Spring Data JPA interface projections — register for reflection and JDK proxy
+        // Without these, native image emits "Couldn't read class metadata" warnings and
+        // projections may fail at runtime when Spring Data tries to create proxy instances.
+        for (Class<?> iface : new Class<?>[] {
+                BookRepository.SavedBookProjection.class,
+                BookRepository.BookSummaryProjection.class,
+                PhotoMetadataProjection.class,
+                PhotoMetadataProjection.BookProjection.class,
+                PhotoMetadataProjection.AuthorProjection.class,
+                PhotoExportFlatProjection.class }) {
+            hints.reflection().registerType(iface,
+                MemberCategory.INVOKE_PUBLIC_METHODS,
+                MemberCategory.DECLARED_FIELDS);
+            hints.proxies().registerJdkProxy(iface);
+        }
     }
 }
