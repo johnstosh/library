@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -164,4 +165,36 @@ public interface BookRepository extends JpaRepository<Book, Long> {
            OR b.title ~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}'
         """, nativeQuery = true)
     List<BookSummaryProjection> findSummariesFromMostRecentDay();
+
+    /**
+     * Get summaries (id + lastModified) for books that have ANY of the given labels.
+     * Books are matched if their tagsList contains at least one of the provided labels.
+     */
+    @Query("SELECT DISTINCT b.id as id, b.lastModified as lastModified FROM Book b JOIN b.tagsList t WHERE t IN :labels")
+    List<BookSummaryProjection> findSummariesByAnyLabel(List<String> labels);
+
+    /**
+     * Find books that have ANY of the given labels, filtered by title query.
+     * Returns distinct books whose tagsList overlaps with the provided labels list.
+     */
+    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<Book> findByTitleContainingIgnoreCaseAndTagsIn(String query, List<String> labels, Pageable pageable);
+
+    /**
+     * Find books with locNumber, matching title query and ANY of the given labels.
+     */
+    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.locNumber IS NOT NULL AND b.locNumber <> ''")
+    Page<Book> findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(String query, List<String> labels, Pageable pageable);
+
+    /**
+     * Find books with electronicResource=true, matching title query and ANY of the given labels.
+     */
+    @Query("SELECT DISTINCT b FROM Book b JOIN b.tagsList t WHERE t IN :labels AND LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.electronicResource = true")
+    Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(String query, List<String> labels, Pageable pageable);
+
+    /**
+     * Count books that have the specified tag in their tagsList.
+     */
+    @Query("SELECT COUNT(DISTINCT b) FROM Book b JOIN b.tagsList t WHERE t = :tag")
+    long countByTag(@Param("tag") String tag);
 }

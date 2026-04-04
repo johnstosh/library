@@ -6,8 +6,12 @@ import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 
 // Hook to get all books with optimized lastModified caching
-export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia') {
+export function useBooks(
+  filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia',
+  selectedLabels?: string[],
+) {
   const queryClient = useQueryClient()
+  const hasLabels = selectedLabels != null && selectedLabels.length > 0
 
   // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
   // For 'all' filter, we also use the summaries endpoint to enable caching
@@ -22,12 +26,19 @@ export function useBooks(filter?: 'all' | 'most-recent' | 'without-loc' | '3-let
     }
   }
 
+  // When labels are active, fetch from /books/by-labels endpoint
+  const labelEndpoint = hasLabels
+    ? `/books/by-labels?labels=${encodeURIComponent((selectedLabels ?? []).join(','))}`
+    : null
+
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
   // For all filters including 'all', we use the summaries endpoint to enable caching
   const filterEndpoint = getFilterEndpoint(filter)
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
-    queryKey: filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
-    queryFn: () => api.get<BookSummaryDto[]>(filterEndpoint),
+    queryKey: hasLabels
+      ? queryKeys.books.labelSummaries(selectedLabels ?? [])
+      : filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
+    queryFn: () => api.get<BookSummaryDto[]>(hasLabels ? labelEndpoint! : filterEndpoint),
     staleTime: 30 * 1000, // 30 seconds: prevents duplicate fetches on rapid mounts/re-renders while keeping data reasonably fresh
     refetchOnMount: true, // Refetch on mount only if data is stale (older than staleTime)
     placeholderData: keepPreviousData, // Prevent summaries from becoming undefined during refetches
@@ -296,14 +307,18 @@ export function useBulkBookFromImage() {
   })
 }
 
-// Hook to lookup genres for a single book using Grok AI
+// Hook to lookup genres for a single book using Grok AI.
+// On success, seeds the individual book cache with the returned BookDto so no follow-up
+// by-ids fetch is needed. Callers are responsible for invalidating the summaries list once
+// all lookups are complete (see BulkActionsToolbar and BookFormPage).
 export function useLookupGenres() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    onSuccess: (data, id) => {
+      if (data.updatedBook) {
+        queryClient.setQueryData(queryKeys.books.detail(id), data.updatedBook)
+      }
     },
   })
 }

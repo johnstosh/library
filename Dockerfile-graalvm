@@ -1,19 +1,5 @@
 # (c) Copyright 2025 by Muczynski
 # GraalVM Native Image Dockerfile for Spring Boot application
-#
-# NOTE: GraalVM native compilation requires significant additional configuration
-# for Spring Boot applications using reflection-heavy libraries like:
-# - Hibernate/JPA
-# - Jackson (JSON)
-# - iText (PDF)
-# - Marc4J
-#
-# See: https://docs.spring.io/spring-boot/docs/current/reference/html/native-image.html
-#
-# Before using this Dockerfile, ensure:
-# 1. Add 'org.graalvm.buildtools.native' plugin to build.gradle
-# 2. Generate native image configuration with tracing agent
-# 3. Add reflect-config.json, resource-config.json, etc.
 
 # --- Stage 1: Build native image ---
 FROM ghcr.io/graalvm/native-image-community:17 AS builder
@@ -38,33 +24,26 @@ COPY src src
 COPY frontend/dist src/main/resources/static
 
 # Build native image
-# Note: This requires the native-image Gradle plugin and proper configuration
-# RUN ./gradlew nativeCompile --no-daemon
-# For now, build the JAR and create a fallback to JIT compilation
-RUN ./gradlew clean build -x test --no-daemon
+RUN ./gradlew clean nativeCompile --no-daemon
 
 # --- Stage 2: Runtime image ---
-# Using a minimal container with just the native executable
-# For native images, use distroless or alpine
-FROM eclipse-temurin:17-jre-alpine
+# GraalVM CE produces glibc-linked binaries; Alpine (musl) is incompatible.
+FROM debian:12-slim
 
 WORKDIR /app
 
-# Copy the JAR (fallback until native compilation is fully configured)
-COPY --from=builder /build/build/libs/*.jar /app/application.jar
+# Install ca-certificates for HTTPS (Cloud SQL, Google APIs, OAuth2)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists/*
+
+# Copy the native binary
+COPY --from=builder /build/build/native/nativeCompile/application /app/application
 
 # Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
 
 # Expose the port (Cloud Run uses PORT env variable, default 8080)
 EXPOSE ${PORT:-8080}
 
-# Let the JVM use up to 75% of the container's available RAM (Cloud Run default is 512Mi).
-# The old -XX:MaxRAM=256m was a placeholder for a true GraalVM native binary that was
-# never actually compiled; running a standard JVM JAR under a 256m cap causes OOM during
-# Hibernate startup and image processing.
-ENV JAVA_OPTS="-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=75"
-
-# Run the JAR
-CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/application.jar"]
+# Native binary is self-contained — no JVM needed
+CMD ["/app/application"]

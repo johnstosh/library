@@ -549,4 +549,47 @@ class BookControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string("xAI API key not configured for user ID: 1"));
     }
+
+    // ==================== GET /api/books/by-labels Tests ====================
+
+    @Test
+    @WithMockUser
+    void getBooksByLabels_returnsMatchingSummaries() throws Exception {
+        BookSummaryDto summary = new BookSummaryDto();
+        summary.setId(1L);
+
+        when(bookService.getSummariesByAnyLabel(Arrays.asList("fiction", "fantasy")))
+                .thenReturn(Collections.singletonList(summary));
+
+        mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction,fantasy"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(1L));
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksByLabels_withNoLabels_returnsAllSummaries() throws Exception {
+        BookSummaryDto summary1 = new BookSummaryDto();
+        summary1.setId(1L);
+        BookSummaryDto summary2 = new BookSummaryDto();
+        summary2.setId(2L);
+
+        when(bookService.getSummariesByAnyLabel(List.of()))
+                .thenReturn(Arrays.asList(summary1, summary2));
+
+        mockMvc.perform(get("/api/books/by-labels"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    @WithMockUser
+    void getBooksByLabels_serviceThrowsException_returns500() throws Exception {
+        when(bookService.getSummariesByAnyLabel(any()))
+                .thenThrow(new RuntimeException("DB error"));
+
+        mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction"))
+                .andExpect(status().isInternalServerError());
+    }
 }

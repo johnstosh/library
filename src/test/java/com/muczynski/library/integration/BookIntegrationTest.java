@@ -13,10 +13,17 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +34,9 @@ class BookIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     @WithMockUser
@@ -74,5 +84,39 @@ class BookIntegrationTest {
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    /**
+     * Verifies that cloning a book produces UTC-based timestamps (no local-time offset).
+     * The cloned book's dateAddedToLibrary and lastModified must be within 30 seconds
+     * of UTC now, confirming the fix for the 4-5 hour timezone drift bug.
+     */
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    @Sql(scripts = "/data-integration.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/cleanup-integration-clone.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void cloneBook_timestampsAreUtc() throws Exception {
+        LocalDateTime beforeClone = LocalDateTime.now(ZoneOffset.UTC).minusSeconds(5);
+
+        MvcResult result = mockMvc.perform(post("/api/books/999/clone"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        LocalDateTime afterClone = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(5);
+
+        BookDto clonedBook = objectMapper.readValue(
+                result.getResponse().getContentAsString(), BookDto.class);
+
+        assertThat(clonedBook.getDateAddedToLibrary())
+                .as("dateAddedToLibrary should be UTC-based (within 30s of now)")
+                .isNotNull()
+                .isAfterOrEqualTo(beforeClone)
+                .isBeforeOrEqualTo(afterClone);
+
+        assertThat(clonedBook.getLastModified())
+                .as("lastModified should be UTC-based (within 30s of now)")
+                .isNotNull()
+                .isAfterOrEqualTo(beforeClone)
+                .isBeforeOrEqualTo(afterClone);
     }
 }

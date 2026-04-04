@@ -8,6 +8,7 @@ import {
   useImportJsonData,
   useDatabaseStats,
   usePhotoExportStats,
+  useLabelCounts,
   exportPhotos,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
@@ -19,6 +20,7 @@ import {
   PiFileArrowDown,
   PiFileArrowUp,
   PiImage,
+  PiTag,
 } from 'react-icons/pi'
 
 export function DataManagementPage() {
@@ -35,6 +37,8 @@ export function DataManagementPage() {
 
   // Fetch database statistics (total counts from backend)
   const { data: dbStats } = useDatabaseStats()
+  // Fetch label counts for the Books by Label section
+  const { data: labelCounts = [] } = useLabelCounts()
   // Fetch branches for filename generation (this is a small list)
   const { data: branches = [] } = useBranches()
 
@@ -469,6 +473,42 @@ export function DataManagementPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Books by Label Section */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+        <div className="bg-green-600 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiTag className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Books by Label</h2>
+              <p className="text-sm text-green-100">
+                Number of books tagged with each label, sorted by most popular
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {labelCounts.length === 0 ? (
+            <p className="text-gray-500 text-sm">No label data available.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-test="label-counts-grid">
+              {labelCounts.map(({ label, count }) => (
+                <div
+                  key={label}
+                  data-test={`label-count-${label}`}
+                  className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
+                >
+                  <span className="text-sm font-medium text-gray-700 truncate mr-2">{label}</span>
+                  <span className={`text-lg font-bold tabular-nums ${count > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+                    {count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Important Notes */}

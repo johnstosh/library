@@ -36,6 +36,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -103,7 +104,7 @@ public class BookService {
         book.setTitle(ensureUniqueTitle(book.getTitle(), null));
 
         // Set lastModified to current time
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
 
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
@@ -135,7 +136,7 @@ public class BookService {
             }
         }
         book.setLibrary(library);
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         return bookRepository.save(book);
     }
 
@@ -270,7 +271,7 @@ public class BookService {
             book.setTagsList(new ArrayList<>());
         }
         // Update lastModified to current time
-        book.setLastModified(LocalDateTime.now());
+        book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
     }
@@ -336,8 +337,8 @@ public class BookService {
         clone.setPlotSummary(original.getPlotSummary());
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setDetailedDescription(original.getDetailedDescription());
-        clone.setDateAddedToLibrary(LocalDateTime.now());
-        clone.setLastModified(LocalDateTime.now());
+        clone.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
+        clone.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         clone.setStatus(original.getStatus());
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
@@ -487,7 +488,7 @@ public class BookService {
 
         dto.setStatus(BookStatus.ACTIVE);
         if (dto.getDateAddedToLibrary() == null) {
-            dto.setDateAddedToLibrary(LocalDateTime.now());
+            dto.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
@@ -737,7 +738,7 @@ public class BookService {
 
         dto.setStatus(BookStatus.ACTIVE);
         if (dto.getDateAddedToLibrary() == null) {
-            dto.setDateAddedToLibrary(LocalDateTime.now());
+            dto.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         List<Photo> photos = photoRepository.findByBookIdOrderByPhotoOrder(id);
@@ -1262,6 +1263,22 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get summaries (id + lastModified) for books that have ANY of the given labels.
+     * Used for label-based filtering in the frontend.
+     *
+     * @param labels List of labels to filter by (book matches if it has at least one)
+     * @return List of BookSummaryDto for matching books
+     */
+    public List<BookSummaryDto> getSummariesByAnyLabel(List<String> labels) {
+        if (labels == null || labels.isEmpty()) {
+            return getAllBookSummaries();
+        }
+        return bookRepository.findSummariesByAnyLabel(labels).stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
     private BookSummaryDto projectionToSummaryDto(BookRepository.BookSummaryProjection projection) {
         BookSummaryDto dto = new BookSummaryDto();
         dto.setId(projection.getId());
@@ -1331,21 +1348,23 @@ public class BookService {
             // Parse the comma-separated response into a list
             List<String> genres = parseGenreResponse(response);
 
-            // Merge suggested genres into book's existing tags and save
+            // Replace book's existing tags with the suggested genres and save
             if (!genres.isEmpty()) {
-                List<String> existingTags = book.getTagsList() != null ? book.getTagsList() : new ArrayList<>();
-                java.util.Set<String> mergedTags = new java.util.LinkedHashSet<>(existingTags);
-                mergedTags.addAll(genres);
-                book.setTagsList(new ArrayList<>(mergedTags));
+                book.setTagsList(new ArrayList<>(genres));
                 bookRepository.save(book);
-                logger.info("Saved {} genre tags to book '{}' (ID: {})", genres.size(), book.getTitle(), bookId);
+                logger.info("Replaced genre tags on book '{}' (ID: {}) with {} tags", book.getTitle(), bookId, genres.size());
             }
+
+            // Map the saved book to a DTO so the frontend can update its cache immediately,
+            // eliminating the need for a follow-up by-ids fetch.
+            BookDto updatedBookDto = bookMapper.toDto(book);
 
             return GenreLookupResultDto.builder()
                     .bookId(bookId)
                     .title(book.getTitle())
                     .success(true)
                     .suggestedGenres(genres)
+                    .updatedBook(updatedBookDto)
                     .build();
 
         } catch (Exception e) {

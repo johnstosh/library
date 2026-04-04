@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.+'
     id 'io.spring.dependency-management' version '1.1.+'
+    id 'org.graalvm.buildtools.native' version '0.10.4'
 }
 
 group = 'com.muczynski'
@@ -91,4 +92,45 @@ test {
         // Optionally include standard streams (e.g., System.out) for failed tests
         showStandardStreams true
     }
+}
+
+graalvmNative {
+    binaries {
+        main {
+            imageName = 'application'
+            mainClass = 'com.muczynski.library.LibraryApplication'
+            classpath(sourceSets.main.output)
+            buildArgs.addAll(
+                '--no-fallback',
+                '--initialize-at-build-time=org.slf4j',
+                '--initialize-at-build-time=ch.qos.logback',
+                '--initialize-at-run-time=com.itextpdf.io.image',
+                '--initialize-at-run-time=com.itextpdf.kernel.pdf',
+                '--initialize-at-run-time=com.itextpdf.layout',
+                '--initialize-at-run-time=com.itextpdf.commons.bouncycastle',
+                '--initialize-at-run-time=javax.imageio',
+                '--initialize-at-run-time=com.sun.imageio',
+                '--initialize-at-run-time=org.marc4j',
+                '--initialize-at-run-time=com.drew',
+                '--initialize-at-run-time=com.google.cloud.sql',
+                '--initialize-at-run-time=org.postgresql.util.SharedTimer',
+                '-H:+ReportExceptionStackTraces',
+                '-H:+AddAllCharsets',
+                '--allow-incomplete-classpath',
+                '-J-Xmx6g',
+                '-J-Xms2g'
+            )
+        }
+    }
+    metadataRepository {
+        enabled = true   // pulls community hints for Hibernate, PostgreSQL, Jackson
+    }
+    testSupport = false  // tests run on JVM (Testcontainers); don't compile test native
+}
+
+// The GraalVM plugin adds processTestAot as a dependency of the test task.
+// Since tests run on JVM (not native), disable processTestAot to avoid
+// Spring Boot test AOT conflicts when many test contexts share the same generated class names.
+tasks.named('processTestAot') {
+    enabled = false
 }

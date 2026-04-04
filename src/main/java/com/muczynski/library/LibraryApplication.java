@@ -3,11 +3,13 @@
  */
 package com.muczynski.library;
 
+import com.muczynski.library.config.LibraryNativeHints;
 import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -22,6 +24,7 @@ import java.util.Set;
 
 @SpringBootApplication
 @EnableScheduling
+@ImportRuntimeHints(LibraryNativeHints.class)
 public class LibraryApplication {
 
     public static void main(String[] args) {

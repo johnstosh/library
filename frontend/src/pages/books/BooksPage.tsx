@@ -2,21 +2,23 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { BookFilters } from './components/BookFilters'
+import { BookLabelFilters } from './components/BookLabelFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBooks } from '@/api/books'
-import { useUiStore, useBooksFilter, useBooksTableSelection } from '@/stores/uiStore'
+import { useUiStore, useBooksFilter, useBooksLabelFilter, useBooksTableSelection } from '@/stores/uiStore'
 import { useIsLibrarian } from '@/stores/authStore'
 import type { BookDto } from '@/types/dtos'
 
 export function BooksPage() {
   const navigate = useNavigate()
   const filter = useBooksFilter()
+  const selectedLabels = useBooksLabelFilter()
   const { selectedIds, selectAll } = useBooksTableSelection()
-  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
+  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
-  const { data: books = [], isLoading, isFetching } = useBooks(filter)
+  const { data: books = [], isLoading, isFetching } = useBooks(filter, selectedLabels)
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
@@ -71,6 +73,11 @@ export function BooksPage() {
       <div className="bg-white rounded-lg shadow relative">
         <div className="p-4 border-b border-gray-200">
           <BookFilters />
+          <BookLabelFilters
+            selectedLabels={selectedLabels}
+            onToggleLabel={toggleBooksLabel}
+            onClearLabels={clearBooksLabels}
+          />
         </div>
 
         <div className="p-4">

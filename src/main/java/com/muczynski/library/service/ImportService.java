@@ -6,6 +6,7 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
 import com.muczynski.library.dto.DatabaseStatsDto;
+import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.BranchDto;
 import com.muczynski.library.dto.importdtos.*;
 import com.muczynski.library.mapper.BranchMapper;
@@ -707,5 +708,24 @@ public class ImportService {
             userRepository.count(),
             loanRepository.count()
         );
+    }
+
+    /**
+     * Returns label counts: for each known label, the number of books tagged with it.
+     * Labels are sorted by count descending, then alphabetically.
+     */
+    @Transactional(readOnly = true)
+    public List<LabelCountDto> getLabelCounts() {
+        List<String> labels = List.of(
+            "fiction", "slice-of-life", "hagiography", "saint", "fantasy", "family",
+            "childrens", "adult", "philosophy", "theology", "discernment", "talking-animals",
+            "biography", "history", "prayer", "classic", "poetry", "science", "music",
+            "mystery", "adventure", "romance", "humor"
+        );
+        return labels.stream()
+            .map(label -> new LabelCountDto(label, bookRepository.countByTag(label)))
+            .sorted(Comparator.comparingLong(LabelCountDto::getCount).reversed()
+                .thenComparing(LabelCountDto::getLabel))
+            .collect(Collectors.toList());
     }
 }

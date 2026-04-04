@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -340,6 +341,7 @@ public class PhotoService {
                 Photo photoToMove = photos.remove(index);
                 photos.add(index - 1, photoToMove);
                 reorderAuthorPhotos(photos);
+                touchAuthorLastModified(authorId);
             }
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} left for author ID {}: {}", photoId, authorId, e.getMessage(), e);
@@ -363,6 +365,7 @@ public class PhotoService {
                 Photo photoToMove = photos.remove(index);
                 photos.add(index + 1, photoToMove);
                 reorderAuthorPhotos(photos);
+                touchAuthorLastModified(authorId);
             }
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for author ID {}: {}", photoId, authorId, e.getMessage(), e);
@@ -576,6 +579,7 @@ public class PhotoService {
                 Photo photoToMove = photos.remove(index);
                 photos.add(index - 1, photoToMove);
                 reorderPhotos(photos);
+                touchBookLastModified(bookId);
             }
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} left for book ID {}: {}", photoId, bookId, e.getMessage(), e);
@@ -599,6 +603,7 @@ public class PhotoService {
                 Photo photoToMove = photos.remove(index);
                 photos.add(index + 1, photoToMove);
                 reorderPhotos(photos);
+                touchBookLastModified(bookId);
             }
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
@@ -693,6 +698,28 @@ public class PhotoService {
             logger.warn("Failed to reorder author photos: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * Touch a book's lastModified timestamp so the browser cache (IndexedDB) detects the change
+     * after a photo reorder.
+     */
+    private void touchBookLastModified(Long bookId) {
+        bookRepository.findById(bookId).ifPresent(book -> {
+            book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
+            bookRepository.save(book);
+        });
+    }
+
+    /**
+     * Touch an author's lastModified timestamp so the browser cache (IndexedDB) detects the change
+     * after a photo reorder.
+     */
+    private void touchAuthorLastModified(Long authorId) {
+        authorRepository.findById(authorId).ifPresent(author -> {
+            author.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
+            authorRepository.save(author);
+        });
     }
 
     @Transactional

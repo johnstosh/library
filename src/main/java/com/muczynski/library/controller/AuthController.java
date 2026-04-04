@@ -67,12 +67,14 @@ public class AuthController {
 
         // Create authentication token using user ID as principal (not username)
         // This makes user lookup by ID instead of username, avoiding duplicates
+        // Use SimpleGrantedAuthority (a concrete class, not a lambda) so the session
+        // can be deserialized in both JVM and GraalVM native image.
         UsernamePasswordAuthenticationToken authToken =
             new UsernamePasswordAuthenticationToken(
                 user.getId().toString(),
                 null,
                 user.getAuthorities().stream()
-                    .map(authority -> (org.springframework.security.core.GrantedAuthority) () -> authority.getName())
+                    .map(authority -> new org.springframework.security.core.authority.SimpleGrantedAuthority(authority.getName()))
                     .collect(java.util.stream.Collectors.toList())
             );
 

@@ -135,8 +135,22 @@ export function useCreateAuthor() {
 
   return useMutation({
     mutationFn: (author: Partial<AuthorDto>) => api.post<AuthorDto>('/authors', author),
-    onSuccess: () => {
-      // Invalidate summaries to trigger re-fetch
+    onSuccess: (newAuthor) => {
+      // Immediately populate the new author's detail cache so AuthorCombobox can
+      // display the author name without waiting for a full summaries + byIds refetch.
+      queryClient.setQueryData(queryKeys.authors.detail(newAuthor.id), newAuthor)
+
+      // Append the new author summary to the existing summaries cache so useAuthors()
+      // picks it up on the next render (avoids the blank-display window during refetch).
+      const existingSummaries = queryClient.getQueryData<AuthorSummaryDto[]>(queryKeys.authors.summaries())
+      if (existingSummaries) {
+        queryClient.setQueryData(queryKeys.authors.summaries(), [
+          ...existingSummaries,
+          { id: newAuthor.id, lastModified: newAuthor.lastModified },
+        ])
+      }
+
+      // Invalidate so background refetch confirms the server state
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },

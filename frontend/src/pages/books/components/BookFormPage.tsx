@@ -1,6 +1,8 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/config/queryClient'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
@@ -71,6 +73,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
+  const queryClient = useQueryClient()
   const { data: authors } = useAuthors()
   const { data: branches, isLoading: branchesLoading } = useBranches()
   const createBook = useCreateBook()
@@ -433,6 +436,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupGenres.mutateAsync(book.id)
+      // Invalidate summaries now that the lookup is done (the hook no longer auto-invalidates).
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
       setGenreResults([result])
       setShowGenreResults(true)
       if (result.success && result.suggestedGenres && result.suggestedGenres.length > 0) {
