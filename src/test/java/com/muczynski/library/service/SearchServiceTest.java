@@ -343,4 +343,130 @@ class SearchServiceTest {
         assertEquals(1, result.getBooks().size());
         assertEquals("Library Book", result.getBooks().get(0).getTitle());
     }
+
+    @Test
+    void searchWithLabels_usesLabelFilteredRepository() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        List<String> labels = Arrays.asList("fiction", "fantasy");
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Fiction Book");
+        book.getTagsList().add("fiction");
+        List<Book> bookList = Arrays.asList(book);
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Fiction Book");
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+                .thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY", labels);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Fiction Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithLabels_onlineType_usesElectronicResourceAndTagsRepo() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        List<String> labels = Arrays.asList("fiction");
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(2L);
+        book.setTitle("Online Fiction");
+        book.setElectronicResource(true);
+        Page<Book> bookPage = new PageImpl<>(Arrays.asList(book), pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(2L);
+        bookDto.setTitle("Online Fiction");
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+                .thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "ONLINE", labels);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Online Fiction", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithLabels_allType_usesTagsRepo() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        List<String> labels = Arrays.asList("theology");
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(3L);
+        book.setTitle("Theology Book");
+        Page<Book> bookPage = new PageImpl<>(Arrays.asList(book), pageable, 1);
+        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        BookDto bookDto = new BookDto();
+        bookDto.setId(3L);
+        bookDto.setTitle("Theology Book");
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndTagsIn(eq(query), eq(labels), any(Pageable.class)))
+                .thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        // Act
+        SearchResponseDto result = searchService.search(query, page, size, "ALL", labels);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Theology Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithNullLabels_behavesLikeNoLabels() {
+        // Arrange
+        String query = "test";
+        int page = 0;
+        int size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Book> emptyBookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        Page<Author> emptyAuthorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class)))
+                .thenReturn(emptyBookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage);
+
+        // Act - null labels should behave like no labels
+        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY", null);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(0, result.getBooks().size());
+    }
 }

@@ -1263,6 +1263,22 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get summaries (id + lastModified) for books that have ANY of the given labels.
+     * Used for label-based filtering in the frontend.
+     *
+     * @param labels List of labels to filter by (book matches if it has at least one)
+     * @return List of BookSummaryDto for matching books
+     */
+    public List<BookSummaryDto> getSummariesByAnyLabel(List<String> labels) {
+        if (labels == null || labels.isEmpty()) {
+            return getAllBookSummaries();
+        }
+        return bookRepository.findSummariesByAnyLabel(labels).stream()
+                .map(this::projectionToSummaryDto)
+                .collect(Collectors.toList());
+    }
+
     private BookSummaryDto projectionToSummaryDto(BookRepository.BookSummaryProjection projection) {
         BookSummaryDto dto = new BookSummaryDto();
         dto.setId(projection.getId());

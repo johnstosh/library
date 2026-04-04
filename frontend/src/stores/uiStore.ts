@@ -21,6 +21,9 @@ interface UiState {
   authorsFilter: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent'
   loansShowAll: boolean
 
+  // Label filter state for books
+  booksLabelFilter: string[]
+
   // Actions
   setSelectedIds: (table: TableName, ids: Set<number>) => void
   toggleSelectAll: (table: TableName) => void
@@ -28,6 +31,8 @@ interface UiState {
   setFilter: (feature: FilterFeature, filter: string) => void
   setLoansShowAll: (showAll: boolean) => void
   toggleRowSelection: (table: TableName, id: number) => void
+  toggleBooksLabel: (label: string) => void
+  clearBooksLabels: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -40,6 +45,7 @@ export const useUiStore = create<UiState>((set) => ({
   booksFilter: 'most-recent',
   authorsFilter: 'most-recent',
   loansShowAll: false,
+  booksLabelFilter: [],
 
   // Actions
   setSelectedIds: (table, ids) =>
@@ -57,10 +63,18 @@ export const useUiStore = create<UiState>((set) => ({
       [table]: { selectedIds: new Set(), selectAll: false },
     })),
 
-  setFilter: (feature, filter) =>
-    set({ [`${feature}Filter`]: filter }),
+  setFilter: (feature, filter) => set({ [`${feature}Filter`]: filter }),
 
   setLoansShowAll: (showAll) => set({ loansShowAll: showAll }),
+
+  toggleBooksLabel: (label) =>
+    set((state) => {
+      const current = state.booksLabelFilter
+      const next = current.includes(label) ? current.filter((l) => l !== label) : [...current, label]
+      return { booksLabelFilter: next }
+    }),
+
+  clearBooksLabels: () => set({ booksLabelFilter: [] }),
 
   toggleRowSelection: (table, id) =>
     set((state) => {
@@ -93,3 +107,4 @@ export const useLoansTableSelection = () => useUiStore((state) => state.loansTab
 export const useBooksFilter = () => useUiStore((state) => state.booksFilter)
 export const useAuthorsFilter = () => useUiStore((state) => state.authorsFilter)
 export const useLoansShowAll = () => useUiStore((state) => state.loansShowAll)
+export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)

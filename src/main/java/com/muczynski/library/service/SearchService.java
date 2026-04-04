@@ -40,14 +40,35 @@ public class SearchService {
 
     @Transactional(readOnly = true)
     public SearchResponseDto search(String query, int page, int size, String searchType) {
+        return search(query, page, size, searchType, null);
+    }
+
+    @Transactional(readOnly = true)
+    public SearchResponseDto search(String query, int page, int size, String searchType, List<String> labels) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Book> bookPage;
         Page<Author> authorPage;
+
+        boolean hasLabels = labels != null && !labels.isEmpty();
 
         // Empty query returns all books and authors (paginated)
         if (query == null || query.trim().isEmpty()) {
             bookPage = bookRepository.findAll(pageable);
             authorPage = authorRepository.findAll(pageable);
+        } else if (hasLabels) {
+            switch (searchType) {
+                case "ONLINE":
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndTagsIn(query, labels, pageable);
+                    break;
+                case "IN_LIBRARY":
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndTagsIn(query, labels, pageable);
+                    break;
+                case "ALL":
+                default:
+                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndTagsIn(query, labels, pageable);
+                    break;
+            }
+            authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);
         } else {
             switch (searchType) {
                 case "ONLINE":

@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -65,7 +67,7 @@ class SearchControllerTest {
                 authorPage
         );
 
-        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), any())).thenReturn(searchResults);
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), isNull())).thenReturn(searchResults);
 
         // Act & Assert
         given()
@@ -208,7 +210,7 @@ class SearchControllerTest {
     @Test
     void testSearch_ServiceThrowsException() {
         // Arrange - Service throws exception
-        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), any()))
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyString(), isNull()))
                 .thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert

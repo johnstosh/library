@@ -22,14 +22,24 @@ export interface SearchResponse {
 
 export type SearchType = 'ONLINE' | 'ALL' | 'IN_LIBRARY'
 
-export function useSearch(query: string, page = 0, size = 20, searchType: SearchType = 'IN_LIBRARY') {
+export function useSearch(
+  query: string,
+  page = 0,
+  size = 20,
+  searchType: SearchType = 'IN_LIBRARY',
+  enabled = true,
+  selectedLabels?: string[],
+) {
+  const hasLabels = selectedLabels != null && selectedLabels.length > 0
+  const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
   return useQuery({
-    queryKey: ['search', query, page, size, searchType],
+    queryKey: ['search', query, page, size, searchType, selectedLabels ?? []],
     queryFn: () =>
-      api.get<SearchResponse>(`/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}`, {
-        requireAuth: false,
-      }),
-    enabled: query.trim().length > 0,
+      api.get<SearchResponse>(
+        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}${labelsParam}`,
+        { requireAuth: false },
+      ),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }

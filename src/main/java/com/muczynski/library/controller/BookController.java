@@ -32,9 +32,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/books")
@@ -108,6 +110,28 @@ public class BookController {
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    /**
+     * Get book summaries for books that have ANY of the specified labels.
+     * Labels should be passed as a comma-separated string, e.g. ?labels=fiction,history
+     */
+    @GetMapping("/by-labels")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBooksByLabels(@RequestParam(required = false) String labels) {
+        try {
+            List<String> labelList = (labels == null || labels.isBlank())
+                    ? List.of()
+                    : Arrays.stream(labels.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+            List<BookSummaryDto> summaries = bookService.getSummariesByAnyLabel(labelList);
+            return ResponseEntity.ok(summaries);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve books by labels '{}': {}", labels, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

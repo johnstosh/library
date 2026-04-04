@@ -22,6 +22,7 @@ export const queryKeys = {
     all: ['books'] as const,
     summaries: () => [...queryKeys.books.all, 'summaries'] as const,
     filterSummaries: (filter: string) => [...queryKeys.books.all, 'filterSummaries', filter] as const,
+    labelSummaries: (labels: string[]) => [...queryKeys.books.all, 'labelSummaries', labels.slice().sort().join(',')] as const,
     byIds: (ids: number[], filter?: string) => [...queryKeys.books.all, 'byIds', ids.join(','), filter] as const,
     list: (filter?: string) => [...queryKeys.books.all, 'list', filter] as const,
     detail: (id: number) => [...queryKeys.books.all, 'detail', id] as const,
