@@ -4,10 +4,18 @@ import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/authStore'
 import { printLibraryCard } from '@/api/library-cards'
 import { PiIdentificationCard, PiFilePdf } from 'react-icons/pi'
+import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
+import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
+import type { LibraryCardDesign } from '@/types/dtos'
 
 export function MyLibraryCardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [cardDesignSuccess, setCardDesignSuccess] = useState('')
+  const [cardDesignError, setCardDesignError] = useState('')
   const user = useAuthStore((state) => state.user)
+
+  const { data: userSettings } = useUserSettings()
+  const updateUserSettings = useUpdateUserSettings()
 
   const handlePrintCard = async () => {
     setIsGenerating(true)
@@ -28,6 +36,18 @@ export function MyLibraryCardPage() {
       alert('Failed to generate library card PDF. Please try again.')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleLibraryCardDesignChange = async (design: LibraryCardDesign) => {
+    setCardDesignSuccess('')
+    setCardDesignError('')
+
+    try {
+      await updateUserSettings.mutateAsync({ libraryCardDesign: design })
+      setCardDesignSuccess('Library card design updated successfully')
+    } catch (error) {
+      setCardDesignError(error instanceof Error ? error.message : 'Failed to update library card design')
     }
   }
 
@@ -96,6 +116,17 @@ export function MyLibraryCardPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Card Design Section */}
+      <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Card Design</h2>
+        <LibraryCardDesignPicker
+          currentDesign={userSettings?.libraryCardDesign}
+          onDesignChange={handleLibraryCardDesignChange}
+          successMessage={cardDesignSuccess}
+          errorMessage={cardDesignError}
+        />
       </div>
 
       {/* Information Section */}

@@ -8,6 +8,7 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
+import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
 import type { LibraryCardDesign } from '@/types/dtos'
 
 interface PasswordChangeForm {
@@ -15,34 +16,6 @@ interface PasswordChangeForm {
   newPassword: string
   confirmPassword: string
 }
-
-const LIBRARY_CARD_DESIGN_OPTIONS: Array<{ value: LibraryCardDesign; label: string; description: string }> = [
-  {
-    value: 'CLASSICAL_DEVOTION',
-    label: 'Classical Devotion',
-    description: 'Traditional design with classic typography'
-  },
-  {
-    value: 'COUNTRYSIDE_YOUTH',
-    label: 'Countryside Youth',
-    description: 'Fresh, youthful design with natural elements'
-  },
-  {
-    value: 'SACRED_HEART_PORTRAIT',
-    label: 'Sacred Heart Portrait',
-    description: 'Portrait-oriented design with sacred imagery'
-  },
-  {
-    value: 'RADIANT_BLESSING',
-    label: 'Radiant Blessing',
-    description: 'Bright design with uplifting elements'
-  },
-  {
-    value: 'PATRON_OF_CREATURES',
-    label: 'Patron of Creatures',
-    description: 'Nature-focused design with animal motifs'
-  }
-]
 
 export function UserSettingsPage() {
   const { user } = useAuthStore()
@@ -224,56 +197,12 @@ export function UserSettingsPage() {
           {/* Library Card Design Section */}
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-
-            {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
-            {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
-
-            {/* Large preview of currently selected design */}
-            <div className="mb-4 flex justify-center">
-              <img
-                src={`/images/library-cards/${(userSettings?.libraryCardDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
-                alt="Selected library card design preview"
-                className="w-32 h-40 object-cover rounded-lg shadow"
-                data-test="library-card-design-preview"
-              />
-            </div>
-
-            <div className="space-y-3">
-              {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
-                <div
-                  key={option.value}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    userSettings?.libraryCardDesign === option.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => handleLibraryCardDesignChange(option.value)}
-                  data-test={`library-card-design-${option.value}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
-                      alt={option.label}
-                      className="w-16 h-20 object-cover rounded flex-shrink-0"
-                    />
-                    <div className="flex items-start flex-1">
-                      <input
-                        type="radio"
-                        name="libraryCardDesign"
-                        value={option.value}
-                        checked={userSettings?.libraryCardDesign === option.value}
-                        onChange={() => handleLibraryCardDesignChange(option.value)}
-                        className="mt-1 mr-3"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">{option.label}</div>
-                        <div className="text-sm text-gray-600 mt-1">{option.description}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <LibraryCardDesignPicker
+              currentDesign={userSettings?.libraryCardDesign}
+              onDesignChange={handleLibraryCardDesignChange}
+              successMessage={cardDesignSuccess}
+              errorMessage={cardDesignError}
+            />
           </div>
 
           {/* XAI API Configuration - Librarian Only */}
@@ -419,56 +348,12 @@ export function UserSettingsPage() {
         {/* Library Card Design Section */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-
-          {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
-          {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
-
-          {/* Large preview of currently selected design */}
-          <div className="mb-4 flex justify-center">
-            <img
-              src={`/images/library-cards/${(userSettings?.libraryCardDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
-              alt="Selected library card design preview"
-              className="w-32 h-40 object-cover rounded-lg shadow"
-              data-test="library-card-design-preview"
-            />
-          </div>
-
-          <div className="space-y-3">
-            {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
-              <div
-                key={option.value}
-                className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  userSettings?.libraryCardDesign === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handleLibraryCardDesignChange(option.value)}
-                data-test={`library-card-design-${option.value}`}
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
-                    alt={option.label}
-                    className="w-16 h-20 object-cover rounded flex-shrink-0"
-                  />
-                  <div className="flex items-start flex-1">
-                    <input
-                      type="radio"
-                      name="libraryCardDesign"
-                      value={option.value}
-                      checked={userSettings?.libraryCardDesign === option.value}
-                      onChange={() => handleLibraryCardDesignChange(option.value)}
-                      className="mt-1 mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">{option.label}</div>
-                      <div className="text-sm text-gray-600 mt-1">{option.description}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <LibraryCardDesignPicker
+            currentDesign={userSettings?.libraryCardDesign}
+            onDesignChange={handleLibraryCardDesignChange}
+            successMessage={cardDesignSuccess}
+            errorMessage={cardDesignError}
+          />
         </div>
 
         {/* Change Password Form */}
