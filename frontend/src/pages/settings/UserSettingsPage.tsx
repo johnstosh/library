@@ -212,12 +212,6 @@ export function UserSettingsPage() {
                   <span className="ml-2 text-gray-900">{userSettings.email}</span>
                 </div>
               )}
-              {userSettings?.activeLoansCount !== undefined && (
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Active Loans:</span>
-                  <span className="ml-2 text-gray-900">{userSettings.activeLoansCount}</span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -400,12 +394,6 @@ export function UserSettingsPage() {
               <div>
                 <span className="text-sm font-medium text-gray-500">Email:</span>
                 <span className="ml-2 text-gray-900">{userSettings.email}</span>
-              </div>
-            )}
-            {userSettings?.activeLoansCount !== undefined && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Active Loans:</span>
-                <span className="ml-2 text-gray-900">{userSettings.activeLoansCount}</span>
               </div>
             )}
           </div>
