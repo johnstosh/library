@@ -67,3 +67,14 @@ export async function printLibraryCard(): Promise<Blob> {
 
   return response.blob()
 }
+
+// Function to print all 5 library card designs as a multi-page PDF
+export async function printAllLibraryCards(): Promise<Blob> {
+  const response = await fetch('/api/library-card/print-all', {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    throw new Error('Failed to generate all library card PDFs')
+  }
+  return response.blob()
+}

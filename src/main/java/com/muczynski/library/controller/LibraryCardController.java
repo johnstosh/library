@@ -36,6 +36,38 @@ public class LibraryCardController {
     private UserRepository userRepository;
 
     /**
+     * Generate and download a multi-page PDF containing all 5 library card designs.
+     *
+     * @return PDF file as byte array with appropriate headers
+     */
+    @GetMapping("/print-all")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> printAllLibraryCards() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                throw new LibraryException("User not authenticated");
+            }
+
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new LibraryException("User not found"));
+
+            byte[] pdfBytes = libraryCardPdfService.generateAllDesignsPdf(user);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "library-cards-all.pdf");
+            headers.setContentLength(pdfBytes.length);
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (IOException e) {
+            throw new LibraryException("Failed to generate all library card PDFs: " + e.getMessage());
+        }
+    }
+
+    /**
      * Generate and download a wallet-sized library card PDF for the current user.
      *
      * @return PDF file as byte array with appropriate headers

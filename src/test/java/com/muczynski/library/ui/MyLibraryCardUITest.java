@@ -116,6 +116,32 @@ public class MyLibraryCardUITest {
     }
 
     @Test
+    @DisplayName("USER: Should see and click Print All Card Designs button")
+    void testUserCanSeeAndClickPrintAllButton() {
+        login("testuser", "password");
+        navigateToMyCard();
+
+        // Wait for page to load
+        page.waitForSelector("h1", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        // Wait for the Print All button to be visible
+        page.waitForSelector("[data-test='print-all-library-cards']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        assertThat(page.locator("[data-test='print-all-library-cards']")).isVisible();
+
+        // Click the button and wait for network idle (PDF download request)
+        page.click("[data-test='print-all-library-cards']");
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+        // Verify no error alert was triggered — page heading still visible
+        assertThat(page.locator("h1")).containsText("My Library Card");
+    }
+
+    @Test
     @DisplayName("USER: Should change card design from My Card page")
     void testUserCanChangeDesignFromMyCardPage() {
         login("testuser", "password");

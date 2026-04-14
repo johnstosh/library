@@ -35,6 +35,70 @@ public class LibraryCardPdfService {
     private static final float MARGIN = 0.5f * 72;
 
     /**
+     * Generates a multi-page PDF containing all 5 library card designs.
+     * Each design occupies one page in wallet-sized format with 0.5" margins.
+     *
+     * @param user The user for context (used for display; all designs are included)
+     * @return PDF as byte array containing all designs
+     * @throws IOException if any image cannot be loaded or PDF cannot be generated
+     */
+    public byte[] generateAllDesignsPdf(User user) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        float pageWidth = WALLET_WIDTH + (2 * MARGIN);
+        float pageHeight = WALLET_HEIGHT + (2 * MARGIN);
+
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdf = new PdfDocument(writer);
+        PageSize pageSize = new PageSize(pageWidth, pageHeight);
+        pdf.setDefaultPageSize(pageSize);
+
+        Document document = new Document(pdf);
+        document.setMargins(MARGIN, MARGIN, MARGIN, MARGIN);
+
+        try {
+            LibraryCardDesign[] designs = LibraryCardDesign.values();
+            for (int i = 0; i < designs.length; i++) {
+                LibraryCardDesign design = designs[i];
+
+                if (i > 0) {
+                    document.add(new com.itextpdf.layout.element.AreaBreak(
+                            com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
+                }
+
+                String imagePath = "static/images/library-cards/" + design.getImageFilename();
+                ClassPathResource imageResource = new ClassPathResource(imagePath);
+
+                if (!imageResource.exists()) {
+                    throw new IOException("Library card image not found: " + imagePath);
+                }
+
+                byte[] imageBytes = imageResource.getInputStream().readAllBytes();
+                ImageData imageData = ImageDataFactory.create(imageBytes);
+                Image image = new Image(imageData);
+
+                float imageWidth = imageData.getWidth();
+                float imageHeight = imageData.getHeight();
+                boolean isLandscape = imageWidth > imageHeight;
+
+                if (isLandscape) {
+                    image.setRotationAngle(Math.toRadians(90));
+                    image.scaleToFit(WALLET_HEIGHT, WALLET_WIDTH);
+                } else {
+                    image.scaleToFit(WALLET_WIDTH, WALLET_HEIGHT);
+                }
+
+                image.setFixedPosition(MARGIN, MARGIN);
+                document.add(image);
+            }
+        } finally {
+            document.close();
+        }
+
+        return baos.toByteArray();
+    }
+
+    /**
      * Generates a wallet-sized library card PDF for the given user.
      * The card is placed on a page with 0.5" margins for printing.
      * Landscape images are automatically rotated 90 degrees to fit portrait orientation.

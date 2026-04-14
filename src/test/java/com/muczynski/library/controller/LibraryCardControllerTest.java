@@ -262,6 +262,39 @@ class LibraryCardControllerTest {
         }
     }
 
+    // ==================== GET /api/library-card/print-all Tests ====================
+
+    @Test
+    void testPrintAllLibraryCards_Success() throws Exception {
+        // Arrange
+        User testUser = createTestUser(20L, "testuser", LibraryCardDesign.CLASSICAL_DEVOTION);
+        when(userRepository.findById(20L))
+                .thenReturn(Optional.of(testUser));
+
+        // Act & Assert
+        MvcResult result = mockMvc.perform(get("/api/library-card/print-all")
+                        .with(user("20").authorities(new SimpleGrantedAuthority("USER"))))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", "form-data; name=\"attachment\"; filename=\"library-cards-all.pdf\""))
+                .andReturn();
+
+        byte[] pdfBytes = result.getResponse().getContentAsByteArray();
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0, "All-designs PDF should have content");
+
+        // Verify PDF signature
+        String pdfHeader = new String(pdfBytes, 0, Math.min(4, pdfBytes.length));
+        assertEquals("%PDF", pdfHeader, "PDF should start with %PDF header");
+    }
+
+    @Test
+    void testPrintAllLibraryCards_Unauthenticated() throws Exception {
+        // Act & Assert - No authentication should be rejected
+        mockMvc.perform(get("/api/library-card/print-all"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ==================== Helper Methods ====================
 
     /**

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/authStore'
-import { printLibraryCard } from '@/api/library-cards'
+import { printLibraryCard, printAllLibraryCards } from '@/api/library-cards'
 import { PiIdentificationCard, PiFilePdf } from 'react-icons/pi'
 import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
@@ -10,6 +10,7 @@ import type { LibraryCardDesign } from '@/types/dtos'
 
 export function MyLibraryCardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [cardDesignSuccess, setCardDesignSuccess] = useState('')
   const [cardDesignError, setCardDesignError] = useState('')
   const user = useAuthStore((state) => state.user)
@@ -36,6 +37,28 @@ export function MyLibraryCardPage() {
       alert('Failed to generate library card PDF. Please try again.')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handlePrintAllCards = async () => {
+    setIsGeneratingAll(true)
+    try {
+      const blob = await printAllLibraryCards()
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'library-cards-all.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Failed to generate all library card PDFs:', error)
+      alert('Failed to generate all library card PDFs. Please try again.')
+    } finally {
+      setIsGeneratingAll(false)
     }
   }
 
@@ -104,16 +127,28 @@ export function MyLibraryCardPage() {
                 Download a wallet-sized PDF version of your library card
               </p>
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={handlePrintCard}
-              isLoading={isGenerating}
-              leftIcon={<PiFilePdf />}
-              data-test="print-library-card"
-            >
-              Print Card
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handlePrintCard}
+                isLoading={isGenerating}
+                leftIcon={<PiFilePdf />}
+                data-test="print-library-card"
+              >
+                Print Card
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={handlePrintAllCards}
+                isLoading={isGeneratingAll}
+                leftIcon={<PiFilePdf />}
+                data-test="print-all-library-cards"
+              >
+                Print All Card Designs
+              </Button>
+            </div>
           </div>
         </div>
       </div>
