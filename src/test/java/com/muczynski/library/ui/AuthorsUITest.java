@@ -7,7 +7,13 @@ import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.muczynski.library.LibraryApplication;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -25,7 +31,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-books.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("UI tests temporarily disabled")
 public class AuthorsUITest {
 
     @LocalServerPort
@@ -104,7 +109,7 @@ public class AuthorsUITest {
     @DisplayName("Should display books table in author view page")
     void shouldDisplayBooksTableInAuthorView() {
         // Click on first author to view details
-        page.click("tr[data-row-id]");
+        page.click("tr[data-entity-id]");
 
         // Wait for view page to load
         page.waitForSelector("[data-test='author-name']",
@@ -130,7 +135,7 @@ public class AuthorsUITest {
     @DisplayName("Should display books table in author edit page")
     void shouldDisplayBooksTableInAuthorEdit() {
         // Click on first author to view details
-        page.click("tr[data-row-id]");
+        page.click("tr[data-entity-id]");
 
         // Wait for view page to load
         page.waitForSelector("[data-test='author-name']",
@@ -162,7 +167,7 @@ public class AuthorsUITest {
     @DisplayName("Should navigate to book when clicking on book row in author view")
     void shouldNavigateToBookFromAuthorView() {
         // Click on first author to view details
-        page.click("tr[data-row-id]");
+        page.click("tr[data-entity-id]");
 
         // Wait for view page to load
         page.waitForSelector("[data-test='author-name']",
@@ -172,7 +177,7 @@ public class AuthorsUITest {
         Locator booksTable = page.locator("[data-test='author-books-table']");
         if (booksTable.count() > 0) {
             // Click on first book row
-            Locator firstBookRow = booksTable.locator("tr[data-row-id]").first();
+            Locator firstBookRow = booksTable.locator("tr[data-entity-id]").first();
             if (firstBookRow.count() > 0) {
                 firstBookRow.click();
 

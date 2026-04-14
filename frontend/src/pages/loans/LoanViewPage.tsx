@@ -19,15 +19,18 @@ export function LoanViewPage() {
   const returnBook = useReturnBook()
   const deleteLoan = useDeleteLoan()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false)
   const [error, setError] = useState('')
   const isLibrarian = useIsLibrarian()
 
   const handleReturn = async () => {
     try {
       await returnBook.mutateAsync(loanId)
-      // Refresh the loan data after returning
+      setShowReturnConfirm(false)
+      navigate('/loans')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to return book')
+      setShowReturnConfirm(false)
     }
   }
 
@@ -86,6 +89,8 @@ export function LoanViewPage() {
         </Button>
       </div>
 
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">Loan Details</h2>
+
       <div className="bg-white rounded-lg shadow">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
@@ -107,10 +112,10 @@ export function LoanViewPage() {
                   Edit
                 </Button>
               )}
-              {!isReturned && (
+              {isLibrarian && !isReturned && (
                 <Button
                   variant="primary"
-                  onClick={handleReturn}
+                  onClick={() => setShowReturnConfirm(true)}
                   isLoading={returnBook.isPending}
                   leftIcon={<PiCheckCircle />}
                   data-test="loan-view-return"
@@ -118,14 +123,16 @@ export function LoanViewPage() {
                   Return Book
                 </Button>
               )}
-              <Button
-                variant="danger"
-                onClick={() => setShowDeleteConfirm(true)}
-                leftIcon={<PiTrash />}
-                data-test="loan-view-delete"
-              >
-                Delete
-              </Button>
+              {isLibrarian && (
+                <Button
+                  variant="danger"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  leftIcon={<PiTrash />}
+                  data-test="loan-view-delete"
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -133,6 +140,32 @@ export function LoanViewPage() {
         {/* Body */}
         <div className="px-6 py-6 space-y-6">
           {error && <ErrorMessage message={error} />}
+
+          {/* Return Confirmation */}
+          {showReturnConfirm && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-900 font-semibold mb-3">
+                Mark this book as returned?
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  onClick={handleReturn}
+                  isLoading={returnBook.isPending}
+                  data-test="confirm-return-loan"
+                >
+                  Yes, Return
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowReturnConfirm(false)}
+                  data-test="cancel-return-loan"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Delete Confirmation */}
           {showDeleteConfirm && (

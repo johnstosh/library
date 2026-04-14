@@ -114,11 +114,23 @@ public class LoanController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> getLoanById(@PathVariable Long id) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getLoanById(@PathVariable Long id, Authentication authentication) {
         try {
             LoanDto loan = loanService.getLoanById(id);
-            return loan != null ? ResponseEntity.ok(loan) : ResponseEntity.notFound().build();
+            if (loan == null) {
+                return ResponseEntity.notFound().build();
+            }
+            // Non-librarians can only view their own loans
+            boolean isLibrarian = SecurityUtils.isLibrarian(authentication);
+            if (!isLibrarian) {
+                // Principal name is always the database user ID (set during login)
+                Long currentUserId = Long.parseLong(authentication.getName());
+                if (!loan.getUserId().equals(currentUserId)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
+                }
+            }
+            return ResponseEntity.ok(loan);
         } catch (Exception e) {
             logger.warn("Failed to retrieve loan by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

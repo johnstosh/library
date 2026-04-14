@@ -40,6 +40,12 @@ INSERT INTO author (id, name) VALUES (1, 'Initial Author');
 INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, status_reason, date_added_to_library, last_modified)
 VALUES (1, 'Initial Book', 2023, 'Test Publisher', 1, 1, 'ACTIVE', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
--- Insert test loan
-INSERT INTO loan (id, loan_date, due_date, return_date, book_id, user_id)
-VALUES (1, CURRENT_DATE, CURRENT_DATE + 14, NULL, 1, 2);
+-- No loan inserted here: tests that check loan count just verify element visibility (count can be 0).
+-- A loan with null return_date would block book deletion in testDeleteBook.
+
+-- Reset sequences to avoid duplicate key violations when auto-generating IDs after explicit inserts
+SELECT setval('book_id_seq', (SELECT MAX(id) FROM book));
+SELECT setval('author_id_seq', (SELECT MAX(id) FROM author));
+SELECT setval('library_id_seq', (SELECT MAX(id) FROM library));
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+SELECT setval('role_id_seq', (SELECT MAX(id) FROM role));

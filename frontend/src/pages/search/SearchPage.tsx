@@ -118,7 +118,7 @@ export function SearchPage() {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={isLoading}
+            disabled={!inputValue.trim() || isLoading}
             leftIcon={<PiMagnifyingGlass />}
             data-test="search-button"
           >

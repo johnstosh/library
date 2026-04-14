@@ -26,7 +26,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-books.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("UI tests temporarily disabled")
 public class BooksUITest {
 
     @LocalServerPort
@@ -58,7 +57,7 @@ public class BooksUITest {
         context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 1600)); // Increased height for tall modal dialogs
         page = context.newPage();
-        page.setDefaultTimeout(30000L);
+        page.setDefaultTimeout(20000L);
 
         // Login as librarian before each test
         loginAsLibrarian();
@@ -161,7 +160,18 @@ public class BooksUITest {
 
         // Fill in the form
         page.fill("[data-test='book-title']", "New Test Book");
-        page.selectOption("[data-test='book-author']", "1"); // Select first author
+        // Author is a combobox: click to focus, type to filter, then click the matching option
+        page.click("[data-test='book-author-input']");
+        page.keyboard().type("Initial");
+        page.waitForSelector("[data-test='book-author-option']",
+            new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("[data-test='book-author-option']");
+        // Wait for branch options to load (branches fetched from API)
+        // Use ATTACHED state since <option> elements inside <select> are not "visible" in Playwright
+        page.waitForSelector("[data-test='book-branch'] option[value='1']",
+            new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10000L));
         page.selectOption("[data-test='book-branch']", "1"); // Select first branch
         page.fill("[data-test='book-year']", "2024");
         page.fill("[data-test='book-publisher']", "Test Publisher");
@@ -172,13 +182,16 @@ public class BooksUITest {
         page.click("[data-test='book-form-submit']");
 
         // Should navigate back to /books after successful creation
-        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(15000L));
+
+        // Wait for network to settle after navigation
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Switch to 'all' filter to see all books
         page.click("[data-test='filter-all']");
 
-        // Wait for books to load after filter change
-        page.waitForTimeout(2000);
+        // Wait for books to refetch after filter change
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Verify new book is in the table (allowing up to 30s total)
         assertThat(page.locator("text=New Test Book"))
@@ -277,13 +290,14 @@ public class BooksUITest {
         page.click("[data-test='confirm-delete-book']");
 
         // Should navigate back to /books after successful deletion
-        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(15000L));
 
-        // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(2000);
+        // Wait for the books list to refetch after deletion
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Verify book is no longer in table
-        assertThat(page.locator("text=Initial Book")).not().isVisible();
+        // Verify book is no longer in table (allow time for refetch to complete)
+        assertThat(page.locator("text=Initial Book"))
+            .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
     }
 
     @Test
@@ -436,7 +450,8 @@ public class BooksUITest {
         // Verify book details are shown
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
-        assertThat(page.locator("text=2023")).isVisible();
+        // Active status badge is shown in the Status column
+        assertThat(page.locator("text=Active")).isVisible();
     }
 
     @Test
@@ -515,13 +530,14 @@ public class BooksUITest {
         page.click("[data-test='book-view-clone']");
 
         // Should navigate back to /books after successful clone
-        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(15000L));
 
-        // Wait a reasonable time for mutation and refetch
-        page.waitForTimeout(2000);
+        // Wait for the books list to refetch after cloning
+        page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Verify cloned book appears in the table (allowing up to 30s total)
-        assertThat(page.locator("text=Initial Book, c. 1"))
+        // The clone gets ", c. 2" because the original "Initial Book" already exists (counts as copy 1)
+        assertThat(page.locator("text=Initial Book, c. 2"))
             .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
     }
 }

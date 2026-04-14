@@ -18,19 +18,19 @@ INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN') ON CONFLICT (name) DO NOTHIN
 -- Insert a test library
 INSERT INTO library (id, name, library_system_name) VALUES (1, 'Test Library', 'Test Library System');
 
--- Insert authors
-INSERT INTO author (id, name, bio, birth_year, death_year) VALUES (1, 'Test Author 1', 'Bio 1', 1950, NULL);
-INSERT INTO author (id, name, bio, birth_year, death_year) VALUES (2, 'Test Author 2', 'Bio 2', 1960, NULL);
+-- Insert authors (omit @Lob columns: brief_biography, religious_affiliation, birth_country, nationality)
+INSERT INTO author (id, name) VALUES (1, 'Test Author 1');
+INSERT INTO author (id, name) VALUES (2, 'Test Author 2');
 
 -- Insert books (3 active books for testing)
-INSERT INTO book (id, title, publication_year, publisher, isbn, loc_call_number, author_id, library_id, status)
-VALUES (1, 'Available Book 1', 2020, 'Publisher 1', '1234567890', '', 1, 1, 'ACTIVE');
+INSERT INTO book (id, title, publication_year, publisher, loc_number, author_id, library_id, status)
+VALUES (1, 'Available Book 1', 2020, 'Publisher 1', '', 1, 1, 'ACTIVE');
 
-INSERT INTO book (id, title, publication_year, publisher, isbn, loc_call_number, author_id, library_id, status)
-VALUES (2, 'Available Book 2', 2021, 'Publisher 2', '1234567891', '', 2, 1, 'ACTIVE');
+INSERT INTO book (id, title, publication_year, publisher, loc_number, author_id, library_id, status)
+VALUES (2, 'Available Book 2', 2021, 'Publisher 2', '', 2, 1, 'ACTIVE');
 
-INSERT INTO book (id, title, publication_year, publisher, isbn, loc_call_number, author_id, library_id, status)
-VALUES (3, 'Loaned Book', 2022, 'Publisher 3', '1234567892', '', 1, 1, 'ACTIVE');
+INSERT INTO book (id, title, publication_year, publisher, loc_number, author_id, library_id, status)
+VALUES (3, 'Loaned Book', 2022, 'Publisher 3', '', 1, 1, 'ACTIVE');
 
 -- Insert a regular USER
 -- Username: testuser
@@ -80,3 +80,11 @@ VALUES (2, CURRENT_DATE - 20, CURRENT_DATE - 6, CURRENT_DATE - 5, 1, 1);
 -- otheruser has 1 active loan (librarian should see this but testuser should not)
 INSERT INTO loan (id, loan_date, due_date, return_date, book_id, user_id)
 VALUES (3, CURRENT_DATE - 3, CURRENT_DATE + 11, NULL, 2, 3);
+
+-- Reset sequences to avoid duplicate key violations when auto-generating IDs after explicit inserts
+SELECT setval('book_id_seq', (SELECT MAX(id) FROM book));
+SELECT setval('author_id_seq', (SELECT MAX(id) FROM author));
+SELECT setval('library_id_seq', (SELECT MAX(id) FROM library));
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+SELECT setval('role_id_seq', (SELECT MAX(id) FROM role));
+SELECT setval('loan_id_seq', (SELECT MAX(id) FROM loan));
