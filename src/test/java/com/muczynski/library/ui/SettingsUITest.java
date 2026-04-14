@@ -124,6 +124,26 @@ public class SettingsUITest {
     }
 
     @Test
+    @DisplayName("USER: Should see card design preview image")
+    void testUserCanSeeCardDesignPreview() {
+        login("testuser", "password");
+        navigateToSettings();
+
+        // Wait for the preview image to be visible
+        page.waitForSelector("[data-test='library-card-design-preview']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        Locator previewImg = page.locator("[data-test='library-card-design-preview']");
+        assertThat(previewImg).isVisible();
+
+        // Verify the src attribute contains the expected path
+        String src = previewImg.getAttribute("src");
+        assert src != null && src.contains("/images/library-cards/") :
+                "Expected preview src to contain '/images/library-cards/' but was: " + src;
+    }
+
+    @Test
     @DisplayName("USER: Should display library card design options")
     void testUserCanViewLibraryCardDesigns() {
         login("testuser", "password");

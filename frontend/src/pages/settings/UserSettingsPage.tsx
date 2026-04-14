@@ -228,6 +228,16 @@ export function UserSettingsPage() {
             {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
             {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
 
+            {/* Large preview of currently selected design */}
+            <div className="mb-4 flex justify-center">
+              <img
+                src={`/images/library-cards/${(userSettings?.libraryCardDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
+                alt="Selected library card design preview"
+                className="w-32 h-40 object-cover rounded-lg shadow"
+                data-test="library-card-design-preview"
+              />
+            </div>
+
             <div className="space-y-3">
               {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
                 <div
@@ -240,18 +250,25 @@ export function UserSettingsPage() {
                   onClick={() => handleLibraryCardDesignChange(option.value)}
                   data-test={`library-card-design-${option.value}`}
                 >
-                  <div className="flex items-start">
-                    <input
-                      type="radio"
-                      name="libraryCardDesign"
-                      value={option.value}
-                      checked={userSettings?.libraryCardDesign === option.value}
-                      onChange={() => handleLibraryCardDesignChange(option.value)}
-                      className="mt-1 mr-3"
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
+                      alt={option.label}
+                      className="w-16 h-20 object-cover rounded flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-gray-900">{option.label}</div>
-                      <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                    <div className="flex items-start flex-1">
+                      <input
+                        type="radio"
+                        name="libraryCardDesign"
+                        value={option.value}
+                        checked={userSettings?.libraryCardDesign === option.value}
+                        onChange={() => handleLibraryCardDesignChange(option.value)}
+                        className="mt-1 mr-3"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">{option.label}</div>
+                        <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -406,6 +423,16 @@ export function UserSettingsPage() {
           {cardDesignSuccess && <SuccessMessage message={cardDesignSuccess} className="mb-4" />}
           {cardDesignError && <ErrorMessage message={cardDesignError} className="mb-4" />}
 
+          {/* Large preview of currently selected design */}
+          <div className="mb-4 flex justify-center">
+            <img
+              src={`/images/library-cards/${(userSettings?.libraryCardDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
+              alt="Selected library card design preview"
+              className="w-32 h-40 object-cover rounded-lg shadow"
+              data-test="library-card-design-preview"
+            />
+          </div>
+
           <div className="space-y-3">
             {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
               <div
@@ -418,18 +445,25 @@ export function UserSettingsPage() {
                 onClick={() => handleLibraryCardDesignChange(option.value)}
                 data-test={`library-card-design-${option.value}`}
               >
-                <div className="flex items-start">
-                  <input
-                    type="radio"
-                    name="libraryCardDesign"
-                    value={option.value}
-                    checked={userSettings?.libraryCardDesign === option.value}
-                    onChange={() => handleLibraryCardDesignChange(option.value)}
-                    className="mt-1 mr-3"
+                <div className="flex items-center gap-3">
+                  <img
+                    src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
+                    alt={option.label}
+                    className="w-16 h-20 object-cover rounded flex-shrink-0"
                   />
-                  <div>
-                    <div className="font-medium text-gray-900">{option.label}</div>
-                    <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                  <div className="flex items-start flex-1">
+                    <input
+                      type="radio"
+                      name="libraryCardDesign"
+                      value={option.value}
+                      checked={userSettings?.libraryCardDesign === option.value}
+                      onChange={() => handleLibraryCardDesignChange(option.value)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">{option.label}</div>
+                      <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                    </div>
                   </div>
                 </div>
               </div>
