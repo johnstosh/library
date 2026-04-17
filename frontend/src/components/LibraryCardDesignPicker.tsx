@@ -54,7 +54,7 @@ export function LibraryCardDesignPicker({
         <img
           src={`/images/library-cards/${(currentDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
           alt="Selected library card design preview"
-          className="w-32 max-h-40 h-auto object-contain rounded-lg shadow"
+          className="w-128 max-h-160 h-auto object-contain rounded-lg shadow"
           data-test="library-card-design-preview"
         />
       </div>
@@ -75,7 +75,7 @@ export function LibraryCardDesignPicker({
               <img
                 src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
                 alt={option.label}
-                className="w-16 max-h-20 h-auto object-contain rounded flex-shrink-0"
+                className="w-32 max-h-40 h-auto object-contain rounded flex-shrink-0"
               />
               <div className="flex items-start flex-1">
                 <input
