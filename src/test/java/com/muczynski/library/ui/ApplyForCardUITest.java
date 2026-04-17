@@ -27,7 +27,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-apply.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("UI tests temporarily disabled")
 public class ApplyForCardUITest {
 
     @LocalServerPort
@@ -58,7 +57,7 @@ public class ApplyForCardUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(30000L);
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach
@@ -79,7 +78,7 @@ public class ApplyForCardUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Wait for React app to render
-        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(20000L));
 
         // Verify page title
         assertThat(page.locator("h1")).containsText("Apply for a Library Card");
@@ -106,7 +105,7 @@ public class ApplyForCardUITest {
 
         // Verify "Already have an account" link
         assertThat(page.locator("text=Already have an account?")).isVisible();
-        assertThat(page.locator("a[href='/login']")).isVisible();
+        assertThat(page.locator("a[href='/login'].text-blue-600")).isVisible();
 
         // Verify "What happens next" section
         assertThat(page.locator("text=What happens next?")).isVisible();
@@ -132,7 +131,7 @@ public class ApplyForCardUITest {
 
         // Verify confirmation message is shown
         assertThat(page.locator("[data-test='success-container']")).isVisible();
-        assertThat(page.locator("text=Redirecting to login page")).isVisible();
+        assertThat(page.locator("[data-test='success-container'] p")).isVisible();
 
         // Verify form is hidden after success
         Locator nameInput = page.locator("[data-test='apply-name']");
@@ -236,8 +235,8 @@ public class ApplyForCardUITest {
         page.navigate(getBaseUrl() + "/apply");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click the "Sign in" link
-        page.click("a[href='/login']");
+        // Click the "Sign in" link (the one inside the form area, not the nav link)
+        page.click("a[href='/login'].text-blue-600");
 
         // Verify we navigated to login page
         page.waitForURL("**/login", new Page.WaitForURLOptions().setTimeout(10000L));

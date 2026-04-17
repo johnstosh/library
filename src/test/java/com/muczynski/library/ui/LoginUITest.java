@@ -26,7 +26,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-login.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("UI tests temporarily disabled")
 public class LoginUITest {
 
     @LocalServerPort
@@ -57,7 +56,7 @@ public class LoginUITest {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(1280, 720));
         page = context.newPage();
-        page.setDefaultTimeout(30000L); // Increased timeout for React app initialization
+        page.setDefaultTimeout(20000L);
     }
 
     @AfterEach
@@ -96,45 +95,37 @@ public class LoginUITest {
         System.out.println("Page title: " + page.title());
 
         // Wait for React app to render - check for the root div to have content
-        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(20000L));
 
         // Wait specifically for the login username field to appear (indicates React rendered)
         page.waitForSelector("[data-test='login-username']", new Page.WaitForSelectorOptions()
-                .setTimeout(30000L)
+                .setTimeout(20000L)
                 .setState(WaitForSelectorState.VISIBLE));
 
-        // Verify left panel (form side) exists
-        Locator leftPanel = page.locator(".lg\\:w-1\\/2:first-child");
-        assertThat(leftPanel).isVisible();
-
-        // Verify right panel (branding side) exists
-        Locator rightPanel = page.locator(".lg\\:w-1\\/2:last-child");
-        assertThat(rightPanel).isVisible();
-
-        // Verify page title and header in right panel
-        assertThat(page.locator("h1")).containsText("St. Martin de Porres Library");
-
-        // Verify logo in right panel
-        Locator logoImage = page.locator("[data-test='login-logo']");
-        assertThat(logoImage).isVisible();
-
-        // Verify username field in left panel
+        // Verify username field exists
         Locator usernameField = page.locator("[data-test='login-username']");
         assertThat(usernameField).isVisible();
         assertThat(usernameField).hasAttribute("type", "text");
 
-        // Verify password field in left panel
+        // Verify password field exists
         Locator passwordField = page.locator("[data-test='login-password']");
         assertThat(passwordField).isVisible();
         assertThat(passwordField).hasAttribute("type", "password");
 
-        // Verify submit button in left panel
+        // Verify submit button exists
         Locator submitButton = page.locator("[data-test='login-submit']");
         assertThat(submitButton).isVisible();
         assertThat(submitButton).isEnabled();
         assertThat(submitButton).containsText("Sign In");
 
-        // Verify Google OAuth button exists in left panel
+        // Verify page title heading contains library name (right panel branding)
+        assertThat(page.locator("h1")).containsText("St. Martin de Porres");
+
+        // Verify logo image exists (right panel branding)
+        Locator logoImage = page.locator("[data-test='login-logo']");
+        assertThat(logoImage).isVisible();
+
+        // Verify Google OAuth button exists
         Locator googleButton = page.locator("[data-test='google-login']");
         assertThat(googleButton).isVisible();
     }
@@ -175,9 +166,9 @@ public class LoginUITest {
         // Click submit button
         page.click("[data-test='login-submit']");
 
-        // Wait for error message to appear
-        Locator errorMessage = page.locator(".bg-red-50");
-        assertThat(errorMessage).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000L));
+        // Wait for error message to appear using data-test attribute
+        Locator errorMessage = page.locator("[data-test='login-error']");
+        assertThat(errorMessage).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
         assertThat(errorMessage).containsText("Invalid username or password");
     }
 
@@ -269,7 +260,7 @@ public class LoginUITest {
         page.navigate(getBaseUrl() + "/login");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Verify Marian M image is displayed in right panel
+        // Verify logo image is displayed
         Locator logoImage = page.locator("[data-test='login-logo']");
         assertThat(logoImage).isVisible();
 

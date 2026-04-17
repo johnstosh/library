@@ -17,20 +17,21 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.atLeastOnce;
 
+/**
+ * UI test for the "Book from Title and Author" workflow:
+ * - User logs in as librarian
+ * - User navigates to book edit page
+ * - User clicks "Book from Title & Author" to invoke AI lookup
+ * - AskGrok is mocked to return a predictable response
+ * - Test verifies the form updates with AI-returned title
+ * - User saves and the book view page reflects the new title
+ */
 @SpringBootTest(classes = LibraryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -44,20 +45,23 @@ public class BookByPhotoWorkflowTest {
     @MockitoBean
     private AskGrok askGrok;
 
+    private Playwright playwright;
     private Browser browser;
     private Page page;
 
+    // Proper nested JSON format expected by BookService.getBookFromTitleAuthor()
+    private static final String MOCK_AI_RESPONSE =
+        "{\"author\": {\"name\": \"Mock AI Author\", \"dateOfBirth\": null, \"dateOfDeath\": null, " +
+        "\"religiousAffiliation\": \"Unknown\", \"birthCountry\": \"USA\", \"nationality\": \"American\", " +
+        "\"briefBiography\": \"A test author for automated testing.\"}, " +
+        "\"book\": {\"title\": \"Mock AI Book Title\", \"publicationYear\": 2024, \"publisher\": \"Test Press\", " +
+        "\"locNumber\": null, \"plotSummary\": \"A test summary.\", \"relatedWorks\": \"None\", " +
+        "\"detailedDescription\": \"A detailed test description.\"}}";
+
     @BeforeAll
     void launchBrowser() {
-        Playwright playwright = Playwright.create();
+        playwright = Playwright.create();
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-
-        // Set up the mock at class level for both single and multiple photo methods
-        String mockJsonResponse = "{\"title\": \"Mock AI Title\", \"author\": \"Mock AI Author\"}";
-        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString())).thenReturn(mockJsonResponse);
-        when(askGrok.analyzePhoto(any(byte[].class), anyString(), anyString(), anyString())).thenReturn(mockJsonResponse);
-        when(askGrok.analyzePhotos(anyList(), anyString())).thenReturn(mockJsonResponse);
-        when(askGrok.analyzePhotos(anyList(), anyString(), anyString())).thenReturn(mockJsonResponse);
     }
 
     @AfterAll
@@ -65,10 +69,16 @@ public class BookByPhotoWorkflowTest {
         if (browser != null) {
             browser.close();
         }
+        if (playwright != null) {
+            playwright.close();
+        }
     }
 
     @BeforeEach
-    void createContextAndPage() {
+    void createContextAndPageAndSetupMocks() {
+        // Set up mocks before each test so they are active for the current Spring context
+        when(askGrok.askQuestion(anyString())).thenReturn(MOCK_AI_RESPONSE);
+
         BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
         page = context.newPage();
         page.setDefaultTimeout(20000L);
@@ -81,133 +91,77 @@ public class BookByPhotoWorkflowTest {
         }
     }
 
-    private void login() {
-        page.navigate("http://localhost:" + port);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(20000L));
-        page.waitForSelector("[data-test='menu-login']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-        page.click("[data-test='menu-login']");
-        page.waitForSelector("[data-test='login-form']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+    private void loginAsLibrarian() {
+        page.navigate("http://localhost:" + port + "/login");
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+        page.waitForSelector("[data-test='login-username']",
+            new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
         page.fill("[data-test='login-username']", "librarian");
         page.fill("[data-test='login-password']", "password");
         page.click("[data-test='login-submit']");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(20000L));
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
-        page.waitForSelector("[data-test='main-content']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-        page.waitForSelector("[data-test='menu-authors']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     @Test
-    @Disabled("MockitoBean not properly intercepting askGrok.analyzePhoto() calls - Spring Boot 3.4+ bean override configuration issue")
-    void testFullBookByPhotoWorkflow() {
-        Path tempFile = null;
+    @DisplayName("Book from Title & Author: AI fills in book metadata from mocked Grok response")
+    void testBookFromTitleAndAuthorWorkflow() {
         try {
-            // 1. User clicks book-by-photo in the menu
-            login();
-            page.click("[data-test='menu-book-by-photo']");
+            // Step 1: Login as librarian
+            loginAsLibrarian();
 
-            // Wait for initial book creation to complete (buttons become visible)
-            page.waitForSelector("[data-test='cancel-book-btn']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+            // Step 2: Navigate to book 1 edit page
+            page.navigate("http://localhost:" + port + "/books/1/edit");
+            page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(20000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            // 2. Books page opens
-            // 8. Books page goes to edit mode
-            Locator booksForm = page.locator("[data-test='books-form']");
-            booksForm.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(booksForm).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            // Step 3: Wait for the edit form to load with the existing title
+            Locator titleInput = page.locator("[data-test='book-title']");
+            titleInput.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            assertThat(titleInput).hasValue("Initial Book", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
 
-            // 3. Title is set to date/time stamp
-            Locator titleInput = page.locator("[data-test='new-book-title']");
-            titleInput.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            String title = titleInput.inputValue();
-            assertTrue(title.matches("^\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}-\\d{2}$"));
+            // Step 4: Click "Book from Title & Author" to invoke AI lookup
+            Locator bookFromTitleAuthorBtn = page.locator("[data-test='book-operation-book-from-title-author']");
+            bookFromTitleAuthorBtn.scrollIntoViewIfNeeded();
+            bookFromTitleAuthorBtn.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            bookFromTitleAuthorBtn.click();
 
-            // 4. Author is set to the first author in the database
-            Locator authorSelect = page.locator("[data-test='book-author']");
-            authorSelect.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(authorSelect).hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
+            // Step 5: Wait for network idle to ensure the AI response has been processed
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            // 5. Page scrolls to bottom
-            // This is hard to test reliably, but we can check the scroll position
-            // We'll trust the implementation for now and focus on functional steps.
+            // Step 6: Verify the title was updated from the mock AI response
+            assertThat(titleInput).hasValue("Mock AI Book Title", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
 
-            // 6. Data in page is saved to back-end
-            // 7. Page scroll stays at bottom
-            // 9. Page scroll stays at bottom
-            // These are covered by the workflow implicitly.
+            // Step 7: Verify the author combobox input shows the new AI-generated author name
+            Locator authorInput = page.locator("[data-test='book-author-input']");
+            authorInput.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            assertThat(authorInput).hasValue("Mock AI Author", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
 
-            // 10. The cancel and add-photo buttons become available
-            Locator cancelBookBtn = page.locator("[data-test='cancel-book-btn']");
-            cancelBookBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(cancelBookBtn).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-            Locator addPhotoBtn = page.locator("[data-test='add-photo-btn']");
-            addPhotoBtn.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(addPhotoBtn).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            // Step 8: Click Save to persist the AI-generated data
+            Locator saveBtn = page.locator("[data-test='book-form-submit']");
+            saveBtn.scrollIntoViewIfNeeded();
+            saveBtn.click();
 
-            // 11. The user adds one or more photos
-            tempFile = Files.createTempFile("test-photo-workflow", ".jpg");
-            Files.write(tempFile, "dummy photo content".getBytes());
-            page.setInputFiles("input#photo-upload", tempFile);
+            // Step 9: Wait for navigation back to the book view page after save
+            page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(20000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-            // Wait for photo upload to complete and thumbnail to appear
-            page.waitForSelector("[data-test='book-photo']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-
-            // 12. The photos show at the bottom of the page
-            Locator photoThumbnail = page.locator("[data-test='book-photo']");
-            photoThumbnail.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(photoThumbnail).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-
-            // 15. Once a photo has been added the book-by-photo button is visible
-            Locator bookByPhotoButton = page.locator("[data-test='book-by-photo-btn']");
-            bookByPhotoButton.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(bookByPhotoButton).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-
-            // 16. The user clicks book-by-photo
-            // (Mock is already set up in @BeforeEach)
-            bookByPhotoButton.click();
-
-            // Wait for title to be updated from AI response
-            assertThat(titleInput).hasValue("Mock AI Title", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
-            titleInput.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(titleInput).hasValue("Mock AI Title", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
-
-            // 17. All photos are used to determine the title, author, ...
-            // 18. The new book dto is returned from the backend and the fields are updated with non-blank data from the dto
-
-            // Wait for new author option to appear after repopulation
-            page.waitForSelector("[data-test='book-author'] option[value='2']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-
-            // 19. The authors need to be re-read from the backend to obtain the new author for the book
-            Locator authorOption = page.locator("[data-test='book-author'] option[value='2']");
-            authorOption.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(authorOption).hasText("Mock AI Author", new LocatorAssertions.HasTextOptions().setTimeout(20000L));
-            assertThat(authorSelect).hasValue("2", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
-
-            // 20. The books page stays in edit mode
-            assertThat(booksForm).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-
-            // 21. When the user clicks Update Book, the fields are sent to the backend to save
-            page.click("[data-test='add-book-btn']");
-
-            // Wait for update to complete and book table to become visible
-            page.waitForSelector("[data-test='book-table']", new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
-
-            // 22. The Books page leaves edit mode (the book table at the top becomes visible)
-            Locator bookTable = page.locator("[data-test='book-table']");
-            bookTable.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(bookTable).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
-            Locator bookItem = page.locator("[data-test='book-item']").filter(new Locator.FilterOptions().setHasText("Mock AI Title"));
-            bookItem.waitFor(new Locator.WaitForOptions().setTimeout(20000L));
-            assertThat(bookItem).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+            // Step 10: Verify the book view page shows the updated title from AI
+            Locator bookTitle = page.locator("[data-test='book-title']");
+            bookTitle.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            assertThat(bookTitle).containsText("Mock AI Book Title", new LocatorAssertions.ContainsTextOptions().setTimeout(20000L));
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-book-by-photo-workflow.png")));
             throw new RuntimeException(e);
-        } finally {
-            if (tempFile != null) {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (IOException e) {
-                    // Suppress
-                }
-            }
         }
     }
 }

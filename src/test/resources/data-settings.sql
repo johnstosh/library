@@ -48,3 +48,9 @@ INSERT INTO users_roles (user_id, role_id) VALUES (2, 2);
 -- Insert global settings (required for Global Settings page tests)
 INSERT INTO global_settings (id, google_sso_client_id, google_sso_client_secret, google_client_id, google_client_secret, redirect_uri)
 VALUES (1, '', '', '', '', 'http://localhost:8080/oauth2/callback');
+
+-- Reset sequences to avoid duplicate key violations when auto-generating IDs after explicit inserts
+SELECT setval('library_id_seq', (SELECT MAX(id) FROM library));
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+SELECT setval('role_id_seq', (SELECT MAX(id) FROM role));
+SELECT setval('global_settings_id_seq', (SELECT MAX(id) FROM global_settings));

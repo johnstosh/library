@@ -462,7 +462,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     setSuccessMessage('')
 
     if (!formData.title || !formData.authorId || !formData.branchId) {
-      setError('Title, Author, and Branch are required')
+      setError('Title, Author, and Library are required')
       return
     }
 

@@ -6,7 +6,6 @@ package com.muczynski.library.ui;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
-import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.muczynski.library.LibraryApplication;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,7 +25,6 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Sql(value = "classpath:data-login.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("UI tests temporarily disabled")
 public class NavigationUITest {
 
     @LocalServerPort
@@ -145,30 +143,42 @@ public class NavigationUITest {
         // Set mobile viewport
         BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(375, 667)); // iPhone size
-        page = mobileContext.newPage();
-        page.setDefaultTimeout(30000L);
+        Page mobilePage = mobileContext.newPage();
+        mobilePage.setDefaultTimeout(30000L);
 
-        // Login as librarian
-        loginAsLibrarian();
+        try {
+            // Login as librarian using the mobile page
+            mobilePage.navigate(getBaseUrl() + "/login");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+            mobilePage.waitForSelector("[data-test='login-username']",
+                    new Page.WaitForSelectorOptions().setTimeout(30000L));
+            mobilePage.fill("[data-test='login-username']", "librarian");
+            mobilePage.fill("[data-test='login-password']", "password");
+            mobilePage.click("[data-test='login-submit']");
+            mobilePage.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Navigate to books page
-        page.navigate(getBaseUrl() + "/books");
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+            // Navigate to books page
+            mobilePage.navigate(getBaseUrl() + "/books");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Wait for navigation to be visible
-        page.waitForSelector("[data-test='navigation']",
-                new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
+            // Wait for navigation to be visible
+            mobilePage.waitForSelector("[data-test='navigation']",
+                    new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-        // Mobile: My Card link should be visible
-        Locator myCardLinkMobile = page.locator("[data-test='nav-my-card-mobile']");
-        assertThat(myCardLinkMobile).isVisible();
+            // Open the mobile menu by clicking the hamburger button
+            mobilePage.click("[data-test='mobile-menu-button']");
 
-        // Verify it has correct text and link
-        assertThat(myCardLinkMobile).containsText("My Card");
-        assertThat(myCardLinkMobile).hasAttribute("href", "/my-card");
+            // Mobile: My Card link should be visible
+            Locator myCardLinkMobile = mobilePage.locator("[data-test='nav-my-card-mobile']");
+            assertThat(myCardLinkMobile).isVisible();
 
-        // Close mobile context
-        mobileContext.close();
+            // Verify it has correct text and link
+            assertThat(myCardLinkMobile).containsText("My Card");
+            assertThat(myCardLinkMobile).hasAttribute("href", "/my-card");
+        } finally {
+            // Close mobile context; do not update page field to avoid double-close in @AfterEach
+            mobileContext.close();
+        }
     }
 
     @Test
@@ -222,9 +232,7 @@ public class NavigationUITest {
         page.waitForSelector("[data-test='navigation']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-        // Public items should be visible when logged out
-        assertThat(page.locator("[data-test='nav-books']")).isVisible();
-        assertThat(page.locator("[data-test='nav-authors']")).isVisible();
+        // Search is always visible (public route). Books and Authors require authentication.
         assertThat(page.locator("[data-test='nav-search']")).isVisible();
 
         // Login as librarian
@@ -234,7 +242,11 @@ public class NavigationUITest {
         page.navigate(getBaseUrl() + "/books");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Public items should still be visible when logged in
+        // Wait for navigation to be visible
+        page.waitForSelector("[data-test='navigation']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
+
+        // When logged in, all nav items should be visible
         assertThat(page.locator("[data-test='nav-books']")).isVisible();
         assertThat(page.locator("[data-test='nav-authors']")).isVisible();
         assertThat(page.locator("[data-test='nav-search']")).isVisible();
