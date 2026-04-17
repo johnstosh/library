@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
+import type { LibraryCardDesignDto } from '@/types/dtos'
 
 export interface AppliedDto {
   id: number
@@ -55,6 +56,14 @@ export function useDeleteApplication() {
   })
 }
 
+export function useLibraryCardDesigns() {
+  return useQuery({
+    queryKey: ['library-card-designs'],
+    queryFn: () => api.get<LibraryCardDesignDto[]>('/library-card/designs'),
+    staleTime: Infinity,
+  })
+}
+
 // Function to print library card PDF for current user
 export async function printLibraryCard(): Promise<Blob> {
   const response = await fetch('/api/library-card/print', {
@@ -68,7 +77,7 @@ export async function printLibraryCard(): Promise<Blob> {
   return response.blob()
 }
 
-// Function to print all 5 library card designs as a multi-page PDF
+// Function to print all library card designs as a multi-page PDF
 export async function printAllLibraryCards(): Promise<Blob> {
   const response = await fetch('/api/library-card/print-all', {
     credentials: 'include',

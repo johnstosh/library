@@ -3,7 +3,9 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.LibraryCardDesign;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.dto.LibraryCardDesignDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.LibraryCardPdfService;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Controller for library card operations.
@@ -35,8 +39,17 @@ public class LibraryCardController {
     @Autowired
     private UserRepository userRepository;
 
+    @GetMapping("/designs")
+    public List<LibraryCardDesignDto> getDesigns() {
+        return Arrays.stream(LibraryCardDesign.values())
+                .map(d -> new LibraryCardDesignDto(
+                        d.name(), d.getDisplayName(), d.getDescription(),
+                        "/images/library-cards/" + d.getImageFilename()))
+                .toList();
+    }
+
     /**
-     * Generate and download a multi-page PDF containing all 5 library card designs.
+     * Generate and download a multi-page PDF containing all library card designs.
      *
      * @return PDF file as byte array with appropriate headers
      */

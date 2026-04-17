@@ -11,13 +11,15 @@ export interface ErrorResponse {
   existingEntityId?: number
 }
 
-// Library Card Design Type
-export type LibraryCardDesign =
-  | 'COUNTRYSIDE_YOUTH'
-  | 'SACRED_HEART_PORTRAIT'
-  | 'RADIANT_BLESSING'
-  | 'PATRON_OF_CREATURES'
-  | 'CLASSICAL_DEVOTION'
+// Library Card Design Type — open string; backend is the source of truth
+export type LibraryCardDesign = string
+
+export interface LibraryCardDesignDto {
+  name: string
+  displayName: string
+  description: string
+  imageUrl: string
+}
 
 // Common
 export interface IdDto {

@@ -2,34 +2,7 @@
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import type { LibraryCardDesign } from '@/types/dtos'
-
-export const LIBRARY_CARD_DESIGN_OPTIONS: Array<{ value: LibraryCardDesign; label: string; description: string }> = [
-  {
-    value: 'CLASSICAL_DEVOTION',
-    label: 'Classical Devotion',
-    description: 'Traditional design with classic typography'
-  },
-  {
-    value: 'COUNTRYSIDE_YOUTH',
-    label: 'Countryside Youth',
-    description: 'Fresh, youthful design with natural elements'
-  },
-  {
-    value: 'SACRED_HEART_PORTRAIT',
-    label: 'Sacred Heart Portrait',
-    description: 'Portrait-oriented design with sacred imagery'
-  },
-  {
-    value: 'RADIANT_BLESSING',
-    label: 'Radiant Blessing',
-    description: 'Bright design with uplifting elements'
-  },
-  {
-    value: 'PATRON_OF_CREATURES',
-    label: 'Patron of Creatures',
-    description: 'Nature-focused design with animal motifs'
-  }
-]
+import { useLibraryCardDesigns } from '@/api/library-cards'
 
 interface LibraryCardDesignPickerProps {
   currentDesign: LibraryCardDesign | undefined
@@ -44,6 +17,11 @@ export function LibraryCardDesignPicker({
   successMessage,
   errorMessage,
 }: LibraryCardDesignPickerProps) {
+  const { data: designs, isLoading } = useLibraryCardDesigns()
+
+  const previewImageUrl = designs?.find(d => d.name === currentDesign)?.imageUrl
+    ?? `/images/library-cards/${(currentDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`
+
   return (
     <>
       {successMessage && <SuccessMessage message={successMessage} className="mb-4" />}
@@ -52,49 +30,57 @@ export function LibraryCardDesignPicker({
       {/* Large preview of currently selected design */}
       <div className="mb-4 flex justify-center">
         <img
-          src={`/images/library-cards/${(currentDesign ?? 'CLASSICAL_DEVOTION').toLowerCase()}.jpg`}
+          src={previewImageUrl}
           alt="Selected library card design preview"
           className="w-128 max-h-160 h-auto object-contain rounded-lg shadow"
           data-test="library-card-design-preview"
         />
       </div>
 
-      <div className="space-y-3">
-        {LIBRARY_CARD_DESIGN_OPTIONS.map((option) => (
-          <div
-            key={option.value}
-            className={`border rounded-lg p-4 cursor-pointer transition-all ${
-              currentDesign === option.value
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => onDesignChange(option.value)}
-            data-test={`library-card-design-${option.value}`}
-          >
-            <div className="flex items-center gap-3">
-              <img
-                src={`/images/library-cards/${option.value.toLowerCase()}.jpg`}
-                alt={option.label}
-                className="w-32 max-h-40 h-auto object-contain rounded flex-shrink-0"
-              />
-              <div className="flex items-start flex-1">
-                <input
-                  type="radio"
-                  name="libraryCardDesign"
-                  value={option.value}
-                  checked={currentDesign === option.value}
-                  onChange={() => onDesignChange(option.value)}
-                  className="mt-1 mr-3"
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="border rounded-lg p-4 animate-pulse bg-gray-100 h-24" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {(designs ?? []).map((option) => (
+            <div
+              key={option.name}
+              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                currentDesign === option.name
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+              onClick={() => onDesignChange(option.name)}
+              data-test={`library-card-design-${option.name}`}
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src={option.imageUrl}
+                  alt={option.displayName}
+                  className="w-32 max-h-40 h-auto object-contain rounded flex-shrink-0"
                 />
-                <div>
-                  <div className="font-medium text-gray-900">{option.label}</div>
-                  <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                <div className="flex items-start flex-1">
+                  <input
+                    type="radio"
+                    name="libraryCardDesign"
+                    value={option.name}
+                    checked={currentDesign === option.name}
+                    onChange={() => onDesignChange(option.name)}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">{option.displayName}</div>
+                    <div className="text-sm text-gray-600 mt-1">{option.description}</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   )
 }

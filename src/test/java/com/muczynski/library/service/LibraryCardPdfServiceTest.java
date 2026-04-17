@@ -128,27 +128,42 @@ class LibraryCardPdfServiceTest {
 
     @Test
     void testLibraryCardDesign_GetDisplayName() {
-        // Test that all designs have proper display names
         assertEquals("Countryside Youth", LibraryCardDesign.COUNTRYSIDE_YOUTH.getDisplayName());
         assertEquals("Sacred Heart Portrait", LibraryCardDesign.SACRED_HEART_PORTRAIT.getDisplayName());
         assertEquals("Radiant Blessing", LibraryCardDesign.RADIANT_BLESSING.getDisplayName());
         assertEquals("Patron of Creatures", LibraryCardDesign.PATRON_OF_CREATURES.getDisplayName());
         assertEquals("Classical Devotion", LibraryCardDesign.CLASSICAL_DEVOTION.getDisplayName());
+        assertEquals("Clare's Library Card", LibraryCardDesign.CLARES_LIBRARY_CARD.getDisplayName());
+        assertEquals("Grandfather", LibraryCardDesign.GRANDFATHER.getDisplayName());
+        assertEquals("Little Flower Bank", LibraryCardDesign.LITTLE_FLOWER_BANK.getDisplayName());
+        assertEquals("Little Flower", LibraryCardDesign.LITTLE_FLOWER.getDisplayName());
+        assertEquals("Mother Angelica", LibraryCardDesign.MOTHER_ANGELICA.getDisplayName());
     }
 
     @Test
     void testLibraryCardDesign_GetImageFilename() {
-        // Test that all designs have proper filenames
         assertEquals("countryside_youth.jpg", LibraryCardDesign.COUNTRYSIDE_YOUTH.getImageFilename());
         assertEquals("sacred_heart_portrait.jpg", LibraryCardDesign.SACRED_HEART_PORTRAIT.getImageFilename());
         assertEquals("radiant_blessing.jpg", LibraryCardDesign.RADIANT_BLESSING.getImageFilename());
         assertEquals("patron_of_creatures.jpg", LibraryCardDesign.PATRON_OF_CREATURES.getImageFilename());
         assertEquals("classical_devotion.jpg", LibraryCardDesign.CLASSICAL_DEVOTION.getImageFilename());
+        assertEquals("clares_library_card.jpg", LibraryCardDesign.CLARES_LIBRARY_CARD.getImageFilename());
+        assertEquals("grandfather.jpg", LibraryCardDesign.GRANDFATHER.getImageFilename());
+        assertEquals("little_flower_bank.jpg", LibraryCardDesign.LITTLE_FLOWER_BANK.getImageFilename());
+        assertEquals("little_flower.jpg", LibraryCardDesign.LITTLE_FLOWER.getImageFilename());
+        assertEquals("mother_angelica.jpg", LibraryCardDesign.MOTHER_ANGELICA.getImageFilename());
+    }
+
+    @Test
+    void testLibraryCardDesign_GetDescription() {
+        for (LibraryCardDesign design : LibraryCardDesign.values()) {
+            assertNotNull(design.getDescription(), "Description should not be null for " + design);
+            assertFalse(design.getDescription().isBlank(), "Description should not be blank for " + design);
+        }
     }
 
     @Test
     void testLibraryCardDesign_GetDefault() {
-        // Test default design
         assertEquals(LibraryCardDesign.CLASSICAL_DEVOTION, LibraryCardDesign.getDefault(),
                 "Default design should be CLASSICAL_DEVOTION");
     }

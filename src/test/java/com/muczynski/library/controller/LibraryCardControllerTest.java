@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -53,6 +54,29 @@ class LibraryCardControllerTest {
 
     @Autowired
     private LibraryCardPdfService libraryCardPdfService;
+
+    // ==================== GET /api/library-card/designs Tests ====================
+
+    @Test
+    void testGetDesigns_ReturnsAllDesigns() throws Exception {
+        mockMvc.perform(get("/api/library-card/designs"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(LibraryCardDesign.values().length)))
+                .andExpect(jsonPath("$[0].name").exists())
+                .andExpect(jsonPath("$[0].displayName").exists())
+                .andExpect(jsonPath("$[0].description").exists())
+                .andExpect(jsonPath("$[0].imageUrl").exists());
+    }
+
+    @Test
+    void testGetDesigns_ContainsExpectedDesigns() throws Exception {
+        mockMvc.perform(get("/api/library-card/designs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name == 'CLASSICAL_DEVOTION')].displayName").value("Classical Devotion"))
+                .andExpect(jsonPath("$[?(@.name == 'MOTHER_ANGELICA')].displayName").value("Mother Angelica"))
+                .andExpect(jsonPath("$[?(@.name == 'CLARES_LIBRARY_CARD')].displayName").value("Clare's Library Card"));
+    }
 
     // ==================== GET /api/library-card/print Tests ====================
 
