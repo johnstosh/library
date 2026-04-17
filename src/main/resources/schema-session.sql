@@ -1,6 +1,9 @@
 -- Spring Session JDBC Schema for PostgreSQL
 -- This schema is automatically applied when the application starts
 
+-- Drop the auto-generated Hibernate check constraint on library_card_design so new enum values are accepted.
+ALTER TABLE IF EXISTS users DROP CONSTRAINT IF EXISTS users_library_card_design_check;
+
 CREATE TABLE IF NOT EXISTS SPRING_SESSION (
     PRIMARY_ID CHAR(36) NOT NULL,
     SESSION_ID CHAR(36) NOT NULL,
