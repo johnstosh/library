@@ -34,9 +34,27 @@ public class LibraryCardPdfService {
     // Printer margins (0.5 inches on all sides)
     private static final float MARGIN = 0.5f * 72;
 
+    // US Letter page dimensions: 8.5" x 11" = 612pt x 792pt
+    private static final float PAGE_WIDTH = 8.5f * 72;
+    private static final float PAGE_HEIGHT = 11.0f * 72;
+    private static final float PAGE_MARGIN = 0.5f * 72;
+
+    // Gap between adjacent cards: 0.25" = 18pt
+    private static final float GAP = 0.25f * 72;
+
+    // Grid layout: 3 columns x 2 rows = 6 cards per page
+    // Usable width: 612 - 2*36 = 540pt; cols = floor((540+18)/(153+18)) = 3
+    // Usable height: 792 - 2*36 = 720pt; rows = floor((720+18)/(243+18)) = 2
+    private static final int COLS_PER_PAGE = 3;
+    private static final int ROWS_PER_PAGE = 2;
+    private static final int CARDS_PER_PAGE = COLS_PER_PAGE * ROWS_PER_PAGE;
+
     /**
-     * Generates a multi-page PDF containing all 5 library card designs.
-     * Each design occupies one page in wallet-sized format with 0.5" margins.
+     * Generates a PDF containing all 5 library card designs arranged in a grid on US Letter paper.
+     * <p>
+     * Layout: 8.5" × 11" (612pt × 792pt) pages with 0.5" page margins and 0.25" gaps between
+     * cards. Cards are arranged in a 3-column × 2-row grid (6 cards per page), so all 5 designs
+     * fit on a single page. Cards are positioned using absolute coordinates (iText fixed positioning).
      *
      * @param user The user for context (used for display; all designs are included)
      * @return PDF as byte array containing all designs
@@ -45,23 +63,21 @@ public class LibraryCardPdfService {
     public byte[] generateAllDesignsPdf(User user) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-        float pageWidth = WALLET_WIDTH + (2 * MARGIN);
-        float pageHeight = WALLET_HEIGHT + (2 * MARGIN);
-
         PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdf = new PdfDocument(writer);
-        PageSize pageSize = new PageSize(pageWidth, pageHeight);
+        PageSize pageSize = new PageSize(PAGE_WIDTH, PAGE_HEIGHT);
         pdf.setDefaultPageSize(pageSize);
 
         Document document = new Document(pdf);
-        document.setMargins(MARGIN, MARGIN, MARGIN, MARGIN);
+        document.setMargins(0, 0, 0, 0);
 
         try {
             LibraryCardDesign[] designs = LibraryCardDesign.values();
             for (int i = 0; i < designs.length; i++) {
                 LibraryCardDesign design = designs[i];
 
-                if (i > 0) {
+                // Add a new page when we overflow the current page's card grid
+                if (i > 0 && i % CARDS_PER_PAGE == 0) {
                     document.add(new com.itextpdf.layout.element.AreaBreak(
                             com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
                 }
@@ -88,7 +104,16 @@ public class LibraryCardPdfService {
                     image.scaleToFit(WALLET_WIDTH, WALLET_HEIGHT);
                 }
 
-                image.setFixedPosition(MARGIN, MARGIN);
+                // Grid position within the current page
+                int indexOnPage = i % CARDS_PER_PAGE;
+                int col = indexOnPage % COLS_PER_PAGE;
+                int row = indexOnPage / COLS_PER_PAGE;
+
+                // iText origin is bottom-left; row 0 is the top row of cards
+                float x = PAGE_MARGIN + col * (WALLET_WIDTH + GAP);
+                float y = PAGE_HEIGHT - PAGE_MARGIN - WALLET_HEIGHT - row * (WALLET_HEIGHT + GAP);
+
+                image.setFixedPosition(x, y);
                 document.add(image);
             }
         } finally {
