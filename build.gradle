@@ -8,6 +8,8 @@ plugins {
 group = 'com.muczynski'
 version = '2.2.0'
 
+ext['tomcat.version'] = '10.+'
+
 java {
     sourceCompatibility = '17'
 }
