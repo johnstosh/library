@@ -5,9 +5,11 @@ package com.muczynski.library.service;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Image;
 import com.muczynski.library.domain.LibraryCardDesign;
@@ -18,6 +20,11 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service for generating library card PDFs.
@@ -72,16 +79,11 @@ public class LibraryCardPdfService {
         document.setMargins(0, 0, 0, 0);
 
         try {
-            LibraryCardDesign[] designs = LibraryCardDesign.values();
-            for (int i = 0; i < designs.length; i++) {
-                LibraryCardDesign design = designs[i];
-
-                // Add a new page when we overflow the current page's card grid
-                if (i > 0 && i % CARDS_PER_PAGE == 0) {
-                    document.add(new com.itextpdf.layout.element.AreaBreak(
-                            com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
-                }
-
+            // Load all images once to determine dimensions, then sort by normalized aspect ratio
+            // ascending: max(w,h)/min(w,h) — squarer designs print first, longer designs last.
+            Map<LibraryCardDesign, ImageData> imageDataCache = new HashMap<>();
+            List<LibraryCardDesign> designs = new ArrayList<>();
+            for (LibraryCardDesign design : LibraryCardDesign.values()) {
                 String imagePath = "static/images/library-cards/" + design.getImageFilename();
                 ClassPathResource imageResource = new ClassPathResource(imagePath);
 
@@ -91,17 +93,47 @@ public class LibraryCardPdfService {
 
                 byte[] imageBytes = imageResource.getInputStream().readAllBytes();
                 ImageData imageData = ImageDataFactory.create(imageBytes);
+                imageDataCache.put(design, imageData);
+                designs.add(design);
+            }
+
+            designs.sort(Comparator.comparingDouble(d -> {
+                ImageData imgData = imageDataCache.get(d);
+                float w = imgData.getWidth();
+                float h = imgData.getHeight();
+                return Math.max(w, h) / Math.min(w, h);
+            }));
+
+            for (int i = 0; i < designs.size(); i++) {
+                LibraryCardDesign design = designs.get(i);
+
+                // Add a new page when we overflow the current page's card grid
+                if (i > 0 && i % CARDS_PER_PAGE == 0) {
+                    document.add(new com.itextpdf.layout.element.AreaBreak(
+                            com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
+                }
+
+                ImageData imageData = imageDataCache.get(design);
                 Image image = new Image(imageData);
 
                 float imageWidth = imageData.getWidth();
                 float imageHeight = imageData.getHeight();
                 boolean isLandscape = imageWidth > imageHeight;
 
+                float scale;
+                float renderedW;
+                float renderedH;
                 if (isLandscape) {
                     image.setRotationAngle(Math.toRadians(90));
                     image.scaleToFit(WALLET_HEIGHT, WALLET_WIDTH);
+                    scale = Math.min(WALLET_HEIGHT / imageWidth, WALLET_WIDTH / imageHeight);
+                    renderedW = imageHeight * scale;
+                    renderedH = imageWidth * scale;
                 } else {
                     image.scaleToFit(WALLET_WIDTH, WALLET_HEIGHT);
+                    scale = Math.min(WALLET_WIDTH / imageWidth, WALLET_HEIGHT / imageHeight);
+                    renderedW = imageWidth * scale;
+                    renderedH = imageHeight * scale;
                 }
 
                 // Grid position within the current page
@@ -113,8 +145,19 @@ public class LibraryCardPdfService {
                 float x = PAGE_MARGIN + col * (WALLET_WIDTH + GAP);
                 float y = PAGE_HEIGHT - PAGE_MARGIN - WALLET_HEIGHT - row * (WALLET_HEIGHT + GAP);
 
-                image.setFixedPosition(x, y);
+                // Center the scaled image inside the wallet cut-line rectangle
+                float offsetX = (WALLET_WIDTH - renderedW) / 2f;
+                float offsetY = (WALLET_HEIGHT - renderedH) / 2f;
+                image.setFixedPosition(x + offsetX, y + offsetY);
                 document.add(image);
+
+                // Draw a 2pt solid black cut-line rectangle at the card's outer footprint
+                // so users can trim all cards to the same size regardless of the scaled image.
+                PdfCanvas canvas = new PdfCanvas(pdf.getPage(pdf.getNumberOfPages()));
+                canvas.setStrokeColor(ColorConstants.BLACK)
+                        .setLineWidth(2f)
+                        .rectangle(x, y, WALLET_WIDTH, WALLET_HEIGHT)
+                        .stroke();
             }
         } finally {
             document.close();
@@ -171,20 +214,38 @@ public class LibraryCardPdfService {
             float imageHeight = imageData.getHeight();
             boolean isLandscape = imageWidth > imageHeight;
 
+            float scale;
+            float renderedW;
+            float renderedH;
             if (isLandscape) {
                 // Rotate landscape images 90 degrees clockwise to fit portrait card
                 image.setRotationAngle(Math.toRadians(90));
-                // After rotation, swap dimensions for scaling
                 image.scaleToFit(WALLET_HEIGHT, WALLET_WIDTH);
+                scale = Math.min(WALLET_HEIGHT / imageWidth, WALLET_WIDTH / imageHeight);
+                renderedW = imageHeight * scale;
+                renderedH = imageWidth * scale;
             } else {
                 // Scale image to fit wallet size while maintaining aspect ratio
                 image.scaleToFit(WALLET_WIDTH, WALLET_HEIGHT);
+                scale = Math.min(WALLET_WIDTH / imageWidth, WALLET_HEIGHT / imageHeight);
+                renderedW = imageWidth * scale;
+                renderedH = imageHeight * scale;
             }
 
-            // Position at the margins (0.5" from edges)
-            image.setFixedPosition(MARGIN, MARGIN);
+            // Center the scaled image inside the wallet cut-line rectangle
+            float offsetX = (WALLET_WIDTH - renderedW) / 2f;
+            float offsetY = (WALLET_HEIGHT - renderedH) / 2f;
+            image.setFixedPosition(MARGIN + offsetX, MARGIN + offsetY);
 
             document.add(image);
+
+            // Draw a 2pt solid black cut-line rectangle at the card's outer footprint
+            // so users can trim the card to a consistent size regardless of the scaled image.
+            PdfCanvas canvas = new PdfCanvas(pdf.getPage(pdf.getNumberOfPages()));
+            canvas.setStrokeColor(ColorConstants.BLACK)
+                    .setLineWidth(2f)
+                    .rectangle(MARGIN, MARGIN, WALLET_WIDTH, WALLET_HEIGHT)
+                    .stroke();
 
         } finally {
             document.close();
