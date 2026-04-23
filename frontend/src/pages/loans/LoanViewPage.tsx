@@ -267,7 +267,7 @@ export function LoanViewPage() {
                     photoId={loan.photoId}
                     url={getThumbnailUrl(loan.photoId, 400, loan.photoChecksum)}
                     alt="Checkout card photo"
-                    className="max-w-md rounded border border-gray-300 hover:opacity-90 transition-opacity cursor-pointer"
+                    className="w-full max-w-md min-h-[200px] rounded border border-gray-300 hover:opacity-90 transition-opacity cursor-pointer"
                     respectOrientation
                   />
                 </a>

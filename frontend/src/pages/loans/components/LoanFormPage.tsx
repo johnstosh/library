@@ -487,9 +487,9 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const showPhotoPanel = captureMode || selectedFile
 
   return (
-    <div className={`flex gap-6 ${showPhotoPanel ? '' : ''}`}>
+    <div className={`flex flex-col lg:flex-row gap-6 ${showPhotoPanel ? '' : ''}`}>
       {/* Main Form */}
-      <div className={`bg-white rounded-lg shadow relative ${showPhotoPanel ? 'flex-1' : 'w-full'}`}>
+      <div className={`bg-white rounded-lg shadow relative ${showPhotoPanel ? 'w-full lg:flex-1' : 'w-full'}`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
@@ -674,7 +674,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
 
       {/* Photo Panel - shown when captureMode is set or photo is selected */}
       {showPhotoPanel && (
-        <div className="w-96 bg-white rounded-lg shadow">
+        <div className="w-full lg:w-96 bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
               {captureMode === 'camera' ? 'Checkout by Camera' : 'Checkout by Photo'}
@@ -740,7 +740,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                   className="w-full rounded border border-gray-300"
                 />
                 <p className="text-xs text-gray-500 text-center">
-                  Compare the image with the form data above
+                  Compare the image with the form data to the left
                 </p>
                 <Button
                   variant="ghost"
