@@ -1,5 +1,5 @@
-# (c) Copyright 2025 by Muczynski
 #!/bin/bash
+# (c) Copyright 2025 by Muczynski
 
 # deploy.sh
 # Unified deployment script for Google Cloud Run
@@ -109,7 +109,7 @@ if [ "$MODE" = "graalvm" ]; then
   DOCKERFILE="Dockerfile-graalvm"
 fi
 
-IMAGE_TAG="us-east1-docker.pkg.dev/${GCP_PROJECT_ID}/${BINARY_REPO_NAME}/${IMAGE_NAME}:${SERVICE_VERSION}"
+IMAGE_TAG="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${BINARY_REPO_NAME}/${IMAGE_NAME}:${SERVICE_VERSION}"
 
 echo "Mode: $MODE | Image: $IMAGE_TAG | Memory: $MEMORY"
 
@@ -140,7 +140,7 @@ if [ "$MODE" != "redeploy" ]; then
 
   # Configure Docker to use GCP Artifact Registry
   echo "Configuring Docker for Artifact Registry..."
-  gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+  gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
 
   # Build the frontend
   echo "Building React frontend..."
