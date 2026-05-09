@@ -100,6 +100,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Deprecated
     Optional<Book> findByTitleAndAuthorIsNull(String title);
     List<Book> findAllByTitleAndAuthorIsNullOrderByIdAsc(String title);
+    List<Book> findAllByTitleOrderByIdAsc(String title);
 
     @Query("SELECT MAX(b.dateAddedToLibrary) FROM Book b")
     LocalDateTime findMaxDateAddedToLibrary();

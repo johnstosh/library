@@ -300,8 +300,17 @@ public class ImportService {
                     }
                 }
                 if (book == null) {
-                    book = new Book();
-                    book.setTitle(bDto.getTitle());
+                    // Fallback: title-only lookup guards against uk_book_title constraint violation
+                    // when the same title exists in the DB with a different (or null) author
+                    List<Book> existingByTitle = bookRepository.findAllByTitleOrderByIdAsc(bDto.getTitle());
+                    if (!existingByTitle.isEmpty()) {
+                        book = existingByTitle.get(0);
+                        logger.warn("Found existing book '{}' (ID: {}) with different author assignment; merging into it",
+                                bDto.getTitle(), book.getId());
+                    } else {
+                        book = new Book();
+                        book.setTitle(bDto.getTitle());
+                    }
                 }
 
                 // Update fields (merge)
