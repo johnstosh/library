@@ -93,6 +93,16 @@ export interface PhotoVerifyResultDto {
   filename?: string
 }
 
+export interface PhotoZipPartDto {
+  partNumber: number
+  totalParts: number
+  rangeLabel: string
+  photoCount: number
+  estimatedMb: number
+  startKey: string
+  endKey: string
+}
+
 // Export JSON data
 export async function exportJsonData(): Promise<Blob> {
   const response = await fetch('/api/import/json', {
@@ -208,6 +218,17 @@ export function usePhotoExportList() {
   return useQuery({
     queryKey: ['photo-export-list'],
     queryFn: () => api.get<PhotoExportInfoDto[]>('/photo-export/photos'),
+  })
+}
+
+// Compute how the photo collection splits into ZIP parts.
+// staleTime: Infinity so it never re-fetches automatically once loaded;
+// the page auto-triggers this on mount (strictly once per session).
+export function usePhotoZipParts() {
+  return useQuery({
+    queryKey: ['photo-zip-parts'],
+    queryFn: () => api.get<PhotoZipPartDto[]>('/photo-export/zip-parts'),
+    staleTime: Infinity,
   })
 }
 

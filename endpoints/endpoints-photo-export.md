@@ -1,154 +1,144 @@
-# Photo Export Endpoints (Google Photos Sync)
+# Photo Export Endpoints (Google Photos Sync + ZIP Download)
 
-## GET /api/photo-export/stats
-Returns statistics about photo export status.
+## GET /api/photo-export/zip-parts
+Computes how the photo collection splits into alphabetically-bounded ZIP parts.
+Called automatically by the Photos page on load to populate the download buttons.
 
-**Authentication:** Public (permitAll) ⚠️ **Should be librarian-only**
+**Authentication:** Librarian only
 
-**Response:** Map containing:
+**Response:** Array of `PhotoZipPartDto`:
 ```json
-{
-  "totalPhotos": 150,
-  "exportedPhotos": 120,
-  "notExportedPhotos": 30
-}
+[
+  { "partNumber": 1, "totalParts": 3, "rangeLabel": "0-9, A-H", "photoCount": 316, "estimatedMb": 316, "startKey": "0", "endKey": "H" },
+  { "partNumber": 2, "totalParts": 3, "rangeLabel": "I-R",      "photoCount": 291, "estimatedMb": 291, "startKey": "I", "endKey": "R" },
+  { "partNumber": 3, "totalParts": 3, "rangeLabel": "S-Y",      "photoCount": 229, "estimatedMb": 229, "startKey": "S", "endKey": "Y" }
+]
 ```
 
-**Use Case:**
-- Display photo sync status on Data Management page
-- Shows how many photos have been backed up to Google Photos
+**Behavior:**
+- Derives each photo's sort key from book title (or author name / loan's book title), stripping leading articles ("The ", "An ", "A "). Digits and symbols group under "0-9".
+- Assumes 1 MB per photo; targets ≤ 400 MB per part.
+- Splits recalculate dynamically — no configuration needed as the collection grows.
+- See `feature-design-import-export.md` for full algorithm description.
+
+---
+
+## GET /api/photo-export/zip/{partNumber}
+Streams one alphabetically-bounded ZIP part as a file download.
+
+**Authentication:** Librarian only
+
+**Path Parameter:** `partNumber` — 1-based part number (call `/zip-parts` first to discover the range)
+
+**Response:** `application/zip` stream
+
+**Filename format:** `{date}-library-photos-{branch}-part{N}of{M}-{partCount}-of-{totalCount}-photos-{range}.zip`
+Example: `2026-05-09-library-photos-muczynski-part1of3-316-of-836-photos-0-9-a-h.zip`
+
+**Behavior:**
+- Streams photos whose sort key falls in [startKey, endKey] for the requested part.
+- Photos missing local image bytes are fetched from Google Photos on the fly (requires valid OAuth token).
+
+---
+
+## GET /api/photo-export
+Streams **all** photos as a single ZIP file (legacy endpoint, no size limit).
+
+**Authentication:** Librarian only
+
+**Response:** `application/zip` stream
+
+**Filename format:** `{date}-library-photos-{branch}-{count}-photos.zip`
+
+**Behavior:**
+- Memory-efficient streaming — photos are loaded one at a time, never buffered entirely in RAM.
+- Use `/zip-parts` + `/zip/{partNumber}` instead for collections over ~400 MB.
+
+---
+
+## GET /api/photo-export/stats
+Returns photo sync statistics.
+
+**Authentication:** Librarian only *(was incorrectly public in earlier versions)*
+
+**Response:** `PhotoExportStatsDto`
+```json
+{
+  "total": 836, "exported": 800, "imported": 790,
+  "pendingExport": 36, "pendingImport": 10, "failed": 2, "inProgress": 0,
+  "albumName": "Muczynski Library", "albumId": "ABC123..."
+}
+```
 
 ---
 
 ## GET /api/photo-export/photos
-Returns all photos with their export status.
+Returns all photos with export status (metadata only, no image bytes).
 
-**Authentication:** Public (permitAll) ⚠️ **Should be librarian-only**
+**Authentication:** Librarian only *(was incorrectly public in earlier versions)*
 
-**Response:** Array of photo information maps:
-```json
-[
-  {
-    "id": 1,
-    "caption": "Book cover",
-    "permanentId": "abc123...",
-    "hasBeenUploaded": true,
-    "bookTitle": "The Great Gatsby",
-    "authorName": null
-  }
-]
-```
+**Response:** Array of `PhotoExportInfoDto` — id, caption, permanentId, exportStatus, bookTitle, authorName, checksum, etc.
 
-**Use Case:**
-- View which photos have been synced to Google Photos
-- Identify photos that need backup
+---
+
+## GET /api/photo-export/photos/{photoId}
+Returns export info for a single photo. Used by the frontend to refresh just the changed row after a single-photo export/import.
+
+**Authentication:** Librarian only
 
 ---
 
 ## POST /api/photo-export/export-all
-Uploads all photos to Google Photos for backup.
+Uploads all pending photos to Google Photos in batches of 50.
 
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Response:** Success message or error
-
-**Behavior:**
-- Uploads all local photos to Google Photos
-- Updates permanent ID for each photo
-- Skips photos already uploaded
-
-**Use Case:**
-- Backup all library photos to Google Photos cloud storage
-- One-click photo backup operation
+**Authentication:** Librarian only
 
 ---
 
 ## POST /api/photo-export/export/{photoId}
-Uploads a single photo to Google Photos.
+Uploads a single photo to Google Photos and returns the updated `PhotoExportInfoDto`.
 
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Path Parameter:** `photoId` - Photo ID to export
-
-**Response:** Success message or 404 if photo not found
-
-**Use Case:**
-- Selective photo backup to Google Photos
-- Re-upload modified photo
-
----
-
-## POST /api/photo-export/import/{photoId}
-Downloads a single photo from Google Photos.
-
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Path Parameter:** `photoId` - Photo ID to import
-
-**Response:** Success message or error
-
-**Behavior:**
-- Fetches photo from Google Photos using permanent ID
-- Updates local photo data with downloaded bytes
-- Requires photo to have valid permanent ID
-
-**Use Case:**
-- Restore photo from Google Photos backup
-- Download updated photo from cloud
+**Authentication:** Librarian only
 
 ---
 
 ## POST /api/photo-export/import-all
-Downloads all photos from Google Photos.
+Downloads all photos that have a `permanentId` but no local image data, in batches of 20.
 
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+**Authentication:** Librarian only
 
-**Response:** Success message or error
+---
 
-**Behavior:**
-- Fetches all photos with permanent IDs from Google Photos
-- Updates local database with downloaded photo bytes
-- Skips photos without permanent IDs
+## POST /api/photo-export/import/{photoId}
+Downloads a single photo from Google Photos and returns the updated `PhotoExportInfoDto`.
 
-**Use Case:**
-- Restore all photos from Google Photos backup
-- Sync photos after database restore from JSON
+**Authentication:** Librarian only
 
 ---
 
 ## POST /api/photo-export/verify/{photoId}
-Verifies that a photo's permanent ID is valid in Google Photos.
+Checks that a photo's `permanentId` still resolves in Google Photos.
 
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+**Authentication:** Librarian only
 
-**Path Parameter:** `photoId` - Photo ID to verify
-
-**Response:** Verification result with photo metadata
-
-**Use Case:**
-- Check if photo still exists in Google Photos
-- Troubleshoot sync issues
+**Response:** `PhotoVerifyResultDto` — `valid`, `message`, `filename`, `mimeType`
 
 ---
 
 ## POST /api/photo-export/unlink/{photoId}
-Removes the Google Photos permanent ID from a photo.
+Clears a photo's `permanentId` (marks it pending export again). Does **not** delete the photo from Google Photos.
 
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Path Parameter:** `photoId` - Photo ID to unlink
-
-**Response:** Success message or 404 if photo not found
-
-**Behavior:**
-- Clears permanent ID field
-- Marks photo as not uploaded
-- Does NOT delete photo from Google Photos (only removes link)
-
-**Use Case:**
-- Prepare photo for re-upload
-- Fix sync issues
+**Authentication:** Librarian only
 
 ---
 
-**Related:** PhotoExportController.java, PhotoExportService.java, GooglePhotosService.java, feature-design-photos.md
+## POST /api/photo-export/backfill-checksums
+Computes and saves `imageChecksum` for any photos that have local image bytes but no stored checksum. Safe to call multiple times (idempotent).
+
+**Authentication:** Librarian only
+
+**Response:** `{ "updated": 12 }`
+
+---
+
+**Related:** `PhotoExportController.java`, `PhotoExportService.java`, `PhotoZipPartDto.java`, `feature-design-import-export.md`, `feature-design-photos.md`

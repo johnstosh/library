@@ -9,7 +9,8 @@ import {
   useDatabaseStats,
   usePhotoExportStats,
   useLabelCounts,
-  exportPhotos,
+  usePhotoZipParts,
+  type PhotoZipPartDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
@@ -25,7 +26,6 @@ import {
 
 export function DataManagementPage() {
   const [isExportingJson, setIsExportingJson] = useState(false)
-  const [isExportingPhotos, setIsExportingPhotos] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [zipImportResult, setZipImportResult] = useState<PhotoZipImportResultDto | null>(null)
@@ -44,6 +44,7 @@ export function DataManagementPage() {
 
   // Photo stats for filename generation
   const { data: photoStats } = usePhotoExportStats()
+  const { data: zipParts, isLoading: isLoadingZipParts, isError: isZipPartsError } = usePhotoZipParts()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -70,7 +71,7 @@ export function DataManagementPage() {
       const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos-${date}.json`
+      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
@@ -114,42 +115,6 @@ export function DataManagementPage() {
       console.error('Failed to import JSON:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(`Failed to import JSON data: ${errorMessage}`)
-    }
-  }
-
-  const handleExportPhotos = async () => {
-    setIsExportingPhotos(true)
-    setSuccessMessage('')
-    setErrorMessage('')
-
-    try {
-      const blob = await exportPhotos()
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      let branchName = 'branch'
-      if (branches.length > 0) {
-        branchName = branches[0].branchName
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-      }
-      const date = new Date().toISOString().split('T')[0]
-      a.download = `${date}-branch-photos-${branchName}.zip`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-      setSuccessMessage('Photo export downloaded successfully')
-    } catch (error) {
-      console.error('Failed to export photos:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      setErrorMessage(`Photo export failed: ${errorMessage}`)
-    } finally {
-      setIsExportingPhotos(false)
     }
   }
 
@@ -336,7 +301,7 @@ export function DataManagementPage() {
         </div>
 
         <div className="p-6 grid md:grid-cols-2 gap-6">
-          {/* Export Photos */}
+          {/* Export Photos - ZIP Download */}
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-start gap-3">
               <PiFileArrowDown className="w-6 h-6 text-purple-600 mt-1" />
@@ -345,18 +310,41 @@ export function DataManagementPage() {
                   Export Photos
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Download all photos stored in Google Photos as a ZIP archive. This is
-                  separate from the JSON export and can be used for complete backup.
+                  Download all photos as ZIP archives. Separate from the JSON export
+                  and can be used for complete backup.
                 </p>
-                <Button
-                  variant="primary"
-                  onClick={handleExportPhotos}
-                  isLoading={isExportingPhotos}
-                  leftIcon={<PiDownload />}
-                  data-test="export-photos"
-                >
-                  Export Photos
-                </Button>
+                {isLoadingZipParts ? (
+                  <Button variant="primary" isLoading disabled data-test="zip-parts-loading-btn">
+                    Preparing downloads…
+                  </Button>
+                ) : isZipPartsError ? (
+                  <ErrorMessage message="Failed to load ZIP download options. Please refresh the page." />
+                ) : zipParts && zipParts.length > 0 ? (
+                  <div>
+                    {zipParts[0].totalParts > 1 && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        Collection split into {zipParts[0].totalParts} parts by title.
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {zipParts.map((part: PhotoZipPartDto) => (
+                        <a
+                          key={part.partNumber}
+                          href={`/api/photo-export/zip/${part.partNumber}`}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+                          data-test={`zip-download-part-${part.partNumber}`}
+                        >
+                          <PiDownload className="w-4 h-4" />
+                          {part.totalParts === 1
+                            ? `Download ZIP (${part.photoCount} photos, ~${part.estimatedMb} MB)`
+                            : `Part ${part.partNumber}: ${part.rangeLabel} (${part.photoCount} photos, ~${part.estimatedMb} MB)`}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No photos available for download.</p>
+                )}
               </div>
             </div>
           </div>

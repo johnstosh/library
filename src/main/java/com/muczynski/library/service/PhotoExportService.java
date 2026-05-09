@@ -30,10 +30,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.muczynski.library.dto.PhotoZipPartDto;
+import com.muczynski.library.repository.PhotoZipSortProjection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class PhotoExportService {
@@ -1225,6 +1228,164 @@ public class PhotoExportService {
         return metadata;
     }
 
+    // -------------------------------------------------------------------------
+    // Alphabetic ZIP-part algorithm
+    // -------------------------------------------------------------------------
+
+    /**
+     * Strips a leading English article ("The ", "An ", "A ") from a title so that,
+     * e.g., "The Wheel on the School" sorts under W, not T.
+     */
+    static String stripLeadingArticle(String title) {
+        if (title == null || title.isEmpty()) return title == null ? "" : title;
+        if (title.regionMatches(true, 0, "the ", 0, 4)) return title.substring(4);
+        if (title.regionMatches(true, 0, "an ",  0, 3)) return title.substring(3);
+        if (title.regionMatches(true, 0, "a ",   0, 2)) return title.substring(2);
+        return title;
+    }
+
+    /**
+     * Returns the single-character sort key for a photo based on its associated name.
+     * <ul>
+     *   <li>'0' — title/name starts with a digit (all numerics grouped together)</li>
+     *   <li>'A'–'Z' — uppercased first letter after article stripping</li>
+     *   <li>'#' — anything else (symbols, null, blank)</li>
+     * </ul>
+     * '#' sorts before '0' in natural char order, then letters follow — so TreeMap
+     * iteration already gives the right sequence: # → 0 → A → B → … → Z.
+     */
+    static char getSortKey(String name) {
+        if (name == null || name.isBlank()) return '0';
+        String effective = stripLeadingArticle(name).trim();
+        if (effective.isEmpty()) return '0';
+        char first = Character.toUpperCase(effective.charAt(0));
+        if (Character.isLetter(first)) return first;
+        return '0'; // digits, symbols, and nulls all group with numbers
+    }
+
+    /**
+     * Builds a human-readable label for a contiguous range of sort keys, e.g.:
+     * <ul>
+     *   <li>'0','0' → "0-9"</li>
+     *   <li>'0','H' → "0-9, A-H"</li>
+     *   <li>'0','A' → "0-9, A"</li>
+     *   <li>'I','R' → "I-R"</li>
+     *   <li>'S','S' → "S"</li>
+     *   <li>'#','#' → "#"</li>
+     * </ul>
+     */
+    static String buildRangeLabel(char start, char end) {
+        if (start == end) return keyDisplayName(start);
+
+        // Range starts at digits/symbols ('0') and ends at a letter
+        if (start == '0') {
+            return end == 'A' ? "0-9, A" : "0-9, A-" + end;
+        }
+
+        // Both are letters
+        return start + "-" + String.valueOf(end);
+    }
+
+    private static String keyDisplayName(char key) {
+        return key == '0' ? "0-9" : String.valueOf(key);
+    }
+
+    /**
+     * Computes how the full photo collection should be split into ZIP parts.
+     * Each part aims for ≤ 400 MB assuming 1.2 MB per photo.  The total number of
+     * parts is derived from that budget; photos are then divided evenly (by letter
+     * count) across the parts so the last part is smaller, not larger.
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoZipPartDto> computeZipParts() {
+        List<PhotoZipSortProjection> sortData = photoRepository.findAllSortKeysForZip();
+        return computeZipPartsFromSortData(sortData);
+    }
+
+    /** Pure function — separated so it can be unit-tested without a database. */
+    static List<PhotoZipPartDto> computeZipPartsFromSortData(List<PhotoZipSortProjection> sortData) {
+        if (sortData.isEmpty()) return Collections.emptyList();
+
+        // Count photos per sort key; TreeMap gives natural sort: # < 0 < A … Z
+        TreeMap<Character, Integer> countByKey = new TreeMap<>();
+        for (PhotoZipSortProjection row : sortData) {
+            char key = getSortKey(row.getSortName());
+            countByKey.merge(key, 1, Integer::sum);
+        }
+
+        int totalPhotos = sortData.size();
+        // ceil(totalMb / 400) to stay within budget; minimum 1 part
+        int numParts = Math.max(1, (int) Math.ceil(totalPhotos * 1_000_000.0 / 400_000_000.0));
+        // Evenly distribute: last part will be smaller, never larger
+        int targetPerPart = (int) Math.ceil((double) totalPhotos / numParts);
+
+        List<PhotoZipPartDto> parts = new ArrayList<>();
+        List<Character> sortedKeys = new ArrayList<>(countByKey.keySet());
+
+        int currentCount = 0;
+        char partStart = sortedKeys.get(0);
+
+        for (int i = 0; i < sortedKeys.size(); i++) {
+            char key = sortedKeys.get(i);
+            currentCount += countByKey.get(key);
+            boolean isLastKey = (i == sortedKeys.size() - 1);
+
+            if (currentCount >= targetPerPart || isLastKey) {
+                PhotoZipPartDto part = new PhotoZipPartDto();
+                part.setPartNumber(parts.size() + 1);
+                part.setRangeLabel(buildRangeLabel(partStart, key));
+                part.setPhotoCount(currentCount);
+                part.setEstimatedMb(currentCount); // 1 MB assumed per photo
+                part.setStartKey(String.valueOf(partStart));
+                part.setEndKey(String.valueOf(key));
+                parts.add(part);
+                currentCount = 0;
+                if (i + 1 < sortedKeys.size()) {
+                    partStart = sortedKeys.get(i + 1);
+                }
+            }
+        }
+
+        int totalParts = parts.size();
+        parts.forEach(p -> p.setTotalParts(totalParts));
+        return parts;
+    }
+
+    /**
+     * Stream photos belonging to a single ZIP part directly to {@code outputStream}.
+     * The part is identified by {@code partNumber} (1-based).
+     */
+    public void streamPhotosToZipForPart(java.io.OutputStream outputStream, int partNumber) throws java.io.IOException {
+        List<PhotoZipSortProjection> sortData = photoRepository.findAllSortKeysForZip();
+        List<PhotoZipPartDto> parts = computeZipPartsFromSortData(sortData);
+
+        if (partNumber < 1 || partNumber > parts.size()) {
+            throw new LibraryException("Invalid part number " + partNumber + ". Valid range: 1-" + parts.size());
+        }
+
+        PhotoZipPartDto part = parts.get(partNumber - 1);
+        char startKey = part.getStartKey().charAt(0);
+        char endKey   = part.getEndKey().charAt(0);
+
+        List<Long> partPhotoIds = sortData.stream()
+                .filter(row -> {
+                    char key = getSortKey(row.getSortName());
+                    return key >= startKey && key <= endKey;
+                })
+                .map(PhotoZipSortProjection::getId)
+                .collect(Collectors.toList());
+
+        if (partPhotoIds.isEmpty()) {
+            throw new LibraryException("No photos found for part " + partNumber + " (" + part.getRangeLabel() + ")");
+        }
+
+        logger.info("Streaming ZIP part {} of {} ({}) with {} photos",
+                partNumber, parts.size(), part.getRangeLabel(), partPhotoIds.size());
+        streamPhotosToZip(outputStream, partPhotoIds);
+    }
+
+    // -------------------------------------------------------------------------
+
     /**
      * Stream photos to a ZIP output stream, loading one photo at a time.
      * This is memory-efficient for large photo collections.
@@ -1239,6 +1400,10 @@ public class PhotoExportService {
 
         // Get ALL active photo IDs - including those needing download from Google Photos
         List<Long> photoIds = photoRepository.findAllActivePhotoIds();
+        streamPhotosToZip(outputStream, photoIds);
+    }
+
+    private void streamPhotosToZip(java.io.OutputStream outputStream, List<Long> photoIds) throws java.io.IOException {
 
         if (photoIds.isEmpty()) {
             throw new LibraryException("No photos available for export.");
