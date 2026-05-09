@@ -70,7 +70,7 @@ export function DataManagementPage() {
       const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos-${date}.json`
+      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)

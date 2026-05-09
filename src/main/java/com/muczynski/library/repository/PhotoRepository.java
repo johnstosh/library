@@ -212,4 +212,23 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     @Modifying
     @Query("UPDATE Photo p SET p.imageChecksum = :checksum WHERE p.id = :id")
     void updateImageChecksum(@Param("id") Long id, @Param("checksum") String checksum);
+
+    /**
+     * Lightweight query returning each active photo's ID and the name used to derive its
+     * alphabetic sort key: book title takes precedence, then author name, then the title of
+     * the book attached to a loan.  Image bytes are never loaded.
+     */
+    @Query(value = """
+            SELECT p.id AS id,
+                   COALESCE(b.title, a.name, lb.title) AS sortName
+            FROM photo p
+            LEFT JOIN book b   ON p.book_id   = b.id
+            LEFT JOIN author a ON p.author_id  = a.id
+            LEFT JOIN loan l   ON p.loan_id    = l.id
+            LEFT JOIN book lb  ON l.book_id    = lb.id
+            WHERE p.deleted_at IS NULL
+            ORDER BY p.id
+            """,
+            nativeQuery = true)
+    List<PhotoZipSortProjection> findAllSortKeysForZip();
 }

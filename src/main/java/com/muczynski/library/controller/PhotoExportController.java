@@ -10,6 +10,7 @@ import com.muczynski.library.dto.PhotoExportResponseDto;
 import com.muczynski.library.dto.PhotoExportStatsDto;
 import com.muczynski.library.dto.PhotoImportResultDto;
 import com.muczynski.library.dto.PhotoVerifyResultDto;
+import com.muczynski.library.dto.PhotoZipPartDto;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.service.PhotoExportService;
@@ -39,6 +40,99 @@ public class PhotoExportController {
 
     @Autowired
     private BranchRepository branchRepository;
+
+    /**
+     * Returns how many ZIP parts the full photo collection is split into,
+     * with the letter range and estimated size for each part.
+     * The frontend uses this to render one download button per part.
+     */
+    @GetMapping("/zip-parts")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<PhotoZipPartDto>> getZipParts() {
+        try {
+            List<PhotoZipPartDto> parts = photoExportService.computeZipParts();
+            return ResponseEntity.ok(parts);
+        } catch (Exception e) {
+            logger.error("Failed to compute ZIP parts", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Downloads a single alphabetically-bounded ZIP part (1-based).
+     * Call GET /zip-parts first to discover how many parts exist.
+     */
+    @GetMapping("/zip/{partNumber}")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public void downloadZipPart(@PathVariable int partNumber, HttpServletResponse response) {
+        try {
+            logger.info("ZIP part {} download request received", partNumber);
+
+            List<PhotoZipPartDto> parts = photoExportService.computeZipParts();
+            if (parts.isEmpty()) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"error\":\"Export Failed\",\"message\":\"No photos available for export\"}");
+                return;
+            }
+            if (partNumber < 1 || partNumber > parts.size()) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("{\"error\":\"Invalid part\",\"message\":\"Valid range: 1-" + parts.size() + "\"}");
+                return;
+            }
+
+            PhotoZipPartDto part = parts.get(partNumber - 1);
+            int totalPhotos = parts.stream().mapToInt(PhotoZipPartDto::getPhotoCount).sum();
+            String branchName = branchRepository.findAll().stream()
+                    .findFirst()
+                    .map(Library::getBranchName)
+                    .map(name -> name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", ""))
+                    .orElse("branch");
+            // e.g. 2026-05-09-library-photos-muczynski-part1of3-318-of-836-photos-0-9-a-h.zip
+            String rangePart = part.getRangeLabel().toLowerCase()
+                    .replaceAll("[^a-z0-9]+", "-")
+                    .replaceAll("^-+|-+$", "");
+            String filename = java.time.LocalDate.now()
+                    + "-library-photos-" + branchName
+                    + "-part" + partNumber + "of" + parts.size()
+                    + "-" + part.getPhotoCount() + "-of-" + totalPhotos + "-photos"
+                    + "-" + rangePart + ".zip";
+
+            response.setContentType("application/zip");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+            photoExportService.streamPhotosToZipForPart(response.getOutputStream(), partNumber);
+            response.flushBuffer();
+
+            logger.info("ZIP part {} streaming completed", partNumber);
+
+        } catch (LibraryException e) {
+            logger.warn("ZIP part {} export failed: {}", partNumber, e.getMessage());
+            try {
+                if (!response.isCommitted()) {
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"Export Failed\",\"message\":\"" +
+                            e.getMessage().replace("\"", "\\\"") + "\"}");
+                }
+            } catch (Exception ex) {
+                logger.error("Failed to write error response", ex);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to create ZIP part {}: {}", partNumber, e.getMessage(), e);
+            try {
+                if (!response.isCommitted()) {
+                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"Internal Server Error\",\"message\":\"Failed to export photos: " +
+                            e.getMessage().replace("\"", "\\\"") + "\"}");
+                }
+            } catch (Exception ex) {
+                logger.error("Failed to write error response", ex);
+            }
+        }
+    }
 
     /**
      * Get export statistics
@@ -84,13 +178,15 @@ public class PhotoExportController {
 
             // Set response headers for ZIP download
             response.setContentType("application/zip");
-            // Generate filename: 2026-01-25-library-photos-<branchname>.zip
+            // e.g. 2026-01-25-library-photos-muczynski-836-photos.zip
             String branchName = branchRepository.findAll().stream()
                     .findFirst()
                     .map(Library::getBranchName)
                     .map(name -> name.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", ""))
                     .orElse("branch");
-            String filename = java.time.LocalDate.now() + "-library-photos-" + branchName + ".zip";
+            String filename = java.time.LocalDate.now()
+                    + "-library-photos-" + branchName
+                    + "-" + photoIds.size() + "-photos.zip";
             response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
             // Note: No Content-Length because we're streaming
 

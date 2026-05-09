@@ -68,8 +68,8 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
   - Books: Use `authorName` (string) instead of embedded author object
   - Loans: Use `bookTitle`, `bookAuthorName`, `username` instead of embedded book/user objects
   - Photos: Use `imageChecksum` (SHA-256) for photo identification
-- **Filename Format**: `{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{photo-count}-photos-{date}.json`
-  - Example: `st-martin-de-porres-125-books-47-authors-12-users-18-loans-42-photos-2025-12-29.json`
+- **Filename Format**: `{date}-{library-name}-{book-count}-books-{author-count}-authors-{user-count}-users-{loan-count}-loans-{photo-count}-photos.json`
+  - Example: `2025-12-29-st-martin-de-porres-125-books-47-authors-12-users-18-loans-42-photos.json`
   - Library name is sanitized (lowercase, special chars replaced with hyphens)
   - Photo count represents the total photo records in the database (photo-metadata, not binary data which is stored in Google Photos)
 
@@ -351,23 +351,48 @@ The photo status displayed in the list is derived from actual data to ensure it 
 ## Photo ZIP Export/Import
 
 ### Endpoints
-- `GET /api/photo-export` - Download all photos as ZIP file
+- `GET /api/photo-export/zip-parts` - Compute how the collection splits into ZIP parts (returns list of `PhotoZipPartDto`)
+- `GET /api/photo-export/zip/{partNumber}` - Stream one alphabetic ZIP part (1-based)
+- `GET /api/photo-export` - Legacy: stream all photos as a single ZIP (no size limit)
 - `POST /api/photos/import-zip` - Import photos from ZIP file
 - **Authentication**: Librarian only
+
+### Multi-Part ZIP Splitting
+Because the full photo collection exceeds 400 MB, the backend splits photos into alphabetically-bounded parts:
+
+**Algorithm** (`PhotoExportService.computeZipPartsFromSortData`):
+1. Each photo's sort key is derived from its associated name — book title (preferred), author name, or loan's book title — after stripping leading articles ("The ", "An ", "A ").  Digits and symbols all group under `'0'` (displayed as "0-9").
+2. Assumes **1 MB per photo**. Number of parts = `ceil(totalPhotos × 1 MB / 400 MB)`.
+3. Target photos per part = `ceil(totalPhotos / numParts)` (even split; last part is smaller).
+4. Letters are assigned to parts greedily in sorted order (`0 < A < B … < Z`) until the target count is reached, then the next part begins.
+
+**Current production split** (836 photos → 3 parts):
+- Part 1: `0-9, A-H` (~316 photos, ~316 MB)
+- Part 2: `I-R` (~291 photos, ~291 MB)
+- Part 3: `S-Y` (~229 photos, ~229 MB)
+
+The split recalculates dynamically each time `/zip-parts` is called, so it adjusts automatically as the collection grows.
+
+### ZIP Filename Format
+**Partitioned downloads:**
+`{date}-library-photos-{branch}-part{N}of{M}-{partCount}-of-{totalCount}-photos-{range}.zip`
+Example: `2026-05-09-library-photos-muczynski-part1of3-316-of-836-photos-0-9-a-h.zip`
+
+**Legacy all-in-one download:**
+`{date}-library-photos-{branch}-{count}-photos.zip`
+
+**Within the ZIP**, photo filenames use the complete entity name:
+- `book-{Book Title}[-{n}].{ext}`
+- `author-{Author Name}[-{n}].{ext}`
+- `loan-{Book Title}-{Username}[-{n}].{ext}`
+
+Invalid filename characters (`/\:*?"<>|`) are replaced with dashes.
 
 ### ZIP Export Behavior
 - Only exports photos that have local image data (`imageChecksum IS NOT NULL`)
 - Photos that only have `permanentId` (uploaded to Google Photos) but no local image need to be imported first
 - To export all photos: first use "Import All" to download from Google Photos, then export ZIP
 - Logs show how many photos have local data vs. how many need import
-
-### ZIP Filename Format
-Uses the complete entity name with invalid filename characters replaced:
-- `book-{Book Title}[-{n}].{ext}` - Book photos with full title preserved
-- `author-{Author Name}[-{n}].{ext}` - Author photos with full name preserved
-- `loan-{Book Title}-{Username}[-{n}].{ext}` - Loan photos
-
-Invalid filename characters (`/\:*?"<>|`) are replaced with dashes.
 
 ### ZIP Import with Merge/Deduplication
 The photo ZIP import uses merge behavior based on checksum and photo order:
