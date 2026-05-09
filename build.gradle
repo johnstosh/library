@@ -35,7 +35,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.postgresql:postgresql:42.7.+'
     implementation 'com.google.cloud.sql:postgres-socket-factory:1.13.+'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
