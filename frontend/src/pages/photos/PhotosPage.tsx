@@ -6,7 +6,6 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import {
   usePhotoExportStats,
   usePhotoExportList,
-  usePhotoZipParts,
   useExportSinglePhoto,
   useImportSinglePhoto,
   useVerifyPhoto,
@@ -14,7 +13,6 @@ import {
   useDeletePhoto,
   useUploadPhotoImage,
   type PhotoExportInfoDto,
-  type PhotoZipPartDto,
 } from '@/api/data-management'
 import { getThumbnailUrl } from '@/api/photos'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
@@ -47,9 +45,6 @@ export function PhotosPage() {
   const unlinkPhoto = useUnlinkPhoto()
   const deletePhoto = useDeletePhoto()
   const uploadPhotoImage = useUploadPhotoImage()
-
-  // ZIP parts — fetched automatically on mount, never re-fetched (staleTime: Infinity)
-  const { data: zipParts, isLoading: isLoadingZipParts, isError: isZipPartsError } = usePhotoZipParts()
 
   // Photo Export Handlers
   const handleRefreshPhotoStatus = () => {
@@ -440,52 +435,6 @@ export function PhotosPage() {
         <p className="text-gray-600">
           Sync photos with Google Photos cloud storage
         </p>
-      </div>
-
-      {/* ZIP Download Section */}
-      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="photo-zip-section">
-        <div className="bg-indigo-600 px-6 py-4 text-white">
-          <div className="flex items-center gap-3">
-            <PiDownload className="w-8 h-8" />
-            <div>
-              <h2 className="text-xl font-bold">Download Photos</h2>
-              <p className="text-sm text-indigo-100">Download all photos as ZIP archives</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-          {isLoadingZipParts ? (
-            <Button variant="primary" isLoading disabled data-test="zip-parts-loading-btn">
-              Preparing downloads…
-            </Button>
-          ) : isZipPartsError ? (
-            <ErrorMessage message="Failed to load ZIP download options. Please refresh the page." />
-          ) : zipParts && zipParts.length > 0 ? (
-            <div>
-              <p className="text-sm text-gray-600 mb-4">
-                {zipParts[0].totalParts === 1
-                  ? 'Your photo collection fits in a single ZIP file.'
-                  : `Your photo collection is split into ${zipParts[0].totalParts} ZIP files by title.`}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {zipParts.map((part: PhotoZipPartDto) => (
-                  <a
-                    key={part.partNumber}
-                    href={`/api/photo-export/zip/${part.partNumber}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-                    data-test={`zip-download-part-${part.partNumber}`}
-                  >
-                    <PiDownload className="w-4 h-4" />
-                    {part.totalParts === 1
-                      ? `Download ZIP (${part.photoCount} photos, ~${part.estimatedMb} MB)`
-                      : `Part ${part.partNumber} of ${part.totalParts}: ${part.rangeLabel} (${part.photoCount} photos, ~${part.estimatedMb} MB)`}
-                  </a>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
       </div>
 
       {/* Photo Import/Export Status Section */}
