@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Book;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -101,6 +102,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Optional<Book> findByTitleAndAuthorIsNull(String title);
     List<Book> findAllByTitleAndAuthorIsNullOrderByIdAsc(String title);
     List<Book> findAllByTitleOrderByIdAsc(String title);
+
+    @Modifying
+    @Query("UPDATE Book b SET b.lastModified = :now WHERE b.lastModified IS NULL")
+    int backfillLastModified(@Param("now") LocalDateTime now);
 
     @Query("SELECT MAX(b.dateAddedToLibrary) FROM Book b")
     LocalDateTime findMaxDateAddedToLibrary();
