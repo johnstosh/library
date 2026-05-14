@@ -137,10 +137,19 @@ public class PhotoChunkedImportService {
                 uploadId, chunkIndex, isLastChunk, chunkBytes.length, isResume, resumeFromProcessed);
 
         if (chunkIndex == 0 || isResume) {
-            // First chunk (or first chunk of a resume): create queue and start background thread.
-            // Pre-loading books/authors/loans happens inside the background thread so the HTTP
-            // thread returns quickly without waiting for potentially slow DB queries.
-            LinkedBlockingQueue<byte[]> chunksQueue = new LinkedBlockingQueue<>();
+            // First chunk (or first chunk of a resume): pre-load DB data on the HTTP thread so the
+            // background thread can start consuming from the queue immediately without delay.
+            // Bounded queue (4 chunks = 40MB max) provides back-pressure if the bg thread falls behind.
+            log.info("[{}] Loading books/authors/loans from DB for pre-load cache", uploadId);
+            long preloadStart = System.currentTimeMillis();
+            List<Book> allBooks = bookRepository.findAll();
+            List<Author> allAuthors = authorRepository.findAll();
+            List<Loan> allLoans = loanRepository.findAll();
+            log.info("[{}] Pre-load complete in {}ms: {} books, {} authors, {} loans",
+                    uploadId, System.currentTimeMillis() - preloadStart,
+                    allBooks.size(), allAuthors.size(), allLoans.size());
+
+            LinkedBlockingQueue<byte[]> chunksQueue = new LinkedBlockingQueue<>(4);
             BlockingQueue<PhotoZipImportItemDto> resultsQueue = new LinkedBlockingQueue<>();
 
             int entriesToSkip = isResume ? resumeFromProcessed : 0;
@@ -149,15 +158,6 @@ public class PhotoChunkedImportService {
                 ChunkedUploadState s = activeUploads.get(uploadId);
                 log.info("[{}] Background thread started, entriesToSkip={}", uploadId, entriesToSkip);
                 try {
-                    log.info("[{}] Loading books/authors/loans from DB for pre-load cache", uploadId);
-                    long preloadStart = System.currentTimeMillis();
-                    List<Book> allBooks = bookRepository.findAll();
-                    List<Author> allAuthors = authorRepository.findAll();
-                    List<Loan> allLoans = loanRepository.findAll();
-                    log.info("[{}] Pre-load complete in {}ms: {} books, {} authors, {} loans",
-                            uploadId, System.currentTimeMillis() - preloadStart,
-                            allBooks.size(), allAuthors.size(), allLoans.size());
-
                     processZipStream(new ChunkedQueueInputStream(chunksQueue),
                             allBooks, allAuthors, allLoans, s, uploadId, entriesToSkip);
                     log.info("[{}] Background thread finished successfully: success={} failure={} skipped={}",
@@ -217,10 +217,15 @@ public class PhotoChunkedImportService {
             log.warn("[{}] Background error detected at chunkIndex={}: {}", uploadId, chunkIndex, errorMessage);
         }
 
-        // Enqueue raw chunk bytes for background thread — returns immediately, no blocking on DB
+        // Enqueue raw chunk bytes for background thread — blocks if queue is full (back-pressure)
         if (errorMessage == null && chunkBytes.length > 0) {
             int queueSizeBefore = state.chunksQueue.size();
-            state.chunksQueue.add(chunkBytes);
+            try {
+                state.chunksQueue.put(chunkBytes);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting to enqueue chunk " + chunkIndex, e);
+            }
             log.info("[{}] Enqueued chunk {} ({} bytes); queue depth now {} -> {}",
                     uploadId, chunkIndex, chunkBytes.length, queueSizeBefore, state.chunksQueue.size());
         }
