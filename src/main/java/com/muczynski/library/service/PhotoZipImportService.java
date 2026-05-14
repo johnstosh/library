@@ -13,6 +13,7 @@ import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.PhotoIdChecksumProjection;
 import com.muczynski.library.repository.PhotoRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -135,9 +136,10 @@ public class PhotoZipImportService {
         int failureCount = 0;
         int skippedCount = 0;
 
-        // Pre-load all books and authors to avoid repeated queries per file
+        // Pre-load all books, authors, and loans to avoid repeated queries per file
         List<Book> allBooks = bookRepository.findAll();
         List<Author> allAuthors = authorRepository.findAll();
+        List<Loan> allLoans = loanRepository.findAll();
 
         try (ZipInputStream zis = new ZipInputStream(inputStream)) {
             ZipEntry entry;
@@ -154,7 +156,7 @@ public class PhotoZipImportService {
                 }
 
                 String filename = getFilenameFromPath(entryPath);
-                PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors);
+                PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors, allLoans);
                 items.add(item);
 
                 switch (item.getStatus()) {
@@ -215,7 +217,7 @@ public class PhotoZipImportService {
      * Must be public so Spring's @Transactional proxy applies when called from other beans.
      */
     public PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
-                                       List<Book> allBooks, List<Author> allAuthors) {
+                                       List<Book> allBooks, List<Author> allAuthors, List<Loan> allLoans) {
         Matcher matcher = FILENAME_PATTERN.matcher(filename);
 
         if (!matcher.matches()) {
@@ -274,7 +276,7 @@ public class PhotoZipImportService {
             return switch (type) {
                 case "book" -> importBookPhoto(filename, name, imageBytes, contentType, photoOrder, allBooks);
                 case "author" -> importAuthorPhoto(filename, name, imageBytes, contentType, photoOrder, allAuthors);
-                case "loan" -> importLoanPhoto(filename, name, imageBytes, contentType);
+                case "loan" -> importLoanPhoto(filename, name, imageBytes, contentType, allLoans);
                 default -> PhotoZipImportItemDto.builder()
                         .filename(filename)
                         .status("SKIPPED")
@@ -325,15 +327,17 @@ public class PhotoZipImportService {
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
 
-        // Check if photo already exists at this order for the book
-        List<Photo> existingPhotos = photoRepository.findByBookIdAndPhotoOrderOrderByIdAsc(book.getId(), photoOrder);
-        if (!existingPhotos.isEmpty()) {
-            Photo existingPhoto = existingPhotos.get(0);
-            String existingChecksum = existingPhoto.getImageChecksum();
+        // Check if photo already exists at this order for the book (projection — never loads blob bytes)
+        Optional<PhotoIdChecksumProjection> existingOpt =
+                photoRepository.findIdAndChecksumByBookIdAndPhotoOrder(book.getId(), photoOrder);
+        if (existingOpt.isPresent()) {
+            PhotoIdChecksumProjection existing = existingOpt.get();
+            Long existingId = existing.getId();
+            String existingChecksum = existing.getImageChecksum();
 
             if (newChecksum != null && newChecksum.equals(existingChecksum)) {
                 // Same checksum - but verify the database actually has the bytes
-                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                boolean hasBytes = photoRepository.hasImageData(existingId);
                 if (hasBytes) {
                     log.info("Skipping duplicate photo for book '{}' at order {} (same checksum)", book.getTitle(), photoOrder);
                     return PhotoZipImportItemDto.builder()
@@ -342,16 +346,16 @@ public class PhotoZipImportService {
                             .entityType("book")
                             .entityName(book.getTitle())
                             .entityId(book.getId())
-                            .photoId(existingPhoto.getId())
+                            .photoId(existingId)
                             .errorMessage("Duplicate photo (same checksum)")
                             .build();
                 }
-                // Same checksum but bytes missing - restore them
+                // Same checksum but bytes missing - restore them (load entity only now, when write is needed)
                 log.info("Restoring missing image bytes for book '{}' at order {} (same checksum, bytes missing)", book.getTitle(), photoOrder);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -359,17 +363,16 @@ public class PhotoZipImportService {
                         .entityType("book")
                         .entityName(book.getTitle())
                         .entityId(book.getId())
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             } else {
-                // Different photo at same order - replace
+                // Different photo at same order - replace (load entity only now, when write is needed)
                 log.info("Replacing photo for book '{}' at order {} (different checksum)", book.getTitle(), photoOrder);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
-                // Detach to free memory - the photo's image byte[] can be large
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -377,7 +380,7 @@ public class PhotoZipImportService {
                         .entityType("book")
                         .entityName(book.getTitle())
                         .entityId(book.getId())
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             }
         }
@@ -430,15 +433,17 @@ public class PhotoZipImportService {
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
 
-        // Check if photo already exists at this order for the author (author photos have book=null)
-        List<Photo> existingPhotos = photoRepository.findByAuthorIdAndBookIsNullAndPhotoOrderOrderByIdAsc(author.getId(), photoOrder);
-        if (!existingPhotos.isEmpty()) {
-            Photo existingPhoto = existingPhotos.get(0);
-            String existingChecksum = existingPhoto.getImageChecksum();
+        // Check if photo already exists at this order for the author (projection — never loads blob bytes)
+        Optional<PhotoIdChecksumProjection> existingOpt =
+                photoRepository.findIdAndChecksumByAuthorIdAndPhotoOrder(author.getId(), photoOrder);
+        if (existingOpt.isPresent()) {
+            PhotoIdChecksumProjection existing = existingOpt.get();
+            Long existingId = existing.getId();
+            String existingChecksum = existing.getImageChecksum();
 
             if (newChecksum != null && newChecksum.equals(existingChecksum)) {
                 // Same checksum - but verify the database actually has the bytes
-                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                boolean hasBytes = photoRepository.hasImageData(existingId);
                 if (hasBytes) {
                     log.info("Skipping duplicate photo for author '{}' at order {} (same checksum)", author.getName(), photoOrder);
                     return PhotoZipImportItemDto.builder()
@@ -447,16 +452,16 @@ public class PhotoZipImportService {
                             .entityType("author")
                             .entityName(author.getName())
                             .entityId(author.getId())
-                            .photoId(existingPhoto.getId())
+                            .photoId(existingId)
                             .errorMessage("Duplicate photo (same checksum)")
                             .build();
                 }
-                // Same checksum but bytes missing - restore them
+                // Same checksum but bytes missing - restore them (load entity only now, when write is needed)
                 log.info("Restoring missing image bytes for author '{}' at order {} (same checksum, bytes missing)", author.getName(), photoOrder);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -464,17 +469,16 @@ public class PhotoZipImportService {
                         .entityType("author")
                         .entityName(author.getName())
                         .entityId(author.getId())
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             } else {
-                // Different photo at same order - replace
+                // Different photo at same order - replace (load entity only now, when write is needed)
                 log.info("Replacing photo for author '{}' at order {} (different checksum)", author.getName(), photoOrder);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
-                // Detach to free memory - the photo's image byte[] can be large
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -482,7 +486,7 @@ public class PhotoZipImportService {
                         .entityType("author")
                         .entityName(author.getName())
                         .entityId(author.getId())
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             }
         }
@@ -517,7 +521,7 @@ public class PhotoZipImportService {
      * the import is skipped; if a different photo exists, it is replaced.
      */
     private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
-                                                   byte[] imageBytes, String contentType) {
+                                                   byte[] imageBytes, String contentType, List<Loan> allLoans) {
         // Format: {sanitizedTitle}-{sanitizedUsername}
         // Neither part contains dashes (sanitizeForLoanFilename removes them), so splitting on
         // the single dash is unambiguous.
@@ -535,8 +539,7 @@ public class PhotoZipImportService {
         String sanitizedTitle = combined.substring(0, separatorDash);
         String sanitizedUsername = combined.substring(separatorDash + 1);
 
-        // Find a matching loan by comparing sanitized book title and username
-        List<Loan> allLoans = loanRepository.findAll();
+        // Find a matching loan by comparing sanitized book title and username (allLoans pre-loaded by caller)
         Loan loan = allLoans.stream()
                 .filter(l -> l.getBook() != null && l.getUser() != null)
                 .filter(l -> sanitizeForLoanFilename(l.getBook().getTitle()).equals(sanitizedTitle)
@@ -560,15 +563,16 @@ public class PhotoZipImportService {
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
 
-        // Check if the loan already has a photo (loans have at most one photo)
-        Optional<Photo> existingPhotoOpt = photoRepository.findByLoanId(loanId);
-        if (existingPhotoOpt.isPresent()) {
-            Photo existingPhoto = existingPhotoOpt.get();
-            String existingChecksum = existingPhoto.getImageChecksum();
+        // Check if the loan already has a photo (projection — never loads blob bytes)
+        Optional<PhotoIdChecksumProjection> existingOpt = photoRepository.findIdAndChecksumByLoanId(loanId);
+        if (existingOpt.isPresent()) {
+            PhotoIdChecksumProjection existing = existingOpt.get();
+            Long existingId = existing.getId();
+            String existingChecksum = existing.getImageChecksum();
 
             if (newChecksum != null && newChecksum.equals(existingChecksum)) {
                 // Same checksum - verify bytes are present
-                boolean hasBytes = photoRepository.hasImageData(existingPhoto.getId());
+                boolean hasBytes = photoRepository.hasImageData(existingId);
                 if (hasBytes) {
                     log.info("Skipping duplicate photo for loan {} (same checksum)", loanId);
                     return PhotoZipImportItemDto.builder()
@@ -577,16 +581,16 @@ public class PhotoZipImportService {
                             .entityType("loan")
                             .entityName(loanDisplayName)
                             .entityId(loanId)
-                            .photoId(existingPhoto.getId())
+                            .photoId(existingId)
                             .errorMessage("Duplicate photo (same checksum)")
                             .build();
                 }
-                // Same checksum but bytes missing - restore them
+                // Same checksum but bytes missing - restore (load entity only now, when write is needed)
                 log.info("Restoring missing image bytes for loan {} (same checksum, bytes missing)", loanId);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -594,16 +598,16 @@ public class PhotoZipImportService {
                         .entityType("loan")
                         .entityName(loanDisplayName)
                         .entityId(loanId)
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             } else {
-                // Different photo - replace existing
+                // Different photo - replace (load entity only now, when write is needed)
                 log.info("Replacing photo for loan {} (different checksum)", loanId);
+                Photo existingPhoto = photoRepository.findById(existingId).orElseThrow();
                 existingPhoto.setImage(imageBytes);
                 existingPhoto.setContentType(contentType);
                 existingPhoto.setImageChecksum(newChecksum);
                 Photo savedPhoto = photoRepository.saveAndFlush(existingPhoto);
-                Long photoId = savedPhoto.getId();
                 entityManager.detach(savedPhoto);
                 return PhotoZipImportItemDto.builder()
                         .filename(filename)
@@ -611,7 +615,7 @@ public class PhotoZipImportService {
                         .entityType("loan")
                         .entityName(loanDisplayName)
                         .entityId(loanId)
-                        .photoId(photoId)
+                        .photoId(existingId)
                         .build();
             }
         }

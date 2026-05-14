@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.PhotoUploadSession;
 import com.muczynski.library.dto.ChunkUploadResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
@@ -12,6 +13,7 @@ import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
 import com.muczynski.library.dto.ResumeInfoDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.PhotoUploadSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,7 @@ public class PhotoChunkedImportService {
     private final PhotoZipImportService photoZipImportService;
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
+    private final LoanRepository loanRepository;
     private final PhotoUploadSessionRepository uploadSessionRepository;
 
     private final ConcurrentHashMap<String, ChunkedUploadState> activeUploads = new ConcurrentHashMap<>();
@@ -88,16 +91,17 @@ public class PhotoChunkedImportService {
             PipedInputStream pipedIn = new PipedInputStream(pipedOut, 1024 * 1024); // 1MB buffer
             BlockingQueue<PhotoZipImportItemDto> resultsQueue = new LinkedBlockingQueue<>();
 
-            // Pre-load books and authors on the main thread
+            // Pre-load books, authors, and loans on the main thread to avoid repeated DB calls per entry
             List<Book> allBooks = bookRepository.findAll();
             List<Author> allAuthors = authorRepository.findAll();
+            List<Loan> allLoans = loanRepository.findAll();
 
             int entriesToSkip = isResume ? resumeFromProcessed : 0;
 
             Thread bgThread = new Thread(() -> {
                 ChunkedUploadState s = activeUploads.get(uploadId);
                 try {
-                    processZipStream(pipedIn, allBooks, allAuthors, s, uploadId, entriesToSkip);
+                    processZipStream(pipedIn, allBooks, allAuthors, allLoans, s, uploadId, entriesToSkip);
                 } catch (Exception e) {
                     if (s != null) {
                         s.backgroundError = e;
@@ -278,7 +282,8 @@ public class PhotoChunkedImportService {
     }
 
     private void processZipStream(PipedInputStream pipedIn, List<Book> allBooks, List<Author> allAuthors,
-                                   ChunkedUploadState state, String uploadId, int entriesToSkip) throws IOException {
+                                   List<Loan> allLoans, ChunkedUploadState state, String uploadId,
+                                   int entriesToSkip) throws IOException {
         int entryCount = 0;
         CountingInputStream countingIn = new CountingInputStream(pipedIn);
 
@@ -314,7 +319,7 @@ public class PhotoChunkedImportService {
                 }
 
                 try {
-                    PhotoZipImportItemDto item = photoZipImportService.processEntry(filename, zis, allBooks, allAuthors);
+                    PhotoZipImportItemDto item = photoZipImportService.processEntry(filename, zis, allBooks, allAuthors, allLoans);
 
                     switch (item.getStatus()) {
                         case "SUCCESS" -> state.successCount.incrementAndGet();
