@@ -21,6 +21,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -40,9 +41,6 @@ public class PhotoChunkedImportService {
 
     static final long CHUNK_SIZE = 10L * 1024 * 1024; // 10MB - must match frontend
 
-    /** Sentinel value placed in the queue to signal end of stream to the background thread */
-    private static final byte[] END_SENTINEL = new byte[0];
-
     private final PhotoZipImportService photoZipImportService;
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
@@ -51,55 +49,9 @@ public class PhotoChunkedImportService {
 
     private final ConcurrentHashMap<String, ChunkedUploadState> activeUploads = new ConcurrentHashMap<>();
 
-    /**
-     * Streams raw compressed chunk bytes from the HTTP thread to the background ZIP-processing thread.
-     * The HTTP thread enqueues each 10MB chunk and returns immediately — no blocking on DB saves.
-     * The background thread reads through this stream at its own pace.
-     */
-    private static class ChunkedQueueInputStream extends InputStream {
-        private final BlockingQueue<byte[]> queue;
-        private byte[] current = null;
-        private int pos = 0;
-        private boolean done = false;
-
-        ChunkedQueueInputStream(BlockingQueue<byte[]> queue) {
-            this.queue = queue;
-        }
-
-        @Override
-        public int read() throws IOException {
-            byte[] buf = new byte[1];
-            int n = read(buf, 0, 1);
-            return n == -1 ? -1 : (buf[0] & 0xFF);
-        }
-
-        @Override
-        public int read(byte[] buf, int off, int len) throws IOException {
-            if (done) return -1;
-            // Advance to next chunk if current is exhausted
-            while (current == null || pos >= current.length) {
-                try {
-                    current = queue.take();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Interrupted waiting for next chunk", e);
-                }
-                if (current == END_SENTINEL || current.length == 0) {
-                    done = true;
-                    return -1;
-                }
-                pos = 0;
-            }
-            int n = Math.min(len, current.length - pos);
-            System.arraycopy(current, pos, buf, off, n);
-            pos += n;
-            return n;
-        }
-    }
-
     private static class ChunkedUploadState {
-        /** Raw compressed chunk bytes enqueued by HTTP thread, consumed by background thread */
-        final LinkedBlockingQueue<byte[]> chunksQueue;
+        final PipedOutputStream pipedOut;
+        final PipedInputStream pipedIn;
         final Thread backgroundThread;
         final BlockingQueue<PhotoZipImportItemDto> resultsQueue;
         final AtomicInteger successCount = new AtomicInteger(0);
@@ -114,9 +66,10 @@ public class PhotoChunkedImportService {
         /** Last chunk index that was successfully received */
         volatile int lastChunkIndex;
 
-        ChunkedUploadState(LinkedBlockingQueue<byte[]> chunksQueue, Thread backgroundThread,
-                           BlockingQueue<PhotoZipImportItemDto> resultsQueue) {
-            this.chunksQueue = chunksQueue;
+        ChunkedUploadState(PipedOutputStream pipedOut, PipedInputStream pipedIn,
+                           Thread backgroundThread, BlockingQueue<PhotoZipImportItemDto> resultsQueue) {
+            this.pipedOut = pipedOut;
+            this.pipedIn = pipedIn;
             this.backgroundThread = backgroundThread;
             this.resultsQueue = resultsQueue;
         }
@@ -137,9 +90,8 @@ public class PhotoChunkedImportService {
                 uploadId, chunkIndex, isLastChunk, chunkBytes.length, isResume, resumeFromProcessed);
 
         if (chunkIndex == 0 || isResume) {
-            // First chunk (or first chunk of a resume): pre-load DB data on the HTTP thread so the
-            // background thread can start consuming from the queue immediately without delay.
-            // Bounded queue (4 chunks = 40MB max) provides back-pressure if the bg thread falls behind.
+            // First chunk (or first chunk of a resume): pre-load DB data on the HTTP thread, then
+            // connect a 1MB pipe — HTTP thread blocks the moment the pipe fills, keeping memory tight.
             log.info("[{}] Loading books/authors/loans from DB for pre-load cache", uploadId);
             long preloadStart = System.currentTimeMillis();
             List<Book> allBooks = bookRepository.findAll();
@@ -149,7 +101,8 @@ public class PhotoChunkedImportService {
                     uploadId, System.currentTimeMillis() - preloadStart,
                     allBooks.size(), allAuthors.size(), allLoans.size());
 
-            LinkedBlockingQueue<byte[]> chunksQueue = new LinkedBlockingQueue<>(4);
+            PipedOutputStream pipedOut = new PipedOutputStream();
+            PipedInputStream pipedIn = new PipedInputStream(pipedOut, 1024 * 1024); // 1MB buffer
             BlockingQueue<PhotoZipImportItemDto> resultsQueue = new LinkedBlockingQueue<>();
 
             int entriesToSkip = isResume ? resumeFromProcessed : 0;
@@ -158,8 +111,7 @@ public class PhotoChunkedImportService {
                 ChunkedUploadState s = activeUploads.get(uploadId);
                 log.info("[{}] Background thread started, entriesToSkip={}", uploadId, entriesToSkip);
                 try {
-                    processZipStream(new ChunkedQueueInputStream(chunksQueue),
-                            allBooks, allAuthors, allLoans, s, uploadId, entriesToSkip);
+                    processZipStream(pipedIn, allBooks, allAuthors, allLoans, s, uploadId, entriesToSkip);
                     log.info("[{}] Background thread finished successfully: success={} failure={} skipped={}",
                             uploadId,
                             s != null ? s.successCount.get() : "?",
@@ -170,11 +122,13 @@ public class PhotoChunkedImportService {
                         s.backgroundError = e;
                     }
                     log.error("[{}] Background ZIP processing failed: {}", uploadId, e.getMessage(), e);
+                } finally {
+                    try { pipedIn.close(); } catch (IOException ignored) {}
                 }
             }, "zip-import-" + uploadId);
             bgThread.setDaemon(true);
 
-            state = new ChunkedUploadState(chunksQueue, bgThread, resultsQueue);
+            state = new ChunkedUploadState(pipedOut, pipedIn, bgThread, resultsQueue);
 
             if (isResume) {
                 state.successCount.set(getResumeCountFromDb(uploadId, "success"));
@@ -217,24 +171,27 @@ public class PhotoChunkedImportService {
             log.warn("[{}] Background error detected at chunkIndex={}: {}", uploadId, chunkIndex, errorMessage);
         }
 
-        // Enqueue raw chunk bytes for background thread — blocks if queue is full (back-pressure)
+        // Write chunk bytes into the pipe — blocks when the 1MB buffer is full (back-pressure)
         if (errorMessage == null && chunkBytes.length > 0) {
-            int queueSizeBefore = state.chunksQueue.size();
+            log.info("[{}] Writing chunk {} ({} bytes) to pipe", uploadId, chunkIndex, chunkBytes.length);
             try {
-                state.chunksQueue.put(chunkBytes);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Interrupted while waiting to enqueue chunk " + chunkIndex, e);
+                state.pipedOut.write(chunkBytes);
+                state.pipedOut.flush();
+            } catch (IOException e) {
+                if (state.backgroundError != null) {
+                    errorMessage = "Background processing failed: " + state.backgroundError.getMessage();
+                    log.warn("[{}] Pipe write failed due to background error at chunkIndex={}: {}",
+                            uploadId, chunkIndex, errorMessage);
+                } else {
+                    throw e;
+                }
             }
-            log.info("[{}] Enqueued chunk {} ({} bytes); queue depth now {} -> {}",
-                    uploadId, chunkIndex, chunkBytes.length, queueSizeBefore, state.chunksQueue.size());
         }
 
         if (isLastChunk || errorMessage != null) {
-            log.info("[{}] Last chunk or error — sending END_SENTINEL and waiting for background thread",
-                    uploadId);
-            // Signal end of stream to background thread
-            state.chunksQueue.add(END_SENTINEL);
+            log.info("[{}] Last chunk or error — closing pipe and waiting for background thread", uploadId);
+            // Close the pipe to signal end of stream to background thread
+            try { state.pipedOut.close(); } catch (IOException ignored) {}
 
             // Wait for background thread to finish processing all enqueued data
             long joinStart = System.currentTimeMillis();
@@ -345,7 +302,7 @@ public class PhotoChunkedImportService {
         if (removed != null) {
             log.info("[{}] Upload removed by client", uploadId);
             // Signal background thread to stop if still running
-            removed.chunksQueue.add(END_SENTINEL);
+            try { removed.pipedOut.close(); } catch (IOException ignored) {}
             return true;
         }
         return false;
@@ -493,7 +450,7 @@ public class PhotoChunkedImportService {
         activeUploads.entrySet().removeIf(entry -> {
             if (entry.getValue().lastActivityAt.isBefore(cutoff)) {
                 log.warn("Cleaning up stale upload: {}", entry.getKey());
-                entry.getValue().chunksQueue.add(END_SENTINEL);
+                try { entry.getValue().pipedOut.close(); } catch (IOException ignored) {}
                 entry.getValue().backgroundThread.interrupt();
                 return true;
             }
