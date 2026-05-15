@@ -221,4 +221,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      */
     @Query("SELECT COUNT(DISTINCT b) FROM Book b JOIN b.tagsList t WHERE t = :tag")
     long countByTag(@Param("tag") String tag);
+
+    // Lightweight projection for photo ZIP import — skips @Lob fields (plotSummary, etc.)
+    List<BookZipImportProjection> findBy();
 }

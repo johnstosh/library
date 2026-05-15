@@ -3,10 +3,11 @@
  */
 package com.muczynski.library.service;
 
-import com.muczynski.library.domain.Author;
-import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.repository.AuthorZipImportProjection;
+import com.muczynski.library.repository.BookZipImportProjection;
+import com.muczynski.library.repository.LoanZipImportProjection;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto.PhotoZipImportItemDto;
@@ -136,10 +137,11 @@ public class PhotoZipImportService {
         int failureCount = 0;
         int skippedCount = 0;
 
-        // Pre-load all books, authors, and loans to avoid repeated queries per file
-        List<Book> allBooks = bookRepository.findAll();
-        List<Author> allAuthors = authorRepository.findAll();
-        List<Loan> allLoans = loanRepository.findAll();
+        // Pre-load all books, authors, and loans to avoid repeated queries per file.
+        // Use lightweight projections to skip @Lob fields (plotSummary, briefBiography, etc.).
+        List<BookZipImportProjection> allBooks = bookRepository.findBy();
+        List<AuthorZipImportProjection> allAuthors = authorRepository.findBy();
+        List<LoanZipImportProjection> allLoans = loanRepository.findAllForZipImport();
 
         try (ZipInputStream zis = new ZipInputStream(inputStream)) {
             ZipEntry entry;
@@ -217,7 +219,9 @@ public class PhotoZipImportService {
      * Must be public so Spring's @Transactional proxy applies when called from other beans.
      */
     public PhotoZipImportItemDto processEntry(String filename, InputStream inputStream,
-                                       List<Book> allBooks, List<Author> allAuthors, List<Loan> allLoans) {
+                                       List<BookZipImportProjection> allBooks,
+                                       List<AuthorZipImportProjection> allAuthors,
+                                       List<LoanZipImportProjection> allLoans) {
         Matcher matcher = FILENAME_PATTERN.matcher(filename);
 
         if (!matcher.matches()) {
@@ -303,10 +307,10 @@ public class PhotoZipImportService {
      */
     private PhotoZipImportItemDto importBookPhoto(String filename, String sanitizedTitle,
                                                    byte[] imageBytes, String contentType, int photoOrder,
-                                                   List<Book> allBooks) {
+                                                   List<BookZipImportProjection> allBooks) {
         // Try to find book by title using multiple strategies
         String searchTitle = unsanitizeName(sanitizedTitle);
-        List<Book> books = findBooksByTitle(searchTitle, sanitizedTitle, allBooks);
+        List<BookZipImportProjection> books = findBooksByTitle(searchTitle, sanitizedTitle, allBooks);
 
         if (books.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -322,7 +326,7 @@ public class PhotoZipImportService {
             log.warn("Multiple books found for '{}', using first match", searchTitle);
         }
 
-        Book book = books.get(0);
+        BookZipImportProjection book = books.get(0);
 
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
@@ -410,9 +414,9 @@ public class PhotoZipImportService {
      */
     private PhotoZipImportItemDto importAuthorPhoto(String filename, String sanitizedName,
                                                      byte[] imageBytes, String contentType, int photoOrder,
-                                                     List<Author> allAuthors) {
+                                                     List<AuthorZipImportProjection> allAuthors) {
         String searchName = unsanitizeName(sanitizedName);
-        List<Author> authors = findAuthorsByName(searchName, sanitizedName, allAuthors);
+        List<AuthorZipImportProjection> authors = findAuthorsByName(searchName, sanitizedName, allAuthors);
 
         if (authors.isEmpty()) {
             return PhotoZipImportItemDto.builder()
@@ -428,7 +432,7 @@ public class PhotoZipImportService {
             log.warn("Multiple authors found for '{}', using first match", searchName);
         }
 
-        Author author = authors.get(0);
+        AuthorZipImportProjection author = authors.get(0);
 
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
@@ -521,7 +525,8 @@ public class PhotoZipImportService {
      * the import is skipped; if a different photo exists, it is replaced.
      */
     private PhotoZipImportItemDto importLoanPhoto(String filename, String combined,
-                                                   byte[] imageBytes, String contentType, List<Loan> allLoans) {
+                                                   byte[] imageBytes, String contentType,
+                                                   List<LoanZipImportProjection> allLoans) {
         // Format: {sanitizedTitle}-{sanitizedUsername}
         // Neither part contains dashes (sanitizeForLoanFilename removes them), so splitting on
         // the single dash is unambiguous.
@@ -539,11 +544,11 @@ public class PhotoZipImportService {
         String sanitizedTitle = combined.substring(0, separatorDash);
         String sanitizedUsername = combined.substring(separatorDash + 1);
 
-        // Find a matching loan by comparing sanitized book title and username (allLoans pre-loaded by caller)
-        Loan loan = allLoans.stream()
-                .filter(l -> l.getBook() != null && l.getUser() != null)
-                .filter(l -> sanitizeForLoanFilename(l.getBook().getTitle()).equals(sanitizedTitle)
-                          && sanitizeForLoanFilename(l.getUser().getUsername()).equals(sanitizedUsername))
+        // Find a matching loan by comparing sanitized book title and username (allLoans pre-loaded by caller).
+        // The projection query uses INNER JOIN, so loans without a book or user are already excluded.
+        LoanZipImportProjection loan = allLoans.stream()
+                .filter(l -> sanitizeForLoanFilename(l.getBookTitle()).equals(sanitizedTitle)
+                          && sanitizeForLoanFilename(l.getUsername()).equals(sanitizedUsername))
                 .findFirst()
                 .orElse(null);
 
@@ -558,7 +563,7 @@ public class PhotoZipImportService {
         }
 
         Long loanId = loan.getId();
-        String loanDisplayName = loan.getBook().getTitle() + " - " + loan.getUser().getUsername();
+        String loanDisplayName = loan.getBookTitle() + " - " + loan.getUsername();
 
         // Compute checksum for deduplication
         String newChecksum = computeChecksum(imageBytes);
@@ -620,8 +625,9 @@ public class PhotoZipImportService {
             }
         }
 
-        // No existing photo - add new
-        PhotoDto photo = photoService.addPhotoToExistingLoan(loan, imageBytes, contentType);
+        // No existing photo - add new (load full entity only at write time)
+        Loan loanEntity = loanRepository.findById(loanId).orElseThrow();
+        PhotoDto photo = photoService.addPhotoToExistingLoan(loanEntity, imageBytes, contentType);
         photoService.detachPhoto(photo.getId());
 
         log.info("Imported photo for loan {} ({})", loanId, loanDisplayName);
@@ -641,11 +647,12 @@ public class PhotoZipImportService {
      * Within each strategy, exact matches are preferred over substring matches.
      * Tries: 1) substring match, 2) word-based match, 3) sanitized comparison
      */
-    private List<Book> findBooksByTitle(String searchTitle, String sanitizedTitle, List<Book> allBooks) {
+    private List<BookZipImportProjection> findBooksByTitle(String searchTitle, String sanitizedTitle,
+                                                            List<BookZipImportProjection> allBooks) {
         String searchLower = searchTitle.toLowerCase();
 
         // Strategy 1: Direct substring match (works for simple cases)
-        List<Book> books = allBooks.stream()
+        List<BookZipImportProjection> books = allBooks.stream()
                 .filter(b -> b.getTitle().toLowerCase().contains(searchLower))
                 .toList();
 
@@ -688,7 +695,8 @@ public class PhotoZipImportService {
      * to the search string. This handles the case where "Foo" and "Foo Bar"
      * both match a search for "Foo" — we want the shorter (exact) match.
      */
-    private List<Book> preferExactMatch(List<Book> candidates, String searchLower) {
+    private List<BookZipImportProjection> preferExactMatch(List<BookZipImportProjection> candidates,
+                                                             String searchLower) {
         if (candidates.size() <= 1) {
             return candidates;
         }
@@ -698,7 +706,7 @@ public class PhotoZipImportService {
         int searchLen = searchNorm.length();
 
         // Sort by how close the title length is to the search length (closest first)
-        List<Book> sorted = new java.util.ArrayList<>(candidates);
+        List<BookZipImportProjection> sorted = new java.util.ArrayList<>(candidates);
         sorted.sort(java.util.Comparator.comparingInt(b -> {
             String titleNorm = b.getTitle().toLowerCase().replaceAll("[^a-z0-9]", "");
             return Math.abs(titleNorm.length() - searchLen);
@@ -717,11 +725,12 @@ public class PhotoZipImportService {
      * Find authors by name using multiple matching strategies.
      * Within each strategy, exact matches are preferred over substring matches.
      */
-    private List<Author> findAuthorsByName(String searchName, String sanitizedName, List<Author> allAuthors) {
+    private List<AuthorZipImportProjection> findAuthorsByName(String searchName, String sanitizedName,
+                                                               List<AuthorZipImportProjection> allAuthors) {
         String searchLower = searchName.toLowerCase();
 
         // Strategy 1: Direct substring match
-        List<Author> authors = allAuthors.stream()
+        List<AuthorZipImportProjection> authors = allAuthors.stream()
                 .filter(a -> a.getName().toLowerCase().contains(searchLower))
                 .toList();
 
@@ -730,7 +739,7 @@ public class PhotoZipImportService {
                 // Prefer closest length match
                 String searchNorm = searchLower.replaceAll("[^a-z0-9]", "");
                 int searchLen = searchNorm.length();
-                List<Author> sorted = new java.util.ArrayList<>(authors);
+                List<AuthorZipImportProjection> sorted = new java.util.ArrayList<>(authors);
                 sorted.sort(java.util.Comparator.comparingInt(a -> {
                     String nameNorm = a.getName().toLowerCase().replaceAll("[^a-z0-9]", "");
                     return Math.abs(nameNorm.length() - searchLen);

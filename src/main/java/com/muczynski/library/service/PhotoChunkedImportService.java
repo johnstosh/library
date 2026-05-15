@@ -3,9 +3,6 @@
  */
 package com.muczynski.library.service;
 
-import com.muczynski.library.domain.Author;
-import com.muczynski.library.domain.Book;
-import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.PhotoUploadSession;
 import com.muczynski.library.dto.ChunkUploadResultDto;
 import com.muczynski.library.dto.PhotoZipImportResultDto;
@@ -19,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import com.muczynski.library.repository.AuthorZipImportProjection;
+import com.muczynski.library.repository.BookZipImportProjection;
+import com.muczynski.library.repository.LoanZipImportProjection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -94,9 +94,9 @@ public class PhotoChunkedImportService {
             // connect a 1MB pipe — HTTP thread blocks the moment the pipe fills, keeping memory tight.
             log.info("[{}] Loading books/authors/loans from DB for pre-load cache", uploadId);
             long preloadStart = System.currentTimeMillis();
-            List<Book> allBooks = bookRepository.findAll();
-            List<Author> allAuthors = authorRepository.findAll();
-            List<Loan> allLoans = loanRepository.findAll();
+            List<BookZipImportProjection> allBooks = bookRepository.findBy();
+            List<AuthorZipImportProjection> allAuthors = authorRepository.findBy();
+            List<LoanZipImportProjection> allLoans = loanRepository.findAllForZipImport();
             log.info("[{}] Pre-load complete in {}ms: {} books, {} authors, {} loans",
                     uploadId, System.currentTimeMillis() - preloadStart,
                     allBooks.size(), allAuthors.size(), allLoans.size());
@@ -308,8 +308,9 @@ public class PhotoChunkedImportService {
         return false;
     }
 
-    private void processZipStream(InputStream inputStream, List<Book> allBooks, List<Author> allAuthors,
-                                   List<Loan> allLoans, ChunkedUploadState state, String uploadId,
+    private void processZipStream(InputStream inputStream, List<BookZipImportProjection> allBooks,
+                                   List<AuthorZipImportProjection> allAuthors,
+                                   List<LoanZipImportProjection> allLoans, ChunkedUploadState state, String uploadId,
                                    int entriesToSkip) throws IOException {
         int entryCount = 0;
         CountingInputStream countingIn = new CountingInputStream(inputStream);
