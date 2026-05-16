@@ -63,6 +63,12 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
            "ORDER BY l.dueDate ASC")
     List<Loan> findAllByUserAndReturnDateIsNullOrderByDueDateAsc(User user);
 
+    // Lightweight projection for photo ZIP import — loads only id, book title, and username.
+    // INNER JOIN excludes loans without a book or user (same effect as the null guards previously in Java).
+    @Query("SELECT l.id AS id, b.title AS bookTitle, u.username AS username " +
+           "FROM Loan l JOIN l.book b JOIN l.user u")
+    List<LoanZipImportProjection> findAllForZipImport();
+
     void deleteByLoanDate(LocalDate loanDate);
     long countByBookId(Long bookId);
     long countByBookIdAndReturnDateIsNull(Long bookId);

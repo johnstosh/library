@@ -213,6 +213,23 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     @Query("UPDATE Photo p SET p.imageChecksum = :checksum WHERE p.id = :id")
     void updateImageChecksum(@Param("id") Long id, @Param("checksum") String checksum);
 
+    // Lightweight dedup queries for ZIP import — return only ID + checksum, never image bytes
+
+    @Query("SELECT p.id AS id, p.imageChecksum AS imageChecksum FROM Photo p " +
+           "WHERE p.book.id = :bookId AND p.photoOrder = :photoOrder ORDER BY p.id ASC LIMIT 1")
+    Optional<PhotoIdChecksumProjection> findIdAndChecksumByBookIdAndPhotoOrder(
+            @Param("bookId") Long bookId, @Param("photoOrder") Integer photoOrder);
+
+    @Query("SELECT p.id AS id, p.imageChecksum AS imageChecksum FROM Photo p " +
+           "WHERE p.author.id = :authorId AND p.book IS NULL AND p.photoOrder = :photoOrder ORDER BY p.id ASC LIMIT 1")
+    Optional<PhotoIdChecksumProjection> findIdAndChecksumByAuthorIdAndPhotoOrder(
+            @Param("authorId") Long authorId, @Param("photoOrder") Integer photoOrder);
+
+    @Query("SELECT p.id AS id, p.imageChecksum AS imageChecksum FROM Photo p " +
+           "WHERE p.loan.id = :loanId ORDER BY p.id ASC LIMIT 1")
+    Optional<PhotoIdChecksumProjection> findIdAndChecksumByLoanId(@Param("loanId") Long loanId);
+
+
     /**
      * Lightweight query returning each active photo's ID and the name used to derive its
      * alphabetic sort key: book title takes precedence, then author name, then the title of

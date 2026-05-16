@@ -3,12 +3,11 @@
  */
 package com.muczynski.library.config;
 
-import com.muczynski.library.domain.Book;
-import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -18,7 +17,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Handles database migrations that need to run at application startup.
+ * Handles one-time database migrations that run at application startup.
+ * Each migration is gated by a property (default false) so it only runs when explicitly enabled,
+ * avoiding expensive full-table scans on every startup.
  */
 @Component
 @RequiredArgsConstructor
@@ -28,17 +29,27 @@ public class DatabaseMigration {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
 
+    @Value("${app.migration.backfill-user-identifiers:false}")
+    private boolean backfillUserIdentifiers;
+
+    @Value("${app.migration.backfill-book-last-modified:false}")
+    private boolean backfillBookLastModified;
+
     /**
      * Generate UUIDs for existing users that don't have a userIdentifier.
-     * This migration runs once at application startup.
+     * Enable with app.migration.backfill-user-identifiers=true
      */
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void migrateUserIdentifiers() {
+        if (!backfillUserIdentifiers) {
+            log.debug("Skipping user identifier migration (app.migration.backfill-user-identifiers=false)");
+            return;
+        }
         log.info("Checking for users without userIdentifier...");
 
         int migratedCount = 0;
-        for (User user : userRepository.findAll()) {
+        for (com.muczynski.library.domain.User user : userRepository.findAll()) {
             if (user.getUserIdentifier() == null || user.getUserIdentifier().isEmpty()) {
                 user.setUserIdentifier(UUID.randomUUID().toString());
                 userRepository.save(user);
@@ -56,30 +67,22 @@ public class DatabaseMigration {
 
     /**
      * Populate lastModified for existing books that don't have this field set.
-     * This migration runs once at application startup.
-     * For existing books, we set lastModified to the current datetime.
+     * Uses a single bulk UPDATE rather than a per-row loop to avoid a slow full-table scan.
+     * Enable with app.migration.backfill-book-last-modified=true
      */
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void migrateBookLastModified() {
-        log.info("Checking for books without lastModified timestamp...");
-
-        int migratedCount = 0;
-        LocalDateTime now = LocalDateTime.now();
-
-        for (Book book : bookRepository.findAll()) {
-            if (book.getLastModified() == null) {
-                book.setLastModified(now);
-                bookRepository.save(book);
-                migratedCount++;
-                log.debug("Set lastModified for book: {} (ID: {})", book.getTitle(), book.getId());
-            }
+        if (!backfillBookLastModified) {
+            log.debug("Skipping book lastModified migration (app.migration.backfill-book-last-modified=false)");
+            return;
         }
-
-        if (migratedCount > 0) {
-            log.info("Migration complete: Set lastModified for {} books", migratedCount);
+        log.info("Backfilling lastModified for books where it is null...");
+        int count = bookRepository.backfillLastModified(LocalDateTime.now());
+        if (count > 0) {
+            log.info("Migration complete: Set lastModified for {} books", count);
         } else {
-            log.info("No books need lastModified migration");
+            log.info("No books needed lastModified backfill");
         }
     }
 }
