@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -72,6 +73,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     void deleteByLoanDate(LocalDate loanDate);
     long countByBookId(Long bookId);
     long countByBookIdAndReturnDateIsNull(Long bookId);
+
+    // Batch: get open loan counts for multiple books in one query — avoids N+1 in getBooksByIds
+    @Query("SELECT l.book.id, COUNT(l) FROM Loan l WHERE l.book.id IN :bookIds AND l.returnDate IS NULL GROUP BY l.book.id")
+    List<Object[]> countOpenLoansByBookIds(@Param("bookIds") List<Long> bookIds);
     long countByUserIdAndReturnDateIsNull(Long userId);
     void deleteByUserId(Long userId);
     /** @deprecated Use findAllByBookIdAndUserIdAndLoanDateOrderByIdAsc() instead to handle duplicates safely. */
