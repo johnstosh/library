@@ -71,6 +71,44 @@ public class BookMapper {
         return bookDto;
     }
 
+    // Used by getBooksByIds() — pre-fetched data avoids N+1 repository calls
+    public BookDto toDtoWithData(Book book, Long firstPhotoId, String firstPhotoChecksum, long loanCount) {
+        if (book == null) {
+            return null;
+        }
+        BookDto bookDto = new BookDto();
+        bookDto.setId(book.getId());
+        bookDto.setTitle(book.getTitle());
+        bookDto.setPublicationYear(book.getPublicationYear());
+        bookDto.setPublisher(book.getPublisher());
+        bookDto.setPlotSummary(book.getPlotSummary());
+        bookDto.setRelatedWorks(book.getRelatedWorks());
+        bookDto.setDetailedDescription(book.getDetailedDescription());
+        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
+        bookDto.setFreeTextUrl(book.getFreeTextUrl());
+        bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
+        bookDto.setLastModified(book.getLastModified());
+        bookDto.setStatus(book.getStatus());
+        bookDto.setLocNumber(book.getLocNumber());
+        bookDto.setElectronicResource(book.getElectronicResource());
+        bookDto.setStatusReason(book.getStatusReason());
+        if (book.getAuthor() != null) {
+            bookDto.setAuthorId(book.getAuthor().getId());
+            bookDto.setAuthor(book.getAuthor().getName());
+        }
+        if (book.getLibrary() != null) {
+            bookDto.setLibraryId(book.getLibrary().getId());
+            bookDto.setLibrary(book.getLibrary().getBranchName());
+        }
+        bookDto.setFirstPhotoId(firstPhotoId);
+        bookDto.setFirstPhotoChecksum(firstPhotoChecksum);
+        bookDto.setLoanCount(loanCount);
+        if (book.getTagsList() != null) {
+            bookDto.setTagsList(new java.util.ArrayList<>(book.getTagsList()));
+        }
+        return bookDto;
+    }
+
     public Book toEntity(BookDto bookDto) {
         if (bookDto == null) {
             return null;

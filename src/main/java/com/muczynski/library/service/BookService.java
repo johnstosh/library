@@ -1290,8 +1290,29 @@ public class BookService {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        return bookRepository.findAllById(ids).stream()
-                .map(bookMapper::toDto)
+        List<Book> books = bookRepository.findAllById(ids);
+
+        // Batch-fetch photo data (1 query instead of 2N)
+        Map<Long, Long> photoIdByBook = new HashMap<>();
+        Map<Long, String> photoChecksumByBook = new HashMap<>();
+        photoRepository.findFirstPhotoDataForBookIds(ids).forEach(row -> {
+            Long bookId = ((Number) row[0]).longValue();
+            photoIdByBook.put(bookId, ((Number) row[1]).longValue());
+            photoChecksumByBook.put(bookId, (String) row[2]);
+        });
+
+        // Batch-fetch open loan counts (1 query instead of N)
+        Map<Long, Long> loanCountByBook = new HashMap<>();
+        loanRepository.countOpenLoansByBookIds(ids).forEach(row -> {
+            Long bookId = ((Number) row[0]).longValue();
+            loanCountByBook.put(bookId, ((Number) row[1]).longValue());
+        });
+
+        return books.stream()
+                .map(book -> bookMapper.toDtoWithData(book,
+                        photoIdByBook.get(book.getId()),
+                        photoChecksumByBook.get(book.getId()),
+                        loanCountByBook.getOrDefault(book.getId(), 0L)))
                 .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
