@@ -33,6 +33,10 @@ public class AuthorService {
     private BookRepository bookRepository;
 
     public AuthorDto createAuthor(AuthorDto authorDto) {
+        String name = authorDto.getName();
+        if (name != null && !authorRepository.findAllByNameOrderByIdAsc(name).isEmpty()) {
+            throw new LibraryException("An author named \"" + name + "\" already exists");
+        }
         Author author = authorMapper.toEntity(authorDto);
         Author savedAuthor = authorRepository.save(author);
         return authorMapper.toDto(savedAuthor);
