@@ -215,7 +215,7 @@ export function BookTable({
                     data-test={`grokipedia-book-${book.id}`}
                     title="View on Grokipedia"
                   >
-                    <span className="text-lg font-bold">Ø</span>
+                    <span className="text-xl">🅶</span>
                   </a>
                 )}
               </div>

@@ -116,7 +116,7 @@ export function AuthorTable({
                 data-test={`grokipedia-author-${author.id}`}
                 title="View on Grokipedia"
               >
-                <span className="text-lg font-bold">Ø</span>
+                <span className="text-xl">🅶</span>
               </a>
             )}
             <Link
