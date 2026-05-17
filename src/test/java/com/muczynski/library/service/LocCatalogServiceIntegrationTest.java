@@ -36,8 +36,27 @@ class LocCatalogServiceIntegrationTest {
         request.setTitle("The Great Gatsby");
         request.setAuthor("Fitzgerald");
 
-        // Act
-        LocCallNumberResponse response = locCatalogService.getLocCallNumber(request);
+        // Act with retries (LOC service is sometimes flaky; first page may not contain 050 fields)
+        int maxRetries = 3;
+        Exception lastException = null;
+        LocCallNumberResponse response = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                response = locCatalogService.getLocCallNumber(request);
+                break;
+            } catch (Exception e) {
+                lastException = e;
+                System.out.println("Attempt " + attempt + " failed: " + e.getMessage());
+                if (attempt < maxRetries) {
+                    try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+            }
+        }
+
+        if (response == null && lastException != null) {
+            fail("All " + maxRetries + " attempts failed. Last error: " + lastException.getMessage());
+        }
 
         // Assert
         assertNotNull(response, "Response should not be null");
