@@ -82,7 +82,6 @@ export function Combobox({
           <ComboboxButton className="absolute inset-y-0 right-0 flex items-center pr-3">
             <PiCaretDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </ComboboxButton>
-        </div>
 
         <ComboboxOptions
           className={clsx(
@@ -133,6 +132,7 @@ export function Combobox({
             </HeadlessComboboxOption>
           ))}
         </ComboboxOptions>
+        </div>
       </HeadlessCombobox>
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
       {helpText && !error && <p className="mt-1 text-sm text-gray-500">{helpText}</p>}

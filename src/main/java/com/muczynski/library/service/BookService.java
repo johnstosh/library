@@ -547,12 +547,11 @@ public class BookService {
                         if (authorName != null && !authorName.trim().isEmpty()) {
                             authorName = authorName.trim();
 
-                            Pageable singlePage = PageRequest.of(0, 1);
-                            Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(authorName, singlePage);
+                            List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(authorName);
 
                             Author authorEntity;
                             if (!existingAuthors.isEmpty()) {
-                                authorEntity = existingAuthors.getContent().get(0);
+                                authorEntity = existingAuthors.get(0);
                                 // Update existing author with new details
                                 String dobStr = (String) authorMap.get("dateOfBirth");
                                 authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
@@ -800,12 +799,11 @@ public class BookService {
                         if (authorName != null && !authorName.trim().isEmpty()) {
                             authorName = authorName.trim();
 
-                            Pageable singlePage = PageRequest.of(0, 1);
-                            Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(authorName, singlePage);
+                            List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(authorName);
 
                             Author authorEntity;
                             if (!existingAuthors.isEmpty()) {
-                                authorEntity = existingAuthors.getContent().get(0);
+                                authorEntity = existingAuthors.get(0);
                                 // Update existing author with new details
                                 String dobStr = (String) authorMap.get("dateOfBirth");
                                 authorEntity.setDateOfBirth(dobStr != null && !dobStr.isEmpty() ? LocalDate.parse(dobStr) : null);
@@ -1015,12 +1013,11 @@ public class BookService {
         if (authorName != null && !authorName.trim().isEmpty()) {
             authorName = authorName.trim();
 
-            Pageable singlePage = PageRequest.of(0, 1);
-            Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(authorName, singlePage);
+            List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(authorName);
 
             Author authorEntity;
             if (!existingAuthors.isEmpty()) {
-                authorEntity = existingAuthors.getContent().get(0);
+                authorEntity = existingAuthors.get(0);
             } else {
                 authorEntity = new Author();
                 authorEntity.setName(authorName);
@@ -1088,12 +1085,11 @@ public class BookService {
             if (responseAuthorName != null && !responseAuthorName.trim().isEmpty()) {
                 responseAuthorName = responseAuthorName.trim();
 
-                Pageable singlePage = PageRequest.of(0, 1);
-                Page<Author> existingAuthors = authorRepository.findByNameContainingIgnoreCase(responseAuthorName, singlePage);
+                List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(responseAuthorName);
 
                 Author authorEntity;
                 if (!existingAuthors.isEmpty()) {
-                    authorEntity = existingAuthors.getContent().get(0);
+                    authorEntity = existingAuthors.get(0);
                     // Update existing author with new details
                     String dobStr = (String) authorMap.get("dateOfBirth");
                     if (dobStr != null && !dobStr.isEmpty() && !dobStr.equals("null")) {

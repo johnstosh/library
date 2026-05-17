@@ -192,7 +192,12 @@ class LoanControllerTest {
     @Test
     @WithMockUser(username = "1", authorities = "USER")
     void testGetLoanById_Forbidden_AsRegularUser() throws Exception {
-        // Regular users cannot get loans by ID (librarian-only)
+        // Regular user (id=1) tries to view a loan belonging to a different user (id=2) → 403
+        LoanDto otherUserLoan = new LoanDto();
+        otherUserLoan.setId(1L);
+        otherUserLoan.setUserId(2L); // owned by user 2, not the authenticated user 1
+        when(loanService.getLoanById(1L)).thenReturn(otherUserLoan);
+
         mockMvc.perform(get("/api/loans/1"))
                 .andExpect(status().isForbidden());
     }
