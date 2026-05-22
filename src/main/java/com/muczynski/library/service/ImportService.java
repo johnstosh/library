@@ -332,7 +332,14 @@ public class ImportService {
                 }
                 book.setStatus(bDto.getStatus() != null ? bDto.getStatus() : BookStatus.ACTIVE);
                 book.setLocNumber(bDto.getLocNumber());
+                // electronicResource: false is the default; only overwrite when explicitly provided
+                book.setElectronicResource(bDto.getElectronicResource() != null ? bDto.getElectronicResource() : false);
                 book.setStatusReason(bDto.getStatusReason());
+                // tags: only overwrite existing tags when the JSON contains a tags list;
+                // absence of the field (null) preserves existing tags (backward-compat with old exports)
+                if (bDto.getTagsList() != null) {
+                    book.setTagsList(bDto.getTagsList());
+                }
                 book.setAuthor(author);
                 book.setLibrary(branch);
                 book = bookRepository.save(book);
@@ -613,7 +620,13 @@ public class ImportService {
             // Note: lastModified is NOT exported - it will be updated during import
             bDto.setStatus(book.getStatus());
             bDto.setLocNumber(emptyToNull(book.getLocNumber()));
+            // Only export electronicResource when true; absence in JSON means false (default)
+            bDto.setElectronicResource(Boolean.TRUE.equals(book.getElectronicResource()) ? Boolean.TRUE : null);
             bDto.setStatusReason(emptyToNull(book.getStatusReason()));
+            // Only export non-empty tag lists (NON_EMPTY annotation handles null/empty omission)
+            if (book.getTagsList() != null && !book.getTagsList().isEmpty()) {
+                bDto.setTagsList(book.getTagsList());
+            }
             // New format: reference author by name only (not embedded object)
             if (book.getAuthor() != null) {
                 bDto.setAuthorName(book.getAuthor().getName());

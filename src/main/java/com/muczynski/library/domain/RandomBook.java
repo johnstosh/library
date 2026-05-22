@@ -37,6 +37,11 @@ public class RandomBook {
             "Hachette", "Macmillan", "Scholastic", "Wiley", "Pearson"
     );
 
+    private static final List<String> SAMPLE_TAGS = List.of(
+            "fiction", "theology", "history", "biography", "childrens",
+            "classic", "fantasy", "philosophy", "poetry", "science"
+    );
+
     private static final List<String> LOC_PREFIXES = List.of(
             "BX", "BT", "BV", "BR", "BS", "BL", "BM", "BP", "BQ", "BJ"
     );
@@ -59,6 +64,11 @@ public class RandomBook {
         book.setStatus(BookStatus.ACTIVE);
         book.setLocNumber(generateRandomLocNumber());
         book.setStatusReason(null);
+        // Alternate electronic resource flag so some test books are true
+        book.setElectronicResource(RANDOM.nextBoolean());
+        // Add a couple of tags for variety
+        book.setTagsList(List.of(SAMPLE_TAGS.get(RANDOM.nextInt(SAMPLE_TAGS.size())),
+                                 SAMPLE_TAGS.get(RANDOM.nextInt(SAMPLE_TAGS.size()))));
         return book;
     }
 

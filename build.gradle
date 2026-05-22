@@ -85,6 +85,8 @@ test {
     }
     // Increase heap for tests that handle large files (photo ZIP export/import)
     maxHeapSize = '2g'
+    // Pass Playwright browser path to test JVM so UI tests can find installed browsers
+    environment 'PLAYWRIGHT_BROWSERS_PATH', System.getProperty('user.home') + '/.cache/ms-playwright'
     testLogging {
         // Only show detailed output for failed tests
         events 'failed'

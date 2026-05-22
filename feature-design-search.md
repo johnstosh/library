@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Search page provides global search functionality across books and authors in the library catalog. Users can search by entering a query that matches against book titles and author names using case-insensitive partial matching.
+The Search page provides global search functionality across books and authors in the library catalog. Users can search by entering a query that matches against book titles and author names using case-insensitive partial matching. Filter chips narrow book results by physical presence, resource type, or online availability. A blank search (empty query) is valid and returns all books (subject to active filters).
 
 ## Purpose
 
 - **Catalog Discovery**: Find books and authors across the entire library collection
 - **Public Access**: No authentication required - anyone can search the catalog
-- **Real-Time Search**: Immediate results as users type their search query
+- **Filter-Based Refinement**: Filter chips let users narrow results without requiring a text query
 - **Paginated Results**: Efficient handling of large result sets with separate pagination for books and authors
 
 ## Domain Model
@@ -17,7 +17,7 @@ The Search page provides global search functionality across books and authors in
 
 Search operates on existing domain entities:
 
-- **Book**: Searches the `title` field
+- **Book**: Searches the `title` field; filtered by `locNumber`, `electronicResource`, and `freeTextUrl`
 - **Author**: Searches the `name` field
 
 ### DTOs
@@ -53,23 +53,23 @@ Returns paginated search results for books and authors.
 **Authentication**: Public (no authentication required)
 
 **Query Parameters**:
-- `query` (string, required) - Search term to match against book titles and author names
+- `query` (string, optional, default `""`) - Search term to match against book titles and author names. Empty query returns all results.
 - `page` (int, required) - Zero-based page number
 - `size` (int, required) - Number of results per page (default: 20)
-- `searchType` (string, optional) - Filter for book search scope:
-  - `ONLINE` - Only books with `electronicResource = true`
-  - `ALL` - All books (no filtering)
-  - `IN_LIBRARY` - Only books with a LOC call number (in-library materials) - **default**
+- `filterInLibrary` (boolean, optional, default `false`) - Limit books to those with a LOC call number (physical collection)
+- `filterElectronic` (boolean, optional, default `false`) - Limit books to those marked as electronic resources (`electronicResource = true`)
+- `filterFreeText` (boolean, optional, default `false`) - Limit books to those with a free online text URL (`freeTextUrl IS NOT NULL`)
+- `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
+- `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
+
+Multiple boolean filters use OR logic: a book is included if it matches **any** active filter.
 
 **Response**: `SearchResponseDto` containing books, authors, and pagination info for each
 
 **HTTP Status Codes**:
 - `200 OK` - Search completed successfully
+- `400 Bad Request` - Missing required `page` parameter
 - `500 Internal Server Error` - Search failed (e.g., database error)
-
-**Validation**:
-- Empty or null query throws `IllegalArgumentException`
-- Whitespace-only query throws `IllegalArgumentException`
 
 **Controller**: `src/main/java/com/muczynski/library/controller/SearchController.java`
 **Service**: `src/main/java/com/muczynski/library/service/SearchService.java`
@@ -78,31 +78,31 @@ Returns paginated search results for books and authors.
 
 ### Search Strategy
 
-1. **Case-Insensitive Matching**: Uses SQL `ILIKE` (PostgreSQL)
+1. **Case-Insensitive Matching**: Uses JPQL `LOWER(...) LIKE LOWER(CONCAT('%', :query, '%'))`
 2. **Partial Matching**: Searches for the query string anywhere within the field
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
-4. **Search Type Filtering**: Books can be filtered by availability type:
-   - `ONLINE` - Books with `freeTextUrl` IS NOT NULL (online books with free text URL)
-   - `ALL` - No filtering (all books)
-   - `IN_LIBRARY` - Books with `locNumber` IS NOT NULL (in-library materials with LOC call number) - **default**
-5. **Repository Methods**:
-   - `BookRepository.findByTitleContainingIgnoreCase(query, pageable)` - for ALL
-   - `BookRepository.findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(query, pageable)` - for ONLINE
-   - `BookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable)` - for IN_LIBRARY
-   - `AuthorRepository.findByNameContainingIgnoreCase(query, pageable)`
+4. **Blank Query Allowed**: An empty or missing `query` param returns all books (subject to filters)
+5. **Filter Logic (OR)**: When any filter is active, books must match at least one active filter. When no filter is active, all books are eligible.
+6. **Author Query**: Non-empty query → `findByNameContainingIgnoreCase`; empty query → `findAll`
+
+### Repository Methods
+
+- `BookRepository.findWithFilters(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, pageable)` — standard book search
+- `BookRepository.findWithFiltersAndLabels(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, labels, labelCount, pageable)` — additionally filters by label tags
+
+### Filter Semantics
+
+| Filter | Condition |
+|--------|-----------|
+| In-library materials | `locNumber IS NOT NULL AND locNumber <> ''` |
+| Electronic resource | `electronicResource = true` |
+| Has free online text | `freeTextUrl IS NOT NULL` |
+| Has free online audio | `freeTextUrl IS NOT NULL AND LOWER(freeTextUrl) LIKE '%librivox%'` |
 
 ### Fields Searched
 
 - **Books**: `title` field only (NOT publisher, NOT description)
 - **Authors**: `name` field only
-
-### Query Examples
-
-| Query | Matches Book Titles | Matches Author Names |
-|-------|---------------------|---------------------|
-| "gatsby" | "The Great Gatsby" | - |
-| "fitzgerald" | - | "F. Scott Fitzgerald" |
-| "great" | "The Great Gatsby", "Great Expectations" | - |
 
 ## Pagination
 
@@ -120,18 +120,21 @@ Returns paginated search results for books and authors.
 
 Search state is persisted in the URL for better UX and shareability:
 
-**URL Pattern**: `/search?q=<query>&page=<page>&type=<searchType>`
+**URL Pattern**: `/search?q=<query>&page=<page>&inLib=<bool>&elec=<bool>&freeText=<bool>&audio=<bool>`
 
 **Parameters**:
 - `q` (string) - Search query text
 - `page` (number, optional) - Zero-based page number (omitted when 0)
-- `type` (string, optional) - Search type filter: `ONLINE`, `ALL`, or `IN_LIBRARY` (omitted when `IN_LIBRARY`, the default)
+- `inLib` (boolean, optional) - In-library filter active (`true`/`false`; omitted when false)
+- `elec` (boolean, optional) - Electronic resource filter active
+- `freeText` (boolean, optional) - Free online text filter active
+- `audio` (boolean, optional) - Free online audio filter active
 
 **Examples**:
-- `/search?q=Augustine` - Search for "Augustine" in in-library materials
-- `/search?q=City%20of%20God&page=2` - Search for "City of God" on page 3 in in-library materials
-- `/search?q=Bible&type=ONLINE` - Search for "Bible" in online books only
-- `/search?q=Shakespeare&type=ALL` - Search for "Shakespeare" in all books
+- `/search?q=Augustine` - Search for "Augustine" (no filter)
+- `/search?inLib=true` - All in-library books (blank query with filter)
+- `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in in-library OR electronic books
+- `/search?audio=true` - All LibriVox audio books
 
 **Benefits**:
 - Bookmarkable search URLs
@@ -141,149 +144,138 @@ Search state is persisted in the URL for better UX and shareability:
 
 **Implementation**:
 - Uses `useSearchParams` hook from React Router
-- Input field syncs with URL on browser navigation
-- Search button updates URL instead of local state
+- Filter chips read/write URL params directly, triggering immediate search
+- Search executes whenever `hasSearched || hasFilters` is true
 
 ### Page Structure
 
 #### 1. Search Input
+
 - Text input field synced with URL `q` parameter
-- Clear button resets search and clears URL parameters
+- Search button is **always enabled** — blank search is valid and returns all books
 - Search executes on form submit (Enter key or Search button click)
+- Clear button resets query text AND all filter chips, then clears URL parameters
 
-#### 2. Search Type Radio Buttons
-Radio buttons below the search input to filter book search results:
-- **Online books only** - Books with a free text URL (`freeTextUrl IS NOT NULL`)
-- **Search all** - All books (no filtering)
-- **In-library materials** - Books with a LOC call number (`locNumber IS NOT NULL`) - **default**
+#### 2. Filter Chips
 
-Note: The search type filter only affects book results; author search is unaffected.
+Four toggle chips displayed below the search input. Clicking a chip immediately updates the URL and triggers a search. Each chip shows:
+- **Inactive**: Funnel (filter) icon + label + ⓘ indicator
+- **Active**: Checkmark icon + label + ⓘ indicator + blue highlight
+
+| Chip | `data-test` | Tooltip |
+|------|-------------|---------|
+| In-library materials | `filter-in-library` | "Limit results to books with a Library of Congress call number — books physically in the collection" |
+| Electronic resource | `filter-electronic` | "Limit results to books marked as electronic resources" |
+| Has free online text | `filter-free-text` | "Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)" |
+| Has free online audio | `filter-audio` | "Limit results to books with a free LibriVox audio recording" |
+
+Note: Filter chips affect only book results; author search is unaffected by filters.
 
 #### 3. Results Display
 
 **Books Section**:
-- Table showing matching books with columns:
-  - Title
-  - Author name
-  - Library name
-  - Publication year
-  - LOC number
+- Table showing matching books with columns: Title, Author name, Library name, Publication year, LOC number
 - Book count and pagination controls
-- Click on book title to view book details
 - "No books found" message when empty
 
 **Authors Section**:
-- Table showing matching authors with columns:
-  - Name
-  - Brief biography
-  - Birth/death dates
-  - Book count
+- Table showing matching authors with columns: Name, Brief biography, Birth/death dates, Book count
 - Author count and pagination controls
-- Click on author name to view author details
 - "No authors found" message when empty
 
 #### 4. Empty State
-- Displayed when no query has been entered yet
-- Prompts user to enter a search term
-- No API calls until user searches
+
+- Displayed when no query has been entered and no filter chip is active
+- Search button click (or filter chip click) triggers first search
+
+#### 5. Clear Button
+
+Visible when `hasSearched || hasFilters`. Resets all state: clears input, deactivates all filter chips, clears URL params.
 
 ### React Query Integration
 
 **API Function**: `frontend/src/api/search.ts`
 
 ```typescript
-export interface SearchResponse {
-  books: BookDto[];
-  authors: AuthorDto[];
-  bookPage: PageInfo;
-  authorPage: PageInfo;
+export interface SearchFilters {
+  inLib: boolean
+  elec: boolean
+  freeText: boolean
+  audio: boolean
 }
 
-export const searchLibrary = async (query: string, page: number, size: number): Promise<SearchResponse> => {
-  const response = await fetch(`${API_BASE_URL}/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`);
-  return response.json();
-};
+export const defaultSearchFilters: SearchFilters = {
+  inLib: false, elec: false, freeText: false, audio: false
+}
+
+export const useSearch = (query: string, page: number, size: number, filters: SearchFilters, enabled: boolean)
 ```
 
-**Query Hook**: `useSearch(query, page, size)`
-- Fetches search results using TanStack Query
-- Caches results by query + page + size
-- Automatic refetching on parameter change
-
-### Caching Strategy
-
-**Browser Caching**:
-- TanStack Query caches search results by unique query/page/size combination
-- Cache time: Default TanStack Query cache time (5 minutes)
-- Stale time: Results become stale immediately, refetch on navigation back
-- No IndexedDB caching (search is fast enough without it)
-
-**Benefits**:
-- Instant results when navigating back/forward
-- Reduced server load for repeated searches
-- Automatic cache invalidation
+**Query Key**: `['search', query, page, size, filters]` — cache is keyed by all filter values
 
 ## Security
 
 - **Public Access**: `/api/search` endpoint has `@PreAuthorize("permitAll()")`
 - **No Authentication Required**: Anyone can search the catalog
 - **Read-Only**: Search endpoint is a read-only operation with no side effects
-- **No Sensitive Data**: Search results only include public book/author information
-- **Action-Based Security**:
-  - **View action** (eye icon) - Available to all users (public)
-  - **Edit action** (pencil icon) - Librarian only (checked via `useIsLibrarian()` hook)
-  - **Delete action** (trash icon) - Librarian only (checked via `useIsLibrarian()` hook)
+- **Action-Based Security**: Actions in search results mirror those on the Books and Authors pages; role is determined via `useIsLibrarian()` hook
+  - **View, author link, see-books link, free text / Grokipedia links** - Available to all users (public)
+  - **Edit, LOC Lookup, Clone, Delete** - Librarian only
 
 ## Testing
 
 ### Backend Tests
 
 **SearchServiceTest.java** - Service layer unit tests
-- `searchWithResultsFound()` - Verifies search returns matching results
-- `searchWithNoResults()` - Verifies empty results when nothing matches
-- `searchWithEmptyQueryThrowsException()` - Validates empty query handling
-- `searchWithNullQueryThrowsException()` - Validates null query handling
-- `searchWithWhitespaceQueryThrowsException()` - Validates whitespace query handling
-- `searchPaginationBehavior()` - Verifies pagination metadata is correct
+- `searchWithResultsFound()` - Basic search returns matching results
+- `searchWithNoResults()` - Empty results when nothing matches
+- `searchEmptyQueryReturnsAllBooks()` - Empty query returns everything
+- `searchWithInLibraryFilterPassesTrueToRepository()` - filterInLibrary flag forwarded
+- `searchWithElectronicFilterPassesTrueToRepository()` - filterElectronic flag forwarded
+- `searchWithFreeTextFilterPassesTrueToRepository()` - filterFreeText flag forwarded
+- `searchWithAudioFilterPassesTrueToRepository()` - filterAudio flag forwarded
+- `searchWithMultipleFiltersPassesAllTrueToRepository()` - multiple flags forwarded correctly
 
 **SearchControllerTest.java** - Controller integration tests
-- Tests HTTP endpoint behavior
+- Tests HTTP endpoint behavior with all four filter boolean params
 - Mocks SearchService for isolation
 - Verifies HTTP status codes and response structure
-
-### Frontend Tests
-
-TanStack Query integration tests verify:
-- API calls are made with correct parameters
-- Results are cached properly
-- Error states are handled
+- `testSearch_WithInLibraryFilter()`, `testSearch_WithElectronicFilter()`, etc.
+- `testSearch_DefaultFiltersAreFalse()` - no filter params → all booleans default to false
 
 ### UI Tests
 
 **Location**: `src/test/java/com/muczynski/library/ui/SearchUITest.java`
 
 Playwright UI test coverage:
-- `testSearchPageLayout()` - Search form displays correctly
+- `testSearchPageLayout()` - Search form displays correctly; all four filter chips present; button enabled
 - `testSearchForBooks()` - Search returns book results
 - `testSearchForAuthors()` - Search returns author results
 - `testSearchForBooksAndAuthors()` - Search returns both types
 - `testNoResultsFound()` - No results message displayed
-- `testClearSearch()` - Clear button works correctly
-- `testSearchButtonState()` - Button enabled/disabled state
-- `testBookResultDetails()` - Book details display correctly
-- `testAuthorResultDetails()` - Author details display correctly
+- `testClearSearch()` - Clear button resets results
+- `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
+- `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
+- `testBookResultDetails()` - Book details displayed correctly
+- `testAuthorResultDetails()` - Author details displayed correctly
 - `testSearchUpdatesUrl()` - Search updates URL with `?q=` parameter
 - `testSearchFromUrlParameter()` - URL with `?q=` loads search results
-- `testClearSearchUpdatesUrl()` - Clear search clears URL parameter
+- `testClearSearchUpdatesUrl()` - Clear removes URL parameters
 - `testViewBookNavigatesToPage()` - View navigates to `/books/{id}`
 - `testViewAuthorNavigatesToPage()` - View navigates to `/authors/{id}`
+- `testFilterChipsVisible()` - All 4 chips visible with correct text and tooltip
+- `testInLibraryFilterChipUpdatesUrl()` - Clicking chip sets `inLib=true` in URL and returns books
+- `testAudioFilterReturnsLibriVoxBooks()` - Audio filter returns only LibriVox book
+- `testFreeTextFilterReturnsOnlineTextBooks()` - Free-text filter returns 2 books with URLs
+- `testFilterChipStateRestoredFromUrl()` - Navigating with filter params shows active chips
+- `testClearRemovesFilterChips()` - Clear button removes filter params from URL
 
 ## Performance Considerations
 
 1. **Database Indexes**: Ensure indexes on `book.title` and `author.name` for fast searching
 2. **Pagination**: Limits result size to prevent large data transfers
-3. **Query Caching**: TanStack Query reduces redundant API calls
-4. **Case-Insensitive Search**: Uses database-native case-insensitive search (ILIKE)
+3. **Query Caching**: TanStack Query reduces redundant API calls keyed by query + page + filters
+4. **Case-Insensitive Search**: Uses JPQL LOWER() for database-portable case folding
 
 ## Limitations
 
@@ -292,56 +284,57 @@ Playwright UI test coverage:
 - **No Fuzzy Matching**: Exact substring matching only (no typo tolerance)
 - **No Full-Text Search**: Not using PostgreSQL full-text search capabilities
 - **Single Query**: Books and authors searched with same query (can't search different terms)
+- **Filter OR Logic**: Multiple filters are ORed — cannot require a book to satisfy all filters simultaneously
 
 ## Future Enhancements (Not Implemented)
 
-The following features are documented in code review but NOT implemented:
-
 - ❌ **Publisher Search**: Searching books by publisher name
-- ❌ **Search Filters**: Filter results by status, library, date, etc.
 - ❌ **Advanced Search**: Boolean operators, phrase matching
 - ❌ **Fuzzy Search**: Typo tolerance and similarity matching
 - ❌ **Full-Text Search**: PostgreSQL `tsvector` for better relevance ranking
 - ❌ **Search Suggestions**: Autocomplete based on popular searches
 - ❌ **Search History**: User search history and recent searches
+- ❌ **Filter AND Logic**: Require all selected filters to be satisfied simultaneously
 
 ## CRUD Operations in Search Results
 
 ### Actions Column
 
-Each search result (book or author) includes an Actions column on the right side with navigation links:
+Each search result includes an actions area on the right side that mirrors the actions available on the Books and Authors pages, controlled by the user's role.
 
-#### All Users
-- **View** (Eye icon, gray color)
-  - Navigates to book/author view page (`/books/{id}` or `/authors/{id}`)
-  - `data-test="book-result-view-{id}"` or `data-test="author-result-view-{id}"`
-  - Uses React Router `Link` component for client-side navigation
+#### Book Results
 
-#### Librarian Only
-- **Edit** (Pencil icon, blue color)
-  - Navigates to book/author edit page (`/books/{id}/edit` or `/authors/{id}/edit`)
-  - `data-test="book-result-edit-{id}"` or `data-test="author-result-edit-{id}"`
-  - Uses React Router `Link` component for client-side navigation
-  - Only visible if `useIsLibrarian()` returns true
+Actions are arranged in up to three rows (rows omitted when empty):
 
-**Note**: Delete functionality is intentionally NOT available from search results. Users should navigate to the respective Books or Authors pages for delete operations.
+**Row 1 — URL links** (shown only when present; all users)
+- **Free text links** (open-book icon, green) — one per URL in `freeTextUrl`; opens in new tab; `data-test="book-result-free-text-{id}-{index}"`
+- **Grokipedia** (🅶, orange) — links to `grokipediaUrl`; `data-test="book-result-grokipedia-{id}"`
 
-### Implementation Details
+**Row 2 — Navigation** (all users)
+- **View** (eye icon, gray) — navigates to `/books/{id}`; `data-test="book-result-view-{id}"`
+- **Author** (👤, teal) — shown when `authorId` present; links to author edit page for librarians, view page for regular users; `data-test="book-result-author-{id}"`
+- **LOC Lookup** (🗃️, purple) — librarian only; triggers LOC call number lookup and opens `LocLookupResultsModal`; `data-test="book-result-lookup-loc-{id}"`
 
-**Search Results Display**:
-- Book results use `BookResult` component with navigation links
-- Author results use `AuthorResult` component with navigation links
-- Icons use inline SVG for consistency with Books and Authors pages
-- Hover effects change icon color for better UX
+**Row 3 — Librarian actions** (librarian only)
+- **Clone** (copy icon, green) — clones the book via `useCloneBook`; `data-test="book-result-clone-{id}"`
+- **Edit** (pencil icon, blue) — navigates to `/books/{id}/edit`; `data-test="book-result-edit-{id}"`
+- **Delete** (trash icon, red) — opens `ConfirmDialog` then deletes via `useDeleteBook`; `data-test="book-result-delete-{id}"`
 
-**Page-Based Navigation (not modals)**:
-- View actions navigate to `/books/{id}` or `/authors/{id}`
-- Edit actions navigate to `/books/{id}/edit` or `/authors/{id}/edit`
-- Uses React Router `Link` component for declarative navigation
-- Browser back button returns to search results (preserves search URL state)
+#### Author Results
+
+Actions are displayed in a single row:
+
+**All users**
+- **View** (eye icon, gray) — navigates to `/authors/{id}`; `data-test="author-result-view-{id}"`
+- **Grokipedia** (🅶, orange) — shown when `grokipediaUrl` present; `data-test="author-result-grokipedia-{id}"`
+- **See Books** (📚, teal) — navigates to `/authors/{id}`; `data-test="author-result-see-books-{id}"`
+
+**Librarian only**
+- **Edit** (pencil icon, blue) — navigates to `/authors/{id}/edit`; `data-test="author-result-edit-{id}"`
+- **Delete** (trash icon, red) — opens `ConfirmDialog` then deletes via `useDeleteAuthor`; `data-test="author-result-delete-{id}"`
 
 ## Related Documentation
 
-- **API Endpoints**: See `endpoints.md` for complete endpoint documentation
+- **API Endpoints**: See `endpoints/` for complete endpoint documentation
 - **CLAUDE.md**: Main project overview and architecture
-- **checklist-code-review.md**: Feature checklist and review status
+- **feature-design-frontend.md**: React architecture and URL-based CRUD pattern

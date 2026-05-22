@@ -8,6 +8,7 @@ import com.muczynski.library.domain.BookStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -24,7 +25,17 @@ public class ImportBookDto {
     private LocalDateTime lastModified;
     private BookStatus status;
     private String locNumber;
+    /**
+     * True if this book is an electronic resource (e-book, online resource, etc.).
+     * Only present in JSON when true; absence means false (the default).
+     */
+    private Boolean electronicResource;
     private String statusReason;
+    /**
+     * Tags for categorizing the book (e.g., fiction, fantasy, theology).
+     * Omitted from JSON when empty (NON_EMPTY); absence means no tags.
+     */
+    private List<String> tagsList;
     private String libraryName;
 
     // New format: author reference by name only

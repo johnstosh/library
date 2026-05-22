@@ -35,7 +35,10 @@ public class SearchController {
             @RequestParam(defaultValue = "") String query,
             @RequestParam int page,
             @RequestParam int size,
-            @RequestParam(defaultValue = "IN_LIBRARY") String searchType,
+            @RequestParam(defaultValue = "false") boolean filterInLibrary,
+            @RequestParam(defaultValue = "false") boolean filterElectronic,
+            @RequestParam(defaultValue = "false") boolean filterFreeText,
+            @RequestParam(defaultValue = "false") boolean filterAudio,
             @RequestParam(required = false) String labels) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
@@ -44,11 +47,12 @@ public class SearchController {
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
-            SearchResponseDto results = searchService.search(query, page, size, searchType, labelList);
+            SearchResponseDto results = searchService.search(query, page, size,
+                    filterInLibrary, filterElectronic, filterFreeText, filterAudio, labelList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
-            logger.warn("Failed to perform search with query '{}', page {}, size {}, searchType {}, labels {}: {}",
-                    query, page, size, searchType, labels, e.getMessage(), e);
+            logger.warn("Failed to perform search with query '{}', page {}, size {}: {}",
+                    query, page, size, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
