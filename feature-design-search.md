@@ -218,9 +218,9 @@ export const useSearch = (query: string, page: number, size: number, filters: Se
 - **Public Access**: `/api/search` endpoint has `@PreAuthorize("permitAll()")`
 - **No Authentication Required**: Anyone can search the catalog
 - **Read-Only**: Search endpoint is a read-only operation with no side effects
-- **Action-Based Security**:
-  - **View action** (eye icon) - Available to all users (public)
-  - **Edit action** (pencil icon) - Librarian only (checked via `useIsLibrarian()` hook)
+- **Action-Based Security**: Actions in search results mirror those on the Books and Authors pages; role is determined via `useIsLibrarian()` hook
+  - **View, author link, see-books link, free text / Grokipedia links** - Available to all users (public)
+  - **Edit, LOC Lookup, Clone, Delete** - Librarian only
 
 ## Testing
 
@@ -300,15 +300,38 @@ Playwright UI test coverage:
 
 ### Actions Column
 
-Each search result (book or author) includes an Actions column on the right side with navigation links:
+Each search result includes an actions area on the right side that mirrors the actions available on the Books and Authors pages, controlled by the user's role.
 
-#### All Users
-- **View** (Eye icon, gray color) - Navigates to `/books/{id}` or `/authors/{id}`
+#### Book Results
 
-#### Librarian Only
-- **Edit** (Pencil icon, blue color) - Navigates to `/books/{id}/edit` or `/authors/{id}/edit`
+Actions are arranged in up to three rows (rows omitted when empty):
 
-**Note**: Delete functionality is intentionally NOT available from search results.
+**Row 1 — URL links** (shown only when present; all users)
+- **Free text links** (open-book icon, green) — one per URL in `freeTextUrl`; opens in new tab; `data-test="book-result-free-text-{id}-{index}"`
+- **Grokipedia** (🅶, orange) — links to `grokipediaUrl`; `data-test="book-result-grokipedia-{id}"`
+
+**Row 2 — Navigation** (all users)
+- **View** (eye icon, gray) — navigates to `/books/{id}`; `data-test="book-result-view-{id}"`
+- **Author** (👤, teal) — shown when `authorId` present; links to author edit page for librarians, view page for regular users; `data-test="book-result-author-{id}"`
+- **LOC Lookup** (🗃️, purple) — librarian only; triggers LOC call number lookup and opens `LocLookupResultsModal`; `data-test="book-result-lookup-loc-{id}"`
+
+**Row 3 — Librarian actions** (librarian only)
+- **Clone** (copy icon, green) — clones the book via `useCloneBook`; `data-test="book-result-clone-{id}"`
+- **Edit** (pencil icon, blue) — navigates to `/books/{id}/edit`; `data-test="book-result-edit-{id}"`
+- **Delete** (trash icon, red) — opens `ConfirmDialog` then deletes via `useDeleteBook`; `data-test="book-result-delete-{id}"`
+
+#### Author Results
+
+Actions are displayed in a single row:
+
+**All users**
+- **View** (eye icon, gray) — navigates to `/authors/{id}`; `data-test="author-result-view-{id}"`
+- **Grokipedia** (🅶, orange) — shown when `grokipediaUrl` present; `data-test="author-result-grokipedia-{id}"`
+- **See Books** (📚, teal) — navigates to `/authors/{id}`; `data-test="author-result-see-books-{id}"`
+
+**Librarian only**
+- **Edit** (pencil icon, blue) — navigates to `/authors/{id}/edit`; `data-test="author-result-edit-{id}"`
+- **Delete** (trash icon, red) — opens `ConfirmDialog` then deletes via `useDeleteAuthor`; `data-test="author-result-delete-{id}"`
 
 ## Related Documentation
 
