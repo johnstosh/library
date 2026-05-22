@@ -298,6 +298,44 @@ async function addAuthor() {
 - Creating separate unit tests for complex service interactions
 - Documenting tests that require mocking as `@Disabled` with clear explanation
 
+### Issue 8: Invalid Selector When Mixing CSS and `text=` Engine with Comma
+
+**Symptom:** `waitForSelector()` throws a CSS parse error like:
+```
+Unexpected token '=' while parsing css selector 'h2:has-text('Books'), text=No books found'.
+Did you mean to CSS.escape it?
+```
+
+**Root Cause:** Playwright's `waitForSelector()` accepts either a CSS selector or one of its custom engines (`text=`, `css=`, `xpath=`, etc.), but **not a comma-separated mix of both**. The comma-OR syntax only works within the same engine. A selector like `"h2:has-text('Books'), text=No results"` is invalid because `text=` is not CSS.
+
+**Solution — Option A (preferred): Wait for the element you know will appear.**
+
+If your test data guarantees a specific outcome (e.g., results are always present), just wait for that element directly:
+
+```java
+// BAD
+page.waitForSelector("h2:has-text('Books'), text=No books or authors found",
+    new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+// GOOD — test data guarantees books exist
+page.waitForSelector("h2:has-text('Books')", new Page.WaitForSelectorOptions().setTimeout(10000L));
+```
+
+**Solution — Option B: Use `Locator.or()` when outcome is genuinely uncertain.**
+
+```java
+page.locator("h2:has-text('Books')")
+    .or(page.locator("text=No books or authors found"))
+    .first()
+    .waitFor(new Locator.WaitForOptions().setTimeout(10000L));
+```
+
+**Solution — Option C: Use `waitForLoadState(NETWORKIDLE)` for passive waiting.**
+
+When you only need the page to settle (not verify a specific element), `NETWORKIDLE` is the simplest fallback.
+
+**Note:** `:has-text()` is a valid Playwright CSS pseudo-selector usable in `waitForSelector()`. The problem only occurs when combining it with a different engine (`text=`) via comma.
+
 ### Debugging Checklist
 When a UI test fails:
 1. ✅ Check browser console logs (look for `[Sections]`, `[Loans]`, etc. prefixes)
