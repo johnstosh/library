@@ -80,6 +80,12 @@ These statistics are fetched from the `/api/import/stats` endpoint which returns
 - **Import**: Null values are converted back to empty strings for fields that require it
   - User fields like `xaiApiKey`, `googlePhotosApiKey`, etc. are initialized to empty strings if null
 
+### Book-Specific Fields
+- **`electronicResource`**: Only present in JSON when `true`; absence means `false` (the default).
+  This keeps the export compact since most books are not electronic resources.
+- **`tagsList`**: Exported only when non-empty (list of strings such as `["theology", "fiction"]`).
+  When absent from JSON (old exports), existing tags on the target book are preserved during import.
+
 ### Excluded from Export
 - **`lastModified` fields**: Not exported because they are automatically updated during import
   - Both Book and Author entities have `@PreUpdate` hooks that set `lastModified`
@@ -99,7 +105,9 @@ The export format changed to use lightweight references instead of embedded obje
   "books": [{
     "title": "Book Title",
     "authorName": "Author Name",
-    "libraryName": "Library Name"
+    "libraryName": "Library Name",
+    "electronicResource": true,
+    "tagsList": ["theology", "fiction"]
   }],
   "loans": [{
     "bookTitle": "Book Title",

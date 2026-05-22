@@ -206,6 +206,8 @@ class ImportExportRoundTripTest {
                     assertNotNull(book.getAuthorName(), "Book author name should not be null");
                     assertNotNull(book.getLibraryName(), "Book library name should not be null");
                     assertNull(book.getLastModified(), "lastModified should NOT be exported");
+                    // electronicResource: if true in DB it must be true in export; if false it must be absent (null)
+                    // (we verify the round-trip value correctness separately)
                 });
 
         exportedData.getUsers().stream()
@@ -434,6 +436,80 @@ class ImportExportRoundTripTest {
         assertNotNull(book.getLocNumber(), "locNumber should be present");
         assertNotNull(book.getAuthorName(), "authorName should be present");
         assertNotNull(book.getLibraryName(), "libraryName should be present");
+        // RandomBook always sets tagsList with 2 entries → must be present in export
+        assertNotNull(book.getTagsList(), "tagsList should be present");
+        assertFalse(book.getTagsList().isEmpty(), "tagsList should not be empty");
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testElectronicResourceAndTagsRoundTrip() throws Exception {
+        // Create a book explicitly marked as electronic with known tags
+        Book eBook = new Book();
+        eBook.setTitle("ElectronicBook RoundTrip Test");
+        eBook.setAuthor(authors.get(0));
+        eBook.setLibrary(testLibrary);
+        eBook.setStatus(BookStatus.ACTIVE);
+        eBook.setPublicationYear(2025);
+        eBook.setElectronicResource(true);
+        eBook.setTagsList(java.util.List.of("theology", "fiction"));
+        eBook = bookRepository.save(eBook);
+
+        // Create a non-electronic book with tags
+        Book printBook = new Book();
+        printBook.setTitle("PrintBook RoundTrip Test");
+        printBook.setAuthor(authors.get(1));
+        printBook.setLibrary(testLibrary);
+        printBook.setStatus(BookStatus.ACTIVE);
+        printBook.setPublicationYear(2025);
+        printBook.setElectronicResource(false);
+        printBook.setTagsList(java.util.List.of("history"));
+        printBook = bookRepository.save(printBook);
+
+        // Export
+        MvcResult exportResult = mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String exportedJson = exportResult.getResponse().getContentAsString();
+        ImportRequestDto exportedData = objectMapper.readValue(exportedJson, ImportRequestDto.class);
+
+        // Verify eBook: electronicResource=true → exported as true; tags exported
+        var exportedEBook = exportedData.getBooks().stream()
+                .filter(b -> "ElectronicBook RoundTrip Test".equals(b.getTitle()))
+                .findFirst();
+        assertTrue(exportedEBook.isPresent(), "Electronic book should be in export");
+        assertEquals(Boolean.TRUE, exportedEBook.get().getElectronicResource(),
+                "electronicResource=true should be exported as true");
+        assertNotNull(exportedEBook.get().getTagsList(), "tags should be exported for e-book");
+        assertTrue(exportedEBook.get().getTagsList().containsAll(java.util.List.of("theology", "fiction")),
+                "exported tags should match original");
+
+        // Verify printBook: electronicResource=false → absent from JSON (null in DTO)
+        var exportedPrintBook = exportedData.getBooks().stream()
+                .filter(b -> "PrintBook RoundTrip Test".equals(b.getTitle()))
+                .findFirst();
+        assertTrue(exportedPrintBook.isPresent(), "Print book should be in export");
+        assertNull(exportedPrintBook.get().getElectronicResource(),
+                "electronicResource=false should be absent from JSON (null in DTO)");
+        assertNotNull(exportedPrintBook.get().getTagsList(), "tags should be exported for print book");
+
+        // Re-import and verify field values are preserved
+        mockMvc.perform(post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(exportedJson))
+                .andExpect(status().isOk());
+
+        Book reimportedEBook = bookRepository.findAllByTitleOrderByIdAsc("ElectronicBook RoundTrip Test").get(0);
+        assertTrue(Boolean.TRUE.equals(reimportedEBook.getElectronicResource()),
+                "electronicResource should be true after round-trip import");
+        assertTrue(reimportedEBook.getTagsList().containsAll(java.util.List.of("theology", "fiction")),
+                "tags should be preserved after round-trip import");
+
+        Book reimportedPrintBook = bookRepository.findAllByTitleOrderByIdAsc("PrintBook RoundTrip Test").get(0);
+        assertFalse(Boolean.TRUE.equals(reimportedPrintBook.getElectronicResource()),
+                "electronicResource should remain false after round-trip import");
+        assertTrue(reimportedPrintBook.getTagsList().contains("history"),
+                "tags should be preserved after round-trip import");
     }
 
     @Test
