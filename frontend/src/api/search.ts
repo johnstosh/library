@@ -20,23 +20,41 @@ export interface SearchResponse {
   }
 }
 
-export type SearchType = 'ONLINE' | 'ALL' | 'IN_LIBRARY'
+export interface SearchFilters {
+  inLib: boolean
+  elec: boolean
+  freeText: boolean
+  audio: boolean
+}
+
+export const defaultSearchFilters: SearchFilters = {
+  inLib: false,
+  elec: false,
+  freeText: false,
+  audio: false,
+}
 
 export function useSearch(
   query: string,
   page = 0,
   size = 20,
-  searchType: SearchType = 'IN_LIBRARY',
+  filters: SearchFilters = defaultSearchFilters,
   enabled = true,
   selectedLabels?: string[],
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
+  const filterParams = [
+    filters.inLib ? '&filterInLibrary=true' : '',
+    filters.elec ? '&filterElectronic=true' : '',
+    filters.freeText ? '&filterFreeText=true' : '',
+    filters.audio ? '&filterAudio=true' : '',
+  ].join('')
   return useQuery({
-    queryKey: ['search', query, page, size, searchType, selectedLabels ?? []],
+    queryKey: ['search', query, page, size, filters, selectedLabels ?? []],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}${labelsParam}`,
+        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}${filterParams}${labelsParam}`,
         { requireAuth: false },
       ),
     enabled,

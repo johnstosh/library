@@ -27,8 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,25 +48,35 @@ class SearchServiceTest {
     @InjectMocks
     private SearchService searchService;
 
+    // ── Helper to create a stubbed book page ──────────────────────────────
+
+    private Page<Book> bookPageOf(Pageable pageable, Book... books) {
+        return new PageImpl<>(Arrays.asList(books), pageable, books.length);
+    }
+
+    private Page<Book> emptyBookPage(Pageable pageable) {
+        return new PageImpl<>(Collections.emptyList(), pageable, 0);
+    }
+
+    private Page<Author> emptyAuthorPage(Pageable pageable) {
+        return new PageImpl<>(Collections.emptyList(), pageable, 0);
+    }
+
+    // ── No-filter (show all) tests ────────────────────────────────────────
+
     @Test
-    void searchWithResultsFound() {
-        // Arrange
+    void searchWithNoFiltersReturnsMatchingBooks() {
         String query = "test";
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book");
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
 
         Author author = new Author();
         author.setId(1L);
         author.setName("Test Author");
-        List<Author> authorList = Arrays.asList(author);
-        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 1);
 
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
@@ -77,50 +86,39 @@ class SearchServiceTest {
         authorDto.setId(1L);
         authorDto.setName("Test Author");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Arrays.asList(author), pageable, 1));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
 
-        // Assert
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
         assertEquals(1, result.getAuthors().size());
         assertEquals(bookDto, result.getBooks().get(0));
         assertEquals(authorDto, result.getAuthors().get(0));
-
         assertEquals(1, result.getBookPage().getTotalPages());
         assertEquals(1, result.getBookPage().getTotalElements());
         assertEquals(0, result.getBookPage().getCurrentPage());
         assertEquals(20, result.getBookPage().getPageSize());
-
-        assertEquals(1, result.getAuthorPage().getTotalPages());
-        assertEquals(1, result.getAuthorPage().getTotalElements());
-        assertEquals(0, result.getAuthorPage().getCurrentPage());
-        assertEquals(20, result.getAuthorPage().getPageSize());
     }
 
     @Test
-    void searchWithNoResults() {
-        // Arrange
+    void searchWithNoResultsReturnsEmpty() {
         String query = "nonexistent";
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Book> emptyBookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-        Page<Author> emptyAuthorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(emptyBookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(emptyAuthorPage);
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
 
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
-
-        // Assert
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
         assertEquals(0, result.getAuthors().size());
@@ -128,42 +126,39 @@ class SearchServiceTest {
         assertEquals(0, result.getAuthorPage().getTotalElements());
     }
 
+    // ── Empty query tests ─────────────────────────────────────────────────
+
     @Test
     void searchWithEmptyQueryReturnsAllBooks() {
-        // Arrange
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
         Book book = new Book();
         book.setId(1L);
-        book.setTitle("Test Book");
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
+        book.setTitle("Any Book");
 
         Author author = new Author();
         author.setId(1L);
-        author.setName("Test Author");
-        List<Author> authorList = Arrays.asList(author);
-        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 1);
+        author.setName("Any Author");
 
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
-        bookDto.setTitle("Test Book");
+        bookDto.setTitle("Any Book");
 
         AuthorDto authorDto = new AuthorDto();
         authorDto.setId(1L);
-        authorDto.setName("Test Author");
+        authorDto.setName("Any Author");
 
-        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+        // Empty query uses findWithFilters with empty string
+        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Arrays.asList(author), pageable, 1));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
-        // Act
-        SearchResponseDto result = searchService.search("", page, size, "IN_LIBRARY");
+        SearchResponseDto result = searchService.search("", page, size, false, false, false, false, null);
 
-        // Assert
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
         assertEquals(1, result.getAuthors().size());
@@ -171,69 +166,186 @@ class SearchServiceTest {
 
     @Test
     void searchWithNullQueryReturnsAllBooks() {
-        // Arrange
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Book> bookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findAll(any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
 
-        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+        SearchResponseDto result = searchService.search(null, page, size, false, false, false, false, null);
 
-        // Act
-        SearchResponseDto result = searchService.search(null, page, size, "IN_LIBRARY");
-
-        // Assert
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
         assertEquals(0, result.getAuthors().size());
     }
 
     @Test
-    void searchWithWhitespaceQueryReturnsAllBooks() {
-        // Arrange
-        int page = 0;
-        int size = 20;
+    void searchWithWhitespaceQueryTreatsAsEmpty() {
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Book> bookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findAll(any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
 
-        when(bookRepository.findAll(any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findAll(any(Pageable.class))).thenReturn(authorPage);
+        SearchResponseDto result = searchService.search("   ", page, size, false, false, false, false, null);
 
-        // Act
-        SearchResponseDto result = searchService.search("   ", page, size, "IN_LIBRARY");
-
-        // Assert
         assertNotNull(result);
     }
 
+    // ── Type filter tests ─────────────────────────────────────────────────
+
+    @Test
+    void searchWithInLibraryFilterPassesTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Library Book");
+        book.setLocNumber("PS3511.I9 G7");
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Library Book");
+
+        when(bookRepository.findWithFilters(eq(query), eq(true), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        SearchResponseDto result = searchService.search(query, page, size, true, false, false, false, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Library Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithElectronicFilterPassesTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(2L);
+        book.setTitle("Electronic Book");
+        book.setElectronicResource(true);
+        BookDto bookDto = new BookDto();
+        bookDto.setId(2L);
+        bookDto.setTitle("Electronic Book");
+
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(true), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        SearchResponseDto result = searchService.search(query, page, size, false, true, false, false, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Electronic Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithFreeTextFilterPassesTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(3L);
+        book.setTitle("Free Text Book");
+        book.setFreeTextUrl("https://gutenberg.org/ebooks/1234");
+        BookDto bookDto = new BookDto();
+        bookDto.setId(3L);
+        bookDto.setTitle("Free Text Book");
+
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(true), eq(false), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        SearchResponseDto result = searchService.search(query, page, size, false, false, true, false, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("Free Text Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithAudioFilterPassesTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        Book book = new Book();
+        book.setId(4L);
+        book.setTitle("LibriVox Book");
+        book.setFreeTextUrl("https://librivox.org/some-book");
+        BookDto bookDto = new BookDto();
+        bookDto.setId(4L);
+        bookDto.setTitle("LibriVox Book");
+
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(true), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+        when(bookMapper.toDto(book)).thenReturn(bookDto);
+
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, true, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getBooks().size());
+        assertEquals("LibriVox Book", result.getBooks().get(0).getTitle());
+    }
+
+    @Test
+    void searchWithMultipleFiltersPassesAllTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        when(bookRepository.findWithFilters(eq(query), eq(true), eq(true), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+
+        SearchResponseDto result = searchService.search(query, page, size, true, true, false, false, null);
+
+        assertNotNull(result);
+        assertEquals(0, result.getBooks().size());
+    }
+
+    // ── Pagination tests ──────────────────────────────────────────────────
+
     @Test
     void searchPaginationBehavior() {
-        // Arrange
         String query = "test";
-        int page = 1;
-        int size = 10;
+        int page = 1, size = 10;
         Pageable pageable = PageRequest.of(page, size);
 
         List<Book> bookList = Arrays.asList(new Book(), new Book());
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 25); // 25 total, 3 pages
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 25); // 25 total → 3 pages
 
         List<Author> authorList = Arrays.asList(new Author());
-        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 11); // 11 total, 2 pages
+        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 11); // 11 total → 2 pages
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(bookPage);
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(authorPage);
         when(bookMapper.toDto(any(Book.class))).thenReturn(new BookDto());
         when(authorMapper.toDto(any(Author.class))).thenReturn(new AuthorDto());
 
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
 
-        // Assert
         assertNotNull(result);
         assertEquals(3, result.getBookPage().getTotalPages());
         assertEquals(25, result.getBookPage().getTotalElements());
@@ -246,110 +358,12 @@ class SearchServiceTest {
         assertEquals(10, result.getAuthorPage().getPageSize());
     }
 
-    @Test
-    void searchWithSearchTypeOnline() {
-        // Arrange
-        String query = "test";
-        int page = 0;
-        int size = 20;
-        Pageable pageable = PageRequest.of(page, size);
-
-        Book book = new Book();
-        book.setId(1L);
-        book.setTitle("Online Book");
-        book.setElectronicResource(true);
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
-        BookDto bookDto = new BookDto();
-        bookDto.setId(1L);
-        bookDto.setTitle("Online Book");
-
-        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrue(eq(query), any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
-
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "ONLINE");
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getBooks().size());
-        assertEquals("Online Book", result.getBooks().get(0).getTitle());
-    }
-
-    @Test
-    void searchWithSearchTypeAll() {
-        // Arrange
-        String query = "test";
-        int page = 0;
-        int size = 20;
-        Pageable pageable = PageRequest.of(page, size);
-
-        Book book = new Book();
-        book.setId(1L);
-        book.setTitle("Any Book");
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
-        BookDto bookDto = new BookDto();
-        bookDto.setId(1L);
-        bookDto.setTitle("Any Book");
-
-        when(bookRepository.findByTitleContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
-
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "ALL");
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getBooks().size());
-        assertEquals("Any Book", result.getBooks().get(0).getTitle());
-    }
-
-    @Test
-    void searchWithSearchTypeInLibrary() {
-        // Arrange
-        String query = "test";
-        int page = 0;
-        int size = 20;
-        Pageable pageable = PageRequest.of(page, size);
-
-        Book book = new Book();
-        book.setId(1L);
-        book.setTitle("Library Book");
-        book.setLocNumber("PS3511.I9 G7");
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
-        BookDto bookDto = new BookDto();
-        bookDto.setId(1L);
-        bookDto.setTitle("Library Book");
-
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class))).thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
-
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY");
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getBooks().size());
-        assertEquals("Library Book", result.getBooks().get(0).getTitle());
-    }
+    // ── Labels tests ──────────────────────────────────────────────────────
 
     @Test
     void searchWithLabels_usesLabelFilteredRepository() {
-        // Arrange
         String query = "test";
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         List<String> labels = Arrays.asList("fiction", "fantasy");
         Pageable pageable = PageRequest.of(page, size);
 
@@ -357,115 +371,58 @@ class SearchServiceTest {
         book.setId(1L);
         book.setTitle("Fiction Book");
         book.getTagsList().add("fiction");
-        List<Book> bookList = Arrays.asList(book);
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
         bookDto.setTitle("Fiction Book");
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(eq(query), eq(labels), eq(2L), any(Pageable.class)))
-                .thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
+        when(bookRepository.findWithFiltersAndLabels(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(labels), eq(2L), any(Pageable.class)))
+                .thenReturn(bookPageOf(pageable, book));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY", labels);
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, labels);
 
-        // Assert
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
         assertEquals("Fiction Book", result.getBooks().get(0).getTitle());
     }
 
     @Test
-    void searchWithLabels_onlineType_usesElectronicResourceAndTagsRepo() {
-        // Arrange
+    void searchWithLabels_andInLibraryFilter_passesAllParamsToRepository() {
         String query = "test";
-        int page = 0;
-        int size = 20;
-        List<String> labels = Arrays.asList("fiction");
-        Pageable pageable = PageRequest.of(page, size);
-
-        Book book = new Book();
-        book.setId(2L);
-        book.setTitle("Online Fiction");
-        book.setElectronicResource(true);
-        Page<Book> bookPage = new PageImpl<>(Arrays.asList(book), pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
-        BookDto bookDto = new BookDto();
-        bookDto.setId(2L);
-        bookDto.setTitle("Online Fiction");
-
-        when(bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(eq(query), eq(labels), eq(1L), any(Pageable.class)))
-                .thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
-
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "ONLINE", labels);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getBooks().size());
-        assertEquals("Online Fiction", result.getBooks().get(0).getTitle());
-    }
-
-    @Test
-    void searchWithLabels_allType_usesTagsRepo() {
-        // Arrange
-        String query = "test";
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         List<String> labels = Arrays.asList("theology");
         Pageable pageable = PageRequest.of(page, size);
 
-        Book book = new Book();
-        book.setId(3L);
-        book.setTitle("Theology Book");
-        Page<Book> bookPage = new PageImpl<>(Arrays.asList(book), pageable, 1);
-        Page<Author> authorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(bookRepository.findWithFiltersAndLabels(
+                eq(query), eq(true), eq(false), eq(false), eq(false),
+                eq(labels), eq(1L), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
 
-        BookDto bookDto = new BookDto();
-        bookDto.setId(3L);
-        bookDto.setTitle("Theology Book");
+        SearchResponseDto result = searchService.search(query, page, size, true, false, false, false, labels);
 
-        when(bookRepository.findByTitleContainingIgnoreCaseAndAllLabels(eq(query), eq(labels), eq(1L), any(Pageable.class)))
-                .thenReturn(bookPage);
-        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class))).thenReturn(authorPage);
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
-
-        // Act
-        SearchResponseDto result = searchService.search(query, page, size, "ALL", labels);
-
-        // Assert
         assertNotNull(result);
-        assertEquals(1, result.getBooks().size());
-        assertEquals("Theology Book", result.getBooks().get(0).getTitle());
+        assertEquals(0, result.getBooks().size());
     }
 
     @Test
     void searchWithNullLabels_behavesLikeNoLabels() {
-        // Arrange
         String query = "test";
-        int page = 0;
-        int size = 20;
+        int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Book> emptyBookPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-        Page<Author> emptyAuthorPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
-
-        when(bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(eq(query), any(Pageable.class)))
-                .thenReturn(emptyBookPage);
+        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
-                .thenReturn(emptyAuthorPage);
+                .thenReturn(emptyAuthorPage(pageable));
 
-        // Act - null labels should behave like no labels
-        SearchResponseDto result = searchService.search(query, page, size, "IN_LIBRARY", null);
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
 
-        // Assert
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
     }

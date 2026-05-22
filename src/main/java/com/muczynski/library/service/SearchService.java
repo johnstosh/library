@@ -38,67 +38,45 @@ public class SearchService {
     @Autowired
     private AuthorMapper authorMapper;
 
+    /**
+     * Search books and authors with OR-combined type filters.
+     *
+     * @param query          title search text (empty = match all)
+     * @param page           zero-based page number
+     * @param size           results per page
+     * @param filterInLibrary include books with a LOC call number (physical collection)
+     * @param filterElectronic include books with electronicResource = true
+     * @param filterFreeText  include books with a free online text URL
+     * @param filterAudio     include books whose free text URL contains "librivox"
+     * @param labels          label tags that books must ALL have (null/empty = no label filter)
+     */
     @Transactional(readOnly = true)
-    public SearchResponseDto search(String query, int page, int size, String searchType) {
-        return search(query, page, size, searchType, null);
-    }
+    public SearchResponseDto search(String query, int page, int size,
+            boolean filterInLibrary, boolean filterElectronic,
+            boolean filterFreeText, boolean filterAudio,
+            List<String> labels) {
 
-    @Transactional(readOnly = true)
-    public SearchResponseDto search(String query, int page, int size, String searchType, List<String> labels) {
+        String trimmedQuery = (query == null) ? "" : query.trim();
         Pageable pageable = PageRequest.of(page, size);
-        Page<Book> bookPage;
-        Page<Author> authorPage;
-
         boolean hasLabels = labels != null && !labels.isEmpty();
         long labelCount = hasLabels ? labels.size() : 0;
 
-        // Empty query with labels: filter by labels only
-        if (hasLabels && (query == null || query.trim().isEmpty())) {
-            switch (searchType) {
-                case "ONLINE":
-                    bookPage = bookRepository.findByElectronicResourceTrueAndAllLabels(labels, labelCount, pageable);
-                    break;
-                case "IN_LIBRARY":
-                    bookPage = bookRepository.findByLocNumberIsNotNullAndAllLabels(labels, labelCount, pageable);
-                    break;
-                case "ALL":
-                default:
-                    bookPage = bookRepository.findByAllLabels(labels, labelCount, pageable);
-                    break;
-            }
-            authorPage = authorRepository.findAll(pageable);
-        } else if (query == null || query.trim().isEmpty()) {
-            // Empty query, no labels: return all
-            bookPage = bookRepository.findAll(pageable);
-            authorPage = authorRepository.findAll(pageable);
-        } else if (hasLabels) {
-            switch (searchType) {
-                case "ONLINE":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(query, labels, labelCount, pageable);
-                    break;
-                case "IN_LIBRARY":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(query, labels, labelCount, pageable);
-                    break;
-                case "ALL":
-                default:
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndAllLabels(query, labels, labelCount, pageable);
-                    break;
-            }
-            authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);
+        Page<Book> bookPage;
+        if (hasLabels) {
+            bookPage = bookRepository.findWithFiltersAndLabels(
+                    trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                    labels, labelCount, pageable);
         } else {
-            switch (searchType) {
-                case "ONLINE":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndElectronicResourceTrue(query, pageable);
-                    break;
-                case "IN_LIBRARY":
-                    bookPage = bookRepository.findByTitleContainingIgnoreCaseAndLocNumberIsNotNull(query, pageable);
-                    break;
-                case "ALL":
-                default:
-                    bookPage = bookRepository.findByTitleContainingIgnoreCase(query, pageable);
-                    break;
-            }
-            authorPage = authorRepository.findByNameContainingIgnoreCase(query, pageable);
+            bookPage = bookRepository.findWithFilters(
+                    trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                    pageable);
+        }
+
+        Page<Author> authorPage;
+        if (!trimmedQuery.isEmpty()) {
+            authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, pageable);
+        } else {
+            authorPage = authorRepository.findAll(pageable);
         }
 
         List<BookDto> books = bookPage.getContent().stream()
@@ -112,15 +90,13 @@ public class SearchService {
                 bookPage.getTotalPages(),
                 bookPage.getTotalElements(),
                 bookPage.getNumber(),
-                bookPage.getSize()
-        );
+                bookPage.getSize());
 
         PageInfoDto authorPageInfo = new PageInfoDto(
                 authorPage.getTotalPages(),
                 authorPage.getTotalElements(),
                 authorPage.getNumber(),
-                authorPage.getSize()
-        );
+                authorPage.getSize());
 
         return new SearchResponseDto(books, authors, bookPageInfo, authorPageInfo);
     }

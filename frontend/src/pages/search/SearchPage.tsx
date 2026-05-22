@@ -4,33 +4,127 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
-import { useSearch, type SearchType } from '@/api/search'
+import { useSearch, type SearchFilters } from '@/api/search'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { formatBookStatus } from '@/utils/formatters'
-import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiBook, PiUser, PiFunnel } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
 import type { BookDto, AuthorDto } from '@/types/dtos'
 
+// ─── Filter chip component ────────────────────────────────────────────────────
+
+interface FilterChipProps {
+  label: string
+  active: boolean
+  onClick: () => void
+  tooltip: string
+  dataTest: string
+}
+
+function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={tooltip}
+      data-test={dataTest}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
+        active
+          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
+          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
+      }`}
+    >
+      {active ? (
+        <svg className="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <PiFunnel className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+      )}
+      {label}
+      <span className="text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
+    </button>
+  )
+}
+
+// ─── Main search page ─────────────────────────────────────────────────────────
+
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const urlQuery = searchParams.get('q') || ''
-  const urlPage = parseInt(searchParams.get('page') || '0', 10)
-  const urlSearchType = (searchParams.get('type') || 'IN_LIBRARY') as SearchType
+  const urlQuery = searchParams.get('q') ?? ''
+  const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
 
-  // Local input state (for typing before submit)
+  // Filter chip state — lives in URL for shareability
+  const urlInLib = searchParams.get('inLib') === 'true'
+  const urlElec = searchParams.get('elec') === 'true'
+  const urlFreeText = searchParams.get('freeText') === 'true'
+  const urlAudio = searchParams.get('audio') === 'true'
+
+  const filters: SearchFilters = {
+    inLib: urlInLib,
+    elec: urlElec,
+    freeText: urlFreeText,
+    audio: urlAudio,
+  }
+
+  // Local input state (typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
-  const [searchType, setSearchType] = useState<SearchType>(urlSearchType)
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const pageSize = 20
 
-  // Sync input value and searchType when URL changes (e.g., browser back/forward)
+  // Sync input value when URL changes (browser back/forward)
   useEffect(() => {
     setInputValue(urlQuery)
   }, [urlQuery])
 
-  useEffect(() => {
-    setSearchType(urlSearchType)
-  }, [urlSearchType])
+  const hasSearched = searchParams.has('q')
+  const hasFilters = urlInLib || urlElec || urlFreeText || urlAudio || selectedLabels.length > 0
+
+  const { data, isLoading, error } = useSearch(
+    urlQuery,
+    urlPage,
+    pageSize,
+    filters,
+    hasSearched || hasFilters,
+    selectedLabels,
+  )
+  const isLibrarian = useIsLibrarian()
+
+  // ── Helpers for building URL params ──────────────────────────────────────
+
+  const buildFilterParams = (overrides: Partial<SearchFilters> = {}): Record<string, string> => {
+    const f = { ...filters, ...overrides }
+    const params: Record<string, string> = {}
+    if (f.inLib) params.inLib = 'true'
+    if (f.elec) params.elec = 'true'
+    if (f.freeText) params.freeText = 'true'
+    if (f.audio) params.audio = 'true'
+    return params
+  }
+
+  // ── Event handlers ────────────────────────────────────────────────────────
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params: Record<string, string> = { q: inputValue.trim(), ...buildFilterParams() }
+    setSearchParams(params)
+  }
+
+  const handleClear = () => {
+    setInputValue('')
+    setSelectedLabels([])
+    setSearchParams({})
+  }
+
+  const handleFilterToggle = (key: keyof SearchFilters) => {
+    const newValue = !filters[key]
+    const overrides = { [key]: newValue } as Partial<SearchFilters>
+    const params: Record<string, string> = { ...buildFilterParams(overrides) }
+    // Preserve query and page if present
+    if (urlQuery || hasSearched) params.q = urlQuery
+    if (urlPage > 0) params.page = String(urlPage)
+    setSearchParams(params)
+  }
 
   const handleToggleLabel = (label: string) => {
     setSelectedLabels((prev) =>
@@ -42,57 +136,15 @@ export function SearchPage() {
     setSelectedLabels([])
   }
 
-  const hasSearched = searchParams.has('q')
-  const { data, isLoading, error } = useSearch(
-    urlQuery,
-    urlPage,
-    pageSize,
-    urlSearchType,
-    hasSearched || selectedLabels.length > 0,
-    selectedLabels,
-  )
-  const isLibrarian = useIsLibrarian()
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const params: Record<string, string> = { q: inputValue.trim() }
-    if (searchType !== 'IN_LIBRARY') {
-      params.type = searchType
-    }
-    setSearchParams(params)
-  }
-
-  const handleClear = () => {
-    setInputValue('')
-    setSearchType('IN_LIBRARY')
-    setSelectedLabels([])
-    setSearchParams({})
-  }
-
-  const handleSearchTypeChange = (newType: SearchType) => {
-    setSearchType(newType)
-    if (hasSearched) {
-      const params: Record<string, string> = { q: urlQuery }
-      if (newType !== 'IN_LIBRARY') {
-        params.type = newType
-      }
-      setSearchParams(params)
-    }
-  }
-
   const handlePageChange = (newPage: number) => {
-    const params: Record<string, string> = { q: urlQuery }
-    if (newPage > 0) {
-      params.page = String(newPage)
-    }
-    if (urlSearchType !== 'IN_LIBRARY') {
-      params.type = urlSearchType
-    }
+    const params: Record<string, string> = { ...buildFilterParams() }
+    if (urlQuery || hasSearched) params.q = urlQuery
+    if (newPage > 0) params.page = String(newPage)
     setSearchParams(params)
   }
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
-  const noResults = hasSearched && data && data.books.length === 0 && data.authors.length === 0
+  const noResults = (hasSearched || hasFilters) && !isLoading && data && data.books.length === 0 && data.authors.length === 0
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -118,13 +170,13 @@ export function SearchPage() {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={!inputValue.trim() || isLoading}
+            disabled={isLoading}
             leftIcon={<PiMagnifyingGlass />}
             data-test="search-button"
           >
             Search
           </Button>
-          {hasSearched && (
+          {(hasSearched || hasFilters) && (
             <Button
               type="button"
               variant="ghost"
@@ -137,44 +189,36 @@ export function SearchPage() {
           )}
         </div>
 
-        {/* Search Type Radio Buttons */}
-        <div className="flex gap-6 mt-4" data-test="search-type-options">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="searchType"
-              value="ONLINE"
-              checked={searchType === 'ONLINE'}
-              onChange={() => handleSearchTypeChange('ONLINE')}
-              className="w-4 h-4 text-blue-600"
-              data-test="search-type-online"
-            />
-            <span className="text-gray-700">Online books only</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="searchType"
-              value="ALL"
-              checked={searchType === 'ALL'}
-              onChange={() => handleSearchTypeChange('ALL')}
-              className="w-4 h-4 text-blue-600"
-              data-test="search-type-all"
-            />
-            <span className="text-gray-700">Search all</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="searchType"
-              value="IN_LIBRARY"
-              checked={searchType === 'IN_LIBRARY'}
-              onChange={() => handleSearchTypeChange('IN_LIBRARY')}
-              className="w-4 h-4 text-blue-600"
-              data-test="search-type-in-library"
-            />
-            <span className="text-gray-700">In-library materials</span>
-          </label>
+        {/* Filter Chips */}
+        <div className="flex flex-wrap gap-2 mt-4" data-test="search-filter-chips">
+          <FilterChip
+            label="In-library materials"
+            active={urlInLib}
+            onClick={() => handleFilterToggle('inLib')}
+            tooltip="Limit results to books with a Library of Congress call number — books physically in the collection"
+            dataTest="filter-in-library"
+          />
+          <FilterChip
+            label="Electronic resource"
+            active={urlElec}
+            onClick={() => handleFilterToggle('elec')}
+            tooltip="Limit results to books marked as electronic resources"
+            dataTest="filter-electronic"
+          />
+          <FilterChip
+            label="Has free online text"
+            active={urlFreeText}
+            onClick={() => handleFilterToggle('freeText')}
+            tooltip="Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)"
+            dataTest="filter-free-text"
+          />
+          <FilterChip
+            label="Has free online audio"
+            active={urlAudio}
+            onClick={() => handleFilterToggle('audio')}
+            tooltip="Limit results to books with a free LibriVox audio recording"
+            dataTest="filter-audio"
+          />
         </div>
 
         {/* Label Filter Buttons */}
@@ -329,7 +373,8 @@ export function SearchPage() {
   )
 }
 
-// Book Result Component
+// ─── Book Result Component ────────────────────────────────────────────────────
+
 interface BookResultProps {
   book: BookDto
   isLibrarian: boolean
@@ -399,7 +444,8 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
   )
 }
 
-// Author Result Component
+// ─── Author Result Component ──────────────────────────────────────────────────
+
 interface AuthorResultProps {
   author: AuthorDto
   isLibrarian: boolean

@@ -24,6 +24,7 @@ INSERT INTO author (id, name, date_of_birth, date_of_death) VALUES
     (5, 'Francis of Assisi', '1181-09-26', '1226-10-03');
 
 -- Insert books with various titles for searching
+-- Books 1-8: physical collection (have loc_number or are missing it)
 INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number) VALUES
     (1, 'Summa Theologica', 1485, 'Catholic Press', 1, 1, 'ACTIVE', 'BX1749 .A6'),
     (2, 'Confessions', 397, 'Ancient Books', 2, 1, 'ACTIVE', 'BR65 .A9'),
@@ -33,3 +34,14 @@ INSERT INTO book (id, title, publication_year, publisher, author_id, library_id,
     (6, 'The Way of Perfection', 1566, 'Carmelite Press', 4, 2, 'ACTIVE', 'BX2179 .T42'),
     (7, 'Little Flowers', 1476, 'Franciscan Press', 5, 1, 'WITHDRAWN', NULL),
     (8, 'Canticle of the Sun', 1224, 'Franciscan Press', 5, 1, 'ACTIVE', NULL);
+
+-- Books 9-10: electronic resources with free text URLs
+-- Book 9: has free online text (Gutenberg)
+INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, free_text_url, electronic_resource) VALUES
+    (9, 'Confessions (Gutenberg Edition)', 397, 'Project Gutenberg', 2, 1, 'ACTIVE', NULL,
+     'https://www.gutenberg.org/ebooks/3296', true);
+
+-- Book 10: has free online audio (LibriVox)
+INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, free_text_url, electronic_resource) VALUES
+    (10, 'City of God (LibriVox Audio)', 426, 'LibriVox', 2, 1, 'ACTIVE', NULL,
+     'https://librivox.org/city-of-god-by-saint-augustine', false);
