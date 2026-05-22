@@ -29,14 +29,19 @@ export function useSearch(
   searchType: SearchType = 'IN_LIBRARY',
   enabled = true,
   selectedLabels?: string[],
+  hasUrls = false,
+  hasAudioUrls = false,
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
+  const hasUrlsParam = hasUrls ? '&hasUrls=true' : ''
+  const hasAudioUrlsParam = hasAudioUrls ? '&hasAudioUrls=true' : ''
+
   return useQuery({
-    queryKey: ['search', query, page, size, searchType, selectedLabels ?? []],
+    queryKey: ['search', query, page, size, searchType, selectedLabels ?? [], hasUrls, hasAudioUrls],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}${labelsParam}`,
+        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}&searchType=${searchType}${labelsParam}${hasUrlsParam}${hasAudioUrlsParam}`,
         { requireAuth: false },
       ),
     enabled,
