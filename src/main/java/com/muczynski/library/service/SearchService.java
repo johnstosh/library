@@ -39,15 +39,17 @@ public class SearchService {
     private AuthorMapper authorMapper;
 
     /**
-     * Search books and authors with OR-combined type filters.
+     * Search books and authors with AND-combined type filters.
+     * A book must satisfy ALL active type filters (not any one of them).
+     * When no filters are active, returns all books matching the query.
      *
      * @param query          title search text (empty = match all)
      * @param page           zero-based page number
      * @param size           results per page
-     * @param filterInLibrary include books with a LOC call number (physical collection)
-     * @param filterElectronic include books with electronicResource = true
-     * @param filterFreeText  include books with a free online text URL
-     * @param filterAudio     include books whose free text URL contains "librivox"
+     * @param filterInLibrary limit to books with a LOC call number (physical collection)
+     * @param filterElectronic limit to books with electronicResource = true
+     * @param filterFreeText  limit to books with a free online text URL
+     * @param filterAudio     limit to books whose free text URL contains "librivox"
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      */
     @Transactional(readOnly = true)
@@ -72,8 +74,22 @@ public class SearchService {
                     pageable);
         }
 
+        // When any filter chip or label is active, the author list shows only authors
+        // who have at least one book in the filtered book result set.  When no filters
+        // are active the author list is a name-based search (or all authors for a blank query).
+        boolean hasFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio || hasLabels;
         Page<Author> authorPage;
-        if (!trimmedQuery.isEmpty()) {
+        if (hasFilters) {
+            if (hasLabels) {
+                authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
+                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        labels, labelCount, pageable);
+            } else {
+                authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
+                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        pageable);
+            }
+        } else if (!trimmedQuery.isEmpty()) {
             authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, pageable);
         } else {
             authorPage = authorRepository.findAll(pageable);

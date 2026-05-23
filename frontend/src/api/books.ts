@@ -1,44 +1,30 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 
-// Hook to get all books with optimized lastModified caching
-export function useBooks(
-  filter?: 'all' | 'most-recent' | 'without-loc' | '3-letter-loc' | 'without-grokipedia',
-  selectedLabels?: string[],
-) {
+// Hook to get all books with optimized lastModified caching.
+// All filtering is done client-side in BooksPage (via booksChips store).
+// When selectedLabels are provided, the backend pre-filters to only books with those labels
+// (AND logic), then client-side chips apply on top.
+export function useBooks(selectedLabels?: string[]) {
   const queryClient = useQueryClient()
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
-
-  // Determine the filter endpoint - all filter endpoints now return BookSummaryDto
-  // For 'all' filter, we also use the summaries endpoint to enable caching
-  const getFilterEndpoint = (f: typeof filter) => {
-    switch (f) {
-      case 'most-recent': return '/books/most-recent-day'
-      case 'without-loc': return '/books/without-loc'
-      case '3-letter-loc': return '/books/by-3letter-loc'
-      case 'without-grokipedia': return '/books/without-grokipedia'
-      case 'all':
-      default: return '/books/summaries'
-    }
-  }
 
   // When labels are active, fetch from /books/by-labels endpoint
   const labelEndpoint = hasLabels
     ? `/books/by-labels?labels=${encodeURIComponent((selectedLabels ?? []).join(','))}`
     : null
 
-  // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
-  // For all filters including 'all', we use the summaries endpoint to enable caching
-  const filterEndpoint = getFilterEndpoint(filter)
+  // Step 1: Fetch summaries (ID + lastModified).
+  // Always use /books/summaries for the unfiltered case; client-side chips handle all other filtering.
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
     queryKey: hasLabels
       ? queryKeys.books.labelSummaries(selectedLabels ?? [])
-      : filter ? queryKeys.books.filterSummaries(filter) : queryKeys.books.summaries(),
-    queryFn: () => api.get<BookSummaryDto[]>(hasLabels ? labelEndpoint! : filterEndpoint),
+      : queryKeys.books.summaries(),
+    queryFn: () => api.get<BookSummaryDto[]>(hasLabels ? labelEndpoint! : '/books/summaries'),
     staleTime: 30 * 1000, // 30 seconds: prevents duplicate fetches on rapid mounts/re-renders while keeping data reasonably fresh
     refetchOnMount: true, // Refetch on mount only if data is stale (older than staleTime)
     placeholderData: keepPreviousData, // Prevent summaries from becoming undefined during refetches
@@ -57,9 +43,8 @@ export function useBooks(
   }, [summaries, queryClient])
 
   // Step 3: Batch fetch changed books using /books/by-ids
-  // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedBooks, isLoading: fetchingBooks, isFetching: byIdsFetching } = useQuery({
-    queryKey: queryKeys.books.byIds(booksToFetch, filter),
+    queryKey: queryKeys.books.byIds(booksToFetch),
     queryFn: async () => {
       if (booksToFetch.length > 0) {
         // Only fetch books that changed
@@ -124,19 +109,9 @@ export function useBooks(
 
   const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
 
-  // Track filter transitions using state so isFetching stays true for the full fetch duration.
-  // A ref-based approach resets after one render cycle; state persists until summaries arrive.
-  const [settledFilter, setSettledFilter] = useState(filter)
-  React.useEffect(() => {
-    if (!summariesFetching) {
-      setSettledFilter(filter)
-    }
-  }, [filter, summariesFetching])
-
   // isFetching is true for the ENTIRE duration of both network calls:
   // - summaries fetch (phase 1) AND by-ids fetch (phase 2) must both complete before hiding the indicator.
-  // Also remains true during filter transitions (settledFilter !== filter).
-  const isFetching = summariesFetching || byIdsFetching || settledFilter !== filter
+  const isFetching = summariesFetching || byIdsFetching
 
   return {
     data: stableBooks,

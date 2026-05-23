@@ -111,7 +111,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const { data: books = [], isFetching: booksFetching } = useBooks('all')
+  const { data: books = [], isFetching: booksFetching } = useBooks()
   const { data: users = [] } = useUsers()
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
