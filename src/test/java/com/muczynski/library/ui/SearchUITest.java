@@ -510,24 +510,26 @@ public class SearchUITest {
     @Test
     @DisplayName("Filter chip state persists when loaded from URL")
     void testFilterChipStateRestoredFromUrl() {
-        // Navigate with filter chips pre-set in URL
-        page.navigate(getBaseUrl() + "/search?inLib=true&elec=true");
+        // Navigate with filter chips pre-set in URL.
+        // freeText=true AND audio=true: book 10 (LibriVox) satisfies both (AND logic),
+        // so at least 1 result is returned and the Books section renders.
+        page.navigate(getBaseUrl() + "/search?freeText=true&audio=true");
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
 
-        // Wait for results to load (inLib=true returns 6 books; elec=true adds 1 more → 7 total)
+        // Wait for results to load (book 10 has a LibriVox URL, satisfying both AND conditions)
         page.waitForSelector("h2:has-text('Books')", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Filter chips should reflect the URL state (active chips have distinct styling)
         // We check via aria or class—simplest is to verify the data-test buttons are active
         // (Active chips contain a checkmark SVG path "M5 13l4 4L19 7")
-        Locator inLibChip = page.locator("[data-test='filter-in-library']");
-        Locator elecChip  = page.locator("[data-test='filter-electronic']");
+        Locator freeTextChip = page.locator("[data-test='filter-free-text']");
+        Locator audioChip    = page.locator("[data-test='filter-audio']");
 
         // Both chips should be "active" (contain blue styling / checkmark)
         // Simplified check: the chip text content should still be correct
-        assertThat(inLibChip).isVisible();
-        assertThat(elecChip).isVisible();
+        assertThat(freeTextChip).isVisible();
+        assertThat(audioChip).isVisible();
     }
 
     @Test

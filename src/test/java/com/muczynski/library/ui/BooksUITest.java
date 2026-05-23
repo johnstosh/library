@@ -110,10 +110,13 @@ public class BooksUITest {
         assertThat(addButton).isVisible();
         assertThat(addButton).containsText("Add Book");
 
-        // Verify filters are present
-        assertThat(page.locator("[data-test='filter-all']")).isVisible();
+        // Verify filter chip rows are present (chip-style, not radio buttons)
+        assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
+        assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
+        assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
 
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
@@ -187,12 +190,7 @@ public class BooksUITest {
         // Wait for network to settle after navigation
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Switch to 'all' filter to see all books
-        page.click("[data-test='filter-all']");
-
-        // Wait for books to refetch after filter change
-        page.waitForLoadState(LoadState.NETWORKIDLE);
-
+        // The new book is added today so it appears under the default mostRecent chip filter.
         // Verify new book is in the table (allowing up to 30s total)
         assertThat(page.locator("text=New Test Book"))
             .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
@@ -224,10 +222,7 @@ public class BooksUITest {
     void testEditBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Switch to 'all' filter to see all books
-        page.click("[data-test='filter-all']");
-        page.waitForTimeout(2000); // Wait for filter to apply and books to load
-
+        // Initial Book uses CURRENT_TIMESTAMP so it appears under the default mostRecent chip.
         // Wait for initial book to be visible
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
@@ -267,10 +262,7 @@ public class BooksUITest {
     void testDeleteBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Switch to 'all' filter to see all books
-        page.click("[data-test='filter-all']");
-        page.waitForTimeout(2000); // Wait for filter to apply and books to load
-
+        // Initial Book uses CURRENT_TIMESTAMP so it appears under the default mostRecent chip.
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
@@ -301,53 +293,49 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should filter books by 'All Books'")
-    void testFilterAllBooks() {
+    @DisplayName("Should show all books when no chip filters are active")
+    void testNoChipsShowAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Wait for either the table, loading spinner, or "No data available" message
-        page.waitForTimeout(2000); // Give React Query time to load
-
-        // Click 'All Books' filter (default is 'most-recent')
-        page.click("[data-test='filter-all']");
-
-        // Filter should now be selected
-        assertThat(page.locator("[data-test='filter-all']")).isChecked();
-
-        // Should see the initial book (wait up to 10 seconds for books to load)
-        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-    }
-
-    @Test
-    @DisplayName("Should filter books by 'Without LOC'")
-    void testFilterWithoutLoc() {
-        page.waitForLoadState(LoadState.NETWORKIDLE);
-
-        // Click "Without LOC" filter
-        page.click("[data-test='filter-without-loc']");
-
-        // Wait for filter to apply
-        page.waitForTimeout(1000);
-
-        // Initial book has no LOC, so it should still be visible
-        // (or might not be visible if it has LOC - depends on test data)
-        // Verify the filter is selected
-        assertThat(page.locator("[data-test='filter-without-loc']")).isChecked();
-    }
-
-    @Test
-    @DisplayName("Should filter books by 'Most Recent Day'")
-    void testFilterMostRecent() {
-        page.waitForLoadState(LoadState.NETWORKIDLE);
-
-        // Click "Most Recent Day" filter
+        // The default state has mostRecent chip active. Toggle it off to show all books.
         page.click("[data-test='filter-most-recent']");
 
         // Wait for filter to apply
         page.waitForTimeout(1000);
 
-        // Verify the filter is selected
-        assertThat(page.locator("[data-test='filter-most-recent']")).isChecked();
+        // Should still see the initial book (it's the only book)
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+    }
+
+    @Test
+    @DisplayName("Should filter books by 'Without LOC' chip")
+    void testFilterWithoutLoc() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Click "Without LOC" filter chip
+        page.click("[data-test='filter-without-loc']");
+
+        // Wait for filter to apply
+        page.waitForTimeout(1000);
+
+        // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
+        // under the "Without LOC" chip AND with mostRecent chip also active (AND logic).
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+        // Chip is a button, not a radio input — no isChecked() assertion
+    }
+
+    @Test
+    @DisplayName("Should filter books by 'Most Recent Day' chip (active by default)")
+    void testFilterMostRecent() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // mostRecent chip is active by default — book should be visible immediately
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+
+        // Toggle the chip off and verify book is still visible (no other chips restrict it)
+        page.click("[data-test='filter-most-recent']");
+        page.waitForTimeout(500);
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));
     }
 
     @Test
@@ -513,10 +501,7 @@ public class BooksUITest {
     void testCloneFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Switch to 'all' filter to see all books
-        page.click("[data-test='filter-all']");
-        page.waitForTimeout(2000); // Wait for filter to apply and books to load
-
+        // Initial Book uses CURRENT_TIMESTAMP so it appears under the default mostRecent chip.
         // Wait for initial book
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 

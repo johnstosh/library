@@ -217,18 +217,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findByElectronicResourceTrueAndAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
-     * Unified search with OR-combined type filters (no labels).
+     * Unified search with AND-combined type filters (no labels).
      * When no filters are active (all false), returns all books matching the query.
-     * When any filter is active, returns books matching any active filter.
+     * When any filter is active, a book must satisfy ALL active filters (AND logic).
      * Audio filter matches books whose freeTextUrl contains "librivox".
      */
     @Query("SELECT b FROM Book b WHERE " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-        "((:filterInLibrary = false AND :filterElectronic = false AND :filterFreeText = false AND :filterAudio = false) OR " +
-        "(:filterInLibrary = true AND b.locNumber IS NOT NULL AND b.locNumber <> '') OR " +
-        "(:filterElectronic = true AND b.electronicResource = true) OR " +
-        "(:filterFreeText = true AND b.freeTextUrl IS NOT NULL) OR " +
-        "(:filterAudio = true AND b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
+        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
+        "(:filterElectronic = false OR b.electronicResource = true) AND " +
+        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
+        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
     Page<Book> findWithFilters(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,
@@ -238,18 +237,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         Pageable pageable);
 
     /**
-     * Unified search with OR-combined type filters and label filtering.
+     * Unified search with AND-combined type filters and label filtering.
      * Labels use AND logic (book must have ALL specified labels).
-     * Type filters use OR logic (book matches any active type filter).
+     * Type filters use AND logic (book must satisfy ALL active type filters).
      */
     @Query("SELECT b FROM Book b WHERE " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
-        "((:filterInLibrary = false AND :filterElectronic = false AND :filterFreeText = false AND :filterAudio = false) OR " +
-        "(:filterInLibrary = true AND b.locNumber IS NOT NULL AND b.locNumber <> '') OR " +
-        "(:filterElectronic = true AND b.electronicResource = true) OR " +
-        "(:filterFreeText = true AND b.freeTextUrl IS NOT NULL) OR " +
-        "(:filterAudio = true AND b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
+        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
+        "(:filterElectronic = false OR b.electronicResource = true) AND " +
+        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
+        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
     Page<Book> findWithFiltersAndLabels(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,

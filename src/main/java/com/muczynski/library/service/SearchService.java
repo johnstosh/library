@@ -39,15 +39,17 @@ public class SearchService {
     private AuthorMapper authorMapper;
 
     /**
-     * Search books and authors with OR-combined type filters.
+     * Search books and authors with AND-combined type filters.
+     * A book must satisfy ALL active type filters (not any one of them).
+     * When no filters are active, returns all books matching the query.
      *
      * @param query          title search text (empty = match all)
      * @param page           zero-based page number
      * @param size           results per page
-     * @param filterInLibrary include books with a LOC call number (physical collection)
-     * @param filterElectronic include books with electronicResource = true
-     * @param filterFreeText  include books with a free online text URL
-     * @param filterAudio     include books whose free text URL contains "librivox"
+     * @param filterInLibrary limit to books with a LOC call number (physical collection)
+     * @param filterElectronic limit to books with electronicResource = true
+     * @param filterFreeText  limit to books with a free online text URL
+     * @param filterAudio     limit to books whose free text URL contains "librivox"
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      */
     @Transactional(readOnly = true)

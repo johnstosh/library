@@ -62,7 +62,7 @@ Returns paginated search results for books and authors.
 - `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
 - `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
 
-Multiple boolean filters use OR logic: a book is included if it matches **any** active filter.
+Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included.
 
 **Response**: `SearchResponseDto` containing books, authors, and pagination info for each
 
@@ -82,7 +82,7 @@ Multiple boolean filters use OR logic: a book is included if it matches **any** 
 2. **Partial Matching**: Searches for the query string anywhere within the field
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
 4. **Blank Query Allowed**: An empty or missing `query` param returns all books (subject to filters)
-5. **Filter Logic (OR)**: When any filter is active, books must match at least one active filter. When no filter is active, all books are eligible.
+5. **Filter Logic (AND)**: When any filter is active, books must satisfy every active filter. When no filter is active, all books are eligible.
 6. **Author Query**: Depends on whether any filter/label is active:
    - **Filters or labels active** → Authors are derived from the filtered book result set (only authors who wrote at least one book in the filtered results). The text query matches book titles, not author names.
    - **No filters, non-empty query** → `findByNameContainingIgnoreCase` (name-based search)
@@ -138,7 +138,7 @@ Search state is persisted in the URL for better UX and shareability:
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)
 - `/search?inLib=true` - All in-library books (blank query with filter)
-- `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in in-library OR electronic books
+- `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in books that are BOTH in-library AND electronic
 - `/search?audio=true` - All LibriVox audio books
 
 **Benefits**:
@@ -290,7 +290,7 @@ Playwright UI test coverage:
 - **No Fuzzy Matching**: Exact substring matching only (no typo tolerance)
 - **No Full-Text Search**: Not using PostgreSQL full-text search capabilities
 - **Single Query**: Books and authors searched with same query (can't search different terms)
-- **Filter OR Logic**: Multiple filters are ORed — cannot require a book to satisfy all filters simultaneously
+- **Contradictory Filters**: Combining mutually exclusive filters (e.g., in-library + without-LOC) yields zero results (AND logic means all conditions must hold simultaneously)
 
 ## Future Enhancements (Not Implemented)
 
@@ -300,7 +300,7 @@ Playwright UI test coverage:
 - ❌ **Full-Text Search**: PostgreSQL `tsvector` for better relevance ranking
 - ❌ **Search Suggestions**: Autocomplete based on popular searches
 - ❌ **Search History**: User search history and recent searches
-- ❌ **Filter AND Logic**: Require all selected filters to be satisfied simultaneously
+- ✅ **Filter AND Logic**: All active filters must be satisfied simultaneously (implemented)
 
 ## CRUD Operations in Search Results
 

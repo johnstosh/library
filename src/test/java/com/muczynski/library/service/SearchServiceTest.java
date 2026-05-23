@@ -326,6 +326,8 @@ class SearchServiceTest {
 
     @Test
     void searchWithMultipleFiltersPassesAllTrueToRepository() {
+        // With AND logic, both inLibrary AND electronic must be true on the same book.
+        // The repo mock is called with both flags true; result set is whatever the repo returns.
         String query = "test";
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
