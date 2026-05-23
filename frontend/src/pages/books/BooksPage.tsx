@@ -114,10 +114,6 @@ export function BooksPage() {
     navigate('/books/new')
   }
 
-  const handleEditBook = (book: BookDto) => {
-    navigate(`/books/${book.id}/edit`)
-  }
-
   const handleViewBook = (book: BookDto) => {
     navigate(`/books/${book.id}`)
   }
@@ -163,7 +159,6 @@ export function BooksPage() {
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
             onSelectAll={handleSelectAll}
-            onEdit={handleEditBook}
             onView={handleViewBook}
           />
         </div>
