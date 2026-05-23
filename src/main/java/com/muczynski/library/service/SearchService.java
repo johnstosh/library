@@ -72,8 +72,22 @@ public class SearchService {
                     pageable);
         }
 
+        // When any filter chip or label is active, the author list shows only authors
+        // who have at least one book in the filtered book result set.  When no filters
+        // are active the author list is a name-based search (or all authors for a blank query).
+        boolean hasFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio || hasLabels;
         Page<Author> authorPage;
-        if (!trimmedQuery.isEmpty()) {
+        if (hasFilters) {
+            if (hasLabels) {
+                authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
+                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        labels, labelCount, pageable);
+            } else {
+                authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
+                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        pageable);
+            }
+        } else if (!trimmedQuery.isEmpty()) {
             authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, pageable);
         } else {
             authorPage = authorRepository.findAll(pageable);

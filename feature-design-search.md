@@ -83,12 +83,17 @@ Multiple boolean filters use OR logic: a book is included if it matches **any** 
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
 4. **Blank Query Allowed**: An empty or missing `query` param returns all books (subject to filters)
 5. **Filter Logic (OR)**: When any filter is active, books must match at least one active filter. When no filter is active, all books are eligible.
-6. **Author Query**: Non-empty query → `findByNameContainingIgnoreCase`; empty query → `findAll`
+6. **Author Query**: Depends on whether any filter/label is active:
+   - **Filters or labels active** → Authors are derived from the filtered book result set (only authors who wrote at least one book in the filtered results). The text query matches book titles, not author names.
+   - **No filters, non-empty query** → `findByNameContainingIgnoreCase` (name-based search)
+   - **No filters, empty query** → `findAll` (all authors)
 
 ### Repository Methods
 
 - `BookRepository.findWithFilters(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, pageable)` — standard book search
 - `BookRepository.findWithFiltersAndLabels(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, labels, labelCount, pageable)` — additionally filters by label tags
+- `AuthorRepository.findAuthorsOfBooksMatchingFilters(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, pageable)` — authors with ≥1 book in the filtered result set (used when any filter chip is active, no labels)
+- `AuthorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, labels, labelCount, pageable)` — same but with label filtering (used when labels active)
 
 ### Filter Semantics
 
@@ -169,7 +174,7 @@ Four toggle chips displayed below the search input. Clicking a chip immediately 
 | Has free online text | `filter-free-text` | "Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)" |
 | Has free online audio | `filter-audio` | "Limit results to books with a free LibriVox audio recording" |
 
-Note: Filter chips affect only book results; author search is unaffected by filters.
+Note: When any filter chip or label is active, the author list shows only authors who have at least one book in the filtered book result set — not authors matching the search string by name.
 
 #### 3. Results Display
 
@@ -230,11 +235,12 @@ export const useSearch = (query: string, page: number, size: number, filters: Se
 - `searchWithResultsFound()` - Basic search returns matching results
 - `searchWithNoResults()` - Empty results when nothing matches
 - `searchEmptyQueryReturnsAllBooks()` - Empty query returns everything
-- `searchWithInLibraryFilterPassesTrueToRepository()` - filterInLibrary flag forwarded
-- `searchWithElectronicFilterPassesTrueToRepository()` - filterElectronic flag forwarded
-- `searchWithFreeTextFilterPassesTrueToRepository()` - filterFreeText flag forwarded
-- `searchWithAudioFilterPassesTrueToRepository()` - filterAudio flag forwarded
+- `searchWithInLibraryFilterPassesTrueToRepository()` - filterInLibrary flag forwarded; author query uses EXISTS-based method
+- `searchWithElectronicFilterPassesTrueToRepository()` - filterElectronic flag forwarded; author query uses EXISTS-based method
+- `searchWithFreeTextFilterPassesTrueToRepository()` - filterFreeText flag forwarded; author query uses EXISTS-based method
+- `searchWithAudioFilterPassesTrueToRepository()` - filterAudio flag forwarded; author query uses EXISTS-based method
 - `searchWithMultipleFiltersPassesAllTrueToRepository()` - multiple flags forwarded correctly
+- `searchWithFilterActive_authorsAreFromFilteredBooks_notNameSearch()` - verifies that when a filter is active, authors from the filtered book set are returned even if their name doesn't match the query
 
 **SearchControllerTest.java** - Controller integration tests
 - Tests HTTP endpoint behavior with all four filter boolean params
