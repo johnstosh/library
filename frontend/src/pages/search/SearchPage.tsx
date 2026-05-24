@@ -488,7 +488,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                 </div>
               )}
               {/* Line 2: view, author, loc lookup */}
-              <div className="flex gap-1 justify-end">
+              <div className="flex gap-1 justify-end items-center">
                 <Link
                   to={`/books/${book.id}`}
                   className="text-gray-600 hover:text-gray-900"
