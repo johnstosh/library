@@ -1,30 +1,32 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useRef, useState } from 'react'
 
-// --- Sequential load queue ---
-// Images register when they enter the viewport. Only one loads at a time.
+// --- Concurrent load queue ---
+// Images register when they enter the viewport. Up to MAX_CONCURRENT load at a time,
+// which keeps server load reasonable while allowing disk-cache hits to resolve in parallel.
 
 type LoadCallback = () => void
 
+const MAX_CONCURRENT = 6
+
 const queue: LoadCallback[] = []
-let active = false
+let activeCount = 0
 
 function enqueue(load: LoadCallback) {
   queue.push(load)
-  if (!active) processNext()
+  processNext()
 }
 
 function processNext() {
-  const next = queue.shift()
-  if (next) {
-    active = true
+  while (activeCount < MAX_CONCURRENT && queue.length > 0) {
+    const next = queue.shift()!
+    activeCount++
     next()
-  } else {
-    active = false
   }
 }
 
 function advance() {
+  activeCount--
   processNext()
 }
 
