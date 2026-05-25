@@ -92,6 +92,16 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
 
+  // Default branch to first branch when creating a new book
+  useEffect(() => {
+    if (!book && branches && branches.length > 0) {
+      setFormData((prev) => {
+        if (prev.branchId) return prev // don't override if already set
+        return { ...prev, branchId: branches[0].id.toString() }
+      })
+    }
+  }, [book, branches])
+
   useEffect(() => {
     if (book) {
       setFormData({
