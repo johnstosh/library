@@ -100,7 +100,7 @@ export function BranchesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
         <h1 className="text-3xl font-bold text-gray-900">Branches</h1>
         <Button variant="primary" onClick={handleAdd} data-test="add-branch">
           Add Branch
