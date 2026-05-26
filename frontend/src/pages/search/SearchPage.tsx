@@ -433,7 +433,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
   return (
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`book-result-${book.id}`}>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900">{book.title}</h3>
             <p className="text-gray-600 mt-1">by {book.author}</p>
@@ -448,7 +448,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                 statusColors[book.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
@@ -456,107 +456,105 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             >
               {formatBookStatus(book.status)}
             </span>
-            <div className="flex flex-col gap-1 items-end">
-              {/* Line 1: URL-type links (free text, grokipedia) */}
-              {(freeTextUrls.length > 0 || isValidUrl(book.grokipediaUrl)) && (
-                <div className="flex gap-1 justify-end">
-                  {freeTextUrls.map((url, index) => (
-                    <a
-                      key={index}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:text-green-900"
-                      data-test={`book-result-free-text-${book.id}-${index}`}
-                      title={`Free text: ${extractDomain(url)}`}
-                    >
-                      <PiBookOpen className="w-5 h-5" />
-                    </a>
-                  ))}
-                  {isValidUrl(book.grokipediaUrl) && (
-                    <a
-                      href={book.grokipediaUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-600 hover:text-orange-900"
-                      data-test={`book-result-grokipedia-${book.id}`}
-                      title="View on Grokipedia"
-                    >
-                      <span className="text-xl">🅶</span>
-                    </a>
-                  )}
-                </div>
-              )}
-              {/* Line 2: view, author, loc lookup */}
-              <div className="flex gap-1 justify-end items-center">
-                <Link
-                  to={`/books/${book.id}`}
-                  className="text-gray-600 hover:text-gray-900"
-                  data-test={`book-result-view-${book.id}`}
-                  title="View Details"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </Link>
-                {book.authorId && (
-                  <Link
-                    to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
-                    className="text-teal-600 hover:text-teal-900"
-                    data-test={`book-result-author-${book.id}`}
-                    title="See Author"
+            {/* URL-type links (free text, grokipedia) */}
+            {(freeTextUrls.length > 0 || isValidUrl(book.grokipediaUrl)) && (
+              <div className="flex gap-1">
+                {freeTextUrls.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-green-600 hover:text-green-900"
+                    data-test={`book-result-free-text-${book.id}-${index}`}
+                    title={`Free text: ${extractDomain(url)}`}
                   >
-                    <span className="text-lg">👤</span>
-                  </Link>
-                )}
-                {isLibrarian && (
-                  <button
-                    onClick={handleLookupLoc}
-                    className="text-purple-600 hover:text-purple-900"
-                    data-test={`book-result-lookup-loc-${book.id}`}
-                    title="Lookup LOC"
-                    disabled={lookupSingleBook.isPending}
+                    <PiBookOpen className="w-5 h-5" />
+                  </a>
+                ))}
+                {isValidUrl(book.grokipediaUrl) && (
+                  <a
+                    href={book.grokipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-orange-600 hover:text-orange-900"
+                    data-test={`book-result-grokipedia-${book.id}`}
+                    title="View on Grokipedia"
                   >
-                    <span className="text-lg">🗃️</span>
-                  </button>
+                    <span className="text-xl">🅶</span>
+                  </a>
                 )}
               </div>
-              {/* Line 3: clone, edit, delete (librarian only) */}
+            )}
+            {/* View, author, loc lookup */}
+            <div className="flex gap-1 items-center">
+              <Link
+                to={`/books/${book.id}`}
+                className="p-2 text-gray-600 hover:text-gray-900"
+                data-test={`book-result-view-${book.id}`}
+                title="View Details"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </Link>
+              {book.authorId && (
+                <Link
+                  to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                  className="p-2 text-teal-600 hover:text-teal-900"
+                  data-test={`book-result-author-${book.id}`}
+                  title="See Author"
+                >
+                  <span className="text-lg">👤</span>
+                </Link>
+              )}
               {isLibrarian && (
-                <div className="flex gap-1 justify-end">
-                  <button
-                    onClick={handleClone}
-                    className="text-green-600 hover:text-green-900"
-                    data-test={`book-result-clone-${book.id}`}
-                    title="Clone"
-                    disabled={cloneBook.isPending}
-                  >
-                    <PiCopy className="w-5 h-5" />
-                  </button>
-                  <Link
-                    to={`/books/${book.id}/edit`}
-                    className="text-blue-600 hover:text-blue-900"
-                    data-test={`book-result-edit-${book.id}`}
-                    title="Edit"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Link>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-red-600 hover:text-red-900"
-                    data-test={`book-result-delete-${book.id}`}
-                    title="Delete"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  onClick={handleLookupLoc}
+                  className="p-2 text-purple-600 hover:text-purple-900"
+                  data-test={`book-result-lookup-loc-${book.id}`}
+                  title="Lookup LOC"
+                  disabled={lookupSingleBook.isPending}
+                >
+                  <span className="text-lg">🗃️</span>
+                </button>
               )}
             </div>
+            {/* Clone, edit, delete (librarian only) */}
+            {isLibrarian && (
+              <div className="flex gap-1">
+                <button
+                  onClick={handleClone}
+                  className="p-2 text-green-600 hover:text-green-900"
+                  data-test={`book-result-clone-${book.id}`}
+                  title="Clone"
+                  disabled={cloneBook.isPending}
+                >
+                  <PiCopy className="w-5 h-5" />
+                </button>
+                <Link
+                  to={`/books/${book.id}/edit`}
+                  className="p-2 text-blue-600 hover:text-blue-900"
+                  data-test={`book-result-edit-${book.id}`}
+                  title="Edit"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </Link>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 text-red-600 hover:text-red-900"
+                  data-test={`book-result-delete-${book.id}`}
+                  title="Delete"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -604,7 +602,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
   return (
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`author-result-${author.id}`}>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900">
               {author.name}
@@ -620,16 +618,16 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
               <p className="text-gray-700 mt-2 line-clamp-2">{author.briefBiography}</p>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             {author.bookCount !== undefined && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 {author.bookCount} {author.bookCount === 1 ? 'book' : 'books'}
               </span>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Link
                 to={`/authors/${author.id}`}
-                className="text-gray-600 hover:text-gray-900"
+                className="p-2 text-gray-600 hover:text-gray-900"
                 data-test={`author-result-view-${author.id}`}
                 title="View Details"
               >
@@ -643,7 +641,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
                   href={author.grokipediaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-orange-600 hover:text-orange-900"
+                  className="p-2 text-orange-600 hover:text-orange-900"
                   data-test={`author-result-grokipedia-${author.id}`}
                   title="View on Grokipedia"
                 >
@@ -652,7 +650,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
               )}
               <Link
                 to={`/authors/${author.id}`}
-                className="text-teal-600 hover:text-teal-900"
+                className="p-2 text-teal-600 hover:text-teal-900"
                 data-test={`author-result-see-books-${author.id}`}
                 title="See Books"
               >
@@ -662,7 +660,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
                 <>
                   <Link
                     to={`/authors/${author.id}/edit`}
-                    className="text-blue-600 hover:text-blue-900"
+                    className="p-2 text-blue-600 hover:text-blue-900"
                     data-test={`author-result-edit-${author.id}`}
                     title="Edit"
                   >
@@ -672,7 +670,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
                   </Link>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="text-red-600 hover:text-red-900"
+                    className="p-2 text-red-600 hover:text-red-900"
                     data-test={`author-result-delete-${author.id}`}
                     title="Delete"
                   >

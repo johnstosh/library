@@ -60,6 +60,7 @@ export function AuthorTable({
       header: 'Religious Affiliation',
       accessor: (author) => truncate(author.religiousAffiliation, 25) || '—',
       width: '15%',
+      hideOnMobile: true,
     },
     {
       key: 'biography',
@@ -68,6 +69,7 @@ export function AuthorTable({
         <span className="text-gray-600">{truncate(author.briefBiography, 60) || '—'}</span>
       ),
       width: '35%',
+      hideOnMobile: true,
     },
     {
       key: 'bookCount',
@@ -100,7 +102,7 @@ export function AuthorTable({
                 e.stopPropagation()
                 onView(author)
               }}
-              className="text-gray-600 hover:text-gray-900"
+              className="p-1 text-gray-600 hover:text-gray-900"
               data-test={`view-author-${author.id}`}
               title="View Details"
             >
@@ -112,17 +114,17 @@ export function AuthorTable({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="text-orange-600 hover:text-orange-900"
+                className="p-1 text-orange-600 hover:text-orange-900"
                 data-test={`grokipedia-author-${author.id}`}
                 title="View on Grokipedia"
               >
-                <span className="text-xl">🅶</span>
+                <span className="text-lg">🅶</span>
               </a>
             )}
             <Link
               to={`/authors/${author.id}`}
               onClick={(e) => e.stopPropagation()}
-              className="text-teal-600 hover:text-teal-900"
+              className="p-1 text-teal-600 hover:text-teal-900"
               data-test={`see-books-${author.id}`}
               title="See Books"
             >
@@ -133,7 +135,7 @@ export function AuthorTable({
                 e.stopPropagation()
                 onEdit(author)
               }}
-              className="text-blue-600 hover:text-blue-900"
+              className="p-1 text-blue-600 hover:text-blue-900"
               data-test={`edit-author-${author.id}`}
               title="Edit"
             >
@@ -151,7 +153,7 @@ export function AuthorTable({
                 e.stopPropagation()
                 setDeleteAuthorId(author.id)
               }}
-              className="text-red-600 hover:text-red-900"
+              className="p-1 text-red-600 hover:text-red-900"
               data-test={`delete-author-${author.id}`}
               title="Delete"
             >
