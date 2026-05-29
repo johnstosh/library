@@ -1,61 +1,48 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
-import { Button } from '@/components/ui/Button'
 import { clsx } from 'clsx'
 import { useBranches } from '@/api/branches'
+import {
+  Disclosure,
+  DisclosureButton,
+  DisclosurePanel,
+  Menu,
+  MenuButton,
+  MenuItems,
+  MenuItem,
+} from '@headlessui/react'
 
-interface NavLinkProps {
-  to: string
-  children: React.ReactNode
-  'data-test'?: string
-  onClick?: () => void
+function getInitials(username: string | null | undefined): string {
+  const name = (username ?? '').trim()
+  if (!name) return '?'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
 }
 
-function NavLink({ to, children, 'data-test': dataTest, onClick }: NavLinkProps) {
-  const location = useLocation()
-  const isActive = location.pathname.startsWith(to)
+function desktopNavCls({ isActive }: { isActive: boolean }): string {
+  return clsx(
+    'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+  )
+}
 
-  return (
-    <Link
-      to={to}
-      className={clsx(
-        'px-3 py-2 rounded-md text-sm font-medium transition-colors',
-        isActive
-          ? 'bg-blue-100 text-blue-700'
-          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-      )}
-      data-test={dataTest}
-      onClick={onClick}
-    >
-      {children}
-    </Link>
+function mobileNavCls({ isActive }: { isActive: boolean }): string {
+  return clsx(
+    'block px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
   )
 }
 
 export function Navigation() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
   const { data: branches = [] } = useBranches()
 
-  const handleLogout = () => {
-    logout()
-    window.location.href = '/login'
-  }
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false)
-  }
-
-  // Get branch name for display
   const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
   const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
 
@@ -67,225 +54,159 @@ export function Navigation() {
     }
   }, [branches, branchName, librarySystemName])
 
+  const handleLogout = () => {
+    logout()
+    window.location.href = '/login'
+  }
+
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
-      <div className="mx-[2%]">
-        <div className="flex justify-between h-16">
-          {/* Left side - Main navigation */}
-          <div className="flex items-center space-x-4">
-            <Link to="/" className="hidden md:flex flex-col items-start" data-test="branch-name">
-              <span className="text-base font-bold text-gray-900 leading-tight">
-                The {branchName} Branch
-              </span>
-              <span className="text-xs text-gray-600 leading-tight">
-                of the {librarySystemName}
-              </span>
-            </Link>
+    <Disclosure as="nav" className="bg-white shadow-sm border-b border-gray-200" data-test="navigation">
+      {({ open, close }) => (
+        <>
+          <div className="mx-[2%]">
+            <div className="flex items-center h-16 gap-4">
 
-            {/* Hamburger menu button for mobile */}
-            <button
-              type="button"
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-              onClick={toggleMobileMenu}
-              aria-expanded={isMobileMenuOpen}
-              data-test="mobile-menu-button"
-            >
-              <span className="sr-only">Open main menu</span>
-              {isMobileMenuOpen ? (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+              {/* App name — left */}
+              <Link to="/" className="flex flex-col items-start shrink-0" data-test="branch-name">
+                <span className="text-base font-bold text-gray-900 leading-tight">
+                  The {branchName} Branch
+                </span>
+                <span className="text-xs text-gray-600 leading-tight">
+                  of the {librarySystemName}
+                </span>
+              </Link>
 
-            <div className="hidden md:flex items-center space-x-2">
-              {/* Public navigation items (always visible) */}
-              <NavLink to="/search" data-test="nav-search">
-                Search
-              </NavLink>
+              {/* Desktop nav — hidden on mobile */}
+              <nav className="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
+                <NavLink to="/search" className={desktopNavCls} data-test="nav-search">Search</NavLink>
+                {isAuthenticated && (
+                  <>
+                    <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
+                    <NavLink to="/authors"  className={desktopNavCls} data-test="nav-authors">Authors</NavLink>
+                    <NavLink to="/loans"    className={desktopNavCls} data-test="nav-loans">Loans</NavLink>
+                    <NavLink to="/my-card"  className={desktopNavCls} data-test="nav-my-card">My Card</NavLink>
+                    <NavLink to="/settings" className={desktopNavCls} data-test="nav-settings">Settings</NavLink>
+                  </>
+                )}
+                {isLibrarian && (
+                  <>
+                    <div className="w-px h-6 bg-gray-300 mx-1" />
+                    <NavLink to="/branches"        className={desktopNavCls} data-test="nav-branches">Branches</NavLink>
+                    <NavLink to="/users"           className={desktopNavCls} data-test="nav-users">Users</NavLink>
+                    <NavLink to="/applications"    className={desktopNavCls} data-test="nav-applications">Applications</NavLink>
+                    <NavLink to="/data-management" className={desktopNavCls} data-test="nav-data">Data</NavLink>
+                    <NavLink to="/photos-management" className={desktopNavCls} data-test="nav-photos">Photos</NavLink>
+                    <NavLink to="/global-settings" className={desktopNavCls} data-test="nav-global-settings">Global Settings</NavLink>
+                  </>
+                )}
+              </nav>
 
-              {/* Authenticated user navigation items */}
-              {isAuthenticated && (
-                <>
-                  <NavLink to="/books" data-test="nav-books">
-                    Books
-                  </NavLink>
-                  <NavLink to="/authors" data-test="nav-authors">
-                    Authors
-                  </NavLink>
-                  <NavLink to="/loans" data-test="nav-loans">
-                    Loans
-                  </NavLink>
-                  <NavLink to="/my-card" data-test="nav-my-card">
-                    My Card
-                  </NavLink>
-                  <NavLink to="/settings" data-test="nav-settings">
-                    Settings
-                  </NavLink>
-                </>
-              )}
+              {/* Right side: hamburger (mobile) + user avatar */}
+              <div className="ml-auto flex items-center gap-2">
 
-              {/* Librarian-only items */}
-              {isLibrarian && (
-                <>
-                  <div className="w-px h-6 bg-gray-300 mx-2" />
-                  <NavLink to="/branches" data-test="nav-branches">
-                    Branches
-                  </NavLink>
-                  <NavLink to="/users" data-test="nav-users">
-                    Users
-                  </NavLink>
-                  <NavLink to="/applications" data-test="nav-applications">
-                    Applications
-                  </NavLink>
-                  <NavLink to="/data-management" data-test="nav-data">
-                    Data
-                  </NavLink>
-                  <NavLink to="/photos-management" data-test="nav-photos">
-                    Photos
-                  </NavLink>
-                  <NavLink to="/global-settings" data-test="nav-global-settings">
-                    Global Settings
-                  </NavLink>
-                </>
-              )}
+                {/* Hamburger — mobile only */}
+                <DisclosureButton
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  aria-label={open ? 'Close menu' : 'Open menu'}
+                  data-test="mobile-menu-button"
+                >
+                  <span className="text-xl leading-none">{open ? '✕' : '☰'}</span>
+                </DisclosureButton>
+
+                {/* User avatar menu */}
+                {isAuthenticated ? (
+                  <Menu as="div" className="relative">
+                    <MenuButton
+                      aria-label="User menu"
+                      data-test="nav-user-menu"
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                      {getInitials(user?.username)}
+                    </MenuButton>
+                    <MenuItems
+                      anchor="bottom end"
+                      className="absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50 focus:outline-none"
+                    >
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900 truncate" data-test="nav-username">
+                          {user?.username}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          {user?.ssoSubjectId && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              SSO
+                            </span>
+                          )}
+                          {isLibrarian && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                              Librarian
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="py-1">
+                        <MenuItem>
+                          {({ focus }) => (
+                            <button
+                              type="button"
+                              onClick={handleLogout}
+                              data-test="nav-logout"
+                              className={clsx(
+                                'w-full text-left px-4 py-2 text-sm',
+                                focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                              )}
+                            >
+                              Logout
+                            </button>
+                          )}
+                        </MenuItem>
+                      </div>
+                    </MenuItems>
+                  </Menu>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="text-sm text-gray-700 hover:underline"
+                    data-test="nav-login"
+                  >
+                    Login
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right side - User menu (desktop only) */}
-          <div className="hidden md:flex items-center">
-            {isAuthenticated ? (
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700" data-test="nav-username">
-                    {user?.username}
-                  </span>
-                  {user?.ssoSubjectId && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      SSO
-                    </span>
-                  )}
-                  {isLibrarian && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                      Librarian
-                    </span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  data-test="nav-logout"
-                >
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <Link to="/login">
-                <Button variant="primary" size="sm" data-test="nav-login">
-                  Login
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {/* Public navigation items (always visible) */}
-            <NavLink to="/search" data-test="nav-search-mobile" onClick={closeMobileMenu}>
-              Search
-            </NavLink>
-
-            {/* Authenticated user navigation items */}
-            {isAuthenticated && (
-              <>
-                <NavLink to="/books" data-test="nav-books-mobile" onClick={closeMobileMenu}>
-                  Books
-                </NavLink>
-                <NavLink to="/authors" data-test="nav-authors-mobile" onClick={closeMobileMenu}>
-                  Authors
-                </NavLink>
-                <NavLink to="/loans" data-test="nav-loans-mobile" onClick={closeMobileMenu}>
-                  Loans
-                </NavLink>
-                <NavLink to="/my-card" data-test="nav-my-card-mobile" onClick={closeMobileMenu}>
-                  My Card
-                </NavLink>
-                <NavLink to="/settings" data-test="nav-settings-mobile" onClick={closeMobileMenu}>
-                  Settings
-                </NavLink>
-              </>
-            )}
-
-            {/* Login/Logout for mobile */}
-            {!isAuthenticated && (
-              <NavLink to="/login" data-test="nav-login-mobile" onClick={closeMobileMenu}>
-                Login
-              </NavLink>
-            )}
-            {isAuthenticated && (
-              <div className="border-t border-gray-200 mt-2 pt-2">
-                <div className="px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-700" data-test="nav-username-mobile">
-                    <span>{user?.username}</span>
-                    {user?.ssoSubjectId && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        SSO
-                      </span>
-                    )}
-                    {isLibrarian && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                        Librarian
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="w-full justify-start px-3"
-                  data-test="nav-logout-mobile"
-                >
-                  Logout
-                </Button>
-              </div>
-            )}
-
-            {isLibrarian && (
-              <>
-                <div className="border-t border-gray-200 my-2" />
-                <NavLink to="/branches" data-test="nav-branches-mobile" onClick={closeMobileMenu}>
-                  Branches
-                </NavLink>
-                <NavLink to="/users" data-test="nav-users-mobile" onClick={closeMobileMenu}>
-                  Users
-                </NavLink>
-                <NavLink to="/applications" data-test="nav-applications-mobile" onClick={closeMobileMenu}>
-                  Applications
-                </NavLink>
-                <NavLink to="/data-management" data-test="nav-data-mobile" onClick={closeMobileMenu}>
-                  Data Management
-                </NavLink>
-                <NavLink to="/photos-management" data-test="nav-photos-mobile" onClick={closeMobileMenu}>
-                  Photos
-                </NavLink>
-                <NavLink to="/global-settings" data-test="nav-global-settings-mobile" onClick={closeMobileMenu}>
-                  Global Settings
-                </NavLink>
-              </>
-            )}
-          </div>
-        </div>
+          {/* Mobile nav panel */}
+          <DisclosurePanel className="md:hidden border-t border-gray-200 bg-white">
+            <nav className="mx-[2%] py-2 space-y-1" aria-label="Primary mobile">
+              <NavLink to="/search" className={mobileNavCls} data-test="nav-search-mobile" onClick={() => close()}>Search</NavLink>
+              {isAuthenticated && (
+                <>
+                  <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>
+                  <NavLink to="/authors"  className={mobileNavCls} data-test="nav-authors-mobile"  onClick={() => close()}>Authors</NavLink>
+                  <NavLink to="/loans"    className={mobileNavCls} data-test="nav-loans-mobile"    onClick={() => close()}>Loans</NavLink>
+                  <NavLink to="/my-card"  className={mobileNavCls} data-test="nav-my-card-mobile"  onClick={() => close()}>My Card</NavLink>
+                  <NavLink to="/settings" className={mobileNavCls} data-test="nav-settings-mobile" onClick={() => close()}>Settings</NavLink>
+                </>
+              )}
+              {!isAuthenticated && (
+                <NavLink to="/login" className={mobileNavCls} data-test="nav-login-mobile" onClick={() => close()}>Login</NavLink>
+              )}
+              {isLibrarian && (
+                <>
+                  <div className="border-t border-gray-200 my-1" />
+                  <NavLink to="/branches"          className={mobileNavCls} data-test="nav-branches-mobile"      onClick={() => close()}>Branches</NavLink>
+                  <NavLink to="/users"             className={mobileNavCls} data-test="nav-users-mobile"         onClick={() => close()}>Users</NavLink>
+                  <NavLink to="/applications"      className={mobileNavCls} data-test="nav-applications-mobile"  onClick={() => close()}>Applications</NavLink>
+                  <NavLink to="/data-management"   className={mobileNavCls} data-test="nav-data-mobile"          onClick={() => close()}>Data Management</NavLink>
+                  <NavLink to="/photos-management" className={mobileNavCls} data-test="nav-photos-mobile"        onClick={() => close()}>Photos</NavLink>
+                  <NavLink to="/global-settings"   className={mobileNavCls} data-test="nav-global-settings-mobile" onClick={() => close()}>Global Settings</NavLink>
+                </>
+              )}
+            </nav>
+          </DisclosurePanel>
+        </>
       )}
-    </nav>
+    </Disclosure>
   )
 }
