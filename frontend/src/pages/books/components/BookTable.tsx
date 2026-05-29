@@ -170,7 +170,6 @@ export function BookTable({
           ))}
         </div>
       ),
-      width: '12%',
       hideOnMobile: true,
     },
   ]
