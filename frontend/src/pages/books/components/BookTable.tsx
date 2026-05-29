@@ -190,7 +190,7 @@ export function BookTable({
           <div className="flex flex-col gap-1 items-end">
             {/* Line 1: URL-type links (free text, grokipedia) */}
             {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || isValidUrl(book.grokipediaUrl)) && (
-              <div className="flex gap-1 justify-end">
+              <div className="flex flex-wrap gap-1 justify-end" style={{ maxWidth: '108px' }}>
                 {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
                   <a
                     key={index}
