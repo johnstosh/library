@@ -37,7 +37,16 @@ EOF
 
 # ── Parse arguments ───────────────────────────────────────────────
 MODE="${1:-}"
-if [ -z "$MODE" ]; then
+SCAN=false
+
+# Allow --scan flag in any position after the mode
+for arg in "$@"; do
+  case "$arg" in
+    --scan) SCAN=true ;;
+  esac
+done
+
+if [ -z "$MODE" ] || [ "$MODE" = "--scan" ]; then
   usage
 fi
 
@@ -153,6 +162,15 @@ if [ "$MODE" != "redeploy" ]; then
   else
     ./gradlew clean build -x test
     docker build -t "$IMAGE_TAG" .
+  fi
+
+  # Scan for CVEs before pushing — fail on HIGH/CRITICAL findings
+  if [ "$SCAN" = true ]; then
+    echo "Scanning image for CVEs..."
+    chmod +x trivy-scan.sh
+    ./trivy-scan.sh "$IMAGE_TAG"
+  else
+    echo "Skipping CVE scan (pass --scan to enable)"
   fi
 
   # Push the image with retry loop (up to 20 attempts)
