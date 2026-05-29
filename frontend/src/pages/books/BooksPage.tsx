@@ -114,17 +114,13 @@ export function BooksPage() {
     navigate('/books/new')
   }
 
-  const handleEditBook = (book: BookDto) => {
-    navigate(`/books/${book.id}/edit`)
-  }
-
   const handleViewBook = (book: BookDto) => {
     navigate(`/books/${book.id}`)
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
         <h1 className="text-3xl font-bold text-gray-900">Books</h1>
         {isLibrarian && (
           <div className="flex gap-2">
@@ -163,7 +159,6 @@ export function BooksPage() {
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
             onSelectAll={handleSelectAll}
-            onEdit={handleEditBook}
             onView={handleViewBook}
           />
         </div>

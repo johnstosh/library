@@ -78,7 +78,7 @@ export function UsersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
         <h1 className="text-3xl font-bold text-gray-900">Users</h1>
         <Button variant="primary" onClick={handleCreate} data-test="create-user">
           Create User

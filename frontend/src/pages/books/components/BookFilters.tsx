@@ -27,14 +27,14 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
       }`}
     >
       {active ? (
-        <svg className="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <svg className="hidden sm:block w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       ) : (
-        <PiFunnel className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+        <PiFunnel className="hidden sm:block w-3.5 h-3.5 text-gray-400 shrink-0" />
       )}
       {label}
-      <span className="text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
+      <span className="hidden sm:inline text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
     </button>
   )
 }

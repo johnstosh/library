@@ -37,7 +37,7 @@ interface BookLabelFiltersProps {
 export function BookLabelFilters({ selectedLabels, onToggleLabel, onClearLabels }: BookLabelFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 mt-3" data-test="book-label-filters">
-      <span className="text-sm font-medium text-gray-700 mr-1 shrink-0">Labels:</span>
+      <span className="text-sm font-medium text-gray-700 mr-1 shrink-0">Genres:</span>
       {ALL_BOOK_LABELS.map((label) => {
         const isSelected = selectedLabels.includes(label)
         return (

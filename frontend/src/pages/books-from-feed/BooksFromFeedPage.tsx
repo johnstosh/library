@@ -102,7 +102,7 @@ export function BooksFromFeedPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Books from Google Photos</h1>
           <p className="text-gray-600 mt-1">

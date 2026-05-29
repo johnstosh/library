@@ -22,7 +22,6 @@ interface BookTableProps {
   selectAll: boolean
   onSelectToggle: (id: number) => void
   onSelectAll: () => void
-  onEdit: (book: BookDto) => void
   onView: (book: BookDto) => void
 }
 
@@ -33,7 +32,6 @@ export function BookTable({
   selectAll,
   onSelectToggle,
   onSelectAll,
-  onEdit,
   onView,
 }: BookTableProps) {
   const [deleteBookId, setDeleteBookId] = useState<number | null>(null)
@@ -122,6 +120,7 @@ export function BookTable({
       accessor: (book) => book.locNumber || '—',
       width: '15%',
       cellClassName: 'px-3 sm:px-6 py-3 sm:py-4 overflow-hidden text-sm break-words',
+      hideOnMobile: true,
     },
     {
       key: 'dateAdded',
@@ -136,6 +135,7 @@ export function BookTable({
           '—'
         ),
       width: '15%',
+      hideOnMobile: true,
     },
     {
       key: 'status',
@@ -170,7 +170,7 @@ export function BookTable({
           ))}
         </div>
       ),
-      width: '12%',
+      hideOnMobile: true,
     },
   ]
 
@@ -198,7 +198,7 @@ export function BookTable({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="text-green-600 hover:text-green-900"
+                    className="p-1 text-green-600 hover:text-green-900"
                     data-test={`free-text-book-${book.id}-${index}`}
                     title={`Free text: ${extractDomain(url)}`}
                   >
@@ -211,7 +211,7 @@ export function BookTable({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="text-orange-600 hover:text-orange-900"
+                    className="p-1 text-orange-600 hover:text-orange-900"
                     data-test={`grokipedia-book-${book.id}`}
                     title="View on Grokipedia"
                   >
@@ -221,23 +221,21 @@ export function BookTable({
               </div>
             )}
             {/* Line 2: view, author, loc */}
-            <div className="flex gap-1 justify-end">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onView(book)
-                }}
-                className="text-gray-600 hover:text-gray-900"
+            <div className="flex gap-1 justify-end items-center">
+              <Link
+                to={`/books/${book.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 text-gray-600 hover:text-gray-900"
                 data-test={`view-book-${book.id}`}
                 title="View Details"
               >
                 <PiEye className="w-5 h-5" />
-              </button>
+              </Link>
               {book.authorId && (
                 <Link
                   to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-teal-600 hover:text-teal-900"
+                  className="p-1 text-teal-600 hover:text-teal-900"
                   data-test={`see-author-${book.id}`}
                   title="See Author"
                 >
@@ -250,7 +248,7 @@ export function BookTable({
                     e.stopPropagation()
                     handleLookupLoc(book.id)
                   }}
-                  className="text-purple-600 hover:text-purple-900"
+                  className="p-1 text-purple-600 hover:text-purple-900"
                   data-test={`lookup-loc-${book.id}`}
                   title="Lookup LOC"
                   disabled={lookupSingleBook.isPending}
@@ -267,7 +265,7 @@ export function BookTable({
                     e.stopPropagation()
                     handleClone(book.id)
                   }}
-                  className="text-green-600 hover:text-green-900"
+                  className="p-1 text-green-600 hover:text-green-900"
                   data-test={`clone-book-${book.id}`}
                   title="Clone"
                   disabled={cloneBook.isPending}
@@ -275,12 +273,10 @@ export function BookTable({
                   <PiCopy className="w-5 h-5" />
                 </button>
               )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit(book)
-                }}
-                className="text-blue-600 hover:text-blue-900"
+              <Link
+                to={`/books/${book.id}/edit`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 text-blue-600 hover:text-blue-900"
                 data-test={`edit-book-${book.id}`}
                 title="Edit"
               >
@@ -292,13 +288,13 @@ export function BookTable({
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-              </button>
+              </Link>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setDeleteBookId(book.id)
                 }}
-                className="text-red-600 hover:text-red-900"
+                className="p-1 text-red-600 hover:text-red-900"
                 data-test={`delete-book-${book.id}`}
                 title="Delete"
               >
