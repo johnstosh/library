@@ -1,6 +1,8 @@
 # Use a slim Java base image matching the project's Java 17 configuration
 FROM eclipse-temurin:17-jre-alpine
 
+RUN apk upgrade --no-cache
+
 # Set working directory
 WORKDIR /app
 
