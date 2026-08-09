@@ -21,12 +21,13 @@ import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCl
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
+import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag } from 'react-icons/pi'
+import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones } from 'react-icons/pi'
 
 interface BookFormPageProps {
   title: string
@@ -58,6 +59,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     tagsList: '',  // Comma-separated tags for editing
     dateAddedToLibrary: '',
     electronicResource: false,
+    ydlAudioAvailable: false,
+    ydlPaperAvailable: false,
+    ydlEbookAvailable: false,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -91,6 +95,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupGrokipedia = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
+  const lookupYdl = useLookupSingleYdl()
 
   // Default branch to first branch when creating a new book
   useEffect(() => {
@@ -121,6 +126,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         tagsList: book.tagsList?.join(', ') || '',
         dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.slice(0, 16) : '',
         electronicResource: book.electronicResource ?? false,
+        ydlAudioAvailable: book.ydlAudioAvailable ?? false,
+        ydlPaperAvailable: book.ydlPaperAvailable ?? false,
+        ydlEbookAvailable: book.ydlEbookAvailable ?? false,
       })
     } else {
       setFormData({
@@ -140,6 +148,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         tagsList: '',
         dateAddedToLibrary: '',
         electronicResource: false,
+        ydlAudioAvailable: false,
+        ydlPaperAvailable: false,
+        ydlEbookAvailable: false,
       })
     }
   }, [book])
@@ -179,6 +190,31 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lookup LOC')
+    }
+  }
+
+  const handleLookupYdl = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupYdl.mutateAsync(book.id)
+      if (result.success) {
+        setFormData({
+          ...formData,
+          ydlAudioAvailable: result.audioAvailable ?? false,
+          ydlPaperAvailable: result.paperAvailable ?? false,
+          ydlEbookAvailable: result.ebookAvailable ?? false,
+        })
+        setSuccessMessage(`YDL availability updated for "${result.matchedTitle}"`)
+        setHasUnsavedChanges(true)
+      } else {
+        setError(result.errorMessage || 'Not held by YDL')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up YDL availability')
     }
   }
 
@@ -330,6 +366,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
+        ydlAudioAvailable: formData.ydlAudioAvailable,
+        ydlPaperAvailable: formData.ydlPaperAvailable,
+        ydlEbookAvailable: formData.ydlEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -364,6 +403,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
+        ydlAudioAvailable: formData.ydlAudioAvailable,
+        ydlPaperAvailable: formData.ydlPaperAvailable,
+        ydlEbookAvailable: formData.ydlEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from first photo')
@@ -430,6 +472,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         tagsList: updated.tagsList?.join(', ') || formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
+        ydlAudioAvailable: formData.ydlAudioAvailable,
+        ydlPaperAvailable: formData.ydlPaperAvailable,
+        ydlEbookAvailable: formData.ydlEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata generated from title and author')
@@ -498,6 +543,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
         electronicResource: formData.electronicResource,
+        ydlAudioAvailable: formData.ydlAudioAvailable,
+        ydlPaperAvailable: formData.ydlPaperAvailable,
+        ydlEbookAvailable: formData.ydlEbookAvailable,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
         tagsList,
@@ -547,7 +595,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
-    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel
+    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
+    lookupYdl.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -804,6 +853,94 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">
             Electronic Resource
           </label>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">YDL Availability</p>
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${formData.title}"`)}&searchType=everything&pageSize=40`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  data-test="book-form-ydl-check-link"
+                >
+                  Check YDL
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupYdl}
+                  isLoading={lookupYdl.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<PiHeadphones />}
+                  data-test="book-operation-lookup-ydl"
+                >
+                  {book?.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ydlAudioAvailable"
+                checked={formData.ydlAudioAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, ydlAudioAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-ydl-audio-available"
+              />
+              <label htmlFor="ydlAudioAvailable" className="text-sm text-gray-700">
+                Audio Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ydlPaperAvailable"
+                checked={formData.ydlPaperAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, ydlPaperAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-ydl-paper-available"
+              />
+              <label htmlFor="ydlPaperAvailable" className="text-sm text-gray-700">
+                Paper Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ydlEbookAvailable"
+                checked={formData.ydlEbookAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, ydlEbookAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-ydl-ebook-available"
+              />
+              <label htmlFor="ydlEbookAvailable" className="text-sm text-gray-700">
+                Ebook
+              </label>
+            </div>
+          </div>
+          {book?.ydlLookupError && (
+            <p className="text-xs text-red-600 mt-1" data-test="book-ydl-lookup-error">
+              {book.ydlLookupError}
+            </p>
+          )}
         </div>
 
         <div>

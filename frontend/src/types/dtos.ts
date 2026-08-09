@@ -93,6 +93,11 @@ export interface BookDto {
   loanCount?: number
   lastModified: string
   tagsList?: string[]
+  ydlAudioAvailable?: boolean
+  ydlPaperAvailable?: boolean
+  ydlEbookAvailable?: boolean
+  ydlLastChecked?: string
+  ydlLookupError?: string
 }
 
 export interface BookSummaryDto {

@@ -9,17 +9,20 @@ import { useDeleteBooks, useBulkBookFromImage, useLookupGenres } from '@/api/boo
 import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
+import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
+import { YdlLookupResultsModal } from './YdlLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 import { PiTag } from 'react-icons/pi'
+import { PiHeadphones } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -46,6 +49,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
   const [genreProgress, setGenreProgress] = useState(0)
   const [isGenreLookupRunning, setIsGenreLookupRunning] = useState(false)
+  const [showYdlResults, setShowYdlResults] = useState(false)
+  const [ydlResults, setYdlResults] = useState<YdlLookupResultDto[]>([])
+  const [ydlProgress, setYdlProgress] = useState(0)
 
   const queryClient = useQueryClient()
 
@@ -57,6 +63,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   })
   const bulkBookFromImage = useBulkBookFromImage()
   const lookupGenres = useLookupGenres()
+  const lookupYdl = useLookupBulkYdlWithProgress((completed, _total) => {
+    setYdlProgress(completed)
+  })
 
   const handleBulkDelete = async () => {
     try {
@@ -166,6 +175,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
+  const handleYdlLookup = async () => {
+    setYdlProgress(0)
+    try {
+      const results = await lookupYdl.mutateAsync(Array.from(selectedIds))
+      setYdlResults(results)
+      setShowYdlResults(true)
+    } catch (error) {
+      console.error('Failed to lookup YDL availability:', error)
+    }
+  }
+
   if (selectedIds.size === 0) return null
 
   return (
@@ -257,6 +277,19 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
                 : 'Lookup Genres'}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleYdlLookup}
+              isLoading={lookupYdl.isPending}
+              disabled={lookupYdl.isPending}
+              leftIcon={<PiHeadphones />}
+              data-test="bulk-lookup-ydl"
+            >
+              {lookupYdl.isPending
+                ? `Checking YDL... (${ydlProgress}/${selectedIds.size})`
+                : 'Lookup YDL Availability'}
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -311,6 +344,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         onClose={() => setShowGenreResults(false)}
         results={genreResults}
         isRunning={isGenreLookupRunning}
+      />
+
+      <YdlLookupResultsModal
+        isOpen={showYdlResults}
+        onClose={() => setShowYdlResults(false)}
+        results={ydlResults}
       />
 
       <Modal

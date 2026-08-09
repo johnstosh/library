@@ -42,6 +42,12 @@ public class BookDto {
     private Boolean electronicResource;
     private String statusReason;
 
+    private Boolean ydlAudioAvailable;
+    private Boolean ydlPaperAvailable;
+    private Boolean ydlEbookAvailable;
+    private LocalDateTime ydlLastChecked;
+    private String ydlLookupError;
+
     /**
      * List of tags for categorizing the book.
      * Tags should be lowercase with only letters, numbers, and dashes.
