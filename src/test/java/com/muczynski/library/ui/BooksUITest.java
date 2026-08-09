@@ -470,6 +470,42 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should display YDL availability section and retry button on book view page")
+    void testYdlAvailabilitySectionVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on the book title to navigate to view page
+        page.click("text=Initial Book");
+
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify the YDL Availability section and its lookup button are visible for librarian
+        assertThat(page.locator("[data-test='ydl-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-ydl-lookup']")).containsText("Lookup YDL Availability");
+    }
+
+    @Test
+    @DisplayName("Should show bulk YDL lookup button when a book is selected")
+    void testBulkYdlLookupButtonVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book row
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Select the book's row checkbox
+        page.click("[data-test='select-checkbox-1']");
+
+        // Verify the bulk actions toolbar appears with the YDL lookup button
+        assertThat(page.locator("[data-test='bulk-lookup-ydl']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-ydl']")).containsText("Lookup YDL Availability");
+    }
+
+    @Test
     @DisplayName("Should navigate to edit form from book view page")
     void testEditFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

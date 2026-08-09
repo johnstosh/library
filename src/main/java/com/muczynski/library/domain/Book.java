@@ -65,6 +65,16 @@ public class Book {
 
     private String statusReason;
 
+    private Boolean ydlAudioAvailable;
+
+    private Boolean ydlPaperAvailable;
+
+    private Boolean ydlEbookAvailable;
+
+    private LocalDateTime ydlLastChecked;
+
+    private String ydlLookupError;
+
     /**
      * List of tags for categorizing the book (e.g., fiction, fantasy, theology).
      * Tags should be lowercase with only letters, numbers, and dashes.

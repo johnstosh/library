@@ -43,6 +43,11 @@ public class BookMapper {
         bookDto.setLocNumber(book.getLocNumber());
         bookDto.setElectronicResource(book.getElectronicResource());
         bookDto.setStatusReason(book.getStatusReason());
+        bookDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+        bookDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+        bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+        bookDto.setYdlLastChecked(book.getYdlLastChecked());
+        bookDto.setYdlLookupError(book.getYdlLookupError());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName()); // Set author name for display
@@ -92,6 +97,11 @@ public class BookMapper {
         bookDto.setLocNumber(book.getLocNumber());
         bookDto.setElectronicResource(book.getElectronicResource());
         bookDto.setStatusReason(book.getStatusReason());
+        bookDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+        bookDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+        bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+        bookDto.setYdlLastChecked(book.getYdlLastChecked());
+        bookDto.setYdlLookupError(book.getYdlLookupError());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName());
@@ -130,6 +140,11 @@ public class BookMapper {
         book.setLocNumber(bookDto.getLocNumber());
         book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
+        book.setYdlAudioAvailable(bookDto.getYdlAudioAvailable());
+        book.setYdlPaperAvailable(bookDto.getYdlPaperAvailable());
+        book.setYdlEbookAvailable(bookDto.getYdlEbookAvailable());
+        book.setYdlLastChecked(bookDto.getYdlLastChecked());
+        book.setYdlLookupError(bookDto.getYdlLookupError());
 
         if (bookDto.getAuthorId() != null) {
             Author author = new Author();

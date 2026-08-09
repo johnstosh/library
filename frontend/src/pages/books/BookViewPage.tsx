@@ -3,9 +3,10 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
+import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
-import { PiCopy, PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
+import { PiCopy, PiPencil, PiTrash, PiArrowLeft, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -17,9 +18,18 @@ export function BookViewPage() {
   const { data: book, isLoading } = useBook(bookId)
   const cloneBook = useCloneBook()
   const deleteBook = useDeleteBook()
+  const lookupYdl = useLookupSingleYdl()
   const isLibrarian = useIsLibrarian()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
+
+  const handleYdlLookup = async () => {
+    try {
+      await lookupYdl.mutateAsync(bookId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up YDL availability')
+    }
+  }
 
   const handleClone = async () => {
     try {
@@ -303,6 +313,86 @@ export function BookViewPage() {
                 <p className="text-sm font-medium text-gray-500">Detailed Description</p>
                 <p className="text-gray-900 whitespace-pre-wrap">{book.detailedDescription}</p>
               </div>
+            )}
+          </div>
+
+          {/* YDL Availability */}
+          <div className="bg-gray-50 rounded-lg p-6" data-test="ydl-availability-section">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">YDL Availability</h2>
+              {isLibrarian && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleYdlLookup}
+                  isLoading={lookupYdl.isPending}
+                  disabled={lookupYdl.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-ydl-lookup"
+                >
+                  {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div data-test="ydl-audio-status">
+                <p className="text-sm font-medium text-gray-500">Audio Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.ydlAudioAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.ydlAudioAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+              <div data-test="ydl-paper-status">
+                <p className="text-sm font-medium text-gray-500">Paper Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.ydlPaperAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.ydlPaperAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+              <div data-test="ydl-ebook-status">
+                <p className="text-sm font-medium text-gray-500">Ebook</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.ydlEbookAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.ydlEbookAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            {book.ydlLastChecked && (
+              <p className="text-xs text-gray-500 mt-3">
+                Last checked: {formatDateTime(book.ydlLastChecked)}
+              </p>
+            )}
+            {book.ydlLookupError && (
+              <p className="text-xs text-red-600 mt-1" data-test="ydl-lookup-error">
+                {book.ydlLookupError}
+              </p>
             )}
           </div>
 
