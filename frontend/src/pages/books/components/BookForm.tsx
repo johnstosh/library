@@ -39,9 +39,6 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
     authorId: '',
     branchId: '',
     electronicResource: false,
-    ydlAudioAvailable: false,
-    ydlPaperAvailable: false,
-    ydlEbookAvailable: false,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -70,9 +67,6 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         authorId: book.authorId?.toString() || '',
         branchId: book.libraryId?.toString() || '',
         electronicResource: book.electronicResource ?? false,
-        ydlAudioAvailable: book.ydlAudioAvailable ?? false,
-        ydlPaperAvailable: book.ydlPaperAvailable ?? false,
-        ydlEbookAvailable: book.ydlEbookAvailable ?? false,
       })
     } else {
       setFormData({
@@ -90,9 +84,6 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         authorId: '',
         branchId: '',
         electronicResource: false,
-        ydlAudioAvailable: false,
-        ydlPaperAvailable: false,
-        ydlEbookAvailable: false,
       })
     }
     setError('')
@@ -173,9 +164,6 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
         statusReason: formData.statusReason || undefined,
         locNumber: formData.locNumber || undefined,
         electronicResource: formData.electronicResource,
-        ydlAudioAvailable: formData.ydlAudioAvailable,
-        ydlPaperAvailable: formData.ydlPaperAvailable,
-        ydlEbookAvailable: formData.ydlEbookAvailable,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
       }
@@ -345,51 +333,6 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
           <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">
             Electronic Resource
           </label>
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">YDL Availability</p>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="ydlAudioAvailable"
-                checked={formData.ydlAudioAvailable}
-                onChange={(e) => setFormData({ ...formData, ydlAudioAvailable: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                data-test="book-ydl-audio-available"
-              />
-              <label htmlFor="ydlAudioAvailable" className="text-sm text-gray-700">
-                Audio Book
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="ydlPaperAvailable"
-                checked={formData.ydlPaperAvailable}
-                onChange={(e) => setFormData({ ...formData, ydlPaperAvailable: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                data-test="book-ydl-paper-available"
-              />
-              <label htmlFor="ydlPaperAvailable" className="text-sm text-gray-700">
-                Paper Book
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="ydlEbookAvailable"
-                checked={formData.ydlEbookAvailable}
-                onChange={(e) => setFormData({ ...formData, ydlEbookAvailable: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                data-test="book-ydl-ebook-available"
-              />
-              <label htmlFor="ydlEbookAvailable" className="text-sm text-gray-700">
-                Ebook
-              </label>
-            </div>
-          </div>
         </div>
 
         <div className="space-y-4">
