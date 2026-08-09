@@ -858,20 +858,33 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-700">YDL Availability</p>
-            {isEditing && isLibrarian && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleLookupYdl}
-                isLoading={lookupYdl.isPending}
-                disabled={isOperationPending || isLoading}
-                leftIcon={<PiHeadphones />}
-                data-test="book-operation-lookup-ydl"
-              >
-                {book?.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${formData.title}"`)}&searchType=everything&pageSize=40`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  data-test="book-form-ydl-check-link"
+                >
+                  Check YDL
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupYdl}
+                  isLoading={lookupYdl.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<PiHeadphones />}
+                  data-test="book-operation-lookup-ydl"
+                >
+                  {book?.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                </Button>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
