@@ -10,6 +10,7 @@ import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl-lookup'
+import { useLookupBulkEmuWithProgress, type EmuLookupResultDto } from '@/api/emu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
@@ -17,12 +18,14 @@ import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsMo
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { YdlLookupResultsModal } from './YdlLookupResultsModal'
+import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 import { PiTag } from 'react-icons/pi'
 import { PiHeadphones } from 'react-icons/pi'
+import { PiGraduationCap } from 'react-icons/pi'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -52,6 +55,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [showYdlResults, setShowYdlResults] = useState(false)
   const [ydlResults, setYdlResults] = useState<YdlLookupResultDto[]>([])
   const [ydlProgress, setYdlProgress] = useState(0)
+  const [showEmuResults, setShowEmuResults] = useState(false)
+  const [emuResults, setEmuResults] = useState<EmuLookupResultDto[]>([])
+  const [emuProgress, setEmuProgress] = useState(0)
 
   const queryClient = useQueryClient()
 
@@ -65,6 +71,9 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const lookupGenres = useLookupGenres()
   const lookupYdl = useLookupBulkYdlWithProgress((completed, _total) => {
     setYdlProgress(completed)
+  })
+  const lookupEmu = useLookupBulkEmuWithProgress((completed, _total) => {
+    setEmuProgress(completed)
   })
 
   const handleBulkDelete = async () => {
@@ -186,6 +195,17 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
+  const handleEmuLookup = async () => {
+    setEmuProgress(0)
+    try {
+      const results = await lookupEmu.mutateAsync(Array.from(selectedIds))
+      setEmuResults(results)
+      setShowEmuResults(true)
+    } catch (error) {
+      console.error('Failed to lookup EMU availability:', error)
+    }
+  }
+
   if (selectedIds.size === 0) return null
 
   return (
@@ -290,6 +310,19 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
                 : 'Lookup YDL Availability'}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEmuLookup}
+              isLoading={lookupEmu.isPending}
+              disabled={lookupEmu.isPending}
+              leftIcon={<PiGraduationCap />}
+              data-test="bulk-lookup-emu"
+            >
+              {lookupEmu.isPending
+                ? `Checking EMU... (${emuProgress}/${selectedIds.size})`
+                : 'Lookup EMU Availability'}
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -350,6 +383,12 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showYdlResults}
         onClose={() => setShowYdlResults(false)}
         results={ydlResults}
+      />
+
+      <EmuLookupResultsModal
+        isOpen={showEmuResults}
+        onClose={() => setShowEmuResults(false)}
+        results={emuResults}
       />
 
       <Modal

@@ -98,6 +98,11 @@ export interface BookDto {
   ydlEbookAvailable?: boolean
   ydlLastChecked?: string
   ydlLookupError?: string
+  emuAudioAvailable?: boolean
+  emuPaperAvailable?: boolean
+  emuEbookAvailable?: boolean
+  emuLastChecked?: string
+  emuLookupError?: string
 }
 
 export interface BookSummaryDto {

@@ -48,6 +48,11 @@ public class BookMapper {
         bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
         bookDto.setYdlLastChecked(book.getYdlLastChecked());
         bookDto.setYdlLookupError(book.getYdlLookupError());
+        bookDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+        bookDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+        bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+        bookDto.setEmuLastChecked(book.getEmuLastChecked());
+        bookDto.setEmuLookupError(book.getEmuLookupError());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName()); // Set author name for display
@@ -102,6 +107,11 @@ public class BookMapper {
         bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
         bookDto.setYdlLastChecked(book.getYdlLastChecked());
         bookDto.setYdlLookupError(book.getYdlLookupError());
+        bookDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+        bookDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+        bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+        bookDto.setEmuLastChecked(book.getEmuLastChecked());
+        bookDto.setEmuLookupError(book.getEmuLookupError());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName());
@@ -145,6 +155,11 @@ public class BookMapper {
         book.setYdlEbookAvailable(bookDto.getYdlEbookAvailable());
         book.setYdlLastChecked(bookDto.getYdlLastChecked());
         book.setYdlLookupError(bookDto.getYdlLookupError());
+        book.setEmuAudioAvailable(bookDto.getEmuAudioAvailable());
+        book.setEmuPaperAvailable(bookDto.getEmuPaperAvailable());
+        book.setEmuEbookAvailable(bookDto.getEmuEbookAvailable());
+        book.setEmuLastChecked(bookDto.getEmuLastChecked());
+        book.setEmuLookupError(bookDto.getEmuLookupError());
 
         if (bookDto.getAuthorId() != null) {
             Author author = new Author();

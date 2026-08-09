@@ -22,12 +22,13 @@ import { useLookupSingleBook } from '@/api/loc-lookup'
 import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
+import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones } from 'react-icons/pi'
+import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 
 interface BookFormPageProps {
   title: string
@@ -62,6 +63,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     ydlAudioAvailable: false,
     ydlPaperAvailable: false,
     ydlEbookAvailable: false,
+    emuAudioAvailable: false,
+    emuPaperAvailable: false,
+    emuEbookAvailable: false,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -96,6 +100,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
   const lookupYdl = useLookupSingleYdl()
+  const lookupEmu = useLookupSingleEmu()
 
   // Default branch to first branch when creating a new book
   useEffect(() => {
@@ -129,6 +134,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: book.ydlAudioAvailable ?? false,
         ydlPaperAvailable: book.ydlPaperAvailable ?? false,
         ydlEbookAvailable: book.ydlEbookAvailable ?? false,
+        emuAudioAvailable: book.emuAudioAvailable ?? false,
+        emuPaperAvailable: book.emuPaperAvailable ?? false,
+        emuEbookAvailable: book.emuEbookAvailable ?? false,
       })
     } else {
       setFormData({
@@ -151,6 +159,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: false,
         ydlPaperAvailable: false,
         ydlEbookAvailable: false,
+        emuAudioAvailable: false,
+        emuPaperAvailable: false,
+        emuEbookAvailable: false,
       })
     }
   }, [book])
@@ -215,6 +226,31 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up YDL availability')
+    }
+  }
+
+  const handleLookupEmu = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupEmu.mutateAsync(book.id)
+      if (result.success) {
+        setFormData({
+          ...formData,
+          emuAudioAvailable: result.audioAvailable ?? false,
+          emuPaperAvailable: result.paperAvailable ?? false,
+          emuEbookAvailable: result.ebookAvailable ?? false,
+        })
+        setSuccessMessage(`EMU availability updated for "${result.matchedTitle}"`)
+        setHasUnsavedChanges(true)
+      } else {
+        setError(result.errorMessage || 'Not held by EMU Halle Library')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up EMU availability')
     }
   }
 
@@ -369,6 +405,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: formData.ydlAudioAvailable,
         ydlPaperAvailable: formData.ydlPaperAvailable,
         ydlEbookAvailable: formData.ydlEbookAvailable,
+        emuAudioAvailable: formData.emuAudioAvailable,
+        emuPaperAvailable: formData.emuPaperAvailable,
+        emuEbookAvailable: formData.emuEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -406,6 +445,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: formData.ydlAudioAvailable,
         ydlPaperAvailable: formData.ydlPaperAvailable,
         ydlEbookAvailable: formData.ydlEbookAvailable,
+        emuAudioAvailable: formData.emuAudioAvailable,
+        emuPaperAvailable: formData.emuPaperAvailable,
+        emuEbookAvailable: formData.emuEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from first photo')
@@ -475,6 +517,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: formData.ydlAudioAvailable,
         ydlPaperAvailable: formData.ydlPaperAvailable,
         ydlEbookAvailable: formData.ydlEbookAvailable,
+        emuAudioAvailable: formData.emuAudioAvailable,
+        emuPaperAvailable: formData.emuPaperAvailable,
+        emuEbookAvailable: formData.emuEbookAvailable,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata generated from title and author')
@@ -546,6 +591,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         ydlAudioAvailable: formData.ydlAudioAvailable,
         ydlPaperAvailable: formData.ydlPaperAvailable,
         ydlEbookAvailable: formData.ydlEbookAvailable,
+        emuAudioAvailable: formData.emuAudioAvailable,
+        emuPaperAvailable: formData.emuPaperAvailable,
+        emuEbookAvailable: formData.emuEbookAvailable,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
         tagsList,
@@ -596,7 +644,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
-    lookupYdl.isPending
+    lookupYdl.isPending || lookupEmu.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -939,6 +987,94 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           {book?.ydlLookupError && (
             <p className="text-xs text-red-600 mt-1" data-test="book-ydl-lookup-error">
               {book.ydlLookupError}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">EMU Availability</p>
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${formData.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  data-test="book-form-emu-check-link"
+                >
+                  Check EMU
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupEmu}
+                  isLoading={lookupEmu.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<PiGraduationCap />}
+                  data-test="book-operation-lookup-emu"
+                >
+                  {book?.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="emuAudioAvailable"
+                checked={formData.emuAudioAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, emuAudioAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-emu-audio-available"
+              />
+              <label htmlFor="emuAudioAvailable" className="text-sm text-gray-700">
+                Audio Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="emuPaperAvailable"
+                checked={formData.emuPaperAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, emuPaperAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-emu-paper-available"
+              />
+              <label htmlFor="emuPaperAvailable" className="text-sm text-gray-700">
+                Paper Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="emuEbookAvailable"
+                checked={formData.emuEbookAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, emuEbookAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                data-test="book-emu-ebook-available"
+              />
+              <label htmlFor="emuEbookAvailable" className="text-sm text-gray-700">
+                Ebook
+              </label>
+            </div>
+          </div>
+          {book?.emuLookupError && (
+            <p className="text-xs text-red-600 mt-1" data-test="book-emu-lookup-error">
+              {book.emuLookupError}
             </p>
           )}
         </div>
