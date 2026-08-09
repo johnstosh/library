@@ -258,4 +258,113 @@ class YdlLookupServiceTest {
         assertTrue(result.isSuccess());
         verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
     }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedTitleStartingWithSameWord_noAuthor() {
+        // Regression test: a book titled just "Ellen" with no author on record must not match
+        // an unrelated YDL title that merely starts with the same word, e.g. "Ellen G White Story".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Ellen");
+
+        String responseUnrelated = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Ellen G White Story",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedLongerTitle_regressionForJoshua() {
+        // Regression test from the real reported bug: "Joshua" falsely matched YDL's
+        // "Joshua in a Troubled World".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Joshua");
+
+        String responseUnrelated = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Joshua in a Troubled World",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchMidWordPrefix() {
+        // "Ellen" must not match "Ellenwood" - not a word-boundary prefix, just shared letters.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Ellen");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        String responseMidWord = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Ellenwood","primaryAgent":{"label":"Author, Test"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseMidWord);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesShortTitleAgainstLongerYdlTitle_whenAuthorCorroborates() {
+        // A genuine prefix match (our title is the short "core" of YDL's longer subtitled
+        // title) is still accepted when the author matches, corroborating the fuzzy title match.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Crucial Conversations");
+        Author author = new Author();
+        author.setName("Kerry Patterson");
+        book.setAuthor(author);
+
+        String responseLongerTitle = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Crucial Conversations Tools For Talking When Stakes Are High",
+                   "primaryAgent":{"label":"Patterson, Kerry"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseLongerTitle);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+    }
 }

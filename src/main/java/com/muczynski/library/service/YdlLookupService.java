@@ -245,9 +245,18 @@ public class YdlLookupService {
 
     /**
      * Filters the search results down to entries whose title (and, if provided, author)
-     * reasonably match the book being looked up. An entry with no author on record at YDL
-     * is still accepted, without requiring an author match, when the title itself is long
-     * enough (more than 4 words) to be a reasonably distinctive match on its own.
+     * reasonably match the book being looked up.
+     *
+     * <p>A fuzzy (word-boundary prefix) title match is only trusted when it's corroborated by
+     * a matching author — e.g. our "Crucial Conversations" matching YDL's "Crucial
+     * Conversations: Tools for Talking..." because the author agrees. Without any author to
+     * search with (or to corroborate against), only an exact title match is accepted: a bare
+     * prefix match on a short, generic title/name like "Ellen" or "Joshua" would otherwise
+     * match any number of unrelated titles that merely start with the same word (e.g. "Joshua
+     * in a Troubled World"), which is exactly the false-positive flood this guards against.
+     * An entry with no author on record at YDL is still accepted on an exact title match,
+     * without requiring an author match, when the title itself is long enough (more than 4
+     * words) to be a reasonably distinctive match on its own.
      */
     private JsonNode filterMatches(JsonNode entries, String title, String authorLastName) {
         com.fasterxml.jackson.databind.node.ArrayNode matches = objectMapper.createArrayNode();
@@ -259,23 +268,41 @@ public class YdlLookupService {
             if (entryTitle.isEmpty()) {
                 continue;
             }
-            boolean titleMatches = entryTitle.equals(normalizedTitle)
-                    || (normalizedTitle.length() > 3 && entryTitle.startsWith(normalizedTitle))
-                    || (entryTitle.length() > 3 && normalizedTitle.startsWith(entryTitle));
-            if (!titleMatches) {
+
+            boolean exactTitleMatch = entryTitle.equals(normalizedTitle);
+            boolean prefixTitleMatch = !exactTitleMatch
+                    && normalizedTitle.length() > 3 && entryTitle.length() > 3
+                    && (isWordBoundaryPrefix(entryTitle, normalizedTitle) || isWordBoundaryPrefix(normalizedTitle, entryTitle));
+            if (!exactTitleMatch && !prefixTitleMatch) {
                 continue;
             }
-            if (authorLastName != null) {
+
+            if (authorLastName == null) {
+                // Nothing to corroborate a fuzzy match with - only trust an exact title match.
+                if (!exactTitleMatch) {
+                    continue;
+                }
+            } else {
                 String agentLabel = entry.path("primaryAgent").path("label").asText("");
                 boolean authorMatches = agentLabel.toLowerCase(Locale.ROOT).contains(authorLastName.toLowerCase(Locale.ROOT));
-                boolean noAuthorOnRecordButLongTitleMatch = agentLabel.isEmpty() && titleWordCount > 4;
-                if (!authorMatches && !noAuthorOnRecordButLongTitleMatch) {
+                boolean noAuthorOnRecordButLongExactMatch = agentLabel.isEmpty() && exactTitleMatch && titleWordCount > 4;
+                if (!authorMatches && !noAuthorOnRecordButLongExactMatch) {
                     continue;
                 }
             }
             matches.add(entry);
         }
         return matches;
+    }
+
+    /**
+     * True if {@code longer} starts with {@code prefix} at a word boundary — i.e. {@code prefix}
+     * isn't just the leading letters of a longer, different word (so "ellen" matches "ellen g
+     * white" but not "ellenwood").
+     */
+    private boolean isWordBoundaryPrefix(String longer, String prefix) {
+        return longer.startsWith(prefix)
+                && (longer.length() == prefix.length() || longer.charAt(prefix.length()) == ' ');
     }
 
     private String normalize(String value) {
