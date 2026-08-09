@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -221,7 +222,11 @@ public class EmuLookupService {
                 + "&skipDelivery=Y&sort=rank&tab=Everything"
                 + "&vid=" + urlEncode(VID);
 
-        String response = emuRestTemplate.getForObject(url, String.class);
+        // Pass a pre-built URI rather than a String: RestTemplate treats a String URL as a URI
+        // template and re-encodes it via UriComponentsBuilder, which double-encodes the query
+        // string we've already percent-encoded above and makes Primo reject the request with a
+        // 400. A URI is used as-is, with no further encoding.
+        String response = emuRestTemplate.getForObject(URI.create(url), String.class);
         try {
             JsonNode root = objectMapper.readTree(response);
             return root.path("docs");

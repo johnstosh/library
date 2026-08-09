@@ -15,11 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,7 +69,7 @@ class EmuLookupServiceTest {
         book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_WITH_ALL_FORMATS);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -93,7 +93,7 @@ class EmuLookupServiceTest {
         book.setTitle("Test Book");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_EBOOK_ONLY);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -112,7 +112,7 @@ class EmuLookupServiceTest {
         book.setTitle("Nonexistent Book Title");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_NO_MATCH);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -130,7 +130,7 @@ class EmuLookupServiceTest {
         book.setTitle("Test Book");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenThrow(new RuntimeException("connection timed out"));
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -156,7 +156,7 @@ class EmuLookupServiceTest {
         book.setTitle("Test Book, c. 2 (DVD)");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_WITH_ALL_FORMATS);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -165,9 +165,9 @@ class EmuLookupServiceTest {
         assertTrue(result.isSuccess());
         assertTrue(result.getEbookAvailable());
 
-        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
         verify(emuRestTemplate).getForObject(urlCaptor.capture(), eq(String.class));
-        String url = urlCaptor.getValue();
+        String url = urlCaptor.getValue().toString();
         assertTrue(url.contains("Test+Book"));
         assertFalse(url.toLowerCase(java.util.Locale.ROOT).contains("dvd"));
     }
@@ -185,7 +185,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_NO_MATCH, responseShortTitle);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -212,7 +212,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseNoAuthor);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -222,7 +222,7 @@ class EmuLookupServiceTest {
         assertTrue(result.getPaperAvailable());
         // Matched on the first (title + author) attempt despite the entry having no author on
         // record, since the title is long enough (>4 words) to be trusted on its own.
-        verify(emuRestTemplate, times(1)).getForObject(anyString(), eq(String.class));
+        verify(emuRestTemplate, times(1)).getForObject(any(URI.class), eq(String.class));
     }
 
     @Test
@@ -241,7 +241,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseNoAuthor);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -250,7 +250,7 @@ class EmuLookupServiceTest {
         // Still succeeds overall via the title-only fallback attempt, but only after the
         // first (title + author) attempt correctly rejected the authorless short-title entry.
         assertTrue(result.isSuccess());
-        verify(emuRestTemplate, times(2)).getForObject(anyString(), eq(String.class));
+        verify(emuRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
     }
 
     @Test
@@ -266,7 +266,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseCentralOnly);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
