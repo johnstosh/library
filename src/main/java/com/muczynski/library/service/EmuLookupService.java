@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -94,23 +95,37 @@ public class EmuLookupService {
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
-            for (String[] attempt : buildSearchAttempts(cleanedTitle, authorLastName)) {
-                String attemptTitle = attempt[0];
-                String attemptAuthor = attempt[1];
-                JsonNode entries = search(attemptTitle, attemptAuthor);
-                matches = filterMatches(entries, attemptTitle, attemptAuthor);
+            for (String candidateTitle : buildTitleCandidates(cleanedTitle)) {
+                for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                    JsonNode entries = search(candidateTitle, queryAuthor);
+                    // Verification always checks the book's real author, regardless of whether
+                    // this particular query included it in the search text - the query variants
+                    // exist only to improve EMU's hit rate, not to relax what counts as a match.
+                    matches = filterMatches(entries, candidateTitle, authorLastName);
+                    if (!matches.isEmpty()) {
+                        break;
+                    }
+                }
                 if (!matches.isEmpty()) {
                     break;
                 }
             }
 
             if (matches.isEmpty()) {
+                // A completed search that found nothing is a definitive answer - clear any
+                // stale availability from a previous lookup rather than leaving it untouched.
+                book.setEmuAudioAvailable(false);
+                book.setEmuPaperAvailable(false);
+                book.setEmuEbookAvailable(false);
                 book.setEmuLastChecked(LocalDateTime.now());
                 book.setEmuLookupError("Not held by EMU Halle Library");
                 bookRepository.save(book);
                 return EmuLookupResultDto.builder()
                         .bookId(book.getId())
                         .success(false)
+                        .audioAvailable(false)
+                        .paperAvailable(false)
+                        .ebookAvailable(false)
                         .errorMessage("Not held by EMU Halle Library")
                         .build();
             }
@@ -164,28 +179,40 @@ public class EmuLookupService {
     }
 
     /**
-     * Builds the ordered list of (title, authorLastName) attempts to try against EMU: the
-     * cleaned title with and without the author, then, if the title has a colon-delimited
-     * subtitle, the truncated core title with and without the author.
+     * Builds the ordered list of title candidates to search for: the cleaned title, then, if
+     * it has a colon-delimited subtitle, the truncated core title too - handling cases where
+     * our catalog's title includes a subtitle EMU's doesn't carry (or vice versa). Each
+     * candidate must still be an exact match (after normalization) against an EMU result to
+     * count - this only widens what we search for, not what counts as a match.
      */
-    private List<String[]> buildSearchAttempts(String cleanedTitle, String authorLastName) {
-        List<String[]> attempts = new ArrayList<>();
-        if (authorLastName != null) {
-            attempts.add(new String[]{cleanedTitle, authorLastName});
-        }
-        attempts.add(new String[]{cleanedTitle, null});
+    private List<String> buildTitleCandidates(String cleanedTitle) {
+        List<String> candidates = new ArrayList<>();
+        candidates.add(cleanedTitle);
 
         int colonIndex = cleanedTitle.indexOf(':');
         if (colonIndex > 0) {
             String truncated = cleanedTitle.substring(0, colonIndex).trim();
             if (!truncated.isEmpty() && !truncated.equalsIgnoreCase(cleanedTitle)) {
-                if (authorLastName != null) {
-                    attempts.add(new String[]{truncated, authorLastName});
-                }
-                attempts.add(new String[]{truncated, null});
+                candidates.add(truncated);
             }
         }
-        return attempts;
+        return candidates;
+    }
+
+    /**
+     * Builds the ordered list of author values to include in the EMU search text itself
+     * (title + author search first, since it's more likely to rank the real match at the top;
+     * title-only as a fallback). This only affects what we search for - {@link #filterMatches}
+     * always verifies against the book's real author regardless of which query found the
+     * result.
+     */
+    private List<String> buildQueryAuthors(String authorLastName) {
+        List<String> queryAuthors = new ArrayList<>();
+        if (authorLastName != null) {
+            queryAuthors.add(authorLastName);
+        }
+        queryAuthors.add(null);
+        return queryAuthors;
     }
 
     /**
@@ -221,7 +248,11 @@ public class EmuLookupService {
                 + "&skipDelivery=Y&sort=rank&tab=Everything"
                 + "&vid=" + urlEncode(VID);
 
-        String response = emuRestTemplate.getForObject(url, String.class);
+        // Pass a pre-built URI rather than a String: RestTemplate treats a String URL as a URI
+        // template and re-encodes it via UriComponentsBuilder, which double-encodes the query
+        // string we've already percent-encoded above and makes Primo reject the request with a
+        // 400. A URI is used as-is, with no further encoding.
+        String response = emuRestTemplate.getForObject(URI.create(url), String.class);
         try {
             JsonNode root = objectMapper.readTree(response);
             return root.path("docs");
@@ -239,11 +270,16 @@ public class EmuLookupService {
     }
 
     /**
-     * Filters the search results down to locally-held entries (context == "L") whose title
-     * (and, if provided, author) reasonably match the book being looked up. An entry with no
-     * author on record at EMU is still accepted, without requiring an author match, when the
-     * title itself is long enough (more than 4 words) to be a reasonably distinctive match
-     * on its own.
+     * Filters the search results down to locally-held entries (context == "L") that exactly
+     * match the book being looked up.
+     *
+     * <p>No fuzzy/substring matching of any kind: the title must be exactly equal (after
+     * normalization) to count at all - this is what stops a short, generic title/name like
+     * "Ellen" or "Joshua" from matching an unrelated title that merely starts with or contains
+     * the same word. Beyond that, an exact title match by itself is only trusted when the
+     * title is more than 4 words long, distinctive enough on its own; a title of 4 words or
+     * fewer additionally requires the book's author's last name to exactly match one of the
+     * words in one of the EMU record's author fields (again no substring matching).
      */
     private JsonNode filterMatches(JsonNode entries, String title, String authorLastName) {
         com.fasterxml.jackson.databind.node.ArrayNode matches = objectMapper.createArrayNode();
@@ -256,36 +292,42 @@ public class EmuLookupService {
             }
             JsonNode display = entry.path("pnx").path("display");
             String entryTitle = normalize(display.path("title").path(0).asText(""));
-            if (entryTitle.isEmpty()) {
+            if (entryTitle.isEmpty() || !entryTitle.equals(normalizedTitle)) {
                 continue;
             }
-            boolean titleMatches = entryTitle.equals(normalizedTitle)
-                    || (normalizedTitle.length() > 3 && entryTitle.startsWith(normalizedTitle))
-                    || (entryTitle.length() > 3 && normalizedTitle.startsWith(entryTitle));
-            if (!titleMatches) {
-                continue;
-            }
-            if (authorLastName != null) {
+
+            if (titleWordCount <= 4) {
+                if (authorLastName == null) {
+                    continue;
+                }
                 JsonNode addata = entry.path("pnx").path("addata");
-                boolean hasAuthorOnRecord = !addata.path("au").isMissingNode() && addata.path("au").size() > 0
-                        || !addata.path("addau").isMissingNode() && addata.path("addau").size() > 0;
-                boolean authorMatches = jsonArrayContainsIgnoreCase(addata.path("au"), authorLastName)
-                        || jsonArrayContainsIgnoreCase(addata.path("addau"), authorLastName);
-                boolean noAuthorOnRecordButLongTitleMatch = !hasAuthorOnRecord && titleWordCount > 4;
-                if (!authorMatches && !noAuthorOnRecordButLongTitleMatch) {
+                boolean authorMatches = jsonArrayHasExactAuthorWordMatch(addata.path("au"), authorLastName)
+                        || jsonArrayHasExactAuthorWordMatch(addata.path("addau"), authorLastName);
+                if (!authorMatches) {
                     continue;
                 }
             }
+
             matches.add(entry);
         }
         return matches;
     }
 
-    private boolean jsonArrayContainsIgnoreCase(JsonNode array, String value) {
-        String needle = value.toLowerCase(Locale.ROOT);
+    /**
+     * True if {@code authorLastName} exactly matches one of the (normalized) words across any
+     * element of the given author-name array - a whole-word match, not a substring match, so a
+     * last name like "White" doesn't match "Whitehead" or "Fitzwhite".
+     */
+    private boolean jsonArrayHasExactAuthorWordMatch(JsonNode array, String authorLastName) {
+        String normalizedLastName = normalize(authorLastName);
+        if (normalizedLastName.isEmpty()) {
+            return false;
+        }
         for (JsonNode element : array) {
-            if (element.asText("").toLowerCase(Locale.ROOT).contains(needle)) {
-                return true;
+            for (String word : normalize(element.asText("")).split(" ")) {
+                if (word.equals(normalizedLastName)) {
+                    return true;
+                }
             }
         }
         return false;

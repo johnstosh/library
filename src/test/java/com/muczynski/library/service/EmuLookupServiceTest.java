@@ -15,11 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,7 +69,7 @@ class EmuLookupServiceTest {
         book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_WITH_ALL_FORMATS);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -91,9 +91,12 @@ class EmuLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_EBOOK_ONLY);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -110,9 +113,14 @@ class EmuLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Nonexistent Book Title");
+        // Simulate stale availability from a previous lookup (or a manual override) that a
+        // fresh "not held" result must clear rather than leave untouched.
+        book.setEmuAudioAvailable(true);
+        book.setEmuPaperAvailable(true);
+        book.setEmuEbookAvailable(true);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_NO_MATCH);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -121,6 +129,13 @@ class EmuLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
         assertEquals("Not held by EMU Halle Library", book.getEmuLookupError());
+
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertFalse(book.getEmuAudioAvailable());
+        assertFalse(book.getEmuPaperAvailable());
+        assertFalse(book.getEmuEbookAvailable());
     }
 
     @Test
@@ -130,7 +145,7 @@ class EmuLookupServiceTest {
         book.setTitle("Test Book");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenThrow(new RuntimeException("connection timed out"));
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -154,9 +169,12 @@ class EmuLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book, c. 2 (DVD)");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_WITH_ALL_FORMATS);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -165,9 +183,9 @@ class EmuLookupServiceTest {
         assertTrue(result.isSuccess());
         assertTrue(result.getEbookAvailable());
 
-        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<URI> urlCaptor = ArgumentCaptor.forClass(URI.class);
         verify(emuRestTemplate).getForObject(urlCaptor.capture(), eq(String.class));
-        String url = urlCaptor.getValue();
+        String url = urlCaptor.getValue().toString();
         assertTrue(url.contains("Test+Book"));
         assertFalse(url.toLowerCase(java.util.Locale.ROOT).contains("dvd"));
     }
@@ -177,15 +195,20 @@ class EmuLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Crucial Conversations: Tools for Talking When Stakes Are High");
+        Author author = new Author();
+        author.setName("Kerry Patterson");
+        book.setAuthor(author);
 
+        // Truncated title is only 2 words, so an author match is required to confirm it.
         String responseShortTitle = """
                 {"info":{"totalResultsLocal":1},"docs":[
-                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Crucial Conversations"],"format":["300 pages"]}}}
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Crucial Conversations"],"format":["300 pages"]},
+                   "addata":{"au":["Patterson, Kerry"]}}}
                 ]}
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_NO_MATCH, responseShortTitle);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -212,7 +235,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseNoAuthor);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -222,11 +245,14 @@ class EmuLookupServiceTest {
         assertTrue(result.getPaperAvailable());
         // Matched on the first (title + author) attempt despite the entry having no author on
         // record, since the title is long enough (>4 words) to be trusted on its own.
-        verify(emuRestTemplate, times(1)).getForObject(anyString(), eq(String.class));
+        verify(emuRestTemplate, times(1)).getForObject(any(URI.class), eq(String.class));
     }
 
     @Test
     void lookupAndUpdateBook_doesNotMatchAuthorlessEntry_whenTitleIsShort() {
+        // A short (<=4 word) title always needs an author match, on every search attempt - an
+        // entry with no author on record can never satisfy that, regardless of which query
+        // variant found it.
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Short Title");
@@ -241,16 +267,14 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseNoAuthor);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
         EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
 
-        // Still succeeds overall via the title-only fallback attempt, but only after the
-        // first (title + author) attempt correctly rejected the authorless short-title entry.
-        assertTrue(result.isSuccess());
-        verify(emuRestTemplate, times(2)).getForObject(anyString(), eq(String.class));
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
     }
 
     @Test
@@ -266,7 +290,7 @@ class EmuLookupServiceTest {
                 """;
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(emuRestTemplate.getForObject(anyString(), eq(String.class)))
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(responseCentralOnly);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -274,5 +298,110 @@ class EmuLookupServiceTest {
 
         assertFalse(result.isSuccess());
         assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedTitleStartingWithSameWord_noAuthor() {
+        // Regression test: a book titled just "Ellen" with no author on record must not match
+        // an unrelated EMU title that merely starts with the same word.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Ellen");
+
+        String responseUnrelated = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Ellen G White Story"],"format":["300 pages"]}}}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedLongerTitle_regressionForJoshua() {
+        // Regression test from the real reported bug: "Joshua" falsely matched an unrelated
+        // "Joshua in a Troubled World".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Joshua");
+
+        String responseUnrelated = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Joshua in a Troubled World"],"format":["300 pages"]}}}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchSubstringAuthorName() {
+        // Author matching is a whole-word match, not a substring match: our author last name
+        // "White" must not match an entry whose author is "Whitehead, John".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseDifferentAuthor = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Short Title"],"format":["300 pages"]},
+                   "addata":{"au":["Whitehead, John"]}}}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(responseDifferentAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesExactAuthorWordAmongAdditionalAuthors() {
+        // Author matching checks the "addau" (additional authors) array too, word by word.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseMatchingAuthor = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Short Title"],"format":["300 pages"]},
+                   "addata":{"au":["Main, Author"],"addau":["White, Ellen G."]}}}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(responseMatchingAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
     }
 }

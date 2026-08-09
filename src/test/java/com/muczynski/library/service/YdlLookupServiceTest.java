@@ -94,6 +94,9 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -113,6 +116,11 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Nonexistent Book Title");
+        // Simulate stale availability from a previous lookup (or a manual override) that a
+        // fresh "not held" result must clear rather than leave untouched.
+        book.setYdlAudioAvailable(true);
+        book.setYdlPaperAvailable(true);
+        book.setYdlEbookAvailable(true);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -124,6 +132,13 @@ class YdlLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not held by YDL", result.getErrorMessage());
         assertEquals("Not held by YDL", book.getYdlLookupError());
+
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertFalse(book.getYdlAudioAvailable());
+        assertFalse(book.getYdlPaperAvailable());
+        assertFalse(book.getYdlEbookAvailable());
     }
 
     @Test
@@ -157,6 +172,9 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book, c. 2 (DVD)");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -172,7 +190,7 @@ class YdlLookupServiceTest {
         ArgumentCaptor<HttpEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(ydlRestTemplate).postForObject(anyString(), captor.capture(), any());
         String searchText = (String) captor.getValue().getBody().get("searchText");
-        assertEquals("\"Test Book\"", searchText);
+        assertEquals("\"Test Book\" Author", searchText);
     }
 
     @Test
@@ -180,10 +198,14 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Crucial Conversations: Tools for Talking When Stakes Are High");
+        Author author = new Author();
+        author.setName("Kerry Patterson");
+        book.setAuthor(author);
 
+        // Truncated title is only 2 words, so an author match is required to confirm it.
         String responseShortTitle = """
                 {"totalPages":1,"page":0,"totalResults":1,"data":[
-                  {"title":"Crucial Conversations",
+                  {"title":"Crucial Conversations","primaryAgent":{"label":"Patterson, Kerry"},
                    "materialTabs":[{"name":"Book","type":"physical"}]}
                 ]}
                 """;
@@ -232,6 +254,9 @@ class YdlLookupServiceTest {
 
     @Test
     void lookupAndUpdateBook_doesNotMatchAuthorlessEntry_whenTitleIsShort() {
+        // A short (<=4 word) title always needs an author match, on every search attempt -
+        // an entry with no author on record can never satisfy that, regardless of which
+        // query variant found it.
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Short Title");
@@ -253,9 +278,174 @@ class YdlLookupServiceTest {
 
         YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
 
-        // Still succeeds overall via the title-only fallback attempt, but only after the
-        // first (title + author) attempt correctly rejected the authorless short-title entry.
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedTitleStartingWithSameWord_noAuthor() {
+        // Regression test: a book titled just "Ellen" with no author on record must not match
+        // an unrelated YDL title that merely starts with the same word, e.g. "Ellen G White Story".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Ellen");
+
+        String responseUnrelated = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Ellen G White Story",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchUnrelatedLongerTitle_regressionForJoshua() {
+        // Regression test from the real reported bug: "Joshua" falsely matched YDL's
+        // "Joshua in a Troubled World".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Joshua");
+
+        String responseUnrelated = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Joshua in a Troubled World",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseUnrelated);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchMidWordPrefix() {
+        // "Ellen" must not match "Ellenwood" - not a word-boundary prefix, just shared letters.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Ellen");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        String responseMidWord = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Ellenwood","primaryAgent":{"label":"Author, Test"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseMidWord);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchWhenTitlesDifferInLength_noFuzzyMatching() {
+        // Fuzzy/prefix title matching has been removed entirely: a short title that is only
+        // the "core" of a longer YDL title (with a subtitle we don't have) no longer matches
+        // by itself, even with a corroborating author. Our own colon-truncation cascade is the
+        // supported way to bridge subtitle differences (see the fallback test above) - it
+        // still requires an exact match against the truncated candidate title.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Crucial Conversations");
+        Author author = new Author();
+        author.setName("Kerry Patterson");
+        book.setAuthor(author);
+
+        String responseLongerTitle = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Crucial Conversations Tools For Talking When Stakes Are High",
+                   "primaryAgent":{"label":"Patterson, Kerry"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseLongerTitle);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchSubstringAuthorName() {
+        // Author matching is a whole-word match, not a substring match: our author last name
+        // "White" must not match an entry whose author label is "Whitehead, John".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseDifferentAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Short Title","primaryAgent":{"label":"Whitehead, John"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseDifferentAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesExactAuthorWordAmongMultipleWords() {
+        // Author matching checks each word in the label individually, so a "Last, First"
+        // formatted label still matches on the last-name word.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseMatchingAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Short Title","primaryAgent":{"label":"White, Ellen G."},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseMatchingAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
         assertTrue(result.isSuccess());
-        verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
     }
 }
