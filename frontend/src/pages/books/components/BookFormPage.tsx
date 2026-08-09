@@ -212,15 +212,20 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupYdl.mutateAsync(book.id)
-      if (result.success) {
+      // The backend returns definite true/false availability whenever it completed a search
+      // (whether or not a match was found) - only omits them on a hard error (network failure,
+      // temporary title) where availability is genuinely unknown and shouldn't be touched.
+      if (typeof result.audioAvailable === 'boolean') {
         setFormData({
           ...formData,
-          ydlAudioAvailable: result.audioAvailable ?? false,
+          ydlAudioAvailable: result.audioAvailable,
           ydlPaperAvailable: result.paperAvailable ?? false,
           ydlEbookAvailable: result.ebookAvailable ?? false,
         })
-        setSuccessMessage(`YDL availability updated for "${result.matchedTitle}"`)
         setHasUnsavedChanges(true)
+      }
+      if (result.success) {
+        setSuccessMessage(`YDL availability updated for "${result.matchedTitle}"`)
       } else {
         setError(result.errorMessage || 'Not held by YDL')
       }
@@ -237,15 +242,20 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupEmu.mutateAsync(book.id)
-      if (result.success) {
+      // The backend returns definite true/false availability whenever it completed a search
+      // (whether or not a match was found) - only omits them on a hard error (network failure,
+      // temporary title) where availability is genuinely unknown and shouldn't be touched.
+      if (typeof result.audioAvailable === 'boolean') {
         setFormData({
           ...formData,
-          emuAudioAvailable: result.audioAvailable ?? false,
+          emuAudioAvailable: result.audioAvailable,
           emuPaperAvailable: result.paperAvailable ?? false,
           emuEbookAvailable: result.ebookAvailable ?? false,
         })
-        setSuccessMessage(`EMU availability updated for "${result.matchedTitle}"`)
         setHasUnsavedChanges(true)
+      }
+      if (result.success) {
+        setSuccessMessage(`EMU availability updated for "${result.matchedTitle}"`)
       } else {
         setError(result.errorMessage || 'Not held by EMU Halle Library')
       }

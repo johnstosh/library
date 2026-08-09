@@ -111,12 +111,20 @@ public class YdlLookupService {
             }
 
             if (matches.isEmpty()) {
+                // A completed search that found nothing is a definitive answer - clear any
+                // stale availability from a previous lookup rather than leaving it untouched.
+                book.setYdlAudioAvailable(false);
+                book.setYdlPaperAvailable(false);
+                book.setYdlEbookAvailable(false);
                 book.setYdlLastChecked(LocalDateTime.now());
                 book.setYdlLookupError("Not held by YDL");
                 bookRepository.save(book);
                 return YdlLookupResultDto.builder()
                         .bookId(book.getId())
                         .success(false)
+                        .audioAvailable(false)
+                        .paperAvailable(false)
+                        .ebookAvailable(false)
                         .errorMessage("Not held by YDL")
                         .build();
             }

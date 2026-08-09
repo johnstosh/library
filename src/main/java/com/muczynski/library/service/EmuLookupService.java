@@ -112,12 +112,20 @@ public class EmuLookupService {
             }
 
             if (matches.isEmpty()) {
+                // A completed search that found nothing is a definitive answer - clear any
+                // stale availability from a previous lookup rather than leaving it untouched.
+                book.setEmuAudioAvailable(false);
+                book.setEmuPaperAvailable(false);
+                book.setEmuEbookAvailable(false);
                 book.setEmuLastChecked(LocalDateTime.now());
                 book.setEmuLookupError("Not held by EMU Halle Library");
                 bookRepository.save(book);
                 return EmuLookupResultDto.builder()
                         .bookId(book.getId())
                         .success(false)
+                        .audioAvailable(false)
+                        .paperAvailable(false)
+                        .ebookAvailable(false)
                         .errorMessage("Not held by EMU Halle Library")
                         .build();
             }

@@ -116,6 +116,11 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Nonexistent Book Title");
+        // Simulate stale availability from a previous lookup (or a manual override) that a
+        // fresh "not held" result must clear rather than leave untouched.
+        book.setYdlAudioAvailable(true);
+        book.setYdlPaperAvailable(true);
+        book.setYdlEbookAvailable(true);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -127,6 +132,13 @@ class YdlLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not held by YDL", result.getErrorMessage());
         assertEquals("Not held by YDL", book.getYdlLookupError());
+
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertFalse(book.getYdlAudioAvailable());
+        assertFalse(book.getYdlPaperAvailable());
+        assertFalse(book.getYdlEbookAvailable());
     }
 
     @Test

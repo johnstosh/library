@@ -113,6 +113,11 @@ class EmuLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Nonexistent Book Title");
+        // Simulate stale availability from a previous lookup (or a manual override) that a
+        // fresh "not held" result must clear rather than leave untouched.
+        book.setEmuAudioAvailable(true);
+        book.setEmuPaperAvailable(true);
+        book.setEmuEbookAvailable(true);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
@@ -124,6 +129,13 @@ class EmuLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
         assertEquals("Not held by EMU Halle Library", book.getEmuLookupError());
+
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertFalse(book.getEmuAudioAvailable());
+        assertFalse(book.getEmuPaperAvailable());
+        assertFalse(book.getEmuEbookAvailable());
     }
 
     @Test
