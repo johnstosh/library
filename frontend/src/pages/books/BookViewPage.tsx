@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
+import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil, PiTrash, PiArrowLeft, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
@@ -19,6 +20,7 @@ export function BookViewPage() {
   const cloneBook = useCloneBook()
   const deleteBook = useDeleteBook()
   const lookupYdl = useLookupSingleYdl()
+  const lookupEmu = useLookupSingleEmu()
   const isLibrarian = useIsLibrarian()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
@@ -28,6 +30,14 @@ export function BookViewPage() {
       await lookupYdl.mutateAsync(bookId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up YDL availability')
+    }
+  }
+
+  const handleEmuLookup = async () => {
+    try {
+      await lookupEmu.mutateAsync(bookId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up EMU availability')
     }
   }
 
@@ -403,6 +413,97 @@ export function BookViewPage() {
             {book.ydlLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="ydl-lookup-error">
                 {book.ydlLookupError}
+              </p>
+            )}
+          </div>
+
+          {/* EMU Availability */}
+          <div className="bg-gray-50 rounded-lg p-6" data-test="emu-availability-section">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">EMU Availability</h2>
+              <div className="flex items-center gap-3">
+                <a
+                  href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${book.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  data-test="book-view-emu-check-link"
+                >
+                  Check EMU
+                </a>
+                {isLibrarian && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEmuLookup}
+                    isLoading={lookupEmu.isPending}
+                    disabled={lookupEmu.isPending}
+                    leftIcon={<PiMagnifyingGlass />}
+                    data-test="book-view-emu-lookup"
+                  >
+                    {book.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div data-test="emu-audio-status">
+                <p className="text-sm font-medium text-gray-500">Audio Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.emuAudioAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.emuAudioAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+              <div data-test="emu-paper-status">
+                <p className="text-sm font-medium text-gray-500">Paper Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.emuPaperAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.emuPaperAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+              <div data-test="emu-ebook-status">
+                <p className="text-sm font-medium text-gray-500">Ebook</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {book.emuEbookAvailable === undefined ? (
+                    'Not checked yet'
+                  ) : book.emuEbookAvailable ? (
+                    <>
+                      <PiCheckCircle className="text-green-600" /> Available
+                    </>
+                  ) : (
+                    <>
+                      <PiXCircle className="text-gray-400" /> Not available
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            {book.emuLastChecked && (
+              <p className="text-xs text-gray-500 mt-3">
+                Last checked: {formatDateTime(book.emuLastChecked)}
+              </p>
+            )}
+            {book.emuLookupError && (
+              <p className="text-xs text-red-600 mt-1" data-test="emu-lookup-error">
+                {book.emuLookupError}
               </p>
             )}
           </div>

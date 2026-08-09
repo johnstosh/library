@@ -48,6 +48,12 @@ public class BookDto {
     private LocalDateTime ydlLastChecked;
     private String ydlLookupError;
 
+    private Boolean emuAudioAvailable;
+    private Boolean emuPaperAvailable;
+    private Boolean emuEbookAvailable;
+    private LocalDateTime emuLastChecked;
+    private String emuLookupError;
+
     /**
      * List of tags for categorizing the book.
      * Tags should be lowercase with only letters, numbers, and dashes.

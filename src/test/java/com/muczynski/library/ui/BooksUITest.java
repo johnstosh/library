@@ -506,6 +506,42 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should display EMU availability section and retry button on book view page")
+    void testEmuAvailabilitySectionVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Click on the book title to navigate to view page
+        page.click("text=Initial Book");
+
+        // Wait for navigation to /books/1
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        // Verify the EMU Availability section and its lookup button are visible for librarian
+        assertThat(page.locator("[data-test='emu-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-lookup']")).containsText("Lookup EMU Availability");
+    }
+
+    @Test
+    @DisplayName("Should show bulk EMU lookup button when a book is selected")
+    void testBulkEmuLookupButtonVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Wait for initial book row
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        // Select the book's row checkbox
+        page.click("[data-test='select-checkbox-1']");
+
+        // Verify the bulk actions toolbar appears with the EMU lookup button
+        assertThat(page.locator("[data-test='bulk-lookup-emu']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-emu']")).containsText("Lookup EMU Availability");
+    }
+
+    @Test
     @DisplayName("Should navigate to edit form from book view page")
     void testEditFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

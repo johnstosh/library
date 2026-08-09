@@ -83,6 +83,27 @@ public class AppConfig {
     }
 
     /**
+     * RestTemplate for the EMU Halle Library (Ex Libris Primo) availability lookup.
+     * Uses a moderate timeout since the lookup runs synchronously per book.
+     */
+    @Bean("emuRestTemplate")
+    public RestTemplate emuRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000); // 15 seconds
+        factory.setReadTimeout(15000); // 15 seconds
+        restTemplate.setRequestFactory(factory);
+
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+
+        return restTemplate;
+    }
+
+    /**
      * Configure ObjectMapper to serialize all datetime types as ISO-8601 strings
      * instead of arrays. This ensures consistent datetime serialization across
      * the application and makes frontend caching comparisons reliable.
