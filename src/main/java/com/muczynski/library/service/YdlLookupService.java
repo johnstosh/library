@@ -245,11 +245,14 @@ public class YdlLookupService {
 
     /**
      * Filters the search results down to entries whose title (and, if provided, author)
-     * reasonably match the book being looked up.
+     * reasonably match the book being looked up. An entry with no author on record at YDL
+     * is still accepted, without requiring an author match, when the title itself is long
+     * enough (more than 4 words) to be a reasonably distinctive match on its own.
      */
     private JsonNode filterMatches(JsonNode entries, String title, String authorLastName) {
         com.fasterxml.jackson.databind.node.ArrayNode matches = objectMapper.createArrayNode();
         String normalizedTitle = normalize(title);
+        int titleWordCount = normalizedTitle.isEmpty() ? 0 : normalizedTitle.split(" ").length;
 
         for (JsonNode entry : entries) {
             String entryTitle = normalize(entry.path("title").asText(""));
@@ -264,7 +267,9 @@ public class YdlLookupService {
             }
             if (authorLastName != null) {
                 String agentLabel = entry.path("primaryAgent").path("label").asText("");
-                if (!agentLabel.toLowerCase(Locale.ROOT).contains(authorLastName.toLowerCase(Locale.ROOT))) {
+                boolean authorMatches = agentLabel.toLowerCase(Locale.ROOT).contains(authorLastName.toLowerCase(Locale.ROOT));
+                boolean noAuthorOnRecordButLongTitleMatch = agentLabel.isEmpty() && titleWordCount > 4;
+                if (!authorMatches && !noAuthorOnRecordButLongTitleMatch) {
                     continue;
                 }
             }

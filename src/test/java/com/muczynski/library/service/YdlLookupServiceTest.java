@@ -22,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -197,5 +198,64 @@ class YdlLookupServiceTest {
         assertTrue(result.isSuccess());
         assertTrue(result.getPaperAvailable());
         assertEquals("Crucial Conversations", result.getMatchedTitle());
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesAuthorlessEntry_whenTitleIsLongEnough() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Crucial Conversations Tools For Talking");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        String responseNoAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Crucial Conversations Tools For Talking",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseNoAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        // Matched on the first (title + author) attempt despite the entry having no author on
+        // record, since the title is long enough (>4 words) to be trusted on its own.
+        verify(ydlRestTemplate, times(1)).postForObject(anyString(), any(HttpEntity.class), any());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchAuthorlessEntry_whenTitleIsShort() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        String responseNoAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Short Title",
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseNoAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        // Still succeeds overall via the title-only fallback attempt, but only after the
+        // first (title + author) attempt correctly rejected the authorless short-title entry.
+        assertTrue(result.isSuccess());
+        verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
     }
 }
