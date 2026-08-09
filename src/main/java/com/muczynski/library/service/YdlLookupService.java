@@ -18,9 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Looks up book availability (audio, paper, ebook) at YDL (Ypsilanti District Library) via
@@ -35,6 +38,17 @@ public class YdlLookupService {
 
     private static final String SEARCH_URL = "https://na4.iiivega.com/api/search-result/search/format-groups";
     private static final String CUSTOMER_DOMAIN = "ypsilantidl.na4.iiivega.com";
+
+    /**
+     * Matches trailing catalog noise our own titles often carry (copy numbers, physical
+     * format labels) that YDL's catalog titles don't have, e.g. ", c. 2", " (DVD)",
+     * ", Audio CD". Applied repeatedly so stacked suffixes (", c. 2, Audio CD") are all
+     * stripped before the title is used to search or match against YDL.
+     */
+    private static final Pattern TRAILING_SUFFIX_PATTERN = Pattern.compile(
+            "(?i)(,?\\s*c\\.?\\s*\\d+"
+                    + "|\\s*\\((?:dvd|cd|vhs|blu-?ray|book on cd|large print|audiobook)\\)"
+                    + "|,\\s*(?:audio\\s*cd|book\\s*on\\s*cd|large\\s*print|dvd|cd|vhs))\\s*$");
 
     private final BookRepository bookRepository;
     private final RestTemplate ydlRestTemplate;
@@ -69,7 +83,7 @@ public class YdlLookupService {
                     .build();
         }
 
-        String title = book.getTitle();
+        String cleanedTitle = cleanTitle(book.getTitle());
         String authorLastName = null;
         if (book.getAuthor() != null && book.getAuthor().getName() != null) {
             String[] parts = book.getAuthor().getName().trim().split("\\s+");
@@ -79,13 +93,15 @@ public class YdlLookupService {
         }
 
         try {
-            JsonNode entries = search(title, authorLastName);
-            JsonNode matches = filterMatches(entries, title, authorLastName);
-
-            if (matches.isEmpty() && authorLastName != null) {
-                // Fallback: title only, in case the author name doesn't match YDL's records
-                entries = search(title, null);
-                matches = filterMatches(entries, title, null);
+            JsonNode matches = objectMapper.createArrayNode();
+            for (String[] attempt : buildSearchAttempts(cleanedTitle, authorLastName)) {
+                String attemptTitle = attempt[0];
+                String attemptAuthor = attempt[1];
+                JsonNode entries = search(attemptTitle, attemptAuthor);
+                matches = filterMatches(entries, attemptTitle, attemptAuthor);
+                if (!matches.isEmpty()) {
+                    break;
+                }
             }
 
             if (matches.isEmpty()) {
@@ -102,7 +118,7 @@ public class YdlLookupService {
             boolean audio = false;
             boolean paper = false;
             boolean ebook = false;
-            String matchedTitle = matches.get(0).path("title").asText(title);
+            String matchedTitle = matches.get(0).path("title").asText(cleanedTitle);
 
             for (JsonNode entry : matches) {
                 for (JsonNode tab : entry.path("materialTabs")) {
@@ -147,6 +163,50 @@ public class YdlLookupService {
                     .errorMessage("Error: " + e.getMessage())
                     .build();
         }
+    }
+
+    /**
+     * Builds the ordered list of (title, authorLastName) attempts to try against YDL: the
+     * cleaned title with and without the author, then, if the title has a colon-delimited
+     * subtitle, the truncated core title with and without the author. This mirrors the LOC
+     * lookup's fallback cascade and handles cases where our catalog's title includes a
+     * subtitle YDL's doesn't carry (or vice versa).
+     */
+    private List<String[]> buildSearchAttempts(String cleanedTitle, String authorLastName) {
+        List<String[]> attempts = new ArrayList<>();
+        if (authorLastName != null) {
+            attempts.add(new String[]{cleanedTitle, authorLastName});
+        }
+        attempts.add(new String[]{cleanedTitle, null});
+
+        int colonIndex = cleanedTitle.indexOf(':');
+        if (colonIndex > 0) {
+            String truncated = cleanedTitle.substring(0, colonIndex).trim();
+            if (!truncated.isEmpty() && !truncated.equalsIgnoreCase(cleanedTitle)) {
+                if (authorLastName != null) {
+                    attempts.add(new String[]{truncated, authorLastName});
+                }
+                attempts.add(new String[]{truncated, null});
+            }
+        }
+        return attempts;
+    }
+
+    /**
+     * Strips trailing catalog noise (copy numbers, physical format labels) from a title
+     * before it's used to search or match against YDL. See {@link #TRAILING_SUFFIX_PATTERN}.
+     */
+    private String cleanTitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        String cleaned = title.trim();
+        String previous;
+        do {
+            previous = cleaned;
+            cleaned = TRAILING_SUFFIX_PATTERN.matcher(cleaned).replaceAll("").trim();
+        } while (!cleaned.equals(previous) && !cleaned.isEmpty());
+        return cleaned.isEmpty() ? title.trim() : cleaned;
     }
 
     /**
