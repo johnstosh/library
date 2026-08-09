@@ -320,19 +320,30 @@ export function BookViewPage() {
           <div className="bg-gray-50 rounded-lg p-6" data-test="ydl-availability-section">
             <div className="flex items-start justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-700">YDL Availability</h2>
-              {isLibrarian && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleYdlLookup}
-                  isLoading={lookupYdl.isPending}
-                  disabled={lookupYdl.isPending}
-                  leftIcon={<PiMagnifyingGlass />}
-                  data-test="book-view-ydl-lookup"
+              <div className="flex items-center gap-3">
+                <a
+                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${book.title}"`)}&searchType=everything&pageSize=40`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  data-test="book-view-ydl-check-link"
                 >
-                  {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
-                </Button>
-              )}
+                  Check YDL
+                </a>
+                {isLibrarian && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleYdlLookup}
+                    isLoading={lookupYdl.isPending}
+                    disabled={lookupYdl.isPending}
+                    leftIcon={<PiMagnifyingGlass />}
+                    data-test="book-view-ydl-lookup"
+                  >
+                    {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div data-test="ydl-audio-status">
