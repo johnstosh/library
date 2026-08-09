@@ -94,11 +94,17 @@ public class YdlLookupService {
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
-            for (String[] attempt : buildSearchAttempts(cleanedTitle, authorLastName)) {
-                String attemptTitle = attempt[0];
-                String attemptAuthor = attempt[1];
-                JsonNode entries = search(attemptTitle, attemptAuthor);
-                matches = filterMatches(entries, attemptTitle, attemptAuthor);
+            for (String candidateTitle : buildTitleCandidates(cleanedTitle)) {
+                for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                    JsonNode entries = search(candidateTitle, queryAuthor);
+                    // Verification always checks the book's real author, regardless of whether
+                    // this particular query included it in the search text - the query variants
+                    // exist only to improve YDL's hit rate, not to relax what counts as a match.
+                    matches = filterMatches(entries, candidateTitle, authorLastName);
+                    if (!matches.isEmpty()) {
+                        break;
+                    }
+                }
                 if (!matches.isEmpty()) {
                     break;
                 }
@@ -166,30 +172,40 @@ public class YdlLookupService {
     }
 
     /**
-     * Builds the ordered list of (title, authorLastName) attempts to try against YDL: the
-     * cleaned title with and without the author, then, if the title has a colon-delimited
-     * subtitle, the truncated core title with and without the author. This mirrors the LOC
-     * lookup's fallback cascade and handles cases where our catalog's title includes a
-     * subtitle YDL's doesn't carry (or vice versa).
+     * Builds the ordered list of title candidates to search for: the cleaned title, then, if
+     * it has a colon-delimited subtitle, the truncated core title too - handling cases where
+     * our catalog's title includes a subtitle YDL's doesn't carry (or vice versa). Each
+     * candidate must still be an exact match (after normalization) against a YDL result to
+     * count - this only widens what we search for, not what counts as a match.
      */
-    private List<String[]> buildSearchAttempts(String cleanedTitle, String authorLastName) {
-        List<String[]> attempts = new ArrayList<>();
-        if (authorLastName != null) {
-            attempts.add(new String[]{cleanedTitle, authorLastName});
-        }
-        attempts.add(new String[]{cleanedTitle, null});
+    private List<String> buildTitleCandidates(String cleanedTitle) {
+        List<String> candidates = new ArrayList<>();
+        candidates.add(cleanedTitle);
 
         int colonIndex = cleanedTitle.indexOf(':');
         if (colonIndex > 0) {
             String truncated = cleanedTitle.substring(0, colonIndex).trim();
             if (!truncated.isEmpty() && !truncated.equalsIgnoreCase(cleanedTitle)) {
-                if (authorLastName != null) {
-                    attempts.add(new String[]{truncated, authorLastName});
-                }
-                attempts.add(new String[]{truncated, null});
+                candidates.add(truncated);
             }
         }
-        return attempts;
+        return candidates;
+    }
+
+    /**
+     * Builds the ordered list of author values to include in the YDL search text itself
+     * (title + author search first, since it's more likely to rank the real match at the top;
+     * title-only as a fallback). This only affects what we search for - {@link #filterMatches}
+     * always verifies against the book's real author regardless of which query found the
+     * result.
+     */
+    private List<String> buildQueryAuthors(String authorLastName) {
+        List<String> queryAuthors = new ArrayList<>();
+        if (authorLastName != null) {
+            queryAuthors.add(authorLastName);
+        }
+        queryAuthors.add(null);
+        return queryAuthors;
     }
 
     /**
@@ -244,19 +260,16 @@ public class YdlLookupService {
     }
 
     /**
-     * Filters the search results down to entries whose title (and, if provided, author)
-     * reasonably match the book being looked up.
+     * Filters the search results down to entries that exactly match the book being looked up.
      *
-     * <p>A fuzzy (word-boundary prefix) title match is only trusted when it's corroborated by
-     * a matching author — e.g. our "Crucial Conversations" matching YDL's "Crucial
-     * Conversations: Tools for Talking..." because the author agrees. Without any author to
-     * search with (or to corroborate against), only an exact title match is accepted: a bare
-     * prefix match on a short, generic title/name like "Ellen" or "Joshua" would otherwise
-     * match any number of unrelated titles that merely start with the same word (e.g. "Joshua
-     * in a Troubled World"), which is exactly the false-positive flood this guards against.
-     * An entry with no author on record at YDL is still accepted on an exact title match,
-     * without requiring an author match, when the title itself is long enough (more than 4
-     * words) to be a reasonably distinctive match on its own.
+     * <p>No fuzzy/substring matching of any kind: the title must be exactly equal (after
+     * normalization) to count at all - this is what stops a short, generic title/name like
+     * "Ellen" or "Joshua" from matching an unrelated title that merely starts with or contains
+     * the same word (e.g. "Joshua in a Troubled World"). Beyond that, an exact title match by
+     * itself is only trusted when the title is more than 4 words long, distinctive enough on
+     * its own; a title of 4 words or fewer additionally requires the book's author's last name
+     * to exactly match one of the words in the YDL entry's author label (again no substring
+     * matching, so "White" doesn't match "Whitehead").
      */
     private JsonNode filterMatches(JsonNode entries, String title, String authorLastName) {
         com.fasterxml.jackson.databind.node.ArrayNode matches = objectMapper.createArrayNode();
@@ -265,44 +278,41 @@ public class YdlLookupService {
 
         for (JsonNode entry : entries) {
             String entryTitle = normalize(entry.path("title").asText(""));
-            if (entryTitle.isEmpty()) {
+            if (entryTitle.isEmpty() || !entryTitle.equals(normalizedTitle)) {
                 continue;
             }
 
-            boolean exactTitleMatch = entryTitle.equals(normalizedTitle);
-            boolean prefixTitleMatch = !exactTitleMatch
-                    && normalizedTitle.length() > 3 && entryTitle.length() > 3
-                    && (isWordBoundaryPrefix(entryTitle, normalizedTitle) || isWordBoundaryPrefix(normalizedTitle, entryTitle));
-            if (!exactTitleMatch && !prefixTitleMatch) {
-                continue;
-            }
-
-            if (authorLastName == null) {
-                // Nothing to corroborate a fuzzy match with - only trust an exact title match.
-                if (!exactTitleMatch) {
+            if (titleWordCount <= 4) {
+                if (authorLastName == null) {
                     continue;
                 }
-            } else {
                 String agentLabel = entry.path("primaryAgent").path("label").asText("");
-                boolean authorMatches = agentLabel.toLowerCase(Locale.ROOT).contains(authorLastName.toLowerCase(Locale.ROOT));
-                boolean noAuthorOnRecordButLongExactMatch = agentLabel.isEmpty() && exactTitleMatch && titleWordCount > 4;
-                if (!authorMatches && !noAuthorOnRecordButLongExactMatch) {
+                if (!hasExactAuthorWordMatch(agentLabel, authorLastName)) {
                     continue;
                 }
             }
+
             matches.add(entry);
         }
         return matches;
     }
 
     /**
-     * True if {@code longer} starts with {@code prefix} at a word boundary — i.e. {@code prefix}
-     * isn't just the leading letters of a longer, different word (so "ellen" matches "ellen g
-     * white" but not "ellenwood").
+     * True if {@code authorLastName} exactly matches one of the (normalized) words in
+     * {@code agentLabel} - a whole-word match, not a substring match, so a last name like
+     * "White" doesn't match "Whitehead" or "Fitzwhite".
      */
-    private boolean isWordBoundaryPrefix(String longer, String prefix) {
-        return longer.startsWith(prefix)
-                && (longer.length() == prefix.length() || longer.charAt(prefix.length()) == ' ');
+    private boolean hasExactAuthorWordMatch(String agentLabel, String authorLastName) {
+        String normalizedLastName = normalize(authorLastName);
+        if (normalizedLastName.isEmpty()) {
+            return false;
+        }
+        for (String word : normalize(agentLabel).split(" ")) {
+            if (word.equals(normalizedLastName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String normalize(String value) {

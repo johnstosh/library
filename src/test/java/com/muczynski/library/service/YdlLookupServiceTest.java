@@ -94,6 +94,9 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -157,6 +160,9 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book, c. 2 (DVD)");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
@@ -172,7 +178,7 @@ class YdlLookupServiceTest {
         ArgumentCaptor<HttpEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(ydlRestTemplate).postForObject(anyString(), captor.capture(), any());
         String searchText = (String) captor.getValue().getBody().get("searchText");
-        assertEquals("\"Test Book\"", searchText);
+        assertEquals("\"Test Book\" Author", searchText);
     }
 
     @Test
@@ -180,10 +186,14 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Crucial Conversations: Tools for Talking When Stakes Are High");
+        Author author = new Author();
+        author.setName("Kerry Patterson");
+        book.setAuthor(author);
 
+        // Truncated title is only 2 words, so an author match is required to confirm it.
         String responseShortTitle = """
                 {"totalPages":1,"page":0,"totalResults":1,"data":[
-                  {"title":"Crucial Conversations",
+                  {"title":"Crucial Conversations","primaryAgent":{"label":"Patterson, Kerry"},
                    "materialTabs":[{"name":"Book","type":"physical"}]}
                 ]}
                 """;
@@ -232,6 +242,9 @@ class YdlLookupServiceTest {
 
     @Test
     void lookupAndUpdateBook_doesNotMatchAuthorlessEntry_whenTitleIsShort() {
+        // A short (<=4 word) title always needs an author match, on every search attempt -
+        // an entry with no author on record can never satisfy that, regardless of which
+        // query variant found it.
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Short Title");
@@ -253,10 +266,8 @@ class YdlLookupServiceTest {
 
         YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
 
-        // Still succeeds overall via the title-only fallback attempt, but only after the
-        // first (title + author) attempt correctly rejected the authorless short-title entry.
-        assertTrue(result.isSuccess());
-        verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
     }
 
     @Test
@@ -339,9 +350,12 @@ class YdlLookupServiceTest {
     }
 
     @Test
-    void lookupAndUpdateBook_matchesShortTitleAgainstLongerYdlTitle_whenAuthorCorroborates() {
-        // A genuine prefix match (our title is the short "core" of YDL's longer subtitled
-        // title) is still accepted when the author matches, corroborating the fuzzy title match.
+    void lookupAndUpdateBook_doesNotMatchWhenTitlesDifferInLength_noFuzzyMatching() {
+        // Fuzzy/prefix title matching has been removed entirely: a short title that is only
+        // the "core" of a longer YDL title (with a subtitle we don't have) no longer matches
+        // by itself, even with a corroborating author. Our own colon-truncation cascade is the
+        // supported way to bridge subtitle differences (see the fallback test above) - it
+        // still requires an exact match against the truncated candidate title.
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Crucial Conversations");
@@ -364,7 +378,62 @@ class YdlLookupServiceTest {
 
         YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
 
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_doesNotMatchSubstringAuthorName() {
+        // Author matching is a whole-word match, not a substring match: our author last name
+        // "White" must not match an entry whose author label is "Whitehead, John".
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseDifferentAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Short Title","primaryAgent":{"label":"Whitehead, John"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseDifferentAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesExactAuthorWordAmongMultipleWords() {
+        // Author matching checks each word in the label individually, so a "Last, First"
+        // formatted label still matches on the last-name word.
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Short Title");
+        Author author = new Author();
+        author.setName("Ellen White");
+        book.setAuthor(author);
+
+        String responseMatchingAuthor = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Short Title","primaryAgent":{"label":"White, Ellen G."},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(responseMatchingAuthor);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
         assertTrue(result.isSuccess());
-        assertTrue(result.getPaperAvailable());
     }
 }
