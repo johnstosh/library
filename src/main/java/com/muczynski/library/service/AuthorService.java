@@ -232,15 +232,11 @@ public class AuthorService {
 
     /**
      * Get all author summaries (id + lastModified) for caching.
+     * Uses a projection so @Lob biography fields are not loaded.
      */
     public List<AuthorSummaryDto> getAllAuthorSummaries() {
-        return authorRepository.findAll().stream()
-                .map(author -> {
-                    AuthorSummaryDto dto = new AuthorSummaryDto();
-                    dto.setId(author.getId());
-                    dto.setLastModified(author.getLastModified());
-                    return dto;
-                })
+        return authorRepository.findAllSummaries().stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -248,14 +244,8 @@ public class AuthorService {
      * Get summaries for authors without a brief biography.
      */
     public List<AuthorSummaryDto> getSummariesWithoutDescription() {
-        return authorRepository.findAll().stream()
-                .filter(author -> author.getBriefBiography() == null || author.getBriefBiography().trim().isEmpty())
-                .map(author -> {
-                    AuthorSummaryDto dto = new AuthorSummaryDto();
-                    dto.setId(author.getId());
-                    dto.setLastModified(author.getLastModified());
-                    return dto;
-                })
+        return authorRepository.findSummariesWithoutDescription().stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -263,14 +253,8 @@ public class AuthorService {
      * Get summaries for authors with zero books.
      */
     public List<AuthorSummaryDto> getSummariesWithZeroBooks() {
-        return authorRepository.findAll().stream()
-                .filter(author -> bookRepository.countByAuthorId(author.getId()) == 0)
-                .map(author -> {
-                    AuthorSummaryDto dto = new AuthorSummaryDto();
-                    dto.setId(author.getId());
-                    dto.setLastModified(author.getLastModified());
-                    return dto;
-                })
+        return authorRepository.findSummariesWithZeroBooks().stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -278,14 +262,8 @@ public class AuthorService {
      * Get summaries for authors without a Grokipedia URL.
      */
     public List<AuthorSummaryDto> getSummariesWithoutGrokipedia() {
-        return authorRepository.findAll().stream()
-                .filter(author -> author.getGrokipediaUrl() == null || author.getGrokipediaUrl().trim().isEmpty())
-                .map(author -> {
-                    AuthorSummaryDto dto = new AuthorSummaryDto();
-                    dto.setId(author.getId());
-                    dto.setLastModified(author.getLastModified());
-                    return dto;
-                })
+        return authorRepository.findSummariesWithoutGrokipedia().stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -306,14 +284,19 @@ public class AuthorService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        return authorRepository.findAllById(authorIds).stream()
-                .map(author -> {
-                    AuthorSummaryDto dto = new AuthorSummaryDto();
-                    dto.setId(author.getId());
-                    dto.setLastModified(author.getLastModified());
-                    return dto;
-                })
+        if (authorIds.isEmpty()) {
+            return List.of();
+        }
+        return authorRepository.findSummariesByIds(authorIds).stream()
+                .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
+    }
+
+    private AuthorSummaryDto projectionToSummaryDto(AuthorRepository.AuthorSummaryProjection projection) {
+        AuthorSummaryDto dto = new AuthorSummaryDto();
+        dto.setId(projection.getId());
+        dto.setLastModified(projection.getLastModified());
+        return dto;
     }
 
     /**
