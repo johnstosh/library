@@ -1,7 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
@@ -10,12 +11,14 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { UserTable } from './components/UserTable'
+import { UserFilters } from './components/UserFilters'
+import { applyUserFilters } from '@/utils/userChipFilters'
 import {
   useUsers,
   useDeleteUser,
   useDeleteUsers,
 } from '@/api/users'
-import { useUiStore } from '@/stores/uiStore'
+import { useUiStore, useUsersChips, useUsersSearchQuery } from '@/stores/uiStore'
 import type { UserDto } from '@/types/dtos'
 
 export function UsersPage() {
@@ -23,16 +26,25 @@ export function UsersPage() {
   const [deletingUser, setDeletingUser] = useState<UserDto | null>(null)
   const [showBulkDelete, setShowBulkDelete] = useState(false)
 
-  const { data: users = [], isLoading, isFetching, error } = useUsers()
+  const { data: allUsers = [], isLoading, isFetching, error } = useUsers()
   const deleteUser = useDeleteUser()
   const deleteUsers = useDeleteUsers()
   const toast = useToast()
 
+  const chips = useUsersChips()
+  const searchQuery = useUsersSearchQuery()
   const selectedIds = useUiStore((state) => state.usersTable.selectedIds)
   const selectAll = useUiStore((state) => state.usersTable.selectAll)
   const setSelectedIds = useUiStore((state) => state.setSelectedIds)
   const toggleSelectAll = useUiStore((state) => state.toggleSelectAll)
   const clearSelection = useUiStore((state) => state.clearSelection)
+  const toggleUsersChip = useUiStore((state) => state.toggleUsersChip)
+  const setUsersSearchQuery = useUiStore((state) => state.setUsersSearchQuery)
+
+  const users = useMemo(
+    () => applyUserFilters(allUsers, chips, searchQuery),
+    [allUsers, chips, searchQuery]
+  )
 
   const handleCreate = () => {
     navigate('/users/new')
@@ -135,6 +147,19 @@ export function UsersPage() {
             </div>
           </div>
         )}
+
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <Input
+            type="search"
+            label="Search users"
+            hideLabel
+            placeholder="Search by name, email, or SSO provider..."
+            value={searchQuery}
+            onChange={(e) => setUsersSearchQuery(e.target.value)}
+            data-test="user-search"
+          />
+          <UserFilters chips={chips} onToggle={toggleUsersChip} />
+        </div>
 
         <div className="p-4">
           <UserTable

@@ -12,6 +12,10 @@ import {
   defaultLoanChipFilters,
   type LoanChipFilters,
 } from '@/utils/loanChipFilters'
+import {
+  defaultUserChipFilters,
+  type UserChipFilters,
+} from '@/utils/userChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -31,10 +35,12 @@ type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
 export type BooksChips = BookChipFilters
 export type AuthorsChips = AuthorChipFilters
 export type LoansChips = LoanChipFilters
+export type UsersChips = UserChipFilters
 
 const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
 const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
+const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
 
 interface UiState {
   // Table selection state per feature
@@ -48,6 +54,8 @@ interface UiState {
 
   authorsChips: AuthorsChips
   loansChips: LoansChips
+  usersChips: UsersChips
+  usersSearchQuery: string
 
   // Label filter state for books
   booksLabelFilter: string[]
@@ -65,6 +73,9 @@ interface UiState {
   clearBooksChips: () => void
   toggleAuthorsChip: (chip: keyof AuthorsChips) => void
   clearAuthorsChips: () => void
+  toggleUsersChip: (chip: keyof UsersChips) => void
+  clearUsersChips: () => void
+  setUsersSearchQuery: (query: string) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -77,6 +88,8 @@ export const useUiStore = create<UiState>((set) => ({
   booksChips: { ...defaultBooksChips },
   authorsChips: { ...defaultAuthorsChips },
   loansChips: { ...defaultLoansChips },
+  usersChips: { ...defaultUsersChips },
+  usersSearchQuery: '',
   booksLabelFilter: [],
 
   // Actions
@@ -125,6 +138,15 @@ export const useUiStore = create<UiState>((set) => ({
 
   clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
 
+  toggleUsersChip: (chip) =>
+    set((state) => ({
+      usersChips: { ...state.usersChips, [chip]: !state.usersChips[chip] },
+    })),
+
+  clearUsersChips: () => set({ usersChips: { ...defaultUsersChips } }),
+
+  setUsersSearchQuery: (query) => set({ usersSearchQuery: query }),
+
   toggleRowSelection: (table, id) =>
     set((state) => {
       const tableState = state[table]
@@ -156,4 +178,6 @@ export const useLoansTableSelection = () => useUiStore((state) => state.loansTab
 export const useBooksChips = () => useUiStore((state) => state.booksChips)
 export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
 export const useLoansChips = () => useUiStore((state) => state.loansChips)
+export const useUsersChips = () => useUiStore((state) => state.usersChips)
+export const useUsersSearchQuery = () => useUiStore((state) => state.usersSearchQuery)
 export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)
