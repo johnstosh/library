@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { printLibraryCard, printAllLibraryCards } from '@/api/library-cards'
 import { PiIdentificationCard, PiFilePdf } from 'react-icons/pi'
 import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { useToast } from '@/hooks/useToast'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import type { LibraryCardDesign } from '@/types/dtos'
 
@@ -13,6 +15,7 @@ export function MyLibraryCardPage() {
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [cardDesignSuccess, setCardDesignSuccess] = useState('')
   const [cardDesignError, setCardDesignError] = useState('')
+  const toast = useToast()
   const user = useAuthStore((state) => state.user)
 
   const { data: userSettings } = useUserSettings()
@@ -34,7 +37,7 @@ export function MyLibraryCardPage() {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Failed to generate library card PDF:', error)
-      alert('Failed to generate library card PDF. Please try again.')
+      toast.error('Failed to generate library card PDF. Please try again.')
     } finally {
       setIsGenerating(false)
     }
@@ -56,7 +59,7 @@ export function MyLibraryCardPage() {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Failed to generate all library card PDFs:', error)
-      alert('Failed to generate all library card PDFs. Please try again.')
+      toast.error('Failed to generate all library card PDFs. Please try again.')
     } finally {
       setIsGeneratingAll(false)
     }
@@ -76,12 +79,10 @@ export function MyLibraryCardPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Library Card</h1>
-        <p className="text-gray-600">
-          View and print your personalized library card
-        </p>
-      </div>
+      <PageHeader
+        title="My Library Card"
+        description="View and print your personalized library card"
+      />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {/* Card Preview Section */}

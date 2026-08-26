@@ -2,10 +2,14 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useBranch, useBranchStatistics, useDeleteBranch } from '@/api/branches'
-import { Spinner } from '@/components/progress/Spinner'
-import { PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { PiPencil, PiTrash } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { BackLink } from '@/components/ui/BackLink'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { PageCard } from '@/components/ui/PageCard'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function BranchViewPage() {
   const navigate = useNavigate()
@@ -36,27 +40,17 @@ export function BranchViewPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!branch) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Branch Not Found</h1>
-          <p className="text-gray-600 mb-4">The branch you're looking for doesn't exist.</p>
-          <button
-            onClick={handleBack}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Branches
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="Branch Not Found"
+        entityLabel="branch"
+        onBack={handleBack}
+        backLabel="Return to Branches"
+      />
     )
   }
 
@@ -65,18 +59,11 @@ export function BranchViewPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          leftIcon={<PiArrowLeft />}
-          data-test="back-to-branches"
-        >
-          Back to Branches
-        </Button>
-      </div>
+      <BackLink onClick={handleBack} data-test="back-to-branches">
+        Back to Branches
+      </BackLink>
 
-      <div className="bg-white rounded-lg shadow">
+      <PageCard padding={false}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
@@ -108,33 +95,6 @@ export function BranchViewPage() {
         <div className="px-6 py-6 space-y-6">
           {error && <ErrorMessage message={error} />}
 
-          {/* Delete Confirmation */}
-          {showDeleteConfirm && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-900 font-semibold mb-3">
-                Are you sure you want to delete this branch?
-              </p>
-              <p className="text-red-700 mb-4">This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={deleteBranch.isPending}
-                  data-test="confirm-delete-branch"
-                >
-                  Yes, Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  data-test="cancel-delete-branch"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Branch Info */}
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -157,7 +117,20 @@ export function BranchViewPage() {
             </div>
           </div>
         </div>
-      </div>
+      </PageCard>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Branch"
+        message="Are you sure you want to delete this branch? This action cannot be undone."
+        confirmText="Yes, Delete"
+        variant="danger"
+        isLoading={deleteBranch.isPending}
+        confirmDataTest="confirm-delete-branch"
+        cancelDataTest="cancel-delete-branch"
+      />
     </div>
   )
 }

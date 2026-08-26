@@ -6,6 +6,8 @@ import { Spinner } from '@/components/progress/Spinner'
 import { useProcessSingleBook, type SavedBookDto } from '@/api/books-from-feed'
 import { useDeleteBook } from '@/api/books'
 import { PiEye, PiMagicWand, PiTrash } from 'react-icons/pi'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useNavigate } from 'react-router-dom'
 
 interface SavedBooksTableProps {
@@ -56,12 +58,10 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
 
   if (books.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg font-medium mb-2">No saved books yet</p>
-        <p className="text-sm">
-          Click "Select Photos" above to import book photos from Google Photos
-        </p>
-      </div>
+      <EmptyState
+        message="No saved books yet"
+        description={'Click "Select Photos" above to import book photos from Google Photos'}
+      />
     )
   }
 
@@ -99,13 +99,9 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
                 </td>
                 <td className="px-6 py-4 overflow-hidden truncate">
                   {book.needsProcessing ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Needs Processing
-                    </span>
+                    <StatusBadge tone="warning">Needs Processing</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Processed
-                    </span>
+                    <StatusBadge tone="success">Processed</StatusBadge>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

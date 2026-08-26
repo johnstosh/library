@@ -10,15 +10,22 @@ import {
   useDeleteApplication,
   type AppliedDto,
 } from '@/api/library-cards'
-import { PiCheckCircle, PiEye, PiTrash } from 'react-icons/pi'
-import { useNavigate } from 'react-router-dom'
+import { PiCheckCircle } from 'react-icons/pi'
+import { IconButton } from '@/components/ui/IconButton'
+import { DeleteIcon } from '@/components/ui/Icons'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { TableSummary } from '@/components/table/TableSummary'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useToast } from '@/hooks/useToast'
 
 export function ApplicationsPage() {
-  const navigate = useNavigate()
+  const toast = useToast()
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  const { data: applications = [], isLoading } = useApplications()
+  const { data: applications = [], isLoading, isFetching, error } = useApplications()
   const approveApplication = useApproveApplication()
   const deleteApplication = useDeleteApplication()
 
@@ -30,7 +37,7 @@ export function ApplicationsPage() {
       setApprovingId(null)
     } catch (error) {
       console.error('Failed to approve application:', error)
-      alert('Failed to approve application. Please try again.')
+      toast.error('Failed to approve application. Please try again.')
     }
   }
 
@@ -42,7 +49,7 @@ export function ApplicationsPage() {
       setDeletingId(null)
     } catch (error) {
       console.error('Failed to delete application:', error)
-      alert('Failed to delete application. Please try again.')
+      toast.error('Failed to delete application. Please try again.')
     }
   }
 
@@ -69,16 +76,16 @@ export function ApplicationsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Library Card Applications</h1>
-          <p className="text-gray-600 mt-1">
-            Review and approve library card applications
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Library Card Applications"
+        description="Review and approve library card applications"
+      />
 
-      <div className="bg-white rounded-lg shadow">
+      {error && (
+        <ErrorMessage message={`Error loading applications: ${error.message}`} className="mb-4" />
+      )}
+
+      <PageCard padding={false} className="relative">
         <div className="p-4">
           <DataTable
             data={applications}
@@ -86,14 +93,6 @@ export function ApplicationsPage() {
             keyExtractor={(app) => app.id}
             actions={(app) => (
               <>
-                <button
-                  onClick={() => navigate(`/library-cards/applications/${app.id}`)}
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
-                  data-test={`view-application-${app.id}`}
-                  title="View Details"
-                >
-                  <PiEye className="w-5 h-5" />
-                </button>
                 <Button
                   variant="primary"
                   size="sm"
@@ -103,14 +102,13 @@ export function ApplicationsPage() {
                 >
                   Approve
                 </Button>
-                <button
+                <IconButton
+                  icon={<DeleteIcon />}
+                  label="Delete"
+                  tone="danger"
                   onClick={() => setDeletingId(app.id)}
-                  className="text-red-600 hover:text-red-900 transition-colors"
                   data-test={`delete-application-${app.id}`}
-                  title="Delete"
-                >
-                  <PiTrash className="w-5 h-5" />
-                </button>
+                />
               </>
             )}
             isLoading={isLoading}
@@ -118,14 +116,14 @@ export function ApplicationsPage() {
           />
         </div>
 
-        {!isLoading && applications.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {applications.length} pending {applications.length === 1 ? 'application' : 'applications'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary
+          count={applications.length}
+          singular="pending application"
+          plural="pending applications"
+          isLoading={isLoading}
+        />
+      </PageCard>
 
       {/* Help Text */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">

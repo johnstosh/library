@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/progress/Spinner'
 import {
   useTestDataStats,
@@ -97,7 +98,7 @@ export function TestDataPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Test Data Management</h1>
+      <PageHeader title="Test Data Management" />
 
       <div className="space-y-6">
         {/* Warning Banner */}

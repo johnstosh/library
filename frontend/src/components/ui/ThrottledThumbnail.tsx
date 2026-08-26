@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 type LoadCallback = () => void
 
 const queue: LoadCallback[] = []
-let active = false
+let active: LoadCallback | null = null
 
 function enqueue(load: LoadCallback) {
   queue.push(load)
@@ -17,15 +17,27 @@ function enqueue(load: LoadCallback) {
 function processNext() {
   const next = queue.shift()
   if (next) {
-    active = true
+    active = next
     next()
   } else {
-    active = false
+    active = null
   }
 }
 
 function advance() {
   processNext()
+}
+
+function cancel(load: LoadCallback) {
+  const idx = queue.indexOf(load)
+  if (idx >= 0) {
+    queue.splice(idx, 1)
+    return
+  }
+  if (active === load) {
+    active = null
+    processNext()
+  }
 }
 
 // --- Component ---
@@ -51,19 +63,24 @@ export function Thumbnail({ url, alt, className, respectOrientation }: Thumbnail
     const el = placeholderRef.current
     if (!el) return
 
+    const startLoad = () => setActiveSrc(url)
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !enqueuedRef.current) {
           enqueuedRef.current = true
           observer.disconnect()
-          enqueue(() => setActiveSrc(url))
+          enqueue(startLoad)
         }
       },
       { rootMargin: '100px' }
     )
 
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      cancel(startLoad)
+    }
   }, [url])
 
   if (error) {

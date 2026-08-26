@@ -13,6 +13,7 @@ import {
   type ProcessResultDto,
 } from '@/api/books-from-feed'
 import { PiUpload, PiMagicWand } from 'react-icons/pi'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface ProcessingProgress {
   current: number
@@ -102,44 +103,42 @@ export function BooksFromFeedPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Books from Google Photos</h1>
-          <p className="text-gray-600 mt-1">
-            Import book photos from Google Photos and process them using AI
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowPickerModal(true)}
-            disabled={isProcessingAll}
-            leftIcon={<PiUpload />}
-            data-test="open-picker"
-          >
-            Select Photos
-          </Button>
-          {booksNeedingProcessing.length > 0 && !isProcessingAll && (
-            <Button
-              variant="primary"
-              onClick={handleProcessAll}
-              leftIcon={<PiMagicWand />}
-              data-test="process-all"
-            >
-              Process All ({booksNeedingProcessing.length})
-            </Button>
-          )}
-          {isProcessingAll && (
+      <PageHeader
+        title="Books from Google Photos"
+        description="Import book photos from Google Photos and process them using AI"
+        actions={
+          <>
             <Button
               variant="outline"
-              onClick={handleCancelProcessing}
-              data-test="cancel-processing"
+              onClick={() => setShowPickerModal(true)}
+              disabled={isProcessingAll}
+              leftIcon={<PiUpload />}
+              data-test="open-picker"
             >
-              Cancel
+              Select Photos
             </Button>
-          )}
-        </div>
-      </div>
+            {booksNeedingProcessing.length > 0 && !isProcessingAll && (
+              <Button
+                variant="primary"
+                onClick={handleProcessAll}
+                leftIcon={<PiMagicWand />}
+                data-test="process-all"
+              >
+                Process All ({booksNeedingProcessing.length})
+              </Button>
+            )}
+            {isProcessingAll && (
+              <Button
+                variant="outline"
+                onClick={handleCancelProcessing}
+                data-test="cancel-processing"
+              >
+                Cancel
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {successMessage && <SuccessMessage message={successMessage} />}
       {errorMessage && <ErrorMessage message={errorMessage} />}

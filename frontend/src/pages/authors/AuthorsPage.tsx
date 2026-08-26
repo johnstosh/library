@@ -2,6 +2,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { TableSummary } from '@/components/table/TableSummary'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useToast } from '@/hooks/useToast'
+import { GrokipediaIcon } from '@/components/ui/Icons'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
@@ -21,9 +28,10 @@ export function AuthorsPage() {
   const { selectedIds, selectAll } = useAuthorsTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
 
-  const { data: authors = [], isLoading } = useAuthors(filter)
+  const { data: authors = [], isLoading, isFetching, error } = useAuthors(filter)
   const deleteAuthors = useDeleteAuthors()
   const lookupGrokipedia = useLookupBulkAuthorsGrokipedia()
+  const toast = useToast()
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -62,6 +70,7 @@ export function AuthorsPage() {
       setShowDeleteConfirm(false)
     } catch (error) {
       console.error('Failed to delete authors:', error)
+      toast.error('Failed to delete authors')
     }
   }
 
@@ -72,19 +81,26 @@ export function AuthorsPage() {
       setShowGrokipediaResults(true)
     } catch (error) {
       console.error('Failed to lookup Grokipedia URLs:', error)
+      toast.error('Failed to lookup Grokipedia URLs')
     }
   }
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Authors</h1>
-        <Button variant="primary" onClick={handleAddAuthor} data-test="add-author">
-          Add Author
-        </Button>
-      </div>
+      <PageHeader
+        title="Authors"
+        actions={
+          <Button variant="primary" onClick={handleAddAuthor} data-test="add-author">
+            Add Author
+          </Button>
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow">
+      {error && (
+        <ErrorMessage message={`Error loading authors: ${error.message}`} className="mb-4" />
+      )}
+
+      <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
           <AuthorFilters />
         </div>
@@ -113,7 +129,7 @@ export function AuthorsPage() {
                     onClick={handleGrokipediaLookup}
                     isLoading={lookupGrokipedia.isPending}
                     disabled={lookupGrokipedia.isPending}
-                    leftIcon={<span>🌐</span>}
+                    leftIcon={<GrokipediaIcon />}
                     data-test="bulk-lookup-grokipedia"
                   >
                     Find Grokipedia URLs
@@ -143,14 +159,9 @@ export function AuthorsPage() {
           />
         </div>
 
-        {!isLoading && authors.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {authors.length} {authors.length === 1 ? 'author' : 'authors'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary count={authors.length} singular="author" plural="authors" isLoading={isLoading} />
+      </PageCard>
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

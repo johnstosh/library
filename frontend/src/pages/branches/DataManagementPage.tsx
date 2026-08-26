@@ -3,6 +3,9 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { jobStatusTone } from '@/utils/status'
+import { PageHeader } from '@/components/ui/PageHeader'
 import {
   exportJsonData,
   useImportJsonData,
@@ -178,12 +181,10 @@ export function DataManagementPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Data Management</h1>
-        <p className="text-gray-600">
-          Export and import branch data for backup or migration
-        </p>
-      </div>
+      <PageHeader
+        title="Data Management"
+        description="Export and import branch data for backup or migration"
+      />
 
       {/* JSON Export/Import Section */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
@@ -439,13 +440,9 @@ export function DataManagementPage() {
                       <tr key={index}>
                         <td className="px-4 py-2 text-sm font-mono text-gray-900">{item.filename}</td>
                         <td className="px-4 py-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            item.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
-                            item.status === 'FAILURE' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <StatusBadge tone={jobStatusTone(item.status)}>
                             {item.status}
-                          </span>
+                          </StatusBadge>
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-600">
                           {item.entityType && `${item.entityType}: ${item.entityName || '-'}`}

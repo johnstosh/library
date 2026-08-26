@@ -2,6 +2,7 @@
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import type { GenreLookupResultDto } from '@/types/dtos'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 interface GenreLookupResultsModalProps {
   isOpen: boolean
@@ -58,12 +59,9 @@ export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }:
                   {result.success && result.suggestedGenres && result.suggestedGenres.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {result.suggestedGenres.map((genre) => (
-                        <span
-                          key={genre}
-                          className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
-                        >
+                        <StatusBadge key={genre} tone="accent" shape="rounded">
                           {genre}
-                        </span>
+                        </StatusBadge>
                       ))}
                     </div>
                   ) : (

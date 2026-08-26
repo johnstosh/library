@@ -16,6 +16,10 @@ import {
 } from '@/api/data-management'
 import { getThumbnailUrl } from '@/api/photos'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { photoStatusTone } from '@/utils/status'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Spinner } from '@/components/progress/Spinner'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import {
   PiDownload,
@@ -354,25 +358,6 @@ export function PhotosPage() {
     }
   }, [pasteModePhotoId])
 
-  // Get status badge color class
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800'
-      case 'FAILED':
-        return 'bg-red-100 text-red-800'
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800'
-      case 'NO_IMAGE':
-        return 'bg-gray-100 text-gray-800'
-      case 'PENDING_IMPORT':
-        return 'bg-purple-100 text-purple-800'
-      case 'PENDING':
-      default:
-        return 'bg-yellow-100 text-yellow-800'
-    }
-  }
-
   // Format status text
   const formatStatusText = (status: string) => {
     switch (status) {
@@ -430,12 +415,10 @@ export function PhotosPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Photos</h1>
-        <p className="text-gray-600">
-          Sync photos with Google Photos cloud storage
-        </p>
-      </div>
+      <PageHeader
+        title="Photos"
+        description="Sync photos with Google Photos cloud storage"
+      />
 
       {/* Photo Import/Export Status Section */}
       <div
@@ -602,7 +585,7 @@ export function PhotosPage() {
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                         <div className="flex items-center justify-center gap-3">
-                          <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                          <Spinner size="sm" />
                           <span>Loading photos...</span>
                         </div>
                       </td>
@@ -650,12 +633,12 @@ export function PhotosPage() {
 
                         {/* Status */}
                         <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(photo.exportStatus)}`}
+                          <StatusBadge
+                            tone={photoStatusTone(photo.exportStatus)}
                             title={photo.exportErrorMessage || undefined}
                           >
                             {formatStatusText(photo.exportStatus)}
-                          </span>
+                          </StatusBadge>
                         </td>
 
                         {/* Exported At */}

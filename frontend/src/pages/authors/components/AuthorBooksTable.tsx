@@ -4,6 +4,9 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { formatBookStatus } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { bookStatusTone } from '@/utils/status'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 interface AuthorBooksTableProps {
   books: BookDto[]
@@ -34,17 +37,9 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
       key: 'status',
       header: 'Status',
       accessor: (book) => (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            book.status === 'ACTIVE'
-              ? 'bg-green-100 text-green-800'
-              : book.status === 'ON_ORDER'
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
+        <StatusBadge tone={bookStatusTone(book.status)}>
           {formatBookStatus(book.status)}
-        </span>
+        </StatusBadge>
       ),
       width: '15%',
     },
@@ -56,9 +51,10 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
 
   if (!books || books.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500" data-test="author-books-empty">
-        No books found for this author.
-      </div>
+      <EmptyState
+        message="No books found for this author."
+        data-test="author-books-empty"
+      />
     )
   }
 

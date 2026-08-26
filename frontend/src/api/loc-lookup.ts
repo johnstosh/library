@@ -63,6 +63,47 @@ export function useLookupBulkBooks() {
   })
 }
 
+/**
+ * Lookup LOC for multiple books with progress tracking.
+ * Processes books sequentially so the toolbar can show n/total.
+ */
+export function useLookupBulkBooksWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (bookIds: number[]) => {
+      const results: LocLookupResultDto[] = []
+      const total = bookIds.length
+
+      for (let i = 0; i < bookIds.length; i++) {
+        const bookId = bookIds[i]
+        try {
+          const result = await api.post<LocLookupResultDto>(`/loc-bulk-lookup/lookup/${bookId}`, {})
+          results.push(result)
+          queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
+        } catch (error) {
+          results.push({
+            bookId,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            matchCount: 0,
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: ['loc-lookup'] })
+    },
+  })
+}
+
 // Lookup LOC for all books missing LOC numbers
 export function useLookupAllMissing() {
   const queryClient = useQueryClient()

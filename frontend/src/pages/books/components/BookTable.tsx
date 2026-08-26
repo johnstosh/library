@@ -1,6 +1,5 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -12,8 +11,21 @@ import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
-import { PiBookOpen, PiCopy, PiEye } from 'react-icons/pi'
 import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/hooks/useToast'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { bookStatusTone } from '@/utils/status'
+import { IconButton } from '@/components/ui/IconButton'
+import {
+  AuthorIcon,
+  CopyIcon,
+  DeleteIcon,
+  EditIcon,
+  FreeTextIcon,
+  GrokipediaIcon,
+  LocIcon,
+  ViewIcon,
+} from '@/components/ui/Icons'
 
 interface BookTableProps {
   books: BookDto[]
@@ -42,6 +54,7 @@ export function BookTable({
   const lookupSingleBook = useLookupSingleBook()
   const { user } = useAuthStore()
   const isLibrarian = user?.authority === 'LIBRARIAN'
+  const toast = useToast()
 
   const handleDelete = async () => {
     if (deleteBookId === null) return
@@ -51,6 +64,7 @@ export function BookTable({
       setDeleteBookId(null)
     } catch (error) {
       console.error('Failed to delete book:', error)
+      toast.error('Failed to delete book')
     }
   }
 
@@ -61,6 +75,7 @@ export function BookTable({
       setShowLookupResults(true)
     } catch (error) {
       console.error('Failed to lookup LOC:', error)
+      toast.error('Failed to look up LOC')
     }
   }
 
@@ -69,6 +84,7 @@ export function BookTable({
       await cloneBook.mutateAsync(bookId)
     } catch (error) {
       console.error('Failed to clone book:', error)
+      toast.error('Failed to clone book')
     }
   }
 
@@ -141,17 +157,9 @@ export function BookTable({
       key: 'status',
       header: 'Status',
       accessor: (book) => (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            book.status === 'ACTIVE'
-              ? 'bg-green-100 text-green-800'
-              : book.status === 'ON_ORDER'
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
+        <StatusBadge tone={bookStatusTone(book.status)}>
           {formatBookStatus(book.status)}
-        </span>
+        </StatusBadge>
       ),
       width: '10%',
     },
@@ -161,12 +169,9 @@ export function BookTable({
       accessor: (book) => (
         <div className="flex flex-wrap gap-1">
           {book.tagsList?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
-            >
+            <StatusBadge key={tag} tone="accent" shape="rounded">
               {tag}
-            </span>
+            </StatusBadge>
           ))}
         </div>
       ),
@@ -192,121 +197,94 @@ export function BookTable({
             {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || isValidUrl(book.grokipediaUrl)) && (
               <div className="flex flex-wrap gap-1 justify-end" style={{ maxWidth: '108px' }}>
                 {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
-                  <a
+                  <IconButton
                     key={index}
                     href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    icon={<FreeTextIcon />}
+                    label={`Free text: ${extractDomain(url)}`}
+                    tone="success"
                     onClick={(e) => e.stopPropagation()}
-                    className="p-1 text-green-600 hover:text-green-900"
                     data-test={`free-text-book-${book.id}-${index}`}
-                    title={`Free text: ${extractDomain(url)}`}
-                  >
-                    <PiBookOpen className="w-5 h-5" />
-                  </a>
+                  />
                 ))}
                 {isValidUrl(book.grokipediaUrl) && (
-                  <a
+                  <IconButton
                     href={book.grokipediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    icon={<GrokipediaIcon />}
+                    label="View on Grokipedia"
+                    tone="warning"
                     onClick={(e) => e.stopPropagation()}
-                    className="p-1 text-orange-600 hover:text-orange-900"
                     data-test={`grokipedia-book-${book.id}`}
-                    title="View on Grokipedia"
-                  >
-                    <span className="text-xl">🅶</span>
-                  </a>
+                  />
                 )}
               </div>
             )}
             {/* Line 2: view, author, loc */}
             <div className="flex gap-1 justify-end items-center">
-              <Link
+              <IconButton
                 to={`/books/${book.id}`}
+                icon={<ViewIcon />}
+                label="View Details"
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 text-gray-600 hover:text-gray-900"
                 data-test={`view-book-${book.id}`}
-                title="View Details"
-              >
-                <PiEye className="w-5 h-5" />
-              </Link>
+              />
               {book.authorId && (
-                <Link
+                <IconButton
                   to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                  icon={<AuthorIcon />}
+                  label="See Author"
+                  tone="info"
                   onClick={(e) => e.stopPropagation()}
-                  className="p-1 text-teal-600 hover:text-teal-900"
                   data-test={`see-author-${book.id}`}
-                  title="See Author"
-                >
-                  <span className="text-lg">👤</span>
-                </Link>
+                />
               )}
               {isLibrarian && (
-                <button
+                <IconButton
+                  icon={<LocIcon />}
+                  label="Lookup LOC"
+                  tone="accent"
+                  disabled={lookupSingleBook.isPending}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleLookupLoc(book.id)
                   }}
-                  className="p-1 text-purple-600 hover:text-purple-900"
                   data-test={`lookup-loc-${book.id}`}
-                  title="Lookup LOC"
-                  disabled={lookupSingleBook.isPending}
-                >
-                  <span className="text-lg">🗃️</span>
-                </button>
+                />
               )}
             </div>
             {/* Line 3: clone, edit, delete */}
             <div className="flex gap-1 justify-end">
               {isLibrarian && (
-                <button
+                <IconButton
+                  icon={<CopyIcon />}
+                  label="Clone"
+                  tone="success"
+                  disabled={cloneBook.isPending}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleClone(book.id)
                   }}
-                  className="p-1 text-green-600 hover:text-green-900"
                   data-test={`clone-book-${book.id}`}
-                  title="Clone"
-                  disabled={cloneBook.isPending}
-                >
-                  <PiCopy className="w-5 h-5" />
-                </button>
+                />
               )}
-              <Link
+              <IconButton
                 to={`/books/${book.id}/edit`}
+                icon={<EditIcon />}
+                label="Edit"
+                tone="primary"
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 text-blue-600 hover:text-blue-900"
                 data-test={`edit-book-${book.id}`}
-                title="Edit"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              </Link>
-              <button
+              />
+              <IconButton
+                icon={<DeleteIcon />}
+                label="Delete"
+                tone="danger"
                 onClick={(e) => {
                   e.stopPropagation()
                   setDeleteBookId(book.id)
                 }}
-                className="p-1 text-red-600 hover:text-red-900"
                 data-test={`delete-book-${book.id}`}
-                title="Delete"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+              />
             </div>
           </div>
         )}

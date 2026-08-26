@@ -2,6 +2,7 @@
 import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
+import { PiX } from 'react-icons/pi'
 
 export interface ModalProps {
   isOpen: boolean
@@ -54,22 +55,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
                 <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   data-test="modal-close"
+                  aria-label="Close"
                 >
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <PiX className="h-6 w-6" />
                 </button>
               </div>
 

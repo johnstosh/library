@@ -1,6 +1,9 @@
 // (c) Copyright 2025 by Muczynski
 import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
+import { Spinner } from '@/components/progress/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 export interface Column<T> {
   key: string
@@ -47,13 +50,13 @@ export function DataTable<T>({
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <Spinner size="lg" />
       </div>
     )
   }
 
   if (data.length === 0) {
-    return <div className="text-center py-12 text-gray-500">{emptyMessage}</div>
+    return <EmptyState message={emptyMessage} />
   }
 
   return (
@@ -63,11 +66,9 @@ export function DataTable<T>({
           <tr>
             {selectable && (
               <th className="px-3 sm:px-6 py-3 text-left" style={{ width: '5%' }}>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={selectAll}
                   onChange={onSelectAll}
-                  className="rounded border-gray-300 w-4 h-4"
                   data-test="select-all-checkbox"
                 />
               </th>
@@ -109,14 +110,13 @@ export function DataTable<T>({
               >
                 {selectable && (
                   <td className="px-3 sm:px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => onSelectToggle?.(Number(key))}
-                      onClick={(e) => e.stopPropagation()}
-                      className="rounded border-gray-300 w-4 h-4"
-                      data-test={`select-checkbox-${key}`}
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => onSelectToggle?.(Number(key))}
+                        data-test={`select-checkbox-${key}`}
+                      />
+                    </div>
                   </td>
                 )}
                 {columns.map((column) => (

@@ -1,13 +1,12 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '@/config/queryClient'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
-import { useDeleteBooks, useBulkBookFromImage, useLookupGenres } from '@/api/books'
-import { useLookupBulkBooks, type LocLookupResultDto } from '@/api/loc-lookup'
-import { useLookupBulkBooksGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { useDeleteBooks, useBulkBookFromImage, useLookupBulkGenresWithProgress } from '@/api/books'
+import { useLookupBulkBooksWithProgress, type LocLookupResultDto } from '@/api/loc-lookup'
+import { useLookupBulkBooksGrokipediaWithProgress, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl-lookup'
 import { useLookupBulkEmuWithProgress, type EmuLookupResultDto } from '@/api/emu-lookup'
@@ -22,6 +21,7 @@ import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
+import { GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 import { PiTag } from 'react-icons/pi'
 import { PiHeadphones } from 'react-icons/pi'
@@ -34,7 +34,12 @@ interface BulkActionsToolbarProps {
 
 export type BookFromImageResult = { id: number; success: boolean; book?: { title: string }; error?: string }
 
+function progressLabel(idle: string, running: string, isPending: boolean, completed: number, total: number) {
+  return isPending ? `${running} (${completed}/${total})` : idle
+}
+
 export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
+  const toast = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
   const [deleteResults, setDeleteResults] = useState<BulkDeleteResultDto | null>(null)
@@ -47,11 +52,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
   const [showFreeTextResults, setShowFreeTextResults] = useState(false)
   const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
+  const [locProgress, setLocProgress] = useState(0)
+  const [grokipediaProgress, setGrokipediaProgress] = useState(0)
+  const [bookFromImageProgress, setBookFromImageProgress] = useState(0)
   const [freeTextProgress, setFreeTextProgress] = useState(0)
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
   const [genreProgress, setGenreProgress] = useState(0)
-  const [isGenreLookupRunning, setIsGenreLookupRunning] = useState(false)
   const [showYdlResults, setShowYdlResults] = useState(false)
   const [ydlResults, setYdlResults] = useState<YdlLookupResultDto[]>([])
   const [ydlProgress, setYdlProgress] = useState(0)
@@ -59,22 +66,30 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
   const [emuResults, setEmuResults] = useState<EmuLookupResultDto[]>([])
   const [emuProgress, setEmuProgress] = useState(0)
 
-  const queryClient = useQueryClient()
-
   const deleteBooks = useDeleteBooks()
-  const lookupBulk = useLookupBulkBooks()
-  const lookupGrokipedia = useLookupBulkBooksGrokipedia()
-  const lookupFreeText = useLookupBulkFreeTextWithProgress((completed, _total) => {
+  const lookupBulk = useLookupBulkBooksWithProgress((completed) => {
+    setLocProgress(completed)
+  })
+  const lookupGrokipedia = useLookupBulkBooksGrokipediaWithProgress((completed) => {
+    setGrokipediaProgress(completed)
+  })
+  const lookupFreeText = useLookupBulkFreeTextWithProgress((completed) => {
     setFreeTextProgress(completed)
   })
-  const bulkBookFromImage = useBulkBookFromImage()
-  const lookupGenres = useLookupGenres()
-  const lookupYdl = useLookupBulkYdlWithProgress((completed, _total) => {
+  const bulkBookFromImage = useBulkBookFromImage((completed) => {
+    setBookFromImageProgress(completed)
+  })
+  const lookupGenres = useLookupBulkGenresWithProgress((completed) => {
+    setGenreProgress(completed)
+  })
+  const lookupYdl = useLookupBulkYdlWithProgress((completed) => {
     setYdlProgress(completed)
   })
-  const lookupEmu = useLookupBulkEmuWithProgress((completed, _total) => {
+  const lookupEmu = useLookupBulkEmuWithProgress((completed) => {
     setEmuProgress(completed)
   })
+
+  const selectedCount = selectedIds.size
 
   const handleBulkDelete = async () => {
     try {
@@ -89,26 +104,31 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     } catch (error) {
       console.error('Failed to delete books:', error)
       setShowDeleteConfirm(false)
+      toast.error('Failed to delete books')
     }
   }
 
   const handleBulkLookup = async () => {
+    setLocProgress(0)
     try {
       const results = await lookupBulk.mutateAsync(Array.from(selectedIds))
       setLookupResults(results)
       setShowResults(true)
     } catch (error) {
       console.error('Failed to lookup LOC:', error)
+      toast.error('Failed to lookup LOC')
     }
   }
 
   const handleGrokipediaLookup = async () => {
+    setGrokipediaProgress(0)
     try {
       const results = await lookupGrokipedia.mutateAsync(Array.from(selectedIds))
       setGrokipediaResults(results)
       setShowGrokipediaResults(true)
     } catch (error) {
       console.error('Failed to lookup Grokipedia URLs:', error)
+      toast.error('Failed to lookup Grokipedia URLs')
     }
   }
 
@@ -130,19 +150,21 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       document.body.removeChild(a)
     } catch (error) {
       console.error('Failed to generate labels PDF:', error)
-      alert('Failed to generate labels PDF. Please try again.')
+      toast.error('Failed to generate labels PDF. Please try again.')
     } finally {
       setIsGeneratingLabels(false)
     }
   }
 
   const handleBookFromImage = async () => {
+    setBookFromImageProgress(0)
     try {
       const results = await bulkBookFromImage.mutateAsync(Array.from(selectedIds))
       setBookFromImageResults(results)
       setShowBookFromImageResults(true)
     } catch (error) {
       console.error('Failed to process books from images:', error)
+      toast.error('Failed to process books from images')
     }
   }
 
@@ -154,33 +176,19 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowFreeTextResults(true)
     } catch (error) {
       console.error('Failed to lookup free online text:', error)
+      toast.error('Failed to lookup free online text')
     }
   }
 
   const handleGenreLookup = async () => {
-    const ids = Array.from(selectedIds)
     setGenreProgress(0)
-    setGenreResults([])
-    setShowGenreResults(true)
-    setIsGenreLookupRunning(true)
     try {
-      for (let i = 0; i < ids.length; i++) {
-        try {
-          const result = await lookupGenres.mutateAsync(ids[i])
-          setGenreResults((prev) => [...prev, result])
-        } catch (error) {
-          setGenreResults((prev) => [
-            ...prev,
-            { bookId: ids[i], success: false, errorMessage: String(error) } as GenreLookupResultDto,
-          ])
-        }
-        setGenreProgress(i + 1)
-      }
-      // Invalidate once at the end instead of after each book to reduce network calls.
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-    } finally {
-      setIsGenreLookupRunning(false)
+      const results = await lookupGenres.mutateAsync(Array.from(selectedIds))
+      setGenreResults(results)
+      setShowGenreResults(true)
+    } catch (error) {
+      console.error('Failed to lookup genres:', error)
+      toast.error('Failed to lookup genres')
     }
   }
 
@@ -192,6 +200,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowYdlResults(true)
     } catch (error) {
       console.error('Failed to lookup YDL availability:', error)
+      toast.error('Failed to lookup YDL availability')
     }
   }
 
@@ -203,6 +212,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
       setShowEmuResults(true)
     } catch (error) {
       console.error('Failed to lookup EMU availability:', error)
+      toast.error('Failed to lookup EMU availability')
     }
   }
 
@@ -232,10 +242,10 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleBulkLookup}
               isLoading={lookupBulk.isPending}
               disabled={lookupBulk.isPending}
-              leftIcon={<span>🗃️</span>}
+              leftIcon={<LocIcon />}
               data-test="bulk-lookup-loc"
             >
-              Lookup LOC
+              {progressLabel('Lookup LOC', 'LOC...', lookupBulk.isPending, locProgress, selectedCount)}
             </Button>
             <Button
               variant="outline"
@@ -243,10 +253,16 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleGrokipediaLookup}
               isLoading={lookupGrokipedia.isPending}
               disabled={lookupGrokipedia.isPending}
-              leftIcon={<span>🌐</span>}
+              leftIcon={<GrokipediaIcon />}
               data-test="bulk-lookup-grokipedia"
             >
-              Find Grokipedia URLs
+              {progressLabel(
+                'Find Grokipedia URLs',
+                'Grokipedia...',
+                lookupGrokipedia.isPending,
+                grokipediaProgress,
+                selectedCount
+              )}
             </Button>
             <Button
               variant="outline"
@@ -257,9 +273,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               leftIcon={<PiBookOpen />}
               data-test="bulk-lookup-free-text"
             >
-              {lookupFreeText.isPending
-                ? `Finding... (${freeTextProgress}/${selectedIds.size})`
-                : 'Find links to free online text'}
+              {progressLabel(
+                'Find links to free online text',
+                'Finding...',
+                lookupFreeText.isPending,
+                freeTextProgress,
+                selectedCount
+              )}
             </Button>
             <Button
               variant="outline"
@@ -281,20 +301,24 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               leftIcon={<PiCamera />}
               data-test="bulk-book-from-images"
             >
-              Book from Images
+              {progressLabel(
+                'Book from Images',
+                'Images...',
+                bulkBookFromImage.isPending,
+                bookFromImageProgress,
+                selectedCount
+              )}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleGenreLookup}
-              isLoading={isGenreLookupRunning}
-              disabled={isGenreLookupRunning}
+              isLoading={lookupGenres.isPending}
+              disabled={lookupGenres.isPending}
               leftIcon={<PiTag />}
               data-test="bulk-lookup-genres"
             >
-              {isGenreLookupRunning
-                ? `Genres... (${genreProgress}/${selectedIds.size})`
-                : 'Lookup Genres'}
+              {progressLabel('Lookup Genres', 'Genres...', lookupGenres.isPending, genreProgress, selectedCount)}
             </Button>
             <Button
               variant="outline"
@@ -305,9 +329,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               leftIcon={<PiHeadphones />}
               data-test="bulk-lookup-ydl"
             >
-              {lookupYdl.isPending
-                ? `Checking YDL... (${ydlProgress}/${selectedIds.size})`
-                : 'Lookup YDL Availability'}
+              {progressLabel(
+                'Lookup YDL Availability',
+                'Checking YDL...',
+                lookupYdl.isPending,
+                ydlProgress,
+                selectedCount
+              )}
             </Button>
             <Button
               variant="outline"
@@ -318,9 +346,13 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               leftIcon={<PiGraduationCap />}
               data-test="bulk-lookup-emu"
             >
-              {lookupEmu.isPending
-                ? `Checking EMU... (${emuProgress}/${selectedIds.size})`
-                : 'Lookup EMU Availability'}
+              {progressLabel(
+                'Lookup EMU Availability',
+                'Checking EMU...',
+                lookupEmu.isPending,
+                emuProgress,
+                selectedCount
+              )}
             </Button>
             <Button
               variant="danger"
@@ -376,7 +408,6 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
         isOpen={showGenreResults}
         onClose={() => setShowGenreResults(false)}
         results={genreResults}
-        isRunning={isGenreLookupRunning}
       />
 
       <YdlLookupResultsModal

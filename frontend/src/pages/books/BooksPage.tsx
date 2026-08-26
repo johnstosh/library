@@ -2,6 +2,11 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { TableSummary } from '@/components/table/TableSummary'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from './components/BookFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
 import { BookTable } from './components/BookTable'
@@ -85,7 +90,7 @@ export function BooksPage() {
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
-  const { data: allBooks = [], isLoading, isFetching } = useBooks(selectedLabels)
+  const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels)
 
   // Apply all chip filters client-side (AND logic)
   const books = useMemo(() => applyChipFilters(allBooks, chips), [allBooks, chips])
@@ -120,23 +125,29 @@ export function BooksPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Books</h1>
-        {isLibrarian && (
-          <div className="flex gap-2">
-            <Link to="/books-from-feed">
-              <Button variant="outline" data-test="books-from-feed">
-                Books from Feed
+      <PageHeader
+        title="Books"
+        actions={
+          isLibrarian ? (
+            <>
+              <Link to="/books-from-feed">
+                <Button variant="outline" data-test="books-from-feed">
+                  Books from Feed
+                </Button>
+              </Link>
+              <Button variant="primary" onClick={handleAddBook} data-test="add-book">
+                Add Book
               </Button>
-            </Link>
-            <Button variant="primary" onClick={handleAddBook} data-test="add-book">
-              Add Book
-            </Button>
-          </div>
-        )}
-      </div>
+            </>
+          ) : undefined
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow relative">
+      {error && (
+        <ErrorMessage message={`Error loading books: ${error.message}`} className="mb-4" />
+      )}
+
+      <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
           <BookFilters />
           <BookLabelFilters
@@ -163,20 +174,9 @@ export function BooksPage() {
           />
         </div>
 
-        {isFetching && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-          </div>
-        )}
-
-        {!isLoading && books.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {books.length} {books.length === 1 ? 'book' : 'books'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary count={books.length} singular="book" plural="books" isLoading={isLoading} />
+      </PageCard>
 
     </div>
   )

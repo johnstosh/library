@@ -20,7 +20,7 @@ export function useBooks(selectedLabels?: string[]) {
 
   // Step 1: Fetch summaries (ID + lastModified).
   // Always use /books/summaries for the unfiltered case; client-side chips handle all other filtering.
-  const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching } = useQuery({
+  const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
     queryKey: hasLabels
       ? queryKeys.books.labelSummaries(selectedLabels ?? [])
       : queryKeys.books.summaries(),
@@ -43,7 +43,7 @@ export function useBooks(selectedLabels?: string[]) {
   }, [summaries, queryClient])
 
   // Step 3: Batch fetch changed books using /books/by-ids
-  const { data: fetchedBooks, isLoading: fetchingBooks, isFetching: byIdsFetching } = useQuery({
+  const { data: fetchedBooks, isLoading: fetchingBooks, isFetching: byIdsFetching, error: byIdsError } = useQuery({
     queryKey: queryKeys.books.byIds(booksToFetch),
     queryFn: async () => {
       if (booksToFetch.length > 0) {
@@ -117,6 +117,7 @@ export function useBooks(selectedLabels?: string[]) {
     data: stableBooks,
     isLoading: stableBooks.length === 0 && (summariesLoading || fetchingBooks),
     isFetching,
+    error: summariesError || byIdsError,
   }
 }
 
@@ -252,13 +253,17 @@ export function useBookFromFirstPhoto() {
 }
 
 // Hook to generate book metadata from images for multiple books
-export function useBulkBookFromImage() {
+export function useBulkBookFromImage(
+  onProgress?: (completed: number, total: number) => void
+) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (ids: number[]) => {
       const results: { id: number; success: boolean; book?: BookDto; error?: string }[] = []
-      for (const id of ids) {
+      const total = ids.length
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
         try {
           const book = await api.put<BookDto>(`/books/${id}/book-by-photo`)
           results.push({ id, success: true, book })
@@ -271,6 +276,7 @@ export function useBulkBookFromImage() {
             error: error instanceof Error ? error.message : 'Unknown error',
           })
         }
+        onProgress?.(i + 1, total)
       }
       return results
     },
@@ -294,6 +300,47 @@ export function useLookupGenres() {
       if (data.updatedBook) {
         queryClient.setQueryData(queryKeys.books.detail(id), data.updatedBook)
       }
+    },
+  })
+}
+
+/**
+ * Lookup genres for multiple books with progress tracking.
+ * Processes books sequentially so the toolbar can show n/total.
+ */
+export function useLookupBulkGenresWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results: GenreLookupResultDto[] = []
+      const total = ids.length
+
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        try {
+          const result = await api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`)
+          results.push(result)
+          if (result.updatedBook) {
+            queryClient.setQueryData(queryKeys.books.detail(id), result.updatedBook)
+          }
+        } catch (error) {
+          results.push({
+            bookId: id,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
     },
   })
 }

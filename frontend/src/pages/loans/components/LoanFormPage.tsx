@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { Spinner } from '@/components/progress/Spinner'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { useCheckoutBook, useCheckoutBookWithPhoto, useTranscribeCheckoutCard } from '@/api/loans'
 import { useBooks } from '@/api/books'
 import { useUsers } from '@/api/users'
@@ -665,11 +666,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
         </div>
 
         {/* Loading overlay: visible for the entire duration of the summaries + by-ids fetch sequence */}
-        {booksFetching && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-          </div>
-        )}
+        <LoadingOverlay show={booksFetching} />
       </div>
 
       {/* Photo Panel - shown when captureMode is set or photo is selected */}

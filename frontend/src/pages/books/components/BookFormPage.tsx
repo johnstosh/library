@@ -29,6 +29,7 @@ import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
+import { AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 
 interface BookFormPageProps {
   title: string
@@ -782,7 +783,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 data-test="book-see-author"
                 title="View Author"
               >
-                <span>👤</span>
+                <AuthorIcon />
               </Link>
             )}
           </div>
@@ -857,7 +858,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               onClick={handleGrokipediaLookup}
               isLoading={lookupGrokipedia.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<span>🌐</span>}
+              leftIcon={<GrokipediaIcon />}
               data-test="book-operation-grokipedia"
               className="mb-0"
             >
@@ -1150,7 +1151,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 onClick={handleLookupLoc}
                 isLoading={isLookingUp}
                 disabled={isLoading || isLookingUp || isSuggesting}
-                leftIcon={<span>🗃️</span>}
+                leftIcon={<LocIcon />}
                 data-test="lookup-loc-button"
                 className="mb-0"
               >

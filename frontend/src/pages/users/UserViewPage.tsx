@@ -2,10 +2,15 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useUser, useDeleteUser } from '@/api/users'
-import { Spinner } from '@/components/progress/Spinner'
-import { PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { PiPencil, PiTrash } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { BackLink } from '@/components/ui/BackLink'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { PageCard } from '@/components/ui/PageCard'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function UserViewPage() {
   const navigate = useNavigate()
@@ -35,44 +40,27 @@ export function UserViewPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">User Not Found</h1>
-          <p className="text-gray-600 mb-4">The user you're looking for doesn't exist.</p>
-          <button
-            onClick={handleBack}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Users
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="User Not Found"
+        entityLabel="user"
+        onBack={handleBack}
+        backLabel="Return to Users"
+      />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          leftIcon={<PiArrowLeft />}
-          data-test="back-to-users"
-        >
-          Back to Users
-        </Button>
-      </div>
+      <BackLink onClick={handleBack} data-test="back-to-users">
+        Back to Users
+      </BackLink>
 
-      <div className="bg-white rounded-lg shadow">
+      <PageCard padding={false}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
@@ -104,33 +92,6 @@ export function UserViewPage() {
         <div className="px-6 py-6 space-y-6">
           {error && <ErrorMessage message={error} />}
 
-          {/* Delete Confirmation */}
-          {showDeleteConfirm && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-900 font-semibold mb-3">
-                Are you sure you want to delete this user?
-              </p>
-              <p className="text-red-700 mb-4">This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={deleteUser.isPending}
-                  data-test="confirm-delete-user"
-                >
-                  Yes, Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  data-test="cancel-delete-user"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* User Info */}
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,24 +100,16 @@ export function UserViewPage() {
                 <div className="flex items-center gap-2">
                   <p className="text-gray-900">{user.username}</p>
                   {user.ssoSubjectId && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      SSO
-                    </span>
+                    <StatusBadge tone="info" shape="rounded">SSO</StatusBadge>
                   )}
                 </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Authority</p>
                 <p className="text-gray-900">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.authorities?.includes('LIBRARIAN')
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
+                  <StatusBadge tone={user.authorities?.includes('LIBRARIAN') ? 'emphasis' : 'neutral'}>
                     {user.authorities?.[0] || 'USER'}
-                  </span>
+                  </StatusBadge>
                 </p>
               </div>
               <div>
@@ -185,7 +138,20 @@ export function UserViewPage() {
             )}
           </div>
         </div>
-      </div>
+      </PageCard>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Yes, Delete"
+        variant="danger"
+        isLoading={deleteUser.isPending}
+        confirmDataTest="confirm-delete-user"
+        cancelDataTest="cancel-delete-user"
+      />
     </div>
   )
 }

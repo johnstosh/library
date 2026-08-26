@@ -10,8 +10,17 @@ import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
-import { PiEye } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { loanStatusTone } from '@/utils/status'
+import { IconButton, TEXT_LINK_CLASS } from '@/components/ui/IconButton'
+import { DeleteIcon, ReturnIcon, ViewIcon } from '@/components/ui/Icons'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { TableSummary } from '@/components/table/TableSummary'
+import { useToast } from '@/hooks/useToast'
 
 export function LoansPage() {
   const navigate = useNavigate()
@@ -23,20 +32,9 @@ export function LoansPage() {
   const isLibrarian = useIsLibrarian()
 
   const { data: loans = [], isLoading, error, isFetching } = useLoans(showAll)
-
-  // Debug logging for loans
-  console.log('[LoansPage] Render state:', {
-    showAll,
-    isLoading,
-    isFetching,
-    loansCount: loans.length,
-    error: error?.message
-  })
-  if (loans.length > 0) {
-    console.log('[LoansPage] First loan:', loans[0])
-  }
   const returnBook = useReturnBook()
   const deleteLoan = useDeleteLoan()
+  const toast = useToast()
 
   const handleCheckout = () => {
     navigate('/loans/new')
@@ -62,6 +60,7 @@ export function LoansPage() {
       setReturnLoanId(null)
     } catch (error) {
       console.error('Failed to return book:', error)
+      toast.error('Failed to return book')
     }
   }
 
@@ -73,6 +72,7 @@ export function LoansPage() {
       setDeleteLoanId(null)
     } catch (error) {
       console.error('Failed to delete loan:', error)
+      toast.error('Failed to delete loan')
     }
   }
 
@@ -84,7 +84,7 @@ export function LoansPage() {
         <div>
           <button
             onClick={() => handleViewLoan(loan)}
-            className="font-medium text-blue-600 hover:text-blue-800 text-left"
+            className={`font-medium ${TEXT_LINK_CLASS} text-left`}
             data-test={`view-loan-${loan.id}`}
           >
             {loan.bookTitle}
@@ -133,22 +133,12 @@ export function LoansPage() {
       key: 'status',
       header: 'Status',
       accessor: (loan) => {
-        if (loan.returnDate) {
-          return (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              Returned
-            </span>
-          )
-        }
-        const isOverdue = parseISODateSafe(loan.dueDate) < new Date()
+        const isOverdue = !loan.returnDate && parseISODateSafe(loan.dueDate) < new Date()
+        const label = loan.returnDate ? 'Returned' : isOverdue ? 'Overdue' : 'Active'
         return (
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              isOverdue ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-            }`}
-          >
-            {isOverdue ? 'Overdue' : 'Active'}
-          </span>
+          <StatusBadge tone={loanStatusTone(!!loan.returnDate, isOverdue)}>
+            {label}
+          </StatusBadge>
         )
       },
       width: '10%',
@@ -157,30 +147,28 @@ export function LoansPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Loans</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleCheckoutByPhoto} data-test="checkout-by-photo">
-            Checkout by Photo
-          </Button>
-          <Button variant="secondary" onClick={handleCheckoutByCamera} data-test="checkout-by-camera">
-            Checkout by Camera
-          </Button>
-          <Button variant="primary" onClick={handleCheckout} data-test="checkout-book">
-            Checkout Book
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Loans"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleCheckoutByPhoto} data-test="checkout-by-photo">
+              Checkout by Photo
+            </Button>
+            <Button variant="secondary" onClick={handleCheckoutByCamera} data-test="checkout-by-camera">
+              Checkout by Camera
+            </Button>
+            <Button variant="primary" onClick={handleCheckout} data-test="checkout-book">
+              Checkout Book
+            </Button>
+          </>
+        }
+      />
 
-      {/* Error display for debugging */}
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          <p className="font-bold">Error loading loans:</p>
-          <p>{error.message}</p>
-        </div>
+        <ErrorMessage message={`Error loading loans: ${error.message}`} className="mb-4" />
       )}
 
-      <div className="bg-white rounded-lg shadow">
+      <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
           <Checkbox
             label="Show returned loans"
@@ -197,47 +185,29 @@ export function LoansPage() {
             keyExtractor={(loan) => loan.id}
             actions={(loan) => (
               <>
-                <button
+                <IconButton
+                  icon={<ViewIcon />}
+                  label="View Details"
                   onClick={() => handleViewLoan(loan)}
-                  className="text-gray-600 hover:text-gray-900"
                   data-test={`view-loan-details-${loan.id}`}
-                  title="View Details"
-                >
-                  <PiEye className="w-5 h-5" />
-                </button>
+                />
                 {isLibrarian && !loan.returnDate && (
-                  <button
+                  <IconButton
+                    icon={<ReturnIcon />}
+                    label="Return Book"
+                    tone="success"
                     onClick={() => setReturnLoanId(loan.id)}
-                    className="text-green-600 hover:text-green-900"
                     data-test={`return-loan-${loan.id}`}
-                    title="Return Book"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </button>
+                  />
                 )}
                 {isLibrarian && (
-                  <button
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    label="Delete"
+                    tone="danger"
                     onClick={() => setDeleteLoanId(loan.id)}
-                    className="text-red-600 hover:text-red-900"
                     data-test={`delete-loan-${loan.id}`}
-                    title="Delete"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                  />
                 )}
               </>
             )}
@@ -246,14 +216,9 @@ export function LoansPage() {
           />
         </div>
 
-        {!isLoading && loans.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {loans.length} {loans.length === 1 ? 'loan' : 'loans'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary count={loans.length} singular="loan" plural="loans" isLoading={isLoading} />
+      </PageCard>
 
       <ConfirmDialog
         isOpen={returnLoanId !== null}

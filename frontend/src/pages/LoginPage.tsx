@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
 export function LoginPage() {
   const [username, setUsername] = useState('')
@@ -65,11 +66,7 @@ export function LoginPage() {
                 data-test="login-password"
               />
 
-              {error && (
-                <div data-test="login-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                  {error}
-                </div>
-              )}
+              {error && <ErrorMessage message={error} data-test="login-error" />}
 
               <Button
                 type="submit"
