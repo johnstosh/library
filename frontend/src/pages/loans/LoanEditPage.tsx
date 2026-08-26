@@ -4,12 +4,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
-import { Spinner } from '@/components/progress/Spinner'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { BackLink } from '@/components/ui/BackLink'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { useLoan, useUpdateLoan, useAddLoanPhoto } from '@/api/loans'
 import { getThumbnailUrl, getPhotoUrl } from '@/api/photos'
 import { parseISODateSafe } from '@/utils/formatters'
-import { PiArrowLeft, PiCamera } from 'react-icons/pi'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { PiCamera } from 'react-icons/pi'
 
 function formatDateToInput(isoDate: string | undefined): string {
   if (!isoDate) return ''
@@ -116,24 +119,17 @@ export function LoanEditPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!loan) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loan Not Found</h1>
-          <p className="text-gray-600 mb-4">The loan you're looking for doesn't exist.</p>
-          <button onClick={() => navigate('/loans')} className="text-blue-600 hover:text-blue-800">
-            Return to Loans
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="Loan Not Found"
+        entityLabel="loan"
+        onBack={() => navigate('/loans')}
+        backLabel="Return to Loans"
+      />
     )
   }
 
@@ -141,11 +137,7 @@ export function LoanEditPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={handleCancel} leftIcon={<PiArrowLeft />}>
-          Back to Loan
-        </Button>
-      </div>
+      <BackLink onClick={handleCancel}>Back to Loan</BackLink>
 
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -159,7 +151,9 @@ export function LoanEditPage() {
           <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Book</p>
-              <p className="text-gray-900">{loan.bookTitle}</p>
+              <p className="text-gray-900">
+                <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Borrower</p>

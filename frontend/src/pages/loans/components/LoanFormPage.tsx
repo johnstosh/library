@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { Spinner } from '@/components/progress/Spinner'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { useCheckoutBook, useCheckoutBookWithPhoto, useTranscribeCheckoutCard } from '@/api/loans'
 import { useBooks } from '@/api/books'
 import { useUsers } from '@/api/users'
@@ -12,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useIsLibrarian } from '@/stores/authStore'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
+import { EntityLink } from '@/components/ui/EntityLink'
 
 interface InitialFilters {
   title?: string
@@ -506,7 +508,9 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Book</p>
-                    <p className="text-gray-900">{loan.bookTitle}</p>
+                    <p className="text-gray-900">
+                      <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Borrower</p>
@@ -665,11 +669,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
         </div>
 
         {/* Loading overlay: visible for the entire duration of the summaries + by-ids fetch sequence */}
-        {booksFetching && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-          </div>
-        )}
+        <LoadingOverlay show={booksFetching} />
       </div>
 
       {/* Photo Panel - shown when captureMode is set or photo is selected */}

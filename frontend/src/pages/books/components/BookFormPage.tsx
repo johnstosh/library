@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/config/queryClient'
 import { Input } from '@/components/ui/Input'
@@ -29,6 +29,8 @@ import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
+import { IconButton } from '@/components/ui/IconButton'
+import { AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 
 interface BookFormPageProps {
   title: string
@@ -654,7 +656,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
-    lookupYdl.isPending || lookupEmu.isPending
+    lookupYdl.isPending || lookupEmu.isPending || lookupLoc.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -676,6 +678,42 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-clone"
             >
               Clone
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupLoc}
+              isLoading={lookupLoc.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<LocIcon />}
+              data-test="book-operation-lookup-loc"
+            >
+              Lookup LOC
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGrokipediaLookup}
+              isLoading={lookupGrokipedia.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<GrokipediaIcon />}
+              data-test="book-operation-grokipedia"
+            >
+              Find Grokipedia URL
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFreeTextLookup}
+              isLoading={lookupFreeText.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiBookOpen />}
+              data-test="book-operation-free-text"
+            >
+              Find links to free online text
             </Button>
             <Button
               type="button"
@@ -711,7 +749,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               leftIcon={<PiCamera />}
               data-test="book-operation-book-from-all-photos"
             >
-              Book from All Photos
+              Book from Images
             </Button>
             <Button
               type="button"
@@ -736,6 +774,42 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-book-from-title-author"
             >
               Book from Title & Author
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenreLookup}
+              isLoading={lookupGenres.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiTag />}
+              data-test="book-operation-lookup-genres"
+            >
+              Lookup Genres
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupYdl}
+              isLoading={lookupYdl.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiHeadphones />}
+              data-test="book-operation-lookup-ydl"
+            >
+              Lookup YDL Availability
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupEmu}
+              isLoading={lookupEmu.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<PiGraduationCap />}
+              data-test="book-operation-lookup-emu"
+            >
+              Lookup EMU Availability
             </Button>
             <Button
               type="button"
@@ -776,14 +850,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               />
             </div>
             {formData.authorId && (
-              <Link
+              <IconButton
                 to={`/authors/${formData.authorId}`}
-                className="mb-0.5 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded inline-flex items-center gap-1"
+                icon={<AuthorIcon />}
+                label="See Author"
+                tone="info"
+                className="mb-0.5"
                 data-test="book-see-author"
-                title="View Author"
-              >
-                <span>👤</span>
-              </Link>
+              />
             )}
           </div>
 
@@ -857,8 +931,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               onClick={handleGrokipediaLookup}
               isLoading={lookupGrokipedia.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<span>🌐</span>}
-              data-test="book-operation-grokipedia"
+              leftIcon={<GrokipediaIcon />}
+              data-test="book-field-lookup-grokipedia"
               className="mb-0"
             >
               Find Grokipedia URL
@@ -886,7 +960,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 isLoading={lookupFreeText.isPending}
                 disabled={isOperationPending || isLoading}
                 leftIcon={<PiBookOpen />}
-                data-test="book-operation-free-text"
+                data-test="book-field-lookup-free-text"
                 className="mb-0"
               >
                 Find Free Text URL
@@ -937,7 +1011,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   isLoading={lookupYdl.isPending}
                   disabled={isOperationPending || isLoading}
                   leftIcon={<PiHeadphones />}
-                  data-test="book-operation-lookup-ydl"
+                  data-test="book-field-lookup-ydl"
                 >
                   {book?.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
                 </Button>
@@ -1025,7 +1099,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   isLoading={lookupEmu.isPending}
                   disabled={isOperationPending || isLoading}
                   leftIcon={<PiGraduationCap />}
-                  data-test="book-operation-lookup-emu"
+                  data-test="book-field-lookup-emu"
                 >
                   {book?.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
                 </Button>
@@ -1109,7 +1183,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 isLoading={lookupGenres.isPending}
                 disabled={isOperationPending || isLoading}
                 leftIcon={<PiTag />}
-                data-test="book-operation-lookup-genres"
+                data-test="book-field-lookup-genres"
                 className="mb-0"
               >
                 Lookup Genres
@@ -1150,7 +1224,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 onClick={handleLookupLoc}
                 isLoading={isLookingUp}
                 disabled={isLoading || isLookingUp || isSuggesting}
-                leftIcon={<span>🗃️</span>}
+                leftIcon={<LocIcon />}
                 data-test="lookup-loc-button"
                 className="mb-0"
               >

@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
-import { Spinner } from '@/components/progress/Spinner'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { PageLoading } from '@/components/progress/PageLoading'
 import { useGlobalSettings, useUpdateGlobalSettings } from '@/api/settings'
 import { formatRelativeTime } from '@/utils/formatters'
 
@@ -77,18 +80,14 @@ export function GlobalSettingsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Global Settings</h1>
+      <PageHeader title="Global Settings" />
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <PageCard>
         <p className="text-sm text-gray-600 mb-6">
           Configure OAuth credentials for Google integrations. Leave secret fields blank to keep existing values.
         </p>
@@ -108,13 +107,9 @@ export function GlobalSettingsPage() {
                     Client ID <span className="text-red-500">*</span>
                   </label>
                   {settings?.googleSsoClientIdConfigured ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Configured
-                    </span>
+                    <StatusBadge tone="success">Configured</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Not Configured
-                    </span>
+                    <StatusBadge tone="neutral">Not Configured</StatusBadge>
                   )}
                 </div>
                 <Input
@@ -129,13 +124,9 @@ export function GlobalSettingsPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <label className="block text-sm font-medium text-gray-700">Client Secret</label>
                   {settings?.googleSsoClientSecretConfigured ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Configured
-                    </span>
+                    <StatusBadge tone="success">Configured</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Not Configured
-                    </span>
+                    <StatusBadge tone="neutral">Not Configured</StatusBadge>
                   )}
                 </div>
                 <Input
@@ -181,13 +172,9 @@ export function GlobalSettingsPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <label className="block text-sm font-medium text-gray-700">Client ID</label>
                   {settings?.googleClientSecretConfigured ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Configured
-                    </span>
+                    <StatusBadge tone="success">Configured</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Not Configured
-                    </span>
+                    <StatusBadge tone="neutral">Not Configured</StatusBadge>
                   )}
                 </div>
                 <Input
@@ -207,13 +194,9 @@ export function GlobalSettingsPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <label className="block text-sm font-medium text-gray-700">Client Secret</label>
                   {settings?.googleClientSecretConfigured ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Configured
-                    </span>
+                    <StatusBadge tone="success">Configured</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Not Configured
-                    </span>
+                    <StatusBadge tone="neutral">Not Configured</StatusBadge>
                   )}
                 </div>
                 <Input
@@ -297,7 +280,7 @@ export function GlobalSettingsPage() {
             </p>
           </div>
         )}
-      </div>
+      </PageCard>
     </div>
   )
 }

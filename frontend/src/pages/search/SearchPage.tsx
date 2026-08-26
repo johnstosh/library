@@ -1,56 +1,68 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useState } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSearch, type SearchFilters } from '@/api/search'
+import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
-import { LocLookupResultsModal } from '@/pages/books/components/LocLookupResultsModal'
+import { defaultBookChipFilters, isAnyChipActive, type BookChipFilters } from '@/utils/bookChipFilters'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
-import { PiMagnifyingGlass, PiBook, PiUser, PiFunnel, PiBookOpen, PiCopy } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { bookStatusTone } from '@/utils/status'
+import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
+import {
+  AuthorIcon,
+  BookIcon,
+  BooksIcon,
+  DeleteIcon,
+  EditIcon,
+  FreeTextIcon,
+  GrokipediaIcon,
+} from '@/components/ui/Icons'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { useToast } from '@/hooks/useToast'
+import { PageCard } from '@/components/ui/PageCard'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
-import { useDeleteBook, useCloneBook } from '@/api/books'
+import { useDeleteBook } from '@/api/books'
 import { useDeleteAuthor } from '@/api/authors'
-import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto, AuthorDto } from '@/types/dtos'
-import type { LocLookupResultDto } from '@/api/loc-lookup'
 
-// ─── Filter chip component ────────────────────────────────────────────────────
-
-interface FilterChipProps {
-  label: string
-  active: boolean
-  onClick: () => void
-  tooltip: string
-  dataTest: string
+/** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
+const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
+  inLibrary: 'inLib',
+  electronic: 'elec',
+  freeText: 'freeText',
+  audio: 'audio',
+  mostRecent: 'mostRecent',
+  withoutLoc: 'withoutLoc',
+  threeLetterLoc: 'threeLetterLoc',
+  withoutGrokipedia: 'withoutGrokipedia',
+  withoutGenres: 'withoutGenres',
+  notActiveStatus: 'notActiveStatus',
+  withoutFreeTextUrls: 'withoutFreeTextUrls',
 }
 
-function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={tooltip}
-      data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
-        active
-          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
-      }`}
-    >
-      {active ? (
-        <svg className="hidden sm:block w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <PiFunnel className="hidden sm:block w-3.5 h-3.5 text-gray-400 shrink-0" />
-      )}
-      {label}
-      <span className="hidden sm:inline text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
-    </button>
-  )
+function chipsFromSearchParams(params: URLSearchParams): SearchFilters {
+  const chips: SearchFilters = { ...defaultBookChipFilters }
+  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
+    chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
+  })
+  return chips
+}
+
+function chipParamsForUrl(chips: SearchFilters): Record<string, string> {
+  const params: Record<string, string> = {}
+  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
+    if (chips[chip]) params[CHIP_URL_KEYS[chip]] = 'true'
+  })
+  return params
 }
 
 // ─── Main search page ─────────────────────────────────────────────────────────
@@ -61,17 +73,7 @@ export function SearchPage() {
   const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
 
   // Filter chip state — lives in URL for shareability
-  const urlInLib = searchParams.get('inLib') === 'true'
-  const urlElec = searchParams.get('elec') === 'true'
-  const urlFreeText = searchParams.get('freeText') === 'true'
-  const urlAudio = searchParams.get('audio') === 'true'
-
-  const filters: SearchFilters = {
-    inLib: urlInLib,
-    elec: urlElec,
-    freeText: urlFreeText,
-    audio: urlAudio,
-  }
+  const filters: SearchFilters = chipsFromSearchParams(searchParams)
 
   // Local input state (typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
@@ -84,7 +86,7 @@ export function SearchPage() {
   }, [urlQuery])
 
   const hasSearched = searchParams.has('q')
-  const hasFilters = urlInLib || urlElec || urlFreeText || urlAudio || selectedLabels.length > 0
+  const hasFilters = isAnyChipActive(filters) || selectedLabels.length > 0
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -99,13 +101,7 @@ export function SearchPage() {
   // ── Helpers for building URL params ──────────────────────────────────────
 
   const buildFilterParams = (overrides: Partial<SearchFilters> = {}): Record<string, string> => {
-    const f = { ...filters, ...overrides }
-    const params: Record<string, string> = {}
-    if (f.inLib) params.inLib = 'true'
-    if (f.elec) params.elec = 'true'
-    if (f.freeText) params.freeText = 'true'
-    if (f.audio) params.audio = 'true'
-    return params
+    return chipParamsForUrl({ ...filters, ...overrides })
   }
 
   // ── Event handlers ────────────────────────────────────────────────────────
@@ -154,10 +150,10 @@ export function SearchPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Search Library</h1>
-        <p className="text-gray-600">Search for books and authors by title or name</p>
-      </div>
+      <PageHeader
+        title="Search Library"
+        description="Search for books and authors by title or name"
+      />
 
       {/* Search Form */}
       <form onSubmit={handleSearch} className="mb-8">
@@ -195,36 +191,9 @@ export function SearchPage() {
           )}
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex flex-wrap gap-2 mt-4" data-test="search-filter-chips">
-          <FilterChip
-            label="In-library materials"
-            active={urlInLib}
-            onClick={() => handleFilterToggle('inLib')}
-            tooltip="Limit results to books with a Library of Congress call number — books physically in the collection"
-            dataTest="filter-in-library"
-          />
-          <FilterChip
-            label="Electronic resource"
-            active={urlElec}
-            onClick={() => handleFilterToggle('elec')}
-            tooltip="Limit results to books marked as electronic resources"
-            dataTest="filter-electronic"
-          />
-          <FilterChip
-            label="Has free online text"
-            active={urlFreeText}
-            onClick={() => handleFilterToggle('freeText')}
-            tooltip="Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)"
-            dataTest="filter-free-text"
-          />
-          <FilterChip
-            label="Has free online audio"
-            active={urlAudio}
-            onClick={() => handleFilterToggle('audio')}
-            tooltip="Limit results to books with a free LibriVox audio recording"
-            dataTest="filter-audio"
-          />
+        {/* Filter Chips — same two rows as Books page */}
+        <div className="mt-4" data-test="search-filter-chips">
+          <BookFilters chips={filters} onToggle={handleFilterToggle} />
         </div>
 
         {/* Label Filter Buttons */}
@@ -244,19 +213,17 @@ export function SearchPage() {
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-          <p className="font-medium">Error performing search</p>
-          <p className="text-sm mt-1">{error instanceof Error ? error.message : 'An error occurred'}</p>
-        </div>
+        <ErrorMessage
+          className="mb-4"
+          message={`Error performing search: ${error instanceof Error ? error.message : 'An error occurred'}`}
+        />
       )}
 
       {/* No Results */}
       {noResults && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600 text-lg">
-            {urlQuery ? `No books or authors found for "${urlQuery}"` : 'No books or authors found'}
-          </p>
-        </div>
+        <EmptyState
+          message={urlQuery ? `No books or authors found for "${urlQuery}"` : 'No books or authors found'}
+        />
       )}
 
       {/* Search Results */}
@@ -275,7 +242,7 @@ export function SearchPage() {
                 </h2>
               </div>
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
+              <PageCard padding={false} className="overflow-hidden">
                 <div className="divide-y divide-gray-200">
                   {data.books.map((book) => (
                     <BookResult
@@ -314,7 +281,7 @@ export function SearchPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </PageCard>
             </div>
           )}
 
@@ -331,7 +298,7 @@ export function SearchPage() {
                 </h2>
               </div>
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
+              <PageCard padding={false} className="overflow-hidden">
                 <div className="divide-y divide-gray-200">
                   {data.authors.map((author) => (
                     <AuthorResult
@@ -370,7 +337,7 @@ export function SearchPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </PageCard>
             </div>
           )}
         </div>
@@ -388,18 +355,8 @@ interface BookResultProps {
 
 function BookResult({ book, isLibrarian }: BookResultProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
-  const [showLookupResults, setShowLookupResults] = useState(false)
   const deleteBook = useDeleteBook()
-  const cloneBook = useCloneBook()
-  const lookupSingleBook = useLookupSingleBook()
-
-  const statusColors = {
-    AVAILABLE: 'bg-green-100 text-green-800',
-    CHECKED_OUT: 'bg-blue-100 text-blue-800',
-    LOST: 'bg-red-100 text-red-800',
-    DAMAGED: 'bg-orange-100 text-orange-800',
-  }
+  const toast = useToast()
 
   const handleDelete = async () => {
     try {
@@ -407,24 +364,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
       setShowDeleteConfirm(false)
     } catch (error) {
       console.error('Failed to delete book:', error)
-    }
-  }
-
-  const handleClone = async () => {
-    try {
-      await cloneBook.mutateAsync(book.id)
-    } catch (error) {
-      console.error('Failed to clone book:', error)
-    }
-  }
-
-  const handleLookupLoc = async () => {
-    try {
-      const result = await lookupSingleBook.mutateAsync(book.id)
-      setLookupResults([result])
-      setShowLookupResults(true)
-    } catch (error) {
-      console.error('Failed to lookup LOC:', error)
+      toast.error('Failed to delete book')
     }
   }
 
@@ -435,8 +375,21 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`book-result-${book.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{book.title}</h3>
-            <p className="text-gray-600 mt-1">by {book.author}</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
+                {book.title}
+              </EntityLink>
+            </h3>
+            <p className="text-gray-600 mt-1">
+              by{' '}
+              {book.authorId ? (
+                <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
+                  {book.author}
+                </EntityLink>
+              ) : (
+                book.author
+              )}
+            </p>
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
               {book.publicationYear && <span>{book.publicationYear}</span>}
               {book.publisher && <span>{book.publisher}</span>}
@@ -449,110 +402,65 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             )}
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                statusColors[book.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-              }`}
-            >
+            <StatusBadge tone={bookStatusTone(book.status)}>
               {formatBookStatus(book.status)}
-            </span>
-            {/* URL-type links (free text, grokipedia) */}
+            </StatusBadge>
             {(freeTextUrls.length > 0 || isValidUrl(book.grokipediaUrl)) && (
               <div className="flex gap-1">
                 {freeTextUrls.map((url, index) => (
-                  <a
+                  <IconButton
                     key={index}
                     href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-green-600 hover:text-green-900"
+                    icon={<FreeTextIcon />}
+                    label={`Free text: ${extractDomain(url)}`}
+                    tone="success"
                     data-test={`book-result-free-text-${book.id}-${index}`}
-                    title={`Free text: ${extractDomain(url)}`}
-                  >
-                    <PiBookOpen className="w-5 h-5" />
-                  </a>
+                  />
                 ))}
                 {isValidUrl(book.grokipediaUrl) && (
-                  <a
+                  <IconButton
                     href={book.grokipediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-orange-600 hover:text-orange-900"
+                    icon={<GrokipediaIcon />}
+                    label="View on Grokipedia"
+                    tone="warning"
                     data-test={`book-result-grokipedia-${book.id}`}
-                    title="View on Grokipedia"
-                  >
-                    <span className="text-xl">🅶</span>
-                  </a>
+                  />
                 )}
               </div>
             )}
-            {/* View, author, loc lookup */}
             <div className="flex gap-1 items-center">
-              <Link
+              <IconButton
                 to={`/books/${book.id}`}
-                className="p-2 text-gray-600 hover:text-gray-900"
+                icon={<BookIcon />}
+                label="View Details"
                 data-test={`book-result-view-${book.id}`}
-                title="View Details"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </Link>
+              />
               {book.authorId && (
-                <Link
-                  to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
-                  className="p-2 text-teal-600 hover:text-teal-900"
+                <IconButton
+                  to={`/authors/${book.authorId}`}
+                  icon={<AuthorIcon />}
+                  label="See Author"
+                  tone="info"
                   data-test={`book-result-author-${book.id}`}
-                  title="See Author"
-                >
-                  <span className="text-lg">👤</span>
-                </Link>
-              )}
-              {isLibrarian && (
-                <button
-                  onClick={handleLookupLoc}
-                  className="p-2 text-purple-600 hover:text-purple-900"
-                  data-test={`book-result-lookup-loc-${book.id}`}
-                  title="Lookup LOC"
-                  disabled={lookupSingleBook.isPending}
-                >
-                  <span className="text-lg">🗃️</span>
-                </button>
+                />
               )}
             </div>
-            {/* Clone, edit, delete (librarian only) */}
             {isLibrarian && (
               <div className="flex gap-1">
-                <button
-                  onClick={handleClone}
-                  className="p-2 text-green-600 hover:text-green-900"
-                  data-test={`book-result-clone-${book.id}`}
-                  title="Clone"
-                  disabled={cloneBook.isPending}
-                >
-                  <PiCopy className="w-5 h-5" />
-                </button>
-                <Link
+                <IconButton
                   to={`/books/${book.id}/edit`}
-                  className="p-2 text-blue-600 hover:text-blue-900"
+                  icon={<EditIcon />}
+                  label="Edit"
+                  tone="primary"
                   data-test={`book-result-edit-${book.id}`}
-                  title="Edit"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </Link>
-                <button
+                />
+                <IconButton
+                  icon={<DeleteIcon />}
+                  label="Delete"
+                  tone="danger"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="p-2 text-red-600 hover:text-red-900"
                   data-test={`book-result-delete-${book.id}`}
-                  title="Delete"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                />
               </div>
             )}
           </div>
@@ -569,12 +477,6 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
         variant="danger"
         isLoading={deleteBook.isPending}
       />
-
-      <LocLookupResultsModal
-        isOpen={showLookupResults}
-        onClose={() => setShowLookupResults(false)}
-        results={lookupResults}
-      />
     </>
   )
 }
@@ -589,6 +491,7 @@ interface AuthorResultProps {
 function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const deleteAuthor = useDeleteAuthor()
+  const toast = useToast()
 
   const handleDelete = async () => {
     try {
@@ -596,6 +499,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
       setShowDeleteConfirm(false)
     } catch (error) {
       console.error('Failed to delete author:', error)
+      toast.error('Failed to delete author')
     }
   }
 
@@ -605,7 +509,9 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900">
-              {author.name}
+              <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
+                {author.name}
+              </EntityLink>
             </h3>
             {(author.dateOfBirth || author.dateOfDeath) && (
               <p className="text-gray-600 mt-1">
@@ -620,64 +526,49 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             {author.bookCount !== undefined && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              <StatusBadge tone="emphasis">
                 {author.bookCount} {author.bookCount === 1 ? 'book' : 'books'}
-              </span>
+              </StatusBadge>
             )}
             <div className="flex items-center gap-1">
-              <Link
+              <IconButton
                 to={`/authors/${author.id}`}
-                className="p-2 text-gray-600 hover:text-gray-900"
+                icon={<AuthorIcon />}
+                label="View Details"
                 data-test={`author-result-view-${author.id}`}
-                title="View Details"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </Link>
+              />
               {isValidUrl(author.grokipediaUrl) && (
-                <a
+                <IconButton
                   href={author.grokipediaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 text-orange-600 hover:text-orange-900"
+                  icon={<GrokipediaIcon />}
+                  label="View on Grokipedia"
+                  tone="warning"
                   data-test={`author-result-grokipedia-${author.id}`}
-                  title="View on Grokipedia"
-                >
-                  <span className="text-xl">🅶</span>
-                </a>
+                />
               )}
-              <Link
+              <IconButton
                 to={`/authors/${author.id}`}
-                className="p-2 text-teal-600 hover:text-teal-900"
+                icon={<BooksIcon />}
+                label="See Books"
+                tone="info"
                 data-test={`author-result-see-books-${author.id}`}
-                title="See Books"
-              >
-                <span className="text-lg">📚</span>
-              </Link>
+              />
               {isLibrarian && (
                 <>
-                  <Link
+                  <IconButton
                     to={`/authors/${author.id}/edit`}
-                    className="p-2 text-blue-600 hover:text-blue-900"
+                    icon={<EditIcon />}
+                    label="Edit"
+                    tone="primary"
                     data-test={`author-result-edit-${author.id}`}
-                    title="Edit"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </Link>
-                  <button
+                  />
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    label="Delete"
+                    tone="danger"
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="p-2 text-red-600 hover:text-red-900"
                     data-test={`author-result-delete-${author.id}`}
-                    title="Delete"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  />
                 </>
               )}
             </div>

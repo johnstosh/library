@@ -97,11 +97,18 @@ public class SearchUITest {
         // Search button is ENABLED even with empty input (blank search is allowed)
         assertThat(searchButton).isEnabled();
 
-        // Verify all four filter chips are present
+        // Verify the same filter chips as the Books page
         assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='filter-electronic']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
+        assertThat(page.locator("[data-test='filter-3-letter-loc']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
+        assertThat(page.locator("[data-test='filter-not-active-status']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-free-text-urls']")).isVisible();
     }
 
     @Test
@@ -407,28 +414,35 @@ public class SearchUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
 
-        // All four chips visible
         Locator inLibChip    = page.locator("[data-test='filter-in-library']");
         Locator elecChip     = page.locator("[data-test='filter-electronic']");
         Locator freeTextChip = page.locator("[data-test='filter-free-text']");
         Locator audioChip    = page.locator("[data-test='filter-audio']");
+        Locator mostRecentChip = page.locator("[data-test='filter-most-recent']");
+        Locator notActiveChip = page.locator("[data-test='filter-not-active-status']");
 
         assertThat(inLibChip).isVisible();
         assertThat(elecChip).isVisible();
         assertThat(freeTextChip).isVisible();
         assertThat(audioChip).isVisible();
+        assertThat(mostRecentChip).isVisible();
+        assertThat(notActiveChip).isVisible();
 
         // Chips have tooltip (title attribute)
         Assertions.assertNotNull(inLibChip.getAttribute("title"), "In-library chip should have a tooltip");
         Assertions.assertNotNull(elecChip.getAttribute("title"), "Electronic chip should have a tooltip");
         Assertions.assertNotNull(freeTextChip.getAttribute("title"), "Free text chip should have a tooltip");
         Assertions.assertNotNull(audioChip.getAttribute("title"), "Audio chip should have a tooltip");
+        Assertions.assertNotNull(mostRecentChip.getAttribute("title"), "Most recent chip should have a tooltip");
+        Assertions.assertNotNull(notActiveChip.getAttribute("title"), "Not active status chip should have a tooltip");
 
         // Text content
         assertThat(inLibChip).containsText("In-library materials");
         assertThat(elecChip).containsText("Electronic resource");
         assertThat(freeTextChip).containsText("Has free online text");
         assertThat(audioChip).containsText("Has free online audio");
+        assertThat(mostRecentChip).containsText("Most Recent Day");
+        assertThat(notActiveChip).containsText("Not Active Status");
     }
 
     @Test
@@ -552,5 +566,54 @@ public class SearchUITest {
 
         // Clear button should disappear
         assertThat(page.locator("[data-test='clear-search']")).not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Blank search hides WITHDRAWN books; Not Active Status chip shows only non-ACTIVE")
+    void testWithdrawnHiddenUntilNotActiveStatusChipOn() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+        page.click("[data-test='search-button']");
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator bookResults = page.locator("[data-test^='book-result-']");
+        assertThat(bookResults.filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(bookResults.filter(new Locator.FilterOptions().setHasText("Little Flowers")))
+                .not().isVisible();
+
+        page.click("[data-test='filter-not-active-status']");
+
+        assertThat(page.locator("[data-test^='book-result-']")
+                .filter(new Locator.FilterOptions().setHasText("Little Flowers")))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test^='book-result-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica")))
+                .not().isVisible();
+    }
+
+    @Test
+    @DisplayName("In-library AND electronic chips together hide books matching only one")
+    void testInLibraryAndElectronicChipsRestrictTogether() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+        page.click("[data-test='filter-in-library']");
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test^='book-result-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-']")
+                .filter(new Locator.FilterOptions().setHasText("Gutenberg"))).not().isVisible();
+
+        page.click("[data-test='filter-electronic']");
+
+        page.waitForSelector("text=No books or authors found",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("text=Summa Theologica")).not().isVisible();
+        assertThat(page.locator("text=Gutenberg")).not().isVisible();
     }
 }

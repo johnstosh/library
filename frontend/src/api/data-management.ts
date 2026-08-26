@@ -47,6 +47,21 @@ export interface LabelCountDto {
   count: number
 }
 
+// Named book-count statistics for the Data Management availability section
+export interface BookAvailabilityStatsDto {
+  electronicResource: number
+  hasCallNumber: number
+  withdrawn: number
+  availableAtYdl: number
+  ydlPaper: number
+  ydlEbook: number
+  ydlAudio: number
+  availableAtEmu: number
+  emuPaper: number
+  emuEbook: number
+  emuAudio: number
+}
+
 // Photo Export Types
 export interface PhotoExportStatsDto {
   total: number
@@ -76,6 +91,7 @@ export interface PhotoExportInfoDto {
   bookId?: number
   bookLocNumber?: string
   bookDateAdded?: string
+  bookAuthorId?: number
   bookAuthorName?: string
   authorName?: string
   authorId?: number
@@ -152,6 +168,7 @@ export function useImportJsonData() {
     onSuccess: () => {
       // Invalidate all queries to refresh data after import
       queryClient.invalidateQueries({ queryKey: ['database-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['availability-stats'] })
       queryClient.invalidateQueries({ queryKey: ['books'] })
       queryClient.invalidateQueries({ queryKey: ['authors'] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -174,6 +191,14 @@ export function useLabelCounts() {
   return useQuery({
     queryKey: ['label-counts'],
     queryFn: () => api.get<LabelCountDto[]>('/import/label-counts'),
+  })
+}
+
+// Get book availability counts (electronic, call number, withdrawn, YDL, EMU)
+export function useAvailabilityStats() {
+  return useQuery({
+    queryKey: ['availability-stats'],
+    queryFn: () => api.get<BookAvailabilityStatsDto>('/import/availability-stats'),
   })
 }
 

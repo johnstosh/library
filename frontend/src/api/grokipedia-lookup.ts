@@ -43,6 +43,51 @@ export function useLookupBulkBooksGrokipedia() {
   })
 }
 
+/**
+ * Lookup Grokipedia URLs for multiple books with progress tracking.
+ * Processes books sequentially so the toolbar can show n/total.
+ */
+export function useLookupBulkBooksGrokipediaWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (bookIds: number[]) => {
+      const results: GrokipediaLookupResultDto[] = []
+      const total = bookIds.length
+
+      for (let i = 0; i < bookIds.length; i++) {
+        const bookId = bookIds[i]
+        try {
+          const batch = await api.post<GrokipediaLookupResultDto[]>('/books/grokipedia-lookup-bulk', [bookId])
+          results.push(batch[0] ?? {
+            bookId,
+            name: `Book ${bookId}`,
+            success: false,
+            errorMessage: 'No result returned',
+          })
+          queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
+        } catch (error) {
+          results.push({
+            bookId,
+            name: `Book ${bookId}`,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+    },
+  })
+}
+
 // Lookup Grokipedia URLs for multiple authors (bulk)
 export function useLookupBulkAuthorsGrokipedia() {
   const queryClient = useQueryClient()

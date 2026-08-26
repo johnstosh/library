@@ -2,6 +2,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { TableSummary } from '@/components/table/TableSummary'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { UserTable } from './components/UserTable'
 import {
@@ -17,9 +23,10 @@ export function UsersPage() {
   const [deletingUser, setDeletingUser] = useState<UserDto | null>(null)
   const [showBulkDelete, setShowBulkDelete] = useState(false)
 
-  const { data: users = [], isLoading } = useUsers()
+  const { data: users = [], isLoading, isFetching, error } = useUsers()
   const deleteUser = useDeleteUser()
   const deleteUsers = useDeleteUsers()
+  const toast = useToast()
 
   const selectedIds = useUiStore((state) => state.usersTable.selectedIds)
   const selectAll = useUiStore((state) => state.usersTable.selectAll)
@@ -41,8 +48,13 @@ export function UsersPage() {
 
   const confirmDelete = async () => {
     if (!deletingUser) return
-    await deleteUser.mutateAsync(deletingUser.id)
-    setDeletingUser(null)
+    try {
+      await deleteUser.mutateAsync(deletingUser.id)
+      setDeletingUser(null)
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      toast.error('Failed to delete user')
+    }
   }
 
   const handleBulkDelete = () => {
@@ -51,9 +63,14 @@ export function UsersPage() {
   }
 
   const confirmBulkDelete = async () => {
-    await deleteUsers.mutateAsync(Array.from(selectedIds))
-    clearSelection('usersTable')
-    setShowBulkDelete(false)
+    try {
+      await deleteUsers.mutateAsync(Array.from(selectedIds))
+      clearSelection('usersTable')
+      setShowBulkDelete(false)
+    } catch (error) {
+      console.error('Failed to delete users:', error)
+      toast.error('Failed to delete users')
+    }
   }
 
   const handleSelectToggle = (id: number) => {
@@ -78,45 +95,47 @@ export function UsersPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-        <Button variant="primary" onClick={handleCreate} data-test="create-user">
-          Create User
-        </Button>
-      </div>
+      <PageHeader
+        title="Users"
+        actions={
+          <Button variant="primary" onClick={handleCreate} data-test="create-user">
+            Add User
+          </Button>
+        }
+      />
 
-      {/* Bulk Actions */}
-      {selectedIds.size > 0 && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      {error && (
+        <ErrorMessage message={`Error loading users: ${error.message}`} className="mb-4" />
+      )}
+
+      <PageCard padding={false} className="relative">
+        {selectedIds.size > 0 && (
+          <div className="m-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-blue-900">
                 {selectedIds.size} user{selectedIds.size === 1 ? '' : 's'} selected
               </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => clearSelection('usersTable')}
-              >
-                Clear
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleBulkDelete}
-                data-test="bulk-delete-users"
-              >
-                Delete Selected
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearSelection('usersTable')}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  data-test="bulk-delete-users"
+                >
+                  Delete Selected
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow">
         <div className="p-4">
           <UserTable
             users={users}
@@ -130,14 +149,9 @@ export function UsersPage() {
           />
         </div>
 
-        {!isLoading && users.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {users.length} {users.length === 1 ? 'user' : 'users'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary count={users.length} singular="user" plural="users" isLoading={isLoading} />
+      </PageCard>
 
       {/* Delete Confirmation */}
       <ConfirmDialog

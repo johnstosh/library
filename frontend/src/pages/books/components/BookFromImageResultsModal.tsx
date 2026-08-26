@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import { PiCheckCircle, PiXCircle } from 'react-icons/pi'
 import type { BookFromImageResult } from './BulkActionsToolbar'
 
@@ -96,7 +97,11 @@ export function BookFromImageResultsModal({
                     {result.id}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-900">
-                    {result.book?.title || '—'}
+                    {result.book?.title ? (
+                      <EntityLink to={`/books/${result.id}`}>{result.book.title}</EntityLink>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-600">
                     {result.success ? 'Successfully processed' : result.error || 'Failed'}

@@ -2,7 +2,8 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@/api/users'
 import { UserFormPage } from './components/UserFormPage'
-import { Spinner } from '@/components/progress/Spinner'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
 
 export function UserEditPage() {
   const navigate = useNavigate()
@@ -19,27 +20,17 @@ export function UserEditPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">User Not Found</h1>
-          <p className="text-gray-600 mb-4">The user you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate('/users')}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Users
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="User Not Found"
+        entityLabel="user"
+        onBack={() => navigate('/users')}
+        backLabel="Return to Users"
+      />
     )
   }
 

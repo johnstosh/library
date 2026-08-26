@@ -13,6 +13,8 @@ import {
   MenuItems,
   MenuItem,
 } from '@headlessui/react'
+import { PiList, PiX } from 'react-icons/pi'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 function getInitials(username: string | null | undefined): string {
   const name = (username ?? '').trim()
@@ -110,7 +112,7 @@ export function Navigation() {
                   aria-label={open ? 'Close menu' : 'Open menu'}
                   data-test="mobile-menu-button"
                 >
-                  <span className="text-xl leading-none">{open ? '✕' : '☰'}</span>
+                  {open ? <PiX className="w-5 h-5" /> : <PiList className="w-5 h-5" />}
                 </DisclosureButton>
 
                 {/* User avatar menu */}
@@ -133,14 +135,10 @@ export function Navigation() {
                         </p>
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                           {user?.ssoSubjectId && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              SSO
-                            </span>
+                            <StatusBadge tone="info" shape="rounded">SSO</StatusBadge>
                           )}
                           {isLibrarian && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                              Librarian
-                            </span>
+                            <StatusBadge tone="emphasis" shape="rounded">Librarian</StatusBadge>
                           )}
                         </div>
                       </div>

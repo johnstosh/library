@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
@@ -97,7 +100,7 @@ export function UserSettingsPage() {
       // Refresh user settings to reflect the change
       await refetch()
       setSuccessMessage('Google Photos access revoked')
-    } catch (error) {
+    } catch {
       setErrorMessage('Failed to revoke Google Photos access')
     }
   }
@@ -159,9 +162,9 @@ export function UserSettingsPage() {
   if (user?.ssoSubjectId) {
     return (
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">User Settings</h1>
+        <PageHeader title="User Settings" />
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <PageCard>
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Information</h2>
             <div className="space-y-2">
@@ -171,9 +174,7 @@ export function UserSettingsPage() {
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Account Type:</span>
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  Google SSO
-                </span>
+                <StatusBadge tone="info" className="ml-2">Google SSO</StatusBadge>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Authority:</span>
@@ -247,9 +248,7 @@ export function UserSettingsPage() {
                   </label>
                   {userSettings?.googlePhotosApiKey ? (
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                        Authorized
-                      </span>
+                      <StatusBadge tone="success">Authorized</StatusBadge>
                       <Button
                         variant="secondary"
                         onClick={handleRevokeGooglePhotos}
@@ -260,9 +259,7 @@ export function UserSettingsPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-                        Not Authorized
-                      </span>
+                      <StatusBadge tone="neutral">Not Authorized</StatusBadge>
                       <Button
                         onClick={handleAuthorizeGooglePhotos}
                         data-test="authorize-google-photos-button"
@@ -314,16 +311,16 @@ export function UserSettingsPage() {
               </div>
             </div>
           )}
-        </div>
+        </PageCard>
       </div>
     )
   }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">User Settings</h1>
+      <PageHeader title="User Settings" />
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <PageCard>
         {/* Account Information */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
@@ -465,9 +462,7 @@ export function UserSettingsPage() {
                 </label>
                 {userSettings?.googlePhotosApiKey ? (
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                      Authorized
-                    </span>
+                    <StatusBadge tone="success">Authorized</StatusBadge>
                     <Button
                       variant="secondary"
                       onClick={handleRevokeGooglePhotos}
@@ -478,9 +473,7 @@ export function UserSettingsPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-                      Not Authorized
-                    </span>
+                    <StatusBadge tone="neutral">Not Authorized</StatusBadge>
                     <Button
                       onClick={handleAuthorizeGooglePhotos}
                       data-test="authorize-google-photos-button"
@@ -532,7 +525,7 @@ export function UserSettingsPage() {
             </div>
           </div>
         )}
-      </div>
+      </PageCard>
     </div>
   )
 }

@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
@@ -69,5 +70,15 @@ public class ImportController {
     public ResponseEntity<List<LabelCountDto>> getLabelCounts() {
         List<LabelCountDto> labelCounts = importService.getLabelCounts();
         return ResponseEntity.ok(labelCounts);
+    }
+
+    /**
+     * Returns named book-count statistics for electronic, call number, withdrawn, YDL, and EMU.
+     */
+    @GetMapping("/availability-stats")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<BookAvailabilityStatsDto> getAvailabilityStats() {
+        BookAvailabilityStatsDto stats = importService.getAvailabilityStats();
+        return ResponseEntity.ok(stats);
     }
 }

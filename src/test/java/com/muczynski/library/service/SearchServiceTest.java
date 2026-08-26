@@ -22,12 +22,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +50,7 @@ class SearchServiceTest {
     @InjectMocks
     private SearchService searchService;
 
-    // ── Helper to create a stubbed book page ──────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────
 
     private Page<Book> bookPageOf(Pageable pageable, Book... books) {
         return new PageImpl<>(Arrays.asList(books), pageable, books.length);
@@ -60,6 +62,32 @@ class SearchServiceTest {
 
     private Page<Author> emptyAuthorPage(Pageable pageable) {
         return new PageImpl<>(Collections.emptyList(), pageable, 0);
+    }
+
+    private SearchResponseDto search(String query, int page, int size,
+            boolean inLib, boolean elec, boolean freeText, boolean audio, List<String> labels) {
+        return searchService.search(query, page, size, inLib, elec, freeText, audio,
+                false, false, false, false, false, false, false, labels);
+    }
+
+    private void stubFindWithFilters(String query, boolean inLib, boolean elec, boolean freeText, boolean audio,
+            Page<Book> bookPage) {
+        when(bookRepository.findWithFilters(
+                eq(query), eq(inLib), eq(elec), eq(freeText), eq(audio),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(bookPage);
+    }
+
+    private void stubAuthorsOfFilteredBooks(String query, boolean inLib, boolean elec, boolean freeText, boolean audio,
+            Page<Author> authorPage) {
+        when(authorRepository.findAuthorsOfBooksMatchingFilters(
+                eq(query), eq(inLib), eq(elec), eq(freeText), eq(audio),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(authorPage);
     }
 
     // ── No-filter (show all) tests ────────────────────────────────────────
@@ -86,14 +114,13 @@ class SearchServiceTest {
         authorDto.setId(1L);
         authorDto.setName("Test Author");
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
+        stubFindWithFilters(query, false, false, false, false, bookPageOf(pageable, book));
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(Arrays.asList(author), pageable, 1));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -112,12 +139,11 @@ class SearchServiceTest {
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
+        stubFindWithFilters(query, false, false, false, false, emptyBookPage(pageable));
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
@@ -149,15 +175,13 @@ class SearchServiceTest {
         authorDto.setId(1L);
         authorDto.setName("Any Author");
 
-        // Empty query uses findWithFilters with empty string
-        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
+        stubFindWithFilters("", false, false, false, false, bookPageOf(pageable, book));
         when(authorRepository.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(Arrays.asList(author), pageable, 1));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
-        SearchResponseDto result = searchService.search("", page, size, false, false, false, false, null);
+        SearchResponseDto result = search("", page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -169,12 +193,11 @@ class SearchServiceTest {
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
+        stubFindWithFilters("", false, false, false, false, emptyBookPage(pageable));
         when(authorRepository.findAll(any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(null, page, size, false, false, false, false, null);
+        SearchResponseDto result = search(null, page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
@@ -186,12 +209,11 @@ class SearchServiceTest {
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        when(bookRepository.findWithFilters(eq(""), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
+        stubFindWithFilters("", false, false, false, false, emptyBookPage(pageable));
         when(authorRepository.findAll(any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search("   ", page, size, false, false, false, false, null);
+        SearchResponseDto result = search("   ", page, size, false, false, false, false, null);
 
         assertNotNull(result);
     }
@@ -219,16 +241,13 @@ class SearchServiceTest {
         authorDto.setId(1L);
         authorDto.setName("A Library Author");
 
-        when(bookRepository.findWithFilters(eq(query), eq(true), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
-        // Filter active → uses EXISTS-based query (not name search)
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(true), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(Arrays.asList(author), pageable, 1));
+        stubFindWithFilters(query, true, false, false, false, bookPageOf(pageable, book));
+        stubAuthorsOfFilteredBooks(query, true, false, false, false,
+                new PageImpl<>(Arrays.asList(author), pageable, 1));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, true, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, true, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -251,15 +270,11 @@ class SearchServiceTest {
         bookDto.setId(2L);
         bookDto.setTitle("Electronic Book");
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(true), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
-        // Filter active → uses EXISTS-based query (not name search)
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(false), eq(true), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyAuthorPage(pageable));
+        stubFindWithFilters(query, false, true, false, false, bookPageOf(pageable, book));
+        stubAuthorsOfFilteredBooks(query, false, true, false, false, emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, false, true, false, false, null);
+        SearchResponseDto result = search(query, page, size, false, true, false, false, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -280,15 +295,11 @@ class SearchServiceTest {
         bookDto.setId(3L);
         bookDto.setTitle("Free Text Book");
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(true), eq(false), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
-        // Filter active → uses EXISTS-based query (not name search)
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(false), eq(false), eq(true), eq(false), any(Pageable.class)))
-                .thenReturn(emptyAuthorPage(pageable));
+        stubFindWithFilters(query, false, false, true, false, bookPageOf(pageable, book));
+        stubAuthorsOfFilteredBooks(query, false, false, true, false, emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, true, false, null);
+        SearchResponseDto result = search(query, page, size, false, false, true, false, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -309,15 +320,11 @@ class SearchServiceTest {
         bookDto.setId(4L);
         bookDto.setTitle("LibriVox Book");
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(true), any(Pageable.class)))
-                .thenReturn(bookPageOf(pageable, book));
-        // Filter active → uses EXISTS-based query (not name search)
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(false), eq(false), eq(false), eq(true), any(Pageable.class)))
-                .thenReturn(emptyAuthorPage(pageable));
+        stubFindWithFilters(query, false, false, false, true, bookPageOf(pageable, book));
+        stubAuthorsOfFilteredBooks(query, false, false, false, true, emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, true, null);
+        SearchResponseDto result = search(query, page, size, false, false, false, true, null);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -326,20 +333,14 @@ class SearchServiceTest {
 
     @Test
     void searchWithMultipleFiltersPassesAllTrueToRepository() {
-        // With AND logic, both inLibrary AND electronic must be true on the same book.
-        // The repo mock is called with both flags true; result set is whatever the repo returns.
         String query = "test";
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        when(bookRepository.findWithFilters(eq(query), eq(true), eq(true), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
-        // Filter active → uses EXISTS-based query (not name search)
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(true), eq(true), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyAuthorPage(pageable));
+        stubFindWithFilters(query, true, true, false, false, emptyBookPage(pageable));
+        stubAuthorsOfFilteredBooks(query, true, true, false, false, emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, true, true, false, false, null);
+        SearchResponseDto result = search(query, page, size, true, true, false, false, null);
 
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
@@ -347,30 +348,24 @@ class SearchServiceTest {
 
     @Test
     void searchWithFilterActive_authorsAreFromFilteredBooks_notNameSearch() {
-        // When a filter is active, the author list is the authors of the filtered books,
-        // NOT a name-based search for the query string.
         String query = "bible";
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
         Author authorOfFilteredBook = new Author();
         authorOfFilteredBook.setId(10L);
-        authorOfFilteredBook.setName("Augustine of Hippo"); // name does NOT contain "bible"
+        authorOfFilteredBook.setName("Augustine of Hippo");
         AuthorDto authorDto = new AuthorDto();
         authorDto.setId(10L);
         authorDto.setName("Augustine of Hippo");
 
-        when(bookRepository.findWithFilters(eq(query), eq(true), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
-        when(authorRepository.findAuthorsOfBooksMatchingFilters(
-                eq(query), eq(true), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(Arrays.asList(authorOfFilteredBook), pageable, 1));
+        stubFindWithFilters(query, true, false, false, false, emptyBookPage(pageable));
+        stubAuthorsOfFilteredBooks(query, true, false, false, false,
+                new PageImpl<>(Arrays.asList(authorOfFilteredBook), pageable, 1));
         when(authorMapper.toDto(authorOfFilteredBook)).thenReturn(authorDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, true, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, true, false, false, false, null);
 
-        // The author whose name doesn't match the query is still returned because they
-        // wrote a book that matches the filter.
         assertNotNull(result);
         assertEquals(1, result.getAuthors().size());
         assertEquals("Augustine of Hippo", result.getAuthors().get(0).getName());
@@ -385,19 +380,18 @@ class SearchServiceTest {
         Pageable pageable = PageRequest.of(page, size);
 
         List<Book> bookList = Arrays.asList(new Book(), new Book());
-        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 25); // 25 total → 3 pages
+        Page<Book> bookPage = new PageImpl<>(bookList, pageable, 25);
 
         List<Author> authorList = Arrays.asList(new Author());
-        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 11); // 11 total → 2 pages
+        Page<Author> authorPage = new PageImpl<>(authorList, pageable, 11);
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(bookPage);
+        stubFindWithFilters(query, false, false, false, false, bookPage);
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
                 .thenReturn(authorPage);
         when(bookMapper.toDto(any(Book.class))).thenReturn(new BookDto());
         when(authorMapper.toDto(any(Author.class))).thenReturn(new AuthorDto());
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(3, result.getBookPage().getTotalPages());
@@ -430,16 +424,19 @@ class SearchServiceTest {
 
         when(bookRepository.findWithFiltersAndLabels(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(labels), eq(2L), any(Pageable.class)))
                 .thenReturn(bookPageOf(pageable, book));
-        // Labels are active → uses EXISTS-based author query (not name search)
         when(authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(labels), eq(2L), any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, labels);
+        SearchResponseDto result = search(query, page, size, false, false, false, false, labels);
 
         assertNotNull(result);
         assertEquals(1, result.getBooks().size());
@@ -455,15 +452,18 @@ class SearchServiceTest {
 
         when(bookRepository.findWithFiltersAndLabels(
                 eq(query), eq(true), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(labels), eq(1L), any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
-        // Labels+filter active → uses EXISTS-based author query (not name search)
         when(authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
                 eq(query), eq(true), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(labels), eq(1L), any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, true, false, false, false, labels);
+        SearchResponseDto result = search(query, page, size, true, false, false, false, labels);
 
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
@@ -475,14 +475,135 @@ class SearchServiceTest {
         int page = 0, size = 20;
         Pageable pageable = PageRequest.of(page, size);
 
-        when(bookRepository.findWithFilters(eq(query), eq(false), eq(false), eq(false), eq(false), any(Pageable.class)))
-                .thenReturn(emptyBookPage(pageable));
+        stubFindWithFilters(query, false, false, false, false, emptyBookPage(pageable));
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false, null);
+        SearchResponseDto result = search(query, page, size, false, false, false, false, null);
 
         assertNotNull(result);
         assertEquals(0, result.getBooks().size());
+    }
+
+    // ── notActiveStatus / extra chips ─────────────────────────────────────
+
+    @Test
+    void searchWithNotActiveStatusOff_passesFalseToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        stubFindWithFilters(query, false, false, false, false, emptyBookPage(pageable));
+        when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+
+        searchService.search(query, page, size, false, false, false, false,
+                false, false, false, false, false, false, false, null);
+
+        verify(bookRepository).findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class));
+    }
+
+    @Test
+    void searchWithNotActiveStatusOn_passesTrueAndUsesAuthorFilterQuery() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        when(bookRepository.findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findAuthorsOfBooksMatchingFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+                false, false, false, false, false, true, false, null);
+
+        assertNotNull(result);
+        verify(bookRepository).findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
+                any(Pageable.class));
+        verify(authorRepository).findAuthorsOfBooksMatchingFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
+                any(Pageable.class));
+    }
+
+    @Test
+    void searchWithMostRecentFilter_computesUtcCutoffFromMaxDate() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+        LocalDateTime max = LocalDateTime.of(2026, 8, 26, 15, 30);
+        LocalDateTime expectedCutoff = LocalDateTime.of(2026, 8, 25, 0, 0);
+        List<Long> tempIds = List.of(99L);
+
+        when(bookRepository.findMaxDateAddedToLibrary()).thenReturn(max);
+        when(bookRepository.findBookIdsWithTemporaryTitles()).thenReturn(tempIds);
+        when(bookRepository.findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(true), eq(expectedCutoff), eq(tempIds),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findAuthorsOfBooksMatchingFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(true), eq(expectedCutoff), eq(tempIds),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+                true, false, false, false, false, false, false, null);
+
+        assertNotNull(result);
+        verify(bookRepository).findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(true), eq(expectedCutoff), eq(tempIds),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class));
+    }
+
+    @Test
+    void searchWithWithoutLocFilter_passesTrueToRepository() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        when(bookRepository.findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(true), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyBookPage(pageable));
+        when(authorRepository.findAuthorsOfBooksMatchingFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(true), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class)))
+                .thenReturn(emptyAuthorPage(pageable));
+
+        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+                false, true, false, false, false, false, false, null);
+
+        assertNotNull(result);
+        verify(bookRepository).findWithFilters(
+                eq(query), eq(false), eq(false), eq(false), eq(false),
+                eq(false), any(), anyList(),
+                eq(true), eq(false), eq(false), eq(false), eq(false), eq(false),
+                any(Pageable.class));
     }
 }

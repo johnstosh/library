@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
@@ -405,5 +406,71 @@ class ImportControllerTest {
             .statusCode(200)
             .body("[0].label", notNullValue())
             .body("[0].count", notNullValue());
+    }
+
+    // ==================== GET /api/import/availability-stats Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetAvailabilityStats_Success() {
+        BookAvailabilityStatsDto stats = new BookAvailabilityStatsDto(
+            3L, 8L, 1L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
+        );
+        when(importService.getAvailabilityStats()).thenReturn(stats);
+
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/availability-stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("electronicResource", equalTo(3))
+            .body("hasCallNumber", equalTo(8))
+            .body("withdrawn", equalTo(1))
+            .body("availableAtYdl", equalTo(5))
+            .body("ydlPaper", equalTo(2))
+            .body("ydlEbook", equalTo(4))
+            .body("ydlAudio", equalTo(1))
+            .body("availableAtEmu", equalTo(6))
+            .body("emuPaper", equalTo(3))
+            .body("emuEbook", equalTo(2))
+            .body("emuAudio", equalTo(1));
+    }
+
+    @Test
+    void testGetAvailabilityStats_Unauthorized() {
+        given()
+        .when()
+            .get("/api/import/availability-stats")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetAvailabilityStats_HasAllFields() {
+        when(importService.getAvailabilityStats()).thenReturn(
+            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+        );
+
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/availability-stats")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("electronicResource", notNullValue())
+            .body("hasCallNumber", notNullValue())
+            .body("withdrawn", notNullValue())
+            .body("availableAtYdl", notNullValue())
+            .body("ydlPaper", notNullValue())
+            .body("ydlEbook", notNullValue())
+            .body("ydlAudio", notNullValue())
+            .body("availableAtEmu", notNullValue())
+            .body("emuPaper", notNullValue())
+            .body("emuEbook", notNullValue())
+            .body("emuAudio", notNullValue());
     }
 }

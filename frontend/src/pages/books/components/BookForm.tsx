@@ -14,6 +14,7 @@ import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle } from 'react-icons/pi'
+import { LocIcon } from '@/components/ui/Icons'
 
 interface BookFormProps {
   isOpen: boolean
@@ -366,7 +367,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
                 onClick={handleLookupLoc}
                 isLoading={isLookingUp}
                 disabled={isLoading || isLookingUp || isSuggesting}
-                leftIcon={<span>🗃️</span>}
+                leftIcon={<LocIcon />}
                 data-test="lookup-loc-button"
                 className="mb-0"
               >

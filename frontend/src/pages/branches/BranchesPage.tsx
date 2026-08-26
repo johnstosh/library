@@ -11,26 +11,27 @@ import {
   useDeleteBranch,
 } from '@/api/branches'
 import type { BranchDto } from '@/types/dtos'
-import { PiEye } from 'react-icons/pi'
+import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { DeleteIcon, EditIcon, ViewIcon } from '@/components/ui/Icons'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { PageCard } from '@/components/ui/PageCard'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { TableSummary } from '@/components/table/TableSummary'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useToast } from '@/hooks/useToast'
 
 export function BranchesPage() {
   const navigate = useNavigate()
   const [deleteBranchId, setDeleteBranchId] = useState<number | null>(null)
 
-  const { data: branches = [], isLoading } = useBranches()
+  const { data: branches = [], isLoading, isFetching, error } = useBranches()
+  const toast = useToast()
   const { data: statistics = [] } = useBranchStatistics()
   const deleteBranch = useDeleteBranch()
 
   const handleAdd = () => {
     navigate('/branches/new')
-  }
-
-  const handleEdit = (branch: BranchDto) => {
-    navigate(`/branches/${branch.id}/edit`)
-  }
-
-  const handleView = (branch: BranchDto) => {
-    navigate(`/branches/${branch.id}`)
   }
 
   const handleDelete = async () => {
@@ -41,6 +42,7 @@ export function BranchesPage() {
       setDeleteBranchId(null)
     } catch (error) {
       console.error('Failed to delete branch:', error)
+      toast.error('Failed to delete branch')
     }
   }
 
@@ -54,13 +56,9 @@ export function BranchesPage() {
       key: 'name',
       header: 'Branch Name',
       accessor: (branch) => (
-        <button
-          onClick={() => handleView(branch)}
-          className="font-medium text-blue-600 hover:text-blue-900 text-left"
-          data-test={`view-branch-${branch.id}`}
-        >
+        <EntityLink to={`/branches/${branch.id}`} className="font-medium" data-test={`view-branch-${branch.id}`}>
           {branch.branchName}
-        </button>
+        </EntityLink>
       ),
       width: '30%',
     },
@@ -100,14 +98,20 @@ export function BranchesPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Branches</h1>
-        <Button variant="primary" onClick={handleAdd} data-test="add-branch">
-          Add Branch
-        </Button>
-      </div>
+      <PageHeader
+        title="Branches"
+        actions={
+          <Button variant="primary" onClick={handleAdd} data-test="add-branch">
+            Add Branch
+          </Button>
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow">
+      {error && (
+        <ErrorMessage message={`Error loading branches: ${error.message}`} className="mb-4" />
+      )}
+
+      <PageCard padding={false} className="relative">
         <div className="p-4">
           <DataTable
             data={branches}
@@ -115,44 +119,26 @@ export function BranchesPage() {
             keyExtractor={(branch) => branch.id}
             actions={(branch) => (
               <>
-                <button
-                  onClick={() => handleView(branch)}
-                  className="text-gray-600 hover:text-gray-900"
+                <IconButton
+                  to={`/branches/${branch.id}`}
+                  icon={<ViewIcon />}
+                  label="View Details"
                   data-test={`view-branch-details-${branch.id}`}
-                  title="View Details"
-                >
-                  <PiEye className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleEdit(branch)}
-                  className="text-blue-600 hover:text-blue-900"
+                />
+                <IconButton
+                  to={`/branches/${branch.id}/edit`}
+                  icon={<EditIcon />}
+                  label="Edit"
+                  tone="primary"
                   data-test={`edit-branch-${branch.id}`}
-                  title="Edit"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-                <button
+                />
+                <IconButton
+                  icon={<DeleteIcon />}
+                  label="Delete"
+                  tone="danger"
                   onClick={() => setDeleteBranchId(branch.id)}
-                  className="text-red-600 hover:text-red-900"
                   data-test={`delete-branch-${branch.id}`}
-                  title="Delete"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
+                />
               </>
             )}
             isLoading={isLoading}
@@ -160,14 +146,9 @@ export function BranchesPage() {
           />
         </div>
 
-        {!isLoading && branches.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm text-gray-700">
-              Showing {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
-            </p>
-          </div>
-        )}
-      </div>
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary count={branches.length} singular="branch" plural="branches" isLoading={isLoading} />
+      </PageCard>
 
       <ConfirmDialog
         isOpen={deleteBranchId !== null}

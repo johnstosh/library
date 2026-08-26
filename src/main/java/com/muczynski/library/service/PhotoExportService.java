@@ -694,6 +694,7 @@ public class PhotoExportService {
                 photoInfo.setBookTitle(photo.getBookTitle());
                 photoInfo.setBookLocNumber(photo.getBookLocNumber());
                 photoInfo.setBookDateAdded(photo.getBookDateAdded());
+                photoInfo.setBookAuthorId(photo.getBookAuthorId());
                 photoInfo.setBookAuthorName(photo.getBookAuthorName());
 
                 photoInfo.setAuthorId(photo.getAuthorId());
@@ -754,6 +755,7 @@ public class PhotoExportService {
         photoInfo.setBookTitle(photo.getBookTitle());
         photoInfo.setBookLocNumber(photo.getBookLocNumber());
         photoInfo.setBookDateAdded(photo.getBookDateAdded());
+        photoInfo.setBookAuthorId(photo.getBookAuthorId());
         photoInfo.setBookAuthorName(photo.getBookAuthorName());
 
         photoInfo.setAuthorId(photo.getAuthorId());

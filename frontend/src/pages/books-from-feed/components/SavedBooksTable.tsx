@@ -5,8 +5,12 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Spinner } from '@/components/progress/Spinner'
 import { useProcessSingleBook, type SavedBookDto } from '@/api/books-from-feed'
 import { useDeleteBook } from '@/api/books'
-import { PiEye, PiMagicWand, PiTrash } from 'react-icons/pi'
-import { useNavigate } from 'react-router-dom'
+import { PiMagicWand, PiTrash } from 'react-icons/pi'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { IconButton } from '@/components/ui/IconButton'
+import { AuthorIcon, BookIcon, EditIcon } from '@/components/ui/Icons'
 
 interface SavedBooksTableProps {
   books: SavedBookDto[]
@@ -15,7 +19,6 @@ interface SavedBooksTableProps {
 }
 
 export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTableProps) {
-  const navigate = useNavigate()
   const [processingBookId, setProcessingBookId] = useState<number | null>(null)
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null)
 
@@ -56,12 +59,10 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
 
   if (books.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg font-medium mb-2">No saved books yet</p>
-        <p className="text-sm">
-          Click "Select Photos" above to import book photos from Google Photos
-        </p>
-      </div>
+      <EmptyState
+        message="No saved books yet"
+        description={'Click "Select Photos" above to import book photos from Google Photos'}
+      />
     )
   }
 
@@ -90,8 +91,20 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
               <tr key={book.id} className="hover:bg-gray-50" data-entity-id={book.id}>
                 <td className="px-6 py-4 overflow-hidden truncate">
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{book.title}</div>
-                    {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
+                    <EntityLink to={`/books/${book.id}`} className="text-sm font-medium" data-test={`saved-book-title-${book.id}`}>
+                      {book.title}
+                    </EntityLink>
+                    {book.author && (
+                      book.authorId ? (
+                        <div className="text-sm">
+                          <EntityLink to={`/authors/${book.authorId}`} data-test={`saved-book-author-${book.id}`}>
+                            {book.author}
+                          </EntityLink>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">{book.author}</div>
+                      )
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 overflow-hidden truncate">
@@ -99,26 +112,35 @@ export function SavedBooksTable({ books, isLoading, onRefresh }: SavedBooksTable
                 </td>
                 <td className="px-6 py-4 overflow-hidden truncate">
                   {book.needsProcessing ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Needs Processing
-                    </span>
+                    <StatusBadge tone="warning">Needs Processing</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Processed
-                    </span>
+                    <StatusBadge tone="success">Processed</StatusBadge>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/books/${book.id}`)}
+                    <IconButton
+                      to={`/books/${book.id}`}
+                      icon={<BookIcon />}
+                      label="View Details"
                       data-test={`view-book-${book.id}`}
-                      title="View Details"
-                    >
-                      <PiEye className="w-4 h-4 text-gray-600" />
-                    </Button>
+                    />
+                    {book.authorId && (
+                      <IconButton
+                        to={`/authors/${book.authorId}`}
+                        icon={<AuthorIcon />}
+                        label="See Author"
+                        tone="info"
+                        data-test={`see-author-${book.id}`}
+                      />
+                    )}
+                    <IconButton
+                      to={`/books/${book.id}/edit`}
+                      icon={<EditIcon />}
+                      label="Edit"
+                      tone="primary"
+                      data-test={`edit-book-${book.id}`}
+                    />
                     {book.needsProcessing && (
                       <Button
                         variant="outline"

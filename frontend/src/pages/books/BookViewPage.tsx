@@ -1,13 +1,21 @@
 // (c) Copyright 2025 by Muczynski
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
-import { Spinner } from '@/components/progress/Spinner'
-import { PiCopy, PiPencil, PiTrash, PiArrowLeft, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { bookStatusTone } from '@/utils/status'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { TEXT_LINK_UNDERLINE_CLASS } from '@/components/ui/IconButton'
+import { BackLink } from '@/components/ui/BackLink'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { PageCard } from '@/components/ui/PageCard'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -69,44 +77,27 @@ export function BookViewPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!book) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Book Not Found</h1>
-          <p className="text-gray-600 mb-4">The book you're looking for doesn't exist.</p>
-          <button
-            onClick={handleBack}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Books
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="Book Not Found"
+        entityLabel="book"
+        onBack={handleBack}
+        backLabel="Return to Books"
+      />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          leftIcon={<PiArrowLeft />}
-          data-test="back-to-books"
-        >
-          Back to Books
-        </Button>
-      </div>
+      <BackLink onClick={handleBack} data-test="back-to-books">
+        Back to Books
+      </BackLink>
 
-      <div className="bg-white rounded-lg shadow">
+      <PageCard padding={false}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
@@ -149,47 +140,15 @@ export function BookViewPage() {
         <div className="px-6 py-6 space-y-6">
           {error && <ErrorMessage message={error} />}
 
-          {/* Delete Confirmation */}
-          {showDeleteConfirm && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-900 font-semibold mb-3">
-                Are you sure you want to delete this book?
-              </p>
-              <p className="text-red-700 mb-4">This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={deleteBook.isPending}
-                  data-test="confirm-delete-book"
-                >
-                  Yes, Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  data-test="cancel-delete-book"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Book Info */}
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
                 {book.authorId ? (
-                  <Link
-                    to={`/authors/${book.authorId}`}
-                    className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
-                    data-test="book-author-link"
-                  >
-                    <span>👤</span>
-                    <span className="underline">{book.author}</span>
-                  </Link>
+                  <EntityLink to={`/authors/${book.authorId}`} data-test="book-author-link">
+                    {book.author}
+                  </EntityLink>
                 ) : (
                   <p className="text-gray-900">{book.author}</p>
                 )}
@@ -223,7 +182,7 @@ export function BookViewPage() {
                     href={book.grokipediaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
+                    className={TEXT_LINK_UNDERLINE_CLASS}
                     data-test="book-grokipedia-link"
                   >
                     View on Grokipedia
@@ -240,7 +199,7 @@ export function BookViewPage() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
+                        className={TEXT_LINK_UNDERLINE_CLASS}
                         data-test={`book-free-text-link-${index}`}
                       >
                         {extractDomain(url)}
@@ -257,7 +216,9 @@ export function BookViewPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Status</p>
-                <p className="text-gray-900">{formatBookStatus(book.status)}</p>
+                <StatusBadge tone={bookStatusTone(book.status)}>
+                  {formatBookStatus(book.status)}
+                </StatusBadge>
               </div>
               {book.dateAddedToLibrary && (
                 <div>
@@ -284,13 +245,14 @@ export function BookViewPage() {
                   <p className="text-sm font-medium text-gray-500">Tags</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {book.tagsList.map((tag) => (
-                      <span
+                      <StatusBadge
                         key={tag}
-                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800"
+                        tone="accent"
+                        shape="rounded"
                         data-test={`book-tag-${tag}`}
                       >
                         {tag}
-                      </span>
+                      </StatusBadge>
                     ))}
                   </div>
                 </div>
@@ -335,7 +297,7 @@ export function BookViewPage() {
                   href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${book.title}"`)}&searchType=everything&pageSize=40`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
                   data-test="book-view-ydl-check-link"
                 >
                   Check YDL
@@ -426,7 +388,7 @@ export function BookViewPage() {
                   href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${book.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
                   data-test="book-view-emu-check-link"
                 >
                   Check EMU
@@ -515,7 +477,20 @@ export function BookViewPage() {
             entityName={book.title}
           />
         </div>
-      </div>
+      </PageCard>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Book"
+        message="Are you sure you want to delete this book? This action cannot be undone."
+        confirmText="Yes, Delete"
+        variant="danger"
+        isLoading={deleteBook.isPending}
+        confirmDataTest="confirm-delete-book"
+        cancelDataTest="cancel-delete-book"
+      />
     </div>
   )
 }

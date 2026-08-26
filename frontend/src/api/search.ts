@@ -2,6 +2,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from './client'
 import type { BookDto, AuthorDto } from '@/types/dtos'
+import {
+  defaultBookChipFilters,
+  type BookChipFilters,
+} from '@/utils/bookChipFilters'
 
 export interface SearchResponse {
   books: BookDto[]
@@ -20,18 +24,24 @@ export interface SearchResponse {
   }
 }
 
-export interface SearchFilters {
-  inLib: boolean
-  elec: boolean
-  freeText: boolean
-  audio: boolean
-}
+export type SearchFilters = BookChipFilters
 
-export const defaultSearchFilters: SearchFilters = {
-  inLib: false,
-  elec: false,
-  freeText: false,
-  audio: false,
+export const defaultSearchFilters: SearchFilters = { ...defaultBookChipFilters }
+
+function chipQueryParams(filters: SearchFilters): string {
+  return [
+    filters.inLibrary ? '&filterInLibrary=true' : '',
+    filters.electronic ? '&filterElectronic=true' : '',
+    filters.freeText ? '&filterFreeText=true' : '',
+    filters.audio ? '&filterAudio=true' : '',
+    filters.mostRecent ? '&filterMostRecent=true' : '',
+    filters.withoutLoc ? '&filterWithoutLoc=true' : '',
+    filters.threeLetterLoc ? '&filterThreeLetterLoc=true' : '',
+    filters.withoutGrokipedia ? '&filterWithoutGrokipedia=true' : '',
+    filters.withoutGenres ? '&filterWithoutGenres=true' : '',
+    filters.notActiveStatus ? '&filterNotActiveStatus=true' : '',
+    filters.withoutFreeTextUrls ? '&filterWithoutFreeTextUrls=true' : '',
+  ].join('')
 }
 
 export function useSearch(
@@ -44,12 +54,7 @@ export function useSearch(
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
-  const filterParams = [
-    filters.inLib ? '&filterInLibrary=true' : '',
-    filters.elec ? '&filterElectronic=true' : '',
-    filters.freeText ? '&filterFreeText=true' : '',
-    filters.audio ? '&filterAudio=true' : '',
-  ].join('')
+  const filterParams = chipQueryParams(filters)
   return useQuery({
     queryKey: ['search', query, page, size, filters, selectedLabels ?? []],
     queryFn: () =>

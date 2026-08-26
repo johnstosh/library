@@ -2,7 +2,8 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthor } from '@/api/authors'
 import { AuthorFormPage } from './components/AuthorFormPage'
-import { Spinner } from '@/components/progress/Spinner'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
 
 export function AuthorEditPage() {
   const navigate = useNavigate()
@@ -19,27 +20,17 @@ export function AuthorEditPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!author) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Author Not Found</h1>
-          <p className="text-gray-600 mb-4">The author you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate('/authors')}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Authors
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="Author Not Found"
+        entityLabel="author"
+        onBack={() => navigate('/authors')}
+        backLabel="Return to Authors"
+      />
     )
   }
 

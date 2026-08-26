@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import type { LocLookupResultDto } from '@/api/loc-lookup'
 import { PiCheckCircle, PiXCircle } from 'react-icons/pi'
 
@@ -80,7 +81,9 @@ export function LocLookupResultsModal({
                       <PiXCircle className="w-5 h-5 text-red-600" />
                     )}
                   </td>
-                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-900">Book ID: {result.bookId}</td>
+                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-900">
+                    <EntityLink to={`/books/${result.bookId}`}>Book ID: {result.bookId}</EntityLink>
+                  </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm font-mono text-gray-900">
                     {result.locNumber || '—'}
                   </td>

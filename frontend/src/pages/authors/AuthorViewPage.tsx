@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { AuthorBooksTable } from './components/AuthorBooksTable'
 import { useAuthor, useDeleteAuthor } from '@/api/authors'
-import { Spinner } from '@/components/progress/Spinner'
-import { PiPencil, PiTrash, PiArrowLeft } from 'react-icons/pi'
+import { PageLoading } from '@/components/progress/PageLoading'
+import { PiPencil, PiTrash } from 'react-icons/pi'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { BackLink } from '@/components/ui/BackLink'
+import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { PageCard } from '@/components/ui/PageCard'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function AuthorViewPage() {
   const navigate = useNavigate()
@@ -37,44 +41,27 @@ export function AuthorViewPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!author) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Author Not Found</h1>
-          <p className="text-gray-600 mb-4">The author you're looking for doesn't exist.</p>
-          <button
-            onClick={handleBack}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Return to Authors
-          </button>
-        </div>
-      </div>
+      <EntityNotFound
+        title="Author Not Found"
+        entityLabel="author"
+        onBack={handleBack}
+        backLabel="Return to Authors"
+      />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          leftIcon={<PiArrowLeft />}
-          data-test="back-to-authors"
-        >
-          Back to Authors
-        </Button>
-      </div>
+      <BackLink onClick={handleBack} data-test="back-to-authors">
+        Back to Authors
+      </BackLink>
 
-      <div className="bg-white rounded-lg shadow">
+      <PageCard padding={false}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
@@ -105,33 +92,6 @@ export function AuthorViewPage() {
         {/* Body */}
         <div className="px-6 py-6 space-y-6">
           {error && <ErrorMessage message={error} />}
-
-          {/* Delete Confirmation */}
-          {showDeleteConfirm && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-900 font-semibold mb-3">
-                Are you sure you want to delete this author?
-              </p>
-              <p className="text-red-700 mb-4">This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  isLoading={deleteAuthor.isPending}
-                  data-test="confirm-delete-author"
-                >
-                  Yes, Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  data-test="cancel-delete-author"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Author Info */}
           <div className="bg-gray-50 rounded-lg p-6">
@@ -205,7 +165,20 @@ export function AuthorViewPage() {
             <AuthorBooksTable books={author.books || []} />
           </div>
         </div>
-      </div>
+      </PageCard>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Author"
+        message="Are you sure you want to delete this author? This action cannot be undone."
+        confirmText="Yes, Delete"
+        variant="danger"
+        isLoading={deleteAuthor.isPending}
+        confirmDataTest="confirm-delete-author"
+        cancelDataTest="cancel-delete-author"
+      />
     </div>
   )
 }

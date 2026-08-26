@@ -168,6 +168,7 @@ public class BookService {
                 .map(projection -> SavedBookDto.builder()
                         .id(projection.getId())
                         .title(projection.getTitle())
+                        .authorId(projection.getAuthorId())
                         .author(projection.getAuthorName())
                         .library(projection.getLibraryName())
                         .photoCount(projection.getPhotoCount())

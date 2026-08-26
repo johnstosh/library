@@ -25,7 +25,7 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
   // For all filters including 'all', we use the summaries endpoint to enable caching
   const filterEndpoint = getFilterEndpoint(filter)
-  const { data: summaries, isLoading: summariesLoading } = useQuery({
+  const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
     queryKey: filter ? queryKeys.authors.filterSummaries(filter) : queryKeys.authors.summaries(),
     queryFn: () => api.get<AuthorSummaryDto[]>(filterEndpoint),
     staleTime: 0, // Always check for fresh data when filter changes
@@ -46,7 +46,7 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
 
   // Step 3: Batch fetch changed authors using /authors/by-ids
   // For all filters (including 'all'), we now use the optimized caching approach
-  const { data: fetchedAuthors, isLoading: fetchingAuthors } = useQuery({
+  const { data: fetchedAuthors, isLoading: fetchingAuthors, isFetching: detailsFetching, error: detailsError } = useQuery({
     queryKey: queryKeys.authors.byIds(authorsToFetch, filter),
     queryFn: async () => {
       if (authorsToFetch.length > 0) {
@@ -108,6 +108,8 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   return {
     data: allAuthors,
     isLoading: summariesLoading || fetchingAuthors,
+    isFetching: summariesFetching || detailsFetching,
+    error: summariesError || detailsError,
   }
 }
 

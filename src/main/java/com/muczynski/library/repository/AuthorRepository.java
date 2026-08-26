@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,10 +36,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a FROM Author a WHERE EXISTS (" +
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
-        "(:filterElectronic = false OR b.electronicResource = true) AND " +
-        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
-        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))) " +
+        BookRepository.SEARCH_CHIP_PREDICATE + ") " +
         "ORDER BY LOWER(a.name)")
     Page<Author> findAuthorsOfBooksMatchingFilters(
         @Param("query") String query,
@@ -46,6 +44,15 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterElectronic") boolean filterElectronic,
         @Param("filterFreeText") boolean filterFreeText,
         @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         Pageable pageable);
 
     /**
@@ -58,10 +65,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
-        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
-        "(:filterElectronic = false OR b.electronicResource = true) AND " +
-        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
-        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))) " +
+        BookRepository.SEARCH_CHIP_PREDICATE + ") " +
         "ORDER BY LOWER(a.name)")
     Page<Author> findAuthorsOfBooksMatchingFiltersAndLabels(
         @Param("query") String query,
@@ -69,6 +73,15 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterElectronic") boolean filterElectronic,
         @Param("filterFreeText") boolean filterFreeText,
         @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);

@@ -1,5 +1,9 @@
 // (c) Copyright 2025 by Muczynski
 import { create } from 'zustand'
+import {
+  defaultBookChipFilters,
+  type BookChipFilters,
+} from '@/utils/bookChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -13,39 +17,13 @@ type FilterFeature = 'authors'
  * Independent boolean chip filters for the Books page.
  * All active chips are AND-ed together — a book must satisfy every active chip.
  *
- * Row 1 (search-style chips, client-side): inLibrary, electronic, freeText, audio
- * Row 2 (books-specific chips, client-side): mostRecent, withoutLoc, threeLetterLoc,
- *   withoutGrokipedia, withoutGenres, notActiveStatus, withoutFreeTextUrls
+ * Row 1: inLibrary, electronic, freeText, audio
+ * Row 2: mostRecent, withoutLoc, threeLetterLoc, withoutGrokipedia,
+ *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  */
-export interface BooksChips {
-  // Row 1: search-page–style type filters
-  inLibrary: boolean
-  electronic: boolean
-  freeText: boolean
-  audio: boolean
-  // Row 2: books-specific filters
-  mostRecent: boolean
-  withoutLoc: boolean
-  threeLetterLoc: boolean
-  withoutGrokipedia: boolean
-  withoutGenres: boolean
-  notActiveStatus: boolean
-  withoutFreeTextUrls: boolean
-}
+export type BooksChips = BookChipFilters
 
-const defaultBooksChips: BooksChips = {
-  inLibrary: false,
-  electronic: false,
-  freeText: false,
-  audio: false,
-  mostRecent: true,
-  withoutLoc: false,
-  threeLetterLoc: false,
-  withoutGrokipedia: false,
-  withoutGenres: false,
-  notActiveStatus: false,
-  withoutFreeTextUrls: false,
-}
+const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
 
 interface UiState {
   // Table selection state per feature
