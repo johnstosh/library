@@ -4,11 +4,10 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
-import { useDeleteBook, useCloneBook } from '@/api/books'
+import { useDeleteBook } from '@/api/books'
 import { getThumbnailUrl } from '@/api/photos'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
-import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/hooks/useToast'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
@@ -17,7 +16,6 @@ import { EntityLink } from '@/components/ui/EntityLink'
 import {
   AuthorIcon,
   BookIcon,
-  CopyIcon,
   DeleteIcon,
   EditIcon,
   FreeTextIcon,
@@ -45,9 +43,6 @@ export function BookTable({
 }: BookTableProps) {
   const [deleteBookId, setDeleteBookId] = useState<number | null>(null)
   const deleteBook = useDeleteBook()
-  const cloneBook = useCloneBook()
-  const { user } = useAuthStore()
-  const isLibrarian = user?.authority === 'LIBRARIAN'
   const toast = useToast()
 
   const handleDelete = async () => {
@@ -59,15 +54,6 @@ export function BookTable({
     } catch (error) {
       console.error('Failed to delete book:', error)
       toast.error('Failed to delete book')
-    }
-  }
-
-  const handleClone = async (bookId: number) => {
-    try {
-      await cloneBook.mutateAsync(bookId)
-    } catch (error) {
-      console.error('Failed to clone book:', error)
-      toast.error('Failed to clone book')
     }
   }
 
@@ -234,21 +220,8 @@ export function BookTable({
                 />
               )}
             </div>
-            {/* Line 3: clone, edit, delete */}
+            {/* Line 3: edit, delete */}
             <div className="flex gap-1 justify-end">
-              {isLibrarian && (
-                <IconButton
-                  icon={<CopyIcon />}
-                  label="Clone"
-                  tone="success"
-                  disabled={cloneBook.isPending}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleClone(book.id)
-                  }}
-                  data-test={`clone-book-${book.id}`}
-                />
-              )}
               <IconButton
                 to={`/books/${book.id}/edit`}
                 icon={<EditIcon />}

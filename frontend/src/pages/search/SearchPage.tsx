@@ -19,7 +19,6 @@ import {
   AuthorIcon,
   BookIcon,
   BooksIcon,
-  CopyIcon,
   DeleteIcon,
   EditIcon,
   FreeTextIcon,
@@ -31,7 +30,7 @@ import { PageCard } from '@/components/ui/PageCard'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
-import { useDeleteBook, useCloneBook } from '@/api/books'
+import { useDeleteBook } from '@/api/books'
 import { useDeleteAuthor } from '@/api/authors'
 import type { BookDto, AuthorDto } from '@/types/dtos'
 
@@ -357,7 +356,6 @@ interface BookResultProps {
 function BookResult({ book, isLibrarian }: BookResultProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const deleteBook = useDeleteBook()
-  const cloneBook = useCloneBook()
   const toast = useToast()
 
   const handleDelete = async () => {
@@ -367,15 +365,6 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
     } catch (error) {
       console.error('Failed to delete book:', error)
       toast.error('Failed to delete book')
-    }
-  }
-
-  const handleClone = async () => {
-    try {
-      await cloneBook.mutateAsync(book.id)
-    } catch (error) {
-      console.error('Failed to clone book:', error)
-      toast.error('Failed to clone book')
     }
   }
 
@@ -458,14 +447,6 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             </div>
             {isLibrarian && (
               <div className="flex gap-1">
-                <IconButton
-                  icon={<CopyIcon />}
-                  label="Clone"
-                  tone="success"
-                  disabled={cloneBook.isPending}
-                  onClick={handleClone}
-                  data-test={`book-result-clone-${book.id}`}
-                />
                 <IconButton
                   to={`/books/${book.id}/edit`}
                   icon={<EditIcon />}
