@@ -1,0 +1,85 @@
+// (c) Copyright 2025 by Muczynski
+import type { LoanChipFilters } from '@/utils/loanChipFilters'
+import { PiFunnel } from 'react-icons/pi'
+
+interface FilterChipProps {
+  label: string
+  active: boolean
+  onClick: () => void
+  tooltip: string
+  dataTest: string
+}
+
+function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={tooltip}
+      aria-pressed={active}
+      data-test={dataTest}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
+        active
+          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
+          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
+      }`}
+    >
+      {active ? (
+        <svg className="hidden sm:block w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <PiFunnel className="hidden sm:block w-3.5 h-3.5 text-gray-400 shrink-0" />
+      )}
+      {label}
+      <span className="hidden sm:inline text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
+    </button>
+  )
+}
+
+interface LoanFiltersProps {
+  chips: LoanChipFilters
+  onToggle: (chip: keyof LoanChipFilters) => void
+}
+
+export function LoanFilters({ chips, onToggle }: LoanFiltersProps) {
+  return (
+    <div className="flex flex-wrap gap-2" data-test="loan-filter-chips">
+      <FilterChip
+        label="Active"
+        active={chips.active}
+        onClick={() => onToggle('active')}
+        tooltip="Only loans that have not been returned"
+        dataTest="filter-active"
+      />
+      <FilterChip
+        label="Returned"
+        active={chips.returned}
+        onClick={() => onToggle('returned')}
+        tooltip="Only loans that have been returned"
+        dataTest="filter-returned"
+      />
+      <FilterChip
+        label="Overdue"
+        active={chips.overdue}
+        onClick={() => onToggle('overdue')}
+        tooltip="Only outstanding loans past their due date"
+        dataTest="filter-overdue"
+      />
+      <FilterChip
+        label="Has Photo"
+        active={chips.hasPhoto}
+        onClick={() => onToggle('hasPhoto')}
+        tooltip="Only loans with a checkout-card photo"
+        dataTest="filter-has-photo"
+      />
+      <FilterChip
+        label="Most Recent Day"
+        active={chips.mostRecent}
+        onClick={() => onToggle('mostRecent')}
+        tooltip="Only loans checked out on the most recent checkout day"
+        dataTest="filter-most-recent"
+      />
+    </div>
+  )
+}

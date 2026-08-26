@@ -106,8 +106,7 @@ public class LoansUITest {
         // Verify checkout button exists
         assertThat(page.locator("[data-test='checkout-book']")).isVisible();
 
-        // Should show "Show returned loans" checkbox
-        assertThat(page.locator("[data-test='show-all-loans']")).isVisible();
+        assertThat(page.locator("[data-test='filter-active']")).isVisible();
 
         // By default, should only show active loans (1 for testuser)
         // testuser has 1 active loan on book ID 3
@@ -143,7 +142,7 @@ public class LoansUITest {
         assertThat(page.locator("text=Loaned Book")).isVisible();
 
         // Check the "Show returned loans" checkbox
-        page.click("[data-test='show-all-loans']");
+        page.click("[data-test='filter-active']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Now should see both active and returned loans (2 total for testuser)
@@ -313,7 +312,7 @@ public class LoansUITest {
         navigateToLoans();
 
         // Check "Show returned loans" to see both active and returned
-        page.click("[data-test='show-all-loans']");
+        page.click("[data-test='filter-active']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Should see "Active" status badge
@@ -382,7 +381,7 @@ public class LoansUITest {
         assertThat(page.locator("text=Showing 2 loans")).isVisible();
 
         // Check "Show returned loans" checkbox
-        page.click("[data-test='show-all-loans']");
+        page.click("[data-test='filter-active']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Now should see all 3 loans (2 active + 1 returned)
@@ -480,7 +479,7 @@ public class LoansUITest {
         page.waitForTimeout(2000);
 
         // Check "Show returned loans" to verify
-        page.click("[data-test='show-all-loans']");
+        page.click("[data-test='filter-active']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Should see "Returned" status badge (use span with exact text to avoid matching label)

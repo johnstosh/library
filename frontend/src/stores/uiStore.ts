@@ -8,6 +8,10 @@ import {
   defaultAuthorChipFilters,
   type AuthorChipFilters,
 } from '@/utils/authorChipFilters'
+import {
+  defaultLoanChipFilters,
+  type LoanChipFilters,
+} from '@/utils/loanChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -26,9 +30,11 @@ type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
  */
 export type BooksChips = BookChipFilters
 export type AuthorsChips = AuthorChipFilters
+export type LoansChips = LoanChipFilters
 
 const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
 const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
+const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 
 interface UiState {
   // Table selection state per feature
@@ -41,7 +47,7 @@ interface UiState {
   booksChips: BooksChips
 
   authorsChips: AuthorsChips
-  loansShowAll: boolean
+  loansChips: LoansChips
 
   // Label filter state for books
   booksLabelFilter: string[]
@@ -50,7 +56,8 @@ interface UiState {
   setSelectedIds: (table: TableName, ids: Set<number>) => void
   toggleSelectAll: (table: TableName) => void
   clearSelection: (table: TableName) => void
-  setLoansShowAll: (showAll: boolean) => void
+  toggleLoansChip: (chip: keyof LoansChips) => void
+  clearLoansChips: () => void
   toggleRowSelection: (table: TableName, id: number) => void
   toggleBooksLabel: (label: string) => void
   clearBooksLabels: () => void
@@ -69,7 +76,7 @@ export const useUiStore = create<UiState>((set) => ({
 
   booksChips: { ...defaultBooksChips },
   authorsChips: { ...defaultAuthorsChips },
-  loansShowAll: false,
+  loansChips: { ...defaultLoansChips },
   booksLabelFilter: [],
 
   // Actions
@@ -88,7 +95,12 @@ export const useUiStore = create<UiState>((set) => ({
       [table]: { selectedIds: new Set(), selectAll: false },
     })),
 
-  setLoansShowAll: (showAll) => set({ loansShowAll: showAll }),
+  toggleLoansChip: (chip) =>
+    set((state) => ({
+      loansChips: { ...state.loansChips, [chip]: !state.loansChips[chip] },
+    })),
+
+  clearLoansChips: () => set({ loansChips: { ...defaultLoansChips } }),
 
   toggleBooksLabel: (label) =>
     set((state) => {
@@ -143,5 +155,5 @@ export const useLoansTableSelection = () => useUiStore((state) => state.loansTab
 // Helper hooks for filters
 export const useBooksChips = () => useUiStore((state) => state.booksChips)
 export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
-export const useLoansShowAll = () => useUiStore((state) => state.loansShowAll)
+export const useLoansChips = () => useUiStore((state) => state.loansChips)
 export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)
