@@ -4,6 +4,10 @@ import {
   defaultBookChipFilters,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
+import {
+  defaultAuthorChipFilters,
+  type AuthorChipFilters,
+} from '@/utils/authorChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -11,7 +15,6 @@ interface TableState {
 }
 
 type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
-type FilterFeature = 'authors'
 
 /**
  * Independent boolean chip filters for the Books page.
@@ -22,8 +25,10 @@ type FilterFeature = 'authors'
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  */
 export type BooksChips = BookChipFilters
+export type AuthorsChips = AuthorChipFilters
 
 const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
+const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
 
 interface UiState {
   // Table selection state per feature
@@ -35,8 +40,7 @@ interface UiState {
   // Books chip filter state (all AND-combined, client-side)
   booksChips: BooksChips
 
-  // Authors filter
-  authorsFilter: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent'
+  authorsChips: AuthorsChips
   loansShowAll: boolean
 
   // Label filter state for books
@@ -46,13 +50,14 @@ interface UiState {
   setSelectedIds: (table: TableName, ids: Set<number>) => void
   toggleSelectAll: (table: TableName) => void
   clearSelection: (table: TableName) => void
-  setFilter: (feature: FilterFeature, filter: string) => void
   setLoansShowAll: (showAll: boolean) => void
   toggleRowSelection: (table: TableName, id: number) => void
   toggleBooksLabel: (label: string) => void
   clearBooksLabels: () => void
   toggleBooksChip: (chip: keyof BooksChips) => void
   clearBooksChips: () => void
+  toggleAuthorsChip: (chip: keyof AuthorsChips) => void
+  clearAuthorsChips: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -63,7 +68,7 @@ export const useUiStore = create<UiState>((set) => ({
   loansTable: { selectedIds: new Set(), selectAll: false },
 
   booksChips: { ...defaultBooksChips },
-  authorsFilter: 'most-recent',
+  authorsChips: { ...defaultAuthorsChips },
   loansShowAll: false,
   booksLabelFilter: [],
 
@@ -83,8 +88,6 @@ export const useUiStore = create<UiState>((set) => ({
       [table]: { selectedIds: new Set(), selectAll: false },
     })),
 
-  setFilter: (feature, filter) => set({ [`${feature}Filter`]: filter }),
-
   setLoansShowAll: (showAll) => set({ loansShowAll: showAll }),
 
   toggleBooksLabel: (label) =>
@@ -102,6 +105,13 @@ export const useUiStore = create<UiState>((set) => ({
     })),
 
   clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
+
+  toggleAuthorsChip: (chip) =>
+    set((state) => ({
+      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
+    })),
+
+  clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
 
   toggleRowSelection: (table, id) =>
     set((state) => {
@@ -132,6 +142,6 @@ export const useLoansTableSelection = () => useUiStore((state) => state.loansTab
 
 // Helper hooks for filters
 export const useBooksChips = () => useUiStore((state) => state.booksChips)
-export const useAuthorsFilter = () => useUiStore((state) => state.authorsFilter)
+export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
 export const useLoansShowAll = () => useUiStore((state) => state.loansShowAll)
 export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)

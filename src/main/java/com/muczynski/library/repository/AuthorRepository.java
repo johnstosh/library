@@ -98,7 +98,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
     List<AuthorSummaryProjection> findAllSummaries();
 
-    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.briefBiography IS NULL OR a.briefBiography = ''")
+    /** briefBiography is a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.briefBiography IS NULL")
     List<AuthorSummaryProjection> findSummariesWithoutDescription();
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE NOT EXISTS (SELECT 1 FROM Book b WHERE b.author = a)")

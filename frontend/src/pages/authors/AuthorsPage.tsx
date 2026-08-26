@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -12,10 +12,11 @@ import { GrokipediaIcon } from '@/components/ui/Icons'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
-import { useAuthors, useDeleteAuthors } from '@/api/authors'
+import { useAuthors, useDeleteAuthors, useMostRecentAuthorSummaries } from '@/api/authors'
+import { applyAuthorChipFilters } from '@/utils/authorChipFilters'
 import { useLookupBulkAuthorsGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
-import { useUiStore, useAuthorsFilter, useAuthorsTableSelection } from '@/stores/uiStore'
+import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
 export function AuthorsPage() {
@@ -24,11 +25,25 @@ export function AuthorsPage() {
   const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
   const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
 
-  const filter = useAuthorsFilter()
+  const chips = useAuthorsChips()
   const { selectedIds, selectAll } = useAuthorsTableSelection()
-  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
+  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleAuthorsChip } = useUiStore()
 
-  const { data: authors = [], isLoading, isFetching, error } = useAuthors(filter)
+  const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors()
+  const {
+    data: mostRecentSummaries = [],
+    isLoading: mostRecentLoading,
+    isFetching: mostRecentFetching,
+    error: mostRecentError,
+  } = useMostRecentAuthorSummaries(chips.mostRecent)
+
+  const authors = useMemo(() => {
+    if (chips.mostRecent && mostRecentLoading) return []
+    const mostRecentIds = chips.mostRecent
+      ? new Set(mostRecentSummaries.map((summary) => summary.id))
+      : undefined
+    return applyAuthorChipFilters(allAuthors, chips, mostRecentIds)
+  }, [allAuthors, chips, mostRecentLoading, mostRecentSummaries])
   const deleteAuthors = useDeleteAuthors()
   const lookupGrokipedia = useLookupBulkAuthorsGrokipedia()
   const toast = useToast()
@@ -92,13 +107,16 @@ export function AuthorsPage() {
         }
       />
 
-      {error && (
-        <ErrorMessage message={`Error loading authors: ${error.message}`} className="mb-4" />
+      {(error || mostRecentError) && (
+        <ErrorMessage
+          message={`Error loading authors: ${(error ?? mostRecentError)?.message}`}
+          className="mb-4"
+        />
       )}
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
-          <AuthorFilters />
+          <AuthorFilters chips={chips} onToggle={toggleAuthorsChip} />
         </div>
 
         <div className="p-4">
@@ -145,7 +163,7 @@ export function AuthorsPage() {
 
           <AuthorTable
             authors={authors}
-            isLoading={isLoading}
+            isLoading={isLoading || (chips.mostRecent && mostRecentLoading)}
             selectedIds={selectedIds}
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
@@ -154,8 +172,18 @@ export function AuthorsPage() {
           />
         </div>
 
-        <LoadingOverlay show={isFetching && !isLoading} />
-        <TableSummary count={authors.length} singular="author" plural="authors" isLoading={isLoading} />
+        <LoadingOverlay
+          show={
+            (isFetching && !isLoading) ||
+            (chips.mostRecent && mostRecentFetching && !mostRecentLoading)
+          }
+        />
+        <TableSummary
+          count={authors.length}
+          singular="author"
+          plural="authors"
+          isLoading={isLoading || (chips.mostRecent && mostRecentLoading)}
+        />
       </PageCard>
 
       <ConfirmDialog
