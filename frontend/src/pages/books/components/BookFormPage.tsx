@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/config/queryClient'
 import { Input } from '@/components/ui/Input'
@@ -29,6 +29,7 @@ import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
+import { IconButton } from '@/components/ui/IconButton'
 import { AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 
 interface BookFormPageProps {
@@ -777,14 +778,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               />
             </div>
             {formData.authorId && (
-              <Link
+              <IconButton
                 to={`/authors/${formData.authorId}`}
-                className="mb-0.5 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded inline-flex items-center gap-1"
+                icon={<AuthorIcon />}
+                label="See Author"
+                tone="info"
+                className="mb-0.5"
                 data-test="book-see-author"
-                title="View Author"
-              >
-                <AuthorIcon />
-              </Link>
+              />
             )}
           </div>
 

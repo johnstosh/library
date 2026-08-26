@@ -5,26 +5,23 @@ import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { useDeleteBook, useCloneBook } from '@/api/books'
-import { useLookupSingleBook } from '@/api/loc-lookup'
 import { getThumbnailUrl } from '@/api/photos'
-import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
-import type { LocLookupResultDto } from '@/api/loc-lookup'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/hooks/useToast'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
 import {
   AuthorIcon,
+  BookIcon,
   CopyIcon,
   DeleteIcon,
   EditIcon,
   FreeTextIcon,
   GrokipediaIcon,
-  LocIcon,
-  ViewIcon,
 } from '@/components/ui/Icons'
 
 interface BookTableProps {
@@ -47,11 +44,8 @@ export function BookTable({
   onView,
 }: BookTableProps) {
   const [deleteBookId, setDeleteBookId] = useState<number | null>(null)
-  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
-  const [showLookupResults, setShowLookupResults] = useState(false)
   const deleteBook = useDeleteBook()
   const cloneBook = useCloneBook()
-  const lookupSingleBook = useLookupSingleBook()
   const { user } = useAuthStore()
   const isLibrarian = user?.authority === 'LIBRARIAN'
   const toast = useToast()
@@ -65,17 +59,6 @@ export function BookTable({
     } catch (error) {
       console.error('Failed to delete book:', error)
       toast.error('Failed to delete book')
-    }
-  }
-
-  const handleLookupLoc = async (bookId: number) => {
-    try {
-      const result = await lookupSingleBook.mutateAsync(bookId)
-      setLookupResults([result])
-      setShowLookupResults(true)
-    } catch (error) {
-      console.error('Failed to lookup LOC:', error)
-      toast.error('Failed to look up LOC')
     }
   }
 
@@ -124,8 +107,20 @@ export function BookTable({
       header: 'Title',
       accessor: (book) => (
         <div>
-          <div className="font-medium text-gray-900">{truncate(book.title, 50)}</div>
-          {book.author && <div className="text-sm text-gray-500">{truncate(book.author, 40)}</div>}
+          <EntityLink to={`/books/${book.id}`} className="font-medium" data-test={`book-title-link-${book.id}`}>
+            {truncate(book.title, 50)}
+          </EntityLink>
+          {book.author && (
+            <div className="text-sm">
+              {book.authorId ? (
+                <EntityLink to={`/authors/${book.authorId}`} data-test={`book-author-link-${book.id}`}>
+                  {truncate(book.author, 40)}
+                </EntityLink>
+              ) : (
+                <span className="text-gray-500">{truncate(book.author, 40)}</span>
+              )}
+            </div>
+          )}
         </div>
       ),
       width: '28%',
@@ -219,36 +214,23 @@ export function BookTable({
                 )}
               </div>
             )}
-            {/* Line 2: view, author, loc */}
+            {/* Line 2: view, author */}
             <div className="flex gap-1 justify-end items-center">
               <IconButton
                 to={`/books/${book.id}`}
-                icon={<ViewIcon />}
+                icon={<BookIcon />}
                 label="View Details"
                 onClick={(e) => e.stopPropagation()}
                 data-test={`view-book-${book.id}`}
               />
               {book.authorId && (
                 <IconButton
-                  to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                  to={`/authors/${book.authorId}`}
                   icon={<AuthorIcon />}
                   label="See Author"
                   tone="info"
                   onClick={(e) => e.stopPropagation()}
                   data-test={`see-author-${book.id}`}
-                />
-              )}
-              {isLibrarian && (
-                <IconButton
-                  icon={<LocIcon />}
-                  label="Lookup LOC"
-                  tone="accent"
-                  disabled={lookupSingleBook.isPending}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleLookupLoc(book.id)
-                  }}
-                  data-test={`lookup-loc-${book.id}`}
                 />
               )}
             </div>
@@ -301,12 +283,6 @@ export function BookTable({
         confirmText="Delete"
         variant="danger"
         isLoading={deleteBook.isPending}
-      />
-
-      <LocLookupResultsModal
-        isOpen={showLookupResults}
-        onClose={() => setShowLookupResults(false)}
-        results={lookupResults}
       />
     </>
   )

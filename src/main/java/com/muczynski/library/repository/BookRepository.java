@@ -4,6 +4,7 @@
 package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +27,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     interface SavedBookProjection {
         Long getId();
         String getTitle();
+        Long getAuthorId();
         String getAuthorName();
         String getLibraryName();
         Long getPhotoCount();
@@ -55,6 +57,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         SELECT
             b.id as id,
             b.title as title,
+            a.id as authorId,
             a.name as authorName,
             l.name as libraryName,
             COALESCE(p.photo_count, 0) as photoCount,
@@ -217,23 +220,47 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findByElectronicResourceTrueAndAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
+     * AND-combined chip predicates shared by book and author search queries.
+     * Alias {@code b} is the Book. notActiveStatus always constrains:
+     * off → exclude WITHDRAWN; on → exclude ACTIVE.
+     */
+    String SEARCH_CHIP_PREDICATE =
+        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
+        "(:filterElectronic = false OR b.electronicResource = true) AND " +
+        "(:filterFreeText = false OR (b.freeTextUrl IS NOT NULL AND b.freeTextUrl <> '')) AND " +
+        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%')) AND " +
+        "(:filterMostRecent = false OR b.dateAddedToLibrary >= :mostRecentCutoff OR b.id IN :mostRecentTempTitleIds) AND " +
+        "(:filterWithoutLoc = false OR b.locNumber IS NULL OR b.locNumber = '') AND " +
+        "(:filterThreeLetterLoc = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z')) AND " +
+        "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '') AND " +
+        "(:filterWithoutGenres = false OR NOT EXISTS (SELECT 1 FROM Book bNoTags JOIN bNoTags.tagsList tNoTags WHERE bNoTags = b)) AND " +
+        "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE)) AND " +
+        "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '')";
+
+    /**
      * Unified search with AND-combined type filters (no labels).
-     * When no filters are active (all false), returns all books matching the query.
+     * When no optional chips are active, still applies notActiveStatus (hide WITHDRAWN when off).
      * When any filter is active, a book must satisfy ALL active filters (AND logic).
      * Audio filter matches books whose freeTextUrl contains "librivox".
      */
     @Query("SELECT b FROM Book b WHERE " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
-        "(:filterElectronic = false OR b.electronicResource = true) AND " +
-        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
-        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
+        SEARCH_CHIP_PREDICATE)
     Page<Book> findWithFilters(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,
         @Param("filterElectronic") boolean filterElectronic,
         @Param("filterFreeText") boolean filterFreeText,
         @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         Pageable pageable);
 
     /**
@@ -244,16 +271,22 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
-        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
-        "(:filterElectronic = false OR b.electronicResource = true) AND " +
-        "(:filterFreeText = false OR b.freeTextUrl IS NOT NULL) AND " +
-        "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'))")
+        SEARCH_CHIP_PREDICATE)
     Page<Book> findWithFiltersAndLabels(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,
         @Param("filterElectronic") boolean filterElectronic,
         @Param("filterFreeText") boolean filterFreeText,
         @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);
@@ -263,6 +296,31 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      */
     @Query("SELECT COUNT(DISTINCT b) FROM Book b JOIN b.tagsList t WHERE t = :tag")
     long countByTag(@Param("tag") String tag);
+
+    long countByElectronicResourceTrue();
+
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.locNumber IS NOT NULL AND TRIM(b.locNumber) <> ''")
+    long countWithCallNumber();
+
+    long countByStatus(BookStatus status);
+
+    long countByYdlPaperAvailableTrue();
+
+    long countByYdlEbookAvailableTrue();
+
+    long countByYdlAudioAvailableTrue();
+
+    long countByEmuPaperAvailableTrue();
+
+    long countByEmuEbookAvailableTrue();
+
+    long countByEmuAudioAvailableTrue();
+
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.ydlPaperAvailable = true OR b.ydlEbookAvailable = true OR b.ydlAudioAvailable = true")
+    long countAvailableAtYdl();
+
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.emuPaperAvailable = true OR b.emuEbookAvailable = true OR b.emuAudioAvailable = true")
+    long countAvailableAtEmu();
 
     // Lightweight projection for photo ZIP import — skips @Lob fields (plotSummary, etc.)
     List<BookZipImportProjection> findBy();

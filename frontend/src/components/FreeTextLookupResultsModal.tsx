@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import type { FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { PiCheckCircle, PiXCircle, PiCaretDown, PiCaretRight } from 'react-icons/pi'
 import { useState } from 'react'
@@ -115,7 +116,7 @@ export function FreeTextLookupResultsModal({
                     </td>
                     <td className="px-4 py-3 overflow-hidden text-sm text-gray-900">
                       <div className="truncate" title={result.bookTitle}>
-                        {result.bookTitle}
+                        <EntityLink to={`/books/${result.bookId}`}>{result.bookTitle}</EntityLink>
                       </div>
                       {result.authorName && (
                         <div className="text-xs text-gray-500 truncate" title={result.authorName}>

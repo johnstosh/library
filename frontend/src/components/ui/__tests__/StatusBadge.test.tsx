@@ -1,10 +1,11 @@
 // (c) Copyright 2025 by Muczynski
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { StatusBadge } from '../StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { IconButton } from '../IconButton'
+import { EntityLink } from '../EntityLink'
 import { ViewIcon } from '../Icons'
 
 describe('StatusBadge', () => {
@@ -50,5 +51,33 @@ describe('IconButton', () => {
     const link = screen.getByRole('link', { name: 'View Details' })
     expect(link).toHaveAttribute('aria-disabled', 'true')
     expect(link).toHaveAttribute('tabindex', '-1')
+  })
+})
+
+describe('EntityLink', () => {
+  it('renders an internal link', () => {
+    render(
+      <MemoryRouter>
+        <EntityLink to="/books/1" data-test="title-link">
+          Dune
+        </EntityLink>
+      </MemoryRouter>
+    )
+    const link = screen.getByRole('link', { name: 'Dune' })
+    expect(link).toHaveAttribute('href', '/books/1')
+    expect(link).toHaveAttribute('data-test', 'title-link')
+  })
+
+  it('stops click bubbling so a parent row does not navigate instead', () => {
+    const onRowClick = vi.fn()
+    render(
+      <MemoryRouter>
+        <div onClick={onRowClick}>
+          <EntityLink to="/authors/2">Frank Herbert</EntityLink>
+        </div>
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByRole('link', { name: 'Frank Herbert' }))
+    expect(onRowClick).not.toHaveBeenCalled()
   })
 })

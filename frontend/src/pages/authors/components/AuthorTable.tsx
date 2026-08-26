@@ -8,7 +8,8 @@ import { truncate, isValidUrl } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { IconButton } from '@/components/ui/IconButton'
-import { BooksIcon, DeleteIcon, EditIcon, GrokipediaIcon, ViewIcon } from '@/components/ui/Icons'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { AuthorIcon, BooksIcon, DeleteIcon, EditIcon, GrokipediaIcon } from '@/components/ui/Icons'
 import { useToast } from '@/hooks/useToast'
 
 interface AuthorTableProps {
@@ -18,7 +19,6 @@ interface AuthorTableProps {
   selectAll: boolean
   onSelectToggle: (id: number) => void
   onSelectAll: () => void
-  onEdit: (author: AuthorDto) => void
   onView: (author: AuthorDto) => void
 }
 
@@ -29,7 +29,6 @@ export function AuthorTable({
   selectAll,
   onSelectToggle,
   onSelectAll,
-  onEdit,
   onView,
 }: AuthorTableProps) {
   const [deleteAuthorId, setDeleteAuthorId] = useState<number | null>(null)
@@ -53,9 +52,9 @@ export function AuthorTable({
       key: 'name',
       header: 'Name',
       accessor: (author) => (
-        <div className="font-medium text-gray-900">
+        <EntityLink to={`/authors/${author.id}`} className="font-medium" data-test={`author-name-link-${author.id}`}>
           {truncate(author.name, 30)}
-        </div>
+        </EntityLink>
       ),
       width: '20%',
     },
@@ -100,12 +99,10 @@ export function AuthorTable({
         actions={(author) => (
           <>
             <IconButton
-              icon={<ViewIcon />}
+              to={`/authors/${author.id}`}
+              icon={<AuthorIcon />}
               label="View Details"
-              onClick={(e) => {
-                e.stopPropagation()
-                onView(author)
-              }}
+              onClick={(e) => e.stopPropagation()}
               data-test={`view-author-${author.id}`}
             />
             {isValidUrl(author.grokipediaUrl) && (
@@ -127,13 +124,11 @@ export function AuthorTable({
               data-test={`see-books-${author.id}`}
             />
             <IconButton
+              to={`/authors/${author.id}/edit`}
               icon={<EditIcon />}
               label="Edit"
               tone="primary"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit(author)
-              }}
+              onClick={(e) => e.stopPropagation()}
               data-test={`edit-author-${author.id}`}
             />
             <IconButton

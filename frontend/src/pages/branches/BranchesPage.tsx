@@ -11,7 +11,8 @@ import {
   useDeleteBranch,
 } from '@/api/branches'
 import type { BranchDto } from '@/types/dtos'
-import { IconButton, TEXT_LINK_CLASS } from '@/components/ui/IconButton'
+import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
 import { DeleteIcon, EditIcon, ViewIcon } from '@/components/ui/Icons'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
@@ -31,14 +32,6 @@ export function BranchesPage() {
 
   const handleAdd = () => {
     navigate('/branches/new')
-  }
-
-  const handleEdit = (branch: BranchDto) => {
-    navigate(`/branches/${branch.id}/edit`)
-  }
-
-  const handleView = (branch: BranchDto) => {
-    navigate(`/branches/${branch.id}`)
   }
 
   const handleDelete = async () => {
@@ -63,13 +56,9 @@ export function BranchesPage() {
       key: 'name',
       header: 'Branch Name',
       accessor: (branch) => (
-        <button
-          onClick={() => handleView(branch)}
-          className={`font-medium ${TEXT_LINK_CLASS} text-left`}
-          data-test={`view-branch-${branch.id}`}
-        >
+        <EntityLink to={`/branches/${branch.id}`} className="font-medium" data-test={`view-branch-${branch.id}`}>
           {branch.branchName}
-        </button>
+        </EntityLink>
       ),
       width: '30%',
     },
@@ -131,16 +120,16 @@ export function BranchesPage() {
             actions={(branch) => (
               <>
                 <IconButton
+                  to={`/branches/${branch.id}`}
                   icon={<ViewIcon />}
                   label="View Details"
-                  onClick={() => handleView(branch)}
                   data-test={`view-branch-details-${branch.id}`}
                 />
                 <IconButton
+                  to={`/branches/${branch.id}/edit`}
                   icon={<EditIcon />}
                   label="Edit"
                   tone="primary"
-                  onClick={() => handleEdit(branch)}
                   data-test={`edit-branch-${branch.id}`}
                 />
                 <IconButton

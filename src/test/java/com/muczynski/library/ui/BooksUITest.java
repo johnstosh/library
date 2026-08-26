@@ -297,11 +297,7 @@ public class BooksUITest {
     void testNoChipsShowAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // The default state has mostRecent chip active. Toggle it off to show all books.
-        page.click("[data-test='filter-most-recent']");
-
-        // Wait for filter to apply
-        page.waitForTimeout(1000);
+        // Default chips are all off (except implicit withdrawn hide). Initial book should show.
 
         // Should still see the initial book (it's the only book)
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
@@ -319,20 +315,20 @@ public class BooksUITest {
         page.waitForTimeout(1000);
 
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
-        // under the "Without LOC" chip AND with mostRecent chip also active (AND logic).
+        // under the "Without LOC" chip.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         // Chip is a button, not a radio input — no isChecked() assertion
     }
 
     @Test
-    @DisplayName("Should filter books by 'Most Recent Day' chip (active by default)")
+    @DisplayName("Should filter books by 'Most Recent Day' chip")
     void testFilterMostRecent() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // mostRecent chip is active by default — book should be visible immediately
+        // Default chips are off — book should be visible
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
-        // Toggle the chip off and verify book is still visible (no other chips restrict it)
+        // Toggle the chip on; the initial book was added in this test run so it still matches
         page.click("[data-test='filter-most-recent']");
         page.waitForTimeout(500);
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));

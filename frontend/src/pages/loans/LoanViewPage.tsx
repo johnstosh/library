@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useNavigate, useParams } from 'react-router-dom'
+import { EntityLink } from '@/components/ui/EntityLink'
 import { Button } from '@/components/ui/Button'
 import { useLoan, useReturnBook, useDeleteLoan } from '@/api/loans'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
@@ -82,7 +83,7 @@ export function LoanViewPage() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900" data-test="loan-book-title">
-                {loan.bookTitle}
+                <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
               </h1>
               <p className="text-gray-600 mt-1">Borrowed by: {loan.userName}</p>
             </div>
@@ -152,7 +153,9 @@ export function LoanViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Book</p>
-                <p className="text-gray-900">{loan.bookTitle}</p>
+                <p className="text-gray-900">
+                  <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Borrower</p>

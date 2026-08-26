@@ -7,6 +7,9 @@ import type { BookDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { IconButton } from '@/components/ui/IconButton'
+import { BookIcon, EditIcon } from '@/components/ui/Icons'
 
 interface AuthorBooksTableProps {
   books: BookDto[]
@@ -21,7 +24,9 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
       header: 'Title',
       accessor: (book) => (
         <div>
-          <div className="font-medium text-gray-900">{book.title}</div>
+          <EntityLink to={`/books/${book.id}`} className="font-medium" data-test={`author-book-title-${book.id}`}>
+            {book.title}
+          </EntityLink>
           {book.library && <div className="text-sm text-gray-500">{book.library}</div>}
         </div>
       ),
@@ -66,6 +71,25 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
         keyExtractor={(book) => book.id}
         selectable={false}
         onRowClick={handleRowClick}
+        actions={(book) => (
+          <>
+            <IconButton
+              to={`/books/${book.id}`}
+              icon={<BookIcon />}
+              label="View Details"
+              onClick={(e) => e.stopPropagation()}
+              data-test={`author-book-view-${book.id}`}
+            />
+            <IconButton
+              to={`/books/${book.id}/edit`}
+              icon={<EditIcon />}
+              label="Edit"
+              tone="primary"
+              onClick={(e) => e.stopPropagation()}
+              data-test={`author-book-edit-${book.id}`}
+            />
+          </>
+        )}
         isLoading={false}
         emptyMessage="No books found for this author."
       />

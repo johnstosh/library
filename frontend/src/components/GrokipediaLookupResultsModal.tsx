@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import type { GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { PiCheckCircle, PiXCircle } from 'react-icons/pi'
 
@@ -83,7 +84,17 @@ export function GrokipediaLookupResultsModal({
                     )}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-900">
-                    {result.name || `${entityType === 'book' ? 'Book' : 'Author'} ID: ${result.bookId ?? result.authorId}`}
+                    {entityType === 'book' && result.bookId ? (
+                      <EntityLink to={`/books/${result.bookId}`}>
+                        {result.name || `Book ID: ${result.bookId}`}
+                      </EntityLink>
+                    ) : entityType === 'author' && result.authorId ? (
+                      <EntityLink to={`/authors/${result.authorId}`}>
+                        {result.name || `Author ID: ${result.authorId}`}
+                      </EntityLink>
+                    ) : (
+                      result.name || `${entityType === 'book' ? 'Book' : 'Author'} ID: ${result.bookId ?? result.authorId}`
+                    )}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-blue-600">
                     {result.grokipediaUrl ? (

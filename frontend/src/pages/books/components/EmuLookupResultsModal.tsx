@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import type { EmuLookupResultDto } from '@/api/emu-lookup'
 import { PiCheckCircle, PiXCircle } from 'react-icons/pi'
 
@@ -83,7 +84,9 @@ export function EmuLookupResultsModal({ isOpen, onClose, results }: EmuLookupRes
                 <tr key={result.bookId} className="hover:bg-gray-50">
                   <td className="px-4 py-3 overflow-hidden text-sm text-gray-900">
                     <div className="truncate" title={result.matchedTitle}>
-                      {result.matchedTitle || `Book #${result.bookId}`}
+                      <EntityLink to={`/books/${result.bookId}`}>
+                        {result.matchedTitle || `Book #${result.bookId}`}
+                      </EntityLink>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">

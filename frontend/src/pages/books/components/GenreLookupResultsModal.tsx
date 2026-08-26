@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { EntityLink } from '@/components/ui/EntityLink'
 import type { GenreLookupResultDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 
@@ -53,8 +54,10 @@ export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }:
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className={`font-medium ${result.success ? 'text-green-800' : 'text-yellow-800'}`}>
-                    {result.title || `Book #${result.bookId}`}
+                  <p className="font-medium">
+                    <EntityLink to={`/books/${result.bookId}`}>
+                      {result.title || `Book #${result.bookId}`}
+                    </EntityLink>
                   </p>
                   {result.success && result.suggestedGenres && result.suggestedGenres.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-2">

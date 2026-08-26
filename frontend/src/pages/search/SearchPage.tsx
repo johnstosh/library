@@ -6,23 +6,24 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSearch, type SearchFilters } from '@/api/search'
+import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
-import { LocLookupResultsModal } from '@/pages/books/components/LocLookupResultsModal'
+import { defaultBookChipFilters, isAnyChipActive, type BookChipFilters } from '@/utils/bookChipFilters'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
-import { PiMagnifyingGlass, PiBook, PiUser, PiFunnel } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
 import {
   AuthorIcon,
+  BookIcon,
   BooksIcon,
   CopyIcon,
   DeleteIcon,
   EditIcon,
   FreeTextIcon,
   GrokipediaIcon,
-  LocIcon,
-  ViewIcon,
 } from '@/components/ui/Icons'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/hooks/useToast'
@@ -32,44 +33,37 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
 import { useDeleteBook, useCloneBook } from '@/api/books'
 import { useDeleteAuthor } from '@/api/authors'
-import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto, AuthorDto } from '@/types/dtos'
-import type { LocLookupResultDto } from '@/api/loc-lookup'
 
-// ─── Filter chip component ────────────────────────────────────────────────────
-
-interface FilterChipProps {
-  label: string
-  active: boolean
-  onClick: () => void
-  tooltip: string
-  dataTest: string
+/** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
+const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
+  inLibrary: 'inLib',
+  electronic: 'elec',
+  freeText: 'freeText',
+  audio: 'audio',
+  mostRecent: 'mostRecent',
+  withoutLoc: 'withoutLoc',
+  threeLetterLoc: 'threeLetterLoc',
+  withoutGrokipedia: 'withoutGrokipedia',
+  withoutGenres: 'withoutGenres',
+  notActiveStatus: 'notActiveStatus',
+  withoutFreeTextUrls: 'withoutFreeTextUrls',
 }
 
-function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={tooltip}
-      data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
-        active
-          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
-      }`}
-    >
-      {active ? (
-        <svg className="hidden sm:block w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      ) : (
-        <PiFunnel className="hidden sm:block w-3.5 h-3.5 text-gray-400 shrink-0" />
-      )}
-      {label}
-      <span className="hidden sm:inline text-gray-400 text-xs shrink-0" aria-hidden="true">ⓘ</span>
-    </button>
-  )
+function chipsFromSearchParams(params: URLSearchParams): SearchFilters {
+  const chips: SearchFilters = { ...defaultBookChipFilters }
+  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
+    chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
+  })
+  return chips
+}
+
+function chipParamsForUrl(chips: SearchFilters): Record<string, string> {
+  const params: Record<string, string> = {}
+  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
+    if (chips[chip]) params[CHIP_URL_KEYS[chip]] = 'true'
+  })
+  return params
 }
 
 // ─── Main search page ─────────────────────────────────────────────────────────
@@ -80,17 +74,7 @@ export function SearchPage() {
   const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
 
   // Filter chip state — lives in URL for shareability
-  const urlInLib = searchParams.get('inLib') === 'true'
-  const urlElec = searchParams.get('elec') === 'true'
-  const urlFreeText = searchParams.get('freeText') === 'true'
-  const urlAudio = searchParams.get('audio') === 'true'
-
-  const filters: SearchFilters = {
-    inLib: urlInLib,
-    elec: urlElec,
-    freeText: urlFreeText,
-    audio: urlAudio,
-  }
+  const filters: SearchFilters = chipsFromSearchParams(searchParams)
 
   // Local input state (typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
@@ -103,7 +87,7 @@ export function SearchPage() {
   }, [urlQuery])
 
   const hasSearched = searchParams.has('q')
-  const hasFilters = urlInLib || urlElec || urlFreeText || urlAudio || selectedLabels.length > 0
+  const hasFilters = isAnyChipActive(filters) || selectedLabels.length > 0
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -118,13 +102,7 @@ export function SearchPage() {
   // ── Helpers for building URL params ──────────────────────────────────────
 
   const buildFilterParams = (overrides: Partial<SearchFilters> = {}): Record<string, string> => {
-    const f = { ...filters, ...overrides }
-    const params: Record<string, string> = {}
-    if (f.inLib) params.inLib = 'true'
-    if (f.elec) params.elec = 'true'
-    if (f.freeText) params.freeText = 'true'
-    if (f.audio) params.audio = 'true'
-    return params
+    return chipParamsForUrl({ ...filters, ...overrides })
   }
 
   // ── Event handlers ────────────────────────────────────────────────────────
@@ -214,36 +192,9 @@ export function SearchPage() {
           )}
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex flex-wrap gap-2 mt-4" data-test="search-filter-chips">
-          <FilterChip
-            label="In-library materials"
-            active={urlInLib}
-            onClick={() => handleFilterToggle('inLib')}
-            tooltip="Limit results to books with a Library of Congress call number — books physically in the collection"
-            dataTest="filter-in-library"
-          />
-          <FilterChip
-            label="Electronic resource"
-            active={urlElec}
-            onClick={() => handleFilterToggle('elec')}
-            tooltip="Limit results to books marked as electronic resources"
-            dataTest="filter-electronic"
-          />
-          <FilterChip
-            label="Has free online text"
-            active={urlFreeText}
-            onClick={() => handleFilterToggle('freeText')}
-            tooltip="Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)"
-            dataTest="filter-free-text"
-          />
-          <FilterChip
-            label="Has free online audio"
-            active={urlAudio}
-            onClick={() => handleFilterToggle('audio')}
-            tooltip="Limit results to books with a free LibriVox audio recording"
-            dataTest="filter-audio"
-          />
+        {/* Filter Chips — same two rows as Books page */}
+        <div className="mt-4" data-test="search-filter-chips">
+          <BookFilters chips={filters} onToggle={handleFilterToggle} />
         </div>
 
         {/* Label Filter Buttons */}
@@ -405,11 +356,8 @@ interface BookResultProps {
 
 function BookResult({ book, isLibrarian }: BookResultProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [lookupResults, setLookupResults] = useState<LocLookupResultDto[]>([])
-  const [showLookupResults, setShowLookupResults] = useState(false)
   const deleteBook = useDeleteBook()
   const cloneBook = useCloneBook()
-  const lookupSingleBook = useLookupSingleBook()
   const toast = useToast()
 
   const handleDelete = async () => {
@@ -431,17 +379,6 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
     }
   }
 
-  const handleLookupLoc = async () => {
-    try {
-      const result = await lookupSingleBook.mutateAsync(book.id)
-      setLookupResults([result])
-      setShowLookupResults(true)
-    } catch (error) {
-      console.error('Failed to lookup LOC:', error)
-      toast.error('Failed to look up LOC')
-    }
-  }
-
   const freeTextUrls = parseSpaceSeparatedUrls(book.freeTextUrl)
 
   return (
@@ -449,8 +386,21 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`book-result-${book.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{book.title}</h3>
-            <p className="text-gray-600 mt-1">by {book.author}</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
+                {book.title}
+              </EntityLink>
+            </h3>
+            <p className="text-gray-600 mt-1">
+              by{' '}
+              {book.authorId ? (
+                <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
+                  {book.author}
+                </EntityLink>
+              ) : (
+                book.author
+              )}
+            </p>
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
               {book.publicationYear && <span>{book.publicationYear}</span>}
               {book.publisher && <span>{book.publisher}</span>}
@@ -492,27 +442,17 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             <div className="flex gap-1 items-center">
               <IconButton
                 to={`/books/${book.id}`}
-                icon={<ViewIcon />}
+                icon={<BookIcon />}
                 label="View Details"
                 data-test={`book-result-view-${book.id}`}
               />
               {book.authorId && (
                 <IconButton
-                  to={isLibrarian ? `/authors/${book.authorId}/edit` : `/authors/${book.authorId}`}
+                  to={`/authors/${book.authorId}`}
                   icon={<AuthorIcon />}
                   label="See Author"
                   tone="info"
                   data-test={`book-result-author-${book.id}`}
-                />
-              )}
-              {isLibrarian && (
-                <IconButton
-                  icon={<LocIcon />}
-                  label="Lookup LOC"
-                  tone="accent"
-                  disabled={lookupSingleBook.isPending}
-                  onClick={handleLookupLoc}
-                  data-test={`book-result-lookup-loc-${book.id}`}
                 />
               )}
             </div>
@@ -556,12 +496,6 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
         variant="danger"
         isLoading={deleteBook.isPending}
       />
-
-      <LocLookupResultsModal
-        isOpen={showLookupResults}
-        onClose={() => setShowLookupResults(false)}
-        results={lookupResults}
-      />
     </>
   )
 }
@@ -594,7 +528,9 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900">
-              {author.name}
+              <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
+                {author.name}
+              </EntityLink>
             </h3>
             {(author.dateOfBirth || author.dateOfDeath) && (
               <p className="text-gray-600 mt-1">
@@ -616,7 +552,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
             <div className="flex items-center gap-1">
               <IconButton
                 to={`/authors/${author.id}`}
-                icon={<ViewIcon />}
+                icon={<AuthorIcon />}
                 label="View Details"
                 data-test={`author-result-view-${author.id}`}
               />

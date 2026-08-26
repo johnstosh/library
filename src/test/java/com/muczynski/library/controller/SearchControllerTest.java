@@ -23,14 +23,15 @@ import java.util.List;
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * API Integration Tests for SearchController using RestAssured.
  *
  * Tests REST endpoints with actual HTTP requests. The search API accepts
- * four boolean filter params (filterInLibrary, filterElectronic, filterFreeText,
- * filterAudio) instead of a single searchType string.
+ * boolean filter params (filterInLibrary, filterElectronic, filterFreeText,
+ * filterAudio, plus row-2 chips) instead of a single searchType string.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -58,13 +59,29 @@ class SearchControllerTest {
                 new PageInfoDto(0, 0, 0, bookPageSize));
     }
 
+    private void stubAnySearch(SearchResponseDto response) {
+        when(searchService.search(anyString(), anyInt(), anyInt(),
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                .thenReturn(response);
+    }
+
+    private void stubSearch(String query, int page, int size,
+            boolean inLib, boolean elec, boolean freeText, boolean audio,
+            SearchResponseDto response) {
+        when(searchService.search(eq(query), eq(page), eq(size),
+                eq(inLib), eq(elec), eq(freeText), eq(audio),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), isNull()))
+                .thenReturn(response);
+    }
+
     // ── Basic search tests ────────────────────────────────────────────────
 
     @Test
     void testSearch_Success() {
-        when(searchService.search(anyString(), anyInt(), anyInt(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubAnySearch(emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -92,9 +109,7 @@ class SearchControllerTest {
                 new PageInfoDto(1, 1, 0, 10),
                 new PageInfoDto(0, 0, 0, 10));
 
-        when(searchService.search(eq("Test Book"), eq(0), eq(10),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(searchResults);
+        stubSearch("Test Book", 0, 10, false, false, false, false, searchResults);
 
         given()
             .param("query", "Test Book")
@@ -117,9 +132,7 @@ class SearchControllerTest {
                 new PageInfoDto(5, 100, 2, 20),
                 new PageInfoDto(0, 0, 2, 20));
 
-        when(searchService.search(eq("book"), eq(2), eq(20),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(searchResults);
+        stubSearch("book", 2, 20, false, false, false, false, searchResults);
 
         given()
             .param("query", "book")
@@ -136,16 +149,13 @@ class SearchControllerTest {
 
     @Test
     void testSearch_MissingQueryDefaultsToEmpty() {
-        // Missing query parameter defaults to "" and returns paginated results
         SearchResponseDto searchResults = new SearchResponseDto(
                 Collections.emptyList(),
                 Collections.emptyList(),
                 new PageInfoDto(1, 10, 0, 10),
                 new PageInfoDto(1, 5, 0, 10));
 
-        when(searchService.search(eq(""), eq(0), eq(10),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(searchResults);
+        stubSearch("", 0, 10, false, false, false, false, searchResults);
 
         given()
             .param("page", 0)
@@ -170,16 +180,13 @@ class SearchControllerTest {
 
     @Test
     void testSearch_EmptyQueryIsValid() {
-        // Empty query string returns all results — blank search is permitted
         SearchResponseDto searchResults = new SearchResponseDto(
                 Collections.emptyList(),
                 Collections.emptyList(),
                 new PageInfoDto(1, 5, 0, 10),
                 new PageInfoDto(1, 3, 0, 10));
 
-        when(searchService.search(eq(""), eq(0), eq(10),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(searchResults);
+        stubSearch("", 0, 10, false, false, false, false, searchResults);
 
         given()
             .param("query", "")
@@ -196,7 +203,9 @@ class SearchControllerTest {
     @Test
     void testSearch_ServiceThrowsExceptionReturns500() {
         when(searchService.search(anyString(), anyInt(), anyInt(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
                 .thenThrow(new RuntimeException("Database error"));
 
         given()
@@ -213,9 +222,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithInLibraryFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(true), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, true, false, false, false, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -230,9 +237,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithElectronicFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(false), eq(true), eq(false), eq(false), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, false, true, false, false, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -247,9 +252,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithFreeTextFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(false), eq(false), eq(true), eq(false), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, false, false, true, false, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -264,9 +267,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithAudioFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(false), eq(false), eq(false), eq(true), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, false, false, false, true, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -281,10 +282,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_DefaultFiltersAreFalse() {
-        // With no filter params, all booleans default to false
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, false, false, false, false, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -298,9 +296,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_MultipleFiltersCanBeActive() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
-                eq(true), eq(false), eq(true), eq(false), isNull()))
-                .thenReturn(emptyResponse(10));
+        stubSearch("test", 0, 10, true, false, true, false, emptyResponse(10));
 
         given()
             .param("query", "test")
@@ -308,6 +304,50 @@ class SearchControllerTest {
             .param("size", 10)
             .param("filterInLibrary", true)
             .param("filterFreeText", true)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
+    void testSearch_WithNotActiveStatusFilter() {
+        when(searchService.search(eq("test"), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(true), eq(false), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("filterNotActiveStatus", true)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+
+        verify(searchService).search(eq("test"), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(true), eq(false), isNull());
+    }
+
+    @Test
+    void testSearch_WithMostRecentAndWithoutLocFilters() {
+        when(searchService.search(eq("test"), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(true), eq(true), eq(false), eq(false),
+                eq(false), eq(false), eq(false), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("filterMostRecent", true)
+            .param("filterWithoutLoc", true)
         .when()
             .get("/api/search")
         .then()

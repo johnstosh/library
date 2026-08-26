@@ -516,4 +516,84 @@ class ImportControllerIntegrationTest {
         java.util.List<Book> books = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("New Loan Book", "New Loan Author");
         org.junit.jupiter.api.Assertions.assertTrue(books.size() > 0, "Book should exist");
     }
+
+    // ==================== GET /api/import/availability-stats Integration Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetAvailabilityStats_CountsTrueFlagsAndCallNumbers() throws Exception {
+        mockMvc.perform(get("/api/import/availability-stats"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.electronicResource").exists())
+                .andExpect(jsonPath("$.hasCallNumber").exists())
+                .andExpect(jsonPath("$.withdrawn").exists())
+                .andExpect(jsonPath("$.availableAtYdl").exists())
+                .andExpect(jsonPath("$.ydlPaper").exists())
+                .andExpect(jsonPath("$.ydlEbook").exists())
+                .andExpect(jsonPath("$.ydlAudio").exists())
+                .andExpect(jsonPath("$.availableAtEmu").exists())
+                .andExpect(jsonPath("$.emuPaper").exists())
+                .andExpect(jsonPath("$.emuEbook").exists())
+                .andExpect(jsonPath("$.emuAudio").exists());
+
+        String beforeJson = mockMvc.perform(get("/api/import/availability-stats"))
+                .andReturn().getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode before =
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(beforeJson);
+
+        Book electronicWithdrawn = new Book();
+        electronicWithdrawn.setTitle("Availability Stats Electronic Withdrawn");
+        electronicWithdrawn.setDateAddedToLibrary(LocalDateTime.now());
+        electronicWithdrawn.setStatus(BookStatus.WITHDRAWN);
+        electronicWithdrawn.setElectronicResource(true);
+        electronicWithdrawn.setLibrary(testLibrary);
+        bookRepository.save(electronicWithdrawn);
+
+        Book ydlEmu = new Book();
+        ydlEmu.setTitle("Availability Stats YDL EMU");
+        ydlEmu.setDateAddedToLibrary(LocalDateTime.now());
+        ydlEmu.setStatus(BookStatus.ACTIVE);
+        ydlEmu.setLocNumber("PS3001.A11");
+        ydlEmu.setYdlPaperAvailable(true);
+        ydlEmu.setYdlEbookAvailable(true);
+        ydlEmu.setYdlAudioAvailable(false);
+        ydlEmu.setEmuAudioAvailable(true);
+        ydlEmu.setEmuPaperAvailable(false);
+        ydlEmu.setEmuEbookAvailable(null);
+        ydlEmu.setLibrary(testLibrary);
+        bookRepository.save(ydlEmu);
+
+        Book ignored = new Book();
+        ignored.setTitle("Availability Stats Ignored Flags");
+        ignored.setDateAddedToLibrary(LocalDateTime.now());
+        ignored.setStatus(BookStatus.ACTIVE);
+        ignored.setLocNumber("   ");
+        ignored.setElectronicResource(false);
+        ignored.setYdlPaperAvailable(false);
+        ignored.setYdlEbookAvailable(null);
+        ignored.setEmuPaperAvailable(false);
+        ignored.setLibrary(testLibrary);
+        bookRepository.save(ignored);
+
+        mockMvc.perform(get("/api/import/availability-stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.electronicResource", equalTo(before.get("electronicResource").asInt() + 1)))
+                .andExpect(jsonPath("$.hasCallNumber", equalTo(before.get("hasCallNumber").asInt() + 1)))
+                .andExpect(jsonPath("$.withdrawn", equalTo(before.get("withdrawn").asInt() + 1)))
+                .andExpect(jsonPath("$.availableAtYdl", equalTo(before.get("availableAtYdl").asInt() + 1)))
+                .andExpect(jsonPath("$.ydlPaper", equalTo(before.get("ydlPaper").asInt() + 1)))
+                .andExpect(jsonPath("$.ydlEbook", equalTo(before.get("ydlEbook").asInt() + 1)))
+                .andExpect(jsonPath("$.ydlAudio", equalTo(before.get("ydlAudio").asInt())))
+                .andExpect(jsonPath("$.availableAtEmu", equalTo(before.get("availableAtEmu").asInt() + 1)))
+                .andExpect(jsonPath("$.emuPaper", equalTo(before.get("emuPaper").asInt())))
+                .andExpect(jsonPath("$.emuEbook", equalTo(before.get("emuEbook").asInt())))
+                .andExpect(jsonPath("$.emuAudio", equalTo(before.get("emuAudio").asInt() + 1)));
+    }
+
+    @Test
+    void testGetAvailabilityStats_Unauthorized() throws Exception {
+        mockMvc.perform(get("/api/import/availability-stats"))
+                .andExpect(status().isUnauthorized());
+    }
 }

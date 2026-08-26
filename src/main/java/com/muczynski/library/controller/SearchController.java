@@ -39,6 +39,13 @@ public class SearchController {
             @RequestParam(defaultValue = "false") boolean filterElectronic,
             @RequestParam(defaultValue = "false") boolean filterFreeText,
             @RequestParam(defaultValue = "false") boolean filterAudio,
+            @RequestParam(defaultValue = "false") boolean filterMostRecent,
+            @RequestParam(defaultValue = "false") boolean filterWithoutLoc,
+            @RequestParam(defaultValue = "false") boolean filterThreeLetterLoc,
+            @RequestParam(defaultValue = "false") boolean filterWithoutGrokipedia,
+            @RequestParam(defaultValue = "false") boolean filterWithoutGenres,
+            @RequestParam(defaultValue = "false") boolean filterNotActiveStatus,
+            @RequestParam(defaultValue = "false") boolean filterWithoutFreeTextUrls,
             @RequestParam(required = false) String labels) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
@@ -48,7 +55,10 @@ public class SearchController {
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
             SearchResponseDto results = searchService.search(query, page, size,
-                    filterInLibrary, filterElectronic, filterFreeText, filterAudio, labelList);
+                    filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                    filterMostRecent, filterWithoutLoc, filterThreeLetterLoc,
+                    filterWithoutGrokipedia, filterWithoutGenres, filterNotActiveStatus,
+                    filterWithoutFreeTextUrls, labelList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', page {}, size {}: {}",

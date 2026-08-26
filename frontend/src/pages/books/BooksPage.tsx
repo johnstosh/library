@@ -14,71 +14,8 @@ import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBooks } from '@/api/books'
 import { useUiStore, useBooksChips, useBooksLabelFilter, useBooksTableSelection } from '@/stores/uiStore'
 import { useIsLibrarian } from '@/stores/authStore'
+import { applyChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
-
-// ─── Client-side filter helpers ───────────────────────────────────────────────
-
-/** True if locNumber starts with exactly three uppercase letters. */
-function is3LetterLoc(locNumber: string | null | undefined): boolean {
-  if (!locNumber) return false
-  return /^[A-Z]{3}/.test(locNumber.substring(0, 3))
-}
-
-/**
- * Apply all active chip filters to the book list (AND logic).
- * A book must satisfy every active chip to be included.
- * The "Most Recent Day" chip mirrors the backend query:
- *   DATE(dateAddedToLibrary) >= max_date - 1 day  OR  temp-title regex.
- */
-function applyChipFilters(books: BookDto[], chips: ReturnType<typeof useBooksChips>): BookDto[] {
-  // Compute max date for mostRecent chip
-  let maxDate: Date | null = null
-  if (chips.mostRecent) {
-    for (const b of books) {
-      if (b.dateAddedToLibrary) {
-        const d = new Date(b.dateAddedToLibrary)
-        if (!maxDate || d > maxDate) maxDate = d
-      }
-    }
-  }
-  // Start of (maxDate - 1 day) in UTC
-  let cutoff: Date | null = null
-  if (maxDate) {
-    cutoff = new Date(maxDate)
-    cutoff.setUTCHours(0, 0, 0, 0)
-    cutoff.setUTCDate(cutoff.getUTCDate() - 1)
-  }
-
-  const TEMP_TITLE_RE = /^\d{4}-\d{1,2}-\d{1,2}/
-
-  return books.filter((book) => {
-    // ── Row 1: search-style type chips ───────────────────────────────────
-    if (chips.inLibrary && (!book.locNumber || book.locNumber.trim() === '')) return false
-    if (chips.electronic && !book.electronicResource) return false
-    if (chips.freeText && (!book.freeTextUrl || book.freeTextUrl.trim() === '')) return false
-    if (chips.audio) {
-      if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false
-    }
-
-    // ── Row 2: books-specific chips ──────────────────────────────────────
-    if (chips.mostRecent) {
-      const isTempTitle = TEMP_TITLE_RE.test(book.title ?? '')
-      if (!isTempTitle) {
-        if (!book.dateAddedToLibrary) return false
-        const bookDate = new Date(book.dateAddedToLibrary)
-        if (!cutoff || bookDate < cutoff) return false
-      }
-    }
-    if (chips.withoutLoc && book.locNumber && book.locNumber.trim() !== '') return false
-    if (chips.threeLetterLoc && !is3LetterLoc(book.locNumber)) return false
-    if (chips.withoutGrokipedia && book.grokipediaUrl && book.grokipediaUrl.trim() !== '') return false
-    if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
-    if (chips.notActiveStatus && book.status === 'ACTIVE') return false
-    if (chips.withoutFreeTextUrls && book.freeTextUrl && book.freeTextUrl.trim() !== '') return false
-
-    return true
-  })
-}
 
 // ─── BooksPage ────────────────────────────────────────────────────────────────
 
@@ -87,7 +24,7 @@ export function BooksPage() {
   const chips = useBooksChips()
   const selectedLabels = useBooksLabelFilter()
   const { selectedIds, selectAll } = useBooksTableSelection()
-  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels } = useUiStore()
+  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels, toggleBooksChip } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels)
@@ -149,7 +86,7 @@ export function BooksPage() {
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
-          <BookFilters />
+          <BookFilters chips={chips} onToggle={toggleBooksChip} />
           <BookLabelFilters
             selectedLabels={selectedLabels}
             onToggleLabel={toggleBooksLabel}

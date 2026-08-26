@@ -95,12 +95,10 @@ export function UserTable({
       actions={(user) => (
         <>
           <IconButton
+            to={`/users/${user.id}`}
             icon={<ViewIcon />}
             label="View Details"
-            onClick={(e) => {
-              e.stopPropagation()
-              onView(user)
-            }}
+            onClick={(e) => e.stopPropagation()}
             data-test={`view-user-${user.id}`}
           />
           <IconButton

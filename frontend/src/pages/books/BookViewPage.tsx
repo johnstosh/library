@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
@@ -8,10 +8,10 @@ import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
-import { AuthorIcon } from '@/components/ui/Icons'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
-import { TEXT_LINK_CLASS, TEXT_LINK_UNDERLINE_CLASS } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
+import { TEXT_LINK_UNDERLINE_CLASS } from '@/components/ui/IconButton'
 import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
@@ -146,14 +146,9 @@ export function BookViewPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
                 {book.authorId ? (
-                  <Link
-                    to={`/authors/${book.authorId}`}
-                    className={`${TEXT_LINK_CLASS} inline-flex items-center gap-1`}
-                    data-test="book-author-link"
-                  >
-                    <AuthorIcon />
-                    <span className="underline">{book.author}</span>
-                  </Link>
+                  <EntityLink to={`/authors/${book.authorId}`} data-test="book-author-link">
+                    {book.author}
+                  </EntityLink>
                 ) : (
                   <p className="text-gray-900">{book.author}</p>
                 )}

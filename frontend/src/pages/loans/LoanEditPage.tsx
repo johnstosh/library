@@ -11,6 +11,7 @@ import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { useLoan, useUpdateLoan, useAddLoanPhoto } from '@/api/loans'
 import { getThumbnailUrl, getPhotoUrl } from '@/api/photos'
 import { parseISODateSafe } from '@/utils/formatters'
+import { EntityLink } from '@/components/ui/EntityLink'
 import { PiCamera } from 'react-icons/pi'
 
 function formatDateToInput(isoDate: string | undefined): string {
@@ -150,7 +151,9 @@ export function LoanEditPage() {
           <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500">Book</p>
-              <p className="text-gray-900">{loan.bookTitle}</p>
+              <p className="text-gray-900">
+                <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Borrower</p>

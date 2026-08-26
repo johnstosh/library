@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useIsLibrarian } from '@/stores/authStore'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
+import { EntityLink } from '@/components/ui/EntityLink'
 
 interface InitialFilters {
   title?: string
@@ -507,7 +508,9 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Book</p>
-                    <p className="text-gray-900">{loan.bookTitle}</p>
+                    <p className="text-gray-900">
+                      <EntityLink to={`/books/${loan.bookId}`}>{loan.bookTitle}</EntityLink>
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Borrower</p>

@@ -13,7 +13,8 @@ import type { LoanDto } from '@/types/dtos'
 import { useIsLibrarian } from '@/stores/authStore'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { loanStatusTone } from '@/utils/status'
-import { IconButton, TEXT_LINK_CLASS } from '@/components/ui/IconButton'
+import { IconButton } from '@/components/ui/IconButton'
+import { EntityLink } from '@/components/ui/EntityLink'
 import { DeleteIcon, ReturnIcon, ViewIcon } from '@/components/ui/Icons'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -48,10 +49,6 @@ export function LoansPage() {
     navigate('/loans/new?captureMode=camera')
   }
 
-  const handleViewLoan = (loan: LoanDto) => {
-    navigate(`/loans/${loan.id}`)
-  }
-
   const handleReturn = async () => {
     if (returnLoanId === null) return
 
@@ -82,13 +79,9 @@ export function LoansPage() {
       header: 'Book',
       accessor: (loan) => (
         <div>
-          <button
-            onClick={() => handleViewLoan(loan)}
-            className={`font-medium ${TEXT_LINK_CLASS} text-left`}
-            data-test={`view-loan-${loan.id}`}
-          >
+          <EntityLink to={`/books/${loan.bookId}`} className="font-medium" data-test={`view-loan-book-${loan.id}`}>
             {loan.bookTitle}
-          </button>
+          </EntityLink>
           {isLibrarian && loan.userName && (
             <div className="text-sm text-gray-500">Borrowed by: {loan.userName}</div>
           )}
@@ -186,9 +179,9 @@ export function LoansPage() {
             actions={(loan) => (
               <>
                 <IconButton
+                  to={`/loans/${loan.id}`}
                   icon={<ViewIcon />}
                   label="View Details"
-                  onClick={() => handleViewLoan(loan)}
                   data-test={`view-loan-details-${loan.id}`}
                 />
                 {isLibrarian && !loan.returnDate && (

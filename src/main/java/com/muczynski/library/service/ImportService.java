@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.*;
+import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.BranchDto;
@@ -749,5 +750,26 @@ public class ImportService {
             .sorted(Comparator.comparingLong(LabelCountDto::getCount).reversed()
                 .thenComparing(LabelCountDto::getLabel))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns named book counts for the Data Management availability section.
+     * Boolean flags are counted only when true; null and false are excluded.
+     */
+    @Transactional(readOnly = true)
+    public BookAvailabilityStatsDto getAvailabilityStats() {
+        return new BookAvailabilityStatsDto(
+            bookRepository.countByElectronicResourceTrue(),
+            bookRepository.countWithCallNumber(),
+            bookRepository.countByStatus(BookStatus.WITHDRAWN),
+            bookRepository.countAvailableAtYdl(),
+            bookRepository.countByYdlPaperAvailableTrue(),
+            bookRepository.countByYdlEbookAvailableTrue(),
+            bookRepository.countByYdlAudioAvailableTrue(),
+            bookRepository.countAvailableAtEmu(),
+            bookRepository.countByEmuPaperAvailableTrue(),
+            bookRepository.countByEmuEbookAvailableTrue(),
+            bookRepository.countByEmuAudioAvailableTrue()
+        );
     }
 }

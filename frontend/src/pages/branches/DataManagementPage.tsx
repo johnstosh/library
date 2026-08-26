@@ -12,11 +12,14 @@ import {
   useDatabaseStats,
   usePhotoExportStats,
   useLabelCounts,
+  useAvailabilityStats,
   usePhotoZipParts,
+  type BookAvailabilityStatsDto,
   type PhotoZipPartDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
+import { Spinner } from '@/components/progress/Spinner'
 import {
   PiDownload,
   PiUpload,
@@ -25,7 +28,26 @@ import {
   PiFileArrowUp,
   PiImage,
   PiTag,
+  PiBooks,
 } from 'react-icons/pi'
+
+const AVAILABILITY_COUNT_ITEMS: {
+  key: keyof BookAvailabilityStatsDto
+  label: string
+  test: string
+}[] = [
+  { key: 'electronicResource', label: 'Electronic resource', test: 'availability-count-electronic' },
+  { key: 'hasCallNumber', label: 'Has call number', test: 'availability-count-has-call-number' },
+  { key: 'withdrawn', label: 'Withdrawn', test: 'availability-count-withdrawn' },
+  { key: 'availableAtYdl', label: 'Available at YDL', test: 'availability-count-ydl' },
+  { key: 'ydlPaper', label: 'YDL paper', test: 'availability-count-ydl-paper' },
+  { key: 'ydlEbook', label: 'YDL ebook', test: 'availability-count-ydl-ebook' },
+  { key: 'ydlAudio', label: 'YDL audio', test: 'availability-count-ydl-audio' },
+  { key: 'availableAtEmu', label: 'Available at EMU', test: 'availability-count-emu' },
+  { key: 'emuPaper', label: 'EMU paper', test: 'availability-count-emu-paper' },
+  { key: 'emuEbook', label: 'EMU ebook', test: 'availability-count-emu-ebook' },
+  { key: 'emuAudio', label: 'EMU audio', test: 'availability-count-emu-audio' },
+]
 
 export function DataManagementPage() {
   const [isExportingJson, setIsExportingJson] = useState(false)
@@ -42,6 +64,7 @@ export function DataManagementPage() {
   const { data: dbStats } = useDatabaseStats()
   // Fetch label counts for the Books by Label section
   const { data: labelCounts = [] } = useLabelCounts()
+  const { data: availabilityStats, isLoading: isLoadingAvailabilityStats } = useAvailabilityStats()
   // Fetch branches for filename generation (this is a small list)
   const { data: branches = [] } = useBranches()
 
@@ -460,6 +483,25 @@ export function DataManagementPage() {
         )}
       </div>
 
+      {/* Important Notes */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+        <h3 className="text-sm font-medium text-yellow-900 mb-3">Important Notes:</h3>
+        <ul className="text-sm text-yellow-800 space-y-2 list-disc list-inside">
+          <li>
+            <strong>JSON Export does NOT include photos</strong> - Use Photo Export
+            separately for a complete backup
+          </li>
+          <li>
+            <strong>Import merges data</strong> - It does not delete existing records,
+            only adds or updates
+          </li>
+          <li>
+            <strong>Regular backups recommended</strong> - Export data periodically to
+            prevent data loss
+          </li>
+        </ul>
+      </div>
+
       {/* Books by Label Section */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
         <div className="bg-green-600 px-6 py-4 text-white">
@@ -496,23 +538,47 @@ export function DataManagementPage() {
         </div>
       </div>
 
-      {/* Important Notes */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-        <h3 className="text-sm font-medium text-yellow-900 mb-3">Important Notes:</h3>
-        <ul className="text-sm text-yellow-800 space-y-2 list-disc list-inside">
-          <li>
-            <strong>JSON Export does NOT include photos</strong> - Use Photo Export
-            separately for a complete backup
-          </li>
-          <li>
-            <strong>Import merges data</strong> - It does not delete existing records,
-            only adds or updates
-          </li>
-          <li>
-            <strong>Regular backups recommended</strong> - Export data periodically to
-            prevent data loss
-          </li>
-        </ul>
+      {/* Books Availability Section */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="availability-stats-section">
+        <div className="bg-teal-600 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiBooks className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Books Availability</h2>
+              <p className="text-sm text-teal-100">
+                Book counts by resource type, call number, status, and library availability
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {isLoadingAvailabilityStats ? (
+            <div className="flex justify-center py-4">
+              <Spinner />
+            </div>
+          ) : !availabilityStats ? (
+            <p className="text-gray-500 text-sm">No availability data available.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-test="availability-stats-grid">
+              {AVAILABILITY_COUNT_ITEMS.map(({ key, label, test }) => {
+                const count = availabilityStats[key]
+                return (
+                  <div
+                    key={key}
+                    data-test={test}
+                    className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-gray-700 truncate mr-2">{label}</span>
+                    <span className={`text-lg font-bold tabular-nums ${count > 0 ? 'text-teal-700' : 'text-gray-400'}`}>
+                      {count}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

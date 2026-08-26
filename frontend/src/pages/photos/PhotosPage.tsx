@@ -21,6 +21,7 @@ import { photoStatusTone } from '@/utils/status'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/progress/Spinner'
 import { formatDateTime, truncate } from '@/utils/formatters'
+import { EntityLink } from '@/components/ui/EntityLink'
 import {
   PiDownload,
   PiUpload,
@@ -617,13 +618,33 @@ export function PhotosPage() {
                         <td className="px-4 py-3">
                           {photo.bookTitle ? (
                             <div>
-                              <div className="font-medium text-gray-900">{photo.bookTitle}</div>
+                              {photo.bookId ? (
+                                <EntityLink to={`/books/${photo.bookId}`} className="font-medium">
+                                  {photo.bookTitle}
+                                </EntityLink>
+                              ) : (
+                                <div className="font-medium text-gray-900">{photo.bookTitle}</div>
+                              )}
                               {photo.bookAuthorName && (
-                                <div className="text-sm text-gray-500">{photo.bookAuthorName}</div>
+                                photo.bookAuthorId ? (
+                                  <div className="text-sm">
+                                    <EntityLink to={`/authors/${photo.bookAuthorId}`}>
+                                      {photo.bookAuthorName}
+                                    </EntityLink>
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500">{photo.bookAuthorName}</div>
+                                )
                               )}
                             </div>
                           ) : photo.authorName ? (
-                            <div className="font-medium text-gray-900">{photo.authorName}</div>
+                            photo.authorId ? (
+                              <EntityLink to={`/authors/${photo.authorId}`} className="font-medium">
+                                {photo.authorName}
+                              </EntityLink>
+                            ) : (
+                              <div className="font-medium text-gray-900">{photo.authorName}</div>
+                            )
                           ) : (
                             <span className="text-gray-400">
                               {photo.caption || `Photo #${photo.id}`}

@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import {
   PiArchive,
   PiArrowLeft,
+  PiBook,
   PiBooks,
   PiBookOpen,
   PiCheckCircle,
@@ -21,6 +22,10 @@ const sizeClass = 'w-5 h-5'
 
 export function ViewIcon({ className }: IconProps) {
   return <PiEye className={clsx(sizeClass, className)} />
+}
+
+export function BookIcon({ className }: IconProps) {
+  return <PiBook className={clsx(sizeClass, className)} />
 }
 
 export function EditIcon({ className }: IconProps) {

@@ -55,10 +55,6 @@ export function AuthorsPage() {
     navigate('/authors/new')
   }
 
-  const handleEditAuthor = (author: AuthorDto) => {
-    navigate(`/authors/${author.id}/edit`)
-  }
-
   const handleViewAuthor = (author: AuthorDto) => {
     navigate(`/authors/${author.id}`)
   }
@@ -154,7 +150,6 @@ export function AuthorsPage() {
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
             onSelectAll={handleSelectAll}
-            onEdit={handleEditAuthor}
             onView={handleViewAuthor}
           />
         </div>

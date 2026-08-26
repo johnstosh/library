@@ -1,6 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useUiStore, useBooksChips } from '@/stores/uiStore'
-import type { BooksChips } from '@/stores/uiStore'
+import type { BookChipFilters } from '@/utils/bookChipFilters'
 import { PiFunnel } from 'react-icons/pi'
 
 // ─── Filter chip component ────────────────────────────────────────────────────
@@ -41,11 +40,13 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
 
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
-export function BookFilters() {
-  const chips = useBooksChips()
-  const { toggleBooksChip } = useUiStore()
+interface BookFiltersProps {
+  chips: BookChipFilters
+  onToggle: (chip: keyof BookChipFilters) => void
+}
 
-  const toggle = (chip: keyof BooksChips) => toggleBooksChip(chip)
+export function BookFilters({ chips, onToggle }: BookFiltersProps) {
+  const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
 
   return (
     <div className="space-y-2">
@@ -122,7 +123,7 @@ export function BookFilters() {
           label="Not Active Status"
           active={chips.notActiveStatus}
           onClick={() => toggle('notActiveStatus')}
-          tooltip="Only books that are not in Active status (lost, withdrawn, on order, etc.)"
+          tooltip="When off: hide withdrawn books. When on: only books that are not Active (lost, withdrawn, on order, etc.)"
           dataTest="filter-not-active-status"
         />
         <FilterChip

@@ -24,6 +24,7 @@ public class PhotoExportInfoDto {
     private Long bookId;
     private String bookLocNumber;
     private LocalDateTime bookDateAdded;
+    private Long bookAuthorId;
     private String bookAuthorName;
 
     // Author-related fields

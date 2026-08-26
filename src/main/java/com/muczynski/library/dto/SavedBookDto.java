@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 public class SavedBookDto {
     private Long id;
     private String title;
+    private Long authorId;
     private String author;
     private String library;
     private Long photoCount;
