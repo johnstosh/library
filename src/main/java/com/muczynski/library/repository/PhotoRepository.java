@@ -117,11 +117,22 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<PhotoMetadataProjection> findBy();
 
     /**
-     * Efficient flat projection for the photo export list page.
-     * Single native SQL query: no image blob loaded, no N+1 queries.
-     * Joins book, book's author, and direct author in one round-trip.
+     * Lightweight projection for cache validation (id + lastModified only).
+     * Must not select the image LOB.
      */
-    @Query(value = """
+    interface PhotoSummaryProjection {
+        Long getId();
+        java.time.LocalDateTime getLastModified();
+    }
+
+    /**
+     * Get summaries (id + lastModified) for all active photos.
+     * Avoids loading full entities and never fetches the image LOB.
+     */
+    @Query("SELECT p.id as id, p.lastModified as lastModified FROM Photo p WHERE p.deletedAt IS NULL")
+    List<PhotoSummaryProjection> findAllSummaries();
+
+    String EXPORT_PAGE_SELECT = """
             SELECT
                 p.id             AS id,
                 p.content_type   AS contentType,
@@ -132,6 +143,7 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
                 p.export_error_message AS exportErrorMessage,
                 p.image_checksum AS imageChecksum,
                 p.deleted_at     AS deletedAt,
+                p.last_modified  AS lastModified,
                 b.id             AS bookId,
                 b.title          AS bookTitle,
                 b.loc_number     AS bookLocNumber,
@@ -144,6 +156,14 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
             LEFT JOIN book b   ON p.book_id   = b.id
             LEFT JOIN author ba ON b.author_id = ba.id
             LEFT JOIN author a  ON p.author_id = a.id
+            """;
+
+    /**
+     * Efficient flat projection for the photo export list page.
+     * Single native SQL query: no image blob loaded, no N+1 queries.
+     * Joins book, book's author, and direct author in one round-trip.
+     */
+    @Query(value = EXPORT_PAGE_SELECT + """
             WHERE p.deleted_at IS NULL
             ORDER BY b.date_added_to_library DESC NULLS LAST, p.id
             """,
@@ -154,34 +174,23 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
      * Efficient flat projection for a single photo on the export page.
      * Same query as findAllForExportPage but filtered to one photo ID.
      */
-    @Query(value = """
-            SELECT
-                p.id             AS id,
-                p.content_type   AS contentType,
-                p.caption        AS caption,
-                p.permanent_id   AS permanentId,
-                p.exported_at    AS exportedAt,
-                p.export_status  AS exportStatus,
-                p.export_error_message AS exportErrorMessage,
-                p.image_checksum AS imageChecksum,
-                p.deleted_at     AS deletedAt,
-                b.id             AS bookId,
-                b.title          AS bookTitle,
-                b.loc_number     AS bookLocNumber,
-                b.date_added_to_library AS bookDateAdded,
-                ba.id            AS bookAuthorId,
-                ba.name          AS bookAuthorName,
-                a.id             AS authorId,
-                a.name           AS authorName
-            FROM photo p
-            LEFT JOIN book b   ON p.book_id   = b.id
-            LEFT JOIN author ba ON b.author_id = ba.id
-            LEFT JOIN author a  ON p.author_id = a.id
+    @Query(value = EXPORT_PAGE_SELECT + """
             WHERE p.deleted_at IS NULL
               AND p.id = :photoId
             """,
             nativeQuery = true)
     Optional<PhotoExportFlatProjection> findByIdForExportPage(@Param("photoId") Long photoId);
+
+    /**
+     * Efficient flat projection for a batch of photos on the export page.
+     * Same mapping as findAllForExportPage / findByIdForExportPage; never loads image bytes.
+     */
+    @Query(value = EXPORT_PAGE_SELECT + """
+            WHERE p.deleted_at IS NULL
+              AND p.id IN :photoIds
+            """,
+            nativeQuery = true)
+    List<PhotoExportFlatProjection> findByIdsForExportPage(@Param("photoIds") List<Long> photoIds);
 
     // Find active photos that have images for ZIP export
     // Note: This loads full Photo entities including image bytes - use only for actual export
@@ -212,9 +221,10 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
     @Query(value = "SELECT id FROM photo WHERE deleted_at IS NULL AND image IS NOT NULL AND image_checksum IS NULL", nativeQuery = true)
     List<Long> findIdsWithLocalImageButNoChecksum();
 
-    // Update just the checksum for a single photo (efficient — no blob round-trip)
+    // Update just the checksum for a single photo (efficient — no blob round-trip).
+    // Also stamps lastModified because @Modifying JPQL bypasses @PreUpdate.
     @Modifying
-    @Query("UPDATE Photo p SET p.imageChecksum = :checksum WHERE p.id = :id")
+    @Query("UPDATE Photo p SET p.imageChecksum = :checksum, p.lastModified = CURRENT_TIMESTAMP WHERE p.id = :id")
     void updateImageChecksum(@Param("id") Long id, @Param("checksum") String checksum);
 
     // Lightweight dedup queries for ZIP import — return only ID + checksum, never image bytes

@@ -56,6 +56,11 @@ export const queryKeys = {
   },
   photos: {
     all: ['photos'] as const,
+    summaries: () => [...queryKeys.photos.all, 'summaries'] as const,
+    byIds: (ids: number[]) => [...queryKeys.photos.all, 'byIds', ids.join(',')] as const,
+    detail: (id: number) => [...queryKeys.photos.all, 'detail', id] as const,
+    exportList: () => [...queryKeys.photos.all, 'exportList'] as const, // deprecated: use summaries + detail
+    exportStats: () => [...queryKeys.photos.all, 'exportStats'] as const,
     book: (bookId: number) => [...queryKeys.photos.all, 'book', bookId] as const,
     author: (authorId: number) => [...queryKeys.photos.all, 'author', authorId] as const,
   },

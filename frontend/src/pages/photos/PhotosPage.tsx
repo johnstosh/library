@@ -20,6 +20,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { photoStatusTone } from '@/utils/status'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/progress/Spinner'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { formatDateTime, truncate } from '@/utils/formatters'
 import { EntityLink } from '@/components/ui/EntityLink'
 import {
@@ -43,7 +44,7 @@ export function PhotosPage() {
   const [pasteInstructions, setPasteInstructions] = useState<string>('')
   // Photo export hooks
   const { data: photoStats, refetch: refetchPhotoStats } = usePhotoExportStats()
-  const { data: photoList = [], refetch: refetchPhotoList, isLoading: isLoadingPhotos } = usePhotoExportList()
+  const { data: photoList = [], refetch: refetchPhotoList, isLoading: isLoadingPhotos, isFetching: isFetchingPhotos } = usePhotoExportList()
   const exportSinglePhoto = useExportSinglePhoto()
   const importSinglePhoto = useImportSinglePhoto()
   const verifyPhoto = useVerifyPhoto()
@@ -550,7 +551,7 @@ export function PhotosPage() {
           </div>
 
           {/* Photo Details Table */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden relative">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
               <h4 className="font-medium text-gray-900">Photo Details</h4>
             </div>
@@ -582,7 +583,7 @@ export function PhotosPage() {
                   className="bg-white divide-y divide-gray-200"
                   data-test="photos-table-body"
                 >
-                  {isLoadingPhotos ? (
+                  {isLoadingPhotos && photoList.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                         <div className="flex items-center justify-center gap-3">
@@ -771,6 +772,7 @@ export function PhotosPage() {
                 </tbody>
               </table>
             </div>
+            <LoadingOverlay show={isFetchingPhotos && !isLoadingPhotos} />
           </div>
         </div>
       </div>

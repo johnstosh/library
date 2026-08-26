@@ -142,6 +142,12 @@ export function useEntities(filter?: string) {
   - `/api/authors/most-recent-day`
 - **Batch Fetch**: `POST /api/authors/by-ids`
 
+### Photos (export/management list)
+- **Summaries Endpoint**: `GET /api/photo-export/summaries` → `PhotoSummaryDto[]` (id + lastModified only; never loads image bytes)
+- **Batch Fetch**: `POST /api/photo-export/by-ids` → `PhotoExportInfoDto[]` (same mapping as `GET /api/photo-export/photos`)
+- **Legacy full list**: `GET /api/photo-export/photos` still works for compatibility
+- **IndexedDB persist**: `photos.detail` (metadata only, no image bytes), same as `books.detail` / `authors.detail`
+
 ## Cache Invalidation
 
 Invalidate summaries when entities change:

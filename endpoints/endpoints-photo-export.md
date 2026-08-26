@@ -77,7 +77,36 @@ Returns all photos with export status (metadata only, no image bytes).
 
 **Authentication:** Librarian only *(was incorrectly public in earlier versions)*
 
-**Response:** Array of `PhotoExportInfoDto` — id, caption, permanentId, exportStatus, bookTitle, authorName, checksum, etc.
+**Response:** Array of `PhotoExportInfoDto` — id, lastModified, caption, permanentId, exportStatus, bookTitle, authorName, checksum, etc.
+
+**Note:** Prefer `GET /summaries` + `POST /by-ids` for the Photos management page. This endpoint remains for compatibility.
+
+---
+
+## GET /api/photo-export/summaries
+Returns lightweight photo summaries for cache validation (id + lastModified only). Never loads image bytes.
+
+**Authentication:** Same as `GET /api/photo-export/photos` (authenticated; librarian in practice)
+
+**Response:** Array of `PhotoSummaryDto`:
+```json
+[
+  { "id": 42, "lastModified": "2026-08-26T14:30:00" }
+]
+```
+
+Legacy rows with a null `lastModified` serialize as `"1970-01-01T00:00:00"` (stable fallback — not `now()`).
+
+---
+
+## POST /api/photo-export/by-ids
+Batch-fetches photo export info for the given IDs. Same mapping as `GET /api/photo-export/photos`. Never loads image bytes.
+
+**Authentication:** Same as `GET /api/photo-export/photos`
+
+**Request Body:** `List<Long>` e.g. `[1, 2, 3]`
+
+**Response:** Array of `PhotoExportInfoDto` for matching active (non-deleted) photos.
 
 ---
 

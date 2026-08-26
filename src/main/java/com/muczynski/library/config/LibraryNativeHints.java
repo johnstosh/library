@@ -7,6 +7,7 @@ import com.muczynski.library.domain.*;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.PhotoExportFlatProjection;
 import com.muczynski.library.repository.PhotoMetadataProjection;
+import com.muczynski.library.repository.PhotoRepository;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -218,7 +219,8 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
                 PhotoMetadataProjection.class,
                 PhotoMetadataProjection.BookProjection.class,
                 PhotoMetadataProjection.AuthorProjection.class,
-                PhotoExportFlatProjection.class }) {
+                PhotoExportFlatProjection.class,
+                PhotoRepository.PhotoSummaryProjection.class }) {
             hints.reflection().registerType(iface,
                 MemberCategory.INVOKE_PUBLIC_METHODS,
                 MemberCategory.DECLARED_FIELDS);

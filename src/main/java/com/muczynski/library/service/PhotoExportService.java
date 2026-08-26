@@ -9,6 +9,7 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.PhotoExportInfoDto;
 import com.muczynski.library.dto.PhotoExportStatsDto;
+import com.muczynski.library.dto.PhotoSummaryDto;
 import com.muczynski.library.dto.PhotoImportResultDto;
 import com.muczynski.library.dto.PhotoVerifyResultDto;
 import com.muczynski.library.photostorage.client.GooglePhotosLibraryClient;
@@ -42,6 +43,9 @@ import java.util.stream.Collectors;
 public class PhotoExportService {
 
     private static final Logger logger = LoggerFactory.getLogger(PhotoExportService.class);
+
+    /** Stable fallback for legacy rows whose lastModified is still null. Never use now() here. */
+    private static final LocalDateTime UNKNOWN_LAST_MODIFIED = LocalDateTime.of(1970, 1, 1, 0, 0);
 
     @Autowired
     private PhotoRepository photoRepository;
@@ -653,54 +657,7 @@ public class PhotoExportService {
 
         for (com.muczynski.library.repository.PhotoExportFlatProjection photo : allPhotos) {
             try {
-                PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
-                photoInfo.setId(photo.getId());
-                photoInfo.setCaption(photo.getCaption());
-
-                // Derive status from actual data to match stats counts exactly
-                // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
-                String derivedStatus;
-                boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
-                boolean hasChecksum = photo.getImageChecksum() != null;
-                String storedStatus = photo.getExportStatus(); // String from native query
-
-                if ("FAILED".equals(storedStatus)) {
-                    derivedStatus = "FAILED";
-                } else if ("IN_PROGRESS".equals(storedStatus)) {
-                    derivedStatus = "IN_PROGRESS";
-                } else if (hasPermanentId && hasChecksum) {
-                    // Has both permanentId and checksum = fully synced (exported and imported)
-                    derivedStatus = "COMPLETED";
-                } else if (hasPermanentId && !hasChecksum) {
-                    // Has permanentId but no checksum = needs import from Google Photos
-                    derivedStatus = "PENDING_IMPORT";
-                } else if (hasChecksum && !hasPermanentId) {
-                    // Has checksum but no permanentId = needs export to Google Photos
-                    derivedStatus = "PENDING";
-                } else {
-                    // No image and no permanentId = no data to export
-                    derivedStatus = "NO_IMAGE";
-                }
-                photoInfo.setExportStatus(derivedStatus);
-                photoInfo.setExportedAt(photo.getExportedAt());
-                photoInfo.setPermanentId(photo.getPermanentId());
-                photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
-                photoInfo.setContentType(photo.getContentType());
-                // Use imageChecksum as proxy for hasImage to avoid loading image bytes
-                photoInfo.setHasImage(photo.getImageChecksum() != null);
-                photoInfo.setChecksum(photo.getImageChecksum());
-
-                photoInfo.setBookId(photo.getBookId());
-                photoInfo.setBookTitle(photo.getBookTitle());
-                photoInfo.setBookLocNumber(photo.getBookLocNumber());
-                photoInfo.setBookDateAdded(photo.getBookDateAdded());
-                photoInfo.setBookAuthorId(photo.getBookAuthorId());
-                photoInfo.setBookAuthorName(photo.getBookAuthorName());
-
-                photoInfo.setAuthorId(photo.getAuthorId());
-                photoInfo.setAuthorName(photo.getAuthorName());
-
-                result.add(photoInfo);
+                result.add(toPhotoExportInfoDto(photo));
             } catch (Exception e) {
                 logger.error("Error processing photo ID: {} - Error: {}", photo.getId(), e.getMessage(), e);
                 // Continue processing other photos even if one fails
@@ -720,16 +677,54 @@ public class PhotoExportService {
         com.muczynski.library.repository.PhotoExportFlatProjection photo =
                 photoRepository.findByIdForExportPage(photoId)
                         .orElseThrow(() -> new LibraryException("Photo not found: " + photoId));
+        return toPhotoExportInfoDto(photo);
+    }
 
+    /**
+     * Lightweight summaries (id + lastModified) for cache validation.
+     * Never loads image bytes.
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoSummaryDto> getAllPhotoSummaries() {
+        return photoRepository.findAllSummaries().stream()
+                .map(this::toPhotoSummaryDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Full export-info DTOs for the given IDs. Same mapping as GET /photos.
+     * Never loads image bytes.
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoExportInfoDto> getPhotosByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return photoRepository.findByIdsForExportPage(ids).stream()
+                .map(this::toPhotoExportInfoDto)
+                .collect(Collectors.toList());
+    }
+
+    private PhotoSummaryDto toPhotoSummaryDto(com.muczynski.library.repository.PhotoRepository.PhotoSummaryProjection projection) {
+        PhotoSummaryDto dto = new PhotoSummaryDto();
+        dto.setId(projection.getId());
+        dto.setLastModified(effectiveLastModified(projection.getLastModified()));
+        return dto;
+    }
+
+    private PhotoExportInfoDto toPhotoExportInfoDto(com.muczynski.library.repository.PhotoExportFlatProjection photo) {
         PhotoExportInfoDto photoInfo = new PhotoExportInfoDto();
         photoInfo.setId(photo.getId());
+        photoInfo.setLastModified(effectiveLastModified(photo.getLastModified()));
         photoInfo.setCaption(photo.getCaption());
 
+        // Derive status from actual data to match stats counts exactly
+        // Priority: FAILED/IN_PROGRESS from stored status, then derive from permanentId/imageChecksum
+        String derivedStatus;
         boolean hasPermanentId = photo.getPermanentId() != null && !photo.getPermanentId().isEmpty();
         boolean hasChecksum = photo.getImageChecksum() != null;
-        String storedStatus = photo.getExportStatus();
+        String storedStatus = photo.getExportStatus(); // String from native query
 
-        String derivedStatus;
         if ("FAILED".equals(storedStatus)) {
             derivedStatus = "FAILED";
         } else if ("IN_PROGRESS".equals(storedStatus)) {
@@ -748,6 +743,7 @@ public class PhotoExportService {
         photoInfo.setPermanentId(photo.getPermanentId());
         photoInfo.setExportErrorMessage(photo.getExportErrorMessage());
         photoInfo.setContentType(photo.getContentType());
+        // Use imageChecksum as proxy for hasImage to avoid loading image bytes
         photoInfo.setHasImage(photo.getImageChecksum() != null);
         photoInfo.setChecksum(photo.getImageChecksum());
 
@@ -762,6 +758,10 @@ public class PhotoExportService {
         photoInfo.setAuthorName(photo.getAuthorName());
 
         return photoInfo;
+    }
+
+    private LocalDateTime effectiveLastModified(LocalDateTime lastModified) {
+        return lastModified != null ? lastModified : UNKNOWN_LAST_MODIFIED;
     }
 
     /**

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class PhotoExportInfoDto {
     private Long id;
+    private LocalDateTime lastModified;
     private String caption;
     private String exportStatus;
     private LocalDateTime exportedAt;

@@ -57,14 +57,16 @@ export const idbPersister = createAsyncStoragePersister({
   key: CACHE_KEY,
 })
 
-// Only persist books.detail and authors.detail queries.
-// Summaries, lists, settings, photos, etc. are intentionally excluded —
-// they either change frequently or are cheap to re-fetch.
+// Persist per-entity detail queries used by the lastModified summaries → by-ids pipeline.
+// Photo export details are metadata-only (no image bytes), same as books/authors.detail.
+// Summaries, lists, stats, and book/author photo galleries are excluded — they either
+// change frequently or are cheap to re-fetch.
 export function shouldPersistQuery(query: Query): boolean {
   const key = query.queryKey as unknown[]
   return (
     (key[0] === 'books' && key[1] === 'detail') ||
-    (key[0] === 'authors' && key[1] === 'detail')
+    (key[0] === 'authors' && key[1] === 'detail') ||
+    (key[0] === 'photos' && key[1] === 'detail')
   )
 }
 
