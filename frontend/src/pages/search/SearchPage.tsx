@@ -9,7 +9,7 @@ import { useSearch, type SearchFilters } from '@/api/search'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { defaultBookChipFilters, isAnyChipActive, type BookChipFilters } from '@/utils/bookChipFilters'
-import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
+import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
@@ -21,6 +21,7 @@ import {
   BooksIcon,
   DeleteIcon,
   EditIcon,
+  FreeAudioIcon,
   FreeTextIcon,
   GrokipediaIcon,
 } from '@/components/ui/Icons'
@@ -407,16 +408,19 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             </StatusBadge>
             {(freeTextUrls.length > 0 || isValidUrl(book.grokipediaUrl)) && (
               <div className="flex gap-1">
-                {freeTextUrls.map((url, index) => (
+                {freeTextUrls.map((url, index) => {
+                  const audio = isFreeAudioUrl(url)
+                  return (
                   <IconButton
                     key={index}
                     href={url}
-                    icon={<FreeTextIcon />}
-                    label={`Free text: ${extractDomain(url)}`}
+                    icon={audio ? <FreeAudioIcon /> : <FreeTextIcon />}
+                    label={`${audio ? 'Free audio' : 'Free text'}: ${extractDomain(url)}`}
                     tone="success"
-                    data-test={`book-result-free-text-${book.id}-${index}`}
+                    data-test={`book-result-${audio ? 'free-audio' : 'free-text'}-${book.id}-${index}`}
                   />
-                ))}
+                  )
+                })}
                 {isValidUrl(book.grokipediaUrl) && (
                   <IconButton
                     href={book.grokipediaUrl}
