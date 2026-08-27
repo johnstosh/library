@@ -39,7 +39,18 @@ export function UserTable({
           )}
         </div>
       ),
-      width: '35%',
+      width: '22%',
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      accessor: (user) => (
+        <span className="text-gray-700" data-test={`user-email-${user.id}`}>
+          {user.email?.trim() ? user.email : '—'}
+        </span>
+      ),
+      width: '28%',
+      hideOnMobile: true,
     },
     {
       key: 'authorities',
@@ -53,7 +64,7 @@ export function UserTable({
           </StatusBadge>
         )
       },
-      width: '20%',
+      width: '15%',
     },
     {
       key: 'activeLoansCount',
@@ -69,7 +80,7 @@ export function UserTable({
           {user.activeLoansCount ?? 0}
         </span>
       ),
-      width: '15%',
+      width: '12%',
     },
     {
       key: 'id',
