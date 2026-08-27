@@ -53,6 +53,8 @@ export interface LabelCountDto {
 export interface BookAvailabilityStatsDto {
   electronicResource: number
   hasCallNumber: number
+  hasFreeOnlineText: number
+  hasFreeOnlineAudio: number
   withdrawn: number
   availableAtYdl: number
   ydlPaper: number
