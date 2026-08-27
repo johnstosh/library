@@ -20,6 +20,7 @@ public interface PhotoExportFlatProjection {
     String getExportErrorMessage();
     String getImageChecksum();
     LocalDateTime getDeletedAt();
+    LocalDateTime getLastModified();
 
     // Book fields (null if photo has no book)
     Long getBookId();

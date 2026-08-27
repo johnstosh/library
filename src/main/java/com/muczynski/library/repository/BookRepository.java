@@ -302,6 +302,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT COUNT(b) FROM Book b WHERE b.locNumber IS NOT NULL AND TRIM(b.locNumber) <> ''")
     long countWithCallNumber();
 
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.freeTextUrl IS NOT NULL AND TRIM(b.freeTextUrl) <> ''")
+    long countWithFreeOnlineText();
+
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%'")
+    long countWithFreeOnlineAudio();
+
     long countByStatus(BookStatus status);
 
     long countByYdlPaperAvailableTrue();

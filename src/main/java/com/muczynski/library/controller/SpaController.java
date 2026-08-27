@@ -33,6 +33,8 @@ public class SpaController {
             "/branches",
             "/branches/**",
             "/data-management",
+            "/photos-management",
+            "/photos-management/**",
             "/loans",
             "/loans/**",
             "/users",

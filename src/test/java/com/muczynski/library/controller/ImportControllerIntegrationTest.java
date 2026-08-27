@@ -527,6 +527,8 @@ class ImportControllerIntegrationTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.electronicResource").exists())
                 .andExpect(jsonPath("$.hasCallNumber").exists())
+                .andExpect(jsonPath("$.hasFreeOnlineText").exists())
+                .andExpect(jsonPath("$.hasFreeOnlineAudio").exists())
                 .andExpect(jsonPath("$.withdrawn").exists())
                 .andExpect(jsonPath("$.availableAtYdl").exists())
                 .andExpect(jsonPath("$.ydlPaper").exists())
@@ -547,6 +549,7 @@ class ImportControllerIntegrationTest {
         electronicWithdrawn.setDateAddedToLibrary(LocalDateTime.now());
         electronicWithdrawn.setStatus(BookStatus.WITHDRAWN);
         electronicWithdrawn.setElectronicResource(true);
+        electronicWithdrawn.setFreeTextUrl("https://www.gutenberg.org/ebooks/1");
         electronicWithdrawn.setLibrary(testLibrary);
         bookRepository.save(electronicWithdrawn);
 
@@ -561,6 +564,7 @@ class ImportControllerIntegrationTest {
         ydlEmu.setEmuAudioAvailable(true);
         ydlEmu.setEmuPaperAvailable(false);
         ydlEmu.setEmuEbookAvailable(null);
+        ydlEmu.setFreeTextUrl("https://librivox.org/city-of-god");
         ydlEmu.setLibrary(testLibrary);
         bookRepository.save(ydlEmu);
 
@@ -580,6 +584,8 @@ class ImportControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.electronicResource", equalTo(before.get("electronicResource").asInt() + 1)))
                 .andExpect(jsonPath("$.hasCallNumber", equalTo(before.get("hasCallNumber").asInt() + 1)))
+                .andExpect(jsonPath("$.hasFreeOnlineText", equalTo(before.get("hasFreeOnlineText").asInt() + 2)))
+                .andExpect(jsonPath("$.hasFreeOnlineAudio", equalTo(before.get("hasFreeOnlineAudio").asInt() + 1)))
                 .andExpect(jsonPath("$.withdrawn", equalTo(before.get("withdrawn").asInt() + 1)))
                 .andExpect(jsonPath("$.availableAtYdl", equalTo(before.get("availableAtYdl").asInt() + 1)))
                 .andExpect(jsonPath("$.ydlPaper", equalTo(before.get("ydlPaper").asInt() + 1)))

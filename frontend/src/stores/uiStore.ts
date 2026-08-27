@@ -4,6 +4,18 @@ import {
   defaultBookChipFilters,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
+import {
+  defaultAuthorChipFilters,
+  type AuthorChipFilters,
+} from '@/utils/authorChipFilters'
+import {
+  defaultLoanChipFilters,
+  type LoanChipFilters,
+} from '@/utils/loanChipFilters'
+import {
+  defaultUserChipFilters,
+  type UserChipFilters,
+} from '@/utils/userChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -11,7 +23,6 @@ interface TableState {
 }
 
 type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
-type FilterFeature = 'authors'
 
 /**
  * Independent boolean chip filters for the Books page.
@@ -22,8 +33,14 @@ type FilterFeature = 'authors'
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  */
 export type BooksChips = BookChipFilters
+export type AuthorsChips = AuthorChipFilters
+export type LoansChips = LoanChipFilters
+export type UsersChips = UserChipFilters
 
 const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
+const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
+const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
+const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
 
 interface UiState {
   // Table selection state per feature
@@ -35,9 +52,10 @@ interface UiState {
   // Books chip filter state (all AND-combined, client-side)
   booksChips: BooksChips
 
-  // Authors filter
-  authorsFilter: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent'
-  loansShowAll: boolean
+  authorsChips: AuthorsChips
+  loansChips: LoansChips
+  usersChips: UsersChips
+  usersSearchQuery: string
 
   // Label filter state for books
   booksLabelFilter: string[]
@@ -46,13 +64,18 @@ interface UiState {
   setSelectedIds: (table: TableName, ids: Set<number>) => void
   toggleSelectAll: (table: TableName) => void
   clearSelection: (table: TableName) => void
-  setFilter: (feature: FilterFeature, filter: string) => void
-  setLoansShowAll: (showAll: boolean) => void
+  toggleLoansChip: (chip: keyof LoansChips) => void
+  clearLoansChips: () => void
   toggleRowSelection: (table: TableName, id: number) => void
   toggleBooksLabel: (label: string) => void
   clearBooksLabels: () => void
   toggleBooksChip: (chip: keyof BooksChips) => void
   clearBooksChips: () => void
+  toggleAuthorsChip: (chip: keyof AuthorsChips) => void
+  clearAuthorsChips: () => void
+  toggleUsersChip: (chip: keyof UsersChips) => void
+  clearUsersChips: () => void
+  setUsersSearchQuery: (query: string) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -63,8 +86,10 @@ export const useUiStore = create<UiState>((set) => ({
   loansTable: { selectedIds: new Set(), selectAll: false },
 
   booksChips: { ...defaultBooksChips },
-  authorsFilter: 'most-recent',
-  loansShowAll: false,
+  authorsChips: { ...defaultAuthorsChips },
+  loansChips: { ...defaultLoansChips },
+  usersChips: { ...defaultUsersChips },
+  usersSearchQuery: '',
   booksLabelFilter: [],
 
   // Actions
@@ -83,9 +108,12 @@ export const useUiStore = create<UiState>((set) => ({
       [table]: { selectedIds: new Set(), selectAll: false },
     })),
 
-  setFilter: (feature, filter) => set({ [`${feature}Filter`]: filter }),
+  toggleLoansChip: (chip) =>
+    set((state) => ({
+      loansChips: { ...state.loansChips, [chip]: !state.loansChips[chip] },
+    })),
 
-  setLoansShowAll: (showAll) => set({ loansShowAll: showAll }),
+  clearLoansChips: () => set({ loansChips: { ...defaultLoansChips } }),
 
   toggleBooksLabel: (label) =>
     set((state) => {
@@ -102,6 +130,22 @@ export const useUiStore = create<UiState>((set) => ({
     })),
 
   clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
+
+  toggleAuthorsChip: (chip) =>
+    set((state) => ({
+      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
+    })),
+
+  clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
+
+  toggleUsersChip: (chip) =>
+    set((state) => ({
+      usersChips: { ...state.usersChips, [chip]: !state.usersChips[chip] },
+    })),
+
+  clearUsersChips: () => set({ usersChips: { ...defaultUsersChips } }),
+
+  setUsersSearchQuery: (query) => set({ usersSearchQuery: query }),
 
   toggleRowSelection: (table, id) =>
     set((state) => {
@@ -132,6 +176,8 @@ export const useLoansTableSelection = () => useUiStore((state) => state.loansTab
 
 // Helper hooks for filters
 export const useBooksChips = () => useUiStore((state) => state.booksChips)
-export const useAuthorsFilter = () => useUiStore((state) => state.authorsFilter)
-export const useLoansShowAll = () => useUiStore((state) => state.loansShowAll)
+export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
+export const useLoansChips = () => useUiStore((state) => state.loansChips)
+export const useUsersChips = () => useUiStore((state) => state.usersChips)
+export const useUsersSearchQuery = () => useUiStore((state) => state.usersSearchQuery)
 export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)

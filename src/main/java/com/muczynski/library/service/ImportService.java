@@ -761,6 +761,8 @@ public class ImportService {
         return new BookAvailabilityStatsDto(
             bookRepository.countByElectronicResourceTrue(),
             bookRepository.countWithCallNumber(),
+            bookRepository.countWithFreeOnlineText(),
+            bookRepository.countWithFreeOnlineAudio(),
             bookRepository.countByStatus(BookStatus.WITHDRAWN),
             bookRepository.countAvailableAtYdl(),
             bookRepository.countByYdlPaperAvailableTrue(),

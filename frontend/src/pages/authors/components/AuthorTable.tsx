@@ -52,11 +52,11 @@ export function AuthorTable({
       key: 'name',
       header: 'Name',
       accessor: (author) => (
-        <EntityLink to={`/authors/${author.id}`} className="font-medium" data-test={`author-name-link-${author.id}`}>
-          {truncate(author.name, 30)}
+        <EntityLink to={`/authors/${author.id}`} className="font-medium block truncate" data-test={`author-name-link-${author.id}`}>
+          {truncate(author.name, 18)}
         </EntityLink>
       ),
-      width: '20%',
+      width: '7%',
     },
     {
       key: 'religiousAffiliation',
@@ -71,7 +71,7 @@ export function AuthorTable({
       accessor: (author) => (
         <span className="text-gray-600">{truncate(author.briefBiography, 60) || '—'}</span>
       ),
-      width: '35%',
+      width: '48%',
       hideOnMobile: true,
     },
     {

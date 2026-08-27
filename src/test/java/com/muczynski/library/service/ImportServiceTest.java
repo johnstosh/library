@@ -30,6 +30,8 @@ class ImportServiceTest {
     void getAvailabilityStats_MapsRepositoryCountsToNamedFields() {
         when(bookRepository.countByElectronicResourceTrue()).thenReturn(3L);
         when(bookRepository.countWithCallNumber()).thenReturn(8L);
+        when(bookRepository.countWithFreeOnlineText()).thenReturn(7L);
+        when(bookRepository.countWithFreeOnlineAudio()).thenReturn(2L);
         when(bookRepository.countByStatus(BookStatus.WITHDRAWN)).thenReturn(1L);
         when(bookRepository.countAvailableAtYdl()).thenReturn(5L);
         when(bookRepository.countByYdlPaperAvailableTrue()).thenReturn(2L);
@@ -44,6 +46,8 @@ class ImportServiceTest {
 
         assertEquals(3L, stats.getElectronicResource());
         assertEquals(8L, stats.getHasCallNumber());
+        assertEquals(7L, stats.getHasFreeOnlineText());
+        assertEquals(2L, stats.getHasFreeOnlineAudio());
         assertEquals(1L, stats.getWithdrawn());
         assertEquals(5L, stats.getAvailableAtYdl());
         assertEquals(2L, stats.getYdlPaper());

@@ -6,16 +6,16 @@ import { formatBookStatus } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { IconButton } from '@/components/ui/IconButton'
 import { BookIcon, EditIcon } from '@/components/ui/Icons'
 
 interface AuthorBooksTableProps {
   books: BookDto[]
+  isLoading?: boolean
 }
 
-export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
+export function AuthorBooksTable({ books, isLoading = false }: AuthorBooksTableProps) {
   const navigate = useNavigate()
 
   const columns: Column<BookDto>[] = [
@@ -54,17 +54,8 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
     navigate(`/books/${book.id}`)
   }
 
-  if (!books || books.length === 0) {
-    return (
-      <EmptyState
-        message="No books found for this author."
-        data-test="author-books-empty"
-      />
-    )
-  }
-
   return (
-    <div data-test="author-books-table">
+    <div data-test={isLoading || books.length > 0 ? 'author-books-table' : 'author-books-empty'}>
       <DataTable
         data={books}
         columns={columns}
@@ -90,7 +81,7 @@ export function AuthorBooksTable({ books }: AuthorBooksTableProps) {
             />
           </>
         )}
-        isLoading={false}
+        isLoading={isLoading}
         emptyMessage="No books found for this author."
       />
     </div>

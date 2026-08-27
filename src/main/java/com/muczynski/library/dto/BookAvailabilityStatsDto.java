@@ -17,6 +17,8 @@ import lombok.NoArgsConstructor;
 public class BookAvailabilityStatsDto {
     private long electronicResource;
     private long hasCallNumber;
+    private long hasFreeOnlineText;
+    private long hasFreeOnlineAudio;
     private long withdrawn;
     private long availableAtYdl;
     private long ydlPaper;

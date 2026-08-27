@@ -1,6 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import React, { useMemo, useRef } from 'react'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
+import { queryKeys } from '@/config/queryClient'
 
 export interface ImportExportStats {
   branches: number
@@ -51,6 +53,8 @@ export interface LabelCountDto {
 export interface BookAvailabilityStatsDto {
   electronicResource: number
   hasCallNumber: number
+  hasFreeOnlineText: number
+  hasFreeOnlineAudio: number
   withdrawn: number
   availableAtYdl: number
   ydlPaper: number
@@ -77,8 +81,14 @@ export interface PhotoExportStatsDto {
   albumId?: string
 }
 
+export interface PhotoSummaryDto {
+  id: number
+  lastModified: string
+}
+
 export interface PhotoExportInfoDto {
   id: number
+  lastModified: string
   caption?: string
   exportStatus: string
   exportedAt?: string
@@ -233,17 +243,104 @@ export async function exportPhotos(): Promise<Blob> {
 // Get photo export statistics
 export function usePhotoExportStats() {
   return useQuery({
-    queryKey: ['photo-export-stats'],
+    queryKey: queryKeys.photos.exportStats(),
     queryFn: () => api.get<PhotoExportStatsDto>('/photo-export/stats'),
   })
 }
 
-// Get all photos with export info
+// Get all photos with export info using lastModified summaries → by-ids caching.
 export function usePhotoExportList() {
-  return useQuery({
-    queryKey: ['photo-export-list'],
-    queryFn: () => api.get<PhotoExportInfoDto[]>('/photo-export/photos'),
+  const queryClient = useQueryClient()
+
+  const {
+    data: summaries,
+    isLoading: summariesLoading,
+    isFetching: summariesFetching,
+    error: summariesError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.photos.summaries(),
+    queryFn: () => api.get<PhotoSummaryDto[]>('/photo-export/summaries'),
+    staleTime: 30 * 1000,
+    refetchOnMount: true,
+    placeholderData: keepPreviousData,
   })
+
+  const photosToFetch = useMemo(() => {
+    if (!summaries) return []
+
+    return summaries
+      .filter((summary) => {
+        const cached = queryClient.getQueryData<PhotoExportInfoDto>(queryKeys.photos.detail(summary.id))
+        return !cached || cached.lastModified !== summary.lastModified
+      })
+      .map((s) => s.id)
+  }, [summaries, queryClient])
+
+  const {
+    data: fetchedPhotos,
+    isLoading: fetchingPhotos,
+    isFetching: byIdsFetching,
+    error: byIdsError,
+  } = useQuery({
+    queryKey: queryKeys.photos.byIds(photosToFetch),
+    queryFn: async () => {
+      if (photosToFetch.length > 0) {
+        return api.post<PhotoExportInfoDto[]>('/photo-export/by-ids', photosToFetch)
+      }
+      return []
+    },
+    enabled: summaries !== undefined && photosToFetch.length > 0,
+    placeholderData: keepPreviousData,
+  })
+
+  React.useEffect(() => {
+    fetchedPhotos?.forEach((photo) => {
+      queryClient.setQueryData(queryKeys.photos.detail(photo.id), photo)
+    })
+  }, [fetchedPhotos, queryClient])
+
+  const allPhotos = useMemo(() => {
+    if (!summaries) return []
+
+    const fetchedPhotosMap = new Map<number, PhotoExportInfoDto>()
+    fetchedPhotos?.forEach((photo) => {
+      fetchedPhotosMap.set(photo.id, photo)
+    })
+
+    const photos = summaries
+      .map((summary) => {
+        const fetched = fetchedPhotosMap.get(summary.id)
+        if (fetched) return fetched
+        return queryClient.getQueryData<PhotoExportInfoDto>(queryKeys.photos.detail(summary.id))
+      })
+      .filter((photo): photo is PhotoExportInfoDto => photo !== undefined)
+
+    return photos.sort((a, b) => {
+      const dateA = a.bookDateAdded ? new Date(a.bookDateAdded).getTime() : 0
+      const dateB = b.bookDateAdded ? new Date(b.bookDateAdded).getTime() : 0
+      if (dateB !== dateA) return dateB - dateA
+      return a.id - b.id
+    })
+  }, [summaries, queryClient, fetchedPhotos])
+
+  const previousPhotosRef = useRef<PhotoExportInfoDto[]>([])
+  React.useEffect(() => {
+    if (allPhotos.length > 0) {
+      previousPhotosRef.current = allPhotos
+    }
+  }, [allPhotos])
+
+  const stablePhotos = allPhotos.length > 0 ? allPhotos : previousPhotosRef.current
+  const isFetching = summariesFetching || byIdsFetching
+
+  return {
+    data: stablePhotos,
+    isLoading: stablePhotos.length === 0 && (summariesLoading || fetchingPhotos),
+    isFetching,
+    error: summariesError || byIdsError,
+    refetch,
+  }
 }
 
 // Compute how the photo collection splits into ZIP parts.
@@ -265,12 +362,9 @@ export function useExportSinglePhoto() {
       return api.post<PhotoExportInfoDto>(`/photo-export/export/${photoId}`)
     },
     onSuccess: (updatedPhoto) => {
-      // Patch just the changed row in the list cache – avoids refetching the entire list
-      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
-        if (!old) return old
-        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
-      })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
+      queryClient.setQueryData(queryKeys.photos.detail(updatedPhoto.id), updatedPhoto)
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
   })
 }
@@ -283,12 +377,9 @@ export function useImportSinglePhoto() {
       return api.post<PhotoExportInfoDto>(`/photo-export/import/${photoId}`)
     },
     onSuccess: (updatedPhoto) => {
-      // Patch just the changed row in the list cache – avoids refetching the entire list
-      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
-        if (!old) return old
-        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
-      })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
+      queryClient.setQueryData(queryKeys.photos.detail(updatedPhoto.id), updatedPhoto)
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
   })
 }
@@ -310,12 +401,9 @@ export function useUnlinkPhoto() {
       return api.post<PhotoExportInfoDto>(`/photo-export/unlink/${photoId}`)
     },
     onSuccess: (updatedPhoto) => {
-      // Patch just the changed row in the list cache – avoids refetching the entire list
-      queryClient.setQueryData<PhotoExportInfoDto[]>(['photo-export-list'], (old) => {
-        if (!old) return old
-        return old.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p))
-      })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
+      queryClient.setQueryData(queryKeys.photos.detail(updatedPhoto.id), updatedPhoto)
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
   })
 }
@@ -327,9 +415,10 @@ export function useDeletePhoto() {
     mutationFn: async (photoId: number) => {
       return api.delete(`/photos/${photoId}`)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
+    onSuccess: (_, photoId) => {
+      queryClient.removeQueries({ queryKey: queryKeys.photos.detail(photoId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
   })
 }
@@ -353,8 +442,8 @@ export function useUploadPhotoImage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['photo-export-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['photo-export-list'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
   })
 }

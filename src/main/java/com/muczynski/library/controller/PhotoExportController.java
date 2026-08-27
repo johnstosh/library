@@ -8,6 +8,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.dto.PhotoExportInfoDto;
 import com.muczynski.library.dto.PhotoExportResponseDto;
 import com.muczynski.library.dto.PhotoExportStatsDto;
+import com.muczynski.library.dto.PhotoSummaryDto;
 import com.muczynski.library.dto.PhotoImportResultDto;
 import com.muczynski.library.dto.PhotoVerifyResultDto;
 import com.muczynski.library.dto.PhotoZipPartDto;
@@ -238,6 +239,42 @@ public class PhotoExportController {
             logger.error("Failed to get photos with export status - Error: {} - Message: {}",
                 e.getClass().getSimpleName(), e.getMessage(), e);
             // Return empty list instead of null to avoid frontend issues
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
+     * Get photo summaries (id + lastModified) for cache validation.
+     * Same auth as GET /photos. Never returns image bytes.
+     */
+    @GetMapping("/summaries")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<PhotoSummaryDto>> getPhotoSummaries() {
+        try {
+            logger.info("Getting photo summaries");
+            List<PhotoSummaryDto> summaries = photoExportService.getAllPhotoSummaries();
+            return ResponseEntity.ok(summaries);
+        } catch (Exception e) {
+            logger.error("Failed to get photo summaries - Error: {} - Message: {}",
+                e.getClass().getSimpleName(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
+     * Batch-fetch photo export info by IDs. Same mapping as GET /photos.
+     * Same auth as GET /photos. Never returns image bytes.
+     */
+    @PostMapping("/by-ids")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<PhotoExportInfoDto>> getPhotosByIds(@RequestBody List<Long> ids) {
+        try {
+            logger.info("Getting photo export info for {} ids", ids == null ? 0 : ids.size());
+            List<PhotoExportInfoDto> photos = photoExportService.getPhotosByIds(ids);
+            return ResponseEntity.ok(photos);
+        } catch (Exception e) {
+            logger.error("Failed to get photos by IDs - Error: {} - Message: {}",
+                e.getClass().getSimpleName(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new java.util.ArrayList<>());
         }
     }

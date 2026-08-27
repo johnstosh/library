@@ -1,13 +1,14 @@
 // (c) Copyright 2025 by Muczynski
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useLoans, useReturnBook, useDeleteLoan } from '@/api/loans'
-import { useLoansShowAll, useUiStore } from '@/stores/uiStore'
+import { useLoansChips, useUiStore } from '@/stores/uiStore'
+import { applyLoanChipFilters } from '@/utils/loanChipFilters'
+import { LoanFilters } from './components/LoanFilters'
 import { formatDate, parseISODateSafe } from '@/utils/formatters'
 import type { LoanDto } from '@/types/dtos'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -28,11 +29,12 @@ export function LoansPage() {
   const [returnLoanId, setReturnLoanId] = useState<number | null>(null)
   const [deleteLoanId, setDeleteLoanId] = useState<number | null>(null)
 
-  const showAll = useLoansShowAll()
-  const setLoansShowAll = useUiStore((state) => state.setLoansShowAll)
+  const chips = useLoansChips()
+  const toggleLoansChip = useUiStore((state) => state.toggleLoansChip)
   const isLibrarian = useIsLibrarian()
 
-  const { data: loans = [], isLoading, error, isFetching } = useLoans(showAll)
+  const { data: allLoans = [], isLoading, error, isFetching } = useLoans(true)
+  const loans = useMemo(() => applyLoanChipFilters(allLoans, chips), [allLoans, chips])
   const returnBook = useReturnBook()
   const deleteLoan = useDeleteLoan()
   const toast = useToast()
@@ -163,12 +165,7 @@ export function LoansPage() {
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
-          <Checkbox
-            label="Show returned loans"
-            checked={showAll}
-            onChange={(e) => setLoansShowAll(e.target.checked)}
-            data-test="show-all-loans"
-          />
+          <LoanFilters chips={chips} onToggle={toggleLoansChip} />
         </div>
 
         <div className="p-4">

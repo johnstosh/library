@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
 import { useDeleteBook } from '@/api/books'
 import { getThumbnailUrl } from '@/api/photos'
-import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import { useToast } from '@/hooks/useToast'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -18,6 +18,7 @@ import {
   BookIcon,
   DeleteIcon,
   EditIcon,
+  FreeAudioIcon,
   FreeTextIcon,
   GrokipediaIcon,
 } from '@/components/ui/Icons'
@@ -177,17 +178,20 @@ export function BookTable({
             {/* Line 1: URL-type links (free text, grokipedia) */}
             {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || isValidUrl(book.grokipediaUrl)) && (
               <div className="flex flex-wrap gap-1 justify-end" style={{ maxWidth: '108px' }}>
-                {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => (
+                {parseSpaceSeparatedUrls(book.freeTextUrl).map((url, index) => {
+                  const audio = isFreeAudioUrl(url)
+                  return (
                   <IconButton
                     key={index}
                     href={url}
-                    icon={<FreeTextIcon />}
-                    label={`Free text: ${extractDomain(url)}`}
+                    icon={audio ? <FreeAudioIcon /> : <FreeTextIcon />}
+                    label={`${audio ? 'Free audio' : 'Free text'}: ${extractDomain(url)}`}
                     tone="success"
                     onClick={(e) => e.stopPropagation()}
-                    data-test={`free-text-book-${book.id}-${index}`}
+                    data-test={`${audio ? 'free-audio' : 'free-text'}-book-${book.id}-${index}`}
                   />
-                ))}
+                  )
+                })}
                 {isValidUrl(book.grokipediaUrl) && (
                   <IconButton
                     href={book.grokipediaUrl}

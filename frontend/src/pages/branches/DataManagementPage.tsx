@@ -36,8 +36,10 @@ const AVAILABILITY_COUNT_ITEMS: {
   label: string
   test: string
 }[] = [
+  { key: 'hasCallNumber', label: 'In-library materials', test: 'availability-count-in-library' },
   { key: 'electronicResource', label: 'Electronic resource', test: 'availability-count-electronic' },
-  { key: 'hasCallNumber', label: 'Has call number', test: 'availability-count-has-call-number' },
+  { key: 'hasFreeOnlineText', label: 'Has free online text', test: 'availability-count-free-text' },
+  { key: 'hasFreeOnlineAudio', label: 'Has free online audio', test: 'availability-count-free-audio' },
   { key: 'withdrawn', label: 'Withdrawn', test: 'availability-count-withdrawn' },
   { key: 'availableAtYdl', label: 'Available at YDL', test: 'availability-count-ydl' },
   { key: 'ydlPaper', label: 'YDL paper', test: 'availability-count-ydl-paper' },

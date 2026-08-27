@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Getter
@@ -56,6 +57,18 @@ public class Photo {
     private String imageChecksum;  // SHA-256 checksum of image bytes for duplicate detection
 
     private LocalDateTime dateTaken;  // Original photo creation time (from Google Photos mediaMetadata)
+
+    private LocalDateTime lastModified;
+
+    @PrePersist
+    protected void onCreate() {
+        lastModified = LocalDateTime.now(ZoneOffset.UTC);
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        lastModified = LocalDateTime.now(ZoneOffset.UTC);
+    }
 
     public enum ExportStatus {
         PENDING,      // Not yet exported

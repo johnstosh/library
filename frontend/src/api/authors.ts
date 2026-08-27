@@ -113,6 +113,16 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   }
 }
 
+export function useMostRecentAuthorSummaries(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.authors.filterSummaries('most-recent'),
+    queryFn: () => api.get<AuthorSummaryDto[]>('/authors/most-recent-day'),
+    enabled,
+    staleTime: 0,
+    refetchOnMount: true,
+  })
+}
+
 // Hook to get a single author
 export function useAuthor(id: number) {
   return useQuery({

@@ -9,6 +9,7 @@ import {
   PiCheckCircle,
   PiCopy,
   PiEye,
+  PiHeadphones,
   PiPencil,
   PiTrash,
   PiUser,
@@ -54,6 +55,10 @@ export function LocIcon({ className }: IconProps) {
 
 export function FreeTextIcon({ className }: IconProps) {
   return <PiBookOpen className={clsx(sizeClass, className)} />
+}
+
+export function FreeAudioIcon({ className }: IconProps) {
+  return <PiHeadphones className={clsx(sizeClass, className)} />
 }
 
 export function ReturnIcon({ className }: IconProps) {

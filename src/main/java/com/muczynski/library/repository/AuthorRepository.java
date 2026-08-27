@@ -85,4 +85,29 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);
+
+    /**
+     * Interface projection for author summaries (id + lastModified).
+     * Avoids loading @Lob biography fields used by /summaries cache validation.
+     */
+    interface AuthorSummaryProjection {
+        Long getId();
+        LocalDateTime getLastModified();
+    }
+
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
+    List<AuthorSummaryProjection> findAllSummaries();
+
+    /** briefBiography is a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.briefBiography IS NULL")
+    List<AuthorSummaryProjection> findSummariesWithoutDescription();
+
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE NOT EXISTS (SELECT 1 FROM Book b WHERE b.author = a)")
+    List<AuthorSummaryProjection> findSummariesWithZeroBooks();
+
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.grokipediaUrl IS NULL OR a.grokipediaUrl = ''")
+    List<AuthorSummaryProjection> findSummariesWithoutGrokipedia();
+
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.id IN :ids")
+    List<AuthorSummaryProjection> findSummariesByIds(@Param("ids") List<Long> ids);
 }

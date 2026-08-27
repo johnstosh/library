@@ -169,3 +169,7 @@ export function parseSpaceSeparatedUrls(urls: string | undefined | null): string
   if (!urls) return []
   return urls.split(/\s+/).filter((url) => isValidUrl(url))
 }
+
+export function isFreeAudioUrl(url: string): boolean {
+  return url.toLowerCase().includes('librivox')
+}

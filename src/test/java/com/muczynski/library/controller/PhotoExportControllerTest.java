@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -81,6 +82,9 @@ class PhotoExportControllerTest {
 
     @Autowired
     private AuthorityRepository authorityRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // Mock external Google Photos services
     @MockitoBean
@@ -389,6 +393,101 @@ class PhotoExportControllerTest {
     void getAllPhotosWithExportStatus_requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/photo-export/photos"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ===========================================
+    // GET /api/photo-export/summaries Tests
+    // ===========================================
+
+    @Test
+    void getPhotoSummaries_requiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/photo-export/summaries"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void getPhotoSummaries_asLibrarian_returnsIdAndLastModified() throws Exception {
+        Photo photo = createPhotoWithImage(testBook, "Summary photo");
+
+        mockMvc.perform(get("/api/photo-export/summaries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$[0].lastModified").exists())
+                .andExpect(jsonPath("$[0].caption").doesNotExist())
+                .andExpect(jsonPath("$[0].hasImage").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void getPhotoSummaries_nullLastModified_returnsEpochFallback() throws Exception {
+        Photo photo = createPhotoWithImage(testBook, "Legacy photo");
+        jdbcTemplate.update("UPDATE photo SET last_modified = NULL WHERE id = ?", photo.getId());
+
+        mockMvc.perform(get("/api/photo-export/summaries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(photo.getId().intValue())))
+                .andExpect(jsonPath("$[0].lastModified", is("1970-01-01T00:00:00")));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void getPhotoSummaries_excludesSoftDeletedPhotos() throws Exception {
+        createPhotoWithImage(testBook, "Active");
+
+        Photo deletedPhoto = createPhotoWithImage(testBook, "Deleted");
+        deletedPhoto.setDeletedAt(LocalDateTime.now());
+        photoRepository.save(deletedPhoto);
+
+        mockMvc.perform(get("/api/photo-export/summaries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    // ===========================================
+    // POST /api/photo-export/by-ids Tests
+    // ===========================================
+
+    @Test
+    void getPhotosByIds_requiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/photo-export/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[1]"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void getPhotosByIds_asLibrarian_returnsMatchingRows() throws Exception {
+        Photo photo1 = createPhotoWithImage(testBook, "First");
+        Photo photo2 = createPhotoWithImage(testBook, "Second");
+        createPhotoWithImage(testBook, "Third");
+
+        mockMvc.perform(post("/api/photo-export/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[" + photo1.getId() + "," + photo2.getId() + "]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].id", containsInAnyOrder(
+                        photo1.getId().intValue(), photo2.getId().intValue())))
+                .andExpect(jsonPath("$[*].caption", containsInAnyOrder("First", "Second")))
+                .andExpect(jsonPath("$[0].lastModified").exists())
+                .andExpect(jsonPath("$[0].hasImage", is(true)))
+                .andExpect(jsonPath("$[0].bookTitle", is("Test Book")));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "LIBRARIAN")
+    void getPhotosByIds_emptyList_returnsEmpty() throws Exception {
+        createPhotoWithImage(testBook, "Should not be returned");
+
+        mockMvc.perform(post("/api/photo-export/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     // ===========================================

@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { AuthorBooksTable } from './AuthorBooksTable'
-import { useCreateAuthor, useUpdateAuthor } from '@/api/authors'
+import { useAuthorBooks, useCreateAuthor, useUpdateAuthor } from '@/api/authors'
 import type { AuthorDto } from '@/types/dtos'
 
 interface AuthorFormPageProps {
@@ -17,6 +17,7 @@ interface AuthorFormPageProps {
 
 export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFormPageProps) {
   const isEditing = !!author
+  const { data: authorBooks = [], isLoading: booksLoading } = useAuthorBooks(author?.id ?? 0)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -199,7 +200,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
             <h2 className="text-lg font-semibold text-gray-900 mb-4" data-test="author-books-heading">
               Books by {author.name}
             </h2>
-            <AuthorBooksTable books={author.books || []} />
+            <AuthorBooksTable books={authorBooks} isLoading={booksLoading} />
           </div>
         )}
       </form>

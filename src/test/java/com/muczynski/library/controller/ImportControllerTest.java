@@ -414,7 +414,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_Success() {
         BookAvailabilityStatsDto stats = new BookAvailabilityStatsDto(
-            3L, 8L, 1L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
+            3L, 8L, 7L, 2L, 1L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
         );
         when(importService.getAvailabilityStats()).thenReturn(stats);
 
@@ -427,6 +427,8 @@ class ImportControllerTest {
             .contentType(ContentType.JSON)
             .body("electronicResource", equalTo(3))
             .body("hasCallNumber", equalTo(8))
+            .body("hasFreeOnlineText", equalTo(7))
+            .body("hasFreeOnlineAudio", equalTo(2))
             .body("withdrawn", equalTo(1))
             .body("availableAtYdl", equalTo(5))
             .body("ydlPaper", equalTo(2))
@@ -451,7 +453,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_HasAllFields() {
         when(importService.getAvailabilityStats()).thenReturn(
-            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         );
 
         given()
@@ -463,6 +465,8 @@ class ImportControllerTest {
             .contentType(ContentType.JSON)
             .body("electronicResource", notNullValue())
             .body("hasCallNumber", notNullValue())
+            .body("hasFreeOnlineText", notNullValue())
+            .body("hasFreeOnlineAudio", notNullValue())
             .body("withdrawn", notNullValue())
             .body("availableAtYdl", notNullValue())
             .body("ydlPaper", notNullValue())

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { AuthorBooksTable } from './components/AuthorBooksTable'
-import { useAuthor, useDeleteAuthor } from '@/api/authors'
+import { useAuthor, useAuthorBooks, useDeleteAuthor } from '@/api/authors'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiPencil, PiTrash } from 'react-icons/pi'
 import { useState } from 'react'
@@ -18,6 +18,7 @@ export function AuthorViewPage() {
   const { id } = useParams<{ id: string }>()
   const authorId = id ? parseInt(id, 10) : 0
   const { data: author, isLoading } = useAuthor(authorId)
+  const { data: authorBooks = [], isLoading: booksLoading } = useAuthorBooks(authorId)
   const deleteAuthor = useDeleteAuthor()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
@@ -162,7 +163,7 @@ export function AuthorViewPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4" data-test="author-books-heading">
               Books by {author.name}
             </h2>
-            <AuthorBooksTable books={author.books || []} />
+            <AuthorBooksTable books={authorBooks} isLoading={booksLoading} />
           </div>
         </div>
       </PageCard>
