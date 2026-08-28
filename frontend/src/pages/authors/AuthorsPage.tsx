@@ -10,8 +10,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
-import { useAuthorAvailability, useAuthorCount, useAuthors, useMostRecentAuthorSummaries } from '@/api/authors'
-import { applyAuthorChipFilters, isAvailabilityChipActive } from '@/utils/authorChipFilters'
+import { useAuthorAvailability, useAuthorCount, useAuthors } from '@/api/authors'
+import { applyAuthorChipFilters, isAvailabilityChipActive, isOtherAuthorChipActive } from '@/utils/authorChipFilters'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
@@ -22,14 +22,12 @@ export function AuthorsPage() {
   const { selectedIds, selectAll } = useAuthorsTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleAuthorsChip } = useUiStore()
 
-  const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors()
+  // mostRecent defaults on in uiStore so this uses GET /authors/most-recent-day
+  // (faster than GET /authors/summaries). Remaining chips still apply client-side.
+  const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors(
+    chips.mostRecent ? 'most-recent' : undefined
+  )
   const { data: authorCount } = useAuthorCount()
-  const {
-    data: mostRecentSummaries = [],
-    isLoading: mostRecentLoading,
-    isFetching: mostRecentFetching,
-    error: mostRecentError,
-  } = useMostRecentAuthorSummaries(chips.mostRecent)
   const {
     data: availability = [],
     isLoading: availabilityLoading,
@@ -44,13 +42,10 @@ export function AuthorsPage() {
   }, [availability])
 
   const authors = useMemo(() => {
-    if (chips.mostRecent && mostRecentLoading) return []
     if (isAvailabilityChipActive(chips) && availabilityLoading) return []
-    const mostRecentIds = chips.mostRecent
-      ? new Set(mostRecentSummaries.map((summary) => summary.id))
-      : undefined
-    return applyAuthorChipFilters(allAuthors, chips, mostRecentIds, availabilityByAuthorId)
-  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips, mostRecentLoading, mostRecentSummaries])
+    // mostRecent is applied by the summaries endpoint, same as BooksPage + GET /books/most-recent-day
+    return applyAuthorChipFilters(allAuthors, { ...chips, mostRecent: false }, undefined, availabilityByAuthorId)
+  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips])
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -89,16 +84,20 @@ export function AuthorsPage() {
         }
       />
 
-      {(error || mostRecentError || availabilityError) && (
+      {(error || availabilityError) && (
         <ErrorMessage
-          message={`Error loading authors: ${(error ?? mostRecentError ?? availabilityError)?.message}`}
+          message={`Error loading authors: ${(error ?? availabilityError)?.message}`}
           className="mb-4"
         />
       )}
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
-          <AuthorFilters chips={chips} onToggle={toggleAuthorsChip} />
+          <AuthorFilters
+            chips={chips}
+            onToggle={toggleAuthorsChip}
+            mostRecentDisabled={isOtherAuthorChipActive(chips)}
+          />
         </div>
 
         <div className="p-4">
@@ -109,7 +108,6 @@ export function AuthorsPage() {
             totalCount={authorCount?.count}
             isLoading={
               isLoading
-              || (chips.mostRecent && mostRecentLoading)
               || (isAvailabilityChipActive(chips) && availabilityLoading)
             }
           />
@@ -118,7 +116,6 @@ export function AuthorsPage() {
             authors={authors}
             isLoading={
               isLoading
-              || (chips.mostRecent && mostRecentLoading)
               || (isAvailabilityChipActive(chips) && availabilityLoading)
             }
             selectedIds={selectedIds}
@@ -132,7 +129,6 @@ export function AuthorsPage() {
         <LoadingOverlay
           show={
             (isFetching && !isLoading) ||
-            (chips.mostRecent && mostRecentFetching && !mostRecentLoading) ||
             (isAvailabilityChipActive(chips) && availabilityFetching && !availabilityLoading)
           }
         />
@@ -142,7 +138,6 @@ export function AuthorsPage() {
           plural="authors"
           isLoading={
             isLoading
-            || (chips.mostRecent && mostRecentLoading)
             || (isAvailabilityChipActive(chips) && availabilityLoading)
           }
         />

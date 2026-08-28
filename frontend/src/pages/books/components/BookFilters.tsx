@@ -1,6 +1,8 @@
 // (c) Copyright 2025 by Muczynski
+import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import { PiFunnel } from 'react-icons/pi'
+import { EmuIcon, YdlIcon } from '@/components/ui/Icons'
 
 // ─── Filter chip component ────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ function FilterChip({ label, active, onClick, tooltip, dataTest, disabled = fals
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
 interface AvailabilityGroupProps {
-  library: string
+  icon: ReactNode
   libraryFull: string
   dataTest: string
   items: {
@@ -59,17 +61,18 @@ interface AvailabilityGroupProps {
   onToggle: (chip: keyof BookChipFilters) => void
 }
 
-function AvailabilityGroup({ library, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+function AvailabilityGroup({ icon, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
   return (
     <div
       className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
       data-test={dataTest}
     >
       <span
-        className="text-xs font-semibold tracking-wide text-gray-500 uppercase w-10 shrink-0"
+        className="inline-flex items-center justify-center w-6 shrink-0 text-gray-500"
         title={libraryFull}
+        aria-label={libraryFull}
       >
-        {library}
+        {icon}
       </span>
       {items.map((item) => (
         <FilterChip
@@ -106,7 +109,7 @@ export function BookFilters({
       {showAvailabilityFilters && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           <AvailabilityGroup
-            library="YDL"
+            icon={<YdlIcon />}
             libraryFull="Ypsilanti District Library"
             dataTest="book-filter-ydl"
             chips={chips}
@@ -133,7 +136,7 @@ export function BookFilters({
             ]}
           />
           <AvailabilityGroup
-            library="EMU"
+            icon={<EmuIcon />}
             libraryFull="EMU Halle Library"
             dataTest="book-filter-emu"
             chips={chips}

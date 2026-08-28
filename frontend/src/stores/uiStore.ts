@@ -7,6 +7,7 @@ import {
 } from '@/utils/bookChipFilters'
 import {
   defaultAuthorChipFilters,
+  isOtherAuthorChipActive,
   type AuthorChipFilters,
 } from '@/utils/authorChipFilters'
 import {
@@ -44,7 +45,10 @@ export type UsersChips = UserChipFilters
 // and is the fast path for the default books list. Search keeps the shared
 // defaultBookChipFilters (all chips off).
 const defaultBooksChips: BooksChips = { ...defaultBookChipFilters, mostRecent: true }
-const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
+// Most Recent Day starts on so the authors list hits GET /authors/most-recent-day
+// instead of GET /authors/summaries. That filter endpoint is a much smaller query
+// and is the fast path for the default authors list.
+const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters, mostRecent: true }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
 
@@ -161,9 +165,15 @@ export const useUiStore = create<UiState>((set) => ({
   clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
 
   toggleAuthorsChip: (chip) =>
-    set((state) => ({
-      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
-    })),
+    set((state) => {
+      if (chip === 'mostRecent' && isOtherAuthorChipActive(state.authorsChips)) {
+        return { authorsChips: { ...state.authorsChips, mostRecent: false } }
+      }
+      const next = { ...state.authorsChips, [chip]: !state.authorsChips[chip] }
+      const othersOn = isOtherAuthorChipActive(next)
+      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
+      return { authorsChips: next }
+    }),
 
   clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
 

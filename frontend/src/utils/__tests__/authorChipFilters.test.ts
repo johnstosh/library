@@ -4,6 +4,7 @@ import {
   applyAuthorChipFilters,
   defaultAuthorChipFilters,
   isAvailabilityChipActive,
+  isOtherAuthorChipActive,
   type AuthorChipFilters,
 } from '../authorChipFilters'
 import type { AuthorDto } from '@/types/dtos'
@@ -28,6 +29,19 @@ const sample: AuthorDto[] = [
 describe('defaultAuthorChipFilters', () => {
   it('starts with YDL/EMU chips off', () => {
     expect(isAvailabilityChipActive(defaultAuthorChipFilters)).toBe(false)
+  })
+
+  it('defaults every chip to off, including mostRecent', () => {
+    // Shared defaults stay off. The Authors page turns mostRecent on in
+    // uiStore so it can use the faster GET /authors/most-recent-day backend.
+    expect(defaultAuthorChipFilters.mostRecent).toBe(false)
+  })
+})
+
+describe('isOtherAuthorChipActive', () => {
+  it('ignores mostRecent and detects any other chip', () => {
+    expect(isOtherAuthorChipActive(chips({ mostRecent: true }))).toBe(false)
+    expect(isOtherAuthorChipActive(chips({ mostRecent: true, withoutDescription: true }))).toBe(true)
   })
 })
 

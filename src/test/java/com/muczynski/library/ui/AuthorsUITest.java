@@ -131,6 +131,9 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
+        // Most Recent Day starts on (faster /authors/most-recent-day backend).
+        assertThat(page.locator("[data-test='filter-most-recent']")).hasAttribute("aria-pressed", "true");
+        assertThat(page.locator("text=Initial Author")).isVisible();
     }
 
     @Test
@@ -224,6 +227,8 @@ public class AuthorsUITest {
 
         Locator filterChip = page.locator("[data-test='filter-without-grokipedia']");
         assertThat(filterChip).hasAttribute("aria-pressed", "true");
+        // Most Recent Day cannot be combined with other filters
+        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
 
         // The authors table should be visible (may have rows or be empty)
         Locator authorsTable = page.locator("table");

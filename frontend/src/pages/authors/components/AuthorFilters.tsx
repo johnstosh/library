@@ -1,6 +1,8 @@
 // (c) Copyright 2025 by Muczynski
+import type { ReactNode } from 'react'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
 import { PiFunnel } from 'react-icons/pi'
+import { EmuIcon, YdlIcon } from '@/components/ui/Icons'
 
 interface FilterChipProps {
   label: string
@@ -8,20 +10,26 @@ interface FilterChipProps {
   onClick: () => void
   tooltip: string
   dataTest: string
+  disabled?: boolean
+  hideOnMobile?: boolean
 }
 
-function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
+function FilterChip({ label, active, onClick, tooltip, dataTest, disabled = false, hideOnMobile = false }: FilterChipProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       title={tooltip}
       aria-pressed={active}
       data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
-        active
-          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
+      disabled={disabled}
+      aria-disabled={disabled}
+      className={`${hideOnMobile ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors select-none ${
+        disabled
+          ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+          : active
+            ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 cursor-pointer'
+            : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white cursor-pointer'
       }`}
     >
       {active ? (
@@ -38,7 +46,7 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
 }
 
 interface AvailabilityGroupProps {
-  library: string
+  icon: ReactNode
   libraryFull: string
   dataTest: string
   items: {
@@ -51,17 +59,18 @@ interface AvailabilityGroupProps {
   onToggle: (chip: keyof AuthorChipFilters) => void
 }
 
-function AvailabilityGroup({ library, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+function AvailabilityGroup({ icon, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
   return (
     <div
       className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
       data-test={dataTest}
     >
       <span
-        className="text-xs font-semibold tracking-wide text-gray-500 uppercase w-10 shrink-0"
+        className="inline-flex items-center justify-center w-6 shrink-0 text-gray-500"
         title={libraryFull}
+        aria-label={libraryFull}
       >
-        {library}
+        {icon}
       </span>
       {items.map((item) => (
         <FilterChip
@@ -80,14 +89,16 @@ function AvailabilityGroup({ library, libraryFull, dataTest, items, chips, onTog
 interface AuthorFiltersProps {
   chips: AuthorChipFilters
   onToggle: (chip: keyof AuthorChipFilters) => void
+  /** Authors page: Most Recent Day cannot be combined with other filters. */
+  mostRecentDisabled?: boolean
 }
 
-export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
+export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: AuthorFiltersProps) {
   return (
     <div className="space-y-3" data-test="author-filter-chips">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         <AvailabilityGroup
-          library="YDL"
+          icon={<YdlIcon />}
           libraryFull="Ypsilanti District Library"
           dataTest="author-filter-ydl"
           chips={chips}
@@ -114,7 +125,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           ]}
         />
         <AvailabilityGroup
-          library="EMU"
+          icon={<EmuIcon />}
           libraryFull="EMU Halle Library"
           dataTest="author-filter-emu"
           chips={chips}
@@ -145,10 +156,15 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
       <div className="flex flex-wrap gap-2">
         <FilterChip
           label="Most Recent Day"
-          active={chips.mostRecent}
+          active={chips.mostRecent && !mostRecentDisabled}
           onClick={() => onToggle('mostRecent')}
-          tooltip="Only authors of books added on the most recent day"
+          tooltip={
+            mostRecentDisabled
+              ? 'Most Recent Day cannot be combined with other filters. Turn the others off to use it.'
+              : 'Only authors of books added on the most recent day'
+          }
           dataTest="filter-most-recent"
+          disabled={mostRecentDisabled}
         />
         <FilterChip
           label="Without Description"
@@ -184,6 +200,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           onClick={() => onToggle('withoutPhotos')}
           tooltip="Only authors with no photo"
           dataTest="filter-without-photos"
+          hideOnMobile
         />
         <FilterChip
           label="With Photos"
@@ -191,6 +208,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           onClick={() => onToggle('withPhotos')}
           tooltip="Only authors that have a photo"
           dataTest="filter-with-photos"
+          hideOnMobile
         />
         <FilterChip
           label="Without Birth Date"
@@ -198,6 +216,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           onClick={() => onToggle('withoutBirthDate')}
           tooltip="Only authors missing a date of birth"
           dataTest="filter-without-birth-date"
+          hideOnMobile
         />
         <FilterChip
           label="Without Death Date"
@@ -205,6 +224,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           onClick={() => onToggle('withoutDeathDate')}
           tooltip="Only authors missing a date of death"
           dataTest="filter-without-death-date"
+          hideOnMobile
         />
       </div>
     </div>

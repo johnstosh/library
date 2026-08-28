@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.regex.Pattern;
 
 @Entity
 @Table(
@@ -22,6 +23,15 @@ import java.time.ZoneOffset;
 @Getter
 @Setter
 public class Book {
+
+    /**
+     * Trailing copy-number suffix our catalog appends to disambiguate duplicate
+     * titles, e.g. ", c. 2", ", c.2", ", c 3". External catalogs (YDL, EMU) do
+     * not carry this suffix on their titles.
+     */
+    private static final Pattern COPY_SUFFIX_PATTERN =
+            Pattern.compile("(?i),\\s*c\\.?\\s*\\d+\\s*$");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -103,6 +113,27 @@ public class Book {
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Photo> photos;
+
+    /**
+     * Strips a trailing copy-number suffix of the form {@code ", c. N"} (any
+     * spacing or optional period after {@code c}). Returns the original string
+     * when there is no suffix, or when stripping would leave the title empty.
+     */
+    public static String stripCopySuffix(String title) {
+        if (title == null || title.isBlank()) {
+            return title;
+        }
+        String trimmed = title.trim();
+        String stripped = COPY_SUFFIX_PATTERN.matcher(trimmed).replaceFirst("").trim();
+        return stripped.isEmpty() ? trimmed : stripped;
+    }
+
+    /**
+     * This book's title with any trailing {@code ", c. N"} copy-number suffix removed.
+     */
+    public String titleWithoutCopySuffix() {
+        return stripCopySuffix(title);
+    }
 
     @PrePersist
     protected void onCreate() {

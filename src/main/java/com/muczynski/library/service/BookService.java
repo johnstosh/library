@@ -431,12 +431,7 @@ public class BookService {
         }
 
         // Strip any existing ", c. N" suffix to get the base title
-        String baseTitle = desiredTitle;
-        Pattern copyPattern = Pattern.compile("^(.+),\\s*c\\.\\s*\\d+$");
-        Matcher matcher = copyPattern.matcher(desiredTitle);
-        if (matcher.matches()) {
-            baseTitle = matcher.group(1);
-        }
+        String baseTitle = Book.stripCopySuffix(desiredTitle);
 
         // Find all titles matching the base or "base, c. N" pattern
         String titlePattern = baseTitle + ", c. %";

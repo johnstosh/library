@@ -6,6 +6,7 @@ import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -294,7 +295,7 @@ export function BookViewPage() {
               <h2 className="text-sm font-semibold text-gray-700">YDL Availability</h2>
               <div className="flex items-center gap-3">
                 <a
-                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${book.title}"`)}&searchType=everything&pageSize=40`}
+                  href={ydlCatalogSearchUrl(book.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
@@ -385,7 +386,7 @@ export function BookViewPage() {
               <h2 className="text-sm font-semibold text-gray-700">EMU Availability</h2>
               <div className="flex items-center gap-3">
                 <a
-                  href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${book.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
+                  href={emuCatalogSearchUrl(book.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}

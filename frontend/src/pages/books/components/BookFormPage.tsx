@@ -27,6 +27,7 @@ import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
+import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
@@ -995,7 +996,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             <div className="flex items-center gap-3">
               {formData.title && (
                 <a
-                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${formData.title}"`)}&searchType=everything&pageSize=40`}
+                  href={ydlCatalogSearchUrl(formData.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 underline text-sm"
@@ -1083,7 +1084,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             <div className="flex items-center gap-3">
               {formData.title && (
                 <a
-                  href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${formData.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
+                  href={emuCatalogSearchUrl(formData.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 underline text-sm"

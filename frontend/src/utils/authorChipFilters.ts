@@ -34,6 +34,8 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   hasEmuBook: false,
   hasEmuEbook: false,
   hasEmuAudio: false,
+  // Shared default is off. The Authors page overrides this to true in uiStore
+  // so it can use GET /authors/most-recent-day instead of GET /authors/summaries.
   mostRecent: false,
   withoutDescription: false,
   withoutGrokipedia: false,
@@ -56,6 +58,13 @@ const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
 
 export function isAvailabilityChipActive(chips: AuthorChipFilters): boolean {
   return AVAILABILITY_CHIPS.some((key) => chips[key])
+}
+
+/** True if any chip other than mostRecent is on. */
+export function isOtherAuthorChipActive(chips: AuthorChipFilters): boolean {
+  return (Object.keys(chips) as (keyof AuthorChipFilters)[])
+    .filter((key) => key !== 'mostRecent')
+    .some((key) => chips[key])
 }
 
 export interface AuthorAvailabilityFlags {
