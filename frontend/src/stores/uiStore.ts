@@ -29,8 +29,9 @@ type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
  * Independent boolean chip filters for the Books page.
  * All active chips are AND-ed together — a book must satisfy every active chip.
  *
- * Row 1: inLibrary, electronic, freeText, audio
- * Row 2: mostRecent, withoutLoc, threeLetterLoc, withoutGrokipedia,
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 2: inLibrary, electronic, freeText, audio
+ * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  */
 export type BooksChips = BookChipFilters

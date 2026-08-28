@@ -59,9 +59,16 @@ public class SearchService {
      * @param filterWithoutLoc limit to books with no LOC call number
      * @param filterThreeLetterLoc limit to locNumbers starting with three uppercase letters
      * @param filterWithoutGrokipedia limit to books with no grokipedia URL
+     * @param filterWithGrokipedia limit to books with a grokipedia URL
      * @param filterWithoutGenres limit to books with no genre tags
      * @param filterNotActiveStatus when true, only non-ACTIVE statuses; when false, hide WITHDRAWN
      * @param filterWithoutFreeTextUrls limit to books with no free text URL
+     * @param filterYdlAudio limit to books with YDL audio
+     * @param filterYdlBook limit to books with YDL paper
+     * @param filterYdlEbook limit to books with YDL ebook
+     * @param filterEmuAudio limit to books with EMU audio
+     * @param filterEmuBook limit to books with EMU paper
+     * @param filterEmuEbook limit to books with EMU ebook
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      */
     @Transactional(readOnly = true)
@@ -72,6 +79,9 @@ public class SearchService {
             boolean filterThreeLetterLoc, boolean filterWithoutGrokipedia,
             boolean filterWithoutGenres, boolean filterNotActiveStatus,
             boolean filterWithoutFreeTextUrls,
+            boolean filterYdlAudio, boolean filterYdlBook, boolean filterYdlEbook,
+            boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
+            boolean filterWithGrokipedia,
             List<String> labels) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
@@ -97,6 +107,9 @@ public class SearchService {
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                     filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                     filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                    filterYdlAudio, filterYdlBook, filterYdlEbook,
+                    filterEmuAudio, filterEmuBook, filterEmuEbook,
+                    filterWithGrokipedia,
                     labels, labelCount, pageable);
         } else {
             bookPage = bookRepository.findWithFilters(
@@ -104,6 +117,9 @@ public class SearchService {
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                     filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                     filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                    filterYdlAudio, filterYdlBook, filterYdlEbook,
+                    filterEmuAudio, filterEmuBook, filterEmuEbook,
+                    filterWithGrokipedia,
                     pageable);
         }
 
@@ -112,8 +128,11 @@ public class SearchService {
         // those author-of-books queries, but does not by itself switch away from name search.
         boolean hasFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio
                 || filterMostRecent || filterWithoutLoc || filterThreeLetterLoc
-                || filterWithoutGrokipedia || filterWithoutGenres || filterNotActiveStatus
-                || filterWithoutFreeTextUrls || hasLabels;
+                || filterWithoutGrokipedia || filterWithGrokipedia || filterWithoutGenres || filterNotActiveStatus
+                || filterWithoutFreeTextUrls
+                || filterYdlAudio || filterYdlBook || filterYdlEbook
+                || filterEmuAudio || filterEmuBook || filterEmuEbook
+                || hasLabels;
         Page<Author> authorPage;
         if (hasFilters) {
             if (hasLabels) {
@@ -122,6 +141,9 @@ public class SearchService {
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                         filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                         filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                        filterYdlAudio, filterYdlBook, filterYdlEbook,
+                        filterEmuAudio, filterEmuBook, filterEmuEbook,
+                        filterWithGrokipedia,
                         labels, labelCount, pageable);
             } else {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -129,6 +151,9 @@ public class SearchService {
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                         filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                         filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                        filterYdlAudio, filterYdlBook, filterYdlEbook,
+                        filterEmuAudio, filterEmuBook, filterEmuEbook,
+                        filterWithGrokipedia,
                         pageable);
             }
         } else if (!trimmedQuery.isEmpty()) {

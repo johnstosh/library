@@ -15,6 +15,7 @@ import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsMo
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { AuthorCombobox } from './AuthorCombobox'
+import { GenreChips, standardGenresFrom } from './BookLabelFilters'
 import { useAuthors } from '@/api/authors'
 import { useBranches } from '@/api/branches'
 import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useBookFromFirstPhoto, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
@@ -59,7 +60,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     locNumber: '',
     authorId: '',
     branchId: '',
-    tagsList: '',  // Comma-separated tags for editing
+    tagsList: [] as string[],
     dateAddedToLibrary: '',
     electronicResource: false,
     ydlAudioAvailable: false,
@@ -130,7 +131,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: book.locNumber || '',
         authorId: book.authorId?.toString() || '',
         branchId: book.libraryId?.toString() || '',
-        tagsList: book.tagsList?.join(', ') || '',
+        tagsList: standardGenresFrom(book.tagsList),
         dateAddedToLibrary: book.dateAddedToLibrary ? book.dateAddedToLibrary.slice(0, 16) : '',
         electronicResource: book.electronicResource ?? false,
         ydlAudioAvailable: book.ydlAudioAvailable ?? false,
@@ -155,7 +156,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: '',
         authorId: '',
         branchId: '',
-        tagsList: '',
+        tagsList: [],
         dateAddedToLibrary: '',
         electronicResource: false,
         ydlAudioAvailable: false,
@@ -183,6 +184,16 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value })
+    setHasUnsavedChanges(true)
+  }
+
+  const handleToggleGenre = (genre: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tagsList: prev.tagsList.includes(genre)
+        ? prev.tagsList.filter((g) => g !== genre)
+        : [...prev.tagsList, genre],
+    }))
     setHasUnsavedChanges(true)
   }
 
@@ -411,7 +422,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
-        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        tagsList: updated.tagsList ? standardGenresFrom(updated.tagsList) : formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
         ydlAudioAvailable: formData.ydlAudioAvailable,
@@ -451,7 +462,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
-        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        tagsList: updated.tagsList ? standardGenresFrom(updated.tagsList) : formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
         ydlAudioAvailable: formData.ydlAudioAvailable,
@@ -523,7 +534,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         locNumber: updated.locNumber || formData.locNumber,
         authorId: updated.authorId?.toString() || formData.authorId,
         branchId: updated.libraryId?.toString() || formData.branchId,
-        tagsList: updated.tagsList?.join(', ') || formData.tagsList,
+        tagsList: updated.tagsList ? standardGenresFrom(updated.tagsList) : formData.tagsList,
         dateAddedToLibrary: updated.dateAddedToLibrary ? updated.dateAddedToLibrary.slice(0, 16) : formData.dateAddedToLibrary,
         electronicResource: updated.electronicResource ?? formData.electronicResource,
         ydlAudioAvailable: formData.ydlAudioAvailable,
@@ -554,14 +565,13 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       setGenreResults([result])
       setShowGenreResults(true)
       if (result.success && result.suggestedGenres && result.suggestedGenres.length > 0) {
-        // Merge suggested genres with existing tags
-        const existingTags = formData.tagsList
-          ? formData.tagsList.split(',').map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0)
-          : []
-        const newTags = [...new Set([...existingTags, ...result.suggestedGenres])]
-        setFormData({ ...formData, tagsList: newTags.join(', ') })
+        const suggested = standardGenresFrom(result.suggestedGenres)
+        const added = suggested.filter((genre) => !formData.tagsList.includes(genre))
+        setFormData({ ...formData, tagsList: [...new Set([...formData.tagsList, ...suggested])] })
         setHasUnsavedChanges(true)
-        setSuccessMessage(`Added ${result.suggestedGenres.length} suggested genre(s)`)
+        if (added.length > 0) {
+          setSuccessMessage(`Added ${added.length} suggested genre(s)`)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lookup genres')
@@ -579,14 +589,6 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
 
     try {
-      // Parse tags from comma-separated string to array, normalize to lowercase
-      const tagsList = formData.tagsList
-        ? formData.tagsList
-            .split(',')
-            .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''))
-            .filter((tag) => tag.length > 0)
-        : undefined
-
       const bookData = {
         title: formData.title,
         publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
@@ -608,7 +610,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuEbookAvailable: formData.emuEbookAvailable,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
-        tagsList,
+        tagsList: standardGenresFrom(formData.tagsList),
         dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
       }
 
@@ -1164,33 +1166,29 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         </div>
 
         <div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <Input
-                label="Genres"
-                value={formData.tagsList}
-                onChange={(e) => handleFieldChange('tagsList', e.target.value)}
-                placeholder="fiction, fantasy, childrens"
-                data-test="book-tags"
-              />
-            </div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-sm font-medium text-gray-700">Genres</span>
             {isEditing && isLibrarian && (
               <Button
                 type="button"
                 variant="outline"
-                size="md"
+                size="sm"
                 onClick={handleGenreLookup}
                 isLoading={lookupGenres.isPending}
                 disabled={isOperationPending || isLoading}
                 leftIcon={<AiIcon />}
                 data-test="book-field-lookup-genres"
-                className="mb-0"
               >
                 Lookup Genres
               </Button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1">Comma-separated genres (e.g., fiction, theology, childrens)</p>
+          <GenreChips
+            selected={formData.tagsList}
+            onToggle={handleToggleGenre}
+            dataTest="book-tags"
+            chipDataTestPrefix="book-tag"
+          />
         </div>
 
         <div className="space-y-4">

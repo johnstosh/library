@@ -4,7 +4,6 @@ import type { BookDto } from '@/types/dtos'
 import {
   applyChipFilters,
   defaultBookChipFilters,
-  is3LetterLoc,
   isAnyChipActive,
   isOtherBookChipActive,
   type BookChipFilters,
@@ -39,22 +38,8 @@ describe('isOtherBookChipActive', () => {
   it('ignores mostRecent and detects any other chip', () => {
     expect(isOtherBookChipActive(chips({ mostRecent: true }))).toBe(false)
     expect(isOtherBookChipActive(chips({ withoutLoc: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ hasYdlAudio: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ mostRecent: true, electronic: true }))).toBe(true)
-  })
-})
-
-describe('is3LetterLoc', () => {
-  it('matches three leading uppercase letters', () => {
-    expect(is3LetterLoc('PSX3511')).toBe(true)
-    expect(is3LetterLoc('BXA1749 .A6')).toBe(true)
-  })
-
-  it('rejects missing, short, or lowercase prefixes', () => {
-    expect(is3LetterLoc(null)).toBe(false)
-    expect(is3LetterLoc('')).toBe(false)
-    expect(is3LetterLoc('PS')).toBe(false)
-    expect(is3LetterLoc('ps3511')).toBe(false)
-    expect(is3LetterLoc('P3511')).toBe(false)
   })
 })
 
@@ -113,18 +98,18 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
-  it('threeLetterLoc keeps locNumbers starting with three uppercase letters', () => {
-    const match = book({ id: 1, locNumber: 'BXA1749' })
-    const noMatch = book({ id: 2, locNumber: 'B1749' })
-    const result = applyChipFilters([match, noMatch], chips({ threeLetterLoc: true }))
-    expect(result.map((b) => b.id)).toEqual([1])
-  })
-
   it('withoutGrokipedia keeps books with no grokipediaUrl', () => {
     const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
     const without = book({ id: 2, grokipediaUrl: '' })
     const result = applyChipFilters([withUrl, without], chips({ withoutGrokipedia: true }))
     expect(result.map((b) => b.id)).toEqual([2])
+  })
+
+  it('withGrokipedia keeps books that have a grokipediaUrl', () => {
+    const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
+    const without = book({ id: 2, grokipediaUrl: '' })
+    const result = applyChipFilters([withUrl, without], chips({ withGrokipedia: true }))
+    expect(result.map((b) => b.id)).toEqual([1])
   })
 
   it('withoutGenres keeps books with no tags', () => {
@@ -139,6 +124,17 @@ describe('applyChipFilters', () => {
     const without = book({ id: 2 })
     const result = applyChipFilters([withUrl, without], chips({ withoutFreeTextUrls: true }))
     expect(result.map((b) => b.id)).toEqual([2])
+  })
+
+  it('YDL and EMU chips keep books with that holding', () => {
+    const ydlAudio = book({ id: 1, ydlAudioAvailable: true })
+    const ydlPaper = book({ id: 2, ydlPaperAvailable: true })
+    const emuEbook = book({ id: 3, emuEbookAvailable: true })
+    const none = book({ id: 4 })
+    const sample = [ydlAudio, ydlPaper, emuEbook, none]
+    expect(applyChipFilters(sample, chips({ hasYdlAudio: true })).map((b) => b.id)).toEqual([1])
+    expect(applyChipFilters(sample, chips({ hasYdlBook: true })).map((b) => b.id)).toEqual([2])
+    expect(applyChipFilters(sample, chips({ hasEmuEbook: true })).map((b) => b.id)).toEqual([3])
   })
 
   it('ANDs active chips so conflicting filters yield empty', () => {

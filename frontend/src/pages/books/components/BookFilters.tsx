@@ -45,26 +45,124 @@ function FilterChip({ label, active, onClick, tooltip, dataTest, disabled = fals
 
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
+interface AvailabilityGroupProps {
+  library: string
+  libraryFull: string
+  dataTest: string
+  items: {
+    chip: keyof BookChipFilters
+    label: string
+    tooltip: string
+    dataTest: string
+  }[]
+  chips: BookChipFilters
+  onToggle: (chip: keyof BookChipFilters) => void
+}
+
+function AvailabilityGroup({ library, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+      data-test={dataTest}
+    >
+      <span
+        className="text-xs font-semibold tracking-wide text-gray-500 uppercase w-10 shrink-0"
+        title={libraryFull}
+      >
+        {library}
+      </span>
+      {items.map((item) => (
+        <FilterChip
+          key={item.chip}
+          label={item.label}
+          active={chips[item.chip]}
+          onClick={() => onToggle(item.chip)}
+          tooltip={item.tooltip}
+          dataTest={item.dataTest}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface BookFiltersProps {
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
-  /** Books page hides this chip; Search still shows it. */
-  showThreeLetterLoc?: boolean
   /** Books page: Most Recent Day cannot be combined with other filters. */
   mostRecentDisabled?: boolean
+  showAvailabilityFilters?: boolean
 }
 
 export function BookFilters({
   chips,
   onToggle,
-  showThreeLetterLoc = true,
   mostRecentDisabled = false,
+  showAvailabilityFilters = false,
 }: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
 
   return (
     <div className="space-y-2">
-      {/* Row 1: search-style type filters */}
+      {showAvailabilityFilters && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <AvailabilityGroup
+            library="YDL"
+            libraryFull="Ypsilanti District Library"
+            dataTest="book-filter-ydl"
+            chips={chips}
+            onToggle={onToggle}
+            items={[
+              {
+                chip: 'hasYdlAudio',
+                label: 'Audio',
+                tooltip: 'Has YDL audio — only books with an audiobook held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-audio',
+              },
+              {
+                chip: 'hasYdlBook',
+                label: 'Book',
+                tooltip: 'Has YDL book — only books with a physical copy held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-book',
+              },
+              {
+                chip: 'hasYdlEbook',
+                label: 'Ebook',
+                tooltip: 'Has YDL ebook — only books with an ebook held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-ebook',
+              },
+            ]}
+          />
+          <AvailabilityGroup
+            library="EMU"
+            libraryFull="EMU Halle Library"
+            dataTest="book-filter-emu"
+            chips={chips}
+            onToggle={onToggle}
+            items={[
+              {
+                chip: 'hasEmuAudio',
+                label: 'Audio',
+                tooltip: 'Has EMU audio — only books with an audiobook held at EMU Halle Library',
+                dataTest: 'filter-has-emu-audio',
+              },
+              {
+                chip: 'hasEmuBook',
+                label: 'Book',
+                tooltip: 'Has EMU book — only books with a physical copy held at EMU Halle Library',
+                dataTest: 'filter-has-emu-book',
+              },
+              {
+                chip: 'hasEmuEbook',
+                label: 'Ebook',
+                tooltip: 'Has EMU ebook — only books with an ebook held at EMU Halle Library',
+                dataTest: 'filter-has-emu-ebook',
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      {/* Type filters */}
       <div className="flex flex-wrap gap-2" data-test="book-type-filter-chips">
         <FilterChip
           label="In-library materials"
@@ -119,21 +217,19 @@ export function BookFilters({
           tooltip="Only books without a Library of Congress call number"
           dataTest="filter-without-loc"
         />
-        {showThreeLetterLoc && (
-          <FilterChip
-            label="3-Letter Call Numbers"
-            active={chips.threeLetterLoc}
-            onClick={() => toggle('threeLetterLoc')}
-            tooltip="Only books whose LOC call number starts with three uppercase letters"
-            dataTest="filter-3-letter-loc"
-          />
-        )}
         <FilterChip
           label="Without Grokipedia"
           active={chips.withoutGrokipedia}
           onClick={() => toggle('withoutGrokipedia')}
           tooltip="Only books without a Grokipedia URL"
           dataTest="filter-without-grokipedia"
+        />
+        <FilterChip
+          label="With Grokipedia"
+          active={chips.withGrokipedia}
+          onClick={() => toggle('withGrokipedia')}
+          tooltip="Only books that have a Grokipedia URL"
+          dataTest="filter-with-grokipedia"
         />
         <FilterChip
           label="Without Genres"

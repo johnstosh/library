@@ -233,9 +233,16 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterWithoutLoc = false OR b.locNumber IS NULL OR b.locNumber = '') AND " +
         "(:filterThreeLetterLoc = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z')) AND " +
         "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '') AND " +
+        "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '')) AND " +
         "(:filterWithoutGenres = false OR NOT EXISTS (SELECT 1 FROM Book bNoTags JOIN bNoTags.tagsList tNoTags WHERE bNoTags = b)) AND " +
         "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE)) AND " +
-        "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '')";
+        "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '') AND " +
+        "(:filterYdlAudio = false OR b.ydlAudioAvailable = true) AND " +
+        "(:filterYdlBook = false OR b.ydlPaperAvailable = true) AND " +
+        "(:filterYdlEbook = false OR b.ydlEbookAvailable = true) AND " +
+        "(:filterEmuAudio = false OR b.emuAudioAvailable = true) AND " +
+        "(:filterEmuBook = false OR b.emuPaperAvailable = true) AND " +
+        "(:filterEmuEbook = false OR b.emuEbookAvailable = true)";
 
     /**
      * Unified search with AND-combined type filters (no labels).
@@ -261,6 +268,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         Pageable pageable);
 
     /**
@@ -287,6 +301,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);

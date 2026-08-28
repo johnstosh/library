@@ -94,6 +94,12 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           onToggle={onToggle}
           items={[
             {
+              chip: 'hasYdlAudio',
+              label: 'Audio',
+              tooltip: 'Has YDL audio — only authors with an audiobook held at Ypsilanti District Library',
+              dataTest: 'filter-has-ydl-audio',
+            },
+            {
               chip: 'hasYdlBook',
               label: 'Book',
               tooltip: 'Has YDL book — only authors with a physical book held at Ypsilanti District Library',
@@ -105,12 +111,6 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
               tooltip: 'Has YDL ebook — only authors with an ebook held at Ypsilanti District Library',
               dataTest: 'filter-has-ydl-ebook',
             },
-            {
-              chip: 'hasYdlAudio',
-              label: 'Audio',
-              tooltip: 'Has YDL audio — only authors with an audiobook held at Ypsilanti District Library',
-              dataTest: 'filter-has-ydl-audio',
-            },
           ]}
         />
         <AvailabilityGroup
@@ -120,6 +120,12 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           chips={chips}
           onToggle={onToggle}
           items={[
+            {
+              chip: 'hasEmuAudio',
+              label: 'Audio',
+              tooltip: 'Has EMU audio — only authors with an audiobook held at EMU Halle Library',
+              dataTest: 'filter-has-emu-audio',
+            },
             {
               chip: 'hasEmuBook',
               label: 'Book',
@@ -131,12 +137,6 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
               label: 'Ebook',
               tooltip: 'Has EMU ebook — only authors with an ebook held at EMU Halle Library',
               dataTest: 'filter-has-emu-ebook',
-            },
-            {
-              chip: 'hasEmuAudio',
-              label: 'Audio',
-              tooltip: 'Has EMU audio — only authors with an audiobook held at EMU Halle Library',
-              dataTest: 'filter-has-emu-audio',
             },
           ]}
         />

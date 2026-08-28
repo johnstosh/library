@@ -63,7 +63,9 @@ class SearchControllerTest {
         when(searchService.search(anyString(), anyInt(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
                 .thenReturn(response);
     }
 
@@ -73,7 +75,9 @@ class SearchControllerTest {
         when(searchService.search(eq(query), eq(page), eq(size),
                 eq(inLib), eq(elec), eq(freeText), eq(audio),
                 eq(false), eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull()))
                 .thenReturn(response);
     }
 
@@ -205,7 +209,9 @@ class SearchControllerTest {
         when(searchService.search(anyString(), anyInt(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
                 .thenThrow(new RuntimeException("Database error"));
 
         given()
@@ -315,7 +321,9 @@ class SearchControllerTest {
         when(searchService.search(eq("test"), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
-                eq(false), eq(true), eq(false), isNull()))
+                eq(false), eq(true), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -331,7 +339,9 @@ class SearchControllerTest {
         verify(searchService).search(eq("test"), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
-                eq(false), eq(true), eq(false), isNull());
+                eq(false), eq(true), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull());
     }
 
     @Test
@@ -339,7 +349,9 @@ class SearchControllerTest {
         when(searchService.search(eq("test"), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(true), eq(true), eq(false), eq(false),
-                eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -348,6 +360,48 @@ class SearchControllerTest {
             .param("size", 10)
             .param("filterMostRecent", true)
             .param("filterWithoutLoc", true)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
+    void testSearch_WithYdlAudioFilter() {
+        when(searchService.search(eq("test"), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(true), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("filterYdlAudio", true)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
+    void testSearch_WithGrokipediaFilter() {
+        when(searchService.search(eq("test"), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(true), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("filterWithGrokipedia", true)
         .when()
             .get("/api/search")
         .then()

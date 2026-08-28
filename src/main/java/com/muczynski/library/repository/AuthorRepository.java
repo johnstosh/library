@@ -53,6 +53,13 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         Pageable pageable);
 
     /**
@@ -82,6 +89,13 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);

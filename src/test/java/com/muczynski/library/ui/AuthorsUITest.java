@@ -129,6 +129,8 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
     }
 
     @Test

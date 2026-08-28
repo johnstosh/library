@@ -92,7 +92,7 @@ export function BooksPage() {
           <BookFilters
             chips={chips}
             onToggle={toggleBooksChip}
-            showThreeLetterLoc={false}
+            showAvailabilityFilters
             mostRecentDisabled={isOtherBookChipActive(chips) || selectedLabels.length > 0}
           />
           <BookLabelFilters

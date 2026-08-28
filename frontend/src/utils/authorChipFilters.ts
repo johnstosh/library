@@ -5,7 +5,7 @@ import type { AuthorDto } from '@/types/dtos'
  * Independent boolean chip filters for the Authors page.
  * All active chips AND together — more buttons on = fewer results.
  *
- * Row 1: hasYdlBook, hasYdlEbook, hasYdlAudio, hasEmuBook, hasEmuEbook, hasEmuAudio
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
  * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
  *   zeroBooks, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */

@@ -160,7 +160,6 @@ export function useCreateBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
@@ -178,7 +177,6 @@ export function useUpdateBook() {
       queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
@@ -195,7 +193,6 @@ export function useDeleteBook() {
       queryClient.removeQueries({ queryKey: queryKeys.books.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
@@ -215,7 +212,6 @@ export function useDeleteBooks() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
@@ -231,7 +227,6 @@ export function useCloneBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })

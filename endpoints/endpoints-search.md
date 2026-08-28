@@ -17,9 +17,16 @@ Returns search results for books and authors matching the query.
 - `filterWithoutLoc` (boolean, optional, default `false`) - Books with no LOC call number
 - `filterThreeLetterLoc` (boolean, optional, default `false`) - LOC call number starts with three uppercase letters
 - `filterWithoutGrokipedia` (boolean, optional, default `false`) - Books with no Grokipedia URL
+- `filterWithGrokipedia` (boolean, optional, default `false`) - Books with a Grokipedia URL
 - `filterWithoutGenres` (boolean, optional, default `false`) - Books with no genre tags
 - `filterNotActiveStatus` (boolean, optional, default `false`) - When `false`, hide WITHDRAWN books. When `true`, only non-ACTIVE statuses (LOST, WITHDRAWN, ON_ORDER, …)
 - `filterWithoutFreeTextUrls` (boolean, optional, default `false`) - Books with no free text URL
+- `filterYdlAudio` (boolean, optional, default `false`) - Books with YDL audio
+- `filterYdlBook` (boolean, optional, default `false`) - Books with YDL paper
+- `filterYdlEbook` (boolean, optional, default `false`) - Books with YDL ebook
+- `filterEmuAudio` (boolean, optional, default `false`) - Books with EMU audio
+- `filterEmuBook` (boolean, optional, default `false`) - Books with EMU paper
+- `filterEmuEbook` (boolean, optional, default `false`) - Books with EMU ebook
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 
 All active boolean chips AND labels AND together. Conflicting chips may yield empty results.
