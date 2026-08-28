@@ -328,6 +328,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT COUNT(b) FROM Book b WHERE b.emuPaperAvailable = true OR b.emuEbookAvailable = true OR b.emuAudioAvailable = true")
     long countAvailableAtEmu();
 
-    // Lightweight projection for photo ZIP import — skips @Lob fields (plotSummary, etc.)
+    // Lightweight projection for photo ZIP import — skips @Lob fields (plotEssay, etc.)
     List<BookZipImportProjection> findBy();
 }

@@ -43,7 +43,8 @@ public class Author {
     private String nationality;
 
     @Lob
-    private String briefBiography;
+    @Column(name = "brief_biography")
+    private String biographicalEssay;
 
     private String grokipediaUrl;
 

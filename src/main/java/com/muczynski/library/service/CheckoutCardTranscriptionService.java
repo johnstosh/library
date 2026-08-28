@@ -78,7 +78,13 @@ public class CheckoutCardTranscriptionService {
         log.info("Transcribing checkout card photo ({} bytes, type: {})", imageBytes.length, contentType);
 
         // Call Grok AI with the transcription prompt 
-        String grokResponse = askGrok.analyzePhoto(imageBytes, contentType, TRANSCRIPTION_PROMPT, AskGrok.MODEL_GROK_4_FAST);
+        String grokResponse = askGrok.analyzePhoto(
+                imageBytes,
+                contentType,
+                TRANSCRIPTION_PROMPT,
+                AskGrok.MODEL_GROK_4_FAST,
+                null,
+                AskGrok.IMAGE_DETAIL_HIGH);
         log.debug("Grok response: {}", grokResponse);
 
         // Parse JSON response

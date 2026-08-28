@@ -32,7 +32,7 @@ public class BookMapper {
         bookDto.setTitle(book.getTitle());
         bookDto.setPublicationYear(book.getPublicationYear());
         bookDto.setPublisher(book.getPublisher());
-        bookDto.setPlotSummary(book.getPlotSummary());
+        bookDto.setPlotSummary(book.getPlotEssay());
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
@@ -91,7 +91,7 @@ public class BookMapper {
         bookDto.setTitle(book.getTitle());
         bookDto.setPublicationYear(book.getPublicationYear());
         bookDto.setPublisher(book.getPublisher());
-        bookDto.setPlotSummary(book.getPlotSummary());
+        bookDto.setPlotSummary(book.getPlotEssay());
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
@@ -139,7 +139,7 @@ public class BookMapper {
         book.setTitle(bookDto.getTitle());
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
-        book.setPlotSummary(bookDto.getPlotSummary());
+        book.setPlotEssay(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());

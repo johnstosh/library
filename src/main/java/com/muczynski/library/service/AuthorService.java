@@ -131,11 +131,11 @@ public class AuthorService {
     }
 
     /**
-     * Get authors without a brief biography
+     * Get authors without a biographical essay
      */
     public List<AuthorDto> getAuthorsWithoutDescription() {
         return authorRepository.findAll().stream()
-                .filter(author -> author.getBriefBiography() == null || author.getBriefBiography().trim().isEmpty())
+                .filter(author -> author.getBiographicalEssay() == null || author.getBiographicalEssay().trim().isEmpty())
                 .map(author -> {
                     AuthorDto dto = authorMapper.toDto(author);
                     dto.setBookCount(bookRepository.countByAuthorId(author.getId()));
@@ -241,7 +241,7 @@ public class AuthorService {
     }
 
     /**
-     * Get summaries for authors without a brief biography.
+     * Get summaries for authors without a biographical essay.
      */
     public List<AuthorSummaryDto> getSummariesWithoutDescription() {
         return authorRepository.findSummariesWithoutDescription().stream()

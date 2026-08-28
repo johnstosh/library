@@ -138,7 +138,7 @@ public class PhotoZipImportService {
         int skippedCount = 0;
 
         // Pre-load all books, authors, and loans to avoid repeated queries per file.
-        // Use lightweight projections to skip @Lob fields (plotSummary, briefBiography, etc.).
+        // Use lightweight projections to skip @Lob fields (plotEssay, biographicalEssay, etc.).
         List<BookZipImportProjection> allBooks = bookRepository.findBy();
         List<AuthorZipImportProjection> allAuthors = authorRepository.findBy();
         List<LoanZipImportProjection> allLoans = loanRepository.findAllForZipImport();

@@ -24,7 +24,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a FROM Author a LEFT JOIN FETCH a.books WHERE a.id = :id")
     Optional<Author> findByIdWithBooks(@Param("id") Long id);
 
-    // Lightweight projection for photo ZIP import — skips @Lob fields (briefBiography, etc.)
+    // Lightweight projection for photo ZIP import — skips @Lob fields (biographicalEssay, etc.)
     List<AuthorZipImportProjection> findBy();
 
     /**
@@ -98,8 +98,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
     List<AuthorSummaryProjection> findAllSummaries();
 
-    /** briefBiography is a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
-    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.briefBiography IS NULL")
+    /** biographicalEssay maps to brief_biography, a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.biographicalEssay IS NULL")
     List<AuthorSummaryProjection> findSummariesWithoutDescription();
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE NOT EXISTS (SELECT 1 FROM Book b WHERE b.author = a)")

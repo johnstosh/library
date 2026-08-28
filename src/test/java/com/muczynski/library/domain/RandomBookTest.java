@@ -58,7 +58,7 @@ class RandomBookTest {
         assertNotNull(book.getPublisher(), "Publisher should be generated");
         assertTrue(book.getPublisher().startsWith("test-data"), "Publisher should be marked as test-data");
         assertNotNull(book.getPublicationYear(), "Publication year should be generated");
-        assertNotNull(book.getPlotSummary(), "Plot summary should be generated");
+        assertNotNull(book.getPlotEssay(), "Plot summary should be generated");
         assertNotNull(book.getRelatedWorks(), "Related works should be generated");
         assertNotNull(book.getDetailedDescription(), "Detailed description should be generated");
         assertNotNull(book.getGrokipediaUrl(), "Grokipedia URL should be generated");

@@ -33,7 +33,8 @@ public class Book {
     private String publisher;
 
     @Lob
-    private String plotSummary;
+    @Column(name = "plot_summary")
+    private String plotEssay;
 
     @Lob
     private String relatedWorks;
