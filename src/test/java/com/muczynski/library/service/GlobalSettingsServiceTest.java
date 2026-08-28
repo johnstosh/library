@@ -3,8 +3,10 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.mapper.GlobalSettingsMapper;
 import com.muczynski.library.repository.GlobalSettingsRepository;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -320,5 +323,83 @@ class GlobalSettingsServiceTest {
 
         // Assert
         assertFalse(result); // Should be false if either is missing
+    }
+
+    @Test
+    void testUpdateGlobalSettings_UpdatesEmailMethod() {
+        GlobalSettings existingSettings = new GlobalSettings();
+        existingSettings.setId(1L);
+        existingSettings.setEmailMethod(EmailMethod.DISABLED);
+
+        GlobalSettingsDto updateDto = new GlobalSettingsDto();
+        updateDto.setEmailMethod(EmailMethod.LOG);
+        updateDto.setEmailFromAddress("library@example.com");
+        updateDto.setEmailNotifyLibrariansOnPending(true);
+        updateDto.setEmailLibrarianRecipients("staff@example.com");
+
+        GlobalSettingsDto mappedDto = new GlobalSettingsDto();
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(existingSettings));
+        when(globalSettingsMapper.toDto(any(GlobalSettings.class))).thenReturn(mappedDto);
+        when(globalSettingsRepository.save(any(GlobalSettings.class))).thenReturn(existingSettings);
+
+        GlobalSettingsDto result = globalSettingsService.updateGlobalSettings(updateDto);
+
+        assertNotNull(result);
+        assertEquals(EmailMethod.LOG, existingSettings.getEmailMethod());
+        assertEquals("library@example.com", existingSettings.getEmailFromAddress());
+        assertEquals("staff@example.com", existingSettings.getEmailLibrarianRecipients());
+        verify(globalSettingsRepository, atLeastOnce()).save(any(GlobalSettings.class));
+    }
+
+    @Test
+    void testGetGlobalSettingsDto_DoesNotExposeEmailSecrets() {
+        GlobalSettings settings = new GlobalSettings();
+        settings.setId(1L);
+        settings.setEmailMethod(EmailMethod.SMTP);
+        settings.setSmtpPassword("super-secret-pass");
+        settings.setSendGridApiKey("SG.secretkeyXXXX");
+        settings.setWebhookBearerToken("webhook-token-9999");
+        settings.setSmtpHost("smtp.example.com");
+        settings.setEmailFromAddress("library@example.com");
+
+        GlobalSettingsDto mappedDto = new GlobalSettingsDto();
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(settings));
+        when(globalSettingsMapper.toDto(settings)).thenReturn(mappedDto);
+
+        EmailSender smtpSender = mock(EmailSender.class);
+        when(smtpSender.getMethod()).thenReturn(EmailMethod.SMTP);
+        when(smtpSender.isConfigured(settings)).thenReturn(true);
+        when(smtpSender.describeStatus(settings)).thenReturn("Ready (smtp://smtp.example.com:587)");
+        globalSettingsService.setEmailSenders(List.of(smtpSender));
+
+        GlobalSettingsDto result = globalSettingsService.getGlobalSettingsDto();
+
+        assertNull(result.getSmtpPassword());
+        assertNull(result.getSendGridApiKey());
+        assertNull(result.getWebhookBearerToken());
+        assertTrue(result.isSmtpPasswordConfigured());
+        assertEquals("...pass", result.getSmtpPasswordPartial());
+        assertEquals("...XXXX", result.getSendGridApiKeyPartial());
+        assertEquals("...9999", result.getWebhookBearerTokenPartial());
+        assertEquals(EmailMethod.SMTP, result.getEmailMethod());
+        assertTrue(result.isEmailMethodConfigured());
+    }
+
+    @Test
+    void testUpdateGlobalSettings_EmptySmtpPasswordDoesNotUpdate() {
+        GlobalSettings existingSettings = new GlobalSettings();
+        existingSettings.setId(1L);
+        existingSettings.setSmtpPassword("keep-me");
+
+        GlobalSettingsDto updateDto = new GlobalSettingsDto();
+        updateDto.setSmtpPassword("");
+
+        GlobalSettingsDto mappedDto = new GlobalSettingsDto();
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(existingSettings));
+        when(globalSettingsMapper.toDto(any(GlobalSettings.class))).thenReturn(mappedDto);
+
+        globalSettingsService.updateGlobalSettings(updateDto);
+
+        assertEquals("keep-me", existingSettings.getSmtpPassword());
     }
 }

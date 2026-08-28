@@ -479,6 +479,7 @@ public class SettingsUITest {
         // Verify all sections are present
         assertThat(page.locator("h2:has-text('Google SSO (User Authentication)')")).isVisible();
         assertThat(page.locator("h2:has-text('Google Photos API')")).isVisible();
+        assertThat(page.locator("h2:has-text('Email Notifications')")).isVisible();
         assertThat(page.locator("h2:has-text('OAuth Redirect URI')")).isVisible();
     }
 
@@ -502,6 +503,12 @@ public class SettingsUITest {
         // Verify Google Photos API fields
         assertThat(page.locator("[data-test='photos-client-id']")).isVisible();
         assertThat(page.locator("[data-test='photos-client-secret']")).isVisible();
+
+        // Verify email notification fields
+        assertThat(page.locator("[data-test='email-method']")).isVisible();
+        assertThat(page.locator("[data-test='email-from-address']")).isVisible();
+        assertThat(page.locator("[data-test='email-notify-librarians']")).isVisible();
+        assertThat(page.locator("[data-test='send-test-email']")).isVisible();
 
         // Verify action buttons
         assertThat(page.locator("[data-test='save-settings']")).isVisible();

@@ -3,10 +3,13 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.mapper.GlobalSettingsMapper;
 import com.muczynski.library.repository.GlobalSettingsRepository;
+import com.muczynski.library.util.SecretDisplay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service for managing global application settings.
@@ -49,6 +55,16 @@ public class GlobalSettingsService {
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
     private String externalBaseUrl;
+
+    private final Map<EmailMethod, EmailSender> emailSenders = new EnumMap<>(EmailMethod.class);
+
+    @Autowired
+    public void setEmailSenders(List<EmailSender> senderList) {
+        emailSenders.clear();
+        for (EmailSender sender : senderList) {
+            emailSenders.put(sender.getMethod(), sender);
+        }
+    }
 
     /**
      * Get the global settings singleton
@@ -142,6 +158,8 @@ public class GlobalSettingsService {
         // Don't include the actual SSO secret in responses
         dto.setGoogleSsoClientSecret(null);
 
+        applyEmailSettingsToDto(dto, settings);
+
         return dto;
     }
 
@@ -212,6 +230,10 @@ public class GlobalSettingsService {
 
             settings.setGoogleSsoClientSecret(newSecret);
             settings.setGoogleSsoCredentialsUpdatedAt(Instant.now());
+            updated = true;
+        }
+
+        if (updateEmailSettings(settings, dto)) {
             updated = true;
         }
 
@@ -342,5 +364,124 @@ public class GlobalSettingsService {
         String clientId = getEffectiveSsoClientId();
         String clientSecret = getEffectiveSsoClientSecret();
         return clientId != null && !clientId.isEmpty() && clientSecret != null && !clientSecret.isEmpty();
+    }
+
+    private void applyEmailSettingsToDto(GlobalSettingsDto dto, GlobalSettings settings) {
+        EmailMethod method = settings.getEmailMethod() != null ? settings.getEmailMethod() : EmailMethod.DISABLED;
+        dto.setEmailMethod(method);
+        dto.setEmailFromAddress(nullToEmpty(settings.getEmailFromAddress()));
+        dto.setEmailFromName(nullToEmpty(settings.getEmailFromName()));
+        dto.setEmailNotifyLibrariansOnPending(settings.isEmailNotifyLibrariansOnPending());
+        dto.setEmailNotifyApplicantOnPending(settings.isEmailNotifyApplicantOnPending());
+        dto.setEmailLibrarianRecipients(nullToEmpty(settings.getEmailLibrarianRecipients()));
+        dto.setEmailIncludeLibrarianUserEmails(settings.isEmailIncludeLibrarianUserEmails());
+        dto.setSmtpHost(nullToEmpty(settings.getSmtpHost()));
+        dto.setSmtpPort(settings.getSmtpPort() != null ? settings.getSmtpPort() : 587);
+        dto.setSmtpUsername(nullToEmpty(settings.getSmtpUsername()));
+        dto.setSmtpPassword(null);
+        dto.setSmtpPasswordConfigured(SecretDisplay.isConfigured(settings.getSmtpPassword()));
+        dto.setSmtpPasswordPartial(SecretDisplay.partial(settings.getSmtpPassword()));
+        dto.setSmtpStartTls(settings.isSmtpStartTls());
+        dto.setSmtpSsl(settings.isSmtpSsl());
+        dto.setSendGridApiKey(null);
+        dto.setSendGridApiKeyConfigured(SecretDisplay.isConfigured(settings.getSendGridApiKey()));
+        dto.setSendGridApiKeyPartial(SecretDisplay.partial(settings.getSendGridApiKey()));
+        dto.setWebhookUrl(nullToEmpty(settings.getWebhookUrl()));
+        dto.setWebhookBearerToken(null);
+        dto.setWebhookBearerTokenConfigured(SecretDisplay.isConfigured(settings.getWebhookBearerToken()));
+        dto.setWebhookBearerTokenPartial(SecretDisplay.partial(settings.getWebhookBearerToken()));
+
+        if (method == EmailMethod.DISABLED) {
+            dto.setEmailMethodConfigured(true);
+            dto.setEmailMethodStatus("Disabled — no email will be sent");
+            return;
+        }
+        EmailSender sender = emailSenders.get(method);
+        if (sender == null) {
+            dto.setEmailMethodConfigured(false);
+            dto.setEmailMethodStatus("Unknown email method: " + method);
+            return;
+        }
+        dto.setEmailMethodConfigured(sender.isConfigured(settings));
+        dto.setEmailMethodStatus(sender.describeStatus(settings));
+    }
+
+    private boolean updateEmailSettings(GlobalSettings settings, GlobalSettingsDto dto) {
+        boolean updated = false;
+
+        if (dto.getEmailMethod() != null && dto.getEmailMethod() != settings.getEmailMethod()) {
+            logger.info("Updating email method to {}", dto.getEmailMethod());
+            settings.setEmailMethod(dto.getEmailMethod());
+            updated = true;
+        }
+        if (dto.getEmailFromAddress() != null) {
+            settings.setEmailFromAddress(dto.getEmailFromAddress().trim());
+            updated = true;
+        }
+        if (dto.getEmailFromName() != null) {
+            settings.setEmailFromName(dto.getEmailFromName().trim());
+            updated = true;
+        }
+        if (dto.getEmailNotifyLibrariansOnPending() != null) {
+            settings.setEmailNotifyLibrariansOnPending(dto.getEmailNotifyLibrariansOnPending());
+            updated = true;
+        }
+        if (dto.getEmailNotifyApplicantOnPending() != null) {
+            settings.setEmailNotifyApplicantOnPending(dto.getEmailNotifyApplicantOnPending());
+            updated = true;
+        }
+        if (dto.getEmailLibrarianRecipients() != null) {
+            settings.setEmailLibrarianRecipients(dto.getEmailLibrarianRecipients().trim());
+            updated = true;
+        }
+        if (dto.getEmailIncludeLibrarianUserEmails() != null) {
+            settings.setEmailIncludeLibrarianUserEmails(dto.getEmailIncludeLibrarianUserEmails());
+            updated = true;
+        }
+        if (dto.getSmtpHost() != null) {
+            settings.setSmtpHost(dto.getSmtpHost().trim());
+            updated = true;
+        }
+        if (dto.getSmtpPort() != null) {
+            settings.setSmtpPort(dto.getSmtpPort());
+            updated = true;
+        }
+        if (dto.getSmtpUsername() != null) {
+            settings.setSmtpUsername(dto.getSmtpUsername().trim());
+            updated = true;
+        }
+        if (hasText(dto.getSmtpPassword())) {
+            settings.setSmtpPassword(dto.getSmtpPassword().trim());
+            updated = true;
+        }
+        if (dto.getSmtpStartTls() != null) {
+            settings.setSmtpStartTls(dto.getSmtpStartTls());
+            updated = true;
+        }
+        if (dto.getSmtpSsl() != null) {
+            settings.setSmtpSsl(dto.getSmtpSsl());
+            updated = true;
+        }
+        if (hasText(dto.getSendGridApiKey())) {
+            settings.setSendGridApiKey(dto.getSendGridApiKey().trim());
+            updated = true;
+        }
+        if (dto.getWebhookUrl() != null) {
+            settings.setWebhookUrl(dto.getWebhookUrl().trim());
+            updated = true;
+        }
+        if (hasText(dto.getWebhookBearerToken())) {
+            settings.setWebhookBearerToken(dto.getWebhookBearerToken().trim());
+            updated = true;
+        }
+        return updated;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value != null ? value : "";
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

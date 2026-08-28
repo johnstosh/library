@@ -40,6 +40,7 @@ public class AppliedController {
             Applied applied = new Applied();
             applied.setName(registrationRequest.getUsername());
             applied.setPassword(registrationRequest.getPassword());
+            applied.setEmail(registrationRequest.getEmail());
             Applied createdApplied = appliedService.createApplied(applied);
             logger.info("Successfully created application with ID: {}", createdApplied.getId());
             return ResponseEntity.noContent().build();

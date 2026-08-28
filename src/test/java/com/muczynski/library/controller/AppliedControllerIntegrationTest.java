@@ -72,6 +72,29 @@ class AppliedControllerIntegrationTest {
         assertThat(savedApplication.getPassword()).startsWith("$2a$");
         assertThat(savedApplication.getStatus()).isEqualTo(Applied.ApplicationStatus.PENDING);
         assertThat(savedApplication.getId()).isNotNull();
+        assertThat(savedApplication.getEmail()).isNull();
+    }
+
+    @Test
+    void testPublicRegister_SavesOptionalEmail() throws Exception {
+        String validSHA256Hash = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+        String requestJson = """
+            {
+                "username": "Jane Email",
+                "password": "%s",
+                "email": "jane@example.com",
+                "authority": "USER"
+            }
+            """.formatted(validSHA256Hash);
+
+        mockMvc.perform(post("/api/application/public/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isNoContent());
+
+        Applied saved = appliedRepository.findAll().get(0);
+        assertThat(saved.getEmail()).isEqualTo("jane@example.com");
+        assertThat(saved.getStatus()).isEqualTo(Applied.ApplicationStatus.PENDING);
     }
 
     @Test

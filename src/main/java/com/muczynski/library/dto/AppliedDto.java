@@ -16,5 +16,6 @@ import lombok.Setter;
 public class AppliedDto {
     private Long id;
     private String name;
+    private String email;
     private Applied.ApplicationStatus status;
 }

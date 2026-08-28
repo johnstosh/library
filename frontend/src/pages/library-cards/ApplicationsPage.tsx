@@ -68,7 +68,15 @@ export function ApplicationsPage() {
       accessor: (app) => (
         <span className="font-medium text-gray-900">{app.name}</span>
       ),
-      width: '70%',
+      width: '40%',
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      accessor: (app) => (
+        <span className="text-sm text-gray-700">{app.email || '—'}</span>
+      ),
+      width: '30%',
     },
   ]
 

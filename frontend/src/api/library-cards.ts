@@ -6,12 +6,14 @@ import type { LibraryCardDesignDto } from '@/types/dtos'
 export interface AppliedDto {
   id: number
   name: string
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  email?: string
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_APPROVED' | 'QUESTION'
 }
 
 export interface RegistrationRequest {
   username: string
   password: string
+  email?: string
   authority: string
 }
 

@@ -4,6 +4,9 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.dto.TestEmailRequest;
+import com.muczynski.library.dto.TestEmailResultDto;
+import com.muczynski.library.service.ApplicationEmailService;
 import com.muczynski.library.service.GlobalSettingsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +27,9 @@ public class GlobalSettingsController {
 
     @Autowired
     private GlobalSettingsService globalSettingsService;
+
+    @Autowired
+    private ApplicationEmailService applicationEmailService;
 
     /**
      * Get global settings
@@ -47,6 +53,19 @@ public class GlobalSettingsController {
         logger.info("Update global settings requested (librarian-only)");
         GlobalSettingsDto updated = globalSettingsService.updateGlobalSettings(dto);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Send a test message using the currently saved email method.
+     * Save settings before calling this; unsaved form values are not used.
+     */
+    @PostMapping("/test-email")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<TestEmailResultDto> sendTestEmail(@RequestBody(required = false) TestEmailRequest request) {
+        String to = request != null ? request.getTo() : null;
+        logger.info("Sending test email (to override present: {})", to != null && !to.isBlank());
+        TestEmailResultDto result = applicationEmailService.sendTestEmail(to);
+        return ResponseEntity.ok(result);
     }
 
     /**

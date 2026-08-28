@@ -32,6 +32,12 @@ public class Applied {
 
     private String name;
 
+    /**
+     * Optional contact email. Used to notify the applicant and shown to librarians.
+     */
+    @Column(length = 320)
+    private String email;
+
     @Column(length = 64)
     private String password;
 

@@ -104,6 +104,19 @@ public class AppConfig {
     }
 
     /**
+     * RestTemplate for outbound email HTTP transports (SendGrid, webhook).
+     */
+    @Bean("emailRestTemplate")
+    public RestTemplate emailRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000);
+        factory.setReadTimeout(15000);
+        restTemplate.setRequestFactory(factory);
+        return restTemplate;
+    }
+
+    /**
      * Configure ObjectMapper to serialize all datetime types as ISO-8601 strings
      * instead of arrays. This ensures consistent datetime serialization across
      * the application and makes frontend caching comparisons reliable.

@@ -37,6 +37,7 @@ Public-facing form where prospective patrons can submit library card application
 
 **Features**:
 - Username and password input
+- Optional email (used for pending-application notifications)
 - Client-side SHA-256 password hashing before submission
 - Form validation
 - Success/error messaging
@@ -110,14 +111,16 @@ Each user can select their preferred library card design from 5 predefined optio
 public class Applied {
     private Long id;                    // Auto-generated primary key
     private String name;                // Applicant's username
+    private String email;               // Optional contact email
     private String password;            // Bcrypt-hashed password
-    private ApplicationStatus status;   // PENDING, APPROVED, REJECTED
+    private ApplicationStatus status;   // PENDING, APPROVED, NOT_APPROVED, QUESTION
 }
 ```
 
 **Fields**:
 - `id`: Unique identifier (auto-generated)
 - `name`: Requested username for the library account
+- `email`: Optional contact email for notifications
 - `password`: Password hashed with bcrypt (after client-side SHA-256)
 - `status`: Enum tracking application state
 
@@ -138,6 +141,7 @@ public class Applied {
 public class AppliedDto {
     private Long id;
     private String name;
+    private String email;
     private ApplicationStatus status;
     // password NOT included for security
 }
@@ -586,6 +590,28 @@ When an application is approved:
 **Note**: Password is NOT re-hashed; it's already bcrypt-hashed when the application was created.
 
 ## Future Enhancements
+
+### Email on pending application
+
+When an application is saved with status `PENDING`, `ApplicationEmailService` sends mail using the transport selected in Global Settings (`emailMethod`):
+
+| Method | Behavior |
+|--------|----------|
+| `DISABLED` | Default. Nothing is sent. |
+| `LOG` | Subject, recipients, and body are written to application logs. |
+| `SMTP` | Jakarta Mail using host/port/credentials stored in Global Settings (not `application.properties`). |
+| `SENDGRID` | HTTPS call to SendGrid's v3 mail API. |
+| `WEBHOOK` | JSON POST to a librarian-configured URL (Zapier, n8n, Make, Apps Script, Cloud Function). |
+
+Global options:
+
+- `emailNotifyLibrariansOnPending` — notify librarians (default true once a method is chosen)
+- `emailNotifyApplicantOnPending` — confirmation to the applicant (requires email on the application)
+- `emailLibrarianRecipients` — extra addresses
+- `emailIncludeLibrarianUserEmails` — also use emails stored on librarian user accounts
+- From address/name, plus method-specific secrets (SMTP password, SendGrid API key, webhook bearer token)
+
+Librarians can send a test message from Global Settings (`POST /api/global-settings/test-email`). Delivery failures are logged and never roll back the application.
 
 ### Potential Features
 - Barcode generation on library cards (QR code or Code 39)

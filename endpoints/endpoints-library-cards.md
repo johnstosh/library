@@ -12,9 +12,12 @@ Submit a library card application (public endpoint).
 {
   "username": "john_doe",
   "password": "sha256-hashed-password",
+  "email": "john@example.com",
   "authority": "USER"
 }
 ```
+
+`email` is optional. When present it must look like an email address. It is stored on the application and used if "email the applicant" is enabled in global settings.
 
 **Password Requirements:**
 - Must be SHA-256 hashed client-side (64 hex characters)
@@ -31,6 +34,7 @@ Submit a library card application (public endpoint).
 - Public-facing library card application form
 - Creates `Applied` entity with status `PENDING`
 - Awaits librarian approval
+- After save, `ApplicationEmailService` notifies librarians (and optionally the applicant) using the email method in Global Settings. Mail failures do not fail the registration.
 
 ---
 
@@ -45,6 +49,7 @@ Returns all library card applications.
   {
     "id": 1,
     "name": "john_doe",
+    "email": "john@example.com",
     "status": "PENDING"
   }
 ]

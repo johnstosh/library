@@ -34,6 +34,7 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(LibraryCardDesign.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(Photo.ExportStatus.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(Applied.ApplicationStatus.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(EmailMethod.class, MemberCategory.INVOKE_DECLARED_METHODS);
 
         // Spring Session JDBC serializes the full SecurityContext object graph to bytes.
         // Every class in the graph must be registered for Java serialization in native image.
@@ -201,6 +202,13 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
 
         // JDBC driver SPI
         hints.resources().registerPattern("META-INF/services/java.sql.Driver");
+
+        // Jakarta Mail / Angus (SMTP email sender)
+        hints.resources().registerPattern("META-INF/javamail.default.providers");
+        hints.resources().registerPattern("META-INF/javamail.default.address.map");
+        hints.resources().registerPattern("META-INF/javamail.charset.map");
+        hints.resources().registerPattern("META-INF/services/jakarta.mail.Provider");
+        hints.resources().registerPattern("META-INF/services/jakarta.mail.util.StreamProvider");
 
         // metadata-extractor (EXIF reading in PhotoService)
         hints.reflection().registerType(

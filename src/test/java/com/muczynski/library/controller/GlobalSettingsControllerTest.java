@@ -4,7 +4,11 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.dto.GlobalSettingsDto;
+import com.muczynski.library.dto.TestEmailRequest;
+import com.muczynski.library.dto.TestEmailResultDto;
+import com.muczynski.library.service.ApplicationEmailService;
 import com.muczynski.library.service.GlobalSettingsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +53,9 @@ class GlobalSettingsControllerTest {
 
     @MockitoBean
     private GlobalSettingsService globalSettingsService;
+
+    @MockitoBean
+    private ApplicationEmailService applicationEmailService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -362,6 +369,48 @@ class GlobalSettingsControllerTest {
                         .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ssoConfigured").value(true));
+    }
+
+    @Test
+    void testSendTestEmail_Success_AsLibrarian() throws Exception {
+        TestEmailResultDto result = new TestEmailResultDto();
+        result.setSent(true);
+        result.setMethod(EmailMethod.LOG);
+        result.setMessage("Test email sent via LOG to [librarian@example.com]");
+        result.setRecipients(java.util.List.of("librarian@example.com"));
+        when(applicationEmailService.sendTestEmail("librarian@example.com")).thenReturn(result);
+
+        TestEmailRequest request = new TestEmailRequest();
+        request.setTo("librarian@example.com");
+
+        mockMvc.perform(post("/api/global-settings/test-email")
+                        .with(user("librarian").authorities(new SimpleGrantedAuthority("LIBRARIAN")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sent").value(true))
+                .andExpect(jsonPath("$.method").value("LOG"))
+                .andExpect(jsonPath("$.recipients[0]").value("librarian@example.com"));
+    }
+
+    @Test
+    void testSendTestEmail_Forbidden_AsRegularUser() throws Exception {
+        TestEmailRequest request = new TestEmailRequest();
+        request.setTo("user@example.com");
+
+        mockMvc.perform(post("/api/global-settings/test-email")
+                        .with(user("regularuser").authorities(new SimpleGrantedAuthority("USER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testSendTestEmail_Unauthorized() throws Exception {
+        mockMvc.perform(post("/api/global-settings/test-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
