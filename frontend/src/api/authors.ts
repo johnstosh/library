@@ -3,7 +3,7 @@ import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { AuthorDto, AuthorSummaryDto, BookDto } from '@/types/dtos'
+import type { AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
 // Hook to get all authors with optimized lastModified caching
 export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
@@ -205,7 +205,70 @@ export function useDeleteAuthors() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (ids: number[]) => api.post('/authors/delete-bulk', ids),
+    mutationFn: (ids: number[]) => api.post<BulkDeleteResultDto>('/authors/delete-bulk', ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+/**
+ * Fill blank catalog fields for a single author using Grok.
+ */
+export function useGenerateAuthorMissingData() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.put<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing`),
+    onSuccess: (data, id) => {
+      if (data.updatedAuthor) {
+        queryClient.setQueryData(queryKeys.authors.detail(id), data.updatedAuthor)
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+/**
+ * Fill blank catalog fields for multiple authors with progress tracking.
+ * Processes authors sequentially so the toolbar can show n/total.
+ */
+export function useGenerateAuthorsMissingDataWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results: AuthorEnrichmentResultDto[] = []
+      const total = ids.length
+
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        try {
+          const result = await api.put<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing`)
+          results.push(result)
+          if (result.updatedAuthor) {
+            queryClient.setQueryData(queryKeys.authors.detail(id), result.updatedAuthor)
+          }
+        } catch (error) {
+          results.push({
+            authorId: id,
+            name: `Author ${id}`,
+            success: false,
+            skipped: false,
+            filledFields: [],
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+
+      return results
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })

@@ -98,6 +98,52 @@ export function useLookupBulkAuthorsGrokipedia() {
     onSuccess: () => {
       // Invalidate all author queries
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
+    },
+  })
+}
+
+/**
+ * Lookup Grokipedia URLs for multiple authors with progress tracking.
+ * Processes authors sequentially so the toolbar can show n/total.
+ */
+export function useLookupBulkAuthorsGrokipediaWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (authorIds: number[]) => {
+      const results: GrokipediaLookupResultDto[] = []
+      const total = authorIds.length
+
+      for (let i = 0; i < authorIds.length; i++) {
+        const authorId = authorIds[i]
+        try {
+          const batch = await api.post<GrokipediaLookupResultDto[]>('/authors/grokipedia-lookup-bulk', [authorId])
+          results.push(batch[0] ?? {
+            authorId,
+            name: `Author ${authorId}`,
+            success: false,
+            errorMessage: 'No result returned',
+          })
+          queryClient.invalidateQueries({ queryKey: queryKeys.authors.detail(authorId) })
+        } catch (error) {
+          results.push({
+            authorId,
+            name: `Author ${authorId}`,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
     },
   })
 }

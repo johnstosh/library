@@ -58,4 +58,43 @@ Deletes an author by ID.
 
 ---
 
-**Related:** AuthorController.java, AuthorService.java, AuthorDto.java
+## POST /api/authors/delete-bulk
+Deletes multiple authors. Authors with associated books are skipped rather than aborting the rest of the batch.
+
+**Authentication:** Requires `LIBRARIAN` authority
+
+**Request Body:** JSON array of author IDs, e.g. `[1, 2, 3]`
+
+**Response:** `BulkDeleteResultDto`
+- `deletedCount` - number deleted
+- `failedCount` - number that could not be deleted
+- `deletedIds` - IDs that were deleted
+- `failures` - `{ id, title, errorMessage }` for each skipped author (`title` is the author name)
+
+---
+
+## PUT /api/authors/{id}/generate-missing
+Fills blank author catalog fields by prompting Grok. Existing values are never overwritten. Name and `grokipediaUrl` are never changed.
+
+Fillable fields: `dateOfBirth`, `dateOfDeath`, `religiousAffiliation`, `birthCountry`, `nationality`, `biographicalEssay`.
+
+**Authentication:** Requires `LIBRARIAN` authority
+
+**Path Parameters:**
+- `id` - Author ID
+
+**Response:** `AuthorEnrichmentResultDto`
+- `authorId`, `name`
+- `success` - false when Grok/parse failed
+- `skipped` - true when every fillable field already had a value (Grok is not called)
+- `filledFields` - DTO/prompt field names that were written (uses `biographicalEssay`, not `briefBiography`)
+- `errorMessage` - present on failure
+- `updatedAuthor` - `AuthorDto` after the update (or the unchanged author on skip/failure)
+
+**Use Case:**
+- Multi-select authors on the Authors page and generate missing catalog data
+- Pair with filters such as without-description or without-birth-date
+
+---
+
+**Related:** AuthorController.java, AuthorService.java, AuthorDto.java, AuthorEnrichmentResultDto.java

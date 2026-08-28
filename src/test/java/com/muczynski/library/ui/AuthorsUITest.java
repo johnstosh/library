@@ -201,4 +201,21 @@ public class AuthorsUITest {
         Locator authorsTable = page.locator("table");
         assertThat(authorsTable).isVisible();
     }
+
+    @Test
+    @DisplayName("Should show bulk action buttons when an author is selected")
+    void shouldShowBulkActionButtonsWhenAuthorSelected() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='select-checkbox-1']",
+            new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.click("[data-test='select-checkbox-1']");
+
+        assertThat(page.locator("[data-test='bulk-generate-missing']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-generate-missing']")).containsText("Generate missing data");
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).containsText("Find Grokipedia URLs");
+        assertThat(page.locator("[data-test='bulk-delete']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-delete']")).containsText("Delete Selected");
+    }
 }

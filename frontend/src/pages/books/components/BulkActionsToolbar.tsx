@@ -21,9 +21,8 @@ import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
-import { GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+import { AiIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
-import { PiTag } from 'react-icons/pi'
 import { PiHeadphones } from 'react-icons/pi'
 import { PiGraduationCap } from 'react-icons/pi'
 
@@ -315,7 +314,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleGenreLookup}
               isLoading={lookupGenres.isPending}
               disabled={lookupGenres.isPending}
-              leftIcon={<PiTag />}
+              leftIcon={<AiIcon />}
               data-test="bulk-lookup-genres"
             >
               {progressLabel('Lookup Genres', 'Genres...', lookupGenres.isPending, genreProgress, selectedCount)}

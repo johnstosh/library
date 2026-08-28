@@ -28,9 +28,9 @@ import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle, PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiTag, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
+import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 import { IconButton } from '@/components/ui/IconButton'
-import { AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+import { AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 
 interface BookFormPageProps {
   title: string
@@ -770,7 +770,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               onClick={handleBookFromTitleAuthor}
               isLoading={bookFromTitleAuthor.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<PiSparkle />}
+              leftIcon={<AiIcon />}
               data-test="book-operation-book-from-title-author"
             >
               Book from Title & Author
@@ -782,7 +782,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               onClick={handleGenreLookup}
               isLoading={lookupGenres.isPending}
               disabled={isOperationPending || isLoading}
-              leftIcon={<PiTag />}
+              leftIcon={<AiIcon />}
               data-test="book-operation-lookup-genres"
             >
               Lookup Genres
@@ -1182,7 +1182,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 onClick={handleGenreLookup}
                 isLoading={lookupGenres.isPending}
                 disabled={isOperationPending || isLoading}
-                leftIcon={<PiTag />}
+                leftIcon={<AiIcon />}
                 data-test="book-field-lookup-genres"
                 className="mb-0"
               >
@@ -1210,7 +1210,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               onClick={handleSuggestLoc}
               isLoading={isSuggesting}
               disabled={isLoading || isSuggesting || isLookingUp}
-              leftIcon={<PiSparkle />}
+              leftIcon={<AiIcon />}
               data-test="suggest-loc-button"
               className="mb-0"
             >

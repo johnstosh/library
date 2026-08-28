@@ -5,8 +5,10 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
@@ -304,12 +306,24 @@ public class AuthorController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
+    public ResponseEntity<BulkDeleteResultDto> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
         try {
-            authorService.deleteBulkAuthors(authorIds);
-            return ResponseEntity.ok().build();
+            BulkDeleteResultDto result = authorService.deleteBulkAuthors(authorIds);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/{id}/generate-missing")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<AuthorEnrichmentResultDto> generateMissingData(@PathVariable Long id) {
+        try {
+            AuthorEnrichmentResultDto result = authorService.generateMissingData(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.warn("Failed to generate missing data for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

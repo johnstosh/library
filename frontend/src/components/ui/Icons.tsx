@@ -12,6 +12,7 @@ import {
   PiHeadphones,
   PiPencil,
   PiTrash,
+  PiSparkle,
   PiUser,
 } from 'react-icons/pi'
 
@@ -67,6 +68,10 @@ export function ReturnIcon({ className }: IconProps) {
 
 export function BackIcon({ className }: IconProps) {
   return <PiArrowLeft className={clsx(sizeClass, className)} />
+}
+
+export function AiIcon({ className }: IconProps) {
+  return <PiSparkle className={clsx(sizeClass, className)} />
 }
 
 export function GrokipediaIcon({ className }: IconProps) {

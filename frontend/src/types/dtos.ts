@@ -68,6 +68,16 @@ export interface AuthorSummaryDto {
   lastModified: string
 }
 
+export interface AuthorEnrichmentResultDto {
+  authorId: number
+  name: string
+  success: boolean
+  skipped: boolean
+  filledFields: string[]
+  errorMessage?: string
+  updatedAuthor?: AuthorDto
+}
+
 // Book DTOs
 export interface BookDto {
   id: number
