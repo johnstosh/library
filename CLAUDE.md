@@ -1,9 +1,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Standing orders
+
+**Read `standing-orders.md` first** at the start of every session, and follow it. Those operator orders override conflicting notes in this file.
+
 ## Documentation Structure
 
 **This is the main overview file.** Detailed subsystem documentation is in separate files:
+- `standing-orders.md` - operator standing orders; **read first**
 - `feature-design-security.md` - Security, authentication, OAuth, authorities
 - `feature-design-frontend.md` - Frontend architecture, JavaScript modules, UI patterns
 - `feature-design-photos.md` - Photo storage, Google Photos integration, caching
