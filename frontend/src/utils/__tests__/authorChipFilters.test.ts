@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyAuthorChipFilters,
   defaultAuthorChipFilters,
+  isAvailabilityChipActive,
   type AuthorChipFilters,
 } from '../authorChipFilters'
 import type { AuthorDto } from '@/types/dtos'
@@ -23,6 +24,12 @@ const sample: AuthorDto[] = [
   author({ id: 1, name: 'Has Bio', briefBiography: 'A life.', grokipediaUrl: 'https://g', bookCount: 2, firstPhotoId: 9, dateOfBirth: '1900-01-01', dateOfDeath: '1980-01-01' }),
   author({ id: 2, name: 'Empty', bookCount: 0 }),
 ]
+
+describe('defaultAuthorChipFilters', () => {
+  it('starts with YDL/EMU chips off', () => {
+    expect(isAvailabilityChipActive(defaultAuthorChipFilters)).toBe(false)
+  })
+})
 
 describe('applyAuthorChipFilters', () => {
   it('returns everyone when no chips are on', () => {
@@ -48,5 +55,24 @@ describe('applyAuthorChipFilters', () => {
   it('with-grokipedia and with-photos keep authors that have those', () => {
     expect(applyAuthorChipFilters(sample, chips({ withGrokipedia: true })).map((a) => a.id)).toEqual([1])
     expect(applyAuthorChipFilters(sample, chips({ withPhotos: true })).map((a) => a.id)).toEqual([1])
+  })
+
+  it('YDL/EMU chips keep authors who have that holding on any book', () => {
+    const availability = new Map([
+      [1, { hasYdlBook: true, hasEmuEbook: true, hasYdlAudio: true }],
+      [2, { hasYdlEbook: true }],
+    ])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasYdlBook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasYdlEbook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([2])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasYdlBook: true, hasEmuEbook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasEmuAudio: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([])
   })
 })

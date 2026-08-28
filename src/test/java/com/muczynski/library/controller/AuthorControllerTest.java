@@ -4,6 +4,7 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.BookDto;
@@ -81,6 +82,15 @@ class AuthorControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void getAuthorCount_unauthenticated_returnsOk() throws Exception {
+        when(authorService.countAuthors()).thenReturn(52L);
+
+        mockMvc.perform(get("/api/authors/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(52));
     }
 
     @Test
@@ -426,6 +436,29 @@ class AuthorControllerTest {
 
         mockMvc.perform(get("/api/authors/most-recent-day"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorAvailability_unauthenticated_returnsOk() throws Exception {
+        AuthorAvailabilityDto dto = new AuthorAvailabilityDto();
+        dto.setAuthorId(1L);
+        dto.setHasYdlBook(true);
+        dto.setHasYdlEbook(false);
+        dto.setHasYdlAudio(true);
+        dto.setHasEmuBook(false);
+        dto.setHasEmuEbook(true);
+        dto.setHasEmuAudio(false);
+        when(authorService.getAuthorAvailability()).thenReturn(Collections.singletonList(dto));
+
+        mockMvc.perform(get("/api/authors/availability"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].authorId").value(1))
+                .andExpect(jsonPath("$[0].hasYdlBook").value(true))
+                .andExpect(jsonPath("$[0].hasYdlEbook").value(false))
+                .andExpect(jsonPath("$[0].hasYdlAudio").value(true))
+                .andExpect(jsonPath("$[0].hasEmuBook").value(false))
+                .andExpect(jsonPath("$[0].hasEmuEbook").value(true))
+                .andExpect(jsonPath("$[0].hasEmuAudio").value(false));
     }
 
     @Test

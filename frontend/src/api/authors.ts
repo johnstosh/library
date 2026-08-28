@@ -3,7 +3,7 @@ import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
+import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
 // Hook to get all authors with optimized lastModified caching
 export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
@@ -119,6 +119,23 @@ export function useMostRecentAuthorSummaries(enabled: boolean) {
     queryFn: () => api.get<AuthorSummaryDto[]>('/authors/most-recent-day'),
     enabled,
     staleTime: 0,
+    refetchOnMount: true,
+  })
+}
+
+export function useAuthorCount() {
+  return useQuery({
+    queryKey: queryKeys.authors.count(),
+    queryFn: () => api.get<{ count: number }>('/authors/count'),
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useAuthorAvailability() {
+  return useQuery({
+    queryKey: queryKeys.authors.availability(),
+    queryFn: () => api.get<AuthorAvailabilityDto[]>('/authors/availability'),
+    staleTime: 30 * 1000,
     refetchOnMount: true,
   })
 }

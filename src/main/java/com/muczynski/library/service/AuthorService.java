@@ -7,6 +7,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.AuthorSummaryDto;
@@ -353,6 +354,10 @@ public class AuthorService {
                 .collect(Collectors.toList());
     }
 
+    public long countAuthors() {
+        return authorRepository.count();
+    }
+
     /**
      * Get summaries for authors without a biographical essay.
      */
@@ -403,6 +408,42 @@ public class AuthorService {
         return authorRepository.findSummariesByIds(authorIds).stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Roll up each author's YDL/EMU book/ebook/audio holdings from their books.
+     * Authors with no true flags are omitted; the frontend treats a missing id as all false.
+     */
+    public List<AuthorAvailabilityDto> getAuthorAvailability() {
+        return bookRepository.countAvailabilityByAuthor().stream()
+                .map(this::projectionToAvailabilityDto)
+                .filter(this::hasAnyAvailability)
+                .collect(Collectors.toList());
+    }
+
+    private AuthorAvailabilityDto projectionToAvailabilityDto(BookRepository.AuthorAvailabilityProjection projection) {
+        AuthorAvailabilityDto dto = new AuthorAvailabilityDto();
+        dto.setAuthorId(projection.getAuthorId());
+        dto.setHasYdlBook(positive(projection.getYdlPaperCount()));
+        dto.setHasYdlEbook(positive(projection.getYdlEbookCount()));
+        dto.setHasYdlAudio(positive(projection.getYdlAudioCount()));
+        dto.setHasEmuBook(positive(projection.getEmuPaperCount()));
+        dto.setHasEmuEbook(positive(projection.getEmuEbookCount()));
+        dto.setHasEmuAudio(positive(projection.getEmuAudioCount()));
+        return dto;
+    }
+
+    private boolean hasAnyAvailability(AuthorAvailabilityDto dto) {
+        return Boolean.TRUE.equals(dto.getHasYdlBook())
+                || Boolean.TRUE.equals(dto.getHasYdlEbook())
+                || Boolean.TRUE.equals(dto.getHasYdlAudio())
+                || Boolean.TRUE.equals(dto.getHasEmuBook())
+                || Boolean.TRUE.equals(dto.getHasEmuEbook())
+                || Boolean.TRUE.equals(dto.getHasEmuAudio());
+    }
+
+    private static boolean positive(Long count) {
+        return count != null && count > 0;
     }
 
     private AuthorSummaryDto projectionToSummaryDto(AuthorRepository.AuthorSummaryProjection projection) {

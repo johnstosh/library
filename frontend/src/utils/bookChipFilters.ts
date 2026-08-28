@@ -31,6 +31,9 @@ export const defaultBookChipFilters: BookChipFilters = {
   electronic: false,
   freeText: false,
   audio: false,
+  // Shared default is off (Search, applyChipFilters tests). The Books page
+  // overrides this to true in uiStore so it can use the faster
+  // GET /books/most-recent-day backend instead of GET /books/summaries.
   mostRecent: false,
   withoutLoc: false,
   threeLetterLoc: false,
@@ -50,6 +53,13 @@ export function is3LetterLoc(locNumber: string | null | undefined): boolean {
 
 export function isAnyChipActive(chips: BookChipFilters): boolean {
   return (Object.keys(chips) as (keyof BookChipFilters)[]).some((key) => chips[key])
+}
+
+/** True if any chip other than mostRecent is on. */
+export function isOtherBookChipActive(chips: BookChipFilters): boolean {
+  return (Object.keys(chips) as (keyof BookChipFilters)[])
+    .filter((key) => key !== 'mostRecent')
+    .some((key) => chips[key])
 }
 
 function isBlank(value: string | null | undefined): boolean {

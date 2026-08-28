@@ -328,6 +328,34 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT COUNT(b) FROM Book b WHERE b.emuPaperAvailable = true OR b.emuEbookAvailable = true OR b.emuAudioAvailable = true")
     long countAvailableAtEmu();
 
+    /**
+     * Per-author counts of books held as paper/ebook/audio at YDL and EMU.
+     * Authors with no matching books are omitted (treat missing as all false).
+     */
+    interface AuthorAvailabilityProjection {
+        Long getAuthorId();
+        Long getYdlPaperCount();
+        Long getYdlEbookCount();
+        Long getYdlAudioCount();
+        Long getEmuPaperCount();
+        Long getEmuEbookCount();
+        Long getEmuAudioCount();
+    }
+
+    @Query("""
+            SELECT b.author.id as authorId,
+                   SUM(CASE WHEN b.ydlPaperAvailable = true THEN 1 ELSE 0 END) as ydlPaperCount,
+                   SUM(CASE WHEN b.ydlEbookAvailable = true THEN 1 ELSE 0 END) as ydlEbookCount,
+                   SUM(CASE WHEN b.ydlAudioAvailable = true THEN 1 ELSE 0 END) as ydlAudioCount,
+                   SUM(CASE WHEN b.emuPaperAvailable = true THEN 1 ELSE 0 END) as emuPaperCount,
+                   SUM(CASE WHEN b.emuEbookAvailable = true THEN 1 ELSE 0 END) as emuEbookCount,
+                   SUM(CASE WHEN b.emuAudioAvailable = true THEN 1 ELSE 0 END) as emuAudioCount
+            FROM Book b
+            WHERE b.author IS NOT NULL
+            GROUP BY b.author.id
+            """)
+    List<AuthorAvailabilityProjection> countAvailabilityByAuthor();
+
     // Lightweight projection for photo ZIP import — skips @Lob fields (plotEssay, etc.)
     List<BookZipImportProjection> findBy();
 }

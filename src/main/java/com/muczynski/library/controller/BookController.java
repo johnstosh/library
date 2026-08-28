@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
+import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GenreLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
@@ -445,6 +446,17 @@ public class BookController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             logger.warn("Failed to move photo ID {} right for book ID {}: {}", photoId, bookId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/count")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<CountDto> getBookCount() {
+        try {
+            return ResponseEntity.ok(new CountDto(bookService.countBooks()));
+        } catch (Exception e) {
+            logger.warn("Failed to count books: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

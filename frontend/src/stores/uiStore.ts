@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import {
   defaultBookChipFilters,
+  isOtherBookChipActive,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
 import {
@@ -37,7 +38,11 @@ export type AuthorsChips = AuthorChipFilters
 export type LoansChips = LoanChipFilters
 export type UsersChips = UserChipFilters
 
-const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
+// Most Recent Day starts on so the books list hits GET /books/most-recent-day
+// instead of GET /books/summaries. That filter endpoint is a much smaller query
+// and is the fast path for the default books list. Search keeps the shared
+// defaultBookChipFilters (all chips off).
+const defaultBooksChips: BooksChips = { ...defaultBookChipFilters, mostRecent: true }
 const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
@@ -118,16 +123,39 @@ export const useUiStore = create<UiState>((set) => ({
   toggleBooksLabel: (label) =>
     set((state) => {
       const current = state.booksLabelFilter
-      const next = current.includes(label) ? current.filter((l) => l !== label) : [...current, label]
-      return { booksLabelFilter: next }
+      const nextLabels = current.includes(label)
+        ? current.filter((l) => l !== label)
+        : [...current, label]
+      const othersOn = nextLabels.length > 0 || isOtherBookChipActive(state.booksChips)
+      // Most Recent Day cannot be combined with other filters (client-side AND
+      // on the small most-recent-day result set is misleading). Restore it when
+      // nothing else is on — that is the books page default fast path.
+      return {
+        booksLabelFilter: nextLabels,
+        booksChips: { ...state.booksChips, mostRecent: !othersOn },
+      }
     }),
 
-  clearBooksLabels: () => set({ booksLabelFilter: [] }),
+  clearBooksLabels: () =>
+    set((state) => ({
+      booksLabelFilter: [],
+      booksChips: {
+        ...state.booksChips,
+        mostRecent: !isOtherBookChipActive(state.booksChips),
+      },
+    })),
 
   toggleBooksChip: (chip) =>
-    set((state) => ({
-      booksChips: { ...state.booksChips, [chip]: !state.booksChips[chip] },
-    })),
+    set((state) => {
+      const labelsOn = state.booksLabelFilter.length > 0
+      if (chip === 'mostRecent' && (isOtherBookChipActive(state.booksChips) || labelsOn)) {
+        return { booksChips: { ...state.booksChips, mostRecent: false } }
+      }
+      const next = { ...state.booksChips, [chip]: !state.booksChips[chip] }
+      const othersOn = isOtherBookChipActive(next) || labelsOn
+      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
+      return { booksChips: next }
+    }),
 
   clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
 

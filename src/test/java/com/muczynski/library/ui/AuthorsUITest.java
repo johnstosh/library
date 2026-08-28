@@ -106,6 +106,32 @@ public class AuthorsUITest {
     }
 
     @Test
+    @DisplayName("Should show table stats in the bulk-action slot when nothing is selected")
+    void shouldShowTableStatsPlaceholderWhenNothingSelected() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
+        assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show YDL and EMU availability chips first on the authors page")
+    void shouldShowYdlAndEmuFilterChipsFirst() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        assertThat(page.locator("[data-test='author-filter-ydl']")).isVisible();
+        assertThat(page.locator("[data-test='author-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+    }
+
+    @Test
     @DisplayName("Should display books table in author view page")
     void shouldDisplayBooksTableInAuthorView() {
         // Click on first author to view details

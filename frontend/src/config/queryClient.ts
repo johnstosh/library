@@ -20,6 +20,7 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   books: {
     all: ['books'] as const,
+    count: () => [...queryKeys.books.all, 'count'] as const,
     summaries: () => [...queryKeys.books.all, 'summaries'] as const,
     filterSummaries: (filter: string) => [...queryKeys.books.all, 'filterSummaries', filter] as const,
     labelSummaries: (labels: string[]) => [...queryKeys.books.all, 'labelSummaries', labels.slice().sort().join(',')] as const,
@@ -30,9 +31,11 @@ export const queryKeys = {
   },
   authors: {
     all: ['authors'] as const,
+    count: () => [...queryKeys.authors.all, 'count'] as const,
     summaries: () => [...queryKeys.authors.all, 'summaries'] as const,
     filterSummaries: (filter: string) => [...queryKeys.authors.all, 'filterSummaries', filter] as const,
     byIds: (ids: number[], filter?: string) => [...queryKeys.authors.all, 'byIds', ids.join(','), filter] as const,
+    availability: () => [...queryKeys.authors.all, 'availability'] as const,
     list: (filter?: string) => [...queryKeys.authors.all, 'list', filter] as const,
     detail: (id: number) => [...queryKeys.authors.all, 'detail', id] as const,
     photos: (id: number) => [...queryKeys.authors.all, id, 'photos'] as const,

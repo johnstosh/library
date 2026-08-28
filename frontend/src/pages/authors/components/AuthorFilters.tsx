@@ -37,6 +37,46 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
   )
 }
 
+interface AvailabilityGroupProps {
+  library: string
+  libraryFull: string
+  dataTest: string
+  items: {
+    chip: keyof AuthorChipFilters
+    label: string
+    tooltip: string
+    dataTest: string
+  }[]
+  chips: AuthorChipFilters
+  onToggle: (chip: keyof AuthorChipFilters) => void
+}
+
+function AvailabilityGroup({ library, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+      data-test={dataTest}
+    >
+      <span
+        className="text-xs font-semibold tracking-wide text-gray-500 uppercase w-10 shrink-0"
+        title={libraryFull}
+      >
+        {library}
+      </span>
+      {items.map((item) => (
+        <FilterChip
+          key={item.chip}
+          label={item.label}
+          active={chips[item.chip]}
+          onClick={() => onToggle(item.chip)}
+          tooltip={item.tooltip}
+          dataTest={item.dataTest}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface AuthorFiltersProps {
   chips: AuthorChipFilters
   onToggle: (chip: keyof AuthorChipFilters) => void
@@ -44,70 +84,129 @@ interface AuthorFiltersProps {
 
 export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
   return (
-    <div className="flex flex-wrap gap-2" data-test="author-filter-chips">
-      <FilterChip
-        label="Most Recent Day"
-        active={chips.mostRecent}
-        onClick={() => onToggle('mostRecent')}
-        tooltip="Only authors of books added on the most recent day"
-        dataTest="filter-most-recent"
-      />
-      <FilterChip
-        label="Without Description"
-        active={chips.withoutDescription}
-        onClick={() => onToggle('withoutDescription')}
-        tooltip="Only authors with no brief biography"
-        dataTest="filter-without-description"
-      />
-      <FilterChip
-        label="Without Grokipedia"
-        active={chips.withoutGrokipedia}
-        onClick={() => onToggle('withoutGrokipedia')}
-        tooltip="Only authors without a Grokipedia URL"
-        dataTest="filter-without-grokipedia"
-      />
-      <FilterChip
-        label="With Grokipedia"
-        active={chips.withGrokipedia}
-        onClick={() => onToggle('withGrokipedia')}
-        tooltip="Only authors that have a Grokipedia URL"
-        dataTest="filter-with-grokipedia"
-      />
-      <FilterChip
-        label="Zero Books"
-        active={chips.zeroBooks}
-        onClick={() => onToggle('zeroBooks')}
-        tooltip="Only authors with no books in the catalog"
-        dataTest="filter-zero-books"
-      />
-      <FilterChip
-        label="Without Photos"
-        active={chips.withoutPhotos}
-        onClick={() => onToggle('withoutPhotos')}
-        tooltip="Only authors with no photo"
-        dataTest="filter-without-photos"
-      />
-      <FilterChip
-        label="With Photos"
-        active={chips.withPhotos}
-        onClick={() => onToggle('withPhotos')}
-        tooltip="Only authors that have a photo"
-        dataTest="filter-with-photos"
-      />
-      <FilterChip
-        label="Without Birth Date"
-        active={chips.withoutBirthDate}
-        onClick={() => onToggle('withoutBirthDate')}
-        tooltip="Only authors missing a date of birth"
-        dataTest="filter-without-birth-date"
-      />
-      <FilterChip
-        label="Without Death Date"
-        active={chips.withoutDeathDate}
-        onClick={() => onToggle('withoutDeathDate')}
-        tooltip="Only authors missing a date of death"
-        dataTest="filter-without-death-date"
-      />
+    <div className="space-y-3" data-test="author-filter-chips">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <AvailabilityGroup
+          library="YDL"
+          libraryFull="Ypsilanti District Library"
+          dataTest="author-filter-ydl"
+          chips={chips}
+          onToggle={onToggle}
+          items={[
+            {
+              chip: 'hasYdlBook',
+              label: 'Book',
+              tooltip: 'Has YDL book — only authors with a physical book held at Ypsilanti District Library',
+              dataTest: 'filter-has-ydl-book',
+            },
+            {
+              chip: 'hasYdlEbook',
+              label: 'Ebook',
+              tooltip: 'Has YDL ebook — only authors with an ebook held at Ypsilanti District Library',
+              dataTest: 'filter-has-ydl-ebook',
+            },
+            {
+              chip: 'hasYdlAudio',
+              label: 'Audio',
+              tooltip: 'Has YDL audio — only authors with an audiobook held at Ypsilanti District Library',
+              dataTest: 'filter-has-ydl-audio',
+            },
+          ]}
+        />
+        <AvailabilityGroup
+          library="EMU"
+          libraryFull="EMU Halle Library"
+          dataTest="author-filter-emu"
+          chips={chips}
+          onToggle={onToggle}
+          items={[
+            {
+              chip: 'hasEmuBook',
+              label: 'Book',
+              tooltip: 'Has EMU book — only authors with a physical book held at EMU Halle Library',
+              dataTest: 'filter-has-emu-book',
+            },
+            {
+              chip: 'hasEmuEbook',
+              label: 'Ebook',
+              tooltip: 'Has EMU ebook — only authors with an ebook held at EMU Halle Library',
+              dataTest: 'filter-has-emu-ebook',
+            },
+            {
+              chip: 'hasEmuAudio',
+              label: 'Audio',
+              tooltip: 'Has EMU audio — only authors with an audiobook held at EMU Halle Library',
+              dataTest: 'filter-has-emu-audio',
+            },
+          ]}
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <FilterChip
+          label="Most Recent Day"
+          active={chips.mostRecent}
+          onClick={() => onToggle('mostRecent')}
+          tooltip="Only authors of books added on the most recent day"
+          dataTest="filter-most-recent"
+        />
+        <FilterChip
+          label="Without Description"
+          active={chips.withoutDescription}
+          onClick={() => onToggle('withoutDescription')}
+          tooltip="Only authors with no brief biography"
+          dataTest="filter-without-description"
+        />
+        <FilterChip
+          label="Without Grokipedia"
+          active={chips.withoutGrokipedia}
+          onClick={() => onToggle('withoutGrokipedia')}
+          tooltip="Only authors without a Grokipedia URL"
+          dataTest="filter-without-grokipedia"
+        />
+        <FilterChip
+          label="With Grokipedia"
+          active={chips.withGrokipedia}
+          onClick={() => onToggle('withGrokipedia')}
+          tooltip="Only authors that have a Grokipedia URL"
+          dataTest="filter-with-grokipedia"
+        />
+        <FilterChip
+          label="Zero Books"
+          active={chips.zeroBooks}
+          onClick={() => onToggle('zeroBooks')}
+          tooltip="Only authors with no books in the catalog"
+          dataTest="filter-zero-books"
+        />
+        <FilterChip
+          label="Without Photos"
+          active={chips.withoutPhotos}
+          onClick={() => onToggle('withoutPhotos')}
+          tooltip="Only authors with no photo"
+          dataTest="filter-without-photos"
+        />
+        <FilterChip
+          label="With Photos"
+          active={chips.withPhotos}
+          onClick={() => onToggle('withPhotos')}
+          tooltip="Only authors that have a photo"
+          dataTest="filter-with-photos"
+        />
+        <FilterChip
+          label="Without Birth Date"
+          active={chips.withoutBirthDate}
+          onClick={() => onToggle('withoutBirthDate')}
+          tooltip="Only authors missing a date of birth"
+          dataTest="filter-without-birth-date"
+        />
+        <FilterChip
+          label="Without Death Date"
+          active={chips.withoutDeathDate}
+          onClick={() => onToggle('withoutDeathDate')}
+          tooltip="Only authors missing a date of death"
+          dataTest="filter-without-death-date"
+        />
+      </div>
     </div>
   )
 }

@@ -68,6 +68,17 @@ export interface AuthorSummaryDto {
   lastModified: string
 }
 
+/** Per-author YDL/EMU holdings rolled up from that author's books. */
+export interface AuthorAvailabilityDto {
+  authorId: number
+  hasYdlBook?: boolean
+  hasYdlEbook?: boolean
+  hasYdlAudio?: boolean
+  hasEmuBook?: boolean
+  hasEmuEbook?: boolean
+  hasEmuAudio?: boolean
+}
+
 export interface AuthorEnrichmentResultDto {
   authorId: number
   name: string

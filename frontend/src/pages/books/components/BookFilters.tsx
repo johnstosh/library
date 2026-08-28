@@ -10,19 +10,24 @@ interface FilterChipProps {
   onClick: () => void
   tooltip: string
   dataTest: string
+  disabled?: boolean
 }
 
-function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
+function FilterChip({ label, active, onClick, tooltip, dataTest, disabled = false }: FilterChipProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       title={tooltip}
       data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
-        active
-          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
+      disabled={disabled}
+      aria-disabled={disabled}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors select-none ${
+        disabled
+          ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+          : active
+            ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 cursor-pointer'
+            : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white cursor-pointer'
       }`}
     >
       {active ? (
@@ -43,9 +48,18 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
 interface BookFiltersProps {
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
+  /** Books page hides this chip; Search still shows it. */
+  showThreeLetterLoc?: boolean
+  /** Books page: Most Recent Day cannot be combined with other filters. */
+  mostRecentDisabled?: boolean
 }
 
-export function BookFilters({ chips, onToggle }: BookFiltersProps) {
+export function BookFilters({
+  chips,
+  onToggle,
+  showThreeLetterLoc = true,
+  mostRecentDisabled = false,
+}: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
 
   return (
@@ -84,12 +98,19 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
 
       {/* Row 2: books-specific filters */}
       <div className="flex flex-wrap gap-2" data-test="book-source-filter-chips">
+        {/* Defaults on so BooksPage can call GET /books/most-recent-day. Forced off
+            and disabled when any other filter is on — those need the full catalog. */}
         <FilterChip
           label="Most Recent Day"
-          active={chips.mostRecent}
+          active={chips.mostRecent && !mostRecentDisabled}
           onClick={() => toggle('mostRecent')}
-          tooltip="Only books added on the most recent day (or with a temporary date-format title)"
+          tooltip={
+            mostRecentDisabled
+              ? 'Most Recent Day cannot be combined with other filters. Turn the others off to use it.'
+              : 'Only books added on the most recent day (or with a temporary date-format title)'
+          }
           dataTest="filter-most-recent"
+          disabled={mostRecentDisabled}
         />
         <FilterChip
           label="Without LOC"
@@ -98,13 +119,15 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           tooltip="Only books without a Library of Congress call number"
           dataTest="filter-without-loc"
         />
-        <FilterChip
-          label="3-Letter Call Numbers"
-          active={chips.threeLetterLoc}
-          onClick={() => toggle('threeLetterLoc')}
-          tooltip="Only books whose LOC call number starts with three uppercase letters"
-          dataTest="filter-3-letter-loc"
-        />
+        {showThreeLetterLoc && (
+          <FilterChip
+            label="3-Letter Call Numbers"
+            active={chips.threeLetterLoc}
+            onClick={() => toggle('threeLetterLoc')}
+            tooltip="Only books whose LOC call number starts with three uppercase letters"
+            dataTest="filter-3-letter-loc"
+          />
+        )}
         <FilterChip
           label="Without Grokipedia"
           active={chips.withoutGrokipedia}

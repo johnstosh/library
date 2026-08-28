@@ -10,8 +10,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { AuthorFilters } from './components/AuthorFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
-import { useAuthors, useMostRecentAuthorSummaries } from '@/api/authors'
-import { applyAuthorChipFilters } from '@/utils/authorChipFilters'
+import { useAuthorAvailability, useAuthorCount, useAuthors, useMostRecentAuthorSummaries } from '@/api/authors'
+import { applyAuthorChipFilters, isAvailabilityChipActive } from '@/utils/authorChipFilters'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
@@ -23,20 +23,34 @@ export function AuthorsPage() {
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleAuthorsChip } = useUiStore()
 
   const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors()
+  const { data: authorCount } = useAuthorCount()
   const {
     data: mostRecentSummaries = [],
     isLoading: mostRecentLoading,
     isFetching: mostRecentFetching,
     error: mostRecentError,
   } = useMostRecentAuthorSummaries(chips.mostRecent)
+  const {
+    data: availability = [],
+    isLoading: availabilityLoading,
+    isFetching: availabilityFetching,
+    error: availabilityError,
+  } = useAuthorAvailability()
+
+  const availabilityByAuthorId = useMemo(() => {
+    const map = new Map<number, (typeof availability)[number]>()
+    availability.forEach((row) => map.set(row.authorId, row))
+    return map
+  }, [availability])
 
   const authors = useMemo(() => {
     if (chips.mostRecent && mostRecentLoading) return []
+    if (isAvailabilityChipActive(chips) && availabilityLoading) return []
     const mostRecentIds = chips.mostRecent
       ? new Set(mostRecentSummaries.map((summary) => summary.id))
       : undefined
-    return applyAuthorChipFilters(allAuthors, chips, mostRecentIds)
-  }, [allAuthors, chips, mostRecentLoading, mostRecentSummaries])
+    return applyAuthorChipFilters(allAuthors, chips, mostRecentIds, availabilityByAuthorId)
+  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips, mostRecentLoading, mostRecentSummaries])
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -75,9 +89,9 @@ export function AuthorsPage() {
         }
       />
 
-      {(error || mostRecentError) && (
+      {(error || mostRecentError || availabilityError) && (
         <ErrorMessage
-          message={`Error loading authors: ${(error ?? mostRecentError)?.message}`}
+          message={`Error loading authors: ${(error ?? mostRecentError ?? availabilityError)?.message}`}
           className="mb-4"
         />
       )}
@@ -91,11 +105,22 @@ export function AuthorsPage() {
           <AuthorBulkActionsToolbar
             selectedIds={selectedIds}
             onClearSelection={handleClearSelection}
+            tableCount={authors.length}
+            totalCount={authorCount?.count}
+            isLoading={
+              isLoading
+              || (chips.mostRecent && mostRecentLoading)
+              || (isAvailabilityChipActive(chips) && availabilityLoading)
+            }
           />
 
           <AuthorTable
             authors={authors}
-            isLoading={isLoading || (chips.mostRecent && mostRecentLoading)}
+            isLoading={
+              isLoading
+              || (chips.mostRecent && mostRecentLoading)
+              || (isAvailabilityChipActive(chips) && availabilityLoading)
+            }
             selectedIds={selectedIds}
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
@@ -107,14 +132,19 @@ export function AuthorsPage() {
         <LoadingOverlay
           show={
             (isFetching && !isLoading) ||
-            (chips.mostRecent && mostRecentFetching && !mostRecentLoading)
+            (chips.mostRecent && mostRecentFetching && !mostRecentLoading) ||
+            (isAvailabilityChipActive(chips) && availabilityFetching && !availabilityLoading)
           }
         />
         <TableSummary
           count={authors.length}
           singular="author"
           plural="authors"
-          isLoading={isLoading || (chips.mostRecent && mostRecentLoading)}
+          isLoading={
+            isLoading
+            || (chips.mostRecent && mostRecentLoading)
+            || (isAvailabilityChipActive(chips) && availabilityLoading)
+          }
         />
       </PageCard>
     </div>

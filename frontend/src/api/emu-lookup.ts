@@ -26,6 +26,7 @@ export function useLookupSingleEmu() {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }
@@ -68,6 +69,7 @@ export function useLookupBulkEmuWithProgress(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }

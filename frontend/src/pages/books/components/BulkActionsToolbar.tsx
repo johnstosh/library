@@ -25,10 +25,14 @@ import { AiIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 import { PiHeadphones } from 'react-icons/pi'
 import { PiGraduationCap } from 'react-icons/pi'
+import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
+  tableCount: number
+  totalCount?: number
+  isLoading?: boolean
 }
 
 export type BookFromImageResult = { id: number; success: boolean; book?: { title: string }; error?: string }
@@ -37,7 +41,13 @@ function progressLabel(idle: string, running: string, isPending: boolean, comple
   return isPending ? `${running} (${completed}/${total})` : idle
 }
 
-export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
+export function BulkActionsToolbar({
+  selectedIds,
+  onClearSelection,
+  tableCount,
+  totalCount,
+  isLoading = false,
+}: BulkActionsToolbarProps) {
   const toast = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
@@ -215,13 +225,25 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
-  if (selectedIds.size === 0) return null
+  if (selectedIds.size === 0) {
+    return (
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
+        <TableCountPlaceholder
+          tableCount={tableCount}
+          totalCount={totalCount}
+          singular="book"
+          plural="books"
+          isLoading={isLoading}
+        />
+      </SelectionToolbar>
+    )
+  }
 
   return (
     <>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected>
+        <div className="flex items-center justify-between gap-4 w-full min-w-0">
+          <div className="flex items-center gap-4 shrink-0">
             <span className="text-sm font-medium text-blue-900">
               {selectedIds.size} {selectedIds.size === 1 ? 'book' : 'books'} selected
             </span>
@@ -234,7 +256,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               Clear Selection
             </Button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0 [&_button]:shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -356,6 +378,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
             <Button
               variant="danger"
               size="sm"
+              className="shrink-0"
               onClick={() => setShowDeleteConfirm(true)}
               data-test="bulk-delete"
             >
@@ -363,7 +386,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
             </Button>
           </div>
         </div>
-      </div>
+      </SelectionToolbar>
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

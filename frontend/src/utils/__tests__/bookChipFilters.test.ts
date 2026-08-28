@@ -6,6 +6,7 @@ import {
   defaultBookChipFilters,
   is3LetterLoc,
   isAnyChipActive,
+  isOtherBookChipActive,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
 
@@ -27,8 +28,18 @@ function chips(overrides: Partial<BookChipFilters>): BookChipFilters {
 
 describe('defaultBookChipFilters', () => {
   it('defaults every chip to off, including mostRecent', () => {
+    // Shared defaults stay off (Search). The Books page turns mostRecent on in
+    // uiStore so it can use the faster GET /books/most-recent-day backend.
     expect(defaultBookChipFilters.mostRecent).toBe(false)
     expect(isAnyChipActive(defaultBookChipFilters)).toBe(false)
+  })
+})
+
+describe('isOtherBookChipActive', () => {
+  it('ignores mostRecent and detects any other chip', () => {
+    expect(isOtherBookChipActive(chips({ mostRecent: true }))).toBe(false)
+    expect(isOtherBookChipActive(chips({ withoutLoc: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ mostRecent: true, electronic: true }))).toBe(true)
   })
 })
 

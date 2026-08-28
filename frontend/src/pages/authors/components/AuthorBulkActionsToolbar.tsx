@@ -10,17 +10,27 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { AuthorEnrichmentResultsModal } from './AuthorEnrichmentResultsModal'
 import { AiIcon, GrokipediaIcon } from '@/components/ui/Icons'
 import type { AuthorEnrichmentResultDto, BulkDeleteResultDto } from '@/types/dtos'
+import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface AuthorBulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
+  tableCount: number
+  totalCount?: number
+  isLoading?: boolean
 }
 
 function progressLabel(idle: string, running: string, isPending: boolean, completed: number, total: number) {
   return isPending ? `${running} (${completed}/${total})` : idle
 }
 
-export function AuthorBulkActionsToolbar({ selectedIds, onClearSelection }: AuthorBulkActionsToolbarProps) {
+export function AuthorBulkActionsToolbar({
+  selectedIds,
+  onClearSelection,
+  tableCount,
+  totalCount,
+  isLoading = false,
+}: AuthorBulkActionsToolbarProps) {
   const toast = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
@@ -83,12 +93,24 @@ export function AuthorBulkActionsToolbar({ selectedIds, onClearSelection }: Auth
     }
   }
 
-  if (selectedIds.size === 0) return null
+  if (selectedIds.size === 0) {
+    return (
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
+        <TableCountPlaceholder
+          tableCount={tableCount}
+          totalCount={totalCount}
+          singular="author"
+          plural="authors"
+          isLoading={isLoading}
+        />
+      </SelectionToolbar>
+    )
+  }
 
   return (
     <>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <div className="flex items-center justify-between gap-4">
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected>
+        <div className="flex items-center justify-between gap-4 w-full min-w-0">
           <div className="flex items-center gap-4 shrink-0">
             <span className="text-sm font-medium text-blue-900">
               {selectedIds.size} {selectedIds.size === 1 ? 'author' : 'authors'} selected
@@ -151,7 +173,7 @@ export function AuthorBulkActionsToolbar({ selectedIds, onClearSelection }: Auth
             </Button>
           </div>
         </div>
-      </div>
+      </SelectionToolbar>
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

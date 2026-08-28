@@ -1211,6 +1211,10 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    public long countBooks() {
+        return bookRepository.count();
+    }
+
     /**
      * Get summaries (id + lastModified) for books without LOC number.
      * Used for cache validation in frontend.

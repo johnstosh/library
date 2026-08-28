@@ -315,6 +315,40 @@ class AuthorServiceTest {
     }
 
     @Test
+    void getAuthorAvailability_mapsPositiveCountsAndDropsAllFalse() {
+        BookRepository.AuthorAvailabilityProjection withFlags = org.mockito.Mockito.mock(BookRepository.AuthorAvailabilityProjection.class);
+        when(withFlags.getAuthorId()).thenReturn(1L);
+        when(withFlags.getYdlPaperCount()).thenReturn(2L);
+        when(withFlags.getYdlEbookCount()).thenReturn(0L);
+        when(withFlags.getYdlAudioCount()).thenReturn(1L);
+        when(withFlags.getEmuPaperCount()).thenReturn(null);
+        when(withFlags.getEmuEbookCount()).thenReturn(3L);
+        when(withFlags.getEmuAudioCount()).thenReturn(0L);
+
+        BookRepository.AuthorAvailabilityProjection none = org.mockito.Mockito.mock(BookRepository.AuthorAvailabilityProjection.class);
+        when(none.getAuthorId()).thenReturn(2L);
+        when(none.getYdlPaperCount()).thenReturn(0L);
+        when(none.getYdlEbookCount()).thenReturn(0L);
+        when(none.getYdlAudioCount()).thenReturn(0L);
+        when(none.getEmuPaperCount()).thenReturn(0L);
+        when(none.getEmuEbookCount()).thenReturn(0L);
+        when(none.getEmuAudioCount()).thenReturn(0L);
+
+        when(bookRepository.countAvailabilityByAuthor()).thenReturn(List.of(withFlags, none));
+
+        var result = authorService.getAuthorAvailability();
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getAuthorId());
+        assertTrue(result.get(0).getHasYdlBook());
+        assertFalse(result.get(0).getHasYdlEbook());
+        assertTrue(result.get(0).getHasYdlAudio());
+        assertFalse(result.get(0).getHasEmuBook());
+        assertTrue(result.get(0).getHasEmuEbook());
+        assertFalse(result.get(0).getHasEmuAudio());
+    }
+
+    @Test
     void deleteBulkAuthors_deletesSomeAndRecordsFailures() {
         when(authorRepository.existsById(1L)).thenReturn(true);
         when(bookRepository.countByAuthorId(1L)).thenReturn(0L);
