@@ -121,6 +121,31 @@ public class SearchUITest {
     }
 
     @Test
+    @DisplayName("Should hide without-* and Not Active Status filters on phone")
+    void testSearchPageHidesWithoutFiltersOnPhone() {
+        BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(375, 667));
+        Page mobilePage = mobileContext.newPage();
+        mobilePage.setDefaultTimeout(20000L);
+        try {
+            mobilePage.navigate(getBaseUrl() + "/search");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+
+            assertThat(mobilePage.locator("[data-test='filter-without-loc']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-genres']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).isHidden();
+
+            assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='filter-with-grokipedia']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).isVisible();
+        } finally {
+            mobileContext.close();
+        }
+    }
+
+    @Test
     @DisplayName("Should search for and display books by title")
     void testSearchForBooks() {
         page.navigate(getBaseUrl() + "/search");

@@ -200,7 +200,12 @@ export function SearchPage() {
 
         {/* Filter Chips — same two rows as Books page */}
         <div className="mt-4" data-test="search-filter-chips">
-          <BookFilters chips={filters} onToggle={handleFilterToggle} showAvailabilityFilters />
+          <BookFilters
+            chips={filters}
+            onToggle={handleFilterToggle}
+            showAvailabilityFilters
+            hideWithoutAndNotActiveOnMobile
+          />
         </div>
 
         {/* Label Filter Buttons */}
