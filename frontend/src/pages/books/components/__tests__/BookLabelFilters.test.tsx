@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { BookLabelFilters } from '../BookLabelFilters'
 
 describe('BookLabelFilters', () => {
-  it('lays genres out alphabetically in columns of three, top to bottom then left to right', () => {
+  it('lists genres alphabetically so phones wrap in A–Z order', () => {
     render(
       <BookLabelFilters
         selectedLabels={[]}
@@ -12,17 +12,10 @@ describe('BookLabelFilters', () => {
       />,
     )
 
-    const columns = screen.getAllByTestId('label-filter-column')
-    const labelsByColumn = columns.map((column) =>
-      Array.from(column.querySelectorAll('button')).map((button) => button.textContent),
-    )
-
-    expect(labelsByColumn[0]).toEqual(['adult', 'adventure', 'biography'])
-    expect(labelsByColumn[1]).toEqual(['childrens', 'classic', 'discernment'])
-    expect(labelsByColumn.every((column) => column.length <= 3)).toBe(true)
-
-    const readingOrder = labelsByColumn.flat()
-    const sorted = [...readingOrder].sort((a, b) => a!.localeCompare(b!))
-    expect(readingOrder).toEqual(sorted)
+    const wrap = screen.getByTestId('label-filter-wrap')
+    const labels = Array.from(wrap.querySelectorAll('button')).map((button) => button.textContent)
+    const sorted = [...labels].sort((a, b) => a!.localeCompare(b!))
+    expect(labels).toEqual(sorted)
+    expect(labels.slice(0, 3)).toEqual(['adult', 'adventure', 'biography'])
   })
 })

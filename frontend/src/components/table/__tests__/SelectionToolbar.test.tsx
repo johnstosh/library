@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { render, screen } from '@testing-library/react'
-import { TableCountPlaceholder } from '../SelectionToolbar'
+import { SelectionSummary, TableCountPlaceholder } from '../SelectionToolbar'
 
 describe('TableCountPlaceholder', () => {
   it('reports table and database counts', () => {
@@ -31,3 +31,15 @@ describe('TableCountPlaceholder', () => {
     expect(screen.getByTestId('database-count')).toHaveTextContent('1 author in the database')
   })
 })
+
+describe('SelectionSummary', () => {
+  it('stacks the count text above Clear Selection', () => {
+    render(
+      <SelectionSummary count={3} singular="book" plural="books" onClear={() => {}} />
+    )
+
+    expect(screen.getByText('3 books selected')).toBeInTheDocument()
+    expect(screen.getByTestId('clear-selection')).toHaveTextContent('Clear Selection')
+  })
+})
+

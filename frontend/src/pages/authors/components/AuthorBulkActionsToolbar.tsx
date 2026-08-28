@@ -10,7 +10,7 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { AuthorEnrichmentResultsModal } from './AuthorEnrichmentResultsModal'
 import { AiIcon, GrokipediaIcon } from '@/components/ui/Icons'
 import type { AuthorEnrichmentResultDto, BulkDeleteResultDto } from '@/types/dtos'
-import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface AuthorBulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -110,21 +110,14 @@ export function AuthorBulkActionsToolbar({
   return (
     <>
       <SelectionToolbar dataTest="bulk-actions-toolbar" selected>
-        <div className="flex items-center justify-between gap-4 w-full min-w-0">
-          <div className="flex items-center gap-4 shrink-0">
-            <span className="text-sm font-medium text-blue-900">
-              {selectedIds.size} {selectedIds.size === 1 ? 'author' : 'authors'} selected
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearSelection}
-              data-test="clear-selection"
-            >
-              Clear Selection
-            </Button>
-          </div>
-          <div className="flex gap-2 overflow-x-auto flex-nowrap">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full min-w-0">
+          <SelectionSummary
+            count={selectedIds.size}
+            singular="author"
+            plural="authors"
+            onClear={onClearSelection}
+          />
+          <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0">
             <Button
               variant="outline"
               size="sm"

@@ -510,9 +510,9 @@ export function DataManagementPage() {
           <div className="flex items-center gap-3">
             <PiTag className="w-8 h-8" />
             <div>
-              <h2 className="text-xl font-bold">Books by Label</h2>
+              <h2 className="text-xl font-bold">Books by Genre</h2>
               <p className="text-sm text-green-100">
-                Number of books tagged with each label, sorted by most popular
+                Number of books tagged with each genre, sorted by most popular
               </p>
             </div>
           </div>
@@ -520,7 +520,7 @@ export function DataManagementPage() {
 
         <div className="p-6">
           {labelCounts.length === 0 ? (
-            <p className="text-gray-500 text-sm">No label data available.</p>
+            <p className="text-gray-500 text-sm">No genre data available.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-test="label-counts-grid">
               {labelCounts.map(({ label, count }) => (

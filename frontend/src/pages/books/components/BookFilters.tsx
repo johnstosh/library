@@ -139,7 +139,7 @@ export function BookFilters({
           label="Without Genres"
           active={chips.withoutGenres}
           onClick={() => toggle('withoutGenres')}
-          tooltip="Only books with no genre tags assigned"
+          tooltip="Only books with no genres assigned"
           dataTest="filter-without-genres"
         />
         <FilterChip

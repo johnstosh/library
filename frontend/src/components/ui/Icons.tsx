@@ -7,6 +7,7 @@ import {
   PiBooks,
   PiBookOpen,
   PiCheckCircle,
+  PiClock,
   PiCopy,
   PiEye,
   PiHeadphones,
@@ -86,4 +87,25 @@ export function GrokipediaIcon({ className }: IconProps) {
       G
     </span>
   )
+}
+
+/** Script capital Y for Ypsilanti District Library. */
+export function YdlIcon({ className }: IconProps) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center justify-center w-5 h-5 text-[17px] leading-none italic',
+        className
+      )}
+      style={{ fontFamily: 'cursive, Georgia, "Times New Roman", serif' }}
+      aria-hidden
+    >
+      Y
+    </span>
+  )
+}
+
+/** Analog clock for EMU Halle Library. */
+export function EmuIcon({ className }: IconProps) {
+  return <PiClock className={clsx(sizeClass, className)} />
 }

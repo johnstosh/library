@@ -561,7 +561,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         const newTags = [...new Set([...existingTags, ...result.suggestedGenres])]
         setFormData({ ...formData, tagsList: newTags.join(', ') })
         setHasUnsavedChanges(true)
-        setSuccessMessage(`Added ${result.suggestedGenres.length} suggested genre(s) to tags`)
+        setSuccessMessage(`Added ${result.suggestedGenres.length} suggested genre(s)`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lookup genres')

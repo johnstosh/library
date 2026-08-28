@@ -242,7 +242,7 @@ export function BookViewPage() {
               </div>
               {book.tagsList && book.tagsList.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Tags</p>
+                  <p className="text-sm font-medium text-gray-500">Genres</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {book.tagsList.map((tag) => (
                       <StatusBadge

@@ -21,11 +21,9 @@ import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
-import { AiIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
-import { PiHeadphones } from 'react-icons/pi'
-import { PiGraduationCap } from 'react-icons/pi'
-import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -242,20 +240,13 @@ export function BulkActionsToolbar({
   return (
     <>
       <SelectionToolbar dataTest="bulk-actions-toolbar" selected>
-        <div className="flex items-center justify-between gap-4 w-full min-w-0">
-          <div className="flex items-center gap-4 shrink-0">
-            <span className="text-sm font-medium text-blue-900">
-              {selectedIds.size} {selectedIds.size === 1 ? 'book' : 'books'} selected
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearSelection}
-              data-test="clear-selection"
-            >
-              Clear Selection
-            </Button>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full min-w-0">
+          <SelectionSummary
+            count={selectedIds.size}
+            singular="book"
+            plural="books"
+            onClear={onClearSelection}
+          />
           <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0 [&_button]:shrink-0">
             <Button
               variant="outline"
@@ -347,7 +338,7 @@ export function BulkActionsToolbar({
               onClick={handleYdlLookup}
               isLoading={lookupYdl.isPending}
               disabled={lookupYdl.isPending}
-              leftIcon={<PiHeadphones />}
+              leftIcon={<YdlIcon />}
               data-test="bulk-lookup-ydl"
             >
               {progressLabel(
@@ -364,7 +355,7 @@ export function BulkActionsToolbar({
               onClick={handleEmuLookup}
               isLoading={lookupEmu.isPending}
               disabled={lookupEmu.isPending}
-              leftIcon={<PiGraduationCap />}
+              leftIcon={<EmuIcon />}
               data-test="bulk-lookup-emu"
             >
               {progressLabel(
