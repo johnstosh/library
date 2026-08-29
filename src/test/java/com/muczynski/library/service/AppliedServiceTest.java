@@ -132,6 +132,30 @@ class AppliedServiceTest {
     }
 
     @Test
+    void getAllApplied_returnsOnlyApplicationsAwaitingReview() {
+        Applied pending = new Applied();
+        pending.setId(1L);
+        pending.setStatus(Applied.ApplicationStatus.PENDING);
+        Applied approved = new Applied();
+        approved.setId(2L);
+        approved.setStatus(Applied.ApplicationStatus.APPROVED);
+        Applied question = new Applied();
+        question.setId(3L);
+        question.setStatus(Applied.ApplicationStatus.QUESTION);
+        Applied notApproved = new Applied();
+        notApproved.setId(4L);
+        notApproved.setStatus(Applied.ApplicationStatus.NOT_APPROVED);
+        Applied unset = new Applied();
+        unset.setId(5L);
+        unset.setStatus(null);
+        when(appliedRepository.findAll()).thenReturn(List.of(pending, approved, question, notApproved, unset));
+
+        List<Applied> open = appliedService.getAllApplied();
+
+        assertEquals(List.of(1L, 3L, 5L), open.stream().map(Applied::getId).toList());
+    }
+
+    @Test
     void approveApplication_createsUserAndMarksApproved() {
         Applied applied = new Applied();
         applied.setId(1L);

@@ -24,8 +24,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -213,5 +215,26 @@ class AppliedControllerIntegrationTest {
 
         Applied stillPending = appliedRepository.findById(saved.getId()).orElseThrow();
         assertThat(stillPending.getStatus()).isEqualTo(Applied.ApplicationStatus.PENDING);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testApprove_RemovesApplicationFromPendingList() throws Exception {
+        Applied applied = new Applied();
+        applied.setName("Approve Me");
+        applied.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        applied.setStatus(Applied.ApplicationStatus.PENDING);
+        Applied saved = appliedRepository.save(applied);
+
+        mockMvc.perform(post("/api/applied/" + saved.getId() + "/approve"))
+                .andExpect(status().isOk());
+
+        Applied approved = appliedRepository.findById(saved.getId()).orElseThrow();
+        assertThat(approved.getStatus()).isEqualTo(Applied.ApplicationStatus.APPROVED);
+        assertThat(userRepository.findAllByUsernameOrderByIdAsc("Approve Me")).isNotEmpty();
+
+        mockMvc.perform(get("/api/applied"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name == 'Approve Me')]").isEmpty());
     }
 }

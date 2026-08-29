@@ -107,12 +107,7 @@ class AppliedControllerTest {
         applied1.setName("user1");
         applied1.setStatus(ApplicationStatus.PENDING);
 
-        Applied applied2 = new Applied();
-        applied2.setId(2L);
-        applied2.setName("user2");
-        applied2.setStatus(ApplicationStatus.APPROVED);
-
-        when(appliedService.getAllApplied()).thenReturn(List.of(applied1, applied2));
+        when(appliedService.getAllApplied()).thenReturn(List.of(applied1));
 
         // Act & Assert
         given()
@@ -121,11 +116,9 @@ class AppliedControllerTest {
             .get("/api/applied")
         .then()
             .statusCode(200)
-            .body("$", hasSize(2))
+            .body("$", hasSize(1))
             .body("[0].name", equalTo("user1"))
-            .body("[0].status", equalTo("PENDING"))
-            .body("[1].name", equalTo("user2"))
-            .body("[1].status", equalTo("APPROVED"));
+            .body("[0].status", equalTo("PENDING"));
     }
 
     @Test

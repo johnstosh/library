@@ -111,4 +111,31 @@ public class ApplicationsUITest {
 
         assertThat(page.locator("[data-test='approve-application-1']")).isVisible();
     }
+
+    @Test
+    @DisplayName("Should remove an application from the list after approval")
+    void testApproveRemovesApplicationFromList() {
+        loginAsLibrarian();
+
+        page.click("[data-test='nav-applications']");
+        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("[data-test='approve-application-2']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+        assertThat(page.locator("text=Fresh Applicant").first()).isVisible();
+
+        page.click("[data-test='approve-application-2']");
+        page.waitForSelector("[data-test='confirm-dialog-confirm']", new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='confirm-dialog-confirm']");
+
+        page.waitForSelector("[data-test='approve-application-2']", new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.HIDDEN)
+                .setTimeout(10000L));
+        assertThat(page.locator("[data-test='confirm-dialog-confirm']")).not().isVisible();
+        assertThat(page.locator("[data-test='approve-application-1']")).isVisible();
+        assertThat(page.locator("text=Existing Applicant").first()).isVisible();
+    }
 }

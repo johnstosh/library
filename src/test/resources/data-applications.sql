@@ -31,6 +31,9 @@ INSERT INTO users_roles (user_id, role_id) VALUES (2, 1);
 INSERT INTO applied (id, name, email, password, status)
 VALUES (1, 'Existing Applicant', 'existing@example.com', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'PENDING');
 
+INSERT INTO applied (id, name, email, password, status)
+VALUES (2, 'Fresh Applicant', 'fresh@example.com', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'PENDING');
+
 SELECT setval('role_id_seq', (SELECT MAX(id) FROM role));
 SELECT setval('library_id_seq', (SELECT MAX(id) FROM library));
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));

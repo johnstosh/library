@@ -76,7 +76,8 @@ Management interface for reviewing and processing library card applications.
    - Password from application (already bcrypt-hashed)
    - Authority: `USER`
 3. Application status changed to `APPROVED`
-4. User can now log in with their credentials
+4. The application is omitted from GET `/api/applied` (the pending queue) so it leaves the Applications list
+5. User can now log in with their credentials
 
 ### 4. Library Card Design (User Settings)
 

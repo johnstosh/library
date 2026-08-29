@@ -39,7 +39,7 @@ Submit a library card application (public endpoint).
 ---
 
 ### GET /api/applied
-Returns all library card applications.
+Returns library card applications awaiting review (`PENDING` and `QUESTION`). Approved and not-approved applications are omitted so they disappear from the librarian queue after approval.
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
