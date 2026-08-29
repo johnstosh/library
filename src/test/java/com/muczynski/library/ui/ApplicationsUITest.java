@@ -137,5 +137,77 @@ public class ApplicationsUITest {
         assertThat(page.locator("[data-test='confirm-dialog-confirm']")).not().isVisible();
         assertThat(page.locator("[data-test='approve-application-1']")).isVisible();
         assertThat(page.locator("text=Existing Applicant").first()).isVisible();
+        assertThat(page.locator("text=Approved Applicant")).not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Should default to applications that still need approval")
+    void testDefaultFilterShowsApplicationsNeedingApproval() {
+        loginAsLibrarian();
+
+        page.click("[data-test='nav-applications']");
+        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("[data-test='filter-needs-approval']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+        assertThat(page.locator("[data-test='filter-needs-approval']")).hasAttribute("aria-pressed", "true");
+
+        assertThat(page.locator("text=Existing Applicant").first()).isVisible();
+        assertThat(page.locator("text=Fresh Applicant").first()).isVisible();
+        assertThat(page.locator("text=Question Applicant").first()).isVisible();
+        assertThat(page.locator("text=Approved Applicant")).not().isVisible();
+        assertThat(page.locator("text=Declined Applicant")).not().isVisible();
+        assertThat(page.locator("[data-test='approve-application-3']")).not().isVisible();
+        assertThat(page.locator("[data-test='not-approve-application-1']")).isVisible();
+        assertThat(page.locator("[data-test='question-application-1']")).isVisible();
+        assertThat(page.locator("[data-test='reopen-application-5']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show approved applications when that filter is selected")
+    void testApprovedFilterShowsApprovedApplications() {
+        loginAsLibrarian();
+
+        page.click("[data-test='nav-applications']");
+        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("[data-test='filter-needs-approval']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='filter-needs-approval']");
+        page.click("[data-test='filter-approved']");
+
+        assertThat(page.locator("text=Approved Applicant").first()).isVisible();
+        assertThat(page.locator("[data-test='application-status-3']")).containsText("Approved");
+        assertThat(page.locator("text=Fresh Applicant")).not().isVisible();
+        assertThat(page.locator("[data-test='approve-application-3']")).not().isVisible();
+        assertThat(page.locator("[data-test='delete-application-3']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should decline an application and hide it from the default queue")
+    void testDoNotApproveRemovesApplicationFromDefaultFilter() {
+        loginAsLibrarian();
+
+        page.click("[data-test='nav-applications']");
+        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("[data-test='not-approve-application-2']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='not-approve-application-2']");
+        page.waitForSelector("[data-test='confirm-dialog-confirm']", new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='confirm-dialog-confirm']");
+
+        page.waitForSelector("[data-test='approve-application-2']", new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.HIDDEN)
+                .setTimeout(10000L));
+        assertThat(page.locator("text=Fresh Applicant")).not().isVisible();
+        assertThat(page.locator("[data-test='approve-application-1']")).isVisible();
     }
 }

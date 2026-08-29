@@ -37,15 +37,7 @@ public class AppliedService {
     private ApplicationEmailService applicationEmailService;
 
     public List<Applied> getAllApplied() {
-        return appliedRepository.findAll().stream()
-                .filter(applied -> isAwaitingReview(applied.getStatus()))
-                .toList();
-    }
-
-    static boolean isAwaitingReview(Applied.ApplicationStatus status) {
-        return status == null
-                || status == Applied.ApplicationStatus.PENDING
-                || status == Applied.ApplicationStatus.QUESTION;
+        return appliedRepository.findAll();
     }
 
     public Applied getAppliedById(Long id) {

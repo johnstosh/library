@@ -39,7 +39,7 @@ Submit a library card application (public endpoint).
 ---
 
 ### GET /api/applied
-Returns library card applications awaiting review (`PENDING` and `QUESTION`). Approved and not-approved applications are omitted so they disappear from the librarian queue after approval.
+Returns all library card applications. The Applications page filters this list in the browser (Needs approval is on by default).
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
@@ -84,7 +84,7 @@ Updates an application's status.
 **Request Body:** Applied entity with updated fields
 ```json
 {
-  "status": "REJECTED"
+  "status": "NOT_APPROVED"
 }
 ```
 
@@ -100,8 +100,10 @@ Deletes a library card application.
 **Response:** 204 No Content or 404 if not found
 
 **Use Case:**
-- Reject an application by deleting it
-- Clean up old approved applications
+- Remove an application record
+- Clean up old approved or declined applications
+
+Prefer **Do not approve** (PUT status `NOT_APPROVED`) when declining an application so the record remains available to filters.
 
 ---
 

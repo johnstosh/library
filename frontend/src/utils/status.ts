@@ -61,6 +61,36 @@ export function photoStatusTone(status: string | null | undefined): StatusTone {
   }
 }
 
+export function applicationStatusTone(status: string | null | undefined): StatusTone {
+  switch (status) {
+    case 'APPROVED':
+      return 'success'
+    case 'QUESTION':
+      return 'info'
+    case 'NOT_APPROVED':
+    case 'REJECTED':
+      return 'danger'
+    case 'PENDING':
+    default:
+      return 'warning'
+  }
+}
+
+export function applicationStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case 'APPROVED':
+      return 'Approved'
+    case 'QUESTION':
+      return 'Question'
+    case 'NOT_APPROVED':
+    case 'REJECTED':
+      return 'Not approved'
+    case 'PENDING':
+    default:
+      return 'Pending'
+  }
+}
+
 export function jobStatusTone(status: string | null | undefined): StatusTone {
   switch (status) {
     case 'SUCCESS':
