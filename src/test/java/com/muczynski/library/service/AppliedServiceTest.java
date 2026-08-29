@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -128,5 +129,46 @@ class AppliedServiceTest {
 
         assertThrows(LibraryException.class, () -> appliedService.createApplied(incoming));
         verify(applicationEmailService, never()).notifyPendingApplication(any());
+    }
+
+    @Test
+    void approveApplication_createsUserAndMarksApproved() {
+        Applied applied = new Applied();
+        applied.setId(1L);
+        applied.setName("Jane Doe");
+        applied.setStatus(Applied.ApplicationStatus.PENDING);
+        when(appliedRepository.findById(1L)).thenReturn(Optional.of(applied));
+
+        appliedService.approveApplication(1L);
+
+        verify(userService).createUserFromApplied(applied);
+        ArgumentCaptor<Applied> captor = ArgumentCaptor.forClass(Applied.class);
+        verify(appliedRepository).save(captor.capture());
+        assertEquals(Applied.ApplicationStatus.APPROVED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void approveApplication_duplicateUsernameIsReported() {
+        Applied applied = new Applied();
+        applied.setId(1L);
+        applied.setName("Jane Doe");
+        when(appliedRepository.findById(1L)).thenReturn(Optional.of(applied));
+        when(userService.createUserFromApplied(applied))
+                .thenThrow(new LibraryException("A user named 'Jane Doe' already exists"));
+
+        LibraryException ex = assertThrows(LibraryException.class,
+                () -> appliedService.approveApplication(1L));
+        assertEquals("A user named 'Jane Doe' already exists", ex.getMessage());
+        verify(appliedRepository, never()).save(any());
+    }
+
+    @Test
+    void approveApplication_missingApplicationThrows() {
+        when(appliedRepository.findById(99L)).thenReturn(Optional.empty());
+
+        LibraryException ex = assertThrows(LibraryException.class,
+                () -> appliedService.approveApplication(99L));
+        assertEquals("Application not found: 99", ex.getMessage());
+        verify(userService, never()).createUserFromApplied(any());
     }
 }

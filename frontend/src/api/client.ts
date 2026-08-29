@@ -1,5 +1,31 @@
 // (c) Copyright 2025 by Muczynski
 
+export function parseApiErrorMessage(errorText: string, fallback = 'An error occurred'): string {
+  if (!errorText) {
+    return fallback
+  }
+
+  try {
+    const errorData = JSON.parse(errorText) as unknown
+    if (typeof errorData === 'string' && errorData.trim()) {
+      return errorData
+    }
+    if (errorData && typeof errorData === 'object') {
+      const record = errorData as { message?: unknown; error?: unknown }
+      if (typeof record.message === 'string' && record.message.trim()) {
+        return record.message
+      }
+      if (typeof record.error === 'string' && record.error.trim()) {
+        return record.error
+      }
+    }
+  } catch {
+    // Response was not JSON; use the raw body below.
+  }
+
+  return errorText
+}
+
 export class ApiError extends Error {
   status: number
   statusText: string
@@ -63,14 +89,7 @@ export async function apiClient<T>(
       const errorText = await response.text()
       let errorMessage = 'An error occurred'
 
-      // Try to parse JSON error response
-      try {
-        const errorData = JSON.parse(errorText)
-        errorMessage = errorData.message || errorText
-      } catch {
-        // If not JSON, use raw text
-        errorMessage = errorText || errorMessage
-      }
+      errorMessage = parseApiErrorMessage(errorText, errorMessage)
 
       throw new ApiError(
         errorMessage,

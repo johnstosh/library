@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.controller.payload.RegistrationRequest;
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.domain.Applied.ApplicationStatus;
+import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.AppliedService;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -320,6 +321,22 @@ class AppliedControllerTest {
         .when()
             .post("/api/applied/999/approve")
         .then()
-            .statusCode(500);
+            .statusCode(500)
+            .body(containsString("Application not found"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testApproveApplication_UsernameAlreadyExists() {
+        doThrow(new LibraryException("A user named 'existing' already exists"))
+                .when(appliedService).approveApplication(1L);
+
+        given()
+            .auth().none()
+        .when()
+            .post("/api/applied/1/approve")
+        .then()
+            .statusCode(500)
+            .body(containsString("A user named 'existing' already exists"));
     }
 }

@@ -5,21 +5,27 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.controller.payload.RegistrationRequest;
 import com.muczynski.library.domain.Applied;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.repository.AppliedRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -37,6 +43,9 @@ class AppliedControllerIntegrationTest {
 
     @Autowired
     private AppliedRepository appliedRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
@@ -180,5 +189,29 @@ class AppliedControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testApprove_DuplicateUsernameReturnsErrorMessage() throws Exception {
+        User existing = new User();
+        existing.setUserIdentifier(UUID.randomUUID().toString());
+        existing.setUsername("Dup User");
+        existing.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        existing.setSsoProvider("local");
+        userRepository.save(existing);
+
+        Applied applied = new Applied();
+        applied.setName("Dup User");
+        applied.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        applied.setStatus(Applied.ApplicationStatus.PENDING);
+        Applied saved = appliedRepository.save(applied);
+
+        mockMvc.perform(post("/api/applied/" + saved.getId() + "/approve"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("A user named 'Dup User' already exists")));
+
+        Applied stillPending = appliedRepository.findById(saved.getId()).orElseThrow();
+        assertThat(stillPending.getStatus()).isEqualTo(Applied.ApplicationStatus.PENDING);
     }
 }

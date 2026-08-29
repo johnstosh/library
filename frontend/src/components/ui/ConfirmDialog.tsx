@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { Modal } from './Modal'
 import { Button } from './Button'
+import { ErrorMessage } from './ErrorMessage'
 
 export interface ConfirmDialogProps {
   isOpen: boolean
@@ -8,6 +9,7 @@ export interface ConfirmDialogProps {
   onConfirm: () => void
   title: string
   message: string
+  error?: string
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'primary'
@@ -22,6 +24,7 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
+  error,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'primary',
@@ -52,6 +55,9 @@ export function ConfirmDialog({
       }
     >
       <p className="text-gray-700">{message}</p>
+      {error && (
+        <ErrorMessage message={error} className="mt-4" data-test="confirm-dialog-error" />
+      )}
     </Modal>
   )
 }

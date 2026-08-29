@@ -65,6 +65,7 @@ Management interface for reviewing and processing library card applications.
 - Delete applications (reject)
 - Displays applicant name and status
 - Confirmation dialogs for approve/delete actions
+- Approval and delete failures are shown in the confirmation dialog, as a page-level error, and as a toast — including the server reason (for example, when a user with that name already exists)
 
 **Frontend**: `frontend/src/pages/library-cards/ApplicationsPage.tsx`
 

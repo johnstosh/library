@@ -20,14 +20,39 @@ import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useToast } from '@/hooks/useToast'
 
+function toActionError(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message.trim() ? error.message : fallback
+}
+
 export function ApplicationsPage() {
   const toast = useToast()
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [actionError, setActionError] = useState('')
 
   const { data: applications = [], isLoading, isFetching, error } = useApplications()
   const approveApplication = useApproveApplication()
   const deleteApplication = useDeleteApplication()
+
+  const openApproveDialog = (id: number) => {
+    setActionError('')
+    setApprovingId(id)
+  }
+
+  const closeApproveDialog = () => {
+    if (approveApplication.isPending) return
+    setApprovingId(null)
+  }
+
+  const openDeleteDialog = (id: number) => {
+    setActionError('')
+    setDeletingId(id)
+  }
+
+  const closeDeleteDialog = () => {
+    if (deleteApplication.isPending) return
+    setDeletingId(null)
+  }
 
   const handleApprove = async () => {
     if (approvingId === null) return
@@ -35,9 +60,12 @@ export function ApplicationsPage() {
     try {
       await approveApplication.mutateAsync(approvingId)
       setApprovingId(null)
+      setActionError('')
     } catch (error) {
       console.error('Failed to approve application:', error)
-      toast.error('Failed to approve application. Please try again.')
+      const message = toActionError(error, 'Failed to approve application. Please try again.')
+      setActionError(message)
+      toast.error(message)
     }
   }
 
@@ -47,9 +75,12 @@ export function ApplicationsPage() {
     try {
       await deleteApplication.mutateAsync(deletingId)
       setDeletingId(null)
+      setActionError('')
     } catch (error) {
       console.error('Failed to delete application:', error)
-      toast.error('Failed to delete application. Please try again.')
+      const message = toActionError(error, 'Failed to delete application. Please try again.')
+      setActionError(message)
+      toast.error(message)
     }
   }
 
@@ -93,6 +124,10 @@ export function ApplicationsPage() {
         <ErrorMessage message={`Error loading applications: ${error.message}`} className="mb-4" />
       )}
 
+      {actionError && (
+        <ErrorMessage message={actionError} className="mb-4" data-test="application-action-error" />
+      )}
+
       <PageCard padding={false} className="relative">
         <div className="p-4">
           <DataTable
@@ -104,7 +139,7 @@ export function ApplicationsPage() {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => setApprovingId(app.id)}
+                  onClick={() => openApproveDialog(app.id)}
                   leftIcon={<PiCheckCircle />}
                   data-test={`approve-application-${app.id}`}
                 >
@@ -114,7 +149,7 @@ export function ApplicationsPage() {
                   icon={<DeleteIcon />}
                   label="Delete"
                   tone="danger"
-                  onClick={() => setDeletingId(app.id)}
+                  onClick={() => openDeleteDialog(app.id)}
                   data-test={`delete-application-${app.id}`}
                 />
               </>
@@ -146,10 +181,11 @@ export function ApplicationsPage() {
       {/* Approve Confirmation */}
       <ConfirmDialog
         isOpen={approvingId !== null}
-        onClose={() => setApprovingId(null)}
+        onClose={closeApproveDialog}
         onConfirm={handleApprove}
         title="Approve Application"
         message={`Approve library card application for "${applications.find(app => app.id === approvingId)?.name}"? This will create a new user account.`}
+        error={approvingId !== null ? actionError : undefined}
         confirmText="Approve"
         variant="primary"
         isLoading={approveApplication.isPending}
@@ -158,10 +194,11 @@ export function ApplicationsPage() {
       {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deletingId !== null}
-        onClose={() => setDeletingId(null)}
+        onClose={closeDeleteDialog}
         onConfirm={handleDelete}
         title="Delete Application"
         message={`Delete application for "${deletingApplication?.name}"? This action cannot be undone.`}
+        error={deletingId !== null ? actionError : undefined}
         confirmText="Delete"
         variant="danger"
         isLoading={deleteApplication.isPending}

@@ -123,7 +123,7 @@ Approves a library card application and creates a user account.
 
 **Error Responses:**
 - 404: Application not found
-- 500: User creation failed (e.g., username already exists)
+- 500: User creation failed (e.g., a user named 'Jane Doe' already exists). The response body contains the reason so the librarian UI can display it.
 
 ---
 
