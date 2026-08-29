@@ -299,22 +299,22 @@ Protected routes with authentication and role-based access. All CRUD operations 
   {/* Public routes */}
   <Route path="/login" element={<LoginPage />} />
   <Route path="/search" element={<SearchPage />} />
+  <Route path="/books/:id" element={<BookViewPage />} />
+  <Route path="/authors/:id" element={<AuthorViewPage />} />
 
   {/* Protected routes (authenticated users) */}
   <Route element={<ProtectedRoute />}>
     <Route element={<AppLayout />}>
       <Route path="/" element={<Navigate to="/books" replace />} />
 
-      {/* Books - URL-based CRUD */}
+      {/* Books - URL-based CRUD (list/create/edit require login) */}
       <Route path="/books" element={<BooksPage />} />
       <Route path="/books/new" element={<BookNewPage />} />
-      <Route path="/books/:id" element={<BookViewPage />} />
       <Route path="/books/:id/edit" element={<BookEditPage />} />
 
-      {/* Authors - URL-based CRUD */}
+      {/* Authors - URL-based CRUD (list/create/edit require login) */}
       <Route path="/authors" element={<AuthorsPage />} />
       <Route path="/authors/new" element={<AuthorNewPage />} />
-      <Route path="/authors/:id" element={<AuthorViewPage />} />
       <Route path="/authors/:id/edit" element={<AuthorEditPage />} />
 
       {/* Loans - URL-based CRUD */}

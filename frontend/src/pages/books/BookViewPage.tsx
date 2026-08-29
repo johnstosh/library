@@ -17,7 +17,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useIsLibrarian } from '@/stores/authStore'
+import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
@@ -31,6 +31,7 @@ export function BookViewPage() {
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const isLibrarian = useIsLibrarian()
+  const isAuthenticated = useIsAuthenticated()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -74,7 +75,7 @@ export function BookViewPage() {
   }
 
   const handleBack = () => {
-    navigate('/books')
+    navigate(isAuthenticated ? '/books' : '/search')
   }
 
   if (isLoading) {
@@ -87,16 +88,22 @@ export function BookViewPage() {
         title="Book Not Found"
         entityLabel="book"
         onBack={handleBack}
-        backLabel="Return to Books"
+        backLabel={isAuthenticated ? 'Return to Books' : 'Return to Search'}
       />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <BackLink onClick={handleBack} data-test="back-to-books">
-        Back to Books
-      </BackLink>
+      {isAuthenticated ? (
+        <BackLink onClick={handleBack} data-test="back-to-books">
+          Back to Books
+        </BackLink>
+      ) : (
+        <BackLink onClick={handleBack} data-test="back-to-search">
+          Back to Search
+        </BackLink>
+      )}
 
       <PageCard padding={false}>
         {/* Header */}

@@ -15,6 +15,7 @@ import {
   useMovePhotoRight,
 } from '@/api/photos'
 import { PiUpload } from 'react-icons/pi'
+import { useIsLibrarian } from '@/stores/authStore'
 
 interface PhotoSectionProps {
   entityType: 'book' | 'author'
@@ -24,6 +25,7 @@ interface PhotoSectionProps {
 
 export function PhotoSection({ entityType, entityId, entityName }: PhotoSectionProps) {
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const isLibrarian = useIsLibrarian()
 
   // Fetch photos based on entity type
   const { data: bookPhotos = [], isLoading: loadingBookPhotos } = useBookPhotos(
@@ -106,14 +108,16 @@ export function PhotoSection({ entityType, entityId, entityName }: PhotoSectionP
             {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
           </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowUploadModal(true)}
-          leftIcon={<PiUpload />}
-          data-test="upload-photo-button"
-        >
-          Upload Photo
-        </Button>
+        {isLibrarian && (
+          <Button
+            variant="primary"
+            onClick={() => setShowUploadModal(true)}
+            leftIcon={<PiUpload />}
+            data-test="upload-photo-button"
+          >
+            Upload Photo
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -129,6 +133,7 @@ export function PhotoSection({ entityType, entityId, entityName }: PhotoSectionP
           onMoveLeft={handleMoveLeft}
           onMoveRight={handleMoveRight}
           isLoading={isMutating}
+          canEdit={isLibrarian}
         />
       )}
 

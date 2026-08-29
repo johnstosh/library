@@ -85,6 +85,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/apply" element={<ApplyForCardPage />} />
+            <Route path="/books/:id" element={<BookViewPage />} />
+            <Route path="/authors/:id" element={<AuthorViewPage />} />
           </Route>
 
           {/* Public photo view (no navigation, full screen) */}
@@ -96,11 +98,9 @@ function App() {
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/books" element={<BooksPage />} />
               <Route path="/books/new" element={<BookNewPage />} />
-              <Route path="/books/:id" element={<BookViewPage />} />
               <Route path="/books/:id/edit" element={<BookEditPage />} />
               <Route path="/authors" element={<AuthorsPage />} />
               <Route path="/authors/new" element={<AuthorNewPage />} />
-              <Route path="/authors/:id" element={<AuthorViewPage />} />
               <Route path="/authors/:id/edit" element={<AuthorEditPage />} />
               <Route path="/loans" element={<LoansPage />} />
               <Route path="/loans/new" element={<LoanNewPage />} />

@@ -9,6 +9,7 @@ import { bookStatusTone } from '@/utils/status'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { IconButton } from '@/components/ui/IconButton'
 import { BookIcon, EditIcon } from '@/components/ui/Icons'
+import { useIsLibrarian } from '@/stores/authStore'
 
 interface AuthorBooksTableProps {
   books: BookDto[]
@@ -17,6 +18,7 @@ interface AuthorBooksTableProps {
 
 export function AuthorBooksTable({ books, isLoading = false }: AuthorBooksTableProps) {
   const navigate = useNavigate()
+  const isLibrarian = useIsLibrarian()
 
   const columns: Column<BookDto>[] = [
     {
@@ -71,14 +73,16 @@ export function AuthorBooksTable({ books, isLoading = false }: AuthorBooksTableP
               onClick={(e) => e.stopPropagation()}
               data-test={`author-book-view-${book.id}`}
             />
-            <IconButton
-              to={`/books/${book.id}/edit`}
-              icon={<EditIcon />}
-              label="Edit"
-              tone="primary"
-              onClick={(e) => e.stopPropagation()}
-              data-test={`author-book-edit-${book.id}`}
-            />
+            {isLibrarian && (
+              <IconButton
+                to={`/books/${book.id}/edit`}
+                icon={<EditIcon />}
+                label="Edit"
+                tone="primary"
+                onClick={(e) => e.stopPropagation()}
+                data-test={`author-book-edit-${book.id}`}
+              />
+            )}
           </>
         )}
         isLoading={isLoading}
