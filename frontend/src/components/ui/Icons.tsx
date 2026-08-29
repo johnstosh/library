@@ -89,19 +89,40 @@ export function GrokipediaIcon({ className }: IconProps) {
   )
 }
 
-/** Script capital Y for Ypsilanti District Library. */
+/**
+ * Script capital Y for Ypsilanti District Library.
+ * Drawn as an SVG (not a font glyph) so it matches on web and phone:
+ * red left arm, yellow right arm, blue stem.
+ */
 export function YdlIcon({ className }: IconProps) {
   return (
-    <span
-      className={clsx(
-        'inline-flex items-center justify-center w-5 h-5 text-[17px] leading-none italic',
-        className
-      )}
-      style={{ fontFamily: 'cursive, Georgia, "Times New Roman", serif' }}
+    <svg
+      className={clsx(sizeClass, className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      overflow="visible"
       aria-hidden
+      data-test="ydl-icon"
     >
-      Y
-    </span>
+      <path
+        d="M4.5 8C4.2 4.6 8.6 3.4 10 6.9C10.9 8.9 11.5 10.2 12 11.2"
+        stroke="#E03131"
+        strokeWidth="2.85"
+        strokeLinecap="round"
+      />
+      <path
+        d="M20.4 4.2C18.6 2.8 15.4 4.8 14.4 7.2C13.6 8.8 12.8 10.2 12 11.2"
+        stroke="#E6B422"
+        strokeWidth="2.85"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 11.2C12.5 15 11.9 18.8 9.9 21C8.4 22.2 6 21.4 5.7 19.2"
+        stroke="#2563EB"
+        strokeWidth="2.85"
+        strokeLinecap="round"
+      />
+    </svg>
   )
 }
 
