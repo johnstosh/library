@@ -2,10 +2,12 @@
 import { create } from 'zustand'
 import {
   defaultBookChipFilters,
+  isOtherBookChipActive,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
 import {
   defaultAuthorChipFilters,
+  isOtherAuthorChipActive,
   type AuthorChipFilters,
 } from '@/utils/authorChipFilters'
 import {
@@ -28,8 +30,9 @@ type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
  * Independent boolean chip filters for the Books page.
  * All active chips are AND-ed together — a book must satisfy every active chip.
  *
- * Row 1: inLibrary, electronic, freeText, audio
- * Row 2: mostRecent, withoutLoc, threeLetterLoc, withoutGrokipedia,
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 2: inLibrary, electronic, freeText, audio
+ * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  */
 export type BooksChips = BookChipFilters
@@ -37,8 +40,15 @@ export type AuthorsChips = AuthorChipFilters
 export type LoansChips = LoanChipFilters
 export type UsersChips = UserChipFilters
 
-const defaultBooksChips: BooksChips = { ...defaultBookChipFilters }
-const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters }
+// Most Recent Day starts on so the books list hits GET /books/most-recent-day
+// instead of GET /books/summaries. That filter endpoint is a much smaller query
+// and is the fast path for the default books list. Search keeps the shared
+// defaultBookChipFilters (all chips off).
+const defaultBooksChips: BooksChips = { ...defaultBookChipFilters, mostRecent: true }
+// Most Recent Day starts on so the authors list hits GET /authors/most-recent-day
+// instead of GET /authors/summaries. That filter endpoint is a much smaller query
+// and is the fast path for the default authors list.
+const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters, mostRecent: true }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
 
@@ -118,23 +128,52 @@ export const useUiStore = create<UiState>((set) => ({
   toggleBooksLabel: (label) =>
     set((state) => {
       const current = state.booksLabelFilter
-      const next = current.includes(label) ? current.filter((l) => l !== label) : [...current, label]
-      return { booksLabelFilter: next }
+      const nextLabels = current.includes(label)
+        ? current.filter((l) => l !== label)
+        : [...current, label]
+      const othersOn = nextLabels.length > 0 || isOtherBookChipActive(state.booksChips)
+      // Most Recent Day cannot be combined with other filters (client-side AND
+      // on the small most-recent-day result set is misleading). Restore it when
+      // nothing else is on — that is the books page default fast path.
+      return {
+        booksLabelFilter: nextLabels,
+        booksChips: { ...state.booksChips, mostRecent: !othersOn },
+      }
     }),
 
-  clearBooksLabels: () => set({ booksLabelFilter: [] }),
+  clearBooksLabels: () =>
+    set((state) => ({
+      booksLabelFilter: [],
+      booksChips: {
+        ...state.booksChips,
+        mostRecent: !isOtherBookChipActive(state.booksChips),
+      },
+    })),
 
   toggleBooksChip: (chip) =>
-    set((state) => ({
-      booksChips: { ...state.booksChips, [chip]: !state.booksChips[chip] },
-    })),
+    set((state) => {
+      const labelsOn = state.booksLabelFilter.length > 0
+      if (chip === 'mostRecent' && (isOtherBookChipActive(state.booksChips) || labelsOn)) {
+        return { booksChips: { ...state.booksChips, mostRecent: false } }
+      }
+      const next = { ...state.booksChips, [chip]: !state.booksChips[chip] }
+      const othersOn = isOtherBookChipActive(next) || labelsOn
+      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
+      return { booksChips: next }
+    }),
 
   clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
 
   toggleAuthorsChip: (chip) =>
-    set((state) => ({
-      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
-    })),
+    set((state) => {
+      if (chip === 'mostRecent' && isOtherAuthorChipActive(state.authorsChips)) {
+        return { authorsChips: { ...state.authorsChips, mostRecent: false } }
+      }
+      const next = { ...state.authorsChips, [chip]: !state.authorsChips[chip] }
+      const othersOn = isOtherAuthorChipActive(next)
+      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
+      return { authorsChips: next }
+    }),
 
   clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
 

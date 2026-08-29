@@ -106,6 +106,37 @@ public class AuthorsUITest {
     }
 
     @Test
+    @DisplayName("Should show table stats in the bulk-action slot when nothing is selected")
+    void shouldShowTableStatsPlaceholderWhenNothingSelected() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
+        assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show YDL and EMU availability chips first on the authors page")
+    void shouldShowYdlAndEmuFilterChipsFirst() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        assertThat(page.locator("[data-test='author-filter-ydl']")).isVisible();
+        assertThat(page.locator("[data-test='author-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
+        // Most Recent Day starts on (faster /authors/most-recent-day backend).
+        assertThat(page.locator("[data-test='filter-most-recent']")).hasAttribute("aria-pressed", "true");
+        assertThat(page.locator("text=Initial Author")).isVisible();
+    }
+
+    @Test
     @DisplayName("Should display books table in author view page")
     void shouldDisplayBooksTableInAuthorView() {
         // Click on first author to view details
@@ -196,9 +227,28 @@ public class AuthorsUITest {
 
         Locator filterChip = page.locator("[data-test='filter-without-grokipedia']");
         assertThat(filterChip).hasAttribute("aria-pressed", "true");
+        // Most Recent Day cannot be combined with other filters
+        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
 
         // The authors table should be visible (may have rows or be empty)
         Locator authorsTable = page.locator("table");
         assertThat(authorsTable).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show bulk action buttons when an author is selected")
+    void shouldShowBulkActionButtonsWhenAuthorSelected() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='select-checkbox-1']",
+            new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.click("[data-test='select-checkbox-1']");
+
+        assertThat(page.locator("[data-test='bulk-generate-missing']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-generate-missing']")).containsText("Generate missing data");
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).containsText("Find Grokipedia URLs");
+        assertThat(page.locator("[data-test='bulk-delete']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-delete']")).containsText("Delete Selected");
     }
 }

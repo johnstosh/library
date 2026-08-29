@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { GlobalSettingsDto, UserDto, LibraryCardDesign } from '@/types/dtos'
+import type { GlobalSettingsDto, TestEmailResultDto, UserDto, LibraryCardDesign } from '@/types/dtos'
 
 export interface UserSettingsDto {
   username?: string
@@ -35,6 +35,13 @@ export function useUpdateGlobalSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-settings'] })
     },
+  })
+}
+
+export function useSendTestEmail() {
+  return useMutation({
+    mutationFn: (to?: string) =>
+      api.post<TestEmailResultDto>('/global-settings/test-email', { to: to || undefined }),
   })
 }
 

@@ -87,7 +87,7 @@ class ImportControllerIntegrationTest {
         testBook.setTitle("Test Book");
         testBook.setPublicationYear(2020);
         testBook.setPublisher("Test Publisher");
-        testBook.setPlotSummary("A test book summary");
+        testBook.setPlotEssay("A test book summary");
         testBook.setDateAddedToLibrary(LocalDateTime.now());
         testBook.setStatus(BookStatus.ACTIVE);
         testBook.setLocNumber("PS3000.T47");

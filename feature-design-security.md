@@ -81,6 +81,10 @@ Why? The `.contains()` method relies on object equality, which can fail dependin
 - Test data generation endpoints (`/api/test-data/**`)
 - Book/author/library listings
 - Search functionality
+- Book and author **detail** pages (`/books/:id`, `/authors/:id`) and their GET APIs
+- Photo view (`/photos/:id`) so catalog photos can open without a login
+
+The books **list** (`/books`) and authors **list** (`/authors`) stay authenticated. Create/edit/delete stay librarian-only (`@PreAuthorize`) and are hidden in the UI for guests.
 
 ## UI Visibility Rules
 
@@ -89,6 +93,7 @@ The frontend uses React components to control access based on authentication and
 
 - **`<ProtectedRoute />`**: Wraps routes that require authentication (any authority)
 - **`<LibrarianRoute />`**: Wraps routes that require LIBRARIAN authority
+- **Public catalog views**: `/books/:id` and `/authors/:id` are outside `ProtectedRoute` so unauthenticated visitors can read a book or author. Edit, clone, delete, photo upload, and the `/books` and `/authors` list pages remain behind login.
 - **Conditional rendering**: Components check `isLibrarian` from authStore for conditional UI
   - Example: Bulk delete buttons only shown to librarians
   - Example: "Apply for Library Card" shown only to unauthenticated users

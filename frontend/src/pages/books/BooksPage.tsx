@@ -11,10 +11,10 @@ import { BookFilters } from './components/BookFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
-import { useBooks } from '@/api/books'
+import { useBookCount, useBooks } from '@/api/books'
 import { useUiStore, useBooksChips, useBooksLabelFilter, useBooksTableSelection } from '@/stores/uiStore'
 import { useIsLibrarian } from '@/stores/authStore'
-import { applyChipFilters } from '@/utils/bookChipFilters'
+import { applyChipFilters, isOtherBookChipActive } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
 
 // ─── BooksPage ────────────────────────────────────────────────────────────────
@@ -27,7 +27,10 @@ export function BooksPage() {
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels, toggleBooksChip } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
-  const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels)
+  // mostRecent defaults on in uiStore so this uses GET /books/most-recent-day
+  // (faster than GET /books/summaries). Remaining chips still apply client-side.
+  const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
+  const { data: bookCount } = useBookCount()
 
   // Apply all chip filters client-side (AND logic)
   const books = useMemo(() => applyChipFilters(allBooks, chips), [allBooks, chips])
@@ -86,7 +89,12 @@ export function BooksPage() {
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200">
-          <BookFilters chips={chips} onToggle={toggleBooksChip} />
+          <BookFilters
+            chips={chips}
+            onToggle={toggleBooksChip}
+            showAvailabilityFilters
+            mostRecentDisabled={isOtherBookChipActive(chips) || selectedLabels.length > 0}
+          />
           <BookLabelFilters
             selectedLabels={selectedLabels}
             onToggleLabel={toggleBooksLabel}
@@ -98,6 +106,9 @@ export function BooksPage() {
           <BulkActionsToolbar
             selectedIds={selectedIds}
             onClearSelection={handleClearSelection}
+            tableCount={books.length}
+            totalCount={bookCount?.count}
+            isLoading={isLoading}
           />
 
           <BookTable

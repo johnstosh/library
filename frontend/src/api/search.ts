@@ -36,11 +36,17 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.audio ? '&filterAudio=true' : '',
     filters.mostRecent ? '&filterMostRecent=true' : '',
     filters.withoutLoc ? '&filterWithoutLoc=true' : '',
-    filters.threeLetterLoc ? '&filterThreeLetterLoc=true' : '',
     filters.withoutGrokipedia ? '&filterWithoutGrokipedia=true' : '',
+    filters.withGrokipedia ? '&filterWithGrokipedia=true' : '',
     filters.withoutGenres ? '&filterWithoutGenres=true' : '',
     filters.notActiveStatus ? '&filterNotActiveStatus=true' : '',
     filters.withoutFreeTextUrls ? '&filterWithoutFreeTextUrls=true' : '',
+    filters.hasYdlAudio ? '&filterYdlAudio=true' : '',
+    filters.hasYdlBook ? '&filterYdlBook=true' : '',
+    filters.hasYdlEbook ? '&filterYdlEbook=true' : '',
+    filters.hasEmuAudio ? '&filterEmuAudio=true' : '',
+    filters.hasEmuBook ? '&filterEmuBook=true' : '',
+    filters.hasEmuEbook ? '&filterEmuEbook=true' : '',
   ].join('')
 }
 

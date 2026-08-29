@@ -13,6 +13,7 @@ export function ApplyForCardPage() {
     username: '',
     password: '',
     confirmPassword: '',
+    email: '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -49,6 +50,13 @@ export function ApplyForCardPage() {
       return
     }
 
+    const email = formData.email.trim()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      console.log('Validation failed: Invalid email')
+      setError('Enter a valid email address or leave it blank')
+      return
+    }
+
     try {
       console.log('Validation passed, hashing password...')
       // Hash password client-side
@@ -63,12 +71,13 @@ export function ApplyForCardPage() {
       await applyForCard.mutateAsync({
         username: formData.username.trim(),
         password: hashedPassword,
+        email: email || undefined,
         authority: 'USER',
       })
 
       console.log('Application submitted successfully!')
       setSuccess(true)
-      setFormData({ username: '', password: '', confirmPassword: '' })
+      setFormData({ username: '', password: '', confirmPassword: '', email: '' })
     } catch (err) {
       console.error('Application submission failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit application')
@@ -116,6 +125,19 @@ export function ApplyForCardPage() {
                 placeholder="Enter your full name"
                 data-test="apply-name"
                 autoComplete="name"
+              />
+
+              <Input
+                label="Email (optional)"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                placeholder="you@example.com"
+                data-test="apply-email"
+                autoComplete="email"
+                helpText="Used to notify you when your application is reviewed"
               />
 
               <Input

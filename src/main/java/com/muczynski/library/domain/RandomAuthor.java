@@ -49,7 +49,7 @@ public class RandomAuthor {
         author.setNationality(NATIONALITIES.get(RANDOM.nextInt(NATIONALITIES.size())));
         author.setDateOfBirth(generateRandomBirthDate());
         author.setDateOfDeath(RANDOM.nextInt(100) < 60 ? generateRandomDeathDate(author.getDateOfBirth()) : null);
-        author.setBriefBiography(generateRandomBiography(firstName, lastName));
+        author.setBiographicalEssay(generateRandomBiography(firstName, lastName));
         author.setGrokipediaUrl("https://grokipedia.example.com/author/" + RANDOM.nextInt(1000));
         return author;
     }

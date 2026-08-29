@@ -37,7 +37,7 @@ public class AuthorMapper {
         dto.setReligiousAffiliation(author.getReligiousAffiliation());
         dto.setBirthCountry(author.getBirthCountry());
         dto.setNationality(author.getNationality());
-        dto.setBriefBiography(author.getBriefBiography());
+        dto.setBriefBiography(author.getBiographicalEssay());
         dto.setGrokipediaUrl(author.getGrokipediaUrl());
         dto.setLastModified(author.getLastModified());
 
@@ -74,7 +74,7 @@ public class AuthorMapper {
         author.setReligiousAffiliation(authorDto.getReligiousAffiliation());
         author.setBirthCountry(authorDto.getBirthCountry());
         author.setNationality(authorDto.getNationality());
-        author.setBriefBiography(authorDto.getBriefBiography());
+        author.setBiographicalEssay(authorDto.getBriefBiography());
         author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
 
         return author;

@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.dto;
 
+import com.muczynski.library.domain.EmailMethod;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -94,4 +95,39 @@ public class GlobalSettingsDto {
      * Validation message for the SSO Client Secret format
      */
     private String googleSsoClientSecretValidation;
+
+    private EmailMethod emailMethod;
+    private String emailFromAddress;
+    private String emailFromName;
+    private Boolean emailNotifyLibrariansOnPending;
+    private Boolean emailNotifyApplicantOnPending;
+    private String emailLibrarianRecipients;
+    private Boolean emailIncludeLibrarianUserEmails;
+
+    private String smtpHost;
+    private Integer smtpPort;
+    private String smtpUsername;
+    /** Write-only. Empty/null keeps the stored password. */
+    private String smtpPassword;
+    private String smtpPasswordPartial;
+    private boolean smtpPasswordConfigured;
+    private Boolean smtpStartTls;
+    private Boolean smtpSsl;
+
+    /** Write-only. Empty/null keeps the stored key. */
+    private String sendGridApiKey;
+    private String sendGridApiKeyPartial;
+    private boolean sendGridApiKeyConfigured;
+
+    private String webhookUrl;
+    /** Write-only. Empty/null keeps the stored token. */
+    private String webhookBearerToken;
+    private String webhookBearerTokenPartial;
+    private boolean webhookBearerTokenConfigured;
+
+    /**
+     * Whether the currently selected email method has the fields it needs.
+     */
+    private boolean emailMethodConfigured;
+    private String emailMethodStatus;
 }

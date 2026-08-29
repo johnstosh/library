@@ -1,6 +1,8 @@
 // (c) Copyright 2025 by Muczynski
+import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import { PiFunnel } from 'react-icons/pi'
+import { EmuIcon, YdlIcon } from '@/components/ui/Icons'
 
 // ─── Filter chip component ────────────────────────────────────────────────────
 
@@ -10,19 +12,33 @@ interface FilterChipProps {
   onClick: () => void
   tooltip: string
   dataTest: string
+  disabled?: boolean
+  hideOnMobile?: boolean
 }
 
-function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipProps) {
+function FilterChip({
+  label,
+  active,
+  onClick,
+  tooltip,
+  dataTest,
+  disabled = false,
+  hideOnMobile = false,
+}: FilterChipProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       title={tooltip}
       data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors cursor-pointer select-none ${
-        active
-          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-          : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white'
+      disabled={disabled}
+      aria-disabled={disabled}
+      className={`${hideOnMobile ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors select-none ${
+        disabled
+          ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+          : active
+            ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 cursor-pointer'
+            : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 bg-white cursor-pointer'
       }`}
     >
       {active ? (
@@ -40,17 +56,138 @@ function FilterChip({ label, active, onClick, tooltip, dataTest }: FilterChipPro
 
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
-interface BookFiltersProps {
+interface AvailabilityGroupProps {
+  icon: ReactNode
+  libraryAbbr: string
+  libraryFull: string
+  dataTest: string
+  items: {
+    chip: keyof BookChipFilters
+    label: string
+    tooltip: string
+    dataTest: string
+  }[]
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
 }
 
-export function BookFilters({ chips, onToggle }: BookFiltersProps) {
+function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+      data-test={dataTest}
+    >
+      <span
+        className="inline-flex items-center gap-1.5 shrink-0 text-sm font-medium text-gray-600"
+        title={libraryFull}
+        aria-label={libraryFull}
+      >
+        {icon}
+        {libraryAbbr}
+      </span>
+      {items.map((item) => (
+        <FilterChip
+          key={item.chip}
+          label={item.label}
+          active={chips[item.chip]}
+          onClick={() => onToggle(item.chip)}
+          tooltip={item.tooltip}
+          dataTest={item.dataTest}
+        />
+      ))}
+    </div>
+  )
+}
+
+interface BookFiltersProps {
+  chips: BookChipFilters
+  onToggle: (chip: keyof BookChipFilters) => void
+  /** Books page: Most Recent Day cannot be combined with other filters. */
+  mostRecentDisabled?: boolean
+  showAvailabilityFilters?: boolean
+  /** Search page: hide "without *" chips and Not Active Status on phone. */
+  hideWithoutAndNotActiveOnMobile?: boolean
+}
+
+export function hideBookFilterOnMobile(chip: keyof BookChipFilters): boolean {
+  return chip.toLowerCase().includes('without') || chip === 'notActiveStatus'
+}
+
+export function BookFilters({
+  chips,
+  onToggle,
+  mostRecentDisabled = false,
+  showAvailabilityFilters = false,
+  hideWithoutAndNotActiveOnMobile = false,
+}: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
+  const hideOnPhone = (chip: keyof BookChipFilters) =>
+    hideWithoutAndNotActiveOnMobile && hideBookFilterOnMobile(chip)
 
   return (
     <div className="space-y-2">
-      {/* Row 1: search-style type filters */}
+      {showAvailabilityFilters && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <AvailabilityGroup
+            icon={<YdlIcon />}
+            libraryAbbr="YDL"
+            libraryFull="Ypsilanti District Library"
+            dataTest="book-filter-ydl"
+            chips={chips}
+            onToggle={onToggle}
+            items={[
+              {
+                chip: 'hasYdlAudio',
+                label: 'Audio',
+                tooltip: 'Has YDL audio — only books with an audiobook held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-audio',
+              },
+              {
+                chip: 'hasYdlBook',
+                label: 'Book',
+                tooltip: 'Has YDL book — only books with a physical copy held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-book',
+              },
+              {
+                chip: 'hasYdlEbook',
+                label: 'Ebook',
+                tooltip: 'Has YDL ebook — only books with an ebook held at Ypsilanti District Library',
+                dataTest: 'filter-has-ydl-ebook',
+              },
+            ]}
+          />
+          <AvailabilityGroup
+            icon={<EmuIcon />}
+            libraryAbbr="EMU"
+            libraryFull="EMU Halle Library"
+            dataTest="book-filter-emu"
+            chips={chips}
+            onToggle={onToggle}
+            items={[
+              {
+                chip: 'hasEmuAudio',
+                label: 'Audio',
+                tooltip: 'Has EMU audio — only books with an audiobook held at EMU Halle Library',
+                dataTest: 'filter-has-emu-audio',
+              },
+              {
+                chip: 'hasEmuBook',
+                label: 'Book',
+                tooltip: 'Has EMU book — only books with a physical copy held at EMU Halle Library',
+                dataTest: 'filter-has-emu-book',
+              },
+              {
+                chip: 'hasEmuEbook',
+                label: 'Ebook',
+                tooltip: 'Has EMU ebook — only books with an ebook held at EMU Halle Library',
+                dataTest: 'filter-has-emu-ebook',
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      {/* Type filters */}
       <div className="flex flex-wrap gap-2" data-test="book-type-filter-chips">
         <FilterChip
           label="In-library materials"
@@ -58,6 +195,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('inLibrary')}
           tooltip="Only books with a Library of Congress call number — physically in the collection"
           dataTest="filter-in-library"
+          hideOnMobile={hideOnPhone('inLibrary')}
         />
         <FilterChip
           label="Electronic resource"
@@ -65,6 +203,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('electronic')}
           tooltip="Only books marked as electronic resources"
           dataTest="filter-electronic"
+          hideOnMobile={hideOnPhone('electronic')}
         />
         <FilterChip
           label="Has free online text"
@@ -72,6 +211,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('freeText')}
           tooltip="Only books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)"
           dataTest="filter-free-text"
+          hideOnMobile={hideOnPhone('freeText')}
         />
         <FilterChip
           label="Has free online audio"
@@ -79,17 +219,26 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('audio')}
           tooltip="Only books with a free LibriVox audio recording"
           dataTest="filter-audio"
+          hideOnMobile={hideOnPhone('audio')}
         />
       </div>
 
       {/* Row 2: books-specific filters */}
       <div className="flex flex-wrap gap-2" data-test="book-source-filter-chips">
+        {/* Defaults on so BooksPage can call GET /books/most-recent-day. Forced off
+            and disabled when any other filter is on — those need the full catalog. */}
         <FilterChip
           label="Most Recent Day"
-          active={chips.mostRecent}
+          active={chips.mostRecent && !mostRecentDisabled}
           onClick={() => toggle('mostRecent')}
-          tooltip="Only books added on the most recent day (or with a temporary date-format title)"
+          tooltip={
+            mostRecentDisabled
+              ? 'Most Recent Day cannot be combined with other filters. Turn the others off to use it.'
+              : 'Only books added on the most recent day (or with a temporary date-format title)'
+          }
           dataTest="filter-most-recent"
+          disabled={mostRecentDisabled}
+          hideOnMobile={hideOnPhone('mostRecent')}
         />
         <FilterChip
           label="Without LOC"
@@ -97,13 +246,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('withoutLoc')}
           tooltip="Only books without a Library of Congress call number"
           dataTest="filter-without-loc"
-        />
-        <FilterChip
-          label="3-Letter Call Numbers"
-          active={chips.threeLetterLoc}
-          onClick={() => toggle('threeLetterLoc')}
-          tooltip="Only books whose LOC call number starts with three uppercase letters"
-          dataTest="filter-3-letter-loc"
+          hideOnMobile={hideOnPhone('withoutLoc')}
         />
         <FilterChip
           label="Without Grokipedia"
@@ -111,13 +254,23 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('withoutGrokipedia')}
           tooltip="Only books without a Grokipedia URL"
           dataTest="filter-without-grokipedia"
+          hideOnMobile={hideOnPhone('withoutGrokipedia')}
+        />
+        <FilterChip
+          label="With Grokipedia"
+          active={chips.withGrokipedia}
+          onClick={() => toggle('withGrokipedia')}
+          tooltip="Only books that have a Grokipedia URL"
+          dataTest="filter-with-grokipedia"
+          hideOnMobile={hideOnPhone('withGrokipedia')}
         />
         <FilterChip
           label="Without Genres"
           active={chips.withoutGenres}
           onClick={() => toggle('withoutGenres')}
-          tooltip="Only books with no genre tags assigned"
+          tooltip="Only books with no genres assigned"
           dataTest="filter-without-genres"
+          hideOnMobile={hideOnPhone('withoutGenres')}
         />
         <FilterChip
           label="Not Active Status"
@@ -125,6 +278,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('notActiveStatus')}
           tooltip="When off: hide withdrawn books. When on: only books that are not Active (lost, withdrawn, on order, etc.)"
           dataTest="filter-not-active-status"
+          hideOnMobile={hideOnPhone('notActiveStatus')}
         />
         <FilterChip
           label="Without Free-Text URLs"
@@ -132,6 +286,7 @@ export function BookFilters({ chips, onToggle }: BookFiltersProps) {
           onClick={() => toggle('withoutFreeTextUrls')}
           tooltip="Only books that have no free online text URL"
           dataTest="filter-without-free-text-urls"
+          hideOnMobile={hideOnPhone('withoutFreeTextUrls')}
         />
       </div>
     </div>

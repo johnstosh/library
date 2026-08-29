@@ -24,7 +24,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a FROM Author a LEFT JOIN FETCH a.books WHERE a.id = :id")
     Optional<Author> findByIdWithBooks(@Param("id") Long id);
 
-    // Lightweight projection for photo ZIP import — skips @Lob fields (briefBiography, etc.)
+    // Lightweight projection for photo ZIP import — skips @Lob fields (biographicalEssay, etc.)
     List<AuthorZipImportProjection> findBy();
 
     /**
@@ -53,6 +53,13 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         Pageable pageable);
 
     /**
@@ -82,6 +89,13 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
         @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
         Pageable pageable);
@@ -98,8 +112,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
     List<AuthorSummaryProjection> findAllSummaries();
 
-    /** briefBiography is a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
-    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.briefBiography IS NULL")
+    /** biographicalEssay maps to brief_biography, a PostgreSQL OID LOB — only IS NULL is valid, never compare to ''. */
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.biographicalEssay IS NULL")
     List<AuthorSummaryProjection> findSummariesWithoutDescription();
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE NOT EXISTS (SELECT 1 FROM Book b WHERE b.author = a)")

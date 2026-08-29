@@ -12,6 +12,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 
 export function AuthorViewPage() {
   const navigate = useNavigate()
@@ -20,6 +21,8 @@ export function AuthorViewPage() {
   const { data: author, isLoading } = useAuthor(authorId)
   const { data: authorBooks = [], isLoading: booksLoading } = useAuthorBooks(authorId)
   const deleteAuthor = useDeleteAuthor()
+  const isLibrarian = useIsLibrarian()
+  const isAuthenticated = useIsAuthenticated()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -38,7 +41,7 @@ export function AuthorViewPage() {
   }
 
   const handleBack = () => {
-    navigate('/authors')
+    navigate(isAuthenticated ? '/authors' : '/search')
   }
 
   if (isLoading) {
@@ -51,16 +54,22 @@ export function AuthorViewPage() {
         title="Author Not Found"
         entityLabel="author"
         onBack={handleBack}
-        backLabel="Return to Authors"
+        backLabel={isAuthenticated ? 'Return to Authors' : 'Return to Search'}
       />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <BackLink onClick={handleBack} data-test="back-to-authors">
-        Back to Authors
-      </BackLink>
+      {isAuthenticated ? (
+        <BackLink onClick={handleBack} data-test="back-to-authors">
+          Back to Authors
+        </BackLink>
+      ) : (
+        <BackLink onClick={handleBack} data-test="back-to-search">
+          Back to Search
+        </BackLink>
+      )}
 
       <PageCard padding={false}>
         {/* Header */}
@@ -69,24 +78,26 @@ export function AuthorViewPage() {
             <h1 className="text-2xl font-bold text-gray-900" data-test="author-name">
               {author.name}
             </h1>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleEdit}
-                leftIcon={<PiPencil />}
-                data-test="author-view-edit"
-              >
-                Edit
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => setShowDeleteConfirm(true)}
-                leftIcon={<PiTrash />}
-                data-test="author-view-delete"
-              >
-                Delete
-              </Button>
-            </div>
+            {isLibrarian && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleEdit}
+                  leftIcon={<PiPencil />}
+                  data-test="author-view-edit"
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  leftIcon={<PiTrash />}
+                  data-test="author-view-delete"
+                >
+                  Delete
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

@@ -55,7 +55,7 @@ public class RandomBook {
         book.setLibrary(branchRepository.findAll().get(0));
         book.setPublisher("test-data - " + PUBLISHERS.get(RANDOM.nextInt(PUBLISHERS.size())));
         book.setPublicationYear(1900 + RANDOM.nextInt(125));
-        book.setPlotSummary(generateRandomSummary());
+        book.setPlotEssay(generateRandomSummary());
         book.setRelatedWorks(generateRandomRelatedWorks());
         book.setDetailedDescription(generateRandomDescription());
         book.setGrokipediaUrl("https://grokipedia.example.com/book/" + RANDOM.nextInt(1000));

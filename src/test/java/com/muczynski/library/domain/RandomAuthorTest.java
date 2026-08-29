@@ -23,7 +23,7 @@ class RandomAuthorTest {
         assertNotNull(author.getNationality(), "Nationality should be generated");
         assertNotNull(author.getDateOfBirth(), "Date of birth should be generated");
         // Date of death is only set ~60% of the time (some authors are alive)
-        assertNotNull(author.getBriefBiography(), "Biography should be generated");
+        assertNotNull(author.getBiographicalEssay(), "Biography should be generated");
         assertNotNull(author.getGrokipediaUrl(), "Grokipedia URL should be generated");
     }
 }

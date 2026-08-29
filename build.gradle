@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.2.0'
+version = '2.3.0'
 
 ext['tomcat.version'] = '10.+'
 
@@ -65,6 +65,9 @@ dependencies {
 
     // Metadata-extractor for reading EXIF orientation data
     implementation 'com.drewnoakes:metadata-extractor:2.19.0'
+
+    // Jakarta Mail (SMTP sender; configured at send time from global settings)
+    implementation 'org.eclipse.angus:angus-mail:2.0.3'
 }
 
 jar {
@@ -118,6 +121,9 @@ graalvmNative {
                 '--initialize-at-run-time=com.drew',
                 '--initialize-at-run-time=com.google.cloud.sql',
                 '--initialize-at-run-time=org.postgresql.util.SharedTimer',
+                '--initialize-at-run-time=jakarta.mail',
+                '--initialize-at-run-time=com.sun.mail',
+                '--initialize-at-run-time=org.eclipse.angus',
                 '-H:+ReportExceptionStackTraces',
                 '-H:+AddAllCharsets',
                 '--allow-incomplete-classpath',

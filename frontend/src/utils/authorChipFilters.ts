@@ -4,8 +4,18 @@ import type { AuthorDto } from '@/types/dtos'
 /**
  * Independent boolean chip filters for the Authors page.
  * All active chips AND together — more buttons on = fewer results.
+ *
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
+ *   zeroBooks, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */
 export interface AuthorChipFilters {
+  hasYdlBook: boolean
+  hasYdlEbook: boolean
+  hasYdlAudio: boolean
+  hasEmuBook: boolean
+  hasEmuEbook: boolean
+  hasEmuAudio: boolean
   mostRecent: boolean
   withoutDescription: boolean
   withoutGrokipedia: boolean
@@ -18,6 +28,14 @@ export interface AuthorChipFilters {
 }
 
 export const defaultAuthorChipFilters: AuthorChipFilters = {
+  hasYdlBook: false,
+  hasYdlEbook: false,
+  hasYdlAudio: false,
+  hasEmuBook: false,
+  hasEmuEbook: false,
+  hasEmuAudio: false,
+  // Shared default is off. The Authors page overrides this to true in uiStore
+  // so it can use GET /authors/most-recent-day instead of GET /authors/summaries.
   mostRecent: false,
   withoutDescription: false,
   withoutGrokipedia: false,
@@ -29,6 +47,35 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   withoutDeathDate: false,
 }
 
+const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
+  'hasYdlBook',
+  'hasYdlEbook',
+  'hasYdlAudio',
+  'hasEmuBook',
+  'hasEmuEbook',
+  'hasEmuAudio',
+]
+
+export function isAvailabilityChipActive(chips: AuthorChipFilters): boolean {
+  return AVAILABILITY_CHIPS.some((key) => chips[key])
+}
+
+/** True if any chip other than mostRecent is on. */
+export function isOtherAuthorChipActive(chips: AuthorChipFilters): boolean {
+  return (Object.keys(chips) as (keyof AuthorChipFilters)[])
+    .filter((key) => key !== 'mostRecent')
+    .some((key) => chips[key])
+}
+
+export interface AuthorAvailabilityFlags {
+  hasYdlBook?: boolean
+  hasYdlEbook?: boolean
+  hasYdlAudio?: boolean
+  hasEmuBook?: boolean
+  hasEmuEbook?: boolean
+  hasEmuAudio?: boolean
+}
+
 function isBlank(value: string | null | undefined): boolean {
   return !value || value.trim() === ''
 }
@@ -36,12 +83,20 @@ function isBlank(value: string | null | undefined): boolean {
 export function applyAuthorChipFilters(
   authors: AuthorDto[],
   chips: AuthorChipFilters,
-  mostRecentIds?: Set<number>
+  mostRecentIds?: Set<number>,
+  availabilityByAuthorId?: Map<number, AuthorAvailabilityFlags>
 ): AuthorDto[] {
   return authors.filter((author) => {
     if (chips.mostRecent) {
       if (!mostRecentIds || !mostRecentIds.has(author.id)) return false
     }
+    const availability = availabilityByAuthorId?.get(author.id)
+    if (chips.hasYdlBook && !availability?.hasYdlBook) return false
+    if (chips.hasYdlEbook && !availability?.hasYdlEbook) return false
+    if (chips.hasYdlAudio && !availability?.hasYdlAudio) return false
+    if (chips.hasEmuBook && !availability?.hasEmuBook) return false
+    if (chips.hasEmuEbook && !availability?.hasEmuEbook) return false
+    if (chips.hasEmuAudio && !availability?.hasEmuAudio) return false
     if (chips.withoutDescription && !isBlank(author.briefBiography)) return false
     if (chips.withoutGrokipedia && !isBlank(author.grokipediaUrl)) return false
     if (chips.withGrokipedia && isBlank(author.grokipediaUrl)) return false

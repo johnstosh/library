@@ -4,7 +4,11 @@
 package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.UserDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -16,6 +20,9 @@ import java.util.*;
 
 @Service
 public class AskGrok {
+
+    private static final Logger log = LoggerFactory.getLogger(AskGrok.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
     private UserSettingsService userSettingsService;
@@ -31,9 +38,16 @@ public class AskGrok {
         this.restTemplate.setRequestFactory(factory);
     }
 
-    // Model constants
-    public static final String MODEL_GROK_4 = "grok-4";
+    // Model constants.
+    // xAI does not currently offer a rolling flagship alias (grok-latest / grok-default 404).
+    // grok-4 and grok-4-latest resolve to grok-4.3. Pin the current flagship explicitly.
+    public static final String MODEL_GROK_FLAGSHIP = "grok-4.6";
+    public static final String MODEL_GROK_4 = MODEL_GROK_FLAGSHIP;
     public static final String MODEL_GROK_4_FAST = "grok-4-1-fast-reasoning";
+    public static final String IMAGE_DETAIL_HIGH = "high";
+
+    private static final int CATALOG_MAX_COMPLETION_TOKENS = 8000;
+    private static final int FAST_MAX_COMPLETION_TOKENS = 500;
 
     /**
      * Analyze a single photo using Grok AI vision model with grok-4-fast.
@@ -51,22 +65,26 @@ public class AskGrok {
      * @param imageBytes Photo bytes
      * @param contentType Image content type (e.g., "image/jpeg")
      * @param prompt The analysis prompt/question for the AI
-     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @param model The Grok model to use
      * @return AI response as String
      */
     public String analyzePhoto(byte[] imageBytes, String contentType, String prompt, String model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new LibraryException("No authenticated user found");
-        }
-        // The principal name is the database user ID (not username)
-        Long userId = Long.parseLong(authentication.getName());
-        UserDto userDto = userSettingsService.getUserSettings(userId);
-        String apiKey = userDto.getXaiApiKey();
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user ID: " + userId);
-        }
+        return analyzePhoto(imageBytes, contentType, prompt, model, null, null);
+    }
 
+    /**
+     * Analyze a single photo using Grok AI vision model with specified model and optional system prompt.
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt, String model, String systemPrompt) {
+        return analyzePhoto(imageBytes, contentType, prompt, model, systemPrompt, null);
+    }
+
+    /**
+     * Analyze a single photo using Grok AI vision model with specified model, optional system prompt,
+     * and optional image detail level ({@code auto}, {@code low}, or {@code high}).
+     */
+    public String analyzePhoto(byte[] imageBytes, String contentType, String prompt, String model,
+                               String systemPrompt, String imageDetail) {
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
         textPart.put("text", prompt);
@@ -76,52 +94,16 @@ public class AskGrok {
 
         Map<String, Object> imageUrlPart = new HashMap<>();
         imageUrlPart.put("url", "data:" + contentType + ";base64," + base64Image);
+        if (imageDetail != null && !imageDetail.isBlank()) {
+            imageUrlPart.put("detail", imageDetail);
+        }
 
         Map<String, Object> imagePart = new HashMap<>();
         imagePart.put("type", "image_url");
         imagePart.put("image_url", imageUrlPart);
 
         List<Object> content = Arrays.asList(textPart, imagePart);
-
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", content);
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("model", model);
-        request.put("messages", Arrays.asList(message));
-        request.put("max_tokens", 2000);
-        request.put("temperature", 0.7);
-        request.put("stream", false); // Disable streaming to avoid complexity; use long timeouts instead
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://api.x.ai/v1/chat/completions",
-                entity,
-                Map.class
-        );
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("choices")) {
-                List<Map> choices = (List<Map>) body.get("choices");
-                if (!choices.isEmpty()) {
-                    Map<String, Object> choice = choices.get(0);
-                    if (choice.containsKey("message")) {
-                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
-                        return (String) messageResponse.get("content");
-                    }
-                }
-            }
-            throw new LibraryException("Unexpected response format from xAI API");
-        } else {
-            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
-        }
+        return complete(model, chatMessages(systemPrompt, content), CATALOG_MAX_COMPLETION_TOKENS, 0.7);
     }
 
     /**
@@ -138,38 +120,30 @@ public class AskGrok {
      * Analyze multiple photos using Grok AI vision model with specified model.
      * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
      * @param prompt The analysis prompt/question for the AI
-     * @param model The Grok model to use (e.g., "grok-4" or "grok-4-fast")
+     * @param model The Grok model to use
      * @return AI response as String
      */
     public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt, String model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new LibraryException("No authenticated user found");
-        }
-        // The principal name is the database user ID (not username)
-        Long userId = Long.parseLong(authentication.getName());
-        UserDto userDto = userSettingsService.getUserSettings(userId);
-        String apiKey = userDto.getXaiApiKey();
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user ID: " + userId);
-        }
+        return analyzePhotos(photoDataList, prompt, model, null);
+    }
 
+    /**
+     * Analyze multiple photos using Grok AI vision model with specified model and optional system prompt.
+     */
+    public String analyzePhotos(List<Map<String, Object>> photoDataList, String prompt, String model, String systemPrompt) {
         // Build content array: first the text question, then all images
         List<Object> content = new ArrayList<>();
 
-        // Add text prompt first
         Map<String, Object> textPart = new HashMap<>();
         textPart.put("type", "text");
         textPart.put("text", prompt);
         content.add(textPart);
 
-        // Add all images
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
         for (Map<String, Object> photoData : photoDataList) {
             byte[] imageBytes = (byte[]) photoData.get("imageBytes");
             String contentType = (String) photoData.get("contentType");
 
-            // Skip photos with null image data
             if (imageBytes == null || imageBytes.length == 0) {
                 continue;
             }
@@ -186,45 +160,7 @@ public class AskGrok {
             content.add(imagePart);
         }
 
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", content);
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("model", model);
-        request.put("messages", Arrays.asList(message));
-        request.put("max_tokens", 2000);
-        request.put("temperature", 0.7);
-        request.put("stream", false); // Disable streaming to avoid complexity; use long timeouts instead
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://api.x.ai/v1/chat/completions",
-                entity,
-                Map.class
-        );
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("choices")) {
-                List<Map> choices = (List<Map>) body.get("choices");
-                if (!choices.isEmpty()) {
-                    Map<String, Object> choice = choices.get(0);
-                    if (choice.containsKey("message")) {
-                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
-                        return (String) messageResponse.get("content");
-                    }
-                }
-            }
-            throw new LibraryException("Unexpected response format from xAI API");
-        } else {
-            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
-        }
+        return complete(model, chatMessages(systemPrompt, content), CATALOG_MAX_COMPLETION_TOKENS, 0.7);
     }
 
     /**
@@ -233,57 +169,14 @@ public class AskGrok {
      * @return AI response as String
      */
     public String askQuestion(String question) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new LibraryException("No authenticated user found");
-        }
-        // The principal name is the database user ID (not username)
-        Long userId = Long.parseLong(authentication.getName());
-        UserDto userDto = userSettingsService.getUserSettings(userId);
-        String apiKey = userDto.getXaiApiKey();
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user ID: " + userId);
-        }
+        return askQuestion(question, null);
+    }
 
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", question);
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("model", "grok-3-latest");
-        request.put("messages", Arrays.asList(message));
-        request.put("max_tokens", 2000);
-        request.put("temperature", 0.7);
-        request.put("stream", false);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://api.x.ai/v1/chat/completions",
-                entity,
-                Map.class
-        );
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("choices")) {
-                List<Map> choices = (List<Map>) body.get("choices");
-                if (!choices.isEmpty()) {
-                    Map<String, Object> choice = choices.get(0);
-                    if (choice.containsKey("message")) {
-                        Map<String, Object> messageResponse = (Map<String, Object>) choice.get("message");
-                        return (String) messageResponse.get("content");
-                    }
-                }
-            }
-            throw new LibraryException("Unexpected response format from xAI API");
-        } else {
-            throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
-        }
+    /**
+     * Ask a text-only question to Grok AI with an optional system prompt.
+     */
+    public String askQuestion(String question, String systemPrompt) {
+        return complete(MODEL_GROK_FLAGSHIP, chatMessages(systemPrompt, question), CATALOG_MAX_COMPLETION_TOKENS, 0.7);
     }
 
     /**
@@ -293,15 +186,56 @@ public class AskGrok {
      * @return Suggested LOC call number
      */
     public String suggestLocNumber(String title, String author) {
+        String authorLabel = author != null && !author.isEmpty() ? author : "Unknown Author";
         String prompt = String.format(
-                "What is the Library of Congress call number for the book \"%s\" by %s? " +
-                "Please provide ONLY the call number in standard Library of Congress format. " +
-                "If you're not certain, provide your best estimate based on the subject matter and author. " +
-                "Do not include any explanation, just the call number.",
+                "Return a JSON array of Library of Congress Classification call numbers for the book \"%s\" by %s.\n" +
+                "Each distinct call number must be its own string. Do not concatenate two numbers into one string.\n" +
+                "Sort the array alphabetically. If uncertain, still list each estimate as a separate string.\n" +
+                "Respond with only the JSON array, no other text. Example: [\"BX4700.T4\",\"PS3511.I9 G7\"]",
                 title,
-                author != null && !author.isEmpty() ? author : "Unknown Author"
+                authorLabel
         );
-        return askQuestion(prompt);
+        String response = askQuestion(prompt);
+        List<String> callNumbers = parseCallNumberArray(response);
+        if (callNumbers.isEmpty()) {
+            log.warn("Could not parse LOC call number array for \"{}\" by {}: {}", title, authorLabel, response);
+            return null;
+        }
+        log.info("LOC call number array for \"{}\" by {}: {}", title, authorLabel, callNumbers);
+        return callNumbers.get(0);
+    }
+
+    /**
+     * Parses a JSON array of call-number strings from a model reply and sorts
+     * them alphabetically, ignoring blank entries.
+     */
+    static List<String> parseCallNumberArray(String response) {
+        if (response == null || response.isBlank()) {
+            return List.of();
+        }
+        String trimmed = response.trim();
+        int start = trimmed.indexOf('[');
+        int end = trimmed.lastIndexOf(']');
+        if (start < 0 || end <= start) {
+            return List.of();
+        }
+        try {
+            List<String> parsed = OBJECT_MAPPER.readValue(
+                    trimmed.substring(start, end + 1),
+                    new TypeReference<List<String>>() {});
+            List<String> cleaned = new ArrayList<>();
+            if (parsed != null) {
+                for (String item : parsed) {
+                    if (item != null && !item.isBlank()) {
+                        cleaned.add(item.trim());
+                    }
+                }
+            }
+            cleaned.sort(String.CASE_INSENSITIVE_ORDER);
+            return cleaned;
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     /**
@@ -338,27 +272,46 @@ public class AskGrok {
      * @return AI response as String
      */
     public String askQuestionFast(String question) {
+        return complete(MODEL_GROK_4_FAST, chatMessages(null, question), FAST_MAX_COMPLETION_TOKENS, 0.3);
+    }
+
+    private List<Map<String, Object>> chatMessages(String systemPrompt, Object userContent) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            Map<String, Object> system = new HashMap<>();
+            system.put("role", "system");
+            system.put("content", systemPrompt);
+            messages.add(system);
+        }
+        Map<String, Object> user = new HashMap<>();
+        user.put("role", "user");
+        user.put("content", userContent);
+        messages.add(user);
+        return messages;
+    }
+
+    private String requireApiKey() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
-        // The principal name is the database user ID (not username)
         Long userId = Long.parseLong(authentication.getName());
         UserDto userDto = userSettingsService.getUserSettings(userId);
         String apiKey = userDto.getXaiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new LibraryException("xAI API key not configured for user ID: " + userId);
         }
+        return apiKey;
+    }
 
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", question);
+    private String complete(String model, List<Map<String, Object>> messages, int maxCompletionTokens, double temperature) {
+        String apiKey = requireApiKey();
 
         Map<String, Object> request = new HashMap<>();
-        request.put("model", MODEL_GROK_4_FAST);
-        request.put("messages", Arrays.asList(message));
-        request.put("max_tokens", 500);
-        request.put("temperature", 0.3);  // Lower temperature for more consistent results
+        request.put("model", model);
+        request.put("messages", messages);
+        request.put("max_completion_tokens", maxCompletionTokens);
+        request.put("temperature", temperature);
         request.put("stream", false);
 
         HttpHeaders headers = new HttpHeaders();

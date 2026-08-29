@@ -249,6 +249,15 @@ class BookControllerTest {
     }
 
     @Test
+    void getBookCount_unauthenticated_returnsOk() throws Exception {
+        when(bookService.countBooks()).thenReturn(1847L);
+
+        mockMvc.perform(get("/api/books/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(1847));
+    }
+
+    @Test
     @WithMockUser
     void getAllBookSummaries() throws Exception {
         BookSummaryDto summary1 = new BookSummaryDto();

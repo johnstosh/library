@@ -111,15 +111,32 @@ public class BooksUITest {
         assertThat(addButton).containsText("Add Book");
 
         // Verify filter chip rows are present (chip-style, not radio buttons)
+        assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
+        assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
 
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
+
+        // Stats placeholder holds the bulk-action slot when nothing is selected
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
+        assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
     }
 
     @Test
@@ -293,13 +310,12 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should show all books when no chip filters are active")
+    @DisplayName("Should show the initial book on the default Most Recent Day view")
     void testNoChipsShowAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Default chips are all off (except implicit withdrawn hide). Initial book should show.
-
-        // Should still see the initial book (it's the only book)
+        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // Initial Book uses CURRENT_TIMESTAMP so it appears in that set.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
     }
 
@@ -317,7 +333,8 @@ public class BooksUITest {
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
         // under the "Without LOC" chip.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-        // Chip is a button, not a radio input — no isChecked() assertion
+        // Most Recent Day cannot be combined with other filters
+        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
     }
 
     @Test
@@ -325,10 +342,11 @@ public class BooksUITest {
     void testFilterMostRecent() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Default chips are off — book should be visible
+        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // The initial book was added in this test run so it matches.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
-        // Toggle the chip on; the initial book was added in this test run so it still matches
+        // Toggle the chip off; the full list still includes the initial book
         page.click("[data-test='filter-most-recent']");
         page.waitForTimeout(500);
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));
@@ -493,10 +511,14 @@ public class BooksUITest {
         // Wait for initial book row
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
+        // Stats placeholder is visible before selection so the table does not jump
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
+
         // Select the book's row checkbox
         page.click("[data-test='select-checkbox-1']");
 
         // Verify the bulk actions toolbar appears with the YDL lookup button
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).not().isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).containsText("Lookup YDL Availability");
     }

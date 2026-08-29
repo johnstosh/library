@@ -40,14 +40,14 @@ public class YdlLookupService {
     private static final String CUSTOMER_DOMAIN = "ypsilantidl.na4.iiivega.com";
 
     /**
-     * Matches trailing catalog noise our own titles often carry (copy numbers, physical
-     * format labels) that YDL's catalog titles don't have, e.g. ", c. 2", " (DVD)",
-     * ", Audio CD". Applied repeatedly so stacked suffixes (", c. 2, Audio CD") are all
-     * stripped before the title is used to search or match against YDL.
+     * Matches trailing physical-format labels our own titles often carry that YDL's
+     * catalog titles don't have, e.g. " (DVD)", ", Audio CD". Copy-number suffixes
+     * (", c. 2") are stripped separately via {@link Book#stripCopySuffix(String)}.
+     * Applied repeatedly so stacked suffixes (", c. 2, Audio CD") are all stripped
+     * before the title is used to search or match against YDL.
      */
-    private static final Pattern TRAILING_SUFFIX_PATTERN = Pattern.compile(
-            "(?i)(,?\\s*c\\.?\\s*\\d+"
-                    + "|\\s*\\((?:dvd|cd|vhs|blu-?ray|book on cd|large print|audiobook)\\)"
+    private static final Pattern TRAILING_FORMAT_SUFFIX_PATTERN = Pattern.compile(
+            "(?i)(\\s*\\((?:dvd|cd|vhs|blu-?ray|book on cd|large print|audiobook)\\)"
                     + "|,\\s*(?:audio\\s*cd|book\\s*on\\s*cd|large\\s*print|dvd|cd|vhs))\\s*$");
 
     private final BookRepository bookRepository;
@@ -218,7 +218,8 @@ public class YdlLookupService {
 
     /**
      * Strips trailing catalog noise (copy numbers, physical format labels) from a title
-     * before it's used to search or match against YDL. See {@link #TRAILING_SUFFIX_PATTERN}.
+     * before it's used to search or match against YDL.
+     * See {@link Book#stripCopySuffix(String)} and {@link #TRAILING_FORMAT_SUFFIX_PATTERN}.
      */
     private String cleanTitle(String title) {
         if (title == null) {
@@ -228,7 +229,8 @@ public class YdlLookupService {
         String previous;
         do {
             previous = cleaned;
-            cleaned = TRAILING_SUFFIX_PATTERN.matcher(cleaned).replaceAll("").trim();
+            cleaned = Book.stripCopySuffix(cleaned);
+            cleaned = TRAILING_FORMAT_SUFFIX_PATTERN.matcher(cleaned).replaceAll("").trim();
         } while (!cleaned.equals(previous) && !cleaned.isEmpty());
         return cleaned.isEmpty() ? title.trim() : cleaned;
     }

@@ -98,17 +98,51 @@ public class SearchUITest {
         assertThat(searchButton).isEnabled();
 
         // Verify the same filter chips as the Books page
+        assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
+        assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='filter-electronic']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
-        assertThat(page.locator("[data-test='filter-3-letter-loc']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
         assertThat(page.locator("[data-test='filter-not-active-status']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-free-text-urls']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should hide without-* and Not Active Status filters on phone")
+    void testSearchPageHidesWithoutFiltersOnPhone() {
+        BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(375, 667));
+        Page mobilePage = mobileContext.newPage();
+        mobilePage.setDefaultTimeout(20000L);
+        try {
+            mobilePage.navigate(getBaseUrl() + "/search");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+
+            assertThat(mobilePage.locator("[data-test='filter-without-loc']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-genres']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).isHidden();
+
+            assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='filter-with-grokipedia']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).isVisible();
+        } finally {
+            mobileContext.close();
+        }
     }
 
     @Test

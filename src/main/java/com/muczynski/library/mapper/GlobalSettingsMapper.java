@@ -29,5 +29,16 @@ public interface GlobalSettingsMapper {
     @Mapping(target = "googleSsoClientSecretConfigured", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientIdConfigured", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientSecretValidation", ignore = true) // Set by service
+    @Mapping(target = "smtpPassword", ignore = true)
+    @Mapping(target = "smtpPasswordPartial", ignore = true)
+    @Mapping(target = "smtpPasswordConfigured", ignore = true)
+    @Mapping(target = "sendGridApiKey", ignore = true)
+    @Mapping(target = "sendGridApiKeyPartial", ignore = true)
+    @Mapping(target = "sendGridApiKeyConfigured", ignore = true)
+    @Mapping(target = "webhookBearerToken", ignore = true)
+    @Mapping(target = "webhookBearerTokenPartial", ignore = true)
+    @Mapping(target = "webhookBearerTokenConfigured", ignore = true)
+    @Mapping(target = "emailMethodConfigured", ignore = true)
+    @Mapping(target = "emailMethodStatus", ignore = true)
     GlobalSettingsDto toDto(GlobalSettings globalSettings);
 }

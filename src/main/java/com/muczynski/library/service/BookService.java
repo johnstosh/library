@@ -52,6 +52,41 @@ public class BookService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookService.class);
 
+    private static final String CATALOG_SYSTEM_PROMPT = """
+            You write Catholic library catalog cards. The prose fields are essays, not blurbs or jacket copy.
+            Be frank, polite, and charitable. Do not hedge with a balanced viewpoint.
+            Do not add any text outside the JSON object.""";
+
+    private static final String CATALOG_FROM_PHOTOS_PROMPT = """
+            Based on these book images, infer the book and author. The images may include the book cover, back cover, spine, table of contents, or other pages.
+            Research details from a Catholic perspective. Be frank in your assessments, without providing a balanced view.
+            Emphasize Catholic teachings, saints, and doctrine where applicable.
+            If the content aligns with Catholic faith, praise it; if not, politely critique it with charity and wisdom.
+
+            Provide details for the author:
+            - name: the full name of the author. First name first and last name last.
+            - dateOfBirth: birth date in YYYY-MM-DD format, or null if unknown
+            - dateOfDeath: death date in YYYY-MM-DD format, or null if alive or unknown
+            - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
+            - birthCountry: the author's country of birth
+            - nationality: the author's nationality, or nationalities
+            - biographicalEssay: a frank Catholic biography highlighting virtues, public sins, and conversion. Write 2-4 paragraphs, about 200-400 words. Not a one-sentence blurb.
+
+            For the book:
+            - title: title of the book. If there's ambiguity, explain in plotEssay.
+            - publicationYear: publication year, if known. If there's any uncertainty, leave null.
+            - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave null.
+            - plotEssay: a frank Catholic summary and critique of the plot. Write 2-3 paragraphs. Not a jacket blurb.
+            - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
+            - detailedDescription: a detailed Catholic catalog essay. Write multiple paragraphs, about 400-800 words. Not a blurb.
+
+            Respond only with a JSON object with this structure (no text before or after):
+            {"author": {"name": string, "dateOfBirth": "YYYY-MM-DD or null", "dateOfDeath": "YYYY-MM-DD or null",
+            "religiousAffiliation": string, "birthCountry": string, "nationality": string,
+            "biographicalEssay": string},
+            "book": {"title": string, "publicationYear": number or null, "publisher": string or null,
+            "plotEssay": string, "relatedWorks": string, "detailedDescription": string}}""";
+
     @Autowired
     private BookRepository bookRepository;
 
@@ -239,7 +274,7 @@ public class BookService {
         book.setTitle(ensureUniqueTitle(bookDto.getTitle(), id));
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
-        book.setPlotSummary(bookDto.getPlotSummary());
+        book.setPlotEssay(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
@@ -335,7 +370,7 @@ public class BookService {
         clone.setTitle(newTitle);
         clone.setPublicationYear(original.getPublicationYear());
         clone.setPublisher(original.getPublisher());
-        clone.setPlotSummary(original.getPlotSummary());
+        clone.setPlotEssay(original.getPlotEssay());
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setDetailedDescription(original.getDetailedDescription());
         clone.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
@@ -396,12 +431,7 @@ public class BookService {
         }
 
         // Strip any existing ", c. N" suffix to get the base title
-        String baseTitle = desiredTitle;
-        Pattern copyPattern = Pattern.compile("^(.+),\\s*c\\.\\s*\\d+$");
-        Matcher matcher = copyPattern.matcher(desiredTitle);
-        if (matcher.matches()) {
-            baseTitle = matcher.group(1);
-        }
+        String baseTitle = Book.stripCopySuffix(desiredTitle);
 
         // Find all titles matching the base or "base, c. N" pattern
         String titlePattern = baseTitle + ", c. %";
@@ -481,6 +511,23 @@ public class BookService {
         return str.trim().isEmpty();
     }
 
+    /** First non-blank string among JSON keys, skipping the literal "null". */
+    private static String firstNonBlankString(Map<String, Object> map, String... keys) {
+        if (map == null) {
+            return null;
+        }
+        for (String key : keys) {
+            Object value = map.get(key);
+            if (value instanceof String) {
+                String trimmed = ((String) value).trim();
+                if (!trimmed.isEmpty() && !"null".equals(trimmed)) {
+                    return trimmed;
+                }
+            }
+        }
+        return null;
+    }
+
     public BookDto generateTempBook(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -503,43 +550,13 @@ public class BookService {
                 photoDataList.add(photoData);
             }
 
-            String question = """
-                Based on these book images, infer the book and author. The images may include the book cover, back cover, spine, table of contents, or other pages.
-                Research details from a Catholic perspective. Be frank in your assessments, without providing a balanced view.
-                Emphasize Catholic teachings, saints, and doctrine where applicable.
-                If the content aligns with Catholic faith, praise it; if not, politely critique it with charity and wisdom.
-
-                Provide details for the author:
-                - name: the full name of the author. First name first and last name last.
-                - dateOfBirth: birth date in YYYY-MM-DD format, or null if unknown
-                - dateOfDeath: death date in YYYY-MM-DD format, or null if alive or unknown
-                - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
-                - birthCountry: the author's country of birth
-                - nationality: the author's nationality, or nationalities
-                - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-
-                For the book:
-                - title: title of the book. If there's ambiguity, explain in plotSummary.
-                - publicationYear: publication year, if known. If there's any uncertainty, leave null.
-                - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave null.
-                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-                - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
-                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-
-                Respond only with a JSON object in this exact format:
-                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]",
-                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]",
-                "briefBiography": "[biography text]"},
-
-                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]",
-                "relatedWorks": "[related]", "detailedDescription": "[description]"}}
-                Do not include any other text before or after the JSON. Dig deep for helpful information.""";
+            String question = CATALOG_FROM_PHOTOS_PROMPT;
 
             int maxRetries = 3;
             RuntimeException lastException = null;
             for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_4);
+                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_FLAGSHIP, CATALOG_SYSTEM_PROMPT);
                     Map<String, Object> jsonData = extractJsonFromResponse(response);
 
                     Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
@@ -569,8 +586,8 @@ public class BookService {
                                 String nationality = (String) authorMap.get("nationality");
                                 authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                                String briefBiography = (String) authorMap.get("briefBiography");
-                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
+                                authorEntity.setBiographicalEssay(briefBiography);
 
                                 authorEntity = authorRepository.save(authorEntity);
                             } else {
@@ -591,8 +608,8 @@ public class BookService {
                                 String nationality = (String) authorMap.get("nationality");
                                 authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                                String briefBiography = (String) authorMap.get("briefBiography");
-                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
+                                authorEntity.setBiographicalEssay(briefBiography);
 
                                 authorEntity = authorRepository.save(authorEntity);
                             }
@@ -649,9 +666,9 @@ public class BookService {
                             dto.setLocNumber(locNumber.trim());
                         }
 
-                        String plotSummary = (String) bookMap.get("plotSummary");
-                        if (plotSummary != null && !plotSummary.trim().isEmpty()) {
-                            dto.setPlotSummary(plotSummary.trim());
+                        String plotSummary = firstNonBlankString(bookMap, "plotEssay", "plotSummary");
+                        if (plotSummary != null) {
+                            dto.setPlotSummary(plotSummary);
                         }
 
                         String relatedWorks = (String) bookMap.get("relatedWorks");
@@ -755,43 +772,13 @@ public class BookService {
                 photoDataList.add(photoData);
             }
 
-            String question = """
-                Based on these book images, infer the book and author. The images may include the book cover, back cover, spine, table of contents, or other pages.
-                Research details from a Catholic perspective. Be frank in your assessments, without providing a balanced view.
-                Emphasize Catholic teachings, saints, and doctrine where applicable.
-                If the content aligns with Catholic faith, praise it; if not, politely critique it with charity and wisdom.
-
-                Provide details for the author:
-                - name: the full name of the author. First name first and last name last.
-                - dateOfBirth: birth date in YYYY-MM-DD format, or null if unknown
-                - dateOfDeath: death date in YYYY-MM-DD format, or null if alive or unknown
-                - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
-                - birthCountry: the author's country of birth
-                - nationality: the author's nationality, or nationalities
-                - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-
-                For the book:
-                - title: title of the book. If there's ambiguity, explain in plotSummary.
-                - publicationYear: publication year, if known. If there's any uncertainty, leave null.
-                - publisher: Name of the book's publisher, if known. If there's any ambiguity, leave null.
-                - plotSummary: a frank Catholic summary and critique of the plot. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-                - relatedWorks: only include here other works by the same author. Important closely related works can be described in the detailedDescription.
-                - detailedDescription: a detailed description from a Catholic point of view. Don't provide a balanced viewpoint. Be frank, but polite and charitable.
-
-                Respond only with a JSON object in this exact format:
-                {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]",
-                "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]",
-                "briefBiography": "[biography text]"},
-
-                "book": {"title": "[title]", "publicationYear": [year], "publisher": "[publisher]", "plotSummary": "[summary]",
-                "relatedWorks": "[related]", "detailedDescription": "[description]"}}
-                Do not include any other text before or after the JSON. Dig deep for helpful information.""";
+            String question = CATALOG_FROM_PHOTOS_PROMPT;
 
             int maxRetries = 3;
             RuntimeException lastException = null;
             for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_4);
+                    String response = askGrok.analyzePhotos(photoDataList, question, AskGrok.MODEL_GROK_FLAGSHIP, CATALOG_SYSTEM_PROMPT);
                     Map<String, Object> jsonData = extractJsonFromResponse(response);
 
                     Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
@@ -821,8 +808,8 @@ public class BookService {
                                 String nationality = (String) authorMap.get("nationality");
                                 authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                                String briefBiography = (String) authorMap.get("briefBiography");
-                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
+                                authorEntity.setBiographicalEssay(briefBiography);
 
                                 authorEntity = authorRepository.save(authorEntity);
                             } else {
@@ -843,8 +830,8 @@ public class BookService {
                                 String nationality = (String) authorMap.get("nationality");
                                 authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                                String briefBiography = (String) authorMap.get("briefBiography");
-                                authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                                String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
+                                authorEntity.setBiographicalEssay(briefBiography);
 
                                 authorEntity = authorRepository.save(authorEntity);
                             }
@@ -901,9 +888,9 @@ public class BookService {
                             dto.setLocNumber(locNumber.trim());
                         }
 
-                        String plotSummary = (String) bookMap.get("plotSummary");
-                        if (plotSummary != null && !plotSummary.trim().isEmpty()) {
-                            dto.setPlotSummary(plotSummary.trim());
+                        String plotSummary = firstNonBlankString(bookMap, "plotEssay", "plotSummary");
+                        if (plotSummary != null) {
+                            dto.setPlotSummary(plotSummary);
                         }
 
                         String relatedWorks = (String) bookMap.get("relatedWorks");
@@ -1002,7 +989,7 @@ public class BookService {
 
             Do not include any other text before or after the JSON.""";
 
-        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_4_FAST);
+        String response = askGrok.analyzePhoto(photo.getImage(), photo.getContentType(), question, AskGrok.MODEL_GROK_FLAGSHIP);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         String title = (String) jsonData.get("title");
@@ -1056,27 +1043,26 @@ public class BookService {
             - religiousAffiliation: the author's religious affiliation; be frank if they were heretics or lapsed
             - birthCountry: the author's country of birth
             - nationality: the author's nationality, or nationalities
-            - briefBiography: a frank Catholic biography, highlighting virtues, public sins, conversion.
+            - biographicalEssay: a frank Catholic biography highlighting virtues, public sins, and conversion. Write 2-4 paragraphs, about 200-400 words. Not a one-sentence blurb.
 
             For the book:
             - title: title of the book
             - publicationYear: publication year, if known
             - publisher: Name of the book's publisher, if known
             - locNumber: Library of Congress call number, if known
-            - plotSummary: a frank Catholic summary and critique of the plot
+            - plotEssay: a frank Catholic summary and critique of the plot. Write 2-3 paragraphs. Not a jacket blurb.
             - relatedWorks: other works by the same author
-            - detailedDescription: a detailed description from a Catholic point of view
+            - detailedDescription: a detailed Catholic catalog essay. Write multiple paragraphs, about 400-800 words. Not a blurb.
 
-            Respond only with a JSON object in this exact format:
-            {"author": {"name": "[author name]", "dateOfBirth": "[YYYY-MM-DD or null]", "dateOfDeath": "[YYYY-MM-DD or null]",
-            "religiousAffiliation": "[affiliation]", "birthCountry": "[country]", "nationality": "[nationality]",
-            "briefBiography": "[biography text]"},
-            "book": {"title": "[title]", "publicationYear": [year or null], "publisher": "[publisher or null]",
-            "locNumber": "[LOC or null]", "plotSummary": "[summary]", "relatedWorks": "[related]",
-            "detailedDescription": "[description]"}}
-            Do not include any other text before or after the JSON.""", title.trim(), authorPart);
+            Respond only with a JSON object with this structure (no text before or after):
+            {"author": {"name": string, "dateOfBirth": "YYYY-MM-DD or null", "dateOfDeath": "YYYY-MM-DD or null",
+            "religiousAffiliation": string, "birthCountry": string, "nationality": string,
+            "biographicalEssay": string},
+            "book": {"title": string, "publicationYear": number or null, "publisher": string or null,
+            "locNumber": string or null, "plotEssay": string, "relatedWorks": string,
+            "detailedDescription": string}}""", title.trim(), authorPart);
 
-        String response = askGrok.askQuestion(question);
+        String response = askGrok.askQuestion(question, CATALOG_SYSTEM_PROMPT);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
         @SuppressWarnings("unchecked")
@@ -1125,9 +1111,9 @@ public class BookService {
                         authorEntity.setNationality(nationality.trim());
                     }
 
-                    String briefBiography = (String) authorMap.get("briefBiography");
+                    String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
                     if (briefBiography != null) {
-                        authorEntity.setBriefBiography(briefBiography.trim());
+                        authorEntity.setBiographicalEssay(briefBiography);
                     }
 
                     authorEntity = authorRepository.save(authorEntity);
@@ -1161,8 +1147,8 @@ public class BookService {
                     String nationality = (String) authorMap.get("nationality");
                     authorEntity.setNationality(nationality != null ? nationality.trim() : null);
 
-                    String briefBiography = (String) authorMap.get("briefBiography");
-                    authorEntity.setBriefBiography(briefBiography != null ? briefBiography.trim() : null);
+                    String briefBiography = firstNonBlankString(authorMap, "biographicalEssay", "briefBiography");
+                    authorEntity.setBiographicalEssay(briefBiography);
 
                     authorEntity = authorRepository.save(authorEntity);
                 }
@@ -1195,9 +1181,9 @@ public class BookService {
                 dto.setLocNumber(locNumber.trim());
             }
 
-            String plotSummary = (String) bookMap.get("plotSummary");
-            if (plotSummary != null && !plotSummary.trim().isEmpty()) {
-                dto.setPlotSummary(plotSummary.trim());
+            String plotSummary = firstNonBlankString(bookMap, "plotEssay", "plotSummary");
+            if (plotSummary != null) {
+                dto.setPlotSummary(plotSummary);
             }
 
             String relatedWorks = (String) bookMap.get("relatedWorks");
@@ -1218,6 +1204,10 @@ public class BookService {
         return bookRepository.findAllSummaries().stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
+    }
+
+    public long countBooks() {
+        return bookRepository.count();
     }
 
     /**
@@ -1356,7 +1346,7 @@ public class BookService {
                 authorMap.put("religiousAffiliation", book.getAuthor().getReligiousAffiliation());
                 authorMap.put("birthCountry", book.getAuthor().getBirthCountry());
                 authorMap.put("nationality", book.getAuthor().getNationality());
-                authorMap.put("briefBiography", book.getAuthor().getBriefBiography());
+                authorMap.put("biographicalEssay", book.getAuthor().getBiographicalEssay());
                 authorJson = objectMapper.writeValueAsString(authorMap);
             }
 

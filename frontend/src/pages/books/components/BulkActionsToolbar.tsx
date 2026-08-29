@@ -21,15 +21,16 @@ import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
-import { GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
-import { PiTag } from 'react-icons/pi'
-import { PiHeadphones } from 'react-icons/pi'
-import { PiGraduationCap } from 'react-icons/pi'
+import { SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
+  tableCount: number
+  totalCount?: number
+  isLoading?: boolean
 }
 
 export type BookFromImageResult = { id: number; success: boolean; book?: { title: string }; error?: string }
@@ -38,7 +39,13 @@ function progressLabel(idle: string, running: string, isPending: boolean, comple
   return isPending ? `${running} (${completed}/${total})` : idle
 }
 
-export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkActionsToolbarProps) {
+export function BulkActionsToolbar({
+  selectedIds,
+  onClearSelection,
+  tableCount,
+  totalCount,
+  isLoading = false,
+}: BulkActionsToolbarProps) {
   const toast = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
@@ -216,26 +223,31 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
     }
   }
 
-  if (selectedIds.size === 0) return null
+  if (selectedIds.size === 0) {
+    return (
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
+        <TableCountPlaceholder
+          tableCount={tableCount}
+          totalCount={totalCount}
+          singular="book"
+          plural="books"
+          isLoading={isLoading}
+        />
+      </SelectionToolbar>
+    )
+  }
 
   return (
     <>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-blue-900">
-              {selectedIds.size} {selectedIds.size === 1 ? 'book' : 'books'} selected
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearSelection}
-              data-test="clear-selection"
-            >
-              Clear Selection
-            </Button>
-          </div>
-          <div className="flex gap-2">
+      <SelectionToolbar dataTest="bulk-actions-toolbar" selected>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full min-w-0">
+          <SelectionSummary
+            count={selectedIds.size}
+            singular="book"
+            plural="books"
+            onClear={onClearSelection}
+          />
+          <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0 [&_button]:shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -315,7 +327,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleGenreLookup}
               isLoading={lookupGenres.isPending}
               disabled={lookupGenres.isPending}
-              leftIcon={<PiTag />}
+              leftIcon={<AiIcon />}
               data-test="bulk-lookup-genres"
             >
               {progressLabel('Lookup Genres', 'Genres...', lookupGenres.isPending, genreProgress, selectedCount)}
@@ -326,7 +338,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleYdlLookup}
               isLoading={lookupYdl.isPending}
               disabled={lookupYdl.isPending}
-              leftIcon={<PiHeadphones />}
+              leftIcon={<YdlIcon />}
               data-test="bulk-lookup-ydl"
             >
               {progressLabel(
@@ -343,7 +355,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
               onClick={handleEmuLookup}
               isLoading={lookupEmu.isPending}
               disabled={lookupEmu.isPending}
-              leftIcon={<PiGraduationCap />}
+              leftIcon={<EmuIcon />}
               data-test="bulk-lookup-emu"
             >
               {progressLabel(
@@ -357,6 +369,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
             <Button
               variant="danger"
               size="sm"
+              className="shrink-0"
               onClick={() => setShowDeleteConfirm(true)}
               data-test="bulk-delete"
             >
@@ -364,7 +377,7 @@ export function BulkActionsToolbar({ selectedIds, onClearSelection }: BulkAction
             </Button>
           </div>
         </div>
-      </div>
+      </SelectionToolbar>
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

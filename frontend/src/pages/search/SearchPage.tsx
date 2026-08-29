@@ -37,14 +37,20 @@ import type { BookDto, AuthorDto } from '@/types/dtos'
 
 /** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
 const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
+  hasYdlAudio: 'ydlAudio',
+  hasYdlBook: 'ydlBook',
+  hasYdlEbook: 'ydlEbook',
+  hasEmuAudio: 'emuAudio',
+  hasEmuBook: 'emuBook',
+  hasEmuEbook: 'emuEbook',
   inLibrary: 'inLib',
   electronic: 'elec',
   freeText: 'freeText',
   audio: 'audio',
   mostRecent: 'mostRecent',
   withoutLoc: 'withoutLoc',
-  threeLetterLoc: 'threeLetterLoc',
   withoutGrokipedia: 'withoutGrokipedia',
+  withGrokipedia: 'withGrokipedia',
   withoutGenres: 'withoutGenres',
   notActiveStatus: 'notActiveStatus',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
@@ -194,7 +200,12 @@ export function SearchPage() {
 
         {/* Filter Chips — same two rows as Books page */}
         <div className="mt-4" data-test="search-filter-chips">
-          <BookFilters chips={filters} onToggle={handleFilterToggle} />
+          <BookFilters
+            chips={filters}
+            onToggle={handleFilterToggle}
+            showAvailabilityFilters
+            hideWithoutAndNotActiveOnMobile
+          />
         </div>
 
         {/* Label Filter Buttons */}

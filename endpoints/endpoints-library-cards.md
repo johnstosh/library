@@ -12,9 +12,12 @@ Submit a library card application (public endpoint).
 {
   "username": "john_doe",
   "password": "sha256-hashed-password",
+  "email": "john@example.com",
   "authority": "USER"
 }
 ```
+
+`email` is optional. When present it must look like an email address. It is stored on the application and used if "email the applicant" is enabled in global settings.
 
 **Password Requirements:**
 - Must be SHA-256 hashed client-side (64 hex characters)
@@ -31,11 +34,12 @@ Submit a library card application (public endpoint).
 - Public-facing library card application form
 - Creates `Applied` entity with status `PENDING`
 - Awaits librarian approval
+- After save, `ApplicationEmailService` notifies librarians (and optionally the applicant) using the email method in Global Settings. Mail failures do not fail the registration.
 
 ---
 
 ### GET /api/applied
-Returns all library card applications.
+Returns library card applications awaiting review (`PENDING` and `QUESTION`). Approved and not-approved applications are omitted so they disappear from the librarian queue after approval.
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
@@ -45,6 +49,7 @@ Returns all library card applications.
   {
     "id": 1,
     "name": "john_doe",
+    "email": "john@example.com",
     "status": "PENDING"
   }
 ]
@@ -118,7 +123,7 @@ Approves a library card application and creates a user account.
 
 **Error Responses:**
 - 404: Application not found
-- 500: User creation failed (e.g., username already exists)
+- 500: User creation failed (e.g., a user named 'Jane Doe' already exists). The response body contains the reason so the librarian UI can display it.
 
 ---
 

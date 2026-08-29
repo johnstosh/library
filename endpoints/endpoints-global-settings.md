@@ -20,7 +20,28 @@ Returns application-wide global settings including OAuth credentials configurati
   "googleSsoClientSecretConfigured": true,
   "googleSsoClientIdConfigured": true,
   "googleSsoCredentialsUpdatedAt": "2025-01-15T10:30:00Z",
-  "lastUpdated": "2025-01-15T10:30:00Z"
+  "lastUpdated": "2025-01-15T10:30:00Z",
+  "emailMethod": "DISABLED",
+  "emailFromAddress": "library@example.com",
+  "emailFromName": "Library",
+  "emailNotifyLibrariansOnPending": true,
+  "emailNotifyApplicantOnPending": false,
+  "emailLibrarianRecipients": "librarian@example.com",
+  "emailIncludeLibrarianUserEmails": true,
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpUsername": "library@example.com",
+  "smtpPasswordPartial": "...word",
+  "smtpPasswordConfigured": true,
+  "smtpStartTls": true,
+  "smtpSsl": false,
+  "sendGridApiKeyPartial": "(not configured)",
+  "sendGridApiKeyConfigured": false,
+  "webhookUrl": "",
+  "webhookBearerTokenPartial": "(not configured)",
+  "webhookBearerTokenConfigured": false,
+  "emailMethodConfigured": true,
+  "emailMethodStatus": "Disabled — no email will be sent"
 }
 ```
 
@@ -44,7 +65,20 @@ Updates application-wide global settings.
   "googleClientId": "123456789.apps.googleusercontent.com",
   "redirectUri": "https://library.example.com/api/oauth/google/callback",
   "googleSsoClientId": "987654321.apps.googleusercontent.com",
-  "googleSsoClientSecret": "GOCSPX-newSsoSecret123456789"
+  "googleSsoClientSecret": "GOCSPX-newSsoSecret123456789",
+  "emailMethod": "SMTP",
+  "emailFromAddress": "library@example.com",
+  "emailFromName": "Library",
+  "emailNotifyLibrariansOnPending": true,
+  "emailNotifyApplicantOnPending": false,
+  "emailLibrarianRecipients": "librarian@example.com",
+  "emailIncludeLibrarianUserEmails": true,
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpUsername": "library@example.com",
+  "smtpPassword": "app-password",
+  "smtpStartTls": true,
+  "smtpSsl": false
 }
 ```
 
@@ -109,9 +143,55 @@ if (ssoConfigured) {
 
 ---
 
+---
+
+## POST /api/global-settings/test-email
+Send a test message using the **currently saved** email method (not unsaved form values).
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Request Body:** optional
+```json
+{
+  "to": "you@example.com"
+}
+```
+
+If `to` is omitted, the configured librarian recipients are used.
+
+**Response:** TestEmailResultDto
+```json
+{
+  "sent": true,
+  "method": "LOG",
+  "message": "Test email sent via LOG to [librarian@example.com]",
+  "recipients": ["librarian@example.com"]
+}
+```
+
+`sent` is false when the method is DISABLED, the transport is missing required fields, or the provider returns an error. HTTP status is still 200 so the UI can show the reason.
+
+---
+
+## Email methods
+
+Configured on `GlobalSettings.emailMethod`:
+
+| Method | What it does | When to use |
+|--------|----------------|-------------|
+| `DISABLED` | No email is sent (default) | Fresh install / until a transport is chosen |
+| `LOG` | Writes subject/body/recipients to application logs | Verify the pending-application flow in Cloud Run or local logs |
+| `SMTP` | Jakarta Mail SMTP at send time from these settings | Gmail app password, Fastmail, Mailgun SMTP. Use port 587 or 465; Cloud Run blocks 25 |
+| `SENDGRID` | HTTPS POST to `https://api.sendgrid.com/v3/mail/send` | Cloud Run-friendly transactional email |
+| `WEBHOOK` | HTTPS POST of JSON (`event`, `to`, `subject`, `text`, `html`, `payload`) | Zapier, n8n, Make, Apps Script, or a Cloud Function |
+
+Librarian pending-application mail is sent after a public register saves an `Applied` row with status `PENDING`. Delivery failures are logged and never roll back the application.
+
 **Related Files:**
 - `GlobalSettingsController.java` - REST endpoint controller
 - `GlobalSettingsService.java` - Business logic and credential management
+- `ApplicationEmailService.java` - Pending-application and test-email dispatch
+- `email/` - Transport implementations (`LogEmailSender`, `SmtpEmailSender`, `SendGridEmailSender`, `WebhookEmailSender`)
 - `GlobalSettingsDto.java` - Data transfer object
 - `GlobalSettings.java` - JPA entity (database model)
 - `GlobalSettingsMapper.java` - MapStruct mapper for entity-DTO conversion

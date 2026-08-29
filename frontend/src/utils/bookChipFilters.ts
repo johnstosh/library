@@ -5,36 +5,52 @@ import type { BookDto } from '@/types/dtos'
  * Independent boolean chip filters shared by the Books and Search pages.
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
- * Row 1: inLibrary, electronic, freeText, audio
- * Row 2: mostRecent, withoutLoc, threeLetterLoc, withoutGrokipedia,
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 2: inLibrary, electronic, freeText, audio
+ * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  *
  * notActiveStatus is special and always constrains:
  *   off → hide WITHDRAWN; on → only non-ACTIVE statuses.
  */
 export interface BookChipFilters {
+  hasYdlAudio: boolean
+  hasYdlBook: boolean
+  hasYdlEbook: boolean
+  hasEmuAudio: boolean
+  hasEmuBook: boolean
+  hasEmuEbook: boolean
   inLibrary: boolean
   electronic: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
   withoutLoc: boolean
-  threeLetterLoc: boolean
   withoutGrokipedia: boolean
+  withGrokipedia: boolean
   withoutGenres: boolean
   notActiveStatus: boolean
   withoutFreeTextUrls: boolean
 }
 
 export const defaultBookChipFilters: BookChipFilters = {
+  hasYdlAudio: false,
+  hasYdlBook: false,
+  hasYdlEbook: false,
+  hasEmuAudio: false,
+  hasEmuBook: false,
+  hasEmuEbook: false,
   inLibrary: false,
   electronic: false,
   freeText: false,
   audio: false,
+  // Shared default is off (Search, applyChipFilters tests). The Books page
+  // overrides this to true in uiStore so it can use the faster
+  // GET /books/most-recent-day backend instead of GET /books/summaries.
   mostRecent: false,
   withoutLoc: false,
-  threeLetterLoc: false,
   withoutGrokipedia: false,
+  withGrokipedia: false,
   withoutGenres: false,
   notActiveStatus: false,
   withoutFreeTextUrls: false,
@@ -42,14 +58,15 @@ export const defaultBookChipFilters: BookChipFilters = {
 
 const TEMP_TITLE_RE = /^\d{4}-\d{1,2}-\d{1,2}/
 
-/** True if locNumber starts with three uppercase letters. */
-export function is3LetterLoc(locNumber: string | null | undefined): boolean {
-  if (!locNumber) return false
-  return /^[A-Z]{3}/.test(locNumber)
-}
-
 export function isAnyChipActive(chips: BookChipFilters): boolean {
   return (Object.keys(chips) as (keyof BookChipFilters)[]).some((key) => chips[key])
+}
+
+/** True if any chip other than mostRecent is on. */
+export function isOtherBookChipActive(chips: BookChipFilters): boolean {
+  return (Object.keys(chips) as (keyof BookChipFilters)[])
+    .filter((key) => key !== 'mostRecent')
+    .some((key) => chips[key])
 }
 
 function isBlank(value: string | null | undefined): boolean {
@@ -72,6 +89,12 @@ export function applyChipFilters<T extends Pick<
   | 'grokipediaUrl'
   | 'tagsList'
   | 'status'
+  | 'ydlAudioAvailable'
+  | 'ydlPaperAvailable'
+  | 'ydlEbookAvailable'
+  | 'emuAudioAvailable'
+  | 'emuPaperAvailable'
+  | 'emuEbookAvailable'
 >>(books: T[], chips: BookChipFilters): T[] {
   let maxDate: Date | null = null
   if (chips.mostRecent) {
@@ -90,6 +113,12 @@ export function applyChipFilters<T extends Pick<
   }
 
   return books.filter((book) => {
+    if (chips.hasYdlAudio && book.ydlAudioAvailable !== true) return false
+    if (chips.hasYdlBook && book.ydlPaperAvailable !== true) return false
+    if (chips.hasYdlEbook && book.ydlEbookAvailable !== true) return false
+    if (chips.hasEmuAudio && book.emuAudioAvailable !== true) return false
+    if (chips.hasEmuBook && book.emuPaperAvailable !== true) return false
+    if (chips.hasEmuEbook && book.emuEbookAvailable !== true) return false
     if (chips.inLibrary && isBlank(book.locNumber)) return false
     if (chips.electronic && !book.electronicResource) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
@@ -106,8 +135,8 @@ export function applyChipFilters<T extends Pick<
       }
     }
     if (chips.withoutLoc && !isBlank(book.locNumber)) return false
-    if (chips.threeLetterLoc && !is3LetterLoc(book.locNumber)) return false
     if (chips.withoutGrokipedia && !isBlank(book.grokipediaUrl)) return false
+    if (chips.withGrokipedia && isBlank(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
     if (chips.notActiveStatus) {
       if (book.status === 'ACTIVE') return false

@@ -43,9 +43,16 @@ public class SearchController {
             @RequestParam(defaultValue = "false") boolean filterWithoutLoc,
             @RequestParam(defaultValue = "false") boolean filterThreeLetterLoc,
             @RequestParam(defaultValue = "false") boolean filterWithoutGrokipedia,
+            @RequestParam(defaultValue = "false") boolean filterWithGrokipedia,
             @RequestParam(defaultValue = "false") boolean filterWithoutGenres,
             @RequestParam(defaultValue = "false") boolean filterNotActiveStatus,
             @RequestParam(defaultValue = "false") boolean filterWithoutFreeTextUrls,
+            @RequestParam(defaultValue = "false") boolean filterYdlAudio,
+            @RequestParam(defaultValue = "false") boolean filterYdlBook,
+            @RequestParam(defaultValue = "false") boolean filterYdlEbook,
+            @RequestParam(defaultValue = "false") boolean filterEmuAudio,
+            @RequestParam(defaultValue = "false") boolean filterEmuBook,
+            @RequestParam(defaultValue = "false") boolean filterEmuEbook,
             @RequestParam(required = false) String labels) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
@@ -58,7 +65,11 @@ public class SearchController {
                     filterInLibrary, filterElectronic, filterFreeText, filterAudio,
                     filterMostRecent, filterWithoutLoc, filterThreeLetterLoc,
                     filterWithoutGrokipedia, filterWithoutGenres, filterNotActiveStatus,
-                    filterWithoutFreeTextUrls, labelList);
+                    filterWithoutFreeTextUrls,
+                    filterYdlAudio, filterYdlBook, filterYdlEbook,
+                    filterEmuAudio, filterEmuBook, filterEmuEbook,
+                    filterWithGrokipedia,
+                    labelList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', page {}, size {}: {}",

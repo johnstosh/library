@@ -27,4 +27,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Find user by username with a local password (for form login)
     @Query("SELECT u FROM User u WHERE u.username = :username AND u.password IS NOT NULL ORDER BY u.id ASC")
     List<User> findAllByUsernameWithPasswordOrderByIdAsc(@Param("username") String username);
+
+    @Query("SELECT DISTINCT u.email FROM User u JOIN u.authorities a "
+            + "WHERE a.name = 'LIBRARIAN' AND u.email IS NOT NULL AND u.email <> ''")
+    List<String> findLibrarianEmails();
 }

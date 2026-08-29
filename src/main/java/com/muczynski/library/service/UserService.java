@@ -111,7 +111,7 @@ public class UserService {
 
     public UserDto createUserFromApplied(Applied applied) {
         if (!userRepository.findAllByUsernameOrderByIdAsc(applied.getName()).isEmpty()) {
-            throw new LibraryException("Username already exists");
+            throw new LibraryException("A user named '" + applied.getName() + "' already exists");
         }
 
         User user = new User();

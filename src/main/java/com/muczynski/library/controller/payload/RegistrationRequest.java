@@ -6,6 +6,7 @@ package com.muczynski.library.controller.payload;
 public class RegistrationRequest {
     private String username;
     private String password;
+    private String email;
     private String authority;
 
     public String getUsername() {
@@ -22,6 +23,14 @@ public class RegistrationRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getAuthority() {

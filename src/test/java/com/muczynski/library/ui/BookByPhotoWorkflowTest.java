@@ -53,9 +53,9 @@ public class BookByPhotoWorkflowTest {
     private static final String MOCK_AI_RESPONSE =
         "{\"author\": {\"name\": \"Mock AI Author\", \"dateOfBirth\": null, \"dateOfDeath\": null, " +
         "\"religiousAffiliation\": \"Unknown\", \"birthCountry\": \"USA\", \"nationality\": \"American\", " +
-        "\"briefBiography\": \"A test author for automated testing.\"}, " +
+        "\"biographicalEssay\": \"A test author for automated testing.\"}, " +
         "\"book\": {\"title\": \"Mock AI Book Title\", \"publicationYear\": 2024, \"publisher\": \"Test Press\", " +
-        "\"locNumber\": null, \"plotSummary\": \"A test summary.\", \"relatedWorks\": \"None\", " +
+        "\"locNumber\": null, \"plotEssay\": \"A test summary.\", \"relatedWorks\": \"None\", " +
         "\"detailedDescription\": \"A detailed test description.\"}}";
 
     @BeforeAll

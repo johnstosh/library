@@ -5,9 +5,12 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
-import com.muczynski.library.dto.CreateUserDto;
+import com.muczynski.library.email.EmailAddresses;
+import com.muczynski.library.email.PendingApplicationNotice;
 import com.muczynski.library.repository.AppliedRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,8 @@ import java.util.List;
 @Transactional
 public class AppliedService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AppliedService.class);
+
     @Autowired
     private AppliedRepository appliedRepository;
 
@@ -28,8 +33,19 @@ public class AppliedService {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private ApplicationEmailService applicationEmailService;
+
     public List<Applied> getAllApplied() {
-        return appliedRepository.findAll();
+        return appliedRepository.findAll().stream()
+                .filter(applied -> isAwaitingReview(applied.getStatus()))
+                .toList();
+    }
+
+    static boolean isAwaitingReview(Applied.ApplicationStatus status) {
+        return status == null
+                || status == Applied.ApplicationStatus.PENDING
+                || status == Applied.ApplicationStatus.QUESTION;
     }
 
     public Applied getAppliedById(Long id) {
@@ -49,7 +65,32 @@ public class AppliedService {
             throw new IllegalArgumentException("Invalid password format - expected SHA-256 hash");
         }
         applied.setPassword(passwordEncoder.encode(applied.getPassword()));
-        return appliedRepository.save(applied);
+        applied.setEmail(normalizeOptionalEmail(applied.getEmail()));
+        if (applied.getStatus() == null) {
+            applied.setStatus(Applied.ApplicationStatus.PENDING);
+        }
+        Applied saved = appliedRepository.save(applied);
+        if (saved.getStatus() == Applied.ApplicationStatus.PENDING) {
+            try {
+                applicationEmailService.notifyPendingApplication(
+                        new PendingApplicationNotice(saved.getId(), saved.getName(), saved.getEmail()));
+            } catch (Exception e) {
+                logger.warn("Failed to dispatch pending-application email for '{}': {}",
+                        saved.getName(), e.getMessage());
+            }
+        }
+        return saved;
+    }
+
+    private String normalizeOptionalEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        String trimmed = email.trim();
+        if (!EmailAddresses.isValid(trimmed)) {
+            throw new LibraryException("Invalid email address: " + trimmed);
+        }
+        return trimmed;
     }
 
     public Applied updateApplied(Long id, Applied applied) {

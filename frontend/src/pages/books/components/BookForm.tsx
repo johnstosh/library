@@ -13,8 +13,7 @@ import { useCreateBook, useUpdateBook, useSuggestLocNumber } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
 import type { BookDto } from '@/types/dtos'
 import { BookStatus } from '@/types/enums'
-import { PiSparkle } from 'react-icons/pi'
-import { LocIcon } from '@/components/ui/Icons'
+import { AiIcon, LocIcon } from '@/components/ui/Icons'
 
 interface BookFormProps {
   isOpen: boolean
@@ -353,7 +352,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
               onClick={handleSuggestLoc}
               isLoading={isSuggesting}
               disabled={isLoading || isSuggesting || isLookingUp}
-              leftIcon={<PiSparkle />}
+              leftIcon={<AiIcon />}
               data-test="suggest-loc-button"
               className="mb-0"
             >

@@ -20,6 +20,7 @@ interface PhotoGalleryProps {
   onMoveLeft: (photoId: number) => void
   onMoveRight: (photoId: number) => void
   isLoading?: boolean
+  canEdit?: boolean
 }
 
 export function PhotoGallery({
@@ -30,6 +31,7 @@ export function PhotoGallery({
   onMoveLeft,
   onMoveRight,
   isLoading,
+  canEdit = false,
 }: PhotoGalleryProps) {
   const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null)
   const [lightboxPhoto, setLightboxPhoto] = useState<PhotoDto | null>(null)
@@ -84,17 +86,19 @@ export function PhotoGallery({
                   >
                     <PiMagnifyingGlassPlus className="w-4 h-4 text-gray-700" />
                   </a>
-                  <button
-                    onClick={() => setDeletingPhotoId(photo.id)}
-                    className="p-2 bg-white rounded-lg shadow-sm hover:bg-red-50 transition-colors"
-                    title="Delete"
-                    data-test={`delete-photo-${photo.id}`}
-                  >
-                    <PiTrash className="w-4 h-4 text-red-600" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => setDeletingPhotoId(photo.id)}
+                      className="p-2 bg-white rounded-lg shadow-sm hover:bg-red-50 transition-colors"
+                      title="Delete"
+                      data-test={`delete-photo-${photo.id}`}
+                    >
+                      <PiTrash className="w-4 h-4 text-red-600" />
+                    </button>
+                  )}
                 </div>
 
-                {/* Bottom Actions */}
+                {canEdit && (
                 <div className="flex justify-between gap-1">
                   <div className="flex gap-1">
                     <button
@@ -137,6 +141,7 @@ export function PhotoGallery({
                     </button>
                   </div>
                 </div>
+                )}
               </div>
             </div>
 

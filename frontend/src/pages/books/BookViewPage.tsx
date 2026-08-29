@@ -6,6 +6,7 @@ import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -16,7 +17,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useIsLibrarian } from '@/stores/authStore'
+import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
@@ -30,6 +31,7 @@ export function BookViewPage() {
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const isLibrarian = useIsLibrarian()
+  const isAuthenticated = useIsAuthenticated()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -73,7 +75,7 @@ export function BookViewPage() {
   }
 
   const handleBack = () => {
-    navigate('/books')
+    navigate(isAuthenticated ? '/books' : '/search')
   }
 
   if (isLoading) {
@@ -86,16 +88,22 @@ export function BookViewPage() {
         title="Book Not Found"
         entityLabel="book"
         onBack={handleBack}
-        backLabel="Return to Books"
+        backLabel={isAuthenticated ? 'Return to Books' : 'Return to Search'}
       />
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <BackLink onClick={handleBack} data-test="back-to-books">
-        Back to Books
-      </BackLink>
+      {isAuthenticated ? (
+        <BackLink onClick={handleBack} data-test="back-to-books">
+          Back to Books
+        </BackLink>
+      ) : (
+        <BackLink onClick={handleBack} data-test="back-to-search">
+          Back to Search
+        </BackLink>
+      )}
 
       <PageCard padding={false}>
         {/* Header */}
@@ -242,7 +250,7 @@ export function BookViewPage() {
               </div>
               {book.tagsList && book.tagsList.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Tags</p>
+                  <p className="text-sm font-medium text-gray-500">Genres</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {book.tagsList.map((tag) => (
                       <StatusBadge
@@ -294,7 +302,7 @@ export function BookViewPage() {
               <h2 className="text-sm font-semibold text-gray-700">YDL Availability</h2>
               <div className="flex items-center gap-3">
                 <a
-                  href={`https://ypsilantidl.na4.iiivega.com/search?query=${encodeURIComponent(`"${book.title}"`)}&searchType=everything&pageSize=40`}
+                  href={ydlCatalogSearchUrl(book.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
@@ -385,7 +393,7 @@ export function BookViewPage() {
               <h2 className="text-sm font-semibold text-gray-700">EMU Availability</h2>
               <div className="flex items-center gap-3">
                 <a
-                  href={`https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${book.title}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`}
+                  href={emuCatalogSearchUrl(book.title)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}

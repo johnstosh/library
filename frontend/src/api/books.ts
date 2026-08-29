@@ -5,26 +5,38 @@ import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
 
-// Hook to get all books with optimized lastModified caching.
-// All filtering is done client-side in BooksPage (via booksChips store).
+// Hook to get books with optimized lastModified caching.
 // When selectedLabels are provided, the backend pre-filters to only books with those labels
 // (AND logic), then client-side chips apply on top.
-export function useBooks(selectedLabels?: string[]) {
+// When mostRecent is on and no labels are selected, summaries come from
+// GET /books/most-recent-day instead of GET /books/summaries — that endpoint
+// is a much smaller query and is why the Books page defaults the chip on.
+export function useBooks(selectedLabels?: string[], mostRecent = false) {
   const queryClient = useQueryClient()
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
+  const useMostRecentEndpoint = mostRecent && !hasLabels
 
   // When labels are active, fetch from /books/by-labels endpoint
   const labelEndpoint = hasLabels
     ? `/books/by-labels?labels=${encodeURIComponent((selectedLabels ?? []).join(','))}`
     : null
 
+  const summariesEndpoint = hasLabels
+    ? labelEndpoint!
+    : useMostRecentEndpoint
+      ? '/books/most-recent-day'
+      : '/books/summaries'
+
+  const summariesQueryKey = hasLabels
+    ? queryKeys.books.labelSummaries(selectedLabels ?? [])
+    : useMostRecentEndpoint
+      ? queryKeys.books.filterSummaries('most-recent')
+      : queryKeys.books.summaries()
+
   // Step 1: Fetch summaries (ID + lastModified).
-  // Always use /books/summaries for the unfiltered case; client-side chips handle all other filtering.
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
-    queryKey: hasLabels
-      ? queryKeys.books.labelSummaries(selectedLabels ?? [])
-      : queryKeys.books.summaries(),
-    queryFn: () => api.get<BookSummaryDto[]>(hasLabels ? labelEndpoint! : '/books/summaries'),
+    queryKey: summariesQueryKey,
+    queryFn: () => api.get<BookSummaryDto[]>(summariesEndpoint),
     staleTime: 30 * 1000, // 30 seconds: prevents duplicate fetches on rapid mounts/re-renders while keeping data reasonably fresh
     refetchOnMount: true, // Refetch on mount only if data is stale (older than staleTime)
     placeholderData: keepPreviousData, // Prevent summaries from becoming undefined during refetches
@@ -121,6 +133,14 @@ export function useBooks(selectedLabels?: string[]) {
   }
 }
 
+export function useBookCount() {
+  return useQuery({
+    queryKey: queryKeys.books.count(),
+    queryFn: () => api.get<{ count: number }>('/books/count'),
+    staleTime: 30 * 1000,
+  })
+}
+
 // Hook to get a single book
 export function useBook(id: number) {
   return useQuery({
@@ -140,7 +160,7 @@ export function useCreateBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }
@@ -157,7 +177,7 @@ export function useUpdateBook() {
       queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }
@@ -173,7 +193,7 @@ export function useDeleteBook() {
       queryClient.removeQueries({ queryKey: queryKeys.books.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }
@@ -192,7 +212,7 @@ export function useDeleteBooks() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }
@@ -207,7 +227,7 @@ export function useCloneBook() {
       // Invalidate summaries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.list('3-letter-loc') })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.availability() })
     },
   })
 }

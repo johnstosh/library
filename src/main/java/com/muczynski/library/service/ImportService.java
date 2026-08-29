@@ -127,7 +127,7 @@ public class ImportService {
                 auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
                 auth.setBirthCountry(aDto.getBirthCountry());
                 auth.setNationality(aDto.getNationality());
-                auth.setBriefBiography(aDto.getBriefBiography());
+                auth.setBiographicalEssay(aDto.getBriefBiography());
                 auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
                 auth = authorRepository.save(auth);
                 authMap.put(aDto.getName(), auth);
@@ -317,7 +317,7 @@ public class ImportService {
                 // Update fields (merge)
                 book.setPublicationYear(bDto.getPublicationYear());
                 book.setPublisher(bDto.getPublisher());
-                book.setPlotSummary(bDto.getPlotSummary());
+                book.setPlotEssay(bDto.getPlotSummary());
                 book.setRelatedWorks(bDto.getRelatedWorks());
                 book.setDetailedDescription(bDto.getDetailedDescription());
                 book.setGrokipediaUrl(bDto.getGrokipediaUrl());
@@ -569,7 +569,7 @@ public class ImportService {
             aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
             aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
             aDto.setNationality(emptyToNull(author.getNationality()));
-            aDto.setBriefBiography(emptyToNull(author.getBriefBiography()));
+            aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
             aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
             authDtos.add(aDto);
         }
@@ -612,7 +612,7 @@ public class ImportService {
             bDto.setTitle(book.getTitle());
             bDto.setPublicationYear(book.getPublicationYear());
             bDto.setPublisher(emptyToNull(book.getPublisher()));
-            bDto.setPlotSummary(emptyToNull(book.getPlotSummary()));
+            bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));
             bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
             bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
             bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));

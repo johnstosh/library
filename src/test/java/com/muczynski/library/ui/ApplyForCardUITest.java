@@ -90,6 +90,10 @@ public class ApplyForCardUITest {
         Locator nameInput = page.locator("[data-test='apply-name']");
         assertThat(nameInput).isVisible();
 
+        // Verify optional email input
+        Locator emailInput = page.locator("[data-test='apply-email']");
+        assertThat(emailInput).isVisible();
+
         // Verify password input
         Locator passwordInput = page.locator("[data-test='apply-password']");
         assertThat(passwordInput).isVisible();
@@ -280,5 +284,38 @@ public class ApplyForCardUITest {
 
         // Should show validation error
         assertThat(page.locator("text=Name is required")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should submit application with optional email")
+    void testSuccessfulApplicationWithEmail() {
+        page.navigate(getBaseUrl() + "/apply");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='apply-name']", "Email Applicant");
+        page.fill("[data-test='apply-email']", "applicant@example.com");
+        page.fill("[data-test='apply-password']", "password123");
+        page.fill("[data-test='apply-confirm-password']", "password123");
+
+        page.click("[data-test='apply-submit']");
+
+        assertThat(page.locator("text=Application submitted successfully!"))
+            .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
+    }
+
+    @Test
+    @DisplayName("Should reject invalid email format")
+    void testInvalidEmailValidation() {
+        page.navigate(getBaseUrl() + "/apply");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='apply-name']", "John Smith");
+        page.fill("[data-test='apply-email']", "not-an-email");
+        page.fill("[data-test='apply-password']", "password123");
+        page.fill("[data-test='apply-confirm-password']", "password123");
+
+        page.click("[data-test='apply-submit']");
+
+        assertThat(page.locator("text=Enter a valid email address or leave it blank")).isVisible();
     }
 }

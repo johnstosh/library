@@ -176,4 +176,143 @@ public class AskGrokTest {
             askGrok.analyzePhotos(photoDataList, "test question")
         );
     }
+
+    @Test
+    void askQuestion_usesFlagshipModelSystemPromptAndCompletionCap() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "essay");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        String result = askGrok.askQuestion("Research Little Women", "Write essays, not blurbs.");
+
+        assertEquals("essay", result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        assertEquals(AskGrok.MODEL_GROK_FLAGSHIP, request.get("model"));
+        assertEquals("grok-4.6", request.get("model"));
+        assertEquals(8000, request.get("max_completion_tokens"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        assertEquals(2, messages.size());
+        assertEquals("system", messages.get(0).get("role"));
+        assertEquals("Write essays, not blurbs.", messages.get(0).get("content"));
+        assertEquals("user", messages.get(1).get("role"));
+        assertEquals("Research Little Women", messages.get(1).get("content"));
+    }
+
+    @Test
+    void analyzePhoto_withHighDetail_putsDetailOnImageUrl() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "{}");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        askGrok.analyzePhoto(
+                "img".getBytes(),
+                "image/jpeg",
+                "transcribe",
+                AskGrok.MODEL_GROK_4_FAST,
+                null,
+                AskGrok.IMAGE_DETAIL_HIGH);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> content = (List<Map<String, Object>>) messages.get(0).get("content");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> imagePart = content.stream()
+                .filter(part -> "image_url".equals(part.get("type")))
+                .findFirst()
+                .orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> imageUrl = (Map<String, Object>) imagePart.get("image_url");
+        assertEquals("high", imageUrl.get("detail"));
+    }
+
+    @Test
+    void parseCallNumberArray_sortsAlphabeticallyAndTakesDistinctStrings() {
+        List<String> parsed = AskGrok.parseCallNumberArray(
+                "Here you go:\n[\"PS3511.I9 G7\", \"BX4700.T4\", \"  \"]\n");
+        assertEquals(List.of("BX4700.T4", "PS3511.I9 G7"), parsed);
+    }
+
+    @Test
+    void parseCallNumberArray_emptyOrInvalid_returnsEmpty() {
+        assertEquals(List.of(), AskGrok.parseCallNumberArray(null));
+        assertEquals(List.of(), AskGrok.parseCallNumberArray("PS3511.I9 G7"));
+        assertEquals(List.of(), AskGrok.parseCallNumberArray("[]"));
+    }
+
+    @Test
+    void suggestLocNumber_returnsAlphabeticallyFirstFromArray() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "[\"PS3511.I9 G7\", \"BX4700.T4\"]");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        assertEquals("BX4700.T4", askGrok.suggestLocNumber("Little Women", "Louisa May Alcott"));
+    }
 }

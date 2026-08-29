@@ -6,20 +6,29 @@ import type { LibraryCardDesignDto } from '@/types/dtos'
 export interface AppliedDto {
   id: number
   name: string
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  email?: string
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_APPROVED' | 'QUESTION'
 }
 
 export interface RegistrationRequest {
   username: string
   password: string
+  email?: string
   authority: string
 }
 
-// Hook to get all library card applications (librarian only)
+function isAwaitingReview(status: AppliedDto['status']): boolean {
+  return status == null || status === 'PENDING' || status === 'QUESTION'
+}
+
+// Hook to get library card applications awaiting review (librarian only)
 export function useApplications() {
   return useQuery({
     queryKey: ['applications'],
-    queryFn: () => api.get<AppliedDto[]>('/applied'),
+    queryFn: async () => {
+      const applications = await api.get<AppliedDto[]>('/applied')
+      return applications.filter((application) => isAwaitingReview(application.status))
+    },
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }
@@ -38,8 +47,12 @@ export function useApproveApplication() {
 
   return useMutation({
     mutationFn: (id: number) => api.post(`/applied/${id}/approve`, {}),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<AppliedDto[]>(['applications'], (current) =>
+        current?.filter((application) => application.id !== id)
+      )
       queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
     },
   })
 }

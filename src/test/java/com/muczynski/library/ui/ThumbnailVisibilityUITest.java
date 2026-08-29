@@ -122,7 +122,7 @@ public class ThumbnailVisibilityUITest {
             }
         });
 
-        // Default chips are off (all books shown except withdrawn) — all 5 books were added today.
+        // Most Recent Day starts on; all 5 books were added today so they appear.
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Wait for the book titles to appear

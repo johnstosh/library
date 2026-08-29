@@ -4,9 +4,13 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.User;
+import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.AuthorSummaryDto;
+import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
@@ -70,6 +74,17 @@ public class AuthorController {
         }
     }
 
+    @GetMapping("/count")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<CountDto> getAuthorCount() {
+        try {
+            return ResponseEntity.ok(new CountDto(authorService.countAuthors()));
+        } catch (Exception e) {
+            logger.warn("Failed to count authors: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @GetMapping("/summaries")
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<AuthorSummaryDto>> getAllAuthorSummaries() {
@@ -126,6 +141,23 @@ public class AuthorController {
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve authors from most recent day: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    /**
+     * Per-author YDL/EMU holdings (book/ebook/audio) rolled up from books.
+     * Used by the Authors page filter chips. Separate from author lastModified caching
+     * so lookups that change book flags show up without bumping the author row.
+     */
+    @GetMapping("/availability")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getAuthorAvailability() {
+        try {
+            List<AuthorAvailabilityDto> availability = authorService.getAuthorAvailability();
+            return ResponseEntity.ok(availability);
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve author YDL/EMU availability: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -304,12 +336,24 @@ public class AuthorController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<Void> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
+    public ResponseEntity<BulkDeleteResultDto> deleteBulkAuthors(@RequestBody List<Long> authorIds) {
         try {
-            authorService.deleteBulkAuthors(authorIds);
-            return ResponseEntity.ok().build();
+            BulkDeleteResultDto result = authorService.deleteBulkAuthors(authorIds);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.warn("Failed to bulk delete authors {}: {}", authorIds, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/{id}/generate-missing")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<AuthorEnrichmentResultDto> generateMissingData(@PathVariable Long id) {
+        try {
+            AuthorEnrichmentResultDto result = authorService.generateMissingData(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.warn("Failed to generate missing data for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

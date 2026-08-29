@@ -4,8 +4,11 @@
 package com.muczynski.library.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
+import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
@@ -79,6 +82,15 @@ class AuthorControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void getAuthorCount_unauthenticated_returnsOk() throws Exception {
+        when(authorService.countAuthors()).thenReturn(52L);
+
+        mockMvc.perform(get("/api/authors/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(52));
     }
 
     @Test
@@ -208,12 +220,57 @@ class AuthorControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void deleteBulkAuthors() throws Exception {
         List<Long> authorIds = List.of(1L, 2L, 3L);
-        doNothing().when(authorService).deleteBulkAuthors(authorIds);
+        BulkDeleteResultDto result = BulkDeleteResultDto.builder()
+                .deletedCount(2)
+                .failedCount(1)
+                .deletedIds(List.of(1L, 3L))
+                .failures(List.of(BulkDeleteResultDto.BulkDeleteFailureDto.builder()
+                        .id(2L)
+                        .title("Kept Author")
+                        .errorMessage("Cannot delete author because it has 3 associated books.")
+                        .build()))
+                .build();
+        when(authorService.deleteBulkAuthors(authorIds)).thenReturn(result);
 
         mockMvc.perform(post("/api/authors/delete-bulk")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authorIds)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletedCount").value(2))
+                .andExpect(jsonPath("$.failedCount").value(1))
+                .andExpect(jsonPath("$.failures[0].title").value("Kept Author"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void generateMissingData() throws Exception {
+        AuthorDto updated = new AuthorDto();
+        updated.setId(1L);
+        updated.setName("Jane Austen");
+        updated.setBriefBiography("A biography.");
+        AuthorEnrichmentResultDto result = AuthorEnrichmentResultDto.builder()
+                .authorId(1L)
+                .name("Jane Austen")
+                .success(true)
+                .skipped(false)
+                .filledFields(List.of("biographicalEssay", "dateOfBirth"))
+                .updatedAuthor(updated)
+                .build();
+        when(authorService.generateMissingData(1L)).thenReturn(result);
+
+        mockMvc.perform(put("/api/authors/1/generate-missing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.skipped").value(false))
+                .andExpect(jsonPath("$.filledFields.length()").value(2))
+                .andExpect(jsonPath("$.updatedAuthor.name").value("Jane Austen"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void generateMissingData_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(put("/api/authors/1/generate-missing"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -379,6 +436,29 @@ class AuthorControllerTest {
 
         mockMvc.perform(get("/api/authors/most-recent-day"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void getAuthorAvailability_unauthenticated_returnsOk() throws Exception {
+        AuthorAvailabilityDto dto = new AuthorAvailabilityDto();
+        dto.setAuthorId(1L);
+        dto.setHasYdlBook(true);
+        dto.setHasYdlEbook(false);
+        dto.setHasYdlAudio(true);
+        dto.setHasEmuBook(false);
+        dto.setHasEmuEbook(true);
+        dto.setHasEmuAudio(false);
+        when(authorService.getAuthorAvailability()).thenReturn(Collections.singletonList(dto));
+
+        mockMvc.perform(get("/api/authors/availability"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].authorId").value(1))
+                .andExpect(jsonPath("$[0].hasYdlBook").value(true))
+                .andExpect(jsonPath("$[0].hasYdlEbook").value(false))
+                .andExpect(jsonPath("$[0].hasYdlAudio").value(true))
+                .andExpect(jsonPath("$[0].hasEmuBook").value(false))
+                .andExpect(jsonPath("$[0].hasEmuEbook").value(true))
+                .andExpect(jsonPath("$[0].hasEmuAudio").value(false));
     }
 
     @Test

@@ -68,6 +68,27 @@ export interface AuthorSummaryDto {
   lastModified: string
 }
 
+/** Per-author YDL/EMU holdings rolled up from that author's books. */
+export interface AuthorAvailabilityDto {
+  authorId: number
+  hasYdlBook?: boolean
+  hasYdlEbook?: boolean
+  hasYdlAudio?: boolean
+  hasEmuBook?: boolean
+  hasEmuEbook?: boolean
+  hasEmuAudio?: boolean
+}
+
+export interface AuthorEnrichmentResultDto {
+  authorId: number
+  name: string
+  success: boolean
+  skipped: boolean
+  filledFields: string[]
+  errorMessage?: string
+  updatedAuthor?: AuthorDto
+}
+
 // Book DTOs
 export interface BookDto {
   id: number
@@ -244,6 +265,15 @@ export interface ChunkUploadProgress {
   currentItems: PhotoZipImportItemDto[]
 }
 
+export type EmailMethod = 'DISABLED' | 'LOG' | 'SMTP' | 'SENDGRID' | 'WEBHOOK'
+
+export interface TestEmailResultDto {
+  sent: boolean
+  method: EmailMethod
+  message: string
+  recipients: string[]
+}
+
 // Settings DTOs
 export interface GlobalSettingsDto {
   googleClientSecret?: string
@@ -261,4 +291,28 @@ export interface GlobalSettingsDto {
   lastUpdated?: string
   googleClientSecretConfigured: boolean
   googleClientSecretValidation?: string
+  emailMethod?: EmailMethod
+  emailFromAddress?: string
+  emailFromName?: string
+  emailNotifyLibrariansOnPending?: boolean
+  emailNotifyApplicantOnPending?: boolean
+  emailLibrarianRecipients?: string
+  emailIncludeLibrarianUserEmails?: boolean
+  smtpHost?: string
+  smtpPort?: number
+  smtpUsername?: string
+  smtpPassword?: string
+  smtpPasswordPartial?: string
+  smtpPasswordConfigured?: boolean
+  smtpStartTls?: boolean
+  smtpSsl?: boolean
+  sendGridApiKey?: string
+  sendGridApiKeyPartial?: string
+  sendGridApiKeyConfigured?: boolean
+  webhookUrl?: string
+  webhookBearerToken?: string
+  webhookBearerTokenPartial?: string
+  webhookBearerTokenConfigured?: boolean
+  emailMethodConfigured?: boolean
+  emailMethodStatus?: string
 }
