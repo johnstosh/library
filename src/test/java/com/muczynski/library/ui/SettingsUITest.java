@@ -79,11 +79,34 @@ public class SettingsUITest {
         page.fill("[data-test='login-password']", password);
         page.click("[data-test='login-submit']");
 
-        // Wait for navigation to complete
+        // Wait for navigation to complete and the account menu to render
         page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='nav-user-menu']",
+                new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
+    }
+
+    private void openAccountMenu() {
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        userMenu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        PlaywrightException lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            userMenu.click();
+            try {
+                page.locator("[data-test='nav-settings']").waitFor(
+                        new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(3000L));
+                return;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new AssertionError("Account menu did not open");
     }
 
     private void navigateToSettings() {
+        openAccountMenu();
         page.click("[data-test='nav-settings']");
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
@@ -124,72 +147,19 @@ public class SettingsUITest {
     }
 
     @Test
-    @DisplayName("USER: Should see card design preview image")
-    void testUserCanSeeCardDesignPreview() {
+    @DisplayName("USER: Should not duplicate My Card design picker on Settings")
+    void testUserSettingsDoesNotShowCardDesign() {
         login("testuser", "password");
         navigateToSettings();
 
-        // Wait for the preview image to be visible
-        page.waitForSelector("[data-test='library-card-design-preview']", new Page.WaitForSelectorOptions()
+        page.waitForSelector("h1", new Page.WaitForSelectorOptions()
                 .setTimeout(20000L)
                 .setState(WaitForSelectorState.VISIBLE));
 
-        Locator previewImg = page.locator("[data-test='library-card-design-preview']");
-        assertThat(previewImg).isVisible();
-
-        // Verify the src attribute contains the expected path
-        String src = previewImg.getAttribute("src");
-        assert src != null && src.contains("/images/library-cards/") :
-                "Expected preview src to contain '/images/library-cards/' but was: " + src;
-    }
-
-    @Test
-    @DisplayName("USER: Should display library card design options")
-    void testUserCanViewLibraryCardDesigns() {
-        login("testuser", "password");
-        navigateToSettings();
-
-        // Wait for settings page to load
-        page.waitForSelector("h2:has-text('Library Card Design')", new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
-
-        // Verify all 5 library card design options are present
-        assertThat(page.locator("[data-test='library-card-design-CLASSICAL_DEVOTION']")).isVisible();
-        assertThat(page.locator("[data-test='library-card-design-COUNTRYSIDE_YOUTH']")).isVisible();
-        assertThat(page.locator("[data-test='library-card-design-SACRED_HEART_PORTRAIT']")).isVisible();
-        assertThat(page.locator("[data-test='library-card-design-RADIANT_BLESSING']")).isVisible();
-        assertThat(page.locator("[data-test='library-card-design-PATRON_OF_CREATURES']")).isVisible();
-
-        // Verify design names are displayed
-        assertThat(page.locator("text=Classical Devotion")).isVisible();
-        assertThat(page.locator("text=Countryside Youth")).isVisible();
-        assertThat(page.locator("text=Sacred Heart Portrait")).isVisible();
-        assertThat(page.locator("text=Radiant Blessing")).isVisible();
-        assertThat(page.locator("text=Patron of Creatures")).isVisible();
-    }
-
-    @Test
-    @DisplayName("USER: Should change library card design")
-    void testUserCanChangeLibraryCardDesign() {
-        login("testuser", "password");
-        navigateToSettings();
-
-        // Wait for settings page to load
-        page.waitForSelector("[data-test='library-card-design-COUNTRYSIDE_YOUTH']",
-                new Page.WaitForSelectorOptions()
-                .setTimeout(20000L)
-                .setState(WaitForSelectorState.VISIBLE));
-
-        // Click on a different design
-        page.click("[data-test='library-card-design-COUNTRYSIDE_YOUTH']");
-
-        // Wait for network to be idle (API call completes)
-        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
-
-        // Verify success message appears
-        assertThat(page.locator("text=Library card design updated successfully"))
-                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+        assertThat(page.locator("h1")).containsText("User Settings");
+        assertThat(page.locator("h2:has-text('Library Card Design')")).not().isVisible();
+        assertThat(page.locator("[data-test='library-card-design-preview']")).not().isVisible();
+        assertThat(page.locator("[data-test='library-card-design-CLASSICAL_DEVOTION']")).not().isVisible();
     }
 
     @Test
@@ -337,8 +307,8 @@ public class SettingsUITest {
 
         // Verify all sections are present
         assertThat(page.locator("text=Account Information")).isVisible();
-        assertThat(page.locator("h2:has-text('Library Card Design')")).isVisible();
         assertThat(page.locator("h2:has-text('Change Password')")).isVisible();
+        assertThat(page.locator("h2:has-text('Library Card Design')")).not().isVisible();
 
         // Librarian should see these additional sections
         assertThat(page.locator("h2:has-text('XAI Configuration')")).isVisible();

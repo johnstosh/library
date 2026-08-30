@@ -11,8 +11,6 @@ import { PageCard } from '@/components/ui/PageCard'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
-import type { LibraryCardDesign } from '@/types/dtos'
 
 interface PasswordChangeForm {
   currentPassword: string
@@ -24,8 +22,6 @@ export function UserSettingsPage() {
   const { user } = useAuthStore()
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
-  const [cardDesignSuccess, setCardDesignSuccess] = useState('')
-  const [cardDesignError, setCardDesignError] = useState('')
   const [xaiApiKey, setXaiApiKey] = useState('')
   const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
 
@@ -38,18 +34,6 @@ export function UserSettingsPage() {
     formState: { errors },
     reset,
   } = useForm<PasswordChangeForm>()
-
-  const handleLibraryCardDesignChange = async (design: LibraryCardDesign) => {
-    setCardDesignSuccess('')
-    setCardDesignError('')
-
-    try {
-      await updateUserSettings.mutateAsync({ libraryCardDesign: design })
-      setCardDesignSuccess('Library card design updated successfully')
-    } catch (error) {
-      setCardDesignError(error instanceof Error ? error.message : 'Failed to update library card design')
-    }
-  }
 
   const onSubmit = async (data: PasswordChangeForm) => {
     setSuccessMessage('')
@@ -195,17 +179,6 @@ export function UserSettingsPage() {
             </p>
           </div>
 
-          {/* Library Card Design Section */}
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-            <LibraryCardDesignPicker
-              currentDesign={userSettings?.libraryCardDesign}
-              onDesignChange={handleLibraryCardDesignChange}
-              successMessage={cardDesignSuccess}
-              errorMessage={cardDesignError}
-            />
-          </div>
-
           {/* XAI API Configuration - Librarian Only */}
           {user?.authority === 'LIBRARIAN' && (
             <div className="border-t pt-6">
@@ -340,17 +313,6 @@ export function UserSettingsPage() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Library Card Design Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-          <LibraryCardDesignPicker
-            currentDesign={userSettings?.libraryCardDesign}
-            onDesignChange={handleLibraryCardDesignChange}
-            successMessage={cardDesignSuccess}
-            errorMessage={cardDesignError}
-          />
         </div>
 
         {/* Change Password Form */}

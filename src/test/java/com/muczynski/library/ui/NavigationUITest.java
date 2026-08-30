@@ -91,6 +91,26 @@ public class NavigationUITest {
         page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
     }
 
+    private void openAccountMenu() {
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        userMenu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        PlaywrightException lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            userMenu.click();
+            try {
+                page.locator("[data-test='nav-logout']").waitFor(
+                        new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(3000L));
+                return;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new AssertionError("Account menu did not open");
+    }
+
     @Test
     @DisplayName("My Card menu item should NOT be visible when user is logged out")
     void testMyCardNotVisibleWhenLoggedOut() {
@@ -105,17 +125,12 @@ public class NavigationUITest {
         page.waitForSelector("[data-test='navigation']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-        // Desktop: My Card link should NOT be visible
-        Locator myCardLink = page.locator("[data-test='nav-my-card']");
-        assertThat(myCardLink).not().isVisible();
-
-        // Mobile: My Card link should NOT be visible
-        Locator myCardLinkMobile = page.locator("[data-test='nav-my-card-mobile']");
-        assertThat(myCardLinkMobile).not().isVisible();
+        assertThat(page.locator("[data-test='nav-user-menu']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-my-card']")).not().isVisible();
     }
 
     @Test
-    @DisplayName("My Card menu item should be visible when user is logged in - Desktop")
+    @DisplayName("My Card menu item should be visible in the account menu when user is logged in - Desktop")
     void testMyCardVisibleWhenLoggedInDesktop() {
         // Login as librarian
         loginAsLibrarian();
@@ -128,17 +143,20 @@ public class NavigationUITest {
         page.waitForSelector("[data-test='navigation']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-        // Desktop: My Card link should be visible
+        // My Card lives in the account menu, not the primary nav
+        assertThat(page.locator("[data-test='nav-loans']")).isVisible();
+        assertThat(page.locator("[data-test='nav-my-card']")).not().isVisible();
+
+        openAccountMenu();
+
         Locator myCardLink = page.locator("[data-test='nav-my-card']");
         assertThat(myCardLink).isVisible();
-
-        // Verify it has correct text and link
         assertThat(myCardLink).containsText("My Card");
         assertThat(myCardLink).hasAttribute("href", "/my-card");
     }
 
     @Test
-    @DisplayName("My Card menu item should be visible when user is logged in - Mobile")
+    @DisplayName("My Card menu item should be visible in the account menu when user is logged in - Mobile")
     void testMyCardVisibleWhenLoggedInMobile() {
         // Set mobile viewport
         BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
@@ -165,16 +183,21 @@ public class NavigationUITest {
             mobilePage.waitForSelector("[data-test='navigation']",
                     new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-            // Open the mobile menu by clicking the hamburger button
+            // Open the mobile hamburger and confirm My Card is not in the primary panel
             mobilePage.click("[data-test='mobile-menu-button']");
+            assertThat(mobilePage.locator("[data-test='nav-loans-mobile']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='nav-my-card']")).not().isVisible();
 
-            // Mobile: My Card link should be visible
-            Locator myCardLinkMobile = mobilePage.locator("[data-test='nav-my-card-mobile']");
-            assertThat(myCardLinkMobile).isVisible();
+            // My Card lives in the account menu
+            Locator mobileUserMenu = mobilePage.locator("[data-test='nav-user-menu']");
+            mobileUserMenu.click();
+            mobilePage.locator("[data-test='nav-logout']").waitFor(
+                    new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(10000L));
 
-            // Verify it has correct text and link
-            assertThat(myCardLinkMobile).containsText("My Card");
-            assertThat(myCardLinkMobile).hasAttribute("href", "/my-card");
+            Locator myCardLink = mobilePage.locator("[data-test='nav-my-card']");
+            assertThat(myCardLink).isVisible();
+            assertThat(myCardLink).containsText("My Card");
+            assertThat(myCardLink).hasAttribute("href", "/my-card");
         } finally {
             // Close mobile context; do not update page field to avoid double-close in @AfterEach
             mobileContext.close();
@@ -182,7 +205,7 @@ public class NavigationUITest {
     }
 
     @Test
-    @DisplayName("Authenticated navigation items should be visible when logged in")
+    @DisplayName("Account menu should contain Settings, My Card, and Logout when logged in")
     void testAuthenticatedNavigationItemsVisible() {
         // Login as librarian
         loginAsLibrarian();
@@ -195,10 +218,15 @@ public class NavigationUITest {
         page.waitForSelector("[data-test='navigation']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
-        // Verify all authenticated navigation items are visible
         assertThat(page.locator("[data-test='nav-loans']")).isVisible();
+        assertThat(page.locator("[data-test='nav-user-menu']")).isVisible();
+
+        openAccountMenu();
+
         assertThat(page.locator("[data-test='nav-settings']")).isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).isVisible();
+        assertThat(page.locator("[data-test='nav-logout']")).isVisible();
+        assertThat(page.locator("[data-test='nav-settings']")).hasAttribute("href", "/settings");
     }
 
     @Test
@@ -217,8 +245,10 @@ public class NavigationUITest {
 
         // Verify authenticated navigation items are NOT visible
         assertThat(page.locator("[data-test='nav-loans']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-user-menu']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-settings']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-logout']")).not().isVisible();
     }
 
     @Test

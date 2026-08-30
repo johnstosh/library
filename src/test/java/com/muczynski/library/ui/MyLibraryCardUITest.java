@@ -79,11 +79,30 @@ public class MyLibraryCardUITest {
         page.click("[data-test='login-submit']");
 
         page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='nav-user-menu']",
+                new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
     private void navigateToMyCard() {
-        page.click("[data-test='nav-my-card']");
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        userMenu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        PlaywrightException lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            userMenu.click();
+            try {
+                page.locator("[data-test='nav-my-card']").waitFor(
+                        new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(3000L));
+                page.click("[data-test='nav-my-card']");
+                page.waitForLoadState(LoadState.NETWORKIDLE);
+                return;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new AssertionError("Account menu did not open");
     }
 
     @Test

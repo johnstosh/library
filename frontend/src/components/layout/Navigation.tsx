@@ -38,6 +38,13 @@ function mobileNavCls({ isActive }: { isActive: boolean }): string {
   )
 }
 
+function accountMenuItemCls(focus: boolean): string {
+  return clsx(
+    'block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    focus && 'bg-gray-100 text-gray-900',
+  )
+}
+
 export function Navigation() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
@@ -86,8 +93,6 @@ export function Navigation() {
                     <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
                     <NavLink to="/authors"  className={desktopNavCls} data-test="nav-authors">Authors</NavLink>
                     <NavLink to="/loans"    className={desktopNavCls} data-test="nav-loans">Loans</NavLink>
-                    <NavLink to="/my-card"  className={desktopNavCls} data-test="nav-my-card">My Card</NavLink>
-                    <NavLink to="/settings" className={desktopNavCls} data-test="nav-settings">Settings</NavLink>
                   </>
                 )}
                 {isLibrarian && (
@@ -127,7 +132,8 @@ export function Navigation() {
                     </MenuButton>
                     <MenuItems
                       anchor="bottom end"
-                      className="absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50 focus:outline-none"
+                      data-test="nav-account-menu"
+                      className="w-60 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50 focus:outline-none [--anchor-gap:8px] [--anchor-padding:8px]"
                     >
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900 truncate" data-test="nav-username">
@@ -145,14 +151,35 @@ export function Navigation() {
                       <div className="py-1">
                         <MenuItem>
                           {({ focus }) => (
+                            <NavLink
+                              to="/settings"
+                              className={accountMenuItemCls(focus)}
+                              data-test="nav-settings"
+                            >
+                              Settings
+                            </NavLink>
+                          )}
+                        </MenuItem>
+                        <MenuItem>
+                          {({ focus }) => (
+                            <NavLink
+                              to="/my-card"
+                              className={accountMenuItemCls(focus)}
+                              data-test="nav-my-card"
+                            >
+                              My Card
+                            </NavLink>
+                          )}
+                        </MenuItem>
+                      </div>
+                      <div className="py-1 border-t border-gray-100">
+                        <MenuItem>
+                          {({ focus }) => (
                             <button
                               type="button"
                               onClick={handleLogout}
                               data-test="nav-logout"
-                              className={clsx(
-                                'w-full text-left px-4 py-2 text-sm',
-                                focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                              )}
+                              className={accountMenuItemCls(focus)}
                             >
                               Logout
                             </button>
@@ -183,8 +210,6 @@ export function Navigation() {
                   <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>
                   <NavLink to="/authors"  className={mobileNavCls} data-test="nav-authors-mobile"  onClick={() => close()}>Authors</NavLink>
                   <NavLink to="/loans"    className={mobileNavCls} data-test="nav-loans-mobile"    onClick={() => close()}>Loans</NavLink>
-                  <NavLink to="/my-card"  className={mobileNavCls} data-test="nav-my-card-mobile"  onClick={() => close()}>My Card</NavLink>
-                  <NavLink to="/settings" className={mobileNavCls} data-test="nav-settings-mobile" onClick={() => close()}>Settings</NavLink>
                 </>
               )}
               {!isAuthenticated && (
