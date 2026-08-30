@@ -47,6 +47,7 @@ function FilterChip({ label, active, onClick, tooltip, dataTest, disabled = fals
 
 interface AvailabilityGroupProps {
   icon: ReactNode
+  libraryAbbr: string
   libraryFull: string
   dataTest: string
   items: {
@@ -59,18 +60,19 @@ interface AvailabilityGroupProps {
   onToggle: (chip: keyof AuthorChipFilters) => void
 }
 
-function AvailabilityGroup({ icon, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
+function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, chips, onToggle }: AvailabilityGroupProps) {
   return (
     <div
       className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
       data-test={dataTest}
     >
       <span
-        className="inline-flex items-center justify-center w-6 shrink-0 text-gray-500"
+        className="inline-flex items-center gap-1.5 shrink-0 text-sm font-medium text-gray-600"
         title={libraryFull}
         aria-label={libraryFull}
       >
         {icon}
+        {libraryAbbr}
       </span>
       {items.map((item) => (
         <FilterChip
@@ -99,6 +101,7 @@ export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: A
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         <AvailabilityGroup
           icon={<YdlIcon />}
+          libraryAbbr="YDL"
           libraryFull="Ypsilanti District Library"
           dataTest="author-filter-ydl"
           chips={chips}
@@ -126,6 +129,7 @@ export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: A
         />
         <AvailabilityGroup
           icon={<EmuIcon />}
+          libraryAbbr="EMU"
           libraryFull="EMU Halle Library"
           dataTest="author-filter-emu"
           chips={chips}

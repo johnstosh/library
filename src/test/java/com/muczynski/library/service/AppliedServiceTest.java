@@ -132,7 +132,7 @@ class AppliedServiceTest {
     }
 
     @Test
-    void getAllApplied_returnsOnlyApplicationsAwaitingReview() {
+    void getAllApplied_returnsAllApplicationStatuses() {
         Applied pending = new Applied();
         pending.setId(1L);
         pending.setStatus(Applied.ApplicationStatus.PENDING);
@@ -150,9 +150,27 @@ class AppliedServiceTest {
         unset.setStatus(null);
         when(appliedRepository.findAll()).thenReturn(List.of(pending, approved, question, notApproved, unset));
 
-        List<Applied> open = appliedService.getAllApplied();
+        List<Applied> all = appliedService.getAllApplied();
 
-        assertEquals(List.of(1L, 3L, 5L), open.stream().map(Applied::getId).toList());
+        assertEquals(List.of(1L, 2L, 3L, 4L, 5L), all.stream().map(Applied::getId).toList());
+    }
+
+    @Test
+    void updateApplied_changesStatusOnly() {
+        Applied existing = new Applied();
+        existing.setId(1L);
+        existing.setName("Jane Doe");
+        existing.setStatus(Applied.ApplicationStatus.PENDING);
+        when(appliedRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(appliedRepository.save(any(Applied.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Applied patch = new Applied();
+        patch.setStatus(Applied.ApplicationStatus.NOT_APPROVED);
+
+        Applied result = appliedService.updateApplied(1L, patch);
+
+        assertEquals("Jane Doe", result.getName());
+        assertEquals(Applied.ApplicationStatus.NOT_APPROVED, result.getStatus());
     }
 
     @Test

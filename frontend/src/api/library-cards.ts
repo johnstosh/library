@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import type { LibraryCardDesignDto } from '@/types/dtos'
 
+export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_APPROVED' | 'QUESTION'
+
 export interface AppliedDto {
   id: number
   name: string
   email?: string
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NOT_APPROVED' | 'QUESTION'
+  status?: ApplicationStatus
 }
 
 export interface RegistrationRequest {
@@ -17,18 +19,12 @@ export interface RegistrationRequest {
   authority: string
 }
 
-function isAwaitingReview(status: AppliedDto['status']): boolean {
-  return status == null || status === 'PENDING' || status === 'QUESTION'
-}
-
-// Hook to get library card applications awaiting review (librarian only)
+// Hook to get all library card applications (librarian only).
+// Status filtering is client-side so the Applications page can show approved and declined rows.
 export function useApplications() {
   return useQuery({
     queryKey: ['applications'],
-    queryFn: async () => {
-      const applications = await api.get<AppliedDto[]>('/applied')
-      return applications.filter((application) => isAwaitingReview(application.status))
-    },
+    queryFn: () => api.get<AppliedDto[]>('/applied'),
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }
@@ -49,10 +45,27 @@ export function useApproveApplication() {
     mutationFn: (id: number) => api.post(`/applied/${id}/approve`, {}),
     onSuccess: (_data, id) => {
       queryClient.setQueryData<AppliedDto[]>(['applications'], (current) =>
-        current?.filter((application) => application.id !== id)
+        current?.map((application) =>
+          application.id === id ? { ...application, status: 'APPROVED' } : application
+        )
       )
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+}
+
+export function useUpdateApplicationStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: ApplicationStatus }) =>
+      api.put<AppliedDto>(`/applied/${id}`, { status }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<AppliedDto[]>(['applications'], (current) =>
+        current?.map((application) => (application.id === updated.id ? updated : application))
+      )
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
     },
   })
 }
@@ -63,7 +76,10 @@ export function useDeleteApplication() {
 
   return useMutation({
     mutationFn: (id: number) => api.delete(`/applied/${id}`),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<AppliedDto[]>(['applications'], (current) =>
+        current?.filter((application) => application.id !== id)
+      )
       queryClient.invalidateQueries({ queryKey: ['applications'] })
     },
   })

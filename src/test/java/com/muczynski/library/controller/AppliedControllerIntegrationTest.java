@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -219,7 +220,7 @@ class AppliedControllerIntegrationTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testApprove_RemovesApplicationFromPendingList() throws Exception {
+    void testApprove_KeepsApplicationWithApprovedStatus() throws Exception {
         Applied applied = new Applied();
         applied.setName("Approve Me");
         applied.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
@@ -235,6 +236,34 @@ class AppliedControllerIntegrationTest {
 
         mockMvc.perform(get("/api/applied"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.name == 'Approve Me')]").isEmpty());
+                .andExpect(jsonPath("$[?(@.name == 'Approve Me')].status", hasItem("APPROVED")));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetAllApplied_ReturnsEveryStatus() throws Exception {
+        Applied pending = new Applied();
+        pending.setName("Pending Person");
+        pending.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        pending.setStatus(Applied.ApplicationStatus.PENDING);
+        appliedRepository.save(pending);
+
+        Applied approved = new Applied();
+        approved.setName("Approved Person");
+        approved.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        approved.setStatus(Applied.ApplicationStatus.APPROVED);
+        appliedRepository.save(approved);
+
+        Applied notApproved = new Applied();
+        notApproved.setName("Declined Person");
+        notApproved.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        notApproved.setStatus(Applied.ApplicationStatus.NOT_APPROVED);
+        appliedRepository.save(notApproved);
+
+        mockMvc.perform(get("/api/applied"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name == 'Pending Person')].status", hasItem("PENDING")))
+                .andExpect(jsonPath("$[?(@.name == 'Approved Person')].status", hasItem("APPROVED")))
+                .andExpect(jsonPath("$[?(@.name == 'Declined Person')].status", hasItem("NOT_APPROVED")));
     }
 }

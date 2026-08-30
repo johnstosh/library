@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { useUiStore } from '@/stores/uiStore'
 import { defaultBookChipFilters } from '@/utils/bookChipFilters'
 import { defaultAuthorChipFilters } from '@/utils/authorChipFilters'
+import { defaultApplicationChipFilters } from '@/utils/applicationChipFilters'
 
 describe('booksChips defaults', () => {
   afterEach(() => {
@@ -91,5 +92,23 @@ describe('authorsChips defaults', () => {
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     useUiStore.getState().toggleAuthorsChip('mostRecent')
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(false)
+  })
+})
+
+describe('applicationsChips defaults', () => {
+  afterEach(() => {
+    useUiStore.getState().clearApplicationsChips()
+    useUiStore.getState().setApplicationsSearchQuery('')
+  })
+
+  it('turns Needs approval on so the page opens as a review queue', () => {
+    expect(useUiStore.getState().applicationsChips.needsApproval).toBe(true)
+    expect(defaultApplicationChipFilters.needsApproval).toBe(true)
+  })
+
+  it('toggles chips independently', () => {
+    useUiStore.getState().toggleApplicationsChip('approved')
+    expect(useUiStore.getState().applicationsChips.approved).toBe(true)
+    expect(useUiStore.getState().applicationsChips.needsApproval).toBe(true)
   })
 })

@@ -18,6 +18,10 @@ import {
   defaultUserChipFilters,
   type UserChipFilters,
 } from '@/utils/userChipFilters'
+import {
+  defaultApplicationChipFilters,
+  type ApplicationChipFilters,
+} from '@/utils/applicationChipFilters'
 
 interface TableState {
   selectedIds: Set<number>
@@ -39,6 +43,7 @@ export type BooksChips = BookChipFilters
 export type AuthorsChips = AuthorChipFilters
 export type LoansChips = LoanChipFilters
 export type UsersChips = UserChipFilters
+export type ApplicationsChips = ApplicationChipFilters
 
 // Most Recent Day starts on so the books list hits GET /books/most-recent-day
 // instead of GET /books/summaries. That filter endpoint is a much smaller query
@@ -51,6 +56,7 @@ const defaultBooksChips: BooksChips = { ...defaultBookChipFilters, mostRecent: t
 const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters, mostRecent: true }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
+const defaultApplicationsChips: ApplicationsChips = { ...defaultApplicationChipFilters }
 
 interface UiState {
   // Table selection state per feature
@@ -66,6 +72,8 @@ interface UiState {
   loansChips: LoansChips
   usersChips: UsersChips
   usersSearchQuery: string
+  applicationsChips: ApplicationsChips
+  applicationsSearchQuery: string
 
   // Label filter state for books
   booksLabelFilter: string[]
@@ -86,6 +94,9 @@ interface UiState {
   toggleUsersChip: (chip: keyof UsersChips) => void
   clearUsersChips: () => void
   setUsersSearchQuery: (query: string) => void
+  toggleApplicationsChip: (chip: keyof ApplicationsChips) => void
+  clearApplicationsChips: () => void
+  setApplicationsSearchQuery: (query: string) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -100,6 +111,8 @@ export const useUiStore = create<UiState>((set) => ({
   loansChips: { ...defaultLoansChips },
   usersChips: { ...defaultUsersChips },
   usersSearchQuery: '',
+  applicationsChips: { ...defaultApplicationsChips },
+  applicationsSearchQuery: '',
   booksLabelFilter: [],
 
   // Actions
@@ -186,6 +199,15 @@ export const useUiStore = create<UiState>((set) => ({
 
   setUsersSearchQuery: (query) => set({ usersSearchQuery: query }),
 
+  toggleApplicationsChip: (chip) =>
+    set((state) => ({
+      applicationsChips: { ...state.applicationsChips, [chip]: !state.applicationsChips[chip] },
+    })),
+
+  clearApplicationsChips: () => set({ applicationsChips: { ...defaultApplicationsChips } }),
+
+  setApplicationsSearchQuery: (query) => set({ applicationsSearchQuery: query }),
+
   toggleRowSelection: (table, id) =>
     set((state) => {
       const tableState = state[table]
@@ -219,4 +241,6 @@ export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
 export const useLoansChips = () => useUiStore((state) => state.loansChips)
 export const useUsersChips = () => useUiStore((state) => state.usersChips)
 export const useUsersSearchQuery = () => useUiStore((state) => state.usersSearchQuery)
+export const useApplicationsChips = () => useUiStore((state) => state.applicationsChips)
+export const useApplicationsSearchQuery = () => useUiStore((state) => state.applicationsSearchQuery)
 export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)

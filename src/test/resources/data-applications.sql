@@ -34,6 +34,15 @@ VALUES (1, 'Existing Applicant', 'existing@example.com', '$2a$10$8r2Q3l5gvhlkBNC
 INSERT INTO applied (id, name, email, password, status)
 VALUES (2, 'Fresh Applicant', 'fresh@example.com', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'PENDING');
 
+INSERT INTO applied (id, name, email, password, status)
+VALUES (3, 'Approved Applicant', 'approved@example.com', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'APPROVED');
+
+INSERT INTO applied (id, name, email, password, status)
+VALUES (4, 'Declined Applicant', NULL, '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'NOT_APPROVED');
+
+INSERT INTO applied (id, name, email, password, status)
+VALUES (5, 'Question Applicant', 'question@example.com', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', 'QUESTION');
+
 SELECT setval('role_id_seq', (SELECT MAX(id) FROM role));
 SELECT setval('library_id_seq', (SELECT MAX(id) FROM library));
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));

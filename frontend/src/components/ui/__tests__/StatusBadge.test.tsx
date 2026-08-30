@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { StatusBadge } from '../StatusBadge'
-import { bookStatusTone } from '@/utils/status'
+import { applicationStatusLabel, applicationStatusTone, bookStatusTone } from '@/utils/status'
 import { IconButton } from '../IconButton'
 import { EntityLink } from '../EntityLink'
 import { ViewIcon } from '../Icons'
@@ -24,6 +24,15 @@ describe('StatusBadge', () => {
     expect(bookStatusTone('ON_ORDER')).toBe('info')
     expect(bookStatusTone('LOST')).toBe('danger')
     expect(bookStatusTone('DAMAGED')).toBe('warning')
+  })
+
+  it('maps application statuses onto labels and tones', () => {
+    expect(applicationStatusTone('APPROVED')).toBe('success')
+    expect(applicationStatusTone('QUESTION')).toBe('info')
+    expect(applicationStatusTone('NOT_APPROVED')).toBe('danger')
+    expect(applicationStatusTone('PENDING')).toBe('warning')
+    expect(applicationStatusLabel('NOT_APPROVED')).toBe('Not approved')
+    expect(applicationStatusLabel(undefined)).toBe('Pending')
   })
 })
 

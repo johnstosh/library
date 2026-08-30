@@ -60,11 +60,13 @@ Public-facing form where prospective patrons can submit library card application
 Management interface for reviewing and processing library card applications.
 
 **Features**:
-- List all pending applications
+- List all applications with chip filters and a name/email search box
+- **Needs approval** is on by default (pending, question, and unset statuses)
+- Additional chips: Pending, Question, Approved, Not approved, Has email, Without email
 - Approve applications (creates user account)
-- Delete applications (reject)
-- Displays applicant name and status
-- Confirmation dialogs for approve/delete actions
+- Mark as Question, Do not approve, Restore to pending, and Delete
+- Displays applicant name, email, and status
+- Confirmation dialogs for status and delete actions
 - Approval and delete failures are shown in the confirmation dialog, as a page-level error, and as a toast — including the server reason (for example, when a user with that name already exists)
 
 **Frontend**: `frontend/src/pages/library-cards/ApplicationsPage.tsx`
@@ -76,7 +78,7 @@ Management interface for reviewing and processing library card applications.
    - Password from application (already bcrypt-hashed)
    - Authority: `USER`
 3. Application status changed to `APPROVED`
-4. The application is omitted from GET `/api/applied` (the pending queue) so it leaves the Applications list
+4. The application stays in GET `/api/applied` with status `APPROVED`. The default **Needs approval** filter hides it from the review queue
 5. User can now log in with their credentials
 
 ### 4. Library Card Design (User Settings)
@@ -128,8 +130,9 @@ public class Applied {
 
 **ApplicationStatus Enum**:
 - `PENDING`: Default status, awaiting librarian review
+- `QUESTION`: Librarian needs more information before deciding
 - `APPROVED`: Application approved, user account created
-- `REJECTED`: Application rejected (currently unused)
+- `NOT_APPROVED`: Application declined without creating an account
 
 **Note**: Password is double-hashed:
 1. Client-side: SHA-256 (prevents plain text over network)
