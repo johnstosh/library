@@ -15,6 +15,11 @@ INSERT INTO role (id, name) VALUES (2, 'LIBRARIAN') ON CONFLICT (name) DO NOTHIN
 INSERT INTO library (id, name, library_system_name) VALUES (1, 'St. Martin de Porres', 'Sacred Heart Library System');
 INSERT INTO library (id, name, library_system_name) VALUES (2, 'Holy Family Library', 'Sacred Heart Library System');
 
+-- Username: librarian, Password: password (BCrypt of SHA-256("password"))
+INSERT INTO users (id, username, password, xai_api_key, google_photos_api_key, last_photo_timestamp, sso_provider)
+VALUES (1, 'librarian', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', '', '', '', 'local');
+INSERT INTO users_roles (user_id, role_id) VALUES (1, 2);
+
 -- Insert authors
 INSERT INTO author (id, name, date_of_birth, date_of_death) VALUES
     (1, 'Thomas Aquinas', '1225-01-01', '1274-03-07'),

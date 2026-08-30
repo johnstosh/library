@@ -97,7 +97,7 @@ public class SearchUITest {
         // Search button is ENABLED even with empty input (blank search is allowed)
         assertThat(searchButton).isEnabled();
 
-        // Verify the same filter chips as the Books page
+        // Discovery chips only — cataloger chips belong on Books
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
@@ -111,18 +111,19 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-electronic']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
-        assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
-        assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
-        assertThat(page.locator("[data-test='filter-not-active-status']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-free-text-urls']")).isVisible();
+        assertThat(page.locator("[data-test='filter-most-recent']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-with-grokipedia']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-without-genres']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-not-active-status']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
+        assertThat(page.locator("[data-test='open-in-books']")).hasCount(0);
     }
 
     @Test
-    @DisplayName("Should hide without-* and Not Active Status filters on phone")
-    void testSearchPageHidesWithoutFiltersOnPhone() {
+    @DisplayName("Should omit cataloger chips on phone as well")
+    void testSearchPageHidesCatalogerFiltersOnPhone() {
         BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(375, 667));
         Page mobilePage = mobileContext.newPage();
@@ -131,15 +132,15 @@ public class SearchUITest {
             mobilePage.navigate(getBaseUrl() + "/search");
             mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
 
-            assertThat(mobilePage.locator("[data-test='filter-without-loc']")).isHidden();
-            assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).isHidden();
-            assertThat(mobilePage.locator("[data-test='filter-without-genres']")).isHidden();
-            assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).isHidden();
-            assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).isHidden();
+            assertThat(mobilePage.locator("[data-test='filter-without-loc']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-without-genres']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).hasCount(0);
 
             assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
-            assertThat(mobilePage.locator("[data-test='filter-with-grokipedia']")).isVisible();
-            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='filter-free-text']")).isVisible();
         } finally {
             mobileContext.close();
         }
@@ -452,31 +453,21 @@ public class SearchUITest {
         Locator elecChip     = page.locator("[data-test='filter-electronic']");
         Locator freeTextChip = page.locator("[data-test='filter-free-text']");
         Locator audioChip    = page.locator("[data-test='filter-audio']");
-        Locator mostRecentChip = page.locator("[data-test='filter-most-recent']");
-        Locator notActiveChip = page.locator("[data-test='filter-not-active-status']");
 
         assertThat(inLibChip).isVisible();
         assertThat(elecChip).isVisible();
         assertThat(freeTextChip).isVisible();
         assertThat(audioChip).isVisible();
-        assertThat(mostRecentChip).isVisible();
-        assertThat(notActiveChip).isVisible();
 
-        // Chips have tooltip (title attribute)
         Assertions.assertNotNull(inLibChip.getAttribute("title"), "In-library chip should have a tooltip");
         Assertions.assertNotNull(elecChip.getAttribute("title"), "Electronic chip should have a tooltip");
         Assertions.assertNotNull(freeTextChip.getAttribute("title"), "Free text chip should have a tooltip");
         Assertions.assertNotNull(audioChip.getAttribute("title"), "Audio chip should have a tooltip");
-        Assertions.assertNotNull(mostRecentChip.getAttribute("title"), "Most recent chip should have a tooltip");
-        Assertions.assertNotNull(notActiveChip.getAttribute("title"), "Not active status chip should have a tooltip");
 
-        // Text content
         assertThat(inLibChip).containsText("In-library materials");
         assertThat(elecChip).containsText("Electronic resource");
         assertThat(freeTextChip).containsText("Has free online text");
         assertThat(audioChip).containsText("Has free online audio");
-        assertThat(mostRecentChip).containsText("Most Recent Day");
-        assertThat(notActiveChip).containsText("Not Active Status");
     }
 
     @Test
@@ -603,8 +594,8 @@ public class SearchUITest {
     }
 
     @Test
-    @DisplayName("Blank search hides WITHDRAWN books; Not Active Status chip shows only non-ACTIVE")
-    void testWithdrawnHiddenUntilNotActiveStatusChipOn() {
+    @DisplayName("Blank search hides WITHDRAWN books on the public catalog")
+    void testWithdrawnHiddenOnPublicSearch() {
         page.navigate(getBaseUrl() + "/search");
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
@@ -613,19 +604,50 @@ public class SearchUITest {
         page.waitForSelector("[data-test='search-results-books']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        Locator bookResults = page.locator("[data-test^='book-result-']");
-        assertThat(bookResults.filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
-        assertThat(bookResults.filter(new Locator.FilterOptions().setHasText("Little Flowers")))
-                .not().isVisible();
-
-        page.click("[data-test='filter-not-active-status']");
-
-        assertThat(page.locator("[data-test^='book-result-']")
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
                 .filter(new Locator.FilterOptions().setHasText("Little Flowers")))
-                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
-        assertThat(page.locator("[data-test^='book-result-']")
-                .filter(new Locator.FilterOptions().setHasText("Summa Theologica")))
                 .not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Genre chips write labels into the URL")
+    void testGenreFilterUpdatesUrl() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+        page.click("[data-test='label-filter-fiction']");
+        page.waitForURL(url -> url.contains("labels=fiction"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        Assertions.assertTrue(page.url().contains("labels=fiction"),
+                "URL should contain labels=fiction, got: " + page.url());
+        assertThat(page.locator("[data-test='clear-search']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Librarian Open in Books copies search filters onto /books")
+    void testOpenInBooksCopiesFilters() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='login-username']",
+                new Page.WaitForSelectorOptions().setTimeout(30000L));
+        page.fill("[data-test='login-username']", "librarian");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.navigate(getBaseUrl() + "/search?q=Summa&inLib=true");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='open-in-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("[data-test='open-in-books']");
+        page.waitForURL("**/books?*", new Page.WaitForURLOptions().setTimeout(10000L));
+        String booksUrl = page.url();
+        Assertions.assertTrue(booksUrl.contains("/books"), "Should navigate to Books, got: " + booksUrl);
+        Assertions.assertTrue(booksUrl.contains("q=Summa"), "Should copy query, got: " + booksUrl);
+        Assertions.assertTrue(booksUrl.contains("inLib=true"), "Should copy in-library chip, got: " + booksUrl);
     }
 
     @Test
@@ -638,9 +660,9 @@ public class SearchUITest {
         page.click("[data-test='filter-in-library']");
         page.waitForSelector("[data-test='search-results-books']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
-        assertThat(page.locator("[data-test^='book-result-']")
+        assertThat(page.locator("[data-test^='book-result-title-']")
                 .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
-        assertThat(page.locator("[data-test^='book-result-']")
+        assertThat(page.locator("[data-test^='book-result-title-']")
                 .filter(new Locator.FilterOptions().setHasText("Gutenberg"))).not().isVisible();
 
         page.click("[data-test='filter-electronic']");

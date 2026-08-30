@@ -44,9 +44,8 @@ export const defaultBookChipFilters: BookChipFilters = {
   electronic: false,
   freeText: false,
   audio: false,
-  // Shared default is off (Search, applyChipFilters tests). The Books page
-  // overrides this to true in uiStore so it can use the faster
-  // GET /books/most-recent-day backend instead of GET /books/summaries.
+  // Shared default is off (Search). The Books page turns mostRecent on when
+  // the /books URL has no other filters (see bookFilterParams.ts).
   mostRecent: false,
   withoutLoc: false,
   withoutGrokipedia: false,

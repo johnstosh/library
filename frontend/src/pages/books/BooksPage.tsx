@@ -1,7 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import { useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
@@ -12,28 +13,56 @@ import { BookLabelFilters } from './components/BookLabelFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBookCount, useBooks } from '@/api/books'
-import { useUiStore, useBooksChips, useBooksLabelFilter, useBooksTableSelection } from '@/stores/uiStore'
+import { useUiStore, useBooksTableSelection } from '@/stores/uiStore'
+import { applyChipFilters } from '@/utils/bookChipFilters'
+import {
+  bookFilterParamsForUrl,
+  chipsFromSearchParams,
+  isBooksIntakeConstrained,
+  labelsFromSearchParams,
+  matchesBookQuery,
+} from '@/utils/bookFilterParams'
 import { useIsLibrarian } from '@/stores/authStore'
-import { applyChipFilters, isOtherBookChipActive } from '@/utils/bookChipFilters'
+import type { BookChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
-
-// ─── BooksPage ────────────────────────────────────────────────────────────────
 
 export function BooksPage() {
   const navigate = useNavigate()
-  const chips = useBooksChips()
-  const selectedLabels = useBooksLabelFilter()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const chips = chipsFromSearchParams(searchParams, 'books')
+  const selectedLabels = labelsFromSearchParams(searchParams)
+  const urlQuery = searchParams.get('q') ?? ''
+  const [inputValue, setInputValue] = useState(urlQuery)
   const { selectedIds, selectAll } = useBooksTableSelection()
-  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleBooksLabel, clearBooksLabels, toggleBooksChip } = useUiStore()
+  const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
 
-  // mostRecent defaults on in uiStore so this uses GET /books/most-recent-day
-  // (faster than GET /books/summaries). Remaining chips still apply client-side.
+  useEffect(() => {
+    setInputValue(urlQuery)
+  }, [urlQuery])
+
+  const writeUrl = (next: { chips?: BookChipFilters; labels?: string[]; q?: string }) => {
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? chips,
+          labels: next.labels ?? selectedLabels,
+          q: next.q !== undefined ? next.q : urlQuery,
+        },
+        'books',
+      ),
+    )
+  }
+
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
 
-  // Apply all chip filters client-side (AND logic)
-  const books = useMemo(() => applyChipFilters(allBooks, chips), [allBooks, chips])
+  const books = useMemo(
+    () => applyChipFilters(allBooks, chips).filter((book) => matchesBookQuery(book, urlQuery)),
+    [allBooks, chips, urlQuery],
+  )
+
+  const intakeConstrained = isBooksIntakeConstrained(chips, selectedLabels, urlQuery)
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
@@ -41,10 +70,8 @@ export function BooksPage() {
 
   const handleSelectAll = () => {
     if (selectAll) {
-      // Deselect all
       clearSelection('booksTable')
     } else {
-      // Select all visible books
       const allIds = new Set(books.map((b) => b.id))
       setSelectedIds('booksTable', allIds)
       toggleSelectAll('booksTable')
@@ -61,6 +88,23 @@ export function BooksPage() {
 
   const handleViewBook = (book: BookDto) => {
     navigate(`/books/${book.id}`)
+  }
+
+  const handleToggleChip = (key: keyof BookChipFilters) => {
+    if (key === 'mostRecent' && intakeConstrained) return
+    writeUrl({ chips: { ...chips, [key]: !chips[key] } })
+  }
+
+  const handleToggleLabel = (label: string) => {
+    const nextLabels = selectedLabels.includes(label)
+      ? selectedLabels.filter((l) => l !== label)
+      : [...selectedLabels, label]
+    writeUrl({ labels: nextLabels })
+  }
+
+  const handleQueryChange = (value: string) => {
+    setInputValue(value)
+    writeUrl({ q: value })
   }
 
   return (
@@ -88,17 +132,26 @@ export function BooksPage() {
       )}
 
       <PageCard padding={false} className="relative">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <Input
+            type="search"
+            label="Filter by title or author"
+            hideLabel
+            placeholder="Filter by title or author..."
+            value={inputValue}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            data-test="books-title-filter"
+          />
           <BookFilters
             chips={chips}
-            onToggle={toggleBooksChip}
+            onToggle={handleToggleChip}
             showAvailabilityFilters
-            mostRecentDisabled={isOtherBookChipActive(chips) || selectedLabels.length > 0}
+            mostRecentDisabled={intakeConstrained}
           />
           <BookLabelFilters
             selectedLabels={selectedLabels}
-            onToggleLabel={toggleBooksLabel}
-            onClearLabels={clearBooksLabels}
+            onToggleLabel={handleToggleLabel}
+            onClearLabels={() => writeUrl({ labels: [] })}
           />
         </div>
 

@@ -335,6 +335,8 @@ public class BooksUITest {
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         // Most Recent Day cannot be combined with other filters
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+        Assertions.assertTrue(page.url().contains("withoutLoc=true"),
+                "URL should contain withoutLoc=true, got: " + page.url());
     }
 
     @Test
@@ -350,6 +352,38 @@ public class BooksUITest {
         page.click("[data-test='filter-most-recent']");
         page.waitForTimeout(500);
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));
+        Assertions.assertTrue(page.url().contains("mostRecent=false"),
+                "Turning Most Recent Day off should write mostRecent=false, got: " + page.url());
+    }
+
+    @Test
+    @DisplayName("Title filter updates the URL and narrows the table")
+    void testTitleFilterUpdatesUrl() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='books-title-filter']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.fill("[data-test='books-title-filter']", "Initial");
+        page.waitForURL(url -> url.contains("q=Initial"), new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.fill("[data-test='books-title-filter']", "NoSuchTitleZZZ");
+        page.waitForURL(url -> url.contains("q=NoSuchTitleZZZ"), new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("text=Initial Book"))
+                .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+    }
+
+    @Test
+    @DisplayName("Books filters restore from the URL")
+    void testBooksFiltersRestoreFromUrl() {
+        page.navigate(getBaseUrl() + "/books?q=Initial&withoutLoc=true");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='books-title-filter']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
     }
 
     @Test
@@ -452,8 +486,8 @@ public class BooksUITest {
         // Verify book details are shown
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
-        // Active status badge is shown in the Status column
-        assertThat(page.locator("text=Active")).isVisible();
+        // Active status badge is shown in the Status column (exact: not "Not Active Status")
+        assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
     }
 
     @Test

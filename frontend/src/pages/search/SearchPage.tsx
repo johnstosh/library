@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
@@ -8,9 +8,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSearch, type SearchFilters } from '@/api/search'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
-import { defaultBookChipFilters, isAnyChipActive, type BookChipFilters } from '@/utils/bookChipFilters'
+import { isAnyChipActive } from '@/utils/bookChipFilters'
+import {
+  bookFilterParamsForUrl,
+  booksPathFromFilters,
+  chipsFromSearchParams,
+  labelsFromSearchParams,
+  pageFromSearchParams,
+} from '@/utils/bookFilterParams'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
-import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiBook, PiBooks, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { IconButton } from '@/components/ui/IconButton'
@@ -35,59 +42,21 @@ import { useDeleteBook } from '@/api/books'
 import { useDeleteAuthor } from '@/api/authors'
 import type { BookDto, AuthorDto } from '@/types/dtos'
 
-/** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
-const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
-  hasYdlAudio: 'ydlAudio',
-  hasYdlBook: 'ydlBook',
-  hasYdlEbook: 'ydlEbook',
-  hasEmuAudio: 'emuAudio',
-  hasEmuBook: 'emuBook',
-  hasEmuEbook: 'emuEbook',
-  inLibrary: 'inLib',
-  electronic: 'elec',
-  freeText: 'freeText',
-  audio: 'audio',
-  mostRecent: 'mostRecent',
-  withoutLoc: 'withoutLoc',
-  withoutGrokipedia: 'withoutGrokipedia',
-  withGrokipedia: 'withGrokipedia',
-  withoutGenres: 'withoutGenres',
-  notActiveStatus: 'notActiveStatus',
-  withoutFreeTextUrls: 'withoutFreeTextUrls',
-}
-
-function chipsFromSearchParams(params: URLSearchParams): SearchFilters {
-  const chips: SearchFilters = { ...defaultBookChipFilters }
-  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
-    chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
-  })
-  return chips
-}
-
-function chipParamsForUrl(chips: SearchFilters): Record<string, string> {
-  const params: Record<string, string> = {}
-  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
-    if (chips[chip]) params[CHIP_URL_KEYS[chip]] = 'true'
-  })
-  return params
-}
-
 // ─── Main search page ─────────────────────────────────────────────────────────
 
 export function SearchPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') ?? ''
-  const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
+  const bookPage = pageFromSearchParams(searchParams, 'bookPage')
+  const authorPage = pageFromSearchParams(searchParams, 'authorPage')
 
-  // Filter chip state — lives in URL for shareability
-  const filters: SearchFilters = chipsFromSearchParams(searchParams)
+  const filters: SearchFilters = chipsFromSearchParams(searchParams, 'search')
+  const selectedLabels = labelsFromSearchParams(searchParams)
 
-  // Local input state (typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const pageSize = 20
 
-  // Sync input value when URL changes (browser back/forward)
   useEffect(() => {
     setInputValue(urlQuery)
   }, [urlQuery])
@@ -97,7 +66,8 @@ export function SearchPage() {
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
-    urlPage,
+    bookPage,
+    authorPage,
     pageSize,
     filters,
     hasSearched || hasFilters,
@@ -105,51 +75,69 @@ export function SearchPage() {
   )
   const isLibrarian = useIsLibrarian()
 
-  // ── Helpers for building URL params ──────────────────────────────────────
-
-  const buildFilterParams = (overrides: Partial<SearchFilters> = {}): Record<string, string> => {
-    return chipParamsForUrl({ ...filters, ...overrides })
+  const writeUrl = (next: {
+    chips?: SearchFilters
+    labels?: string[]
+    q?: string
+    includeQ?: boolean
+    bookPage?: number
+    authorPage?: number
+  }) => {
+    const includeQ = next.includeQ ?? hasSearched
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? filters,
+          labels: next.labels ?? selectedLabels,
+          q: next.q !== undefined ? next.q : urlQuery,
+          bookPage: next.bookPage ?? 0,
+          authorPage: next.authorPage ?? 0,
+          includeBlankQuery: includeQ,
+        },
+        'search',
+      ),
+    )
   }
-
-  // ── Event handlers ────────────────────────────────────────────────────────
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params: Record<string, string> = { q: inputValue.trim(), ...buildFilterParams() }
-    setSearchParams(params)
+    writeUrl({ q: inputValue.trim(), includeQ: true })
   }
 
   const handleClear = () => {
     setInputValue('')
-    setSelectedLabels([])
     setSearchParams({})
   }
 
   const handleFilterToggle = (key: keyof SearchFilters) => {
-    const newValue = !filters[key]
-    const overrides = { [key]: newValue } as Partial<SearchFilters>
-    const params: Record<string, string> = { ...buildFilterParams(overrides) }
-    // Preserve query and page if present
-    if (urlQuery || hasSearched) params.q = urlQuery
-    if (urlPage > 0) params.page = String(urlPage)
-    setSearchParams(params)
+    writeUrl({ chips: { ...filters, [key]: !filters[key] } })
   }
 
   const handleToggleLabel = (label: string) => {
-    setSelectedLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
-    )
+    const nextLabels = selectedLabels.includes(label)
+      ? selectedLabels.filter((l) => l !== label)
+      : [...selectedLabels, label]
+    writeUrl({ labels: nextLabels })
   }
 
   const handleClearLabels = () => {
-    setSelectedLabels([])
+    writeUrl({ labels: [] })
   }
 
-  const handlePageChange = (newPage: number) => {
-    const params: Record<string, string> = { ...buildFilterParams() }
-    if (urlQuery || hasSearched) params.q = urlQuery
-    if (newPage > 0) params.page = String(newPage)
-    setSearchParams(params)
+  const handleBookPageChange = (newPage: number) => {
+    writeUrl({ bookPage: newPage, authorPage, includeQ: hasSearched })
+  }
+
+  const handleAuthorPageChange = (newPage: number) => {
+    writeUrl({ bookPage, authorPage: newPage, includeQ: hasSearched })
+  }
+
+  const handleOpenInBooks = () => {
+    navigate(booksPathFromFilters({
+      chips: filters,
+      labels: selectedLabels,
+      q: inputValue.trim() || urlQuery,
+    }))
   }
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
@@ -196,15 +184,26 @@ export function SearchPage() {
               Clear
             </Button>
           )}
+          {isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleOpenInBooks}
+              leftIcon={<PiBooks />}
+              data-test="open-in-books"
+            >
+              Open in Books
+            </Button>
+          )}
         </div>
 
-        {/* Filter Chips — same two rows as Books page */}
         <div className="mt-4" data-test="search-filter-chips">
           <BookFilters
             chips={filters}
             onToggle={handleFilterToggle}
             showAvailabilityFilters
-            hideWithoutAndNotActiveOnMobile
+            showCatalogerFilters={false}
           />
         </div>
 
@@ -275,8 +274,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage - 1)}
-                        disabled={urlPage === 0}
+                        onClick={() => handleBookPageChange(bookPage - 1)}
+                        disabled={bookPage === 0}
                         data-test="books-prev-page"
                       >
                         Previous
@@ -284,8 +283,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage + 1)}
-                        disabled={urlPage >= data.bookPage.totalPages - 1}
+                        onClick={() => handleBookPageChange(bookPage + 1)}
+                        disabled={bookPage >= data.bookPage.totalPages - 1}
                         data-test="books-next-page"
                       >
                         Next
@@ -331,8 +330,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage - 1)}
-                        disabled={urlPage === 0}
+                        onClick={() => handleAuthorPageChange(authorPage - 1)}
+                        disabled={authorPage === 0}
                         data-test="authors-prev-page"
                       >
                         Previous
@@ -340,8 +339,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage + 1)}
-                        disabled={urlPage >= data.authorPage.totalPages - 1}
+                        onClick={() => handleAuthorPageChange(authorPage + 1)}
+                        disabled={authorPage >= data.authorPage.totalPages - 1}
                         data-test="authors-next-page"
                       >
                         Next

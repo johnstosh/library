@@ -33,7 +33,9 @@ public class SearchController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<SearchResponseDto> search(
             @RequestParam(defaultValue = "") String query,
-            @RequestParam int page,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer bookPage,
+            @RequestParam(required = false) Integer authorPage,
             @RequestParam int size,
             @RequestParam(defaultValue = "false") boolean filterInLibrary,
             @RequestParam(defaultValue = "false") boolean filterElectronic,
@@ -61,7 +63,9 @@ public class SearchController {
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
-            SearchResponseDto results = searchService.search(query, page, size,
+            int resolvedBookPage = bookPage != null ? bookPage : (page != null ? page : 0);
+            int resolvedAuthorPage = authorPage != null ? authorPage : (page != null ? page : 0);
+            SearchResponseDto results = searchService.search(query, resolvedBookPage, resolvedAuthorPage, size,
                     filterInLibrary, filterElectronic, filterFreeText, filterAudio,
                     filterMostRecent, filterWithoutLoc, filterThreeLetterLoc,
                     filterWithoutGrokipedia, filterWithoutGenres, filterNotActiveStatus,
@@ -72,8 +76,8 @@ public class SearchController {
                     labelList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
-            logger.warn("Failed to perform search with query '{}', page {}, size {}: {}",
-                    query, page, size, e.getMessage(), e);
+            logger.warn("Failed to perform search with query '{}', bookPage {}, authorPage {}, size {}: {}",
+                    query, bookPage, authorPage, size, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }

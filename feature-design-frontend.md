@@ -408,7 +408,8 @@ On mobile, the user info and Logout button appear in the expandable mobile menu,
 
 2. **Client State** (Zustand)
    - Authentication status
-   - UI state (filters, selected rows)
+   - UI state (selected rows; author/loan/user/application chips)
+   - Book chips, genres, and title filter live in the `/books` URL (`bookFilterParams.ts`), not Zustand
    - Persisted preferences
 
 3. **Component State** (useState)
