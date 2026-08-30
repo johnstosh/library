@@ -16,6 +16,7 @@ import type { LoanDto } from '@/types/dtos'
 import { EntityLink } from '@/components/ui/EntityLink'
 
 interface InitialFilters {
+  bookId?: string
   title?: string
   author?: string
   locNumber?: string
@@ -97,7 +98,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   }
 
   const [formData, setFormData] = useState({
-    bookId: '',
+    bookId: initialFilters?.bookId || '',
     userId: '',
     checkoutDate: initialFilters?.checkoutDate
       ? normalizeDate(initialFilters.checkoutDate)
@@ -113,7 +114,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const { data: books = [], isFetching: booksFetching } = useBooks()
+  const { data: books = [], isFetching: booksFetching, isLoading: booksLoading } = useBooks()
   const { data: users = [] } = useUsers()
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
@@ -448,6 +449,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   // Auto-select or update book selection when filtered list changes
   useEffect(() => {
     if (isEditing) return
+    if (booksLoading) return
 
     const hasFilters = bookFilters.title || bookFilters.author || bookFilters.locNumber
 
@@ -464,7 +466,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       // Clear selection if filters are set but no books match
       setFormData(prev => ({ ...prev, bookId: '' }))
     }
-  }, [filteredBooks, bookFilters, isEditing])
+  }, [filteredBooks, bookFilters, isEditing, booksLoading, formData.bookId])
 
   // Auto-select first user when filtered list changes and no user is selected
   useEffect(() => {

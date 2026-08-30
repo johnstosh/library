@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
+import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
-import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
+import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle, PiBookOpen } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { EntityLink } from '@/components/ui/EntityLink'
@@ -17,7 +19,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
+import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
@@ -26,12 +28,16 @@ export function BookViewPage() {
   const { id } = useParams<{ id: string }>()
   const bookId = id ? parseInt(id, 10) : 0
   const { data: book, isLoading } = useBook(bookId)
+  const { data: titleLoaned, isError: titleLoanedError } = useTitleLoaned(bookId)
   const cloneBook = useCloneBook()
   const deleteBook = useDeleteBook()
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = useIsAuthenticated()
+  const currentUser = useAuthStore((state) => state.user)
+  const loaned = titleLoaned?.loaned === true
+  const canCheckout = isAuthenticated && book?.status === 'ACTIVE' && titleLoaned != null && !loaned
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -74,6 +80,11 @@ export function BookViewPage() {
     navigate(`/books/${bookId}/edit`)
   }
 
+  const handleCheckoutThisBook = () => {
+    if (!book) return
+    navigate(loansNewPathFromBook(book, currentUser?.username))
+  }
+
   const handleBack = () => {
     navigate(isAuthenticated ? '/books' : '/search')
   }
@@ -112,33 +123,47 @@ export function BookViewPage() {
             <h1 className="text-2xl font-bold text-gray-900" data-test="book-title">
               {book.title}
             </h1>
-            {isLibrarian && (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleEdit}
-                  leftIcon={<PiPencil />}
-                  data-test="book-view-edit"
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleClone}
-                  isLoading={cloneBook.isPending}
-                  leftIcon={<PiCopy />}
-                  data-test="book-view-clone"
-                >
-                  Clone
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  leftIcon={<PiTrash />}
-                  data-test="book-view-delete"
-                >
-                  Delete
-                </Button>
+            {(canCheckout || isLibrarian) && (
+              <div className="flex flex-wrap gap-3 justify-end">
+                {canCheckout && (
+                  <Button
+                    variant="primary"
+                    onClick={handleCheckoutThisBook}
+                    leftIcon={<PiBookOpen />}
+                    data-test="checkout-this-book"
+                  >
+                    Checkout this book
+                  </Button>
+                )}
+                {isLibrarian && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleEdit}
+                      leftIcon={<PiPencil />}
+                      data-test="book-view-edit"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleClone}
+                      isLoading={cloneBook.isPending}
+                      leftIcon={<PiCopy />}
+                      data-test="book-view-clone"
+                    >
+                      Clone
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      leftIcon={<PiTrash />}
+                      data-test="book-view-delete"
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -244,10 +269,24 @@ export function BookViewPage() {
                   </p>
                 </div>
               )}
-              <div data-test="book-loan-count">
-                <p className="text-sm font-medium text-gray-500">Active Loans</p>
-                <p className="text-gray-900">{book.loanCount ?? 0}</p>
+              <div data-test="book-loan-status">
+                <p className="text-sm font-medium text-gray-500">Availability</p>
+                {titleLoanedError ? (
+                  <p className="text-gray-500">Could not check availability</p>
+                ) : titleLoaned == null ? (
+                  <p className="text-gray-500">Checking…</p>
+                ) : (
+                  <StatusBadge tone={loaned ? 'info' : 'success'} data-test="book-loaned-badge">
+                    {loaned ? 'Currently on loan' : 'Available'}
+                  </StatusBadge>
+                )}
               </div>
+              {isLibrarian && (
+                <div data-test="book-loan-count">
+                  <p className="text-sm font-medium text-gray-500">Active Loans</p>
+                  <p className="text-gray-900">{book.loanCount ?? 0}</p>
+                </div>
+              )}
               {book.tagsList && book.tagsList.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Genres</p>

@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/global-settings/sso-status").permitAll()
                         .requestMatchers("/api/global-properties/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/library-card/designs").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/loans/title-loaned").permitAll()
                         .requestMatchers("/api/photo-export/**").authenticated()
                         .requestMatchers("/api/oauth/google/authorize", "/api/oauth/google/callback").permitAll()
                         .requestMatchers("/api/import/**").hasAuthority("LIBRARIAN")

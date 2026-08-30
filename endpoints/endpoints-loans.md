@@ -1,5 +1,32 @@
 # Loan Management Endpoints
 
+## GET /api/loans/title-loaned
+Returns whether a catalog title (book record) currently has an open loan.
+
+**Authentication:** Public (`permitAll()`)
+
+**Query Parameters:**
+- `bookId` (required) - Book ID
+
+**Response:** 200 OK
+```json
+{
+  "bookId": 1,
+  "title": "Initial Book",
+  "loaned": false
+}
+```
+
+`loaned` is true when the book has at least one loan with no return date. The borrower is not included.
+
+**Error Responses:**
+- 400: Missing `bookId`
+- 404: Book not found
+
+**Related:** LoanController.java, LoanService.java, TitleLoanedDto.java
+
+---
+
 ## POST /api/loans/checkout
 Checkout a book (create a new loan).
 

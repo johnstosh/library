@@ -6,6 +6,8 @@ package com.muczynski.library.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.dto.TitleLoanedDto;
+import com.muczynski.library.exception.ResourceNotFoundException;
 import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
 import com.muczynski.library.service.UserService;
@@ -62,6 +64,43 @@ class LoanControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    // ==================== GET /api/loans/title-loaned Tests ====================
+
+    @Test
+    void testGetTitleLoaned_Success_Unauthenticated() throws Exception {
+        when(loanService.getTitleLoaned(1L)).thenReturn(new TitleLoanedDto(1L, "Initial Book", true));
+
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookId").value(1L))
+                .andExpect(jsonPath("$.title").value("Initial Book"))
+                .andExpect(jsonPath("$.loaned").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "USER")
+    void testGetTitleLoaned_Success_AsRegularUser() throws Exception {
+        when(loanService.getTitleLoaned(2L)).thenReturn(new TitleLoanedDto(2L, "Available Book", false));
+
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.loaned").value(false));
+    }
+
+    @Test
+    void testGetTitleLoaned_MissingBookId() throws Exception {
+        mockMvc.perform(get("/api/loans/title-loaned"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetTitleLoaned_NotFound() throws Exception {
+        when(loanService.getTitleLoaned(999L)).thenThrow(new ResourceNotFoundException("Book", 999L));
+
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", "999"))
+                .andExpect(status().isNotFound());
+    }
 
     // ==================== POST /api/loans/checkout Tests ====================
 

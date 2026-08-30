@@ -14,8 +14,9 @@ export function LoanNewPage() {
     navigate('/loans')
   }
 
-  // Read initial filter values from query params (from checkout card transcription)
+  // Read initial filter values from query params (checkout card transcription or book detail)
   const initialFilters = {
+    bookId: searchParams.get('bookId') || '',
     title: searchParams.get('title') || '',
     author: searchParams.get('author') || '',
     locNumber: searchParams.get('locNumber') || '',

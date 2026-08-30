@@ -476,4 +476,28 @@ class LoanControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize((int) totalActiveLoans)));
     }
+
+    @Test
+    void testTitleLoaned_ActiveLoan_Unauthenticated() throws Exception {
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", testBook1.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookId", is(testBook1.getId().intValue())))
+                .andExpect(jsonPath("$.title", is("Book 1 - Active Loan")))
+                .andExpect(jsonPath("$.loaned", is(true)));
+    }
+
+    @Test
+    void testTitleLoaned_ReturnedLoan_IsNotLoaned() throws Exception {
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", testBook2.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookId", is(testBook2.getId().intValue())))
+                .andExpect(jsonPath("$.title", is("Book 2 - Returned")))
+                .andExpect(jsonPath("$.loaned", is(false)));
+    }
+
+    @Test
+    void testTitleLoaned_BookNotFound() throws Exception {
+        mockMvc.perform(get("/api/loans/title-loaned").param("bookId", "999999"))
+                .andExpect(status().isNotFound());
+    }
 }

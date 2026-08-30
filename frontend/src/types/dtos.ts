@@ -178,6 +178,12 @@ export interface LoanDto {
   photoChecksum?: string
 }
 
+export interface TitleLoanedDto {
+  bookId: number
+  title: string
+  loaned: boolean
+}
+
 export interface CheckoutCardTranscriptionDto {
   title: string
   author: string

@@ -403,6 +403,64 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Book detail shows title-loaned availability and checkout")
+    void testBookDetailShowsAvailabilityAndCheckout() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='book-loaned-badge']"))
+                .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='checkout-this-book']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Checkout this book prefills the loan form")
+    void testCheckoutThisBookPrefillsLoanForm() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.click("[data-test='checkout-this-book']");
+        page.waitForURL(url -> url.contains("/loans/new") && url.contains("bookId=1"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-title-filter']")).hasValue("Initial Book");
+        assertThat(page.locator("[data-test='loan-author-filter']")).hasValue("Initial Author");
+        assertThat(page.locator("[data-test='loan-user-filter']")).hasValue("librarian");
+        assertThat(page.locator("[data-test='loan-book-select']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(15000));
+        assertThat(page.locator("[data-test='loan-user-select']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
+    }
+
+    @Test
+    @DisplayName("Patron checkout this book prefills the patron")
+    void testPatronCheckoutThisBookPrefillsPatron() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForSelector("[data-test='login-username']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.fill("[data-test='login-username']", "testuser");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.navigate(getBaseUrl() + "/books/1");
+        page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='book-loaned-badge']"))
+                .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
+
+        page.click("[data-test='checkout-this-book']");
+        page.waitForURL(url -> url.contains("/loans/new") && url.contains("borrower=testuser"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-title-filter']")).hasValue("Initial Book");
+        assertThat(page.locator("[data-test='loan-user-filter']")).hasValue("testuser");
+    }
+
+    @Test
     @DisplayName("Should display LOC lookup button when editing book")
     void testLocLookupButtonVisible() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

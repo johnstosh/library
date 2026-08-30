@@ -11,6 +11,8 @@ import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.dto.TitleLoanedDto;
+import com.muczynski.library.exception.ResourceNotFoundException;
 import com.muczynski.library.mapper.LoanMapper;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.LoanRepository;
@@ -49,6 +51,18 @@ public class LoanService {
 
     @Autowired
     private PhotoService photoService;
+
+    /**
+     * Whether this catalog title (this book record) currently has an open loan.
+     * Does not reveal the borrower.
+     */
+    @Transactional(readOnly = true)
+    public TitleLoanedDto getTitleLoaned(Long bookId) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book", bookId));
+        long activeLoans = loanRepository.countByBookIdAndReturnDateIsNull(bookId);
+        return new TitleLoanedDto(book.getId(), book.getTitle(), activeLoans > 0);
+    }
 
     public LoanDto checkoutBook(LoanDto loanDto) {
         Book book = bookRepository.findById(loanDto.getBookId()).orElseThrow(() -> new LibraryException("Book not found: " + loanDto.getBookId()));
