@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
@@ -102,9 +103,9 @@ export function BooksPage() {
     writeUrl({ labels: nextLabels })
   }
 
-  const handleQueryChange = (value: string) => {
-    setInputValue(value)
-    writeUrl({ q: value })
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    writeUrl({ q: inputValue.trim() })
   }
 
   return (
@@ -133,15 +134,27 @@ export function BooksPage() {
 
       <PageCard padding={false} className="relative">
         <div className="p-4 border-b border-gray-200 space-y-3">
-          <Input
-            type="search"
-            label="Filter by title or author"
-            hideLabel
-            placeholder="Filter by title or author..."
-            value={inputValue}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            data-test="books-title-filter"
-          />
+          <form onSubmit={handleSearch} className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Input
+                type="search"
+                label="Filter by title or author"
+                hideLabel
+                placeholder="Filter by title or author..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                data-test="books-title-filter"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="books-search-button"
+            >
+              Search
+            </Button>
+          </form>
           <BookFilters
             chips={chips}
             onToggle={handleToggleChip}

@@ -110,6 +110,12 @@ public class BooksUITest {
         assertThat(addButton).isVisible();
         assertThat(addButton).containsText("Add Book");
 
+        // Title filter only searches on Enter or the Search button
+        assertThat(page.locator("[data-test='books-title-filter']")).isVisible();
+        Locator searchButton = page.locator("[data-test='books-search-button']");
+        assertThat(searchButton).isVisible();
+        assertThat(searchButton).containsText("Search");
+
         // Verify filter chip rows are present (chip-style, not radio buttons)
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
@@ -357,17 +363,27 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Title filter updates the URL and narrows the table")
+    @DisplayName("Title filter searches only on Enter or the Search button")
     void testTitleFilterUpdatesUrl() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("[data-test='books-title-filter']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         page.fill("[data-test='books-title-filter']", "Initial");
+        Assertions.assertFalse(page.url().contains("q="),
+                "Typing should not search until Enter or Search, got: " + page.url());
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.click("[data-test='books-search-button']");
         page.waitForURL(url -> url.contains("q=Initial"), new Page.WaitForURLOptions().setTimeout(10000L));
         assertThat(page.locator("text=Initial Book")).isVisible();
 
         page.fill("[data-test='books-title-filter']", "NoSuchTitleZZZ");
+        Assertions.assertTrue(page.url().contains("q=Initial"),
+                "Unsubmitted typing should keep the previous query, got: " + page.url());
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.press("[data-test='books-title-filter']", "Enter");
         page.waitForURL(url -> url.contains("q=NoSuchTitleZZZ"), new Page.WaitForURLOptions().setTimeout(10000L));
         assertThat(page.locator("text=Initial Book"))
                 .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
