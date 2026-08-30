@@ -96,6 +96,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }))
 
+/** Librarians land on the catalog; patrons land on Search. */
+export function homePathForUser(user: Pick<CurrentUser, 'authority'> | null | undefined): string {
+  return user?.authority === 'LIBRARIAN' ? '/books' : '/search'
+}
+
 // Helper hook to check if user is librarian
 export const useIsLibrarian = () => {
   const user = useAuthStore((state) => state.user)

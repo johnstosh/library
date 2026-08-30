@@ -143,7 +143,7 @@ public class LoginUITest {
         // Click submit button
         page.click("[data-test='login-submit']");
 
-        // Wait for navigation to books page (default after login)
+        // Wait for navigation to books page (librarian default after login)
         page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Verify we're on the books page
@@ -151,6 +151,31 @@ public class LoginUITest {
 
         // Verify navigation menu is visible (indicates successful login)
         assertThat(page.locator("[data-test='navigation']")).isVisible();
+
+        // Home (`/`) should still land librarians on Books
+        page.navigate(getBaseUrl() + "/");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/books");
+    }
+
+    @Test
+    @DisplayName("Should send patrons to search after login")
+    void testPatronLoginGoesToSearch() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='login-username']", "patron");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/search");
+        assertThat(page.locator("[data-test='search-input']")).isVisible();
+
+        // Home (`/`) should also land patrons on Search (OAuth / logo click)
+        page.navigate(getBaseUrl() + "/");
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/search");
     }
 
     @Test

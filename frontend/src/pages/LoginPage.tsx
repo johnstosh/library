@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
+import { homePathForUser, useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -23,9 +23,9 @@ export function LoginPage() {
     try {
       await login(username, password)
 
-      // Redirect to saved return URL or default to /books (Alternative 5: state parameter)
+      // Redirect to saved return URL, else librarians to /books and patrons to /search
       const returnUrl = getAndClearReturnUrl()
-      navigate(returnUrl || '/books')
+      navigate(returnUrl || homePathForUser(useAuthStore.getState().user))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
