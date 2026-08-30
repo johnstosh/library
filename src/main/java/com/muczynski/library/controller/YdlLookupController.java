@@ -23,10 +23,11 @@ public class YdlLookupController {
     private final YdlLookupService ydlLookupService;
 
     /**
-     * Lookup YDL availability for a single book
+     * Lookup YDL availability for a single book.
+     * Public so patrons can refresh holdings from the book page.
      */
     @PostMapping("/lookup/{bookId}")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<YdlLookupResultDto> lookupSingleBook(@PathVariable Long bookId) {
         log.info("Looking up YDL availability for book ID: {}", bookId);
         YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(bookId);

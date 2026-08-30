@@ -451,6 +451,9 @@ public class BooksUITest {
         page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
         assertThat(page.locator("[data-test='book-loaned-badge']"))
                 .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
 
         page.click("[data-test='checkout-this-book']");
         page.waitForURL(url -> url.contains("/loans/new") && url.contains("borrower=testuser"),
@@ -605,10 +608,12 @@ public class BooksUITest {
         // Wait for navigation to /books/1
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify the YDL Availability section and its lookup button are visible for librarian
+        // Verify the YDL Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='ydl-availability-section']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).containsText("Lookup YDL Availability");
+        assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Unknown");
     }
 
     @Test
@@ -645,10 +650,12 @@ public class BooksUITest {
         // Wait for navigation to /books/1
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify the EMU Availability section and its lookup button are visible for librarian
+        // Verify the EMU Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='emu-availability-section']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).containsText("Lookup EMU Availability");
+        assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='emu-audio-status']")).containsText("Unknown");
     }
 
     @Test

@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/user-settings").authenticated()
                         .requestMatchers("/api/search/**").permitAll()
+                        .requestMatchers("/api/ydl-lookup/**", "/api/emu-lookup/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/application/public/**").permitAll()
                         .requestMatchers("/api/users/public/**").permitAll()

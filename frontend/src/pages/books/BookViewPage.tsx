@@ -23,6 +23,24 @@ import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authS
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
+function holdingStatus(available: boolean | null | undefined) {
+  if (available == null) {
+    return 'Unknown'
+  }
+  if (available) {
+    return (
+      <>
+        <PiCheckCircle className="text-green-600" /> Available
+      </>
+    )
+  }
+  return (
+    <>
+      <PiXCircle className="text-gray-400" /> Not available
+    </>
+  )
+}
+
 export function BookViewPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -349,76 +367,42 @@ export function BookViewPage() {
                 >
                   Check YDL
                 </a>
-                {isLibrarian && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleYdlLookup}
-                    isLoading={lookupYdl.isPending}
-                    disabled={lookupYdl.isPending}
-                    leftIcon={<PiMagnifyingGlass />}
-                    data-test="book-view-ydl-lookup"
-                  >
-                    {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleYdlLookup}
+                  isLoading={lookupYdl.isPending}
+                  disabled={lookupYdl.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-ydl-lookup"
+                >
+                  {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div data-test="ydl-audio-status">
                 <p className="text-sm font-medium text-gray-500">Audio Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlAudioAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlAudioAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlAudioAvailable)}
                 </p>
               </div>
               <div data-test="ydl-paper-status">
                 <p className="text-sm font-medium text-gray-500">Paper Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlPaperAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlPaperAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlPaperAvailable)}
                 </p>
               </div>
               <div data-test="ydl-ebook-status">
                 <p className="text-sm font-medium text-gray-500">Ebook</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlEbookAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlEbookAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlEbookAvailable)}
                 </p>
               </div>
             </div>
-            {book.ydlLastChecked && (
-              <p className="text-xs text-gray-500 mt-3">
-                Last checked: {formatDateTime(book.ydlLastChecked)}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-3" data-test="ydl-last-checked">
+              Last checked: {book.ydlLastChecked ? formatDateTime(book.ydlLastChecked) : 'never'}
+            </p>
             {book.ydlLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="ydl-lookup-error">
                 {book.ydlLookupError}
@@ -440,76 +424,42 @@ export function BookViewPage() {
                 >
                   Check EMU
                 </a>
-                {isLibrarian && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEmuLookup}
-                    isLoading={lookupEmu.isPending}
-                    disabled={lookupEmu.isPending}
-                    leftIcon={<PiMagnifyingGlass />}
-                    data-test="book-view-emu-lookup"
-                  >
-                    {book.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEmuLookup}
+                  isLoading={lookupEmu.isPending}
+                  disabled={lookupEmu.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-emu-lookup"
+                >
+                  {book.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div data-test="emu-audio-status">
                 <p className="text-sm font-medium text-gray-500">Audio Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuAudioAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuAudioAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuAudioAvailable)}
                 </p>
               </div>
               <div data-test="emu-paper-status">
                 <p className="text-sm font-medium text-gray-500">Paper Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuPaperAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuPaperAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuPaperAvailable)}
                 </p>
               </div>
               <div data-test="emu-ebook-status">
                 <p className="text-sm font-medium text-gray-500">Ebook</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuEbookAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuEbookAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuEbookAvailable)}
                 </p>
               </div>
             </div>
-            {book.emuLastChecked && (
-              <p className="text-xs text-gray-500 mt-3">
-                Last checked: {formatDateTime(book.emuLastChecked)}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-3" data-test="emu-last-checked">
+              Last checked: {book.emuLastChecked ? formatDateTime(book.emuLastChecked) : 'never'}
+            </p>
             {book.emuLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="emu-lookup-error">
                 {book.emuLookupError}
