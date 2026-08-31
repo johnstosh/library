@@ -152,7 +152,7 @@ The application can automatically discover Grokipedia article URLs for books and
 
 ### Slow lookup
 1. Same generated-URL check as quick lookup. A 2xx result is saved and lookup stops (Grok is not called).
-2. Ask Grok for candidate Grokipedia URLs. Author prompts treat Grokipedia search as the source of truth, prefer a biographical person page, warn that slugs are inconsistent (`C._S._Lewis`, `First_Last_(writer)`, etc.), and ask for a JSON array of URL strings (most relevant first) with nothing before or after the JSON. Book prompts include the corresponding author and a disambiguated example such as `(novel)`. Search URLs in the reply are ignored; only `grokipedia.com/page/...` URLs are HEAD-checked.
+2. Ask Grok for candidate Grokipedia URLs. Author and book prompts both treat Grokipedia search as the source of truth. The search URL uses only the author name for author lookup and only the book title for book lookup; the other entity is context in the goal line, not in `q=`. Author prompts prefer a biographical person page; book prompts prefer the book article. Both warn that slugs are inconsistent and ask for a JSON array of URL strings (most relevant first) with nothing before or after the JSON. Search URLs in the reply are ignored; only `grokipedia.com/page/...` URLs are HEAD-checked.
 3. HEAD-check each candidate. Keep 2xx URLs and save the first working URL. Discard 4xx URLs.
 4. If no working URL remains, save `"-"` in the database to mean N/A. `"-"` is only saved when there are no working URLs; it is not saved for individual 4xx candidates when another URL worked, and it is not saved if the Grok call itself failed.
 

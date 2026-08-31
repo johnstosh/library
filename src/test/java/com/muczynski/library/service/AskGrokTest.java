@@ -352,11 +352,12 @@ public class AskGrokTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
         String prompt = (String) messages.get(0).get("content");
-        assertTrue(prompt.contains("authors and books"));
-        assertTrue(prompt.contains("Little Women"));
-        assertTrue(prompt.contains("Louisa May Alcott"));
+        assertTrue(prompt.contains("This task is about authors and books."));
+        assertTrue(prompt.contains("the book \"Little Women\" by Louisa May Alcott"));
+        assertTrue(prompt.contains("https://grokipedia.com/search?q=Little Women"));
+        assertFalse(prompt.contains("https://grokipedia.com/search?q=Little Women Louisa"));
+        assertTrue(prompt.contains("Grokipedia search as the source of truth"));
         assertTrue(prompt.contains("nothing before or after the JSON"));
-        assertTrue(prompt.contains("may or may not be necessary"));
         assertTrue(prompt.contains("[\"https://grokipedia.com/page/The_Song_of_Bernadette_(novel)\"]"));
     }
 
@@ -398,7 +399,8 @@ public class AskGrokTest {
         String prompt = (String) messages.get(0).get("content");
         assertTrue(prompt.contains("This task is about authors and books."));
         assertTrue(prompt.contains("Louisa May Alcott, known for the book \"Little Women\""));
-        assertTrue(prompt.contains("https://grokipedia.com/search?q=Louisa May Alcott Little Women"));
+        assertTrue(prompt.contains("https://grokipedia.com/search?q=Louisa May Alcott"));
+        assertFalse(prompt.contains("https://grokipedia.com/search?q=Louisa May Alcott Little Women"));
         assertTrue(prompt.contains("Grokipedia search as the source of truth"));
         assertTrue(prompt.contains("nothing before or after the JSON"));
         assertTrue(prompt.contains("[\"https://grokipedia.com/page/C._S._Lewis\"]"));

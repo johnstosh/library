@@ -57,7 +57,7 @@ Looks up Grokipedia URLs for selected authors.
 
 **Behavior:**
 - Quick: HEAD-check `https://grokipedia.com/page/{Name_With_Underscores}`. Save on 2xx; save nothing on 4xx.
-- Slow: same first. If that is not 2xx, ask Grok for a JSON array of URLs (a corresponding book included as context). Keep 2xx URLs; discard 4xx. Save `"-"` only when no working URL is found.
+- Slow: same first. If that is not 2xx, ask Grok to search Grokipedia by author name only (a corresponding book is context, not in `q=`). Keep 2xx `grokipedia.com/page/...` URLs; discard 4xx. Save `"-"` only when no working URL is found.
 
 ---
 

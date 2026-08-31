@@ -112,7 +112,7 @@ Looks up Grokipedia URLs for selected books.
 
 **Behavior:**
 - Quick: HEAD-check `https://grokipedia.com/page/{Title_With_Underscores}` after stripping a trailing copy suffix (`", c. 3"`). Save on 2xx; save nothing on 4xx.
-- Slow: same first. If that is not 2xx, ask Grok for a JSON array of URLs (author included as context). Keep 2xx URLs; discard 4xx. Save `"-"` only when no working URL is found.
+- Slow: same first. If that is not 2xx, ask Grok to search Grokipedia by title only (author is context, not in `q=`). Keep 2xx `grokipedia.com/page/...` URLs; discard 4xx. Save `"-"` only when no working URL is found.
 
 ---
 

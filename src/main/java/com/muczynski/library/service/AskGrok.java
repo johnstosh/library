@@ -210,20 +210,35 @@ public class AskGrok {
      * The model must reply with a JSON array of URL strings and nothing else.
      */
     public List<String> suggestGrokipediaUrlsForBook(String title, String authorName) {
-        String authorLabel = authorName != null && !authorName.isBlank() ? authorName : "unknown author";
-        String prompt = String.format(
-                "This is in regard to authors and books.\n" +
-                "Find Grokipedia article URLs for the book \"%s\" by %s.\n" +
-                "Disambiguation in the URL (for example a parenthetical like (novel)) may or may not be necessary.\n" +
-                "Respond in JSON format with nothing before or after the JSON.\n" +
-                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/The_Song_of_Bernadette_(novel)\"]",
-                title,
-                authorLabel
-        );
+        String goalSubject = authorName != null && !authorName.isBlank()
+                ? "\"" + title + "\" by " + authorName
+                : "\"" + title + "\"";
+        String prompt = """
+                This task is about authors and books.
+
+                Goal: find Grokipedia article URL(s) for the book %s.
+
+                Procedure:
+                1. Treat Grokipedia search as the source of truth.
+                   Search URL: https://grokipedia.com/search?q=%s
+                2. Prefer the primary article about the book, not an author article, film, bibliography, course, or compilation unless no book page exists.
+                3. Grokipedia slugs are inconsistent. Common patterns:
+                   - The_Song_of_Bernadette_(novel)
+                   - The_Song_of_Bernadette
+                   - Song_of_Bernadette
+                   - Title_With_Underscores
+                   - Title_(novel) or (book) or (film)
+                4. If you cannot verify a live page, return the Grokipedia search URL plus the best candidate page URLs rather than inventing a single slug.
+                5. Do not invent Wikipedia-style slugs unless they also appear in Grokipedia search results.
+
+                Respond in JSON only, with nothing before or after the JSON.
+                Return a JSON array of URL strings, most relevant first.
+                Example: ["https://grokipedia.com/page/The_Song_of_Bernadette_(novel)"]
+                """.formatted(goalSubject, title);
         String response = askQuestion(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
-            log.warn("Could not parse Grokipedia URL array for book \"{}\" by {}: {}", title, authorLabel, response);
+            log.warn("Could not parse Grokipedia URL array for book {}: {}", goalSubject, response);
         }
         return urls;
     }
@@ -235,9 +250,6 @@ public class AskGrok {
     public List<String> suggestGrokipediaUrlsForAuthor(String authorName, String bookTitle) {
         String goalSubject = bookTitle != null && !bookTitle.isBlank()
                 ? authorName + ", known for the book \"" + bookTitle + "\""
-                : authorName;
-        String searchQuery = bookTitle != null && !bookTitle.isBlank()
-                ? authorName + " " + bookTitle
                 : authorName;
         String prompt = """
                 This task is about authors and books.
@@ -260,7 +272,7 @@ public class AskGrok {
                 Respond in JSON only, with nothing before or after the JSON.
                 Return a JSON array of URL strings, most relevant first.
                 Example: ["https://grokipedia.com/page/C._S._Lewis"]
-                """.formatted(goalSubject, searchQuery);
+                """.formatted(goalSubject, authorName);
         String response = askQuestion(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
