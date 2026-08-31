@@ -118,8 +118,10 @@ public class LoginUITest {
         assertThat(submitButton).isEnabled();
         assertThat(submitButton).containsText("Sign In");
 
-        // Verify page title heading contains library name (right panel branding)
-        assertThat(page.locator("h1")).containsText("St. Martin de Porres");
+        // Verify branding uses the first branch in the table (data-login.sql)
+        Locator branchHeading = page.locator("[data-test='login-branch-name']");
+        assertThat(branchHeading).containsText("Test Library");
+        assertThat(branchHeading).containsText("Test Library System");
 
         Locator welcome = page.locator("[data-test='login-welcome']");
         assertThat(welcome).isVisible();

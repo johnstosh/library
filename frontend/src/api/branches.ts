@@ -13,6 +13,17 @@ export function useBranches() {
   })
 }
 
+/** Branding names from the first branch in the table. */
+export function useFirstBranch() {
+  const { data: branches = [] } = useBranches()
+  const first = branches[0]
+  return {
+    branchName: first?.branchName ?? 'Branch',
+    librarySystemName: first?.librarySystemName ?? 'Library System',
+    hasBranch: branches.length > 0,
+  }
+}
+
 // Hook to get branch statistics
 export function useBranchStatistics() {
   return useQuery({

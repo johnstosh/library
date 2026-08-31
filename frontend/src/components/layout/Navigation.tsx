@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { clsx } from 'clsx'
-import { useBranches } from '@/api/branches'
+import { useFirstBranch } from '@/api/branches'
 import {
   Disclosure,
   DisclosureButton,
@@ -51,18 +51,15 @@ export function Navigation() {
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
-  const { data: branches = [] } = useBranches()
-
-  const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
-  const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
+  const { branchName, librarySystemName, hasBranch } = useFirstBranch()
 
   useEffect(() => {
-    if (branches.length > 0) {
+    if (hasBranch) {
       document.title = `The ${branchName} Branch of the ${librarySystemName}`
     } else {
       document.title = 'Library'
     }
-  }, [branches, branchName, librarySystemName])
+  }, [hasBranch, branchName, librarySystemName])
 
   const handleLogout = () => {
     logout()

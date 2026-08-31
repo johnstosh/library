@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useFirstBranch } from '@/api/branches'
 import { homePathForUser, useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -14,6 +15,7 @@ export function LoginPage() {
   const login = useAuthStore((state) => state.login)
   const getAndClearReturnUrl = useAuthStore((state) => state.getAndClearReturnUrl)
   const navigate = useNavigate()
+  const { branchName, librarySystemName } = useFirstBranch()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -134,15 +136,15 @@ export function LoginPage() {
           <div className="mb-6">
             <img
               src="/images/marian-m.png"
-              alt="St. Martin de Porres"
+              alt={branchName}
               className="w-48 h-auto mx-auto object-contain"
               data-test="login-logo"
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
-            St. Martin de Porres Branch<br />
+          <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight" data-test="login-branch-name">
+            {branchName} Branch<br />
             of the<br />
-            Sacred Heart Library System
+            {librarySystemName}
           </h1>
           <p className="text-gray-600 text-lg" data-test="login-welcome">
             Welcome to our digital library. Access your borrowed books and discover new reads.
