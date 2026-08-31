@@ -25,7 +25,7 @@ The UI uses a library palette instead of default software blue. Tokens live in `
 | `forest-600` | `#1F4D3A` | Forest green — secondary accents and in-progress states |
 | `charcoal-800` | `#2C2825` | Ink charcoal — secondary buttons and book-icon fills |
 
-The page background is paper with a repeating SVG of small hardcover books (`frontend/public/images/paper-books.svg`) rotated **-45°**, **0°**, and **45°**, filled with burgundy, forest green, and charcoal. Cards, tables, and the nav bar stay opaque so the watermark shows in the page chrome around content.
+The page background is paper with a repeating SVG of small outline book icons (`frontend/public/images/paper-books.svg`) in burgundy, forest green, and charcoal. The marks are the Phosphor `PiBook` outline used for Book Details and, in some places, the `PiBooks` outline used on Open in Books. Positions, rotations, and sizes vary so the 480×480 tile does not read as a regular grid. Cards, tables, and the nav bar stay opaque so the watermark shows in the page chrome around content.
 
 ### State & Data Management
 - **TanStack Query v5** - Server state management with automatic caching
