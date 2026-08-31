@@ -15,6 +15,7 @@ import {
 } from '@headlessui/react'
 import { PiList, PiX } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
 
 function getInitials(username: string | null | undefined): string {
   const name = (username ?? '').trim()
@@ -77,12 +78,7 @@ export function Navigation() {
 
               {/* App name — left */}
               <Link to="/" className="flex flex-col items-start shrink-0" data-test="branch-name">
-                <span className="text-base font-bold text-gray-900 leading-tight">
-                  The {branchName} Branch
-                </span>
-                <span className="text-xs text-gray-600 leading-tight">
-                  of the {librarySystemName}
-                </span>
+                <BranchNameDisplay branchName={branchName} librarySystemName={librarySystemName} />
               </Link>
 
               {/* Desktop nav — hidden on mobile */}

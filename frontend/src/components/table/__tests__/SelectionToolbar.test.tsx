@@ -16,6 +16,25 @@ describe('TableCountPlaceholder', () => {
 
     expect(screen.getByTestId('table-count')).toHaveTextContent('12 books in this table')
     expect(screen.getByTestId('database-count')).toHaveTextContent('1,847 books in the database')
+    expect(screen.queryByTestId('table-branch-name')).not.toBeInTheDocument()
+  })
+
+  it('shows the first-branch heading above the counts, matching the nav bar', () => {
+    render(
+      <TableCountPlaceholder
+        tableCount={12}
+        totalCount={1847}
+        singular="book"
+        plural="books"
+        branchName="St. Martin de Porres"
+        librarySystemName="Sacred Heart Library System"
+      />
+    )
+
+    const heading = screen.getByTestId('table-branch-name')
+    expect(heading).toHaveTextContent('The St. Martin de Porres Branch')
+    expect(heading).toHaveTextContent('of the Sacred Heart Library System')
+    expect(screen.getByTestId('table-count')).toHaveTextContent('12 books in this table')
   })
 
   it('uses the singular noun for a count of one', () => {

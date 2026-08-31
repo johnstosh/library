@@ -11,6 +11,7 @@ import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from 
 import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl-lookup'
 import { useLookupBulkEmuWithProgress, type EmuLookupResultDto } from '@/api/emu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
+import { useBranches } from '@/api/branches'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
@@ -47,6 +48,8 @@ export function BulkActionsToolbar({
   isLoading = false,
 }: BulkActionsToolbarProps) {
   const toast = useToast()
+  const { data: branches = [] } = useBranches()
+  const firstBranch = branches[0]
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
   const [deleteResults, setDeleteResults] = useState<BulkDeleteResultDto | null>(null)
@@ -232,6 +235,8 @@ export function BulkActionsToolbar({
           singular="book"
           plural="books"
           isLoading={isLoading}
+          branchName={firstBranch?.branchName}
+          librarySystemName={firstBranch?.librarySystemName}
         />
       </SelectionToolbar>
     )

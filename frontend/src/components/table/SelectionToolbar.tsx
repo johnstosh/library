@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/Button'
+import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
 
 /**
  * Shared slot for the bulk-action carousel and the empty-selection stats
@@ -79,37 +80,50 @@ export function TableCountPlaceholder({
   singular,
   plural,
   isLoading = false,
+  branchName,
+  librarySystemName,
 }: {
   tableCount: number
   totalCount?: number
   singular: string
   plural: string
   isLoading?: boolean
+  branchName?: string
+  librarySystemName?: string
 }) {
   const tableNoun = tableCount === 1 ? singular : plural
   const totalNoun = totalCount === 1 ? singular : plural
 
   return (
     <div
-      className="flex items-center gap-x-6 gap-y-1 text-sm text-gray-700 whitespace-nowrap overflow-x-auto w-full"
+      className="flex flex-col justify-center gap-1 w-full min-w-0"
       data-test="table-stats-placeholder"
     >
-      {isLoading ? (
-        <span>Loading {plural}…</span>
-      ) : (
-        <>
-          <span data-test="table-count">
-            <span className="font-semibold">{tableCount.toLocaleString('en-US')}</span>
-            {' '}{tableNoun} in this table
-          </span>
-          {totalCount != null && (
-            <span data-test="database-count">
-              <span className="font-semibold">{totalCount.toLocaleString('en-US')}</span>
-              {' '}{totalNoun} in the database
-            </span>
-          )}
-        </>
+      {branchName && librarySystemName && (
+        <BranchNameDisplay
+          branchName={branchName}
+          librarySystemName={librarySystemName}
+          dataTest="table-branch-name"
+        />
       )}
+      <div className="flex items-center gap-x-6 gap-y-1 text-sm text-gray-700 whitespace-nowrap overflow-x-auto w-full">
+        {isLoading ? (
+          <span>Loading {plural}…</span>
+        ) : (
+          <>
+            <span data-test="table-count">
+              <span className="font-semibold">{tableCount.toLocaleString('en-US')}</span>
+              {' '}{tableNoun} in this table
+            </span>
+            {totalCount != null && (
+              <span data-test="database-count">
+                <span className="font-semibold">{totalCount.toLocaleString('en-US')}</span>
+                {' '}{totalNoun} in the database
+              </span>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

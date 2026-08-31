@@ -153,6 +153,10 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
+        Locator tableBranch = page.locator("[data-test='table-branch-name']");
+        assertThat(tableBranch).isVisible();
+        assertThat(tableBranch).containsText("The St. Martin de Porres Branch");
+        assertThat(tableBranch).containsText("of the Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
     }
 
