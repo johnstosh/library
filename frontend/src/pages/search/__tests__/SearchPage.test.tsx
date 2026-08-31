@@ -82,9 +82,9 @@ describe('SearchPage header', () => {
   it('tells patrons they can search by name or browse with filters', () => {
     renderSearch('/search')
 
-    expect(
-      screen.getByText(/Search for books and authors by title or name\. Use the filters to browse\./),
-    ).toBeInTheDocument()
+    const description = screen.getByText(/Search for books and authors by title or name/)
+    expect(description).toHaveTextContent('Use the filters to browse.')
+    expect(description.querySelector('br')).toBeInTheDocument()
   })
 })
 

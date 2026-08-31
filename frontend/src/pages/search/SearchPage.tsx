@@ -148,7 +148,13 @@ export function SearchPage() {
     <div className="max-w-4xl mx-auto">
       <PageHeader
         title="Search Library"
-        description="Search for books and authors by title or name. Use the filters to browse."
+        description={
+          <>
+            Search for books and authors by title or name.
+            <br />
+            Use the filters to browse.
+          </>
+        }
       />
 
       {/* Search Form */}
