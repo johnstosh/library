@@ -86,6 +86,18 @@ describe('SearchPage header', () => {
     expect(description).toHaveTextContent('Use the filters to browse.')
     expect(description.querySelector('br')).toBeInTheDocument()
   })
+
+  it('puts the search controls on a white card like the other pages', () => {
+    renderSearch('/search')
+
+    const form = screen.getByTestId('search-input').closest('form')
+    expect(form).not.toBeNull()
+    const card = form!.closest('.bg-white.rounded-lg.shadow')
+    expect(card).not.toBeNull()
+    expect(card).toContainElement(screen.getByTestId('search-button'))
+    expect(card).toContainElement(screen.getByTestId('search-filter-chips'))
+    expect(card).toContainElement(screen.getByTestId('book-label-filters'))
+  })
 })
 
 describe('SearchPage covers', () => {
