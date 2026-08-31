@@ -400,6 +400,10 @@ public class BookController {
         }
     }
 
+    /**
+     * Preview title and author extracted from the book's first photo.
+     * Does not persist the book; the edit form applies the values until Update or Cancel.
+     */
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {

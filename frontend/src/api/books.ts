@@ -365,16 +365,16 @@ export function useLookupBulkGenresWithProgress(
   })
 }
 
-// Hook to extract title and author from book's photo using AI
+// Extract title and author from the book's photo using AI.
+// The backend returns a preview DTO and does not persist the book. Do not write
+// that preview into the book detail cache, or Cancel would keep the extracted
+// title/author. A new author may have been created, so refresh the author list.
 export function useTitleAuthorFromPhoto() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/title-author-from-photo`),
-    onSuccess: (data, id) => {
-      queryClient.setQueryData(queryKeys.books.detail(id), data)
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },
   })

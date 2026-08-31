@@ -494,6 +494,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const updated = await titleAuthorFromPhoto.mutateAsync(book.id)
+      // Preview only — persist on Update, discard on Cancel.
       setFormData({
         ...formData,
         title: updated.title || formData.title,

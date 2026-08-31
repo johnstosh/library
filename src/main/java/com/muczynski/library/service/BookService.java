@@ -969,6 +969,12 @@ public class BookService {
         return updateBook(id, dto);
     }
 
+    /**
+     * Extract title and author from the book's first photo using AI and return them
+     * as a preview DTO for the edit form. Does not persist the book; the user must
+     * save via the normal update path. A new Author may be created if the extracted
+     * name is not already in the catalog.
+     */
     public BookDto getTitleAuthorFromPhoto(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -1012,9 +1018,10 @@ public class BookService {
                 authorEntity = authorRepository.save(authorEntity);
             }
             dto.setAuthorId(authorEntity.getId());
+            dto.setAuthor(authorEntity.getName());
         }
 
-        return updateBook(id, dto);
+        return dto;
     }
 
     public BookDto getBookFromTitleAuthor(Long id, String title, String authorName) {

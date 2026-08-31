@@ -431,7 +431,9 @@ const [showModal, setShowModal] = useState(false)
 
 ### 5. Form Pattern
 
-Forms are now page-based (not modals) with unsaved changes warnings:
+Forms are now page-based (not modals) with unsaved changes warnings.
+
+AI catalog helpers on the book edit form (Title & Author from First Photo) fill the form only. They must not persist the book until the user clicks Update. Cancel discards the previewed values.
 
 ```typescript
 interface BookFormPageProps {

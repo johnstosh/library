@@ -219,6 +219,39 @@ Uses Grok AI to extract book metadata from all of the book's photos (cover, spin
 
 ---
 
+### PUT /api/books/{id}/title-author-from-photo
+Uses Grok AI vision to extract only the book title and author name from the book's first photo. Returns a preview BookDto for the edit form. **Does not persist the book.** The user must click Update to save, or Cancel to discard. A new Author record may be created if the extracted name is not already in the catalog.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Path Parameters:**
+- `id` - Book ID
+
+**Response:** BookDto with extracted `title` and `authorId` (other fields unchanged from the current book):
+```json
+{
+  "id": 1,
+  "title": "Extracted title",
+  "authorId": 123,
+  "author": "Extracted Author"
+}
+```
+
+**Requirements:**
+- Book must have at least one photo
+- User must have xAI API key configured in user settings
+- Uses Grok flagship vision model
+- 10-minute timeout for API calls
+
+**Error Responses:**
+- 500: Book not found, no photos found, xAI API key not configured, or API call failed
+
+**Use Case:**
+- Book edit page "Title & Author from First Photo" button
+- Preview extracted catalog fields in the form before saving
+
+---
+
 ## Bulk Operations
 
 ### POST /api/books/delete-bulk

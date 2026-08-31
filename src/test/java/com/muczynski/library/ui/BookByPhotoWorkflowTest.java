@@ -8,8 +8,12 @@ import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.muczynski.library.LibraryApplication;
+import com.muczynski.library.domain.Photo;
+import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.PhotoRepository;
 import com.muczynski.library.service.AskGrok;
 import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -20,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.nio.file.Paths;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +49,12 @@ public class BookByPhotoWorkflowTest {
 
     @MockitoBean
     private AskGrok askGrok;
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private PhotoRepository photoRepository;
 
     private Playwright playwright;
     private Browser browser;
@@ -161,6 +172,58 @@ public class BookByPhotoWorkflowTest {
 
         } catch (Exception e) {
             page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-book-by-photo-workflow.png")));
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    @DisplayName("Title & Author from First Photo: Cancel discards extracted title and author")
+    void testTitleAuthorFromPhotoCancelDoesNotPersist() {
+        try {
+            Photo photo = new Photo();
+            photo.setBook(bookRepository.findById(1L).orElseThrow());
+            photo.setContentType("image/jpeg");
+            photo.setImage(new byte[] {1, 2, 3});
+            photo.setPhotoOrder(1);
+            photoRepository.save(photo);
+
+            when(askGrok.analyzePhoto(any(), any(), anyString(), anyString()))
+                .thenReturn("{\"title\": \"Extracted Cover Title\", \"authorName\": \"Extracted Cover Author\"}");
+
+            loginAsLibrarian();
+
+            page.navigate("http://localhost:" + port + "/books/1/edit");
+            page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(20000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+            Locator titleInput = page.locator("[data-test='book-title']");
+            titleInput.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            assertThat(titleInput).hasValue("Initial Book", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
+
+            Locator extractBtn = page.locator("[data-test='book-operation-title-author-from-photo']");
+            extractBtn.scrollIntoViewIfNeeded();
+            extractBtn.click();
+
+            assertThat(titleInput).hasValue("Extracted Cover Title", new LocatorAssertions.HasValueOptions().setTimeout(20000L));
+
+            page.onDialog(Dialog::accept);
+            Locator cancelBtn = page.locator("[data-test='book-form-cancel']");
+            cancelBtn.scrollIntoViewIfNeeded();
+            cancelBtn.click();
+
+            page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(20000L));
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+            Locator bookTitle = page.locator("[data-test='book-title']");
+            bookTitle.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(20000L));
+            assertThat(bookTitle).containsText("Initial Book", new LocatorAssertions.ContainsTextOptions().setTimeout(20000L));
+
+        } catch (Exception e) {
+            page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get("failure-title-author-from-photo-cancel.png")));
             throw new RuntimeException(e);
         }
     }

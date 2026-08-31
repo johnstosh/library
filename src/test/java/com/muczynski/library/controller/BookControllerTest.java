@@ -559,6 +559,29 @@ class BookControllerTest {
                 .andExpect(content().string("xAI API key not configured for user ID: 1"));
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void titleAuthorFromPhoto() throws Exception {
+        BookDto preview = new BookDto();
+        preview.setId(1L);
+        preview.setTitle("Extracted Title");
+        preview.setAuthorId(2L);
+
+        when(bookService.getTitleAuthorFromPhoto(1L)).thenReturn(preview);
+
+        mockMvc.perform(put("/api/books/1/title-author-from-photo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Extracted Title"))
+                .andExpect(jsonPath("$.authorId").value(2));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void titleAuthorFromPhoto_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(put("/api/books/1/title-author-from-photo"))
+                .andExpect(status().isForbidden());
+    }
+
     // ==================== GET /api/books/by-labels Tests ====================
 
     @Test
