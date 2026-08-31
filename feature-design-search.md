@@ -190,12 +190,13 @@ Note: When any filter chip or label is active, the author list shows only author
 #### 3. Results Display
 
 **Books Section**:
-- Table showing matching books with columns: Title, Author name, Library name, Publication year, LOC number
+- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, Library name, Publication year, LOC number
+- Cover links open `/photos/{id}` in a new tab (`data-test="book-result-cover-{id}"`)
 - Book count and pagination controls
 - "No books found" message when empty
 
 **Authors Section**:
-- Table showing matching authors with columns: Name, Brief biography, Birth/death dates, Book count
+- Table showing matching authors with a photo thumbnail (same cover component as books; `data-test="author-result-cover-{id}"`) plus Name, Brief biography, Birth/death dates, Book count
 - Author count and pagination controls
 - "No authors found" message when empty
 
@@ -274,6 +275,9 @@ Playwright UI test coverage:
 - `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
 - `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
 - `testBookResultDetails()` - Book details displayed correctly
+- `testBookResultsShowCoverThumbnails()` - Book results with photos show the same cover thumbnail as the Books table
+- `testBookResultsShowCoverPlaceholderWhenNoPhoto()` - Books without photos show a dash placeholder
+- `testAuthorResultsShowPhotoThumbnails()` - Author results with photos show a thumbnail
 - `testAuthorResultDetails()` - Author details displayed correctly
 - `testSearchUpdatesUrl()` - Search updates URL with `?q=` parameter
 - `testSearchFromUrlParameter()` - URL with `?q=` loads search results

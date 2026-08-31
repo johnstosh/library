@@ -15,6 +15,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.util.Base64;
+
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 /**
@@ -36,6 +38,12 @@ public class SearchUITest {
     private Playwright playwright;
     private Browser browser;
     private Page page;
+
+    // 56x80 solid red PNG — Search intercepts thumbnail requests the same way Books UI tests do
+    private static final byte[] RED_PNG_BYTES = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAADgAAABQCAIAAADDQyF+AAAAWUlEQVR4nO3OAQkAMBAD" +
+            "sfdvepNRDgIRkHt3CfuBqKioqKioqKioaMB+ICoqKioqKioqKhqwH4iKioqKioqKiooG" +
+            "7AeioqKioqKioqKiAfuBqKioqKhoMvoBgnZvgBp1bJkAAAAASUVORK5CYII=");
 
     @BeforeAll
     void launchBrowser() {
@@ -59,6 +67,12 @@ public class SearchUITest {
                 .setViewportSize(1280, 720));
         page = context.newPage();
         page.setDefaultTimeout(20000L);
+        page.route("**/api/photos/*/thumbnail**", route -> {
+            route.fulfill(new Route.FulfillOptions()
+                    .setStatus(200)
+                    .setContentType("image/png")
+                    .setBodyBytes(RED_PNG_BYTES));
+        });
     }
 
     @AfterEach
@@ -318,6 +332,58 @@ public class SearchUITest {
         // Verify book details are shown
         assertThat(bookResult).containsText("City of God");
         assertThat(bookResult).containsText("Augustine"); // Author name
+    }
+
+    @Test
+    @DisplayName("Book results show cover thumbnails like the Books table")
+    void testBookResultsShowCoverThumbnails() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='search-input']", "Summa");
+        page.click("[data-test='search-button']");
+        page.waitForSelector("[data-test='book-result-1']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator cover = page.locator("[data-test='book-result-cover-1']");
+        assertThat(cover).isVisible();
+        assertThat(cover).hasAttribute("href", "/photos/1");
+        Locator thumbnail = cover.locator("[data-test='thumbnail-img']");
+        assertThat(thumbnail).isVisible();
+        assertThat(thumbnail).hasAttribute("alt", "Cover of Summa Theologica");
+    }
+
+    @Test
+    @DisplayName("Book results without a photo show a cover placeholder")
+    void testBookResultsShowCoverPlaceholderWhenNoPhoto() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='search-input']", "Canticle");
+        page.click("[data-test='search-button']");
+        page.waitForSelector("[data-test='book-result-8']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator cover = page.locator("[data-test='book-result-cover-8']");
+        assertThat(cover).isVisible();
+        assertThat(cover).containsText("-");
+        assertThat(cover.locator("[data-test='thumbnail-img']")).hasCount(0);
+    }
+
+    @Test
+    @DisplayName("Author results show photo thumbnails like the Books table covers")
+    void testAuthorResultsShowPhotoThumbnails() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='search-input']", "Teresa of Avila");
+        page.click("[data-test='search-button']");
+        page.waitForSelector("[data-test='author-result-4']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator cover = page.locator("[data-test='author-result-cover-4']");
+        assertThat(cover).isVisible();
+        assertThat(cover).hasAttribute("href", "/photos/3");
+        Locator thumbnail = cover.locator("[data-test='thumbnail-img']");
+        assertThat(thumbnail).isVisible();
+        assertThat(thumbnail).hasAttribute("alt", "Photo of Teresa of Avila");
     }
 
     @Test

@@ -3,9 +3,8 @@ import { useState } from 'react'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { ThrottledThumbnail } from '@/components/ui/ThrottledThumbnail'
+import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { useDeleteBook } from '@/api/books'
-import { getThumbnailUrl } from '@/api/photos'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
 import type { BookDto } from '@/types/dtos'
 import { useToast } from '@/hooks/useToast'
@@ -62,29 +61,14 @@ export function BookTable({
     {
       key: 'photo',
       header: 'Cover',
-      accessor: (book) =>
-        book.firstPhotoId ? (
-          <a
-            href={`/photos/${book.firstPhotoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="block"
-            style={{ width: '3.5rem', minWidth: '3.5rem' }}
-            title="View full-size photo"
-          >
-            <ThrottledThumbnail
-              photoId={book.firstPhotoId}
-              url={getThumbnailUrl(book.firstPhotoId, 70, book.firstPhotoChecksum)}
-              alt={`Cover of ${book.title}`}
-              className="w-14 max-h-20 h-auto object-contain rounded hover:opacity-80 transition-opacity cursor-pointer"
-            />
-          </a>
-        ) : (
-          <div className="w-14 h-20 bg-gray-100 rounded flex items-center justify-center text-gray-400">
-            -
-          </div>
-        ),
+      accessor: (book) => (
+        <CoverThumbnail
+          photoId={book.firstPhotoId}
+          checksum={book.firstPhotoChecksum}
+          alt={`Cover of ${book.title}`}
+          stopPropagation
+        />
+      ),
       width: '70px',
       minWidth: '70px',
       cellClassName: 'px-3 py-3 sm:py-4 overflow-hidden text-sm',

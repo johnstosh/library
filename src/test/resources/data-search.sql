@@ -50,3 +50,11 @@ INSERT INTO book (id, title, publication_year, publisher, author_id, library_id,
 INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, free_text_url, electronic_resource) VALUES
     (10, 'City of God (LibriVox Audio)', 426, 'LibriVox', 2, 1, 'ACTIVE', NULL,
      'https://librivox.org/city-of-god-by-saint-augustine', false);
+
+-- Photos for cover thumbnails on Search (image bytes are unused; UI tests intercept thumbnail URLs)
+INSERT INTO photo (id, book_id, content_type, image_checksum, photo_order)
+VALUES (1, 1, 'image/png', 'checksum_summa', 1);
+INSERT INTO photo (id, book_id, content_type, image_checksum, photo_order)
+VALUES (2, 3, 'image/png', 'checksum_city_of_god', 1);
+INSERT INTO photo (id, author_id, content_type, image_checksum, photo_order)
+VALUES (3, 4, 'image/png', 'checksum_teresa', 1);

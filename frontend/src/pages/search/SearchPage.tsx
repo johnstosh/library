@@ -35,6 +35,7 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/hooks/useToast'
 import { PageCard } from '@/components/ui/PageCard'
+import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -385,32 +386,40 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`book-result-${book.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">
-              <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
-                {book.title}
-              </EntityLink>
-            </h3>
-            <p className="text-gray-600 mt-1">
-              by{' '}
-              {book.authorId ? (
-                <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
-                  {book.author}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <CoverThumbnail
+              photoId={book.firstPhotoId}
+              checksum={book.firstPhotoChecksum}
+              alt={`Cover of ${book.title}`}
+              dataTest={`book-result-cover-${book.id}`}
+            />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
+                  {book.title}
                 </EntityLink>
-              ) : (
-                book.author
-              )}
-            </p>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-              {book.publicationYear && <span>{book.publicationYear}</span>}
-              {book.publisher && <span>{book.publisher}</span>}
-              {book.library && <span className="font-medium">{book.library}</span>}
-            </div>
-            {book.locNumber && (
-              <div className="mt-2 text-sm text-gray-500">
-                <span className="font-medium">LOC:</span> {book.locNumber}
+              </h3>
+              <p className="text-gray-600 mt-1">
+                by{' '}
+                {book.authorId ? (
+                  <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
+                    {book.author}
+                  </EntityLink>
+                ) : (
+                  book.author
+                )}
+              </p>
+              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                {book.publicationYear && <span>{book.publicationYear}</span>}
+                {book.publisher && <span>{book.publisher}</span>}
+                {book.library && <span className="font-medium">{book.library}</span>}
               </div>
-            )}
+              {book.locNumber && (
+                <div className="mt-2 text-sm text-gray-500">
+                  <span className="font-medium">LOC:</span> {book.locNumber}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             <StatusBadge tone={bookStatusTone(book.status)}>
@@ -521,22 +530,30 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`author-result-${author.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">
-              <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
-                {author.name}
-              </EntityLink>
-            </h3>
-            {(author.dateOfBirth || author.dateOfDeath) && (
-              <p className="text-gray-600 mt-1">
-                {author.dateOfBirth && <span>{author.dateOfBirth.split('-')[0]}</span>}
-                {author.dateOfBirth && author.dateOfDeath && <span> - </span>}
-                {author.dateOfDeath && <span>{author.dateOfDeath.split('-')[0]}</span>}
-              </p>
-            )}
-            {author.briefBiography && (
-              <p className="text-gray-700 mt-2 line-clamp-2">{author.briefBiography}</p>
-            )}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <CoverThumbnail
+              photoId={author.firstPhotoId}
+              checksum={author.firstPhotoChecksum}
+              alt={`Photo of ${author.name}`}
+              dataTest={`author-result-cover-${author.id}`}
+            />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
+                  {author.name}
+                </EntityLink>
+              </h3>
+              {(author.dateOfBirth || author.dateOfDeath) && (
+                <p className="text-gray-600 mt-1">
+                  {author.dateOfBirth && <span>{author.dateOfBirth.split('-')[0]}</span>}
+                  {author.dateOfBirth && author.dateOfDeath && <span> - </span>}
+                  {author.dateOfDeath && <span>{author.dateOfDeath.split('-')[0]}</span>}
+                </p>
+              )}
+              {author.briefBiography && (
+                <p className="text-gray-700 mt-2 line-clamp-2">{author.briefBiography}</p>
+              )}
+            </div>
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             {author.bookCount !== undefined && (

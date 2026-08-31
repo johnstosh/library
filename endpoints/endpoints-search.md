@@ -41,6 +41,8 @@ All active boolean chips AND labels AND together. Conflicting chips may yield em
       "id": 1,
       "title": "The Great Gatsby",
       "author": "F. Scott Fitzgerald",
+      "firstPhotoId": 12,
+      "firstPhotoChecksum": "abc123",
       ...
     }
   ],
@@ -48,6 +50,8 @@ All active boolean chips AND labels AND together. Conflicting chips may yield em
     {
       "id": 1,
       "name": "F. Scott Fitzgerald",
+      "firstPhotoId": 44,
+      "firstPhotoChecksum": "def456",
       ...
     }
   ],
