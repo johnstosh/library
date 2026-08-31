@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { EntityLink } from '@/components/ui/EntityLink'
 import type { GenreLookupResultDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { formatBookLabel } from './BookLabelFilters'
 
 interface GenreLookupResultsModalProps {
   isOpen: boolean
@@ -32,11 +33,11 @@ export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }:
     >
       <div className="space-y-4">
         {results.length === 0 && isRunning ? (
-          <p className="text-blue-800 font-medium" data-test="genre-lookup-standby">Please stand by...</p>
+          <p className="text-primary-800 font-medium" data-test="genre-lookup-standby">Please stand by...</p>
         ) : (
           <>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-blue-800 font-medium">
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
+          <p className="text-primary-800 font-medium">
             {successCount} {successCount === 1 ? 'book' : 'books'} processed successfully
             {failedCount > 0 && `, ${failedCount} skipped or failed`}
           </p>
@@ -63,7 +64,7 @@ export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }:
                     <div className="flex flex-wrap gap-1 mt-2">
                       {result.suggestedGenres.map((genre) => (
                         <StatusBadge key={genre} tone="accent" shape="rounded">
-                          {genre}
+                          {formatBookLabel(genre)}
                         </StatusBadge>
                       ))}
                     </div>

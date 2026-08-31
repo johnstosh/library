@@ -9,11 +9,13 @@ import com.muczynski.library.domain.Authority;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
+import com.muczynski.library.email.EmailAddresses;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.LoanRepository;
 import com.muczynski.library.repository.AuthorityRepository;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import com.muczynski.library.util.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +101,8 @@ public class UserService {
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
+        user.setEmail(normalizeOptionalEmail(dto.getEmail()));
+        user.setPhone(normalizeOptionalPhone(dto.getPhone()));
 
         Authority authority = findOrCreateAuthority(dto.getAuthority());
         user.setAuthorities(Collections.singleton(authority));
@@ -119,6 +123,8 @@ public class UserService {
         user.setUsername(applied.getName());
         user.setPassword(applied.getPassword()); // Already encoded from Applied creation
         user.setSsoProvider("local"); // Mark as local (non-SSO) user
+        user.setEmail(applied.getEmail());
+        user.setPhone(applied.getPhone());
 
         Authority authority = findOrCreateAuthority("USER");
         user.setAuthorities(Collections.singleton(authority));
@@ -155,6 +161,12 @@ public class UserService {
         if (dto.getAuthority() != null && !dto.getAuthority().isEmpty()) {
             Authority authority = findOrCreateAuthority(dto.getAuthority());
             user.setAuthorities(Collections.singleton(authority));
+        }
+        if (dto.getEmail() != null) {
+            user.setEmail(normalizeOptionalEmail(dto.getEmail()));
+        }
+        if (dto.getPhone() != null) {
+            user.setPhone(normalizeOptionalPhone(dto.getPhone()));
         }
         User savedUser = userRepository.save(user);
         UserDto dtoResponse = userMapper.toDto(savedUser);
@@ -232,5 +244,27 @@ public class UserService {
             return ssoUsers.get(0).getId();
         }
         return null;
+    }
+
+    private String normalizeOptionalEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        String trimmed = email.trim();
+        if (!EmailAddresses.isValid(trimmed)) {
+            throw new LibraryException("Invalid email address: " + trimmed);
+        }
+        return trimmed;
+    }
+
+    private String normalizeOptionalPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        String trimmed = phone.trim();
+        if (!PhoneNumbers.isValid(trimmed)) {
+            throw new LibraryException("Invalid phone number: " + trimmed);
+        }
+        return trimmed;
     }
 }

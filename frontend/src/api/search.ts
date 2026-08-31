@@ -52,7 +52,8 @@ function chipQueryParams(filters: SearchFilters): string {
 
 export function useSearch(
   query: string,
-  page = 0,
+  bookPage = 0,
+  authorPage = 0,
   size = 20,
   filters: SearchFilters = defaultSearchFilters,
   enabled = true,
@@ -62,10 +63,10 @@ export function useSearch(
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
   const filterParams = chipQueryParams(filters)
   return useQuery({
-    queryKey: ['search', query, page, size, filters, selectedLabels ?? []],
+    queryKey: ['search', query, bookPage, authorPage, size, filters, selectedLabels ?? []],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}${filterParams}${labelsParam}`,
+        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}`,
         { requireAuth: false },
       ),
     enabled,

@@ -15,6 +15,8 @@ export interface UserSettingsDto {
   googlePhotosAlbumId?: string
   lastPhotoTimestamp?: string
   libraryCardDesign?: LibraryCardDesign
+  email?: string
+  phone?: string
 }
 
 // Global Settings API

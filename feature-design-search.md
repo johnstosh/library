@@ -54,7 +54,9 @@ Returns paginated search results for books and authors.
 
 **Query Parameters**:
 - `query` (string, optional, default `""`) - Search term to match against book titles and author names. Empty query returns all results.
-- `page` (int, required) - Zero-based page number
+- `page` (int, optional) - Legacy zero-based page number used for both lists when `bookPage`/`authorPage` are omitted
+- `bookPage` (int, optional, default `0`) - Zero-based page number for book results
+- `authorPage` (int, optional, default `0`) - Zero-based page number for author results
 - `size` (int, required) - Number of results per page (default: 20)
 - `filterInLibrary` (boolean, optional, default `false`) - Limit books to those with a LOC call number (physical collection)
 - `filterElectronic` (boolean, optional, default `false`) - Limit books to those marked as electronic resources (`electronicResource = true`)
@@ -111,10 +113,11 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 ## Pagination
 
-- **Independent Pagination**: Books and authors have separate page counts and totals
+- **Independent Pagination**: Books and authors have separate page counts, totals, and request params (`bookPage`, `authorPage`)
 - **Default Page Size**: 20 results per page
 - **Zero-Based Pages**: Page numbers start at 0
 - **Page Metadata**: Each result type includes total pages, total elements, current page, and page size
+- **Legacy `page`**: If `bookPage`/`authorPage` are omitted, `page` is used for both lists
 
 ## User Interface
 
@@ -125,21 +128,29 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 Search state is persisted in the URL for better UX and shareability:
 
-**URL Pattern**: `/search?q=<query>&page=<page>&inLib=<bool>&elec=<bool>&freeText=<bool>&audio=<bool>`
+**URL Pattern**: `/search?q=<query>&bookPage=<n>&authorPage=<n>&inLib=<bool>&elec=<bool>&freeText=<bool>&audio=<bool>&labels=<csv>`
+
+Search and Books share the same chip/label query-key vocabulary (`bookFilterParams.ts`) but **not** the same URL or state. Search is the public catalog; Books is the inventory table.
 
 **Parameters**:
 - `q` (string) - Search query text
-- `page` (number, optional) - Zero-based page number (omitted when 0)
-- `inLib` (boolean, optional) - In-library filter active (`true`/`false`; omitted when false)
-- `elec` (boolean, optional) - Electronic resource filter active
-- `freeText` (boolean, optional) - Free online text filter active
-- `audio` (boolean, optional) - Free online audio filter active
+- `bookPage` (number, optional) - Zero-based book results page (omitted when 0)
+- `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
+- `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
+- `inLib`, `elec`, `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
+- `labels` (string, optional) - Comma-separated genre tags (AND)
+
+Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `notActiveStatus`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`.
 
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)
 - `/search?inLib=true` - All in-library books (blank query with filter)
 - `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in books that are BOTH in-library AND electronic
 - `/search?audio=true` - All LibriVox audio books
+- `/search?q=Narnia&labels=fiction,classic` - Query plus genre filters
+- `/search?q=Augustine&bookPage=1&authorPage=0` - Independent list pages
+
+Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). That is a one-way handoff, not live sync.
 
 **Benefits**:
 - Bookmarkable search URLs
@@ -163,28 +174,29 @@ Search state is persisted in the URL for better UX and shareability:
 
 #### 2. Filter Chips
 
-Four toggle chips displayed below the search input. Clicking a chip immediately updates the URL and triggers a search. Each chip shows:
-- **Inactive**: Funnel (filter) icon + label + ⓘ indicator
-- **Active**: Checkmark icon + label + ⓘ indicator + blue highlight
+Discovery chips only (availability + type). Cataloger chips stay on the Books page. Clicking a chip immediately updates the URL and triggers a search. Genre chips write `labels=` the same way.
 
-| Chip | `data-test` | Tooltip |
-|------|-------------|---------|
-| In-library materials | `filter-in-library` | "Limit results to books with a Library of Congress call number — books physically in the collection" |
-| Electronic resource | `filter-electronic` | "Limit results to books marked as electronic resources" |
-| Has free online text | `filter-free-text` | "Limit results to books that have a free online text URL (e.g., Project Gutenberg, Internet Archive)" |
-| Has free online audio | `filter-audio` | "Limit results to books with a free LibriVox audio recording" |
+| Chip | `data-test` |
+|------|-------------|
+| YDL / EMU Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*` |
+| In-library materials | `filter-in-library` |
+| Electronic resource | `filter-electronic` |
+| Has free online text | `filter-free-text` |
+| Has free online audio | `filter-audio` |
+| Genres | `label-filter-<genre>` |
 
 Note: When any filter chip or label is active, the author list shows only authors who have at least one book in the filtered book result set — not authors matching the search string by name.
 
 #### 3. Results Display
 
 **Books Section**:
-- Table showing matching books with columns: Title, Author name, Library name, Publication year, LOC number
+- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, Library name, Publication year, LOC number
+- Cover links open `/photos/{id}` in a new tab (`data-test="book-result-cover-{id}"`)
 - Book count and pagination controls
 - "No books found" message when empty
 
 **Authors Section**:
-- Table showing matching authors with columns: Name, Brief biography, Birth/death dates, Book count
+- Table showing matching authors with a photo thumbnail (same cover component as books; `data-test="author-result-cover-{id}"`) plus Name, Brief biography, Birth/death dates, Book count
 - Author count and pagination controls
 - "No authors found" message when empty
 
@@ -263,6 +275,9 @@ Playwright UI test coverage:
 - `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
 - `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
 - `testBookResultDetails()` - Book details displayed correctly
+- `testBookResultsShowCoverThumbnails()` - Book results with photos show the same cover thumbnail as the Books table
+- `testBookResultsShowCoverPlaceholderWhenNoPhoto()` - Books without photos show a dash placeholder
+- `testAuthorResultsShowPhotoThumbnails()` - Author results with photos show a thumbnail
 - `testAuthorResultDetails()` - Author details displayed correctly
 - `testSearchUpdatesUrl()` - Search updates URL with `?q=` parameter
 - `testSearchFromUrlParameter()` - URL with `?q=` loads search results

@@ -87,15 +87,7 @@ public class AuthController {
             SecurityContextHolder.getContext()
         );
 
-        // Return current user info
-        CurrentUserDto currentUser = new CurrentUserDto(
-            user.getId(),
-            user.getUsername(),
-            user.getHighestAuthority(),
-            user.getSsoSubjectId()
-        );
-
-        return ResponseEntity.ok(currentUser);
+        return ResponseEntity.ok(toCurrentUserDto(user));
     }
 
     /**
@@ -124,13 +116,16 @@ public class AuthController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        CurrentUserDto currentUser = new CurrentUserDto(
-            user.getId(),
-            user.getUsername(),
-            user.getHighestAuthority(),
-            user.getSsoSubjectId()
-        );
+        return ResponseEntity.ok(toCurrentUserDto(user));
+    }
 
-        return ResponseEntity.ok(currentUser);
+    private CurrentUserDto toCurrentUserDto(User user) {
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setId(user.getId());
+        currentUser.setUsername(user.getUsername());
+        currentUser.setAuthority(user.getHighestAuthority());
+        currentUser.setSsoSubjectId(user.getSsoSubjectId());
+        currentUser.setCreatedAt(user.getCreatedAt());
+        return currentUser;
     }
 }

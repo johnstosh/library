@@ -3,6 +3,10 @@
  */
 package com.muczynski.library.service;
 
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -19,9 +23,11 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.util.LocCallNumberFormatter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -60,6 +66,15 @@ public class LabelsPdfService {
     @Value("${app.labels.font-size.loc:10}")
     private int locFontSize;
 
+    private static final String[] FONT_REGULAR_PATHS = {
+            "public/fonts/CenturySchL-Roma.ttf",
+            "static/fonts/CenturySchL-Roma.ttf"
+    };
+    private static final String[] FONT_BOLD_PATHS = {
+            "public/fonts/CenturySchL-Bold.ttf",
+            "static/fonts/CenturySchL-Bold.ttf"
+    };
+
     /**
      * Generate labels PDF for the given list of books
      */
@@ -71,6 +86,10 @@ public class LabelsPdfService {
             PdfDocument pdfDoc = new PdfDocument(writer);
             Document document = new Document(pdfDoc, PageSize.LETTER);
             document.setMargins(TOP_MARGIN, RIGHT_MARGIN, BOTTOM_MARGIN, LEFT_MARGIN);
+
+            PdfFont regularFont = loadCenturyFont(FONT_REGULAR_PATHS, StandardFonts.TIMES_ROMAN);
+            PdfFont boldFont = loadCenturyFont(FONT_BOLD_PATHS, StandardFonts.TIMES_BOLD);
+            document.setFont(regularFont);
 
             int labelIndex = 0;
             Table currentTable = null;
@@ -115,7 +134,7 @@ public class LabelsPdfService {
                 // Add label cell
                 boolean isLastRow = (rowIndex == LABELS_PER_COL - 1);
                 boolean isLastCol = colIndex >= LABELS_PER_ROW; 
-                Cell labelCell = createLabelCell(book, isLastRow, isLastCol);
+                Cell labelCell = createLabelCell(book, isLastRow, isLastCol, regularFont, boldFont);
                 currentTable.addCell(labelCell);
 
                 colIndex++;
@@ -156,7 +175,8 @@ public class LabelsPdfService {
      * Create a label cell for a book
      * @param isLastRow true if this cell is in the last (5th) row on the page
      */
-    private Cell createLabelCell(Book book, boolean isLastRow, boolean isLastCol) {
+    private Cell createLabelCell(Book book, boolean isLastRow, boolean isLastCol,
+                                 PdfFont regularFont, PdfFont boldFont) {
         float paddingTop = 6;
         float paddingBottom = isLastRow ? 0 : 6;
 
@@ -195,8 +215,8 @@ public class LabelsPdfService {
 
         // Title (bold, slightly larger) - no truncation, will wrap naturally
         Paragraph titlePara = new Paragraph(book.getTitle())
+                .setFont(boldFont)
                 .setFontSize(titleFontSize)
-                .setBold()
                 .setMargin(0)
                 .setPadding(0);
         leftCell.add(titlePara);
@@ -204,6 +224,7 @@ public class LabelsPdfService {
         // Author - no truncation, will wrap naturally
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : "Unknown";
         Paragraph authorPara = new Paragraph(authorName)
+                .setFont(regularFont)
                 .setFontSize(authorFontSize)
                 .setMargin(0)
                 .setPadding(0)
@@ -223,6 +244,7 @@ public class LabelsPdfService {
         String formattedLoc = formatLocNumber(locNumber);
 
         Paragraph locPara = new Paragraph(formattedLoc)
+                .setFont(regularFont)
                 .setFontSize(locFontSize)
                 .setMargin(0)
                 .setPadding(0)
@@ -270,6 +292,28 @@ public class LabelsPdfService {
      */
     private String formatLocNumber(String locNumber) {
         return LocCallNumberFormatter.formatForSpine(locNumber);
+    }
+
+    private PdfFont loadCenturyFont(String[] classpathPaths, String fallback) {
+        for (String classpathPath : classpathPaths) {
+            try {
+                ClassPathResource resource = new ClassPathResource(classpathPath);
+                if (!resource.exists()) {
+                    continue;
+                }
+                byte[] bytes = resource.getInputStream().readAllBytes();
+                return PdfFontFactory.createFont(bytes, PdfEncodings.IDENTITY_H,
+                        PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED);
+            } catch (Exception e) {
+                log.warn("Could not load {} ({})", classpathPath, e.getMessage());
+            }
+        }
+        log.warn("Falling back to {}", fallback);
+        try {
+            return PdfFontFactory.createFont(fallback);
+        } catch (IOException ex) {
+            throw new RuntimeException("Failed to load label font", ex);
+        }
     }
 
 }

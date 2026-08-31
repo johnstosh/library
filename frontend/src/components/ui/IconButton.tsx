@@ -14,7 +14,7 @@ export type IconButtonTone =
 
 const TONE_CLASSES: Record<IconButtonTone, string> = {
   neutral: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
-  primary: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50',
+  primary: 'text-primary-600 hover:text-primary-800 hover:bg-primary-50',
   danger: 'text-red-600 hover:text-red-800 hover:bg-red-50',
   success: 'text-green-600 hover:text-green-800 hover:bg-green-50',
   warning: 'text-amber-600 hover:text-amber-800 hover:bg-amber-50',
@@ -22,8 +22,8 @@ const TONE_CLASSES: Record<IconButtonTone, string> = {
   accent: 'text-purple-600 hover:text-purple-800 hover:bg-purple-50',
 }
 
-export const TEXT_LINK_CLASS = 'text-blue-600 hover:text-blue-800'
-export const TEXT_LINK_UNDERLINE_CLASS = 'text-blue-600 hover:text-blue-800 underline'
+export const TEXT_LINK_CLASS = 'text-primary-600 hover:text-primary-800'
+export const TEXT_LINK_UNDERLINE_CLASS = 'text-primary-600 hover:text-primary-800 underline'
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   icon: ReactNode
@@ -49,7 +49,7 @@ export function IconButton({
 }: IconButtonProps) {
   const classes = clsx(
     'inline-flex items-center justify-center rounded-md p-1.5 transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500',
+    'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500',
     'disabled:opacity-50 disabled:cursor-not-allowed',
     disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
     TONE_CLASSES[tone],

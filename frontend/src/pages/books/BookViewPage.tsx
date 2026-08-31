@@ -3,12 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
+import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
-import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
+import { formatBookLabel } from './components/BookLabelFilters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
-import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle } from 'react-icons/pi'
+import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle, PiBookOpen } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { EntityLink } from '@/components/ui/EntityLink'
@@ -17,21 +20,43 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
+import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+
+function holdingStatus(available: boolean | null | undefined) {
+  if (available == null) {
+    return 'Unknown'
+  }
+  if (available) {
+    return (
+      <>
+        <PiCheckCircle className="text-green-600" /> Available
+      </>
+    )
+  }
+  return (
+    <>
+      <PiXCircle className="text-gray-400" /> Not available
+    </>
+  )
+}
 
 export function BookViewPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const bookId = id ? parseInt(id, 10) : 0
   const { data: book, isLoading } = useBook(bookId)
+  const { data: titleLoaned, isError: titleLoanedError } = useTitleLoaned(bookId)
   const cloneBook = useCloneBook()
   const deleteBook = useDeleteBook()
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = useIsAuthenticated()
+  const currentUser = useAuthStore((state) => state.user)
+  const loaned = titleLoaned?.loaned === true
+  const canCheckout = isAuthenticated && book?.status === 'ACTIVE' && titleLoaned != null && !loaned
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -74,6 +99,11 @@ export function BookViewPage() {
     navigate(`/books/${bookId}/edit`)
   }
 
+  const handleCheckoutThisBook = () => {
+    if (!book) return
+    navigate(loansNewPathFromBook(book, currentUser?.username))
+  }
+
   const handleBack = () => {
     navigate(isAuthenticated ? '/books' : '/search')
   }
@@ -112,33 +142,47 @@ export function BookViewPage() {
             <h1 className="text-2xl font-bold text-gray-900" data-test="book-title">
               {book.title}
             </h1>
-            {isLibrarian && (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleEdit}
-                  leftIcon={<PiPencil />}
-                  data-test="book-view-edit"
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleClone}
-                  isLoading={cloneBook.isPending}
-                  leftIcon={<PiCopy />}
-                  data-test="book-view-clone"
-                >
-                  Clone
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  leftIcon={<PiTrash />}
-                  data-test="book-view-delete"
-                >
-                  Delete
-                </Button>
+            {(canCheckout || isLibrarian) && (
+              <div className="flex flex-wrap gap-3 justify-end">
+                {canCheckout && (
+                  <Button
+                    variant="primary"
+                    onClick={handleCheckoutThisBook}
+                    leftIcon={<PiBookOpen />}
+                    data-test="checkout-this-book"
+                  >
+                    Checkout this book
+                  </Button>
+                )}
+                {isLibrarian && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleEdit}
+                      leftIcon={<PiPencil />}
+                      data-test="book-view-edit"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleClone}
+                      isLoading={cloneBook.isPending}
+                      leftIcon={<PiCopy />}
+                      data-test="book-view-clone"
+                    >
+                      Clone
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      leftIcon={<PiTrash />}
+                      data-test="book-view-delete"
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -183,7 +227,7 @@ export function BookViewPage() {
                   <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
-              {book.grokipediaUrl && (
+              {isValidUrl(book.grokipediaUrl) && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
                   <a
@@ -244,10 +288,24 @@ export function BookViewPage() {
                   </p>
                 </div>
               )}
-              <div data-test="book-loan-count">
-                <p className="text-sm font-medium text-gray-500">Active Loans</p>
-                <p className="text-gray-900">{book.loanCount ?? 0}</p>
+              <div data-test="book-loan-status">
+                <p className="text-sm font-medium text-gray-500">Availability</p>
+                {titleLoanedError ? (
+                  <p className="text-gray-500">Could not check availability</p>
+                ) : titleLoaned == null ? (
+                  <p className="text-gray-500">Checking…</p>
+                ) : (
+                  <StatusBadge tone={loaned ? 'info' : 'success'} data-test="book-loaned-badge">
+                    {loaned ? 'Currently on loan' : 'Available'}
+                  </StatusBadge>
+                )}
               </div>
+              {isLibrarian && (
+                <div data-test="book-loan-count">
+                  <p className="text-sm font-medium text-gray-500">Active Loans</p>
+                  <p className="text-gray-900">{book.loanCount ?? 0}</p>
+                </div>
+              )}
               {book.tagsList && book.tagsList.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Genres</p>
@@ -259,7 +317,7 @@ export function BookViewPage() {
                         shape="rounded"
                         data-test={`book-tag-${tag}`}
                       >
-                        {tag}
+                        {formatBookLabel(tag)}
                       </StatusBadge>
                     ))}
                   </div>
@@ -310,76 +368,42 @@ export function BookViewPage() {
                 >
                   Check YDL
                 </a>
-                {isLibrarian && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleYdlLookup}
-                    isLoading={lookupYdl.isPending}
-                    disabled={lookupYdl.isPending}
-                    leftIcon={<PiMagnifyingGlass />}
-                    data-test="book-view-ydl-lookup"
-                  >
-                    {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleYdlLookup}
+                  isLoading={lookupYdl.isPending}
+                  disabled={lookupYdl.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-ydl-lookup"
+                >
+                  {book.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div data-test="ydl-audio-status">
                 <p className="text-sm font-medium text-gray-500">Audio Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlAudioAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlAudioAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlAudioAvailable)}
                 </p>
               </div>
               <div data-test="ydl-paper-status">
                 <p className="text-sm font-medium text-gray-500">Paper Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlPaperAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlPaperAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlPaperAvailable)}
                 </p>
               </div>
               <div data-test="ydl-ebook-status">
                 <p className="text-sm font-medium text-gray-500">Ebook</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.ydlEbookAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.ydlEbookAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.ydlEbookAvailable)}
                 </p>
               </div>
             </div>
-            {book.ydlLastChecked && (
-              <p className="text-xs text-gray-500 mt-3">
-                Last checked: {formatDateTime(book.ydlLastChecked)}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-3" data-test="ydl-last-checked">
+              Last checked: {book.ydlLastChecked ? formatDateTime(book.ydlLastChecked) : 'never'}
+            </p>
             {book.ydlLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="ydl-lookup-error">
                 {book.ydlLookupError}
@@ -401,76 +425,42 @@ export function BookViewPage() {
                 >
                   Check EMU
                 </a>
-                {isLibrarian && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEmuLookup}
-                    isLoading={lookupEmu.isPending}
-                    disabled={lookupEmu.isPending}
-                    leftIcon={<PiMagnifyingGlass />}
-                    data-test="book-view-emu-lookup"
-                  >
-                    {book.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEmuLookup}
+                  isLoading={lookupEmu.isPending}
+                  disabled={lookupEmu.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-emu-lookup"
+                >
+                  {book.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div data-test="emu-audio-status">
                 <p className="text-sm font-medium text-gray-500">Audio Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuAudioAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuAudioAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuAudioAvailable)}
                 </p>
               </div>
               <div data-test="emu-paper-status">
                 <p className="text-sm font-medium text-gray-500">Paper Book</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuPaperAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuPaperAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuPaperAvailable)}
                 </p>
               </div>
               <div data-test="emu-ebook-status">
                 <p className="text-sm font-medium text-gray-500">Ebook</p>
                 <p className="text-gray-900 flex items-center gap-1">
-                  {book.emuEbookAvailable === undefined ? (
-                    'Not checked yet'
-                  ) : book.emuEbookAvailable ? (
-                    <>
-                      <PiCheckCircle className="text-green-600" /> Available
-                    </>
-                  ) : (
-                    <>
-                      <PiXCircle className="text-gray-400" /> Not available
-                    </>
-                  )}
+                  {holdingStatus(book.emuEbookAvailable)}
                 </p>
               </div>
             </div>
-            {book.emuLastChecked && (
-              <p className="text-xs text-gray-500 mt-3">
-                Last checked: {formatDateTime(book.emuLastChecked)}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-3" data-test="emu-last-checked">
+              Last checked: {book.emuLastChecked ? formatDateTime(book.emuLastChecked) : 'never'}
+            </p>
             {book.emuLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="emu-lookup-error">
                 {book.emuLookupError}

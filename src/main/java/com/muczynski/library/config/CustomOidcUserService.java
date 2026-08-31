@@ -61,9 +61,10 @@ public class CustomOidcUserService extends OidcUserService {
             }
         }
 
-        // Update email and name on each login (in case they changed)
+        // Fill email from the provider only when the patron has none yet, so
+        // a later Settings change is not overwritten on the next SSO login.
         boolean updated = false;
-        if (email != null && !email.equals(user.getEmail())) {
+        if (email != null && (user.getEmail() == null || user.getEmail().isBlank())) {
             user.setEmail(email);
             updated = true;
         }

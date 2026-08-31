@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { LoanDto, CheckoutCardTranscriptionDto } from '@/types/dtos'
+import type { LoanDto, CheckoutCardTranscriptionDto, TitleLoanedDto } from '@/types/dtos'
 
 // Hook to get loans (with optional filter for showing all or just active)
 export function useLoans(showAll = false) {
@@ -19,6 +19,15 @@ export function useLoans(showAll = false) {
       return loans
     },
     staleTime: 1000 * 60 * 2, // 2 minutes - loans change frequently
+  })
+}
+
+export function useTitleLoaned(bookId: number) {
+  return useQuery({
+    queryKey: queryKeys.loans.titleLoaned(bookId),
+    queryFn: () => api.get<TitleLoanedDto>(`/loans/title-loaned?bookId=${bookId}`),
+    enabled: !!bookId,
+    staleTime: 30 * 1000,
   })
 }
 

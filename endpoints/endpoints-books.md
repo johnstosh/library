@@ -26,7 +26,7 @@ Returns book summaries for books from the most recent 2 days OR books with tempo
 ```
 
 **Use Case:**
-- Books page "Most Recent Day" filter
+- Books page "Recent Arrivals" filter
 - Cache validation: compare lastModified with cached data, fetch only changed books
 
 ---
@@ -91,6 +91,28 @@ Returns book summaries for books without a Grokipedia URL.
 **Use Case:**
 - Books page "Without Grokipedia" filter
 - Identify books that need Grokipedia lookup
+- Includes books whose `grokipediaUrl` is `"-"` (N/A after a slow lookup found no working URL)
+
+---
+
+### POST /api/books/grokipedia-lookup-bulk
+Looks up Grokipedia URLs for selected books.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Query Parameters:**
+- `slow` (boolean, default `false`) — `false` is quick lookup (generated URL only). `true` is slow lookup (generated URL, then Grok candidates, then HTTP checks).
+
+**Request Body:** Array of book IDs
+```json
+[1, 2, 3]
+```
+
+**Response:** Array of `GrokipediaLookupResultDto`
+
+**Behavior:**
+- Quick: HEAD-check `https://grokipedia.com/page/{Title_With_Underscores}` after stripping a trailing copy suffix (`", c. 3"`). Save on 2xx; save nothing on 4xx.
+- Slow: same first. If that is not 2xx, ask Grok to search Grokipedia by title only (author is context, not in `q=`). Keep 2xx `grokipedia.com/page/...` URLs; discard 4xx. Save `"-"` only when no working URL is found.
 
 ---
 
@@ -216,6 +238,39 @@ Uses Grok AI to extract book metadata from all of the book's photos (cover, spin
 - Bulk process books from photos selected in the Books page
 - Extracts title, author, publication year, publisher, and descriptions
 - Creates new author if not found in database
+
+---
+
+### PUT /api/books/{id}/title-author-from-photo
+Uses Grok AI vision to extract only the book title and author name from the book's first photo. Returns a preview BookDto for the edit form. **Does not persist the book.** The user must click Update to save, or Cancel to discard. A new Author record may be created if the extracted name is not already in the catalog.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Path Parameters:**
+- `id` - Book ID
+
+**Response:** BookDto with extracted `title` and `authorId` (other fields unchanged from the current book):
+```json
+{
+  "id": 1,
+  "title": "Extracted title",
+  "authorId": 123,
+  "author": "Extracted Author"
+}
+```
+
+**Requirements:**
+- Book must have at least one photo
+- User must have xAI API key configured in user settings
+- Uses Grok flagship vision model
+- 10-minute timeout for API calls
+
+**Error Responses:**
+- 500: Book not found, no photos found, xAI API key not configured, or API call failed
+
+**Use Case:**
+- Book edit page "Title & Author from First Photo" button
+- Preview extracted catalog fields in the form before saving
 
 ---
 

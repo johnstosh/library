@@ -74,6 +74,7 @@ class ApplicationEmailServiceTest {
         assertTrue(message.getSubject().contains("Jane Doe"));
         assertEquals("library.application.pending", message.getEvent());
         assertTrue(message.getTextBody().contains("https://library.example.com/applications"));
+        assertTrue(message.getHtmlBody().contains("Century Schoolbook L"));
         assertEquals(7L, message.getEventPayload().get("applicationId"));
     }
 

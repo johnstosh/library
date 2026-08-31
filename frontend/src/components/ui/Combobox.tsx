@@ -70,7 +70,7 @@ export function Combobox({
           <ComboboxInput
             className={clsx(
               'block w-full px-3 py-2 border rounded-md shadow-sm min-h-[44px] pr-10',
-              'focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:ring-1',
+              'focus:ring-primary-500 focus:border-primary-500 focus:outline-none focus:ring-1',
               'disabled:bg-gray-100 disabled:cursor-not-allowed',
               error ? 'border-red-300' : 'border-gray-300'
             )}
@@ -99,8 +99,8 @@ export function Combobox({
               className={({ focus, selected }) =>
                 clsx(
                   'relative cursor-pointer select-none py-2 pl-10 pr-4',
-                  focus ? 'bg-blue-600 text-white' : 'text-gray-900',
-                  selected && !focus && 'bg-blue-50',
+                  focus ? 'bg-primary-600 text-white' : 'text-gray-900',
+                  selected && !focus && 'bg-primary-50',
                   option.isCreateOption && 'font-medium'
                 )
               }
@@ -121,7 +121,7 @@ export function Combobox({
                     <span
                       className={clsx(
                         'absolute inset-y-0 left-0 flex items-center pl-3',
-                        focus ? 'text-white' : 'text-blue-600'
+                        focus ? 'text-white' : 'text-primary-600'
                       )}
                     >
                       <PiCheck className="h-5 w-5" aria-hidden="true" />

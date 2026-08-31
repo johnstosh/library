@@ -124,9 +124,9 @@ export function TestDataPage() {
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-900">Books</p>
-                <p className="text-3xl font-bold text-blue-600 mt-2" data-test="books-count">
+              <div className="bg-primary-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-primary-900">Books</p>
+                <p className="text-3xl font-bold text-primary-600 mt-2" data-test="books-count">
                   {stats?.books || 0}
                 </p>
               </div>

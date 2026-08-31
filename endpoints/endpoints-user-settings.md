@@ -19,6 +19,7 @@ Returns the current user's settings and profile information.
   "lastPhotoTimestamp": "2025-01-01T12:00:00",
   "libraryCardDesign": "CLASSICAL_DEVOTION",
   "email": "john@example.com",
+  "phone": "555-123-4567",
   "activeLoansCount": 2,
   "ssoProvider": "google",
   "ssoSubjectId": "123456789",
@@ -44,7 +45,9 @@ Updates the current user's settings.
   "googleClientSecret": "new-secret",
   "googlePhotosAlbumId": "new-album-id",
   "lastPhotoTimestamp": "2025-01-02T12:00:00",
-  "libraryCardDesign": "COUNTRYSIDE_YOUTH"
+  "libraryCardDesign": "COUNTRYSIDE_YOUTH",
+  "email": "john@example.com",
+  "phone": "555-123-4567"
 }
 ```
 
@@ -57,6 +60,8 @@ Updates the current user's settings.
 - Passwords must be SHA-256 hashed on client side before sending
 - Username changes check for uniqueness
 - API keys can be set to empty string to clear them
+- Email and phone are optional contact fields. Empty string clears them. Invalid values return 400.
+- Authenticated patrons (USER and LIBRARIAN) can change their own email and phone. SSO login fills email only when it is currently blank, so a Settings change is kept.
 
 **Error Responses:**
 - 400: Invalid password format (not SHA-256 hash)

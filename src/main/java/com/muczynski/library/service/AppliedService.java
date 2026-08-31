@@ -9,6 +9,7 @@ import com.muczynski.library.email.EmailAddresses;
 import com.muczynski.library.email.PendingApplicationNotice;
 import com.muczynski.library.repository.AppliedRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import com.muczynski.library.util.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +59,7 @@ public class AppliedService {
         }
         applied.setPassword(passwordEncoder.encode(applied.getPassword()));
         applied.setEmail(normalizeOptionalEmail(applied.getEmail()));
+        applied.setPhone(normalizeOptionalPhone(applied.getPhone()));
         if (applied.getStatus() == null) {
             applied.setStatus(Applied.ApplicationStatus.PENDING);
         }
@@ -81,6 +83,17 @@ public class AppliedService {
         String trimmed = email.trim();
         if (!EmailAddresses.isValid(trimmed)) {
             throw new LibraryException("Invalid email address: " + trimmed);
+        }
+        return trimmed;
+    }
+
+    private String normalizeOptionalPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        String trimmed = phone.trim();
+        if (!PhoneNumbers.isValid(trimmed)) {
+            throw new LibraryException("Invalid phone number: " + trimmed);
         }
         return trimmed;
     }

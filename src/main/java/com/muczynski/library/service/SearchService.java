@@ -49,7 +49,8 @@ public class SearchService {
      * notActiveStatus always constrains books: off hides WITHDRAWN; on excludes ACTIVE.
      *
      * @param query          title search text (empty = match all)
-     * @param page           zero-based page number
+     * @param bookPage       zero-based page number for book results
+     * @param authorPage     zero-based page number for author results
      * @param size           results per page
      * @param filterInLibrary limit to books with a LOC call number (physical collection)
      * @param filterElectronic limit to books with electronicResource = true
@@ -72,7 +73,7 @@ public class SearchService {
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      */
     @Transactional(readOnly = true)
-    public SearchResponseDto search(String query, int page, int size,
+    public SearchResponseDto search(String query, int bookPageNumber, int authorPageNumber, int size,
             boolean filterInLibrary, boolean filterElectronic,
             boolean filterFreeText, boolean filterAudio,
             boolean filterMostRecent, boolean filterWithoutLoc,
@@ -85,7 +86,8 @@ public class SearchService {
             List<String> labels) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable bookPageable = PageRequest.of(bookPageNumber, size);
+        Pageable authorPageable = PageRequest.of(authorPageNumber, size);
         boolean hasLabels = labels != null && !labels.isEmpty();
         long labelCount = hasLabels ? labels.size() : 0;
 
@@ -110,7 +112,7 @@ public class SearchService {
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
-                    labels, labelCount, pageable);
+                    labels, labelCount, bookPageable);
         } else {
             bookPage = bookRepository.findWithFilters(
                     trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
@@ -120,7 +122,7 @@ public class SearchService {
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
-                    pageable);
+                    bookPageable);
         }
 
         // Optional chips and labels switch authors to "authors of matching books".
@@ -144,7 +146,7 @@ public class SearchService {
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
-                        labels, labelCount, pageable);
+                        labels, labelCount, authorPageable);
             } else {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
                         trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
@@ -154,12 +156,12 @@ public class SearchService {
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
-                        pageable);
+                        authorPageable);
             }
         } else if (!trimmedQuery.isEmpty()) {
-            authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, pageable);
+            authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, authorPageable);
         } else {
-            authorPage = authorRepository.findAll(pageable);
+            authorPage = authorRepository.findAll(authorPageable);
         }
 
         List<BookDto> books = bookPage.getContent().stream()

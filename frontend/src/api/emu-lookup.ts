@@ -21,7 +21,7 @@ export function useLookupSingleEmu() {
 
   return useMutation({
     mutationFn: (bookId: number) =>
-      api.post<EmuLookupResultDto>(`/emu-lookup/lookup/${bookId}`),
+      api.post<EmuLookupResultDto>(`/emu-lookup/lookup/${bookId}`, undefined, { requireAuth: false }),
     onSuccess: (_, bookId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
@@ -51,7 +51,7 @@ export function useLookupBulkEmuWithProgress(
       for (let i = 0; i < bookIds.length; i++) {
         const bookId = bookIds[i]
         try {
-          const result = await api.post<EmuLookupResultDto>(`/emu-lookup/lookup/${bookId}`)
+          const result = await api.post<EmuLookupResultDto>(`/emu-lookup/lookup/${bookId}`, undefined, { requireAuth: false })
           results.push(result)
           queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
         } catch (error) {

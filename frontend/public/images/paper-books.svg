@@ -1,0 +1,69 @@
+<!-- (c) Copyright 2025 by Muczynski -->
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <rect width="480" height="480" fill="#F4EBDA"/>
+  <defs>
+    <!-- Phosphor PiBook — same outline as the Book Details icon -->
+    <symbol id="book" viewBox="0 0 256 256">
+      <path d="M208,24H72A32,32,0,0,0,40,56V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H208a8,8,0,0,0,8-8V32A8,8,0,0,0,208,24Zm-8,160H72a31.82,31.82,0,0,0-16,4.29V56A16,16,0,0,1,72,40H200Z"/>
+    </symbol>
+    <!-- Phosphor PiBooks — same outline as the Open in Books button icon -->
+    <symbol id="books" viewBox="0 0 256 256">
+      <path d="M231.65,194.55,198.46,36.75a16,16,0,0,0-19-12.39L132.65,34.42a16.08,16.08,0,0,0-12.3,19l33.19,157.8A16,16,0,0,0,169.16,224a16.25,16.25,0,0,0,3.38-.36l46.81-10.06A16.09,16.09,0,0,0,231.65,194.55ZM136,50.15c0-.06,0-.09,0-.09l46.8-10,3.33,15.87L139.33,66Zm6.62,31.47,46.82-10.05,3.34,15.9L146,97.53Zm6.64,31.57,46.82-10.06,13.3,63.24-46.82,10.06ZM216,197.94l-46.8,10-3.33-15.87L212.67,182,216,197.85C216,197.91,216,197.94,216,197.94ZM104,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32ZM56,48h48V64H56Zm0,32h48v96H56Zm48,128H56V192h48v16Z"/>
+    </symbol>
+  </defs>
+
+  <g transform="translate(56,54) rotate(-34)" fill="#2C2825" opacity="0.34">
+    <use href="#book" x="-14" y="-14" width="28" height="28"/>
+  </g>
+  <g transform="translate(121,117) rotate(-8)" fill="#6B2D3C" opacity="0.28">
+    <use href="#book" x="-18" y="-18" width="36" height="36"/>
+  </g>
+  <g transform="translate(218,124) rotate(35)" fill="#1F4D3A" opacity="0.30">
+    <use href="#books" x="-14" y="-14" width="28" height="28"/>
+  </g>
+  <g transform="translate(341,76) rotate(18)" fill="#6B2D3C" opacity="0.26">
+    <use href="#books" x="-21" y="-21" width="42" height="42"/>
+  </g>
+  <g transform="translate(53,173) rotate(13)" fill="#2C2825" opacity="0.32">
+    <use href="#books" x="-15" y="-15" width="30" height="30"/>
+  </g>
+  <g transform="translate(432,146) rotate(22)" fill="#1F4D3A" opacity="0.36">
+    <use href="#book" x="-14" y="-14" width="28" height="28"/>
+  </g>
+  <g transform="translate(335,192) rotate(39)" fill="#2C2825" opacity="0.29">
+    <use href="#book" x="-16" y="-16" width="32" height="32"/>
+  </g>
+  <g transform="translate(161,254) rotate(-28)" fill="#6B2D3C" opacity="0.38">
+    <use href="#book" x="-19" y="-19" width="38" height="38"/>
+  </g>
+  <g transform="translate(245,222) rotate(32)" fill="#1F4D3A" opacity="0.27">
+    <use href="#books" x="-21" y="-21" width="42" height="42"/>
+  </g>
+  <g transform="translate(73,265) rotate(-6)" fill="#1F4D3A" opacity="0.31">
+    <use href="#book" x="-16" y="-16" width="32" height="32"/>
+  </g>
+  <g transform="translate(437,248) rotate(-21)" fill="#6B2D3C" opacity="0.28">
+    <use href="#book" x="-17" y="-17" width="34" height="34"/>
+  </g>
+  <g transform="translate(93,366) rotate(-18)" fill="#2C2825" opacity="0.26">
+    <use href="#books" x="-21" y="-21" width="42" height="42"/>
+  </g>
+  <g transform="translate(201,338) rotate(44)" fill="#6B2D3C" opacity="0.30">
+    <use href="#books" x="-17" y="-17" width="34" height="34"/>
+  </g>
+  <g transform="translate(354,312) rotate(5)" fill="#2C2825" opacity="0.40">
+    <use href="#books" x="-22" y="-22" width="44" height="44"/>
+  </g>
+  <g transform="translate(432,347) rotate(9)" fill="#1F4D3A" opacity="0.33">
+    <use href="#book" x="-14" y="-14" width="28" height="28"/>
+  </g>
+  <g transform="translate(283,387) rotate(-14)" fill="#6B2D3C" opacity="0.29">
+    <use href="#book" x="-18" y="-18" width="36" height="36"/>
+  </g>
+  <g transform="translate(202,422) rotate(-10)" fill="#2C2825" opacity="0.27">
+    <use href="#books" x="-22" y="-22" width="44" height="44"/>
+  </g>
+  <g transform="translate(48,432) rotate(-41)" fill="#1F4D3A" opacity="0.31">
+    <use href="#books" x="-22" y="-22" width="44" height="44"/>
+  </g>
+</svg>

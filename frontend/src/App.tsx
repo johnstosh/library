@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
+import { homePathForUser, useAuthStore } from '@/stores/authStore'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { LibrarianRoute } from '@/components/auth/LibrarianRoute'
@@ -58,12 +58,13 @@ function PageLoader() {
 function HomeRedirect() {
   const navigate = useNavigate()
   const getAndClearReturnUrl = useAuthStore((state) => state.getAndClearReturnUrl)
+  const user = useAuthStore((state) => state.user)
 
   useEffect(() => {
     // Check for saved return URL (from OAuth flow or API 401 redirect)
     const returnUrl = getAndClearReturnUrl()
-    navigate(returnUrl || '/books', { replace: true })
-  }, [getAndClearReturnUrl, navigate])
+    navigate(returnUrl || homePathForUser(user), { replace: true })
+  }, [getAndClearReturnUrl, navigate, user])
 
   // Show nothing while redirecting
   return null

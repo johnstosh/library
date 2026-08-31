@@ -16,6 +16,7 @@ import type { LoanDto } from '@/types/dtos'
 import { EntityLink } from '@/components/ui/EntityLink'
 
 interface InitialFilters {
+  bookId?: string
   title?: string
   author?: string
   locNumber?: string
@@ -97,8 +98,8 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   }
 
   const [formData, setFormData] = useState({
-    bookId: '',
-    userId: '',
+    bookId: initialFilters?.bookId || '',
+    userId: currentUser?.id?.toString() || '',
     checkoutDate: initialFilters?.checkoutDate
       ? normalizeDate(initialFilters.checkoutDate)
       : getTodayFormatted(),
@@ -113,7 +114,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const { data: books = [], isFetching: booksFetching } = useBooks()
+  const { data: books = [], isFetching: booksFetching, isLoading: booksLoading } = useBooks()
   const { data: users = [] } = useUsers()
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
@@ -184,12 +185,11 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
         dueDate: formatDateToInput(loan.dueDate),
       })
     } else {
-      // New loan - set user if applicable
-      if (currentUser && !isLibrarian) {
-        // Default to current user if not a librarian
+      // New loan - default borrower to the logged-in user (librarian can change it)
+      if (currentUser) {
         setFormData(prev => ({
           ...prev,
-          userId: currentUser.id.toString(),
+          userId: prev.userId || currentUser.id.toString(),
         }))
       }
       // Only set default dates if no transcription dates were provided
@@ -215,7 +215,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loan, currentUser, isLibrarian])
+  }, [loan, currentUser])
 
   // Helper function to format ISO date string to MM-DD-YYYY
   // Uses parseISODateSafe to avoid timezone issues with date-only strings
@@ -448,6 +448,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   // Auto-select or update book selection when filtered list changes
   useEffect(() => {
     if (isEditing) return
+    if (booksLoading) return
 
     const hasFilters = bookFilters.title || bookFilters.author || bookFilters.locNumber
 
@@ -464,7 +465,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       // Clear selection if filters are set but no books match
       setFormData(prev => ({ ...prev, bookId: '' }))
     }
-  }, [filteredBooks, bookFilters, isEditing])
+  }, [filteredBooks, bookFilters, isEditing, booksLoading, formData.bookId])
 
   // Auto-select first user when filtered list changes and no user is selected
   useEffect(() => {
@@ -538,8 +539,8 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                   )}
                 </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <p className="text-sm text-primary-900">
                   Loans cannot be edited directly. Use the Return button to mark this loan as returned, or use the Delete button to remove it.
                 </p>
               </div>

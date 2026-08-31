@@ -94,6 +94,10 @@ public class ApplyForCardUITest {
         Locator emailInput = page.locator("[data-test='apply-email']");
         assertThat(emailInput).isVisible();
 
+        // Verify optional phone input
+        Locator phoneInput = page.locator("[data-test='apply-phone']");
+        assertThat(phoneInput).isVisible();
+
         // Verify password input
         Locator passwordInput = page.locator("[data-test='apply-password']");
         assertThat(passwordInput).isVisible();
@@ -109,10 +113,11 @@ public class ApplyForCardUITest {
 
         // Verify "Already have an account" link
         assertThat(page.locator("text=Already have an account?")).isVisible();
-        assertThat(page.locator("a[href='/login'].text-blue-600")).isVisible();
+        assertThat(page.locator("[data-test='apply-sign-in']")).isVisible();
 
-        // Verify "What happens next" section
+        // Verify "What happens next" section does not promise email unless one is provided
         assertThat(page.locator("text=What happens next?")).isVisible();
+        assertThat(page.locator("text=If you included an email, we will notify you when it is reviewed")).isVisible();
     }
 
     @Test
@@ -133,9 +138,11 @@ public class ApplyForCardUITest {
         Locator successMessage = page.locator("text=Application submitted successfully!");
         assertThat(successMessage).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
 
-        // Verify confirmation message is shown
+        // Verify confirmation message is shown and does not promise email without an address
         assertThat(page.locator("[data-test='success-container']")).isVisible();
-        assertThat(page.locator("[data-test='success-container'] p")).isVisible();
+        assertThat(page.locator("[data-test='application-next-step']")).isVisible();
+        assertThat(page.locator("[data-test='application-next-step']"))
+                .containsText("We cannot notify you by email because no address was provided");
 
         // Verify form is hidden after success
         Locator nameInput = page.locator("[data-test='apply-name']");
@@ -240,7 +247,7 @@ public class ApplyForCardUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Click the "Sign in" link (the one inside the form area, not the nav link)
-        page.click("a[href='/login'].text-blue-600");
+        page.click("[data-test='apply-sign-in']");
 
         // Verify we navigated to login page
         page.waitForURL("**/login", new Page.WaitForURLOptions().setTimeout(10000L));
@@ -301,6 +308,8 @@ public class ApplyForCardUITest {
 
         assertThat(page.locator("text=Application submitted successfully!"))
             .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='application-next-step']"))
+            .containsText("We will email you when your card is approved");
     }
 
     @Test

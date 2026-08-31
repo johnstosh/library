@@ -7,7 +7,9 @@ Returns search results for books and authors matching the query.
 
 **Query Parameters:**
 - `query` (string, optional, default `""`) - Search term to match against book titles and author names
-- `page` (int, required) - Zero-based page number
+- `page` (int, optional) - Legacy zero-based page used for both lists when `bookPage`/`authorPage` are omitted
+- `bookPage` (int, optional, default `0`) - Zero-based page number for book results
+- `authorPage` (int, optional, default `0`) - Zero-based page number for author results
 - `size` (int, required) - Number of results per page
 - `filterInLibrary` (boolean, optional, default `false`) - Books with a non-blank LOC call number
 - `filterElectronic` (boolean, optional, default `false`) - Books marked as electronic resources
@@ -39,6 +41,8 @@ All active boolean chips AND labels AND together. Conflicting chips may yield em
       "id": 1,
       "title": "The Great Gatsby",
       "author": "F. Scott Fitzgerald",
+      "firstPhotoId": 12,
+      "firstPhotoChecksum": "abc123",
       ...
     }
   ],
@@ -46,6 +50,8 @@ All active boolean chips AND labels AND together. Conflicting chips may yield em
     {
       "id": 1,
       "name": "F. Scott Fitzgerald",
+      "firstPhotoId": 44,
+      "firstPhotoChecksum": "def456",
       ...
     }
   ],
@@ -67,8 +73,8 @@ All active boolean chips AND labels AND together. Conflicting chips may yield em
 **Use Case:**
 - Public search across library catalog
 - Case-insensitive partial matching on book titles and author names
-- Filter books by AND-combined chip filters (same chips as the Books page)
-- Paginated results for both books and authors
+- Filter books by AND-combined chip filters (Search UI shows discovery chips including Recent Arrivals; Books keeps cataloger chips)
+- Independently paginated book and author results (`bookPage` / `authorPage`)
 - Powers `/search` page with real-time search and filter chips
 
 ---

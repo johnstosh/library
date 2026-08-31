@@ -1,5 +1,5 @@
 -- Test data for Login UI tests
--- Creates a librarian user for testing authentication
+-- Creates a librarian and a patron for testing authentication
 
 -- Clean up existing data in correct order (respecting foreign keys)
 DELETE FROM loan;
@@ -28,3 +28,12 @@ VALUES (1, 'librarian', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3t
 
 -- Assign LIBRARIAN role
 INSERT INTO users_roles (user_id, role_id) VALUES (1, 2);
+
+-- Insert a test patron (USER authority)
+-- Username: patron
+-- Password: password
+INSERT INTO users (id, username, password, xai_api_key, google_photos_api_key, last_photo_timestamp, sso_provider)
+VALUES (2, 'patron', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he', '', '', '', 'local');
+
+-- Assign USER role
+INSERT INTO users_roles (user_id, role_id) VALUES (2, 1);

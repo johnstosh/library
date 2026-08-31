@@ -23,7 +23,8 @@ Displays the current user's library card information and allows them to download
 
 **Features**:
 - Display user's name and member ID
-- "Print Card" button to download PDF
+- "Member Since" year from the user's `createdAt` (shows "Member" when the account has no created date)
+- "Download PDF" and "Download All Card Designs" buttons (the files download; they do not open a print dialog)
 - PDF includes custom library branding (logo, colors)
 - Wallet-sized format (2.125" x 3.375")
 
@@ -38,6 +39,7 @@ Public-facing form where prospective patrons can submit library card application
 **Features**:
 - Username and password input
 - Optional email (used for pending-application notifications)
+- Optional phone number
 - Client-side SHA-256 password hashing before submission
 - Form validation
 - Success/error messaging
@@ -51,7 +53,10 @@ Public-facing form where prospective patrons can submit library card application
 3. Application submitted to `/api/application/public/register`
 4. Application status set to `PENDING`
 5. User receives confirmation message (page remains on success screen permanently - no redirect)
+   - With email: "We will email you when your card is approved"
+   - Without email: the page says we cannot notify them because no address was provided
 6. Librarian reviews application in Applications page
+7. Pending-application email is sent only when the applicant provided an email (and email notifications are configured)
 
 ### 3. Applications (`/applications`)
 
@@ -76,6 +81,7 @@ Management interface for reviewing and processing library card applications.
 2. System creates a new User account with:
    - Username from application
    - Password from application (already bcrypt-hashed)
+   - Email and phone from application (if provided)
    - Authority: `USER`
 3. Application status changed to `APPROVED`
 4. The application stays in GET `/api/applied` with status `APPROVED`. The default **Needs approval** filter hides it from the review queue
@@ -84,6 +90,8 @@ Management interface for reviewing and processing library card applications.
 ### 4. Library Card Design (User Settings)
 
 **Access**: All authenticated users
+
+Logged-in patrons can change their contact email and phone on User Settings (`/settings`). Those fields are optional. Card applications copy email and phone onto the user account at approval, and patrons can update them later.
 
 Each user can select their preferred library card design from 5 predefined options.
 
@@ -116,6 +124,7 @@ public class Applied {
     private Long id;                    // Auto-generated primary key
     private String name;                // Applicant's username
     private String email;               // Optional contact email
+    private String phone;               // Optional contact phone
     private String password;            // Bcrypt-hashed password
     private ApplicationStatus status;   // PENDING, APPROVED, NOT_APPROVED, QUESTION
 }
@@ -124,7 +133,8 @@ public class Applied {
 **Fields**:
 - `id`: Unique identifier (auto-generated)
 - `name`: Requested username for the library account
-- `email`: Optional contact email for notifications
+- `email`: Optional contact email for notifications; copied to the user on approval
+- `phone`: Optional contact phone; copied to the user on approval
 - `password`: Password hashed with bcrypt (after client-side SHA-256)
 - `status`: Enum tracking application state
 
@@ -147,6 +157,7 @@ public class AppliedDto {
     private Long id;
     private String name;
     private String email;
+    private String phone;
     private ApplicationStatus status;
     // password NOT included for security
 }

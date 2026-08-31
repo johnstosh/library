@@ -19,6 +19,24 @@ describe('StatusBadge', () => {
     expect(badge).toHaveClass('bg-green-100', 'text-green-800', 'rounded-full')
   })
 
+  it('uses burgundy primary for informational status', () => {
+    render(
+      <StatusBadge tone="info" data-test="info-badge">
+        Checked out
+      </StatusBadge>
+    )
+    expect(screen.getByTestId('info-badge')).toHaveClass('bg-primary-100', 'text-primary-800')
+  })
+
+  it('uses forest green for accent status', () => {
+    render(
+      <StatusBadge tone="accent" data-test="accent-badge">
+        Accent
+      </StatusBadge>
+    )
+    expect(screen.getByTestId('accent-badge')).toHaveClass('bg-forest-100', 'text-forest-800')
+  })
+
   it('maps book statuses onto the shared tones', () => {
     expect(bookStatusTone('ACTIVE')).toBe('success')
     expect(bookStatusTone('ON_ORDER')).toBe('info')

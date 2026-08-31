@@ -13,6 +13,7 @@ import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
+import { isValidUrl } from '@/utils/formatters'
 
 export function AuthorViewPage() {
   const navigate = useNavigate()
@@ -138,14 +139,14 @@ export function AuthorViewPage() {
                   <p className="text-gray-900">{author.religiousAffiliation}</p>
                 </div>
               )}
-              {author.grokipediaUrl && (
+              {isValidUrl(author.grokipediaUrl) && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
                   <a
                     href={author.grokipediaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
+                    className="text-primary-600 hover:text-primary-800 underline"
                     data-test="author-grokipedia-link"
                   >
                     View on Grokipedia

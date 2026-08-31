@@ -129,6 +129,8 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.resources().registerPattern("static/images/library-cards/*.jpg");
         hints.resources().registerPattern("static/images/library-cards/*.png");
         hints.resources().registerPattern("static/images/*.png");
+        hints.resources().registerPattern("static/fonts/*.ttf");
+        hints.resources().registerPattern("public/fonts/*.ttf");
 
         // iText 8 reflection hints for renderers, document/layout, and kernel classes
         for (Class<?> cls : new Class<?>[] {

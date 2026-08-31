@@ -110,6 +110,12 @@ public class BooksUITest {
         assertThat(addButton).isVisible();
         assertThat(addButton).containsText("Add Book");
 
+        // Title filter only searches on Enter or the Search button
+        assertThat(page.locator("[data-test='books-title-filter']")).isVisible();
+        Locator searchButton = page.locator("[data-test='books-search-button']");
+        assertThat(searchButton).isVisible();
+        assertThat(searchButton).containsText("Search");
+
         // Verify filter chip rows are present (chip-style, not radio buttons)
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
@@ -132,10 +138,25 @@ public class BooksUITest {
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
 
+        Locator filterInfo = page.locator("[data-test='filter-in-library-info']");
+        assertThat(filterInfo).isVisible();
+        String pressedBefore = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
+        filterInfo.click();
+        assertThat(page.locator("[data-test='filter-in-library-tooltip']")).isVisible();
+        assertThat(page.locator("[data-test='filter-in-library-tooltip']"))
+                .containsText("Library of Congress");
+        String pressedAfter = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
+        assert pressedBefore != null && pressedBefore.equals(pressedAfter) :
+                "Clicking filter info should not toggle the filter";
+
         // Stats placeholder holds the bulk-action slot when nothing is selected
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
+        Locator tableBranch = page.locator("[data-test='table-branch-name']");
+        assertThat(tableBranch).isVisible();
+        assertThat(tableBranch).containsText("The St. Martin de Porres Branch");
+        assertThat(tableBranch).containsText("of the Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
     }
 
@@ -157,6 +178,12 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-title']")).isVisible();
         assertThat(page.locator("[data-test='book-author']")).isVisible();
         assertThat(page.locator("[data-test='book-branch']")).isVisible();
+        page.waitForSelector("[data-test='book-branch'] option[value='1']",
+            new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10000L));
+        assertThat(page.locator("[data-test='book-branch']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='book-year']")).isVisible();
         assertThat(page.locator("[data-test='book-publisher']")).isVisible();
         assertThat(page.locator("[data-test='book-loc']")).isVisible();
@@ -310,11 +337,11 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should show the initial book on the default Most Recent Day view")
+    @DisplayName("Should show the initial book on the default Recent Arrivals view")
     void testNoChipsShowAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // Recent Arrivals starts on (faster /books/most-recent-day backend).
         // Initial Book uses CURRENT_TIMESTAMP so it appears in that set.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
     }
@@ -333,16 +360,18 @@ public class BooksUITest {
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
         // under the "Without LOC" chip.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-        // Most Recent Day cannot be combined with other filters
+        // Recent Arrivals cannot be combined with other filters
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+        Assertions.assertTrue(page.url().contains("withoutLoc=true"),
+                "URL should contain withoutLoc=true, got: " + page.url());
     }
 
     @Test
-    @DisplayName("Should filter books by 'Most Recent Day' chip")
+    @DisplayName("Should filter books by 'Recent Arrivals' chip")
     void testFilterMostRecent() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // Recent Arrivals starts on (faster /books/most-recent-day backend).
         // The initial book was added in this test run so it matches.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
@@ -350,6 +379,109 @@ public class BooksUITest {
         page.click("[data-test='filter-most-recent']");
         page.waitForTimeout(500);
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));
+        Assertions.assertTrue(page.url().contains("mostRecent=false"),
+                "Turning Recent Arrivals off should write mostRecent=false, got: " + page.url());
+    }
+
+    @Test
+    @DisplayName("Title filter searches only on Enter or the Search button")
+    void testTitleFilterUpdatesUrl() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='books-title-filter']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.fill("[data-test='books-title-filter']", "Initial");
+        Assertions.assertFalse(page.url().contains("q="),
+                "Typing should not search until Enter or Search, got: " + page.url());
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.click("[data-test='books-search-button']");
+        page.waitForURL(url -> url.contains("q=Initial"), new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.fill("[data-test='books-title-filter']", "NoSuchTitleZZZ");
+        Assertions.assertTrue(page.url().contains("q=Initial"),
+                "Unsubmitted typing should keep the previous query, got: " + page.url());
+        assertThat(page.locator("text=Initial Book")).isVisible();
+
+        page.press("[data-test='books-title-filter']", "Enter");
+        page.waitForURL(url -> url.contains("q=NoSuchTitleZZZ"), new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("text=Initial Book"))
+                .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+    }
+
+    @Test
+    @DisplayName("Books filters restore from the URL")
+    void testBooksFiltersRestoreFromUrl() {
+        page.navigate(getBaseUrl() + "/books?q=Initial&withoutLoc=true");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='books-title-filter']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+    }
+
+    @Test
+    @DisplayName("Book detail shows title-loaned availability and checkout")
+    void testBookDetailShowsAvailabilityAndCheckout() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='book-loaned-badge']"))
+                .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='checkout-this-book']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Checkout this book prefills the loan form")
+    void testCheckoutThisBookPrefillsLoanForm() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.click("[data-test='checkout-this-book']");
+        page.waitForURL(url -> url.contains("/loans/new") && url.contains("bookId=1"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-title-filter']")).hasValue("Initial Book");
+        assertThat(page.locator("[data-test='loan-author-filter']")).hasValue("Initial Author");
+        assertThat(page.locator("[data-test='loan-user-filter']")).hasValue("librarian");
+        assertThat(page.locator("[data-test='loan-book-select']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(15000));
+        assertThat(page.locator("[data-test='loan-user-select']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
+    }
+
+    @Test
+    @DisplayName("Patron checkout this book prefills the patron")
+    void testPatronCheckoutThisBookPrefillsPatron() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForSelector("[data-test='login-username']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.fill("[data-test='login-username']", "testuser");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.navigate(getBaseUrl() + "/books/1");
+        page.waitForSelector("[data-test='book-title']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='book-loaned-badge']"))
+                .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
+        assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
+
+        page.click("[data-test='checkout-this-book']");
+        page.waitForURL(url -> url.contains("/loans/new") && url.contains("borrower=testuser"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='loan-title-filter']")).hasValue("Initial Book");
+        assertThat(page.locator("[data-test='loan-user-filter']")).hasValue("testuser");
     }
 
     @Test
@@ -452,8 +584,8 @@ public class BooksUITest {
         // Verify book details are shown
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
-        // Active status badge is shown in the Status column
-        assertThat(page.locator("text=Active")).isVisible();
+        // Active status badge is shown in the Status column (exact: not "Not Active Status")
+        assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
     }
 
     @Test
@@ -497,10 +629,12 @@ public class BooksUITest {
         // Wait for navigation to /books/1
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify the YDL Availability section and its lookup button are visible for librarian
+        // Verify the YDL Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='ydl-availability-section']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).containsText("Lookup YDL Availability");
+        assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Unknown");
     }
 
     @Test
@@ -537,10 +671,12 @@ public class BooksUITest {
         // Wait for navigation to /books/1
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify the EMU Availability section and its lookup button are visible for librarian
+        // Verify the EMU Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='emu-availability-section']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).containsText("Lookup EMU Availability");
+        assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='emu-audio-status']")).containsText("Unknown");
     }
 
     @Test

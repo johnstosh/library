@@ -380,8 +380,8 @@ export function PhotoPickerModal({ isOpen, onClose, onSuccess }: PhotoPickerModa
         )}
 
         {step === 'waiting-for-selection' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-            <p className="text-sm text-blue-800">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mt-4">
+            <p className="text-sm text-primary-800">
               <strong>Note:</strong> If the picker window doesn't appear, please check if your
               browser is blocking popups and allow them for this site.
             </p>

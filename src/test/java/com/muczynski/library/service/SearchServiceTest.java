@@ -66,7 +66,7 @@ class SearchServiceTest {
 
     private SearchResponseDto search(String query, int page, int size,
             boolean inLib, boolean elec, boolean freeText, boolean audio, List<String> labels) {
-        return searchService.search(query, page, size, inLib, elec, freeText, audio,
+        return searchService.search(query, page, page, size, inLib, elec, freeText, audio,
                 false, false, false, false, false, false, false,
                 false, false, false, false, false, false, false, labels);
     }
@@ -510,7 +510,7 @@ class SearchServiceTest {
         when(authorRepository.findByNameContainingIgnoreCase(eq(query), any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        searchService.search(query, page, size, false, false, false, false,
+        searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
                 false, false, false, false, false, false, false, null);
 
@@ -546,7 +546,7 @@ class SearchServiceTest {
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+        SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, true, false,
                 false, false, false, false, false, false, false, null);
 
@@ -595,7 +595,7 @@ class SearchServiceTest {
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+        SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 true, false, false, false, false, false, false,
                 false, false, false, false, false, false, false, null);
 
@@ -632,7 +632,7 @@ class SearchServiceTest {
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
-        SearchResponseDto result = searchService.search(query, page, size, false, false, false, false,
+        SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, true, false, false, false, false, false,
                 false, false, false, false, false, false, false, null);
 

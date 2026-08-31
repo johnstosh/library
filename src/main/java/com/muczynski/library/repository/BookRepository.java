@@ -122,7 +122,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NULL OR b.locNumber = ''")
     List<Book> findBooksWithoutLocNumber();
 
-    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''")
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-'")
     List<Book> findBooksWithoutGrokipediaUrl();
 
     boolean existsByTitle(String title);
@@ -156,7 +156,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     /**
      * Get summaries (id + lastModified) for books without Grokipedia URL.
      */
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = ''")
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-'")
     List<BookSummaryProjection> findSummariesWithoutGrokipediaUrl();
 
     /**
@@ -232,8 +232,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterMostRecent = false OR b.dateAddedToLibrary >= :mostRecentCutoff OR b.id IN :mostRecentTempTitleIds) AND " +
         "(:filterWithoutLoc = false OR b.locNumber IS NULL OR b.locNumber = '') AND " +
         "(:filterThreeLetterLoc = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z')) AND " +
-        "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '') AND " +
-        "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '')) AND " +
+        "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-') AND " +
+        "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '' AND b.grokipediaUrl <> '-')) AND " +
         "(:filterWithoutGenres = false OR NOT EXISTS (SELECT 1 FROM Book bNoTags JOIN bNoTags.tagsList tNoTags WHERE bNoTags = b)) AND " +
         "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE)) AND " +
         "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '') AND " +

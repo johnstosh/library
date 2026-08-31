@@ -10,9 +10,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
+import { isValidOptionalEmail, isValidOptionalPhone } from '@/utils/contact'
 import { useAuthStore } from '@/stores/authStore'
-import { LibraryCardDesignPicker } from '@/components/LibraryCardDesignPicker'
-import type { LibraryCardDesign } from '@/types/dtos'
 
 interface PasswordChangeForm {
   currentPassword: string
@@ -24,10 +23,10 @@ export function UserSettingsPage() {
   const { user } = useAuthStore()
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
-  const [cardDesignSuccess, setCardDesignSuccess] = useState('')
-  const [cardDesignError, setCardDesignError] = useState('')
   const [xaiApiKey, setXaiApiKey] = useState('')
   const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
 
   const { data: userSettings, refetch } = useUserSettings()
   const updateUserSettings = useUpdateUserSettings()
@@ -39,17 +38,8 @@ export function UserSettingsPage() {
     reset,
   } = useForm<PasswordChangeForm>()
 
-  const handleLibraryCardDesignChange = async (design: LibraryCardDesign) => {
-    setCardDesignSuccess('')
-    setCardDesignError('')
-
-    try {
-      await updateUserSettings.mutateAsync({ libraryCardDesign: design })
-      setCardDesignSuccess('Library card design updated successfully')
-    } catch (error) {
-      setCardDesignError(error instanceof Error ? error.message : 'Failed to update library card design')
-    }
-  }
+  const isSsoUser = !!user?.ssoSubjectId
+  const isLibrarian = user?.authority === 'LIBRARIAN'
 
   const onSubmit = async (data: PasswordChangeForm) => {
     setSuccessMessage('')
@@ -133,11 +123,37 @@ export function UserSettingsPage() {
     }
   }
 
+  const handleSaveContactInfo = async () => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    if (!isValidOptionalEmail(email)) {
+      setErrorMessage('Enter a valid email address or leave it blank')
+      return
+    }
+    if (!isValidOptionalPhone(phone)) {
+      setErrorMessage('Enter a valid phone number or leave it blank')
+      return
+    }
+
+    try {
+      await updateUserSettings.mutateAsync({
+        email: email.trim(),
+        phone: phone.trim(),
+      })
+      setSuccessMessage('Contact information updated successfully')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to update contact information')
+    }
+  }
+
   // Initialize form fields from userSettings
   useEffect(() => {
     if (userSettings) {
       setXaiApiKey(userSettings.xaiApiKey || '')
       setGooglePhotosAlbumId(userSettings.googlePhotosAlbumId || '')
+      setEmail(userSettings.email || '')
+      setPhone(userSettings.phone || '')
     }
   }, [userSettings])
 
@@ -158,170 +174,11 @@ export function UserSettingsPage() {
     }
   }, [refetch])
 
-  // If user is SSO user, they cannot change password
-  if (user?.ssoSubjectId) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <PageHeader title="User Settings" />
-
-        <PageCard>
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Information</h2>
-            <div className="space-y-2">
-              <div>
-                <span className="text-sm font-medium text-gray-500">Name:</span>
-                <span className="ml-2 text-gray-900">{user?.username}</span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">Account Type:</span>
-                <StatusBadge tone="info" className="ml-2">Google SSO</StatusBadge>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-500">Authority:</span>
-                <span className="ml-2 text-gray-900">{user?.authority}</span>
-              </div>
-              {userSettings?.email && (
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Email:</span>
-                  <span className="ml-2 text-gray-900">{userSettings.email}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-900">
-              You are signed in with Google. Password changes are managed through your Google account.
-            </p>
-          </div>
-
-          {/* Library Card Design Section */}
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-            <LibraryCardDesignPicker
-              currentDesign={userSettings?.libraryCardDesign}
-              onDesignChange={handleLibraryCardDesignChange}
-              successMessage={cardDesignSuccess}
-              errorMessage={cardDesignError}
-            />
-          </div>
-
-          {/* XAI API Configuration - Librarian Only */}
-          {user?.authority === 'LIBRARIAN' && (
-            <div className="border-t pt-6">
-              <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="xai-api-key" className="block text-sm font-medium mb-1">
-                    XAI API Key
-                  </label>
-                  <div className="flex gap-3">
-                    <Input
-                      id="xai-api-key"
-                      type="password"
-                      placeholder="Enter XAI API key"
-                      value={xaiApiKey}
-                      onChange={(e) => setXaiApiKey(e.target.value)}
-                      data-test="xai-api-key-input"
-                      className="flex-1"
-                    />
-                    <Button onClick={handleSaveXaiApiKey} data-test="save-xai-api-key-button">
-                      Save
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    API key for XAI integration (optional)
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Google Photos Configuration - Librarian Only */}
-          {user?.authority === 'LIBRARIAN' && (
-            <div className="border-t pt-6">
-              <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Authorization Status
-                  </label>
-                  {userSettings?.googlePhotosApiKey ? (
-                    <div className="flex items-center gap-3">
-                      <StatusBadge tone="success">Authorized</StatusBadge>
-                      <Button
-                        variant="secondary"
-                        onClick={handleRevokeGooglePhotos}
-                        data-test="revoke-google-photos-button"
-                      >
-                        Revoke Access
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <StatusBadge tone="neutral">Not Authorized</StatusBadge>
-                      <Button
-                        onClick={handleAuthorizeGooglePhotos}
-                        data-test="authorize-google-photos-button"
-                      >
-                        Authorize Google Photos
-                      </Button>
-                    </div>
-                  )}
-                  {userSettings?.googlePhotosTokenExpiry && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Token expires: {new Date(userSettings.googlePhotosTokenExpiry).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="google-photos-album-id" className="block text-sm font-medium mb-1">
-                    Google Photos Album ID
-                  </label>
-                  <div className="flex gap-3">
-                    <Input
-                      id="google-photos-album-id"
-                      type="text"
-                      placeholder="Album ID from Google Photos"
-                      value={googlePhotosAlbumId}
-                      onChange={(e) => setGooglePhotosAlbumId(e.target.value)}
-                      className="font-mono flex-1"
-                      data-test="google-photos-album-id-input"
-                    />
-                    <Button onClick={handleSaveGooglePhotosAlbumId} data-test="save-album-id-button">
-                      Save
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Permanent album ID for photo exports
-                  </p>
-                </div>
-
-                {userSettings?.lastPhotoTimestamp && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Last Photo Sync
-                    </label>
-                    <p className="text-sm text-gray-700">
-                      {new Date(userSettings.lastPhotoTimestamp).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </PageCard>
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-2xl mx-auto">
       <PageHeader title="User Settings" />
 
       <PageCard>
-        {/* Account Information */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
           <div className="space-y-2">
@@ -329,99 +186,132 @@ export function UserSettingsPage() {
               <span className="text-sm font-medium text-gray-500">Name:</span>
               <span className="ml-2 text-gray-900">{user?.username}</span>
             </div>
+            {isSsoUser && (
+              <div>
+                <span className="text-sm font-medium text-gray-500">Account Type:</span>
+                <StatusBadge tone="info" className="ml-2">Google SSO</StatusBadge>
+              </div>
+            )}
             <div>
               <span className="text-sm font-medium text-gray-500">Authority:</span>
               <span className="ml-2 text-gray-900">{user?.authority}</span>
             </div>
-            {userSettings?.email && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Email:</span>
-                <span className="ml-2 text-gray-900">{userSettings.email}</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Library Card Design Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Library Card Design</h2>
-          <LibraryCardDesignPicker
-            currentDesign={userSettings?.libraryCardDesign}
-            onDesignChange={handleLibraryCardDesignChange}
-            successMessage={cardDesignSuccess}
-            errorMessage={cardDesignError}
-          />
-        </div>
+        {successMessage && <SuccessMessage message={successMessage} className="mb-4" />}
+        {errorMessage && <ErrorMessage message={errorMessage} className="mb-4" />}
 
-        {/* Change Password Form */}
-        <div className="border-t pt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h2>
-
-          {successMessage && <SuccessMessage message={successMessage} className="mb-4" />}
-          {errorMessage && <ErrorMessage message={errorMessage} className="mb-4" />}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="border-t pt-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Contact Information</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Email and phone are optional. Librarians use them to reach you about your library card and loans.
+          </p>
+          <div className="space-y-4">
             <Input
-              label="Current Password"
-              type="password"
-              {...register('currentPassword', { required: 'Current password is required' })}
-              error={errors.currentPassword?.message}
-              data-test="current-password"
-              required
+              label="Email address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              data-test="settings-email"
+              autoComplete="email"
             />
-
             <Input
-              label="New Password"
-              type="password"
-              {...register('newPassword', {
-                required: 'New password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters',
-                },
-              })}
-              error={errors.newPassword?.message}
-              data-test="new-password"
-              helpText="Password must be at least 8 characters"
-              required
+              label="Phone number"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(555) 123-4567"
+              data-test="settings-phone"
+              autoComplete="tel"
             />
-
-            <Input
-              label="Confirm New Password"
-              type="password"
-              {...register('confirmPassword', { required: 'Please confirm your new password' })}
-              error={errors.confirmPassword?.message}
-              data-test="confirm-password"
-              required
-            />
-
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end">
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => {
-                  reset()
-                  setSuccessMessage('')
-                  setErrorMessage('')
-                }}
-                data-test="cancel-password-change"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
                 variant="primary"
+                onClick={handleSaveContactInfo}
                 isLoading={updateUserSettings.isPending}
-                data-test="change-password-submit"
+                data-test="save-contact-info"
               >
-                Change Password
+                Save contact information
               </Button>
             </div>
-          </form>
+          </div>
         </div>
 
-        {/* XAI API Configuration - Librarian Only */}
-        {user?.authority === 'LIBRARIAN' && (
+        {isSsoUser ? (
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-primary-900">
+              You are signed in with Google. Password changes are managed through your Google account.
+            </p>
+          </div>
+        ) : (
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h2>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <Input
+                label="Current Password"
+                type="password"
+                {...register('currentPassword', { required: 'Current password is required' })}
+                error={errors.currentPassword?.message}
+                data-test="current-password"
+                required
+              />
+
+              <Input
+                label="New Password"
+                type="password"
+                {...register('newPassword', {
+                  required: 'New password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters',
+                  },
+                })}
+                error={errors.newPassword?.message}
+                data-test="new-password"
+                helpText="Password must be at least 8 characters"
+                required
+              />
+
+              <Input
+                label="Confirm New Password"
+                type="password"
+                {...register('confirmPassword', { required: 'Please confirm your new password' })}
+                error={errors.confirmPassword?.message}
+                data-test="confirm-password"
+                required
+              />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    reset()
+                    setSuccessMessage('')
+                    setErrorMessage('')
+                  }}
+                  data-test="cancel-password-change"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={updateUserSettings.isPending}
+                  data-test="change-password-submit"
+                >
+                  Change Password
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {isLibrarian && (
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold mb-4">XAI Configuration</h2>
             <div className="space-y-4">
@@ -451,8 +341,7 @@ export function UserSettingsPage() {
           </div>
         )}
 
-        {/* Google Photos Configuration - Librarian Only */}
-        {user?.authority === 'LIBRARIAN' && (
+        {isLibrarian && (
           <div className="border-t pt-6">
             <h2 className="text-xl font-semibold mb-4">Google Photos Integration</h2>
             <div className="space-y-4">

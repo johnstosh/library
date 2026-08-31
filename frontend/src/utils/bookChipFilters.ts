@@ -6,8 +6,8 @@ import type { BookDto } from '@/types/dtos'
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
- * Row 2: inLibrary, electronic, freeText, audio
- * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
+ * Row 2: inLibrary, electronic, freeText, audio, mostRecent
+ * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  *
  * notActiveStatus is special and always constrains:
@@ -44,9 +44,8 @@ export const defaultBookChipFilters: BookChipFilters = {
   electronic: false,
   freeText: false,
   audio: false,
-  // Shared default is off (Search, applyChipFilters tests). The Books page
-  // overrides this to true in uiStore so it can use the faster
-  // GET /books/most-recent-day backend instead of GET /books/summaries.
+  // Shared default is off (Search). The Books page turns mostRecent on when
+  // the /books URL has no other filters (see bookFilterParams.ts).
   mostRecent: false,
   withoutLoc: false,
   withoutGrokipedia: false,
@@ -73,10 +72,15 @@ function isBlank(value: string | null | undefined): boolean {
   return !value || value.trim() === ''
 }
 
+function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  return !trimmed || trimmed === '-'
+}
+
 /**
  * Apply all chip filters to a book list (AND logic).
  * A book must satisfy every active chip, plus the always-on notActiveStatus constraint.
- * "Most Recent Day" matches dateAddedToLibrary on the most recent day UTC
+ * "Recent Arrivals" matches dateAddedToLibrary on the most recent day UTC
  * (cutoff = UTC start of max-1 day) or a temporary date-format title.
  */
 export function applyChipFilters<T extends Pick<
@@ -135,8 +139,8 @@ export function applyChipFilters<T extends Pick<
       }
     }
     if (chips.withoutLoc && !isBlank(book.locNumber)) return false
-    if (chips.withoutGrokipedia && !isBlank(book.grokipediaUrl)) return false
-    if (chips.withGrokipedia && isBlank(book.grokipediaUrl)) return false
+    if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
+    if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
     if (chips.notActiveStatus) {
       if (book.status === 'ACTIVE') return false

@@ -151,6 +151,7 @@ export interface UserDto {
   ssoProvider?: string
   ssoSubjectId?: string
   email?: string
+  phone?: string
   libraryCardDesign?: LibraryCardDesign
   activeLoansCount?: number
   googlePhotosApiKey?: string
@@ -160,6 +161,7 @@ export interface UserDto {
   googlePhotosAlbumId?: string
   lastPhotoTimestamp?: string
   lastModified: string
+  createdAt?: string
 }
 
 // Loan DTOs
@@ -176,6 +178,12 @@ export interface LoanDto {
   // Checkout card photo (from loan-by-photo feature)
   photoId?: number
   photoChecksum?: string
+}
+
+export interface TitleLoanedDto {
+  bookId: number
+  title: string
+  loaned: boolean
 }
 
 export interface CheckoutCardTranscriptionDto {

@@ -1,10 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { create } from 'zustand'
-import {
-  defaultBookChipFilters,
-  isOtherBookChipActive,
-  type BookChipFilters,
-} from '@/utils/bookChipFilters'
+import { type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   defaultAuthorChipFilters,
   isOtherAuthorChipActive,
@@ -30,29 +26,16 @@ interface TableState {
 
 type TableName = 'booksTable' | 'authorsTable' | 'usersTable' | 'loansTable'
 
-/**
- * Independent boolean chip filters for the Books page.
- * All active chips are AND-ed together — a book must satisfy every active chip.
- *
- * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
- * Row 2: inLibrary, electronic, freeText, audio
- * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
- *   withoutGenres, notActiveStatus, withoutFreeTextUrls
- */
 export type BooksChips = BookChipFilters
 export type AuthorsChips = AuthorChipFilters
 export type LoansChips = LoanChipFilters
 export type UsersChips = UserChipFilters
 export type ApplicationsChips = ApplicationChipFilters
 
-// Most Recent Day starts on so the books list hits GET /books/most-recent-day
-// instead of GET /books/summaries. That filter endpoint is a much smaller query
-// and is the fast path for the default books list. Search keeps the shared
-// defaultBookChipFilters (all chips off).
-const defaultBooksChips: BooksChips = { ...defaultBookChipFilters, mostRecent: true }
-// Most Recent Day starts on so the authors list hits GET /authors/most-recent-day
+// Recent Arrivals starts on so the authors list hits GET /authors/most-recent-day
 // instead of GET /authors/summaries. That filter endpoint is a much smaller query
-// and is the fast path for the default authors list.
+// and is the fast path for the default authors list. Books chips live in the
+// /books URL (see bookFilterParams.ts), not in this store.
 const defaultAuthorsChips: AuthorsChips = { ...defaultAuthorChipFilters, mostRecent: true }
 const defaultLoansChips: LoansChips = { ...defaultLoanChipFilters }
 const defaultUsersChips: UsersChips = { ...defaultUserChipFilters }
@@ -65,18 +48,12 @@ interface UiState {
   usersTable: TableState
   loansTable: TableState
 
-  // Books chip filter state (all AND-combined, client-side)
-  booksChips: BooksChips
-
   authorsChips: AuthorsChips
   loansChips: LoansChips
   usersChips: UsersChips
   usersSearchQuery: string
   applicationsChips: ApplicationsChips
   applicationsSearchQuery: string
-
-  // Label filter state for books
-  booksLabelFilter: string[]
 
   // Actions
   setSelectedIds: (table: TableName, ids: Set<number>) => void
@@ -85,10 +62,6 @@ interface UiState {
   toggleLoansChip: (chip: keyof LoansChips) => void
   clearLoansChips: () => void
   toggleRowSelection: (table: TableName, id: number) => void
-  toggleBooksLabel: (label: string) => void
-  clearBooksLabels: () => void
-  toggleBooksChip: (chip: keyof BooksChips) => void
-  clearBooksChips: () => void
   toggleAuthorsChip: (chip: keyof AuthorsChips) => void
   clearAuthorsChips: () => void
   toggleUsersChip: (chip: keyof UsersChips) => void
@@ -106,14 +79,12 @@ export const useUiStore = create<UiState>((set) => ({
   usersTable: { selectedIds: new Set(), selectAll: false },
   loansTable: { selectedIds: new Set(), selectAll: false },
 
-  booksChips: { ...defaultBooksChips },
   authorsChips: { ...defaultAuthorsChips },
   loansChips: { ...defaultLoansChips },
   usersChips: { ...defaultUsersChips },
   usersSearchQuery: '',
   applicationsChips: { ...defaultApplicationsChips },
   applicationsSearchQuery: '',
-  booksLabelFilter: [],
 
   // Actions
   setSelectedIds: (table, ids) =>
@@ -137,45 +108,6 @@ export const useUiStore = create<UiState>((set) => ({
     })),
 
   clearLoansChips: () => set({ loansChips: { ...defaultLoansChips } }),
-
-  toggleBooksLabel: (label) =>
-    set((state) => {
-      const current = state.booksLabelFilter
-      const nextLabels = current.includes(label)
-        ? current.filter((l) => l !== label)
-        : [...current, label]
-      const othersOn = nextLabels.length > 0 || isOtherBookChipActive(state.booksChips)
-      // Most Recent Day cannot be combined with other filters (client-side AND
-      // on the small most-recent-day result set is misleading). Restore it when
-      // nothing else is on — that is the books page default fast path.
-      return {
-        booksLabelFilter: nextLabels,
-        booksChips: { ...state.booksChips, mostRecent: !othersOn },
-      }
-    }),
-
-  clearBooksLabels: () =>
-    set((state) => ({
-      booksLabelFilter: [],
-      booksChips: {
-        ...state.booksChips,
-        mostRecent: !isOtherBookChipActive(state.booksChips),
-      },
-    })),
-
-  toggleBooksChip: (chip) =>
-    set((state) => {
-      const labelsOn = state.booksLabelFilter.length > 0
-      if (chip === 'mostRecent' && (isOtherBookChipActive(state.booksChips) || labelsOn)) {
-        return { booksChips: { ...state.booksChips, mostRecent: false } }
-      }
-      const next = { ...state.booksChips, [chip]: !state.booksChips[chip] }
-      const othersOn = isOtherBookChipActive(next) || labelsOn
-      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
-      return { booksChips: next }
-    }),
-
-  clearBooksChips: () => set({ booksChips: { ...defaultBooksChips } }),
 
   toggleAuthorsChip: (chip) =>
     set((state) => {
@@ -236,11 +168,9 @@ export const useUsersTableSelection = () => useUiStore((state) => state.usersTab
 export const useLoansTableSelection = () => useUiStore((state) => state.loansTable)
 
 // Helper hooks for filters
-export const useBooksChips = () => useUiStore((state) => state.booksChips)
 export const useAuthorsChips = () => useUiStore((state) => state.authorsChips)
 export const useLoansChips = () => useUiStore((state) => state.loansChips)
 export const useUsersChips = () => useUiStore((state) => state.usersChips)
 export const useUsersSearchQuery = () => useUiStore((state) => state.usersSearchQuery)
 export const useApplicationsChips = () => useUiStore((state) => state.applicationsChips)
 export const useApplicationsSearchQuery = () => useUiStore((state) => state.applicationsSearchQuery)
-export const useBooksLabelFilter = () => useUiStore((state) => state.booksLabelFilter)

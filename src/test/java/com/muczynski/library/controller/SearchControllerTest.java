@@ -60,7 +60,7 @@ class SearchControllerTest {
     }
 
     private void stubAnySearch(SearchResponseDto response) {
-        when(searchService.search(anyString(), anyInt(), anyInt(),
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
@@ -72,7 +72,7 @@ class SearchControllerTest {
     private void stubSearch(String query, int page, int size,
             boolean inLib, boolean elec, boolean freeText, boolean audio,
             SearchResponseDto response) {
-        when(searchService.search(eq(query), eq(page), eq(size),
+        when(searchService.search(eq(query), eq(page), eq(page), eq(size),
                 eq(inLib), eq(elec), eq(freeText), eq(audio),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
@@ -172,14 +172,23 @@ class SearchControllerTest {
     }
 
     @Test
-    void testSearch_MissingPageParameterReturnsBadRequest() {
+    void testSearch_MissingPageParameterDefaultsToZero() {
+        stubAnySearch(emptyResponse(10));
+
         given()
             .param("query", "test")
             .param("size", 10)
         .when()
             .get("/api/search")
         .then()
-            .statusCode(400);
+            .statusCode(200);
+
+        verify(searchService).search(eq("test"), eq(0), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull());
     }
 
     @Test
@@ -206,7 +215,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_ServiceThrowsExceptionReturns500() {
-        when(searchService.search(anyString(), anyInt(), anyInt(),
+        when(searchService.search(anyString(), anyInt(), anyInt(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
@@ -318,7 +327,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithNotActiveStatusFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
@@ -336,7 +345,7 @@ class SearchControllerTest {
         .then()
             .statusCode(200);
 
-        verify(searchService).search(eq("test"), eq(0), eq(10),
+        verify(searchService).search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
@@ -346,7 +355,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithMostRecentAndWithoutLocFilters() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(true), eq(true), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
@@ -368,7 +377,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithYdlAudioFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
@@ -389,7 +398,7 @@ class SearchControllerTest {
 
     @Test
     void testSearch_WithGrokipediaFilter() {
-        when(searchService.search(eq("test"), eq(0), eq(10),
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
@@ -406,5 +415,33 @@ class SearchControllerTest {
             .get("/api/search")
         .then()
             .statusCode(200);
+    }
+
+    @Test
+    void testSearch_IndependentBookAndAuthorPages() {
+        when(searchService.search(eq("test"), eq(2), eq(1), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("bookPage", 2)
+            .param("authorPage", 1)
+            .param("size", 10)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+
+        verify(searchService).search(eq("test"), eq(2), eq(1), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull());
     }
 }

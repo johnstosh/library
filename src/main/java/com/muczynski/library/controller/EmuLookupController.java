@@ -23,10 +23,11 @@ public class EmuLookupController {
     private final EmuLookupService emuLookupService;
 
     /**
-     * Lookup EMU Halle Library availability for a single book
+     * Lookup EMU Halle Library availability for a single book.
+     * Public so patrons can refresh holdings from the book page.
      */
     @PostMapping("/lookup/{bookId}")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<EmuLookupResultDto> lookupSingleBook(@PathVariable Long bookId) {
         log.info("Looking up EMU availability for book ID: {}", bookId);
         EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(bookId);

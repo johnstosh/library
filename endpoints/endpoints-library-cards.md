@@ -13,11 +13,12 @@ Submit a library card application (public endpoint).
   "username": "john_doe",
   "password": "sha256-hashed-password",
   "email": "john@example.com",
+  "phone": "555-123-4567",
   "authority": "USER"
 }
 ```
 
-`email` is optional. When present it must look like an email address. It is stored on the application and used if "email the applicant" is enabled in global settings.
+`email` and `phone` are optional. When present, email must look like an email address and phone must be 7–15 digits with optional `+ - ( ) .` and spaces. Both are stored on the application and copied onto the user account when a librarian approves the card. Email is also used if "email the applicant" is enabled in global settings.
 
 **Password Requirements:**
 - Must be SHA-256 hashed client-side (64 hex characters)
@@ -50,6 +51,7 @@ Returns all library card applications. The Applications page filters this list i
     "id": 1,
     "name": "john_doe",
     "email": "john@example.com",
+    "phone": "555-123-4567",
     "status": "PENDING"
   }
 ]
@@ -152,8 +154,8 @@ Generates and downloads a wallet-sized library card PDF for the current user.
 - 500: PDF generation failed
 
 **Use Case:**
-- Users print their library card for physical wallet
-- PDF can be saved or printed
+- Users download a wallet-sized PDF of their library card
+- The PDF can be saved or printed from the user's PDF viewer
 
 ---
 

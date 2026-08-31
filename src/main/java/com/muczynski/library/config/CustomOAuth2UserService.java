@@ -64,11 +64,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
         }
 
-        // Update email on each login (in case it changed)
-        if (email != null && !email.equals(user.getEmail())) {
+        // Fill email from the provider only when the patron has none yet, so
+        // a later Settings change is not overwritten on the next SSO login.
+        if (email != null && (user.getEmail() == null || user.getEmail().isBlank())) {
             user.setEmail(email);
             userRepository.save(user);
-            log.info("Updated email for user: {} (ID: {})", user.getUsername(), user.getId());
+            log.info("Filled email for user: {} (ID: {})", user.getUsername(), user.getId());
         }
 
         // Convert user authorities to Spring Security authorities

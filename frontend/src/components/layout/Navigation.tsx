@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuthStore, useIsLibrarian } from '@/stores/authStore'
 import { clsx } from 'clsx'
-import { useBranches } from '@/api/branches'
+import { useFirstBranch } from '@/api/branches'
 import {
   Disclosure,
   DisclosureButton,
@@ -15,6 +15,7 @@ import {
 } from '@headlessui/react'
 import { PiList, PiX } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
 
 function getInitials(username: string | null | undefined): string {
   const name = (username ?? '').trim()
@@ -27,14 +28,21 @@ function getInitials(username: string | null | undefined): string {
 function desktopNavCls({ isActive }: { isActive: boolean }): string {
   return clsx(
     'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
   )
 }
 
 function mobileNavCls({ isActive }: { isActive: boolean }): string {
   return clsx(
     'block px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+  )
+}
+
+function accountMenuItemCls(focus: boolean): string {
+  return clsx(
+    'block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    focus && 'bg-gray-100 text-gray-900',
   )
 }
 
@@ -43,18 +51,15 @@ export function Navigation() {
   const logout = useAuthStore((state) => state.logout)
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
-  const { data: branches = [] } = useBranches()
-
-  const branchName = branches.length > 0 ? branches[0].branchName : 'Branch'
-  const librarySystemName = branches.length > 0 ? branches[0].librarySystemName : 'Library System'
+  const { branchName, librarySystemName, hasBranch } = useFirstBranch()
 
   useEffect(() => {
-    if (branches.length > 0) {
+    if (hasBranch) {
       document.title = `The ${branchName} Branch of the ${librarySystemName}`
     } else {
       document.title = 'Library'
     }
-  }, [branches, branchName, librarySystemName])
+  }, [hasBranch, branchName, librarySystemName])
 
   const handleLogout = () => {
     logout()
@@ -70,12 +75,7 @@ export function Navigation() {
 
               {/* App name — left */}
               <Link to="/" className="flex flex-col items-start shrink-0" data-test="branch-name">
-                <span className="text-base font-bold text-gray-900 leading-tight">
-                  The {branchName} Branch
-                </span>
-                <span className="text-xs text-gray-600 leading-tight">
-                  of the {librarySystemName}
-                </span>
+                <BranchNameDisplay branchName={branchName} librarySystemName={librarySystemName} />
               </Link>
 
               {/* Desktop nav — hidden on mobile */}
@@ -86,8 +86,6 @@ export function Navigation() {
                     <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
                     <NavLink to="/authors"  className={desktopNavCls} data-test="nav-authors">Authors</NavLink>
                     <NavLink to="/loans"    className={desktopNavCls} data-test="nav-loans">Loans</NavLink>
-                    <NavLink to="/my-card"  className={desktopNavCls} data-test="nav-my-card">My Card</NavLink>
-                    <NavLink to="/settings" className={desktopNavCls} data-test="nav-settings">Settings</NavLink>
                   </>
                 )}
                 {isLibrarian && (
@@ -108,7 +106,7 @@ export function Navigation() {
 
                 {/* Hamburger — mobile only */}
                 <DisclosureButton
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   aria-label={open ? 'Close menu' : 'Open menu'}
                   data-test="mobile-menu-button"
                 >
@@ -121,13 +119,14 @@ export function Navigation() {
                     <MenuButton
                       aria-label="User menu"
                       data-test="nav-user-menu"
-                      className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                     >
                       {getInitials(user?.username)}
                     </MenuButton>
                     <MenuItems
                       anchor="bottom end"
-                      className="absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50 focus:outline-none"
+                      data-test="nav-account-menu"
+                      className="w-60 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50 focus:outline-none [--anchor-gap:8px] [--anchor-padding:8px]"
                     >
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900 truncate" data-test="nav-username">
@@ -145,14 +144,35 @@ export function Navigation() {
                       <div className="py-1">
                         <MenuItem>
                           {({ focus }) => (
+                            <NavLink
+                              to="/settings"
+                              className={accountMenuItemCls(focus)}
+                              data-test="nav-settings"
+                            >
+                              Settings
+                            </NavLink>
+                          )}
+                        </MenuItem>
+                        <MenuItem>
+                          {({ focus }) => (
+                            <NavLink
+                              to="/my-card"
+                              className={accountMenuItemCls(focus)}
+                              data-test="nav-my-card"
+                            >
+                              My Card
+                            </NavLink>
+                          )}
+                        </MenuItem>
+                      </div>
+                      <div className="py-1 border-t border-gray-100">
+                        <MenuItem>
+                          {({ focus }) => (
                             <button
                               type="button"
                               onClick={handleLogout}
                               data-test="nav-logout"
-                              className={clsx(
-                                'w-full text-left px-4 py-2 text-sm',
-                                focus ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                              )}
+                              className={accountMenuItemCls(focus)}
                             >
                               Logout
                             </button>
@@ -183,8 +203,6 @@ export function Navigation() {
                   <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>
                   <NavLink to="/authors"  className={mobileNavCls} data-test="nav-authors-mobile"  onClick={() => close()}>Authors</NavLink>
                   <NavLink to="/loans"    className={mobileNavCls} data-test="nav-loans-mobile"    onClick={() => close()}>Loans</NavLink>
-                  <NavLink to="/my-card"  className={mobileNavCls} data-test="nav-my-card-mobile"  onClick={() => close()}>My Card</NavLink>
-                  <NavLink to="/settings" className={mobileNavCls} data-test="nav-settings-mobile" onClick={() => close()}>Settings</NavLink>
                 </>
               )}
               {!isAuthenticated && (

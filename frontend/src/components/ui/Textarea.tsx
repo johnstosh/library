@@ -23,7 +23,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           className={clsx(
             'block w-full px-3 py-2 border rounded-md shadow-sm min-h-[44px]',
-            'focus:ring-blue-500 focus:border-blue-500',
+            'focus:ring-primary-500 focus:border-primary-500',
             'disabled:bg-gray-100 disabled:cursor-not-allowed',
             error ? 'border-red-300' : 'border-gray-300',
             className

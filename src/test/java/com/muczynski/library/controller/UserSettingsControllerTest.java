@@ -271,6 +271,31 @@ class UserSettingsControllerTest {
     }
 
     @Test
+    void updateUserSettings_changeEmailAndPhone_updatesContactInfo() throws Exception {
+        UserSettingsDto settingsDto = new UserSettingsDto();
+        settingsDto.setEmail("new@example.com");
+        settingsDto.setPhone("555-123-4567");
+
+        UserDto updatedUser = new UserDto();
+        updatedUser.setId(1L);
+        updatedUser.setUsername("testuser");
+        updatedUser.setAuthorities(Collections.singleton("USER"));
+        updatedUser.setEmail("new@example.com");
+        updatedUser.setPhone("555-123-4567");
+
+        when(userSettingsService.updateUserSettings(eq(1L), any(UserSettingsDto.class)))
+                .thenReturn(updatedUser);
+
+        mockMvc.perform(put("/api/user-settings")
+                        .with(user("1").authorities(new SimpleGrantedAuthority("USER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(settingsDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("new@example.com"))
+                .andExpect(jsonPath("$.phone").value("555-123-4567"));
+    }
+
+    @Test
     void updateUserSettings_unauthenticatedUser_returns401() throws Exception {
         UserSettingsDto settingsDto = new UserSettingsDto();
         settingsDto.setUsername("newusername");

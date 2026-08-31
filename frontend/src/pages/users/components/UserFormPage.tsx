@@ -8,6 +8,7 @@ import { useCreateUser, useUpdateUser } from '@/api/users'
 import type { UserDto } from '@/types/dtos'
 import { UserAuthority } from '@/types/enums'
 import { hashPassword } from '@/utils/auth'
+import { isValidOptionalEmail, isValidOptionalPhone } from '@/utils/contact'
 
 interface UserFormPageProps {
   title: string
@@ -23,6 +24,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
     username: '',
     password: '',
     authority: UserAuthority.USER as string,
+    email: '',
+    phone: '',
   })
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -36,6 +39,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
         username: user.username,
         password: '', // Password is optional for updates
         authority: user.authorities?.[0] || UserAuthority.USER,
+        email: user.email || '',
+        phone: user.phone || '',
       })
     }
   }, [user])
@@ -73,6 +78,15 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
       return
     }
 
+    if (!isValidOptionalEmail(formData.email)) {
+      setError('Enter a valid email address or leave it blank')
+      return
+    }
+    if (!isValidOptionalPhone(formData.phone)) {
+      setError('Enter a valid phone number or leave it blank')
+      return
+    }
+
     try {
       // Hash password if provided
       const hashedPassword = formData.password ? await hashPassword(formData.password) : undefined
@@ -82,6 +96,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
         const updateData = {
           username: formData.username,
           authority: formData.authority,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
           ...(hashedPassword && { password: hashedPassword }),
         }
         await updateUser.mutateAsync({
@@ -98,6 +114,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
           username: formData.username,
           password: hashedPassword,
           authority: formData.authority,
+          email: formData.email.trim() || undefined,
+          phone: formData.phone.trim() || undefined,
         })
       }
 
@@ -138,8 +156,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
         {error && <ErrorMessage message={error} />}
 
         {isSsoUser && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+            <p className="text-sm text-primary-900">
               <strong>SSO User:</strong> This user authenticates via Google OAuth.
               Name and password cannot be changed.
             </p>
@@ -155,6 +173,24 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
           data-test="user-username"
           disabled={isSsoUser}
           {...(isSsoUser && { helpText: 'Cannot change name for SSO users' })}
+        />
+
+        <Input
+          label="Email address"
+          type="email"
+          value={formData.email}
+          onChange={(e) => handleFieldChange('email', e.target.value)}
+          placeholder="you@example.com"
+          data-test="user-email"
+        />
+
+        <Input
+          label="Phone number"
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => handleFieldChange('phone', e.target.value)}
+          placeholder="(555) 123-4567"
+          data-test="user-phone"
         />
 
         <Input

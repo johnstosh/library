@@ -118,8 +118,15 @@ public class LoginUITest {
         assertThat(submitButton).isEnabled();
         assertThat(submitButton).containsText("Sign In");
 
-        // Verify page title heading contains library name (right panel branding)
-        assertThat(page.locator("h1")).containsText("St. Martin de Porres");
+        // Verify branding uses the first branch in the table (data-login.sql)
+        Locator branchHeading = page.locator("[data-test='login-branch-name']");
+        assertThat(branchHeading).containsText("Test Library");
+        assertThat(branchHeading).containsText("Test Library System");
+
+        Locator welcome = page.locator("[data-test='login-welcome']");
+        assertThat(welcome).isVisible();
+        assertThat(welcome).containsText("Access your borrowed books and discover new reads");
+        assertThat(welcome).not().containsText("renew");
 
         // Verify logo image exists (right panel branding)
         Locator logoImage = page.locator("[data-test='login-logo']");
@@ -143,7 +150,7 @@ public class LoginUITest {
         // Click submit button
         page.click("[data-test='login-submit']");
 
-        // Wait for navigation to books page (default after login)
+        // Wait for navigation to books page (librarian default after login)
         page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Verify we're on the books page
@@ -151,6 +158,31 @@ public class LoginUITest {
 
         // Verify navigation menu is visible (indicates successful login)
         assertThat(page.locator("[data-test='navigation']")).isVisible();
+
+        // Home (`/`) should still land librarians on Books
+        page.navigate(getBaseUrl() + "/");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/books");
+    }
+
+    @Test
+    @DisplayName("Should send patrons to search after login")
+    void testPatronLoginGoesToSearch() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.fill("[data-test='login-username']", "patron");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/search");
+        assertThat(page.locator("[data-test='search-input']")).isVisible();
+
+        // Home (`/`) should also land patrons on Search (OAuth / logo click)
+        page.navigate(getBaseUrl() + "/");
+        page.waitForURL("**/search", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(getBaseUrl() + "/search");
     }
 
     @Test

@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
@@ -8,9 +8,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSearch, type SearchFilters } from '@/api/search'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
-import { defaultBookChipFilters, isAnyChipActive, type BookChipFilters } from '@/utils/bookChipFilters'
+import { isAnyChipActive } from '@/utils/bookChipFilters'
+import {
+  bookFilterParamsForUrl,
+  booksPathFromFilters,
+  chipsFromSearchParams,
+  labelsFromSearchParams,
+  pageFromSearchParams,
+} from '@/utils/bookFilterParams'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
-import { PiMagnifyingGlass, PiBook, PiUser } from 'react-icons/pi'
+import { PiMagnifyingGlass, PiBook, PiBooks, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { IconButton } from '@/components/ui/IconButton'
@@ -28,6 +35,7 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/hooks/useToast'
 import { PageCard } from '@/components/ui/PageCard'
+import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -35,59 +43,21 @@ import { useDeleteBook } from '@/api/books'
 import { useDeleteAuthor } from '@/api/authors'
 import type { BookDto, AuthorDto } from '@/types/dtos'
 
-/** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
-const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
-  hasYdlAudio: 'ydlAudio',
-  hasYdlBook: 'ydlBook',
-  hasYdlEbook: 'ydlEbook',
-  hasEmuAudio: 'emuAudio',
-  hasEmuBook: 'emuBook',
-  hasEmuEbook: 'emuEbook',
-  inLibrary: 'inLib',
-  electronic: 'elec',
-  freeText: 'freeText',
-  audio: 'audio',
-  mostRecent: 'mostRecent',
-  withoutLoc: 'withoutLoc',
-  withoutGrokipedia: 'withoutGrokipedia',
-  withGrokipedia: 'withGrokipedia',
-  withoutGenres: 'withoutGenres',
-  notActiveStatus: 'notActiveStatus',
-  withoutFreeTextUrls: 'withoutFreeTextUrls',
-}
-
-function chipsFromSearchParams(params: URLSearchParams): SearchFilters {
-  const chips: SearchFilters = { ...defaultBookChipFilters }
-  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
-    chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
-  })
-  return chips
-}
-
-function chipParamsForUrl(chips: SearchFilters): Record<string, string> {
-  const params: Record<string, string> = {}
-  ;(Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]).forEach((chip) => {
-    if (chips[chip]) params[CHIP_URL_KEYS[chip]] = 'true'
-  })
-  return params
-}
-
 // ─── Main search page ─────────────────────────────────────────────────────────
 
 export function SearchPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') ?? ''
-  const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
+  const bookPage = pageFromSearchParams(searchParams, 'bookPage')
+  const authorPage = pageFromSearchParams(searchParams, 'authorPage')
 
-  // Filter chip state — lives in URL for shareability
-  const filters: SearchFilters = chipsFromSearchParams(searchParams)
+  const filters: SearchFilters = chipsFromSearchParams(searchParams, 'search')
+  const selectedLabels = labelsFromSearchParams(searchParams)
 
-  // Local input state (typing before submit)
   const [inputValue, setInputValue] = useState(urlQuery)
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const pageSize = 20
 
-  // Sync input value when URL changes (browser back/forward)
   useEffect(() => {
     setInputValue(urlQuery)
   }, [urlQuery])
@@ -97,7 +67,8 @@ export function SearchPage() {
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
-    urlPage,
+    bookPage,
+    authorPage,
     pageSize,
     filters,
     hasSearched || hasFilters,
@@ -105,51 +76,69 @@ export function SearchPage() {
   )
   const isLibrarian = useIsLibrarian()
 
-  // ── Helpers for building URL params ──────────────────────────────────────
-
-  const buildFilterParams = (overrides: Partial<SearchFilters> = {}): Record<string, string> => {
-    return chipParamsForUrl({ ...filters, ...overrides })
+  const writeUrl = (next: {
+    chips?: SearchFilters
+    labels?: string[]
+    q?: string
+    includeQ?: boolean
+    bookPage?: number
+    authorPage?: number
+  }) => {
+    const includeQ = next.includeQ ?? hasSearched
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? filters,
+          labels: next.labels ?? selectedLabels,
+          q: next.q !== undefined ? next.q : urlQuery,
+          bookPage: next.bookPage ?? 0,
+          authorPage: next.authorPage ?? 0,
+          includeBlankQuery: includeQ,
+        },
+        'search',
+      ),
+    )
   }
-
-  // ── Event handlers ────────────────────────────────────────────────────────
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params: Record<string, string> = { q: inputValue.trim(), ...buildFilterParams() }
-    setSearchParams(params)
+    writeUrl({ q: inputValue.trim(), includeQ: true })
   }
 
   const handleClear = () => {
     setInputValue('')
-    setSelectedLabels([])
     setSearchParams({})
   }
 
   const handleFilterToggle = (key: keyof SearchFilters) => {
-    const newValue = !filters[key]
-    const overrides = { [key]: newValue } as Partial<SearchFilters>
-    const params: Record<string, string> = { ...buildFilterParams(overrides) }
-    // Preserve query and page if present
-    if (urlQuery || hasSearched) params.q = urlQuery
-    if (urlPage > 0) params.page = String(urlPage)
-    setSearchParams(params)
+    writeUrl({ chips: { ...filters, [key]: !filters[key] } })
   }
 
   const handleToggleLabel = (label: string) => {
-    setSelectedLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
-    )
+    const nextLabels = selectedLabels.includes(label)
+      ? selectedLabels.filter((l) => l !== label)
+      : [...selectedLabels, label]
+    writeUrl({ labels: nextLabels })
   }
 
   const handleClearLabels = () => {
-    setSelectedLabels([])
+    writeUrl({ labels: [] })
   }
 
-  const handlePageChange = (newPage: number) => {
-    const params: Record<string, string> = { ...buildFilterParams() }
-    if (urlQuery || hasSearched) params.q = urlQuery
-    if (newPage > 0) params.page = String(newPage)
-    setSearchParams(params)
+  const handleBookPageChange = (newPage: number) => {
+    writeUrl({ bookPage: newPage, authorPage, includeQ: hasSearched })
+  }
+
+  const handleAuthorPageChange = (newPage: number) => {
+    writeUrl({ bookPage, authorPage: newPage, includeQ: hasSearched })
+  }
+
+  const handleOpenInBooks = () => {
+    navigate(booksPathFromFilters({
+      chips: filters,
+      labels: selectedLabels,
+      q: inputValue.trim() || urlQuery,
+    }))
   }
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
@@ -159,7 +148,13 @@ export function SearchPage() {
     <div className="max-w-4xl mx-auto">
       <PageHeader
         title="Search Library"
-        description="Search for books and authors by title or name"
+        description={
+          <>
+            Search for books and authors by title or name.
+            <br />
+            Use the filters to browse.
+          </>
+        }
       />
 
       {/* Search Form */}
@@ -196,15 +191,26 @@ export function SearchPage() {
               Clear
             </Button>
           )}
+          {isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleOpenInBooks}
+              leftIcon={<PiBooks />}
+              data-test="open-in-books"
+            >
+              Open in Books
+            </Button>
+          )}
         </div>
 
-        {/* Filter Chips — same two rows as Books page */}
         <div className="mt-4" data-test="search-filter-chips">
           <BookFilters
             chips={filters}
             onToggle={handleFilterToggle}
             showAvailabilityFilters
-            hideWithoutAndNotActiveOnMobile
+            showCatalogerFilters={false}
           />
         </div>
 
@@ -245,7 +251,7 @@ export function SearchPage() {
           {data.books.length > 0 && (
             <div data-test="search-results-books">
               <div className="flex items-center gap-2 mb-4">
-                <PiBook className="w-6 h-6 text-blue-600" />
+                <PiBook className="w-6 h-6 text-primary-600" />
                 <h2 className="text-2xl font-bold text-gray-900">
                   Books
                   <span className="ml-2 text-base font-normal text-gray-500">
@@ -275,8 +281,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage - 1)}
-                        disabled={urlPage === 0}
+                        onClick={() => handleBookPageChange(bookPage - 1)}
+                        disabled={bookPage === 0}
                         data-test="books-prev-page"
                       >
                         Previous
@@ -284,8 +290,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage + 1)}
-                        disabled={urlPage >= data.bookPage.totalPages - 1}
+                        onClick={() => handleBookPageChange(bookPage + 1)}
+                        disabled={bookPage >= data.bookPage.totalPages - 1}
                         data-test="books-next-page"
                       >
                         Next
@@ -331,8 +337,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage - 1)}
-                        disabled={urlPage === 0}
+                        onClick={() => handleAuthorPageChange(authorPage - 1)}
+                        disabled={authorPage === 0}
                         data-test="authors-prev-page"
                       >
                         Previous
@@ -340,8 +346,8 @@ export function SearchPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePageChange(urlPage + 1)}
-                        disabled={urlPage >= data.authorPage.totalPages - 1}
+                        onClick={() => handleAuthorPageChange(authorPage + 1)}
+                        disabled={authorPage >= data.authorPage.totalPages - 1}
                         data-test="authors-next-page"
                       >
                         Next
@@ -386,32 +392,40 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`book-result-${book.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">
-              <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
-                {book.title}
-              </EntityLink>
-            </h3>
-            <p className="text-gray-600 mt-1">
-              by{' '}
-              {book.authorId ? (
-                <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
-                  {book.author}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <CoverThumbnail
+              photoId={book.firstPhotoId}
+              checksum={book.firstPhotoChecksum}
+              alt={`Cover of ${book.title}`}
+              dataTest={`book-result-cover-${book.id}`}
+            />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                <EntityLink to={`/books/${book.id}`} data-test={`book-result-title-${book.id}`}>
+                  {book.title}
                 </EntityLink>
-              ) : (
-                book.author
-              )}
-            </p>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-              {book.publicationYear && <span>{book.publicationYear}</span>}
-              {book.publisher && <span>{book.publisher}</span>}
-              {book.library && <span className="font-medium">{book.library}</span>}
-            </div>
-            {book.locNumber && (
-              <div className="mt-2 text-sm text-gray-500">
-                <span className="font-medium">LOC:</span> {book.locNumber}
+              </h3>
+              <p className="text-gray-600 mt-1">
+                by{' '}
+                {book.authorId ? (
+                  <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
+                    {book.author}
+                  </EntityLink>
+                ) : (
+                  book.author
+                )}
+              </p>
+              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                {book.publicationYear && <span>{book.publicationYear}</span>}
+                {book.publisher && <span>{book.publisher}</span>}
+                {book.library && <span className="font-medium">{book.library}</span>}
               </div>
-            )}
+              {book.locNumber && (
+                <div className="mt-2 text-sm text-gray-500">
+                  <span className="font-medium">LOC:</span> {book.locNumber}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             <StatusBadge tone={bookStatusTone(book.status)}>
@@ -522,22 +536,30 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
     <>
       <div className="p-4 hover:bg-gray-50 transition-colors" data-test={`author-result-${author.id}`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">
-              <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
-                {author.name}
-              </EntityLink>
-            </h3>
-            {(author.dateOfBirth || author.dateOfDeath) && (
-              <p className="text-gray-600 mt-1">
-                {author.dateOfBirth && <span>{author.dateOfBirth.split('-')[0]}</span>}
-                {author.dateOfBirth && author.dateOfDeath && <span> - </span>}
-                {author.dateOfDeath && <span>{author.dateOfDeath.split('-')[0]}</span>}
-              </p>
-            )}
-            {author.briefBiography && (
-              <p className="text-gray-700 mt-2 line-clamp-2">{author.briefBiography}</p>
-            )}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <CoverThumbnail
+              photoId={author.firstPhotoId}
+              checksum={author.firstPhotoChecksum}
+              alt={`Photo of ${author.name}`}
+              dataTest={`author-result-cover-${author.id}`}
+            />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                <EntityLink to={`/authors/${author.id}`} data-test={`author-result-name-${author.id}`}>
+                  {author.name}
+                </EntityLink>
+              </h3>
+              {(author.dateOfBirth || author.dateOfDeath) && (
+                <p className="text-gray-600 mt-1">
+                  {author.dateOfBirth && <span>{author.dateOfBirth.split('-')[0]}</span>}
+                  {author.dateOfBirth && author.dateOfDeath && <span> - </span>}
+                  {author.dateOfDeath && <span>{author.dateOfDeath.split('-')[0]}</span>}
+                </p>
+              )}
+              {author.briefBiography && (
+                <p className="text-gray-700 mt-2 line-clamp-2">{author.briefBiography}</p>
+              )}
+            </div>
           </div>
           <div className="flex flex-row flex-wrap sm:flex-col sm:items-end items-center gap-2 sm:gap-1">
             {author.bookCount !== undefined && (

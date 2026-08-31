@@ -69,6 +69,7 @@ class UserSettingsServiceTest {
             dto.setSsoProvider(user.getSsoProvider());
             dto.setSsoSubjectId(user.getSsoSubjectId());
             dto.setEmail(user.getEmail());
+            dto.setPhone(user.getPhone());
             dto.setLastModified(user.getLastModified());
             return dto;
         });
@@ -299,6 +300,69 @@ class UserSettingsServiceTest {
         UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getGooglePhotosTokenExpiry()).isEmpty();
+    }
+
+    @Test
+    void updateUserSettings_shouldUpdateEmailAndPhone() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("new@example.com");
+        dto.setPhone("(555) 123-4567");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getEmail()).isEqualTo("new@example.com");
+        assertThat(result.getPhone()).isEqualTo("(555) 123-4567");
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void updateUserSettings_shouldClearEmailAndPhone_whenEmptyString() {
+        testUser.setEmail("old@example.com");
+        testUser.setPhone("555-0100");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("");
+        dto.setPhone("  ");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getEmail()).isNull();
+        assertThat(result.getPhone()).isNull();
+    }
+
+    @Test
+    void updateUserSettings_shouldRejectInvalidEmail() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("not-an-email");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("Invalid email address");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUserSettings_shouldRejectInvalidPhone() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setPhone("abc");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("Invalid phone number");
+        verify(userRepository, never()).save(any());
     }
 
     @Test

@@ -10,6 +10,12 @@ import { useToast } from '@/hooks/useToast'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import type { LibraryCardDesign } from '@/types/dtos'
 
+export function memberSinceLabel(createdAt?: string | null): string {
+  if (!createdAt) return 'Member'
+  const year = new Date(createdAt).getFullYear()
+  return Number.isFinite(year) ? `Member Since ${year}` : 'Member'
+}
+
 export function MyLibraryCardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
@@ -81,32 +87,32 @@ export function MyLibraryCardPage() {
     <div className="max-w-2xl mx-auto">
       <PageHeader
         title="My Library Card"
-        description="View and print your personalized library card"
+        description="View and download your personalized library card"
       />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {/* Card Preview Section */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 text-white">
+        <div className="bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white">
           <div className="flex items-center gap-4 mb-6">
             <PiIdentificationCard className="w-16 h-16" />
             <div>
               <h2 className="text-2xl font-bold">Library Card</h2>
-              <p className="text-blue-100">Member Since {new Date().getFullYear()}</p>
+              <p className="text-primary-100" data-test="member-since">{memberSinceLabel(user?.createdAt)}</p>
             </div>
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
             <div className="grid gap-4">
               <div>
-                <p className="text-sm text-blue-100 mb-1">Cardholder Name</p>
+                <p className="text-sm text-primary-100 mb-1">Cardholder Name</p>
                 <p className="text-2xl font-bold">{user?.username}</p>
               </div>
               <div>
-                <p className="text-sm text-blue-100 mb-1">Member ID</p>
+                <p className="text-sm text-primary-100 mb-1">Member ID</p>
                 <p className="text-lg font-mono">{user?.id?.toString().padStart(8, '0')}</p>
               </div>
               <div>
-                <p className="text-sm text-blue-100 mb-1">Status</p>
+                <p className="text-sm text-primary-100 mb-1">Status</p>
                 <p className="text-lg">
                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-500 text-white font-medium">
                     Active
@@ -122,7 +128,7 @@ export function MyLibraryCardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Print Your Card
+                Download Your Card
               </h3>
               <p className="text-sm text-gray-600">
                 Download a wallet-sized PDF version of your library card
@@ -137,7 +143,7 @@ export function MyLibraryCardPage() {
                 leftIcon={<PiFilePdf />}
                 data-test="print-library-card"
               >
-                Print Card
+                Download PDF
               </Button>
               <Button
                 variant="secondary"
@@ -147,7 +153,7 @@ export function MyLibraryCardPage() {
                 leftIcon={<PiFilePdf />}
                 data-test="print-all-library-cards"
               >
-                Print All Card Designs
+                Download All Card Designs
               </Button>
             </div>
           </div>
@@ -166,9 +172,9 @@ export function MyLibraryCardPage() {
       </div>
 
       {/* Information Section */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">Using Your Library Card:</h3>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+      <div className="mt-6 bg-primary-50 border border-primary-200 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-primary-900 mb-2">Using Your Library Card:</h3>
+        <ul className="text-sm text-primary-800 space-y-1 list-disc list-inside">
           <li>Present your card when checking out books</li>
           <li>Keep your card in a safe place</li>
           <li>Report lost or stolen cards to a librarian immediately</li>

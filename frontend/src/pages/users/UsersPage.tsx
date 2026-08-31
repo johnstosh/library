@@ -122,9 +122,9 @@ export function UsersPage() {
 
       <PageCard padding={false} className="relative">
         {selectedIds.size > 0 && (
-          <div className="m-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="m-4 bg-primary-50 border border-primary-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-blue-900">
+              <span className="text-sm font-medium text-primary-900">
                 {selectedIds.size} user{selectedIds.size === 1 ? '' : 's'} selected
               </span>
               <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export function UsersPage() {
             type="search"
             label="Search users"
             hideLabel
-            placeholder="Search by name, email, or SSO provider..."
+            placeholder="Search by name, email, phone, or SSO provider..."
             value={searchQuery}
             onChange={(e) => setUsersSearchQuery(e.target.value)}
             data-test="user-search"

@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook } from '@/api/books'
-import { formatBookStatus, formatDateTime } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime, isValidUrl } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -108,14 +108,14 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                   <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
-              {book.grokipediaUrl && (
+              {isValidUrl(book.grokipediaUrl) && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
                   <a
                     href={book.grokipediaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
+                    className="text-primary-600 hover:text-primary-800 underline"
                     data-test="book-grokipedia-link"
                   >
                     View on Grokipedia

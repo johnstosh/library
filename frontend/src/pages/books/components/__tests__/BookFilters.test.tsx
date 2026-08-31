@@ -1,51 +1,40 @@
 // (c) Copyright 2025 by Muczynski
 import { render, screen } from '@testing-library/react'
-import { BookFilters, hideBookFilterOnMobile } from '../BookFilters'
+import { BookFilters } from '../BookFilters'
 import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFilters'
 
 const chips: BookChipFilters = { ...defaultBookChipFilters }
 
-describe('hideBookFilterOnMobile', () => {
-  it('hides chips whose names contain without, plus notActiveStatus', () => {
-    expect(hideBookFilterOnMobile('withoutLoc')).toBe(true)
-    expect(hideBookFilterOnMobile('withoutGrokipedia')).toBe(true)
-    expect(hideBookFilterOnMobile('withoutGenres')).toBe(true)
-    expect(hideBookFilterOnMobile('withoutFreeTextUrls')).toBe(true)
-    expect(hideBookFilterOnMobile('notActiveStatus')).toBe(true)
-  })
-
-  it('keeps other chips visible on phone', () => {
-    expect(hideBookFilterOnMobile('inLibrary')).toBe(false)
-    expect(hideBookFilterOnMobile('withGrokipedia')).toBe(false)
-    expect(hideBookFilterOnMobile('mostRecent')).toBe(false)
-    expect(hideBookFilterOnMobile('freeText')).toBe(false)
-  })
-})
-
 describe('BookFilters', () => {
-  it('shows without-* and Not Active Status chips by default', () => {
+  it('shows cataloger chips by default', () => {
     render(<BookFilters chips={chips} onToggle={() => {}} />)
 
-    expect(screen.getByTestId('filter-without-loc')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-without-grokipedia')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-without-genres')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-without-free-text-urls')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-not-active-status')).not.toHaveClass('hidden')
+    expect(screen.getByTestId('filter-without-loc')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-without-grokipedia')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-without-genres')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-without-free-text-urls')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-not-active-status')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
+    expect(screen.getByText('Recent Arrivals')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-with-grokipedia')).toBeInTheDocument()
   })
 
-  it('hides without-* and Not Active Status chips on phone when asked', () => {
-    render(
-      <BookFilters chips={chips} onToggle={() => {}} hideWithoutAndNotActiveOnMobile />,
-    )
+  it('hides cataloger chips when showCatalogerFilters is false', () => {
+    render(<BookFilters chips={chips} onToggle={() => {}} showCatalogerFilters={false} />)
 
-    expect(screen.getByTestId('filter-without-loc')).toHaveClass('hidden', 'sm:inline-flex')
-    expect(screen.getByTestId('filter-without-grokipedia')).toHaveClass('hidden', 'sm:inline-flex')
-    expect(screen.getByTestId('filter-without-genres')).toHaveClass('hidden', 'sm:inline-flex')
-    expect(screen.getByTestId('filter-without-free-text-urls')).toHaveClass('hidden', 'sm:inline-flex')
-    expect(screen.getByTestId('filter-not-active-status')).toHaveClass('hidden', 'sm:inline-flex')
+    expect(screen.queryByTestId('filter-without-loc')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-without-grokipedia')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-without-free-text-urls')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-not-active-status')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-with-grokipedia')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('book-source-filter-chips')).not.toBeInTheDocument()
 
-    expect(screen.getByTestId('filter-in-library')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-with-grokipedia')).not.toHaveClass('hidden')
-    expect(screen.getByTestId('filter-most-recent')).not.toHaveClass('hidden')
+    expect(screen.getByTestId('filter-in-library')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-electronic')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-free-text')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-audio')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
+    expect(screen.getByText('Recent Arrivals')).toBeInTheDocument()
   })
 })

@@ -315,4 +315,153 @@ public class AskGrokTest {
 
         assertEquals("BX4700.T4", askGrok.suggestLocNumber("Little Women", "Louisa May Alcott"));
     }
+
+    @Test
+    void suggestGrokipediaUrlsForBook_asksForJsonArrayWithAuthorContext() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "[\"https://grokipedia.com/page/Little_Women\"]");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        List<String> urls = askGrok.suggestGrokipediaUrlsForBook("Little Women", "Louisa May Alcott");
+
+        assertEquals(List.of("https://grokipedia.com/page/Little_Women"), urls);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        String prompt = (String) messages.get(0).get("content");
+        assertTrue(prompt.contains("This task is about authors and books."));
+        assertTrue(prompt.contains("the book \"Little Women\" by Louisa May Alcott"));
+        assertTrue(prompt.contains("https://grokipedia.com/search?q=Little Women"));
+        assertFalse(prompt.contains("https://grokipedia.com/search?q=Little Women Louisa"));
+        assertTrue(prompt.contains("Grokipedia search as the source of truth"));
+        assertTrue(prompt.contains("nothing before or after the JSON"));
+        assertTrue(prompt.contains("[\"https://grokipedia.com/page/The_Song_of_Bernadette_(novel)\"]"));
+    }
+
+    @Test
+    void suggestGrokipediaUrlsForAuthor_includesCorrespondingBook() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "[\"https://grokipedia.com/page/Louisa_May_Alcott\"]");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        List<String> urls = askGrok.suggestGrokipediaUrlsForAuthor("Louisa May Alcott", "Little Women");
+
+        assertEquals(List.of("https://grokipedia.com/page/Louisa_May_Alcott"), urls);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        String prompt = (String) messages.get(0).get("content");
+        assertTrue(prompt.contains("This task is about authors and books."));
+        assertTrue(prompt.contains("Louisa May Alcott, known for the book \"Little Women\""));
+        assertTrue(prompt.contains("https://grokipedia.com/search?q=Louisa May Alcott"));
+        assertFalse(prompt.contains("https://grokipedia.com/search?q=Louisa May Alcott Little Women"));
+        assertTrue(prompt.contains("Grokipedia search as the source of truth"));
+        assertTrue(prompt.contains("nothing before or after the JSON"));
+        assertTrue(prompt.contains("[\"https://grokipedia.com/page/C._S._Lewis\"]"));
+    }
+
+    @Test
+    void toAscii_stripsDiacriticsFromKarolJozefWojtyla() {
+        assertEquals("Karol Jozef Wojtyla", AskGrok.toAscii("Karol Józef Wojtyła"));
+        assertNull(AskGrok.toAscii(null));
+        assertEquals("Louisa May Alcott", AskGrok.toAscii("Louisa May Alcott"));
+    }
+
+    @Test
+    void suggestGrokipediaUrlsForAuthor_putsAsciiNameInPrompt() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", "[\"https://grokipedia.com/page/Pope_John_Paul_II\"]");
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        askGrok.suggestGrokipediaUrlsForAuthor("Karol Józef Wojtyła", "Crossing the Threshold of Hope");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        String prompt = (String) messages.get(0).get("content");
+        assertTrue(prompt.contains("Karol Jozef Wojtyla"));
+        assertTrue(prompt.contains("https://grokipedia.com/search?q=Karol Jozef Wojtyla"));
+        assertFalse(prompt.contains("Józef"));
+        assertFalse(prompt.contains("Wojtyła"));
+    }
+
+    @Test
+    void parseJsonStringArray_preservesOrderAndIgnoresBlanks() {
+        List<String> parsed = AskGrok.parseJsonStringArray(
+                "Here:\n[\"https://grokipedia.com/page/B\", \"  \", \"https://grokipedia.com/page/A\"]\n");
+        assertEquals(
+                List.of("https://grokipedia.com/page/B", "https://grokipedia.com/page/A"),
+                parsed);
+        assertEquals(List.of(), AskGrok.parseJsonStringArray(null));
+        assertEquals(List.of(), AskGrok.parseJsonStringArray("not json"));
+    }
 }

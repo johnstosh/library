@@ -21,4 +21,6 @@ public class UserSettingsDto {
     private String googlePhotosAlbumId;
     private String lastPhotoTimestamp;
     private LibraryCardDesign libraryCardDesign;
+    private String email;
+    private String phone;
 }

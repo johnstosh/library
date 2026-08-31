@@ -58,7 +58,7 @@ export function applyUserFilters(
 
   return users.filter((user) => {
     if (needle) {
-      const haystack = [user.username, user.email, user.ssoProvider]
+      const haystack = [user.username, user.email, user.phone, user.ssoProvider]
         .filter((value) => !isBlank(value))
         .join(' ')
         .toLowerCase()

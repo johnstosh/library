@@ -61,7 +61,7 @@ export function LibraryCardDesignPicker({
               key={option.name}
               className={`border rounded-lg p-4 cursor-pointer transition-all ${
                 localDesign === option.name
-                  ? 'border-blue-500 bg-blue-50'
+                  ? 'border-primary-500 bg-primary-50'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
               onClick={() => handleChange(option.name)}

@@ -13,6 +13,19 @@ The frontend is a modern single-page application (SPA) built with React 18, Type
 ### Styling
 - **Tailwind CSS v4** - Utility-first CSS framework
 - **Headless UI** - Unstyled, accessible components (modals, dialogs)
+- **Century Schoolbook L** - App typeface (regular, bold, italic, bold italic). Loaded from `/fonts/CenturySchL-*.ttf` and set as `--font-sans`. `font-mono` is kept for IDs, filenames, API keys, and LOC call numbers.
+
+### Visual theme
+The UI uses a library palette instead of default software blue. Tokens live in `frontend/src/index.css` `@theme` and map to Tailwind utilities (`bg-primary-600`, `text-forest-800`, `bg-paper`, etc.):
+
+| Token | Hex | Role |
+| --- | --- | --- |
+| `paper` | `#F4EBDA` | Page background (uncoated book paper) |
+| `primary-600` | `#6B2D3C` | Deep burgundy — buttons, links, focus rings, nav active |
+| `forest-600` | `#1F4D3A` | Forest green — secondary accents and in-progress states |
+| `charcoal-800` | `#2C2825` | Ink charcoal — secondary buttons and book-icon fills |
+
+The page background is paper with a repeating SVG of small outline book icons (`frontend/public/images/paper-books.svg`) in burgundy, forest green, and charcoal. The marks are the Phosphor `PiBook` outline used for Book Details and, in some places, the `PiBooks` outline used on Open in Books. Positions, rotations, and sizes vary so the 480×480 tile does not read as a regular grid. Cards, tables, and the nav bar stay opaque so the watermark shows in the page chrome around content.
 
 ### State & Data Management
 - **TanStack Query v5** - Server state management with automatic caching
@@ -408,7 +421,8 @@ On mobile, the user info and Logout button appear in the expandable mobile menu,
 
 2. **Client State** (Zustand)
    - Authentication status
-   - UI state (filters, selected rows)
+   - UI state (selected rows; author/loan/user/application chips)
+   - Book chips, genres, and title filter live in the `/books` URL (`bookFilterParams.ts`), not Zustand
    - Persisted preferences
 
 3. **Component State** (useState)
@@ -430,7 +444,9 @@ const [showModal, setShowModal] = useState(false)
 
 ### 5. Form Pattern
 
-Forms are now page-based (not modals) with unsaved changes warnings:
+Forms are now page-based (not modals) with unsaved changes warnings.
+
+AI catalog helpers on the book edit form (Title & Author from First Photo) fill the form only. They must not persist the book until the user clicks Update. Cancel discards the previewed values.
 
 ```typescript
 interface BookFormPageProps {
@@ -741,6 +757,10 @@ All features follow consistent CRUD pattern:
    - Remove from cache on success
 
 ### Filter Pattern
+
+List pages use the shared `FilterChip` (`frontend/src/components/ui/FilterChip.tsx`). The chip label toggles the filter. The info icon is a separate control: hover or click shows the explanation, and clicking it does not toggle the filter.
+
+Older radio-button filters are no longer used:
 
 Radio buttons for mutually exclusive filters:
 

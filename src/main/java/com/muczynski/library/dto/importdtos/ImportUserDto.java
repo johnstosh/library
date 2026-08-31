@@ -16,7 +16,7 @@ import java.util.List;
 @JsonPropertyOrder({"username", "password", "xaiApiKey", "googlePhotosApiKey",
     "googlePhotosRefreshToken", "googlePhotosTokenExpiry", "googleClientSecret",
     "googlePhotosAlbumId", "lastPhotoTimestamp", "ssoProvider", "ssoSubjectId",
-    "email", "libraryCardDesign", "authorities", "roles", "userIdentifier"})
+    "email", "phone", "libraryCardDesign", "authorities", "roles", "userIdentifier"})
 public class ImportUserDto {
     private String username;
     private String password;
@@ -30,6 +30,7 @@ public class ImportUserDto {
     private String ssoProvider;
     private String ssoSubjectId;
     private String email;
+    private String phone;
     private LibraryCardDesign libraryCardDesign;
     private List<String> authorities = new ArrayList<>();
     private List<String> roles = new ArrayList<>(); // For backwards compatibility with older exports

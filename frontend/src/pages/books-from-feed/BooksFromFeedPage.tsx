@@ -145,31 +145,31 @@ export function BooksFromFeedPage() {
 
       {/* Processing Progress */}
       {progress && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6" data-test="processing-progress">
+        <div className="bg-forest-50 border border-forest-200 rounded-lg p-4 mb-6" data-test="processing-progress">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-indigo-900">
+            <span className="text-sm font-medium text-forest-900">
               Processing book {progress.current} of {progress.total}...
             </span>
-            <span className="text-sm font-bold text-indigo-900">
+            <span className="text-sm font-bold text-forest-900">
               {Math.round((progress.current / progress.total) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-indigo-200 rounded-full h-2.5">
+          <div className="w-full bg-forest-200 rounded-full h-2.5">
             <div
-              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-forest-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${(progress.current / progress.total) * 100}%` }}
             />
           </div>
-          <p className="text-xs text-indigo-700 mt-1 truncate">
+          <p className="text-xs text-forest-700 mt-1 truncate">
             {progress.currentBookTitle}
           </p>
         </div>
       )}
 
       {/* Info Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-blue-900 mb-3">How It Works</h2>
-        <div className="space-y-2 text-sm text-blue-800">
+      <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-primary-900 mb-3">How It Works</h2>
+        <div className="space-y-2 text-sm text-primary-800">
           <div className="flex items-start gap-2">
             <span className="font-bold">1.</span>
             <p>

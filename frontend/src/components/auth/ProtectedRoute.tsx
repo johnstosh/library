@@ -14,7 +14,7 @@ export function ProtectedRoute() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       const currentPath = location.pathname + location.search
-      // Don't save "/" as return URL - it would just redirect to /books anyway
+      // Don't save "/" as return URL — HomeRedirect already picks the role home page
       if (currentPath !== '/') {
         setReturnUrl(currentPath)
       }

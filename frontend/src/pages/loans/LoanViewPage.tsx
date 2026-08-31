@@ -141,8 +141,8 @@ export function LoanViewPage() {
               </p>
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-900 font-semibold">
+            <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+              <p className="text-primary-900 font-semibold">
                 This loan is active
               </p>
             </div>

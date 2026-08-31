@@ -39,6 +39,9 @@ class GrokipediaLookupServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private AskGrok askGrok;
+
     @InjectMocks
     private GrokipediaLookupService grokipediaLookupService;
 
@@ -103,6 +106,51 @@ class GrokipediaLookupServiceTest {
     }
 
     @Test
+    void lookupBook_stripsCopySuffixBeforeGeneratingUrl() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Catechism of the Catholic Church, c. 3");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Catechism_of_the_Catholic_Church"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Catechism_of_the_Catholic_Church", result.getGrokipediaUrl());
+        assertEquals("Catechism of the Catholic Church, c. 3", result.getName());
+        verify(restTemplate, never()).exchange(
+                eq("https://grokipedia.com/page/Catechism_of_the_Catholic_Church,_c._3"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class));
+    }
+
+    @Test
+    void lookupBook_slow_asksGrokWithTitleWithoutCopySuffix() {
+        Book book = bookWithAuthor(1L, "Catechism of the Catholic Church, c. 3", "Catholic Church");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook("Catechism of the Catholic Church", "Catholic Church"))
+                .thenReturn(List.of());
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        grokipediaLookupService.lookupBook(1L, true);
+
+        verify(askGrok).suggestGrokipediaUrlsForBook("Catechism of the Catholic Church", "Catholic Church");
+        verify(askGrok, never()).suggestGrokipediaUrlsForBook(
+                eq("Catechism of the Catholic Church, c. 3"), any());
+    }
+
+    @Test
     void lookupBook_urlNotFound() {
         Book book = new Book();
         book.setId(1L);
@@ -118,6 +166,7 @@ class GrokipediaLookupServiceTest {
         assertNull(result.getGrokipediaUrl());
         assertTrue(result.getErrorMessage().contains("No Grokipedia page found"));
         verify(bookRepository, never()).save(any());
+        verify(askGrok, never()).suggestGrokipediaUrlsForBook(any(), any());
     }
 
     @Test
@@ -250,5 +299,199 @@ class GrokipediaLookupServiceTest {
         assertEquals(2, results.size());
         assertTrue(results.get(0).isSuccess());
         assertFalse(results.get(1).isSuccess());
+    }
+
+    @Test
+    void lookupBook_slow_skipsGrokWhenUsualUrlWorks() {
+        Book book = bookWithAuthor(1L, "Little Women", "Louisa May Alcott");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Little_Women"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Little_Women", result.getGrokipediaUrl());
+        verify(askGrok, never()).suggestGrokipediaUrlsForBook(any(), any());
+    }
+
+    @Test
+    void lookupBook_slow_savesFirstWorkingGrokUrlAndDoesNotSaveDash() {
+        Book book = bookWithAuthor(1L, "Obscure Title", "Jane Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Obscure_Title"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook("Obscure Title", "Jane Author"))
+                .thenReturn(List.of(
+                        "https://grokipedia.com/page/Wrong_Page",
+                        "https://grokipedia.com/page/Correct_Page"));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Wrong_Page"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Correct_Page"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Correct_Page", result.getGrokipediaUrl());
+        verify(bookRepository).save(argThat(b ->
+                "https://grokipedia.com/page/Correct_Page".equals(b.getGrokipediaUrl())));
+        verify(bookRepository, never()).save(argThat(b -> "-".equals(b.getGrokipediaUrl())));
+    }
+
+    @Test
+    void lookupBook_slow_savesDashOnlyWhenNoUrlsWork() {
+        Book book = bookWithAuthor(1L, "Unknown Book", "Unknown Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook("Unknown Book", "Unknown Author"))
+                .thenReturn(List.of("https://grokipedia.com/page/Missing_One", "https://grokipedia.com/page/Missing_Two"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertFalse(result.isSuccess());
+        assertEquals("-", result.getGrokipediaUrl());
+        assertTrue(result.getErrorMessage().contains("N/A"));
+        verify(bookRepository).save(argThat(b -> "-".equals(b.getGrokipediaUrl())));
+    }
+
+    @Test
+    void lookupBook_slow_doesNotSaveDashWhenGrokFails() {
+        Book book = bookWithAuthor(1L, "Unknown Book", "Unknown Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook("Unknown Book", "Unknown Author"))
+                .thenThrow(new RuntimeException("xAI API key not configured"));
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertFalse(result.isSuccess());
+        assertNull(result.getGrokipediaUrl());
+        assertTrue(result.getErrorMessage().contains("Grok lookup failed"));
+        verify(bookRepository, never()).save(any());
+    }
+
+    @Test
+    void lookupAuthor_slow_usesCorrespondingBookAsContext() {
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Louisa May Alcott");
+        Book related = new Book();
+        related.setTitle("Little Women, c. 2");
+        author.getBooks().add(related);
+
+        when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Louisa_May_Alcott"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForAuthor("Louisa May Alcott", "Little Women"))
+                .thenReturn(List.of("https://grokipedia.com/page/Louisa_May_Alcott_(writer)"));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Louisa_May_Alcott_(writer)"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(authorRepository.save(any(Author.class))).thenReturn(author);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupAuthor(1L, true);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Louisa_May_Alcott_(writer)", result.getGrokipediaUrl());
+        verify(askGrok).suggestGrokipediaUrlsForAuthor("Louisa May Alcott", "Little Women");
+    }
+
+    @Test
+    void lookupAuthor_slow_skipsSearchUrlsAndKeepsPageUrls() {
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Clive Staples Lewis");
+
+        when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Clive_Staples_Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForAuthor("Clive Staples Lewis", null))
+                .thenReturn(List.of(
+                        "https://grokipedia.com/search?q=Clive Staples Lewis",
+                        "https://grokipedia.com/page/C._S._Lewis"));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/C._S._Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(authorRepository.save(any(Author.class))).thenReturn(author);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupAuthor(1L, true);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/C._S._Lewis", result.getGrokipediaUrl());
+        verify(restTemplate, never()).exchange(
+                eq("https://grokipedia.com/search?q=Clive Staples Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class));
+    }
+
+    @Test
+    void lookupAuthor_slow_savesDashOnlyWhenNoUrlsWork() {
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Unknown Author");
+
+        when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForAuthor("Unknown Author", null))
+                .thenReturn(List.of());
+        when(authorRepository.save(any(Author.class))).thenReturn(author);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupAuthor(1L, true);
+
+        assertFalse(result.isSuccess());
+        assertEquals("-", result.getGrokipediaUrl());
+        verify(authorRepository).save(argThat(a -> "-".equals(a.getGrokipediaUrl())));
+    }
+
+    private Book bookWithAuthor(Long id, String title, String authorName) {
+        Book book = new Book();
+        book.setId(id);
+        book.setTitle(title);
+        Author author = new Author();
+        author.setName(authorName);
+        book.setAuthor(author);
+        return book;
     }
 }

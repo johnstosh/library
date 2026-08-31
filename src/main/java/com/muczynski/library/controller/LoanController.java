@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
+import com.muczynski.library.dto.TitleLoanedDto;
 import com.muczynski.library.exception.InsufficientPermissionsException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.CheckoutCardTranscriptionService;
@@ -39,6 +40,16 @@ public class LoanController {
 
     @Autowired
     private CheckoutCardTranscriptionService checkoutCardTranscriptionService;
+
+    /**
+     * Public catalog availability: whether this book title is currently on loan.
+     * Does not include borrower identity.
+     */
+    @GetMapping("/title-loaned")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<TitleLoanedDto> getTitleLoaned(@RequestParam Long bookId) {
+        return ResponseEntity.ok(loanService.getTitleLoaned(bookId));
+    }
 
     @PostMapping("/checkout")
     @PreAuthorize("isAuthenticated()")

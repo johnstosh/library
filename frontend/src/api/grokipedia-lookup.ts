@@ -12,16 +12,29 @@ export interface GrokipediaLookupResultDto {
   errorMessage: string
 }
 
+export interface GrokipediaLookupRequest {
+  ids: number[]
+  slow?: boolean
+}
+
+function grokipediaLookupPath(resource: 'books' | 'authors', slow?: boolean) {
+  const base = `/${resource}/grokipedia-lookup-bulk`
+  return slow ? `${base}?slow=true` : base
+}
+
 // Lookup Grokipedia URL for a single book
 export function useLookupSingleBookGrokipedia() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (bookId: number) => {
-      const results = await api.post<GrokipediaLookupResultDto[]>('/books/grokipedia-lookup-bulk', [bookId])
+    mutationFn: async ({ bookId, slow }: { bookId: number; slow?: boolean }) => {
+      const results = await api.post<GrokipediaLookupResultDto[]>(
+        grokipediaLookupPath('books', slow),
+        [bookId]
+      )
       return results[0]
     },
-    onSuccess: (_, bookId) => {
+    onSuccess: (_, { bookId }) => {
       // Invalidate the specific book query
       queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
@@ -34,8 +47,8 @@ export function useLookupBulkBooksGrokipedia() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (bookIds: number[]) =>
-      api.post<GrokipediaLookupResultDto[]>('/books/grokipedia-lookup-bulk', bookIds),
+    mutationFn: ({ ids, slow }: GrokipediaLookupRequest) =>
+      api.post<GrokipediaLookupResultDto[]>(grokipediaLookupPath('books', slow), ids),
     onSuccess: () => {
       // Invalidate all book queries
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
@@ -53,14 +66,17 @@ export function useLookupBulkBooksGrokipediaWithProgress(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (bookIds: number[]) => {
+    mutationFn: async ({ ids, slow }: GrokipediaLookupRequest) => {
       const results: GrokipediaLookupResultDto[] = []
-      const total = bookIds.length
+      const total = ids.length
 
-      for (let i = 0; i < bookIds.length; i++) {
-        const bookId = bookIds[i]
+      for (let i = 0; i < ids.length; i++) {
+        const bookId = ids[i]
         try {
-          const batch = await api.post<GrokipediaLookupResultDto[]>('/books/grokipedia-lookup-bulk', [bookId])
+          const batch = await api.post<GrokipediaLookupResultDto[]>(
+            grokipediaLookupPath('books', slow),
+            [bookId]
+          )
           results.push(batch[0] ?? {
             bookId,
             name: `Book ${bookId}`,
@@ -93,8 +109,8 @@ export function useLookupBulkAuthorsGrokipedia() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (authorIds: number[]) =>
-      api.post<GrokipediaLookupResultDto[]>('/authors/grokipedia-lookup-bulk', authorIds),
+    mutationFn: ({ ids, slow }: GrokipediaLookupRequest) =>
+      api.post<GrokipediaLookupResultDto[]>(grokipediaLookupPath('authors', slow), ids),
     onSuccess: () => {
       // Invalidate all author queries
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
@@ -113,14 +129,17 @@ export function useLookupBulkAuthorsGrokipediaWithProgress(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (authorIds: number[]) => {
+    mutationFn: async ({ ids, slow }: GrokipediaLookupRequest) => {
       const results: GrokipediaLookupResultDto[] = []
-      const total = authorIds.length
+      const total = ids.length
 
-      for (let i = 0; i < authorIds.length; i++) {
-        const authorId = authorIds[i]
+      for (let i = 0; i < ids.length; i++) {
+        const authorId = ids[i]
         try {
-          const batch = await api.post<GrokipediaLookupResultDto[]>('/authors/grokipedia-lookup-bulk', [authorId])
+          const batch = await api.post<GrokipediaLookupResultDto[]>(
+            grokipediaLookupPath('authors', slow),
+            [authorId]
+          )
           results.push(batch[0] ?? {
             authorId,
             name: `Author ${authorId}`,

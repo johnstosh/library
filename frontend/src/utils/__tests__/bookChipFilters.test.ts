@@ -27,8 +27,8 @@ function chips(overrides: Partial<BookChipFilters>): BookChipFilters {
 
 describe('defaultBookChipFilters', () => {
   it('defaults every chip to off, including mostRecent', () => {
-    // Shared defaults stay off (Search). The Books page turns mostRecent on in
-    // uiStore so it can use the faster GET /books/most-recent-day backend.
+    // Shared defaults stay off (Search). The Books page turns mostRecent on
+    // from an empty /books URL (see bookFilterParams.ts).
     expect(defaultBookChipFilters.mostRecent).toBe(false)
     expect(isAnyChipActive(defaultBookChipFilters)).toBe(false)
   })
@@ -105,10 +105,18 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
+  it('withoutGrokipedia treats "-" as N/A', () => {
+    const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
+    const na = book({ id: 2, grokipediaUrl: '-' })
+    const result = applyChipFilters([withUrl, na], chips({ withoutGrokipedia: true }))
+    expect(result.map((b) => b.id)).toEqual([2])
+  })
+
   it('withGrokipedia keeps books that have a grokipediaUrl', () => {
     const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
     const without = book({ id: 2, grokipediaUrl: '' })
-    const result = applyChipFilters([withUrl, without], chips({ withGrokipedia: true }))
+    const na = book({ id: 3, grokipediaUrl: '-' })
+    const result = applyChipFilters([withUrl, without, na], chips({ withGrokipedia: true }))
     expect(result.map((b) => b.id)).toEqual([1])
   })
 

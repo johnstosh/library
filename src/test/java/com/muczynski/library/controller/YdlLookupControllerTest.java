@@ -58,14 +58,40 @@ class YdlLookupControllerTest {
 
     @Test
     @WithMockUser(username = "1", authorities = "USER")
-    void lookupSingleBook_regularUser_forbidden() throws Exception {
+    void lookupSingleBook_regularUser_returnsResult() throws Exception {
+        YdlLookupResultDto result = YdlLookupResultDto.builder()
+                .bookId(1L)
+                .success(true)
+                .audioAvailable(false)
+                .paperAvailable(true)
+                .ebookAvailable(false)
+                .matchedTitle("Test Book")
+                .build();
+
+        when(ydlLookupService.lookupAndUpdateBook(eq(1L))).thenReturn(result);
+
         mockMvc.perform(post("/api/ydl-lookup/lookup/1"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.paperAvailable").value(true));
     }
 
     @Test
-    void lookupSingleBook_unauthenticated_unauthorized() throws Exception {
+    void lookupSingleBook_unauthenticated_returnsResult() throws Exception {
+        YdlLookupResultDto result = YdlLookupResultDto.builder()
+                .bookId(1L)
+                .success(true)
+                .audioAvailable(true)
+                .paperAvailable(false)
+                .ebookAvailable(false)
+                .matchedTitle("Test Book")
+                .build();
+
+        when(ydlLookupService.lookupAndUpdateBook(eq(1L))).thenReturn(result);
+
         mockMvc.perform(post("/api/ydl-lookup/lookup/1"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.audioAvailable").value(true));
     }
 }

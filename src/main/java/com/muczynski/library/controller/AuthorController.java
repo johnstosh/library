@@ -360,9 +360,11 @@ public class AuthorController {
 
     @PostMapping("/grokipedia-lookup-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(@RequestBody List<Long> authorIds) {
-        logger.info("Looking up Grokipedia URLs for {} authors", authorIds.size());
-        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupAuthors(authorIds);
+    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(
+            @RequestBody List<Long> authorIds,
+            @RequestParam(defaultValue = "false") boolean slow) {
+        logger.info("Looking up Grokipedia URLs for {} authors (slow={})", authorIds.size(), slow);
+        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupAuthors(authorIds, slow);
         return ResponseEntity.ok(results);
     }
 

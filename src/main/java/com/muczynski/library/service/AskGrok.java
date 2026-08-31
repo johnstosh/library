@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.text.Normalizer;
 import java.util.*;
 
 @Service
@@ -206,10 +207,119 @@ public class AskGrok {
     }
 
     /**
-     * Parses a JSON array of call-number strings from a model reply and sorts
-     * them alphabetically, ignoring blank entries.
+     * Ask Grok for Grokipedia article URLs for a book, using the author as context.
+     * The model must reply with a JSON array of URL strings and nothing else.
      */
-    static List<String> parseCallNumberArray(String response) {
+    public List<String> suggestGrokipediaUrlsForBook(String title, String authorName) {
+        String asciiTitle = toAscii(title);
+        String asciiAuthor = toAscii(authorName);
+        String goalSubject = asciiAuthor != null && !asciiAuthor.isBlank()
+                ? "\"" + asciiTitle + "\" by " + asciiAuthor
+                : "\"" + asciiTitle + "\"";
+        String prompt = """
+                This task is about authors and books.
+
+                Goal: find Grokipedia article URL(s) for the book %s.
+
+                Procedure:
+                1. Treat Grokipedia search as the source of truth.
+                   Search URL: https://grokipedia.com/search?q=%s
+                2. Prefer the primary article about the book, not an author article, film, bibliography, course, or compilation unless no book page exists.
+                3. Grokipedia slugs are inconsistent. Common patterns:
+                   - The_Song_of_Bernadette_(novel)
+                   - The_Song_of_Bernadette
+                   - Song_of_Bernadette
+                   - Title_With_Underscores
+                   - Title_(novel) or (book) or (film)
+                4. If you cannot verify a live page, return the Grokipedia search URL plus the best candidate page URLs rather than inventing a single slug.
+                5. Do not invent Wikipedia-style slugs unless they also appear in Grokipedia search results.
+
+                Respond in JSON only, with nothing before or after the JSON.
+                Return a JSON array of URL strings, most relevant first.
+                Example: ["https://grokipedia.com/page/The_Song_of_Bernadette_(novel)"]
+                """.formatted(goalSubject, asciiTitle);
+        String response = askQuestion(prompt);
+        List<String> urls = parseJsonStringArray(response);
+        if (urls.isEmpty()) {
+            log.warn("Could not parse Grokipedia URL array for book {}: {}", goalSubject, response);
+        }
+        return urls;
+    }
+
+    /**
+     * Ask Grok for Grokipedia article URLs for an author, using a book as context.
+     * The model must reply with a JSON array of URL strings and nothing else.
+     */
+    public List<String> suggestGrokipediaUrlsForAuthor(String authorName, String bookTitle) {
+        String asciiAuthor = toAscii(authorName);
+        String asciiBook = toAscii(bookTitle);
+        String goalSubject = asciiBook != null && !asciiBook.isBlank()
+                ? asciiAuthor + ", known for the book \"" + asciiBook + "\""
+                : asciiAuthor;
+        String prompt = """
+                This task is about authors and books.
+
+                Goal: find Grokipedia article URL(s) for the author %s.
+
+                Procedure:
+                1. Treat Grokipedia search as the source of truth.
+                   Search URL: https://grokipedia.com/search?q=%s
+                2. Prefer the primary biographical article about the person, not a book article, bibliography, course, or compilation unless no person page exists.
+                3. Grokipedia slugs are inconsistent. Common patterns:
+                   - C._S._Lewis
+                   - CS_Lewis
+                   - C_S_Lewis
+                   - First_Last
+                   - First_Last_(writer) or (author) or (book)
+                4. If you cannot verify a live page, return the Grokipedia search URL plus the best candidate page URLs rather than inventing a single slug.
+                5. Do not invent Wikipedia-style slugs unless they also appear in Grokipedia search results.
+
+                Respond in JSON only, with nothing before or after the JSON.
+                Return a JSON array of URL strings, most relevant first.
+                Example: ["https://grokipedia.com/page/C._S._Lewis"]
+                """.formatted(goalSubject, asciiAuthor);
+        String response = askQuestion(prompt);
+        List<String> urls = parseJsonStringArray(response);
+        if (urls.isEmpty()) {
+            log.warn("Could not parse Grokipedia URL array for author {}: {}", authorName, response);
+        }
+        return urls;
+    }
+
+    /**
+     * Strip diacritics and fold Latin letters to ASCII, e.g. {@code Karol Józef Wojtyła}
+     * becomes {@code Karol Jozef Wojtyla}. Null is returned unchanged.
+     */
+    static String toAscii(String input) {
+        if (input == null) {
+            return null;
+        }
+        String folded = Normalizer.normalize(input, Normalizer.Form.NFKD)
+                .replace("ł", "l").replace("Ł", "L")
+                .replace("ø", "o").replace("Ø", "O")
+                .replace("đ", "d").replace("Đ", "D")
+                .replace("æ", "ae").replace("Æ", "AE")
+                .replace("œ", "oe").replace("Œ", "OE")
+                .replace("ß", "ss")
+                .replace("ð", "d").replace("Ð", "D")
+                .replace("þ", "th").replace("Þ", "Th")
+                .replace("ı", "i").replace("İ", "I")
+                .replaceAll("\\p{M}+", "");
+        StringBuilder ascii = new StringBuilder(folded.length());
+        for (int i = 0; i < folded.length(); i++) {
+            char c = folded.charAt(i);
+            if (c <= 0x7F) {
+                ascii.append(c);
+            }
+        }
+        return ascii.toString();
+    }
+
+    /**
+     * Parses a JSON array of strings from a model reply, ignoring blank entries.
+     * Does not sort; callers that need a specific order must sort themselves.
+     */
+    static List<String> parseJsonStringArray(String response) {
         if (response == null || response.isBlank()) {
             return List.of();
         }
@@ -231,11 +341,20 @@ public class AskGrok {
                     }
                 }
             }
-            cleaned.sort(String.CASE_INSENSITIVE_ORDER);
             return cleaned;
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    /**
+     * Parses a JSON array of call-number strings from a model reply and sorts
+     * them alphabetically, ignoring blank entries.
+     */
+    static List<String> parseCallNumberArray(String response) {
+        List<String> cleaned = new ArrayList<>(parseJsonStringArray(response));
+        cleaned.sort(String.CASE_INSENSITIVE_ORDER);
+        return cleaned;
     }
 
     /**

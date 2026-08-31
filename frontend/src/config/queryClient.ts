@@ -50,6 +50,7 @@ export const queryKeys = {
     all: ['loans'] as const,
     list: (showAll?: boolean) => [...queryKeys.loans.all, 'list', showAll] as const,
     detail: (id: number) => [...queryKeys.loans.all, 'detail', id] as const,
+    titleLoaned: (bookId: number) => [...queryKeys.loans.all, 'title-loaned', bookId] as const,
   },
   users: {
     all: ['users'] as const,

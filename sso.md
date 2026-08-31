@@ -387,7 +387,7 @@ To enable Google SSO, administrators must:
    - **Recommendation**: User remains in database but cannot login; librarian can delete if needed
 
 3. Should we sync user information (email, name) on each login?
-   - **Recommendation**: Yes, update email on each login to keep data current
+   - **Recommendation**: Fill email from Google only when the stored contact email is blank. Patrons can change email in User Settings, and a later SSO login must not overwrite that.
 
 4. Should the first Google SSO user be automatically granted LIBRARIAN authority?
    - **Recommendation**: No, require manual authority assignment for security

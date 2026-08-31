@@ -80,6 +80,11 @@ function isBlank(value: string | null | undefined): boolean {
   return !value || value.trim() === ''
 }
 
+function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  return !trimmed || trimmed === '-'
+}
+
 export function applyAuthorChipFilters(
   authors: AuthorDto[],
   chips: AuthorChipFilters,
@@ -98,8 +103,8 @@ export function applyAuthorChipFilters(
     if (chips.hasEmuEbook && !availability?.hasEmuEbook) return false
     if (chips.hasEmuAudio && !availability?.hasEmuAudio) return false
     if (chips.withoutDescription && !isBlank(author.briefBiography)) return false
-    if (chips.withoutGrokipedia && !isBlank(author.grokipediaUrl)) return false
-    if (chips.withGrokipedia && isBlank(author.grokipediaUrl)) return false
+    if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(author.grokipediaUrl)) return false
+    if (chips.withGrokipedia && isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.zeroBooks && (author.bookCount ?? 0) > 0) return false
     if (chips.withoutPhotos && author.firstPhotoId) return false
     if (chips.withPhotos && !author.firstPhotoId) return false

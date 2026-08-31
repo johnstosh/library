@@ -55,7 +55,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
                 <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="text-gray-400 hover:text-gray-600 transition-colors rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   data-test="modal-close"
                   aria-label="Close"
                 >

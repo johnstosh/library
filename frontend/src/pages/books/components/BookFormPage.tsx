@@ -100,21 +100,12 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const bookFromFirstPhoto = useBookFromFirstPhoto()
   const titleAuthorFromPhoto = useTitleAuthorFromPhoto()
   const bookFromTitleAuthor = useBookFromTitleAuthor()
-  const lookupGrokipedia = useLookupSingleBookGrokipedia()
+  const lookupGrokipediaQuick = useLookupSingleBookGrokipedia()
+  const lookupGrokipediaSlow = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
-
-  // Default branch to first branch when creating a new book
-  useEffect(() => {
-    if (!book && branches && branches.length > 0) {
-      setFormData((prev) => {
-        if (prev.branchId) return prev // don't override if already set
-        return { ...prev, branchId: branches[0].id.toString() }
-      })
-    }
-  }, [book, branches])
 
   useEffect(() => {
     if (book) {
@@ -143,7 +134,10 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuEbookAvailable: book.emuEbookAvailable ?? false,
       })
     } else {
-      setFormData({
+      // Creating a new book: keep a branch already chosen (or the first branch
+      // if the list is already loaded). A later effect fills branchId if branches
+      // arrive after this reset.
+      setFormData((prev) => ({
         title: '',
         publicationYear: '',
         publisher: '',
@@ -156,7 +150,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: '',
         locNumber: '',
         authorId: '',
-        branchId: '',
+        branchId: prev.branchId || (branches && branches.length > 0 ? branches[0].id.toString() : ''),
         tagsList: [],
         dateAddedToLibrary: '',
         electronicResource: false,
@@ -166,9 +160,22 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: false,
         emuPaperAvailable: false,
         emuEbookAvailable: false,
+      }))
+    }
+    // branches is read only if already loaded; the effect below fills branchId later.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book])
+
+  // Default branch to first branch when creating a new book. Must run after the
+  // form reset above so Strict Mode remounts cannot wipe the default.
+  useEffect(() => {
+    if (!book && branches && branches.length > 0) {
+      setFormData((prev) => {
+        if (prev.branchId) return prev // don't override if already set
+        return { ...prev, branchId: branches[0].id.toString() }
       })
     }
-  }, [book])
+  }, [book, branches])
 
   // Warn user about unsaved changes
   useEffect(() => {
@@ -362,17 +369,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
-  const handleGrokipediaLookup = async () => {
+  const handleGrokipediaLookup = async (slow: boolean) => {
     if (!book?.id) return
 
     setError('')
     setSuccessMessage('')
 
+    const lookup = slow ? lookupGrokipediaSlow : lookupGrokipediaQuick
     try {
-      const result = await lookupGrokipedia.mutateAsync(book.id)
+      const result = await lookup.mutateAsync({ bookId: book.id, slow })
       setGrokipediaResults([result])
       setShowGrokipediaResults(true)
-      if (result.success && result.grokipediaUrl) {
+      if (result.grokipediaUrl != null) {
         setFormData({ ...formData, grokipediaUrl: result.grokipediaUrl })
         setHasUnsavedChanges(true)
       }
@@ -488,6 +496,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const updated = await titleAuthorFromPhoto.mutateAsync(book.id)
+      // Preview only — persist on Update, discard on Cancel.
       setFormData({
         ...formData,
         title: updated.title || formData.title,
@@ -658,7 +667,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
-    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
+    lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
     lookupYdl.isPending || lookupEmu.isPending || lookupLoc.isPending
 
   return (
@@ -698,13 +707,25 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
+              onClick={() => handleGrokipediaLookup(false)}
+              isLoading={lookupGrokipediaQuick.isPending}
               disabled={isOperationPending || isLoading}
               leftIcon={<GrokipediaIcon />}
-              data-test="book-operation-grokipedia"
+              data-test="book-operation-grokipedia-quick"
             >
-              Find Grokipedia URL
+              Quick Grokipedia lookup
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleGrokipediaLookup(true)}
+              isLoading={lookupGrokipediaSlow.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<GrokipediaIcon />}
+              data-test="book-operation-grokipedia-slow"
+            >
+              Slow Grokipedia lookup
             </Button>
             <Button
               type="button"
@@ -916,8 +937,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-detailed-description"
         />
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[12rem]">
             <Input
               label="Grokipedia URL"
               value={formData.grokipediaUrl}
@@ -927,19 +948,34 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             />
           </div>
           {isEditing && isLibrarian && (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<GrokipediaIcon />}
-              data-test="book-field-lookup-grokipedia"
-              className="mb-0"
-            >
-              Find Grokipedia URL
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(false)}
+                isLoading={lookupGrokipediaQuick.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="book-field-lookup-grokipedia-quick"
+                className="mb-0"
+              >
+                Quick lookup
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(true)}
+                isLoading={lookupGrokipediaSlow.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="book-field-lookup-grokipedia-slow"
+                className="mb-0"
+              >
+                Slow lookup
+              </Button>
+            </>
           )}
         </div>
 
@@ -982,7 +1018,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               setFormData({ ...formData, electronicResource: e.target.checked })
               setHasUnsavedChanges(true)
             }}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             data-test="book-electronic-resource"
           />
           <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">
@@ -999,7 +1035,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   href={ydlCatalogSearchUrl(formData.title)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  className="text-primary-600 hover:text-primary-800 underline text-sm"
                   data-test="book-form-ydl-check-link"
                 >
                   Check YDL
@@ -1031,7 +1067,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, ydlAudioAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-ydl-audio-available"
               />
               <label htmlFor="ydlAudioAvailable" className="text-sm text-gray-700">
@@ -1047,7 +1083,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, ydlPaperAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-ydl-paper-available"
               />
               <label htmlFor="ydlPaperAvailable" className="text-sm text-gray-700">
@@ -1063,7 +1099,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, ydlEbookAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-ydl-ebook-available"
               />
               <label htmlFor="ydlEbookAvailable" className="text-sm text-gray-700">
@@ -1087,7 +1123,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   href={emuCatalogSearchUrl(formData.title)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  className="text-primary-600 hover:text-primary-800 underline text-sm"
                   data-test="book-form-emu-check-link"
                 >
                   Check EMU
@@ -1119,7 +1155,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, emuAudioAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-emu-audio-available"
               />
               <label htmlFor="emuAudioAvailable" className="text-sm text-gray-700">
@@ -1135,7 +1171,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, emuPaperAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-emu-paper-available"
               />
               <label htmlFor="emuPaperAvailable" className="text-sm text-gray-700">
@@ -1151,7 +1187,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   setFormData({ ...formData, emuEbookAvailable: e.target.checked })
                   setHasUnsavedChanges(true)
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 data-test="book-emu-ebook-available"
               />
               <label htmlFor="emuEbookAvailable" className="text-sm text-gray-700">
