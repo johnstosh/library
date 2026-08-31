@@ -23,7 +23,7 @@ import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
 import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
-import { SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -247,7 +247,7 @@ export function BulkActionsToolbar({
             plural="books"
             onClear={onClearSelection}
           />
-          <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0 [&_button]:shrink-0">
+          <ActionCarousel>
             <Button
               variant="outline"
               size="sm"
@@ -369,13 +369,12 @@ export function BulkActionsToolbar({
             <Button
               variant="danger"
               size="sm"
-              className="shrink-0"
               onClick={() => setShowDeleteConfirm(true)}
               data-test="bulk-delete"
             >
               Delete Selected
             </Button>
-          </div>
+          </ActionCarousel>
         </div>
       </SelectionToolbar>
 

@@ -28,6 +28,21 @@ export function SelectionToolbar({
   )
 }
 
+/**
+ * Horizontally scrolling bulk-action buttons. Labels wrap so each button grows
+ * taller instead of staying one wide line of text.
+ */
+export function ActionCarousel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="flex gap-2 overflow-x-auto flex-nowrap min-w-0 items-stretch [&_button]:shrink-0 [&_button]:h-auto [&_button]:max-w-[8.5rem] [&_button]:whitespace-normal [&_button]:break-words [&_button]:leading-snug [&_button]:text-left [&_button]:py-2"
+      data-test="action-carousel"
+    >
+      {children}
+    </div>
+  )
+}
+
 /** Count + Clear Selection, stacked so the action carousel has room on a phone. */
 export function SelectionSummary({
   count,

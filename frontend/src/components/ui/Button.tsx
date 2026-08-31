@@ -62,7 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && (
           <svg
-            className="mr-2 h-4 w-4 animate-spin"
+            className="mr-2 h-4 w-4 shrink-0 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -82,9 +82,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             />
           </svg>
         )}
-        {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
-        {children}
-        {!isLoading && rightIcon && <span className="ml-2">{rightIcon}</span>}
+        {!isLoading && leftIcon && <span className="mr-2 shrink-0">{leftIcon}</span>}
+        <span className="min-w-0">{children}</span>
+        {!isLoading && rightIcon && <span className="ml-2 shrink-0">{rightIcon}</span>}
       </button>
     )
   }

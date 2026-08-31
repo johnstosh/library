@@ -10,7 +10,7 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { AuthorEnrichmentResultsModal } from './AuthorEnrichmentResultsModal'
 import { AiIcon, GrokipediaIcon } from '@/components/ui/Icons'
 import type { AuthorEnrichmentResultDto, BulkDeleteResultDto } from '@/types/dtos'
-import { SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface AuthorBulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -117,11 +117,10 @@ export function AuthorBulkActionsToolbar({
             plural="authors"
             onClear={onClearSelection}
           />
-          <div className="flex gap-2 overflow-x-auto flex-nowrap min-w-0">
+          <ActionCarousel>
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
               onClick={handleGenerateMissing}
               isLoading={generateMissing.isPending}
               disabled={isOperationPending}
@@ -139,7 +138,6 @@ export function AuthorBulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
               onClick={handleGrokipediaLookup}
               isLoading={lookupGrokipedia.isPending}
               disabled={isOperationPending}
@@ -157,14 +155,13 @@ export function AuthorBulkActionsToolbar({
             <Button
               variant="danger"
               size="sm"
-              className="shrink-0"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isOperationPending}
               data-test="bulk-delete"
             >
               Delete Selected
             </Button>
-          </div>
+          </ActionCarousel>
         </div>
       </SelectionToolbar>
 
