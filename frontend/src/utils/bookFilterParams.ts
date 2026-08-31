@@ -38,6 +38,7 @@ export const SEARCH_VISIBLE_CHIPS: (keyof BookChipFilters)[] = [
   'electronic',
   'freeText',
   'audio',
+  'mostRecent',
 ]
 
 export type BookFilterUrlMode = 'search' | 'books'
@@ -152,6 +153,8 @@ export function booksPathFromFilters(state: {
 }): string {
   const discoveryChips: BookChipFilters = { ...defaultBookChipFilters, mostRecent: true }
   for (const key of SEARCH_VISIBLE_CHIPS) {
+    // Books keeps its own intake default; don't copy Search's mostRecent off-state.
+    if (key === 'mostRecent') continue
     discoveryChips[key] = state.chips[key]
   }
   const params = bookFilterParamsForUrl(

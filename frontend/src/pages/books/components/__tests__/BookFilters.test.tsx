@@ -15,6 +15,7 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-without-free-text-urls')).toBeInTheDocument()
     expect(screen.getByTestId('filter-not-active-status')).toBeInTheDocument()
     expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
+    expect(screen.getByText('Recent Arrivals')).toBeInTheDocument()
     expect(screen.getByTestId('filter-with-grokipedia')).toBeInTheDocument()
   })
 
@@ -26,7 +27,6 @@ describe('BookFilters', () => {
     expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-without-free-text-urls')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-not-active-status')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('filter-most-recent')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-with-grokipedia')).not.toBeInTheDocument()
     expect(screen.queryByTestId('book-source-filter-chips')).not.toBeInTheDocument()
 
@@ -34,5 +34,7 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-electronic')).toBeInTheDocument()
     expect(screen.getByTestId('filter-free-text')).toBeInTheDocument()
     expect(screen.getByTestId('filter-audio')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
+    expect(screen.getByText('Recent Arrivals')).toBeInTheDocument()
   })
 })

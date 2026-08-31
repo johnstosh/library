@@ -39,7 +39,7 @@ export function LoanFilters({ chips, onToggle }: LoanFiltersProps) {
         dataTest="filter-has-photo"
       />
       <FilterChip
-        label="Most Recent Day"
+        label="Recent Arrivals"
         active={chips.mostRecent}
         onClick={() => onToggle('mostRecent')}
         tooltip="Only loans checked out on the most recent checkout day"

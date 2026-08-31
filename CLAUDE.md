@@ -224,7 +224,7 @@ See `feature-design-loc.md` for complete details.
 - Marc4J for LOC call number lookup from ISBN
 - BYU CallNumber for proper LOC sorting
 - Individual "Lookup" button per book in table
-- Books can be filtered by "Without LOC" or "Most Recent Day"
+- Books can be filtered by "Without LOC" or "Recent Arrivals"
 
 ### Import/Export
 See `feature-design-import-export.md` for complete details.

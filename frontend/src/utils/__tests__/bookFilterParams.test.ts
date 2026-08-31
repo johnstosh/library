@@ -23,7 +23,7 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('freeText')).toBe(true)
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutLoc')).toBe(false)
-    expect(isSearchVisibleChip('mostRecent')).toBe(false)
+    expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('notActiveStatus')).toBe(false)
     expect(SEARCH_VISIBLE_CHIPS).not.toContain('withGrokipedia')
   })
@@ -57,22 +57,22 @@ describe('chipsFromSearchParams search mode', () => {
     const result = chipsFromSearchParams(params, 'search')
     expect(result.inLibrary).toBe(true)
     expect(result.withoutLoc).toBe(false)
-    expect(result.mostRecent).toBe(false)
+    expect(result.mostRecent).toBe(true)
   })
 })
 
 describe('chipsFromSearchParams books mode', () => {
-  it('defaults Most Recent Day on when the URL is empty', () => {
+  it('defaults Recent Arrivals on when the URL is empty', () => {
     expect(chipsFromSearchParams(new URLSearchParams(), 'books').mostRecent).toBe(true)
   })
 
-  it('turns Most Recent Day off when mostRecent=false', () => {
+  it('turns Recent Arrivals off when mostRecent=false', () => {
     expect(
       chipsFromSearchParams(new URLSearchParams('mostRecent=false'), 'books').mostRecent,
     ).toBe(false)
   })
 
-  it('turns Most Recent Day off when another chip, labels, or q is present', () => {
+  it('turns Recent Arrivals off when another chip, labels, or q is present', () => {
     expect(chipsFromSearchParams(new URLSearchParams('withoutLoc=true'), 'books').mostRecent).toBe(
       false,
     )
@@ -117,6 +117,7 @@ describe('bookFilterParamsForUrl', () => {
       q: 'Augustine',
       labels: 'fiction',
       inLib: 'true',
+      mostRecent: 'true',
       bookPage: '2',
       authorPage: '1',
     })
@@ -145,6 +146,16 @@ describe('booksPathFromFilters', () => {
         q: 'Summa',
       }),
     ).toBe('/books?q=Summa&labels=classic&inLib=true')
+  })
+
+  it('does not copy Search Recent Arrivals off-state onto Books intake', () => {
+    expect(
+      booksPathFromFilters({
+        chips: chips({ mostRecent: false }),
+        labels: [],
+        q: '',
+      }),
+    ).toBe('/books')
   })
 })
 

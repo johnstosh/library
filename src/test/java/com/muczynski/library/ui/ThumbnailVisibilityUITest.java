@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Regression test for thumbnail visibility on the Books page.
  * Verifies that thumbnails remain visible after loading on the
- * default "Most Recent Day" view without any user interaction.
+ * default "Recent Arrivals" view without any user interaction.
  * Guards against the bug where thumbnails would disappear after
  * a few seconds due to blob URL lifecycle or refetch cascade issues.
  */
@@ -110,7 +110,7 @@ public class ThumbnailVisibilityUITest {
     }
 
     @Test
-    @DisplayName("Thumbnails should still be visible after waiting 10 seconds on the default Most Recent Day view")
+    @DisplayName("Thumbnails should still be visible after waiting 10 seconds on the default Recent Arrivals view")
     void testThumbnailsRemainVisibleAfterWaiting() {
         // Capture all console messages and network requests for diagnostics
         List<String> consoleLogs = new ArrayList<>();
@@ -122,7 +122,7 @@ public class ThumbnailVisibilityUITest {
             }
         });
 
-        // Most Recent Day starts on; all 5 books were added today so they appear.
+        // Recent Arrivals starts on; all 5 books were added today so they appear.
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Wait for the book titles to appear

@@ -50,7 +50,7 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 interface AuthorFiltersProps {
   chips: AuthorChipFilters
   onToggle: (chip: keyof AuthorChipFilters) => void
-  /** Authors page: Most Recent Day cannot be combined with other filters. */
+  /** Authors page: Recent Arrivals cannot be combined with other filters. */
   mostRecentDisabled?: boolean
 }
 
@@ -118,12 +118,12 @@ export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: A
 
       <div className="flex flex-wrap gap-2">
         <FilterChip
-          label="Most Recent Day"
+          label="Recent Arrivals"
           active={chips.mostRecent && !mostRecentDisabled}
           onClick={() => onToggle('mostRecent')}
           tooltip={
             mostRecentDisabled
-              ? 'Most Recent Day cannot be combined with other filters. Turn the others off to use it.'
+              ? 'Recent Arrivals cannot be combined with other filters. Turn the others off to use it.'
               : 'Only authors of books added on the most recent day'
           }
           dataTest="filter-most-recent"

@@ -32,7 +32,7 @@ export type LoansChips = LoanChipFilters
 export type UsersChips = UserChipFilters
 export type ApplicationsChips = ApplicationChipFilters
 
-// Most Recent Day starts on so the authors list hits GET /authors/most-recent-day
+// Recent Arrivals starts on so the authors list hits GET /authors/most-recent-day
 // instead of GET /authors/summaries. That filter endpoint is a much smaller query
 // and is the fast path for the default authors list. Books chips live in the
 // /books URL (see bookFilterParams.ts), not in this store.

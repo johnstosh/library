@@ -9,25 +9,25 @@ describe('authorsChips defaults', () => {
     useUiStore.getState().clearAuthorsChips()
   })
 
-  it('turns Most Recent Day on so the authors list uses the faster backend', () => {
+  it('turns Recent Arrivals on so the authors list uses the faster backend', () => {
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(true)
     expect(defaultAuthorChipFilters.mostRecent).toBe(false)
   })
 
-  it('turns Most Recent Day off when another chip is turned on', () => {
+  it('turns Recent Arrivals off when another chip is turned on', () => {
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     expect(useUiStore.getState().authorsChips.withoutDescription).toBe(true)
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(false)
   })
 
-  it('restores Most Recent Day when the last other chip is turned off', () => {
+  it('restores Recent Arrivals when the last other chip is turned off', () => {
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     expect(useUiStore.getState().authorsChips.withoutDescription).toBe(false)
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(true)
   })
 
-  it('keeps Most Recent Day off while any other chip remains on', () => {
+  it('keeps Recent Arrivals off while any other chip remains on', () => {
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     useUiStore.getState().toggleAuthorsChip('zeroBooks')
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
@@ -35,7 +35,7 @@ describe('authorsChips defaults', () => {
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(false)
   })
 
-  it('does not turn Most Recent Day on while other filters are active', () => {
+  it('does not turn Recent Arrivals on while other filters are active', () => {
     useUiStore.getState().toggleAuthorsChip('withoutDescription')
     useUiStore.getState().toggleAuthorsChip('mostRecent')
     expect(useUiStore.getState().authorsChips.mostRecent).toBe(false)

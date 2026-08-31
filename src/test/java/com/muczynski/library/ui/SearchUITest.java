@@ -111,7 +111,7 @@ public class SearchUITest {
         // Search button is ENABLED even with empty input (blank search is allowed)
         assertThat(searchButton).isEnabled();
 
-        // Discovery chips only — cataloger chips belong on Books
+        // Discovery chips (including Recent Arrivals) — cataloger chips belong on Books
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
@@ -125,7 +125,8 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-electronic']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
-        assertThat(page.locator("[data-test='filter-most-recent']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
+        assertThat(page.locator("[data-test='filter-most-recent']")).containsText("Recent Arrivals");
         assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).hasCount(0);
@@ -151,7 +152,7 @@ public class SearchUITest {
             assertThat(mobilePage.locator("[data-test='filter-without-genres']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).hasCount(0);
-            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-most-recent']")).isVisible();
 
             assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
             assertThat(mobilePage.locator("[data-test='filter-free-text']")).isVisible();
@@ -519,21 +520,40 @@ public class SearchUITest {
         Locator elecChip     = page.locator("[data-test='filter-electronic']");
         Locator freeTextChip = page.locator("[data-test='filter-free-text']");
         Locator audioChip    = page.locator("[data-test='filter-audio']");
+        Locator recentChip   = page.locator("[data-test='filter-most-recent']");
 
         assertThat(inLibChip).isVisible();
         assertThat(elecChip).isVisible();
         assertThat(freeTextChip).isVisible();
         assertThat(audioChip).isVisible();
+        assertThat(recentChip).isVisible();
 
-        Assertions.assertNotNull(inLibChip.getAttribute("title"), "In-library chip should have a tooltip");
-        Assertions.assertNotNull(elecChip.getAttribute("title"), "Electronic chip should have a tooltip");
-        Assertions.assertNotNull(freeTextChip.getAttribute("title"), "Free text chip should have a tooltip");
-        Assertions.assertNotNull(audioChip.getAttribute("title"), "Audio chip should have a tooltip");
+        assertThat(page.locator("[data-test='filter-in-library-info']")).isVisible();
+        assertThat(page.locator("[data-test='filter-electronic-info']")).isVisible();
+        assertThat(page.locator("[data-test='filter-free-text-info']")).isVisible();
+        assertThat(page.locator("[data-test='filter-audio-info']")).isVisible();
+        assertThat(page.locator("[data-test='filter-most-recent-info']")).isVisible();
 
         assertThat(inLibChip).containsText("In-library materials");
         assertThat(elecChip).containsText("Electronic resource");
         assertThat(freeTextChip).containsText("Has free online text");
         assertThat(audioChip).containsText("Has free online audio");
+        assertThat(recentChip).containsText("Recent Arrivals");
+    }
+
+    @Test
+    @DisplayName("Activating Recent Arrivals filter chip updates URL")
+    void testRecentArrivalsFilterChipUpdatesUrl() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+        page.click("[data-test='filter-most-recent']");
+        page.waitForURL(url -> url.contains("mostRecent=true"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        Assertions.assertTrue(page.url().contains("mostRecent=true"),
+                "URL should contain mostRecent=true, got: " + page.url());
+        assertThat(page.locator("[data-test='clear-search']")).isVisible();
     }
 
     @Test

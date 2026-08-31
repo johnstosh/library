@@ -52,10 +52,10 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 interface BookFiltersProps {
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
-  /** Books page: Most Recent Day cannot be combined with other filters. */
+  /** Books page: Recent Arrivals cannot be combined with other filters. */
   mostRecentDisabled?: boolean
   showAvailabilityFilters?: boolean
-  /** Search page: hide cataloger-only chips (Most Recent, Without *, Not Active). */
+  /** Search page: hide cataloger-only chips (Without *, Not Active). */
   showCatalogerFilters?: boolean
 }
 
@@ -161,24 +161,25 @@ export function BookFilters({
           tooltip="Only books with a free LibriVox audio recording"
           dataTest="filter-audio"
         />
-      </div>
-
-      {showCatalogerFilters && (
-      <div className="flex flex-wrap gap-2" data-test="book-source-filter-chips">
-        {/* Defaults on so BooksPage can call GET /books/most-recent-day. Forced off
-            and disabled when any other filter is on — those need the full catalog. */}
+        {/* Shown to patrons on Search as well as on Books. Defaults on so BooksPage
+            can call GET /books/most-recent-day. Forced off and disabled on Books when
+            any other filter is on — those need the full catalog. */}
         <FilterChip
-          label="Most Recent Day"
+          label="Recent Arrivals"
           active={chips.mostRecent && !mostRecentDisabled}
           onClick={() => toggle('mostRecent')}
           tooltip={
             mostRecentDisabled
-              ? 'Most Recent Day cannot be combined with other filters. Turn the others off to use it.'
+              ? 'Recent Arrivals cannot be combined with other filters. Turn the others off to use it.'
               : 'Only books added on the most recent day (or with a temporary date-format title)'
           }
           dataTest="filter-most-recent"
           disabled={mostRecentDisabled}
         />
+      </div>
+
+      {showCatalogerFilters && (
+      <div className="flex flex-wrap gap-2" data-test="book-source-filter-chips">
         <FilterChip
           label="Without LOC"
           active={chips.withoutLoc}

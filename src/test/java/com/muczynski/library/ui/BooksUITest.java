@@ -333,11 +333,11 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should show the initial book on the default Most Recent Day view")
+    @DisplayName("Should show the initial book on the default Recent Arrivals view")
     void testNoChipsShowAllBooks() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // Recent Arrivals starts on (faster /books/most-recent-day backend).
         // Initial Book uses CURRENT_TIMESTAMP so it appears in that set.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
     }
@@ -356,18 +356,18 @@ public class BooksUITest {
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
         // under the "Without LOC" chip.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-        // Most Recent Day cannot be combined with other filters
+        // Recent Arrivals cannot be combined with other filters
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
         Assertions.assertTrue(page.url().contains("withoutLoc=true"),
                 "URL should contain withoutLoc=true, got: " + page.url());
     }
 
     @Test
-    @DisplayName("Should filter books by 'Most Recent Day' chip")
+    @DisplayName("Should filter books by 'Recent Arrivals' chip")
     void testFilterMostRecent() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Most Recent Day starts on (faster /books/most-recent-day backend).
+        // Recent Arrivals starts on (faster /books/most-recent-day backend).
         // The initial book was added in this test run so it matches.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
@@ -376,7 +376,7 @@ public class BooksUITest {
         page.waitForTimeout(500);
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(5000));
         Assertions.assertTrue(page.url().contains("mostRecent=false"),
-                "Turning Most Recent Day off should write mostRecent=false, got: " + page.url());
+                "Turning Recent Arrivals off should write mostRecent=false, got: " + page.url());
     }
 
     @Test

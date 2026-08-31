@@ -26,7 +26,7 @@ Returns book summaries for books from the most recent 2 days OR books with tempo
 ```
 
 **Use Case:**
-- Books page "Most Recent Day" filter
+- Books page "Recent Arrivals" filter
 - Cache validation: compare lastModified with cached data, fetch only changed books
 
 ---

@@ -6,8 +6,8 @@ import type { BookDto } from '@/types/dtos'
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
- * Row 2: inLibrary, electronic, freeText, audio
- * Row 3: mostRecent, withoutLoc, withoutGrokipedia, withGrokipedia,
+ * Row 2: inLibrary, electronic, freeText, audio, mostRecent
+ * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, notActiveStatus, withoutFreeTextUrls
  *
  * notActiveStatus is special and always constrains:
@@ -75,7 +75,7 @@ function isBlank(value: string | null | undefined): boolean {
 /**
  * Apply all chip filters to a book list (AND logic).
  * A book must satisfy every active chip, plus the always-on notActiveStatus constraint.
- * "Most Recent Day" matches dateAddedToLibrary on the most recent day UTC
+ * "Recent Arrivals" matches dateAddedToLibrary on the most recent day UTC
  * (cutoff = UTC start of max-1 day) or a temporary date-format title.
  */
 export function applyChipFilters<T extends Pick<
