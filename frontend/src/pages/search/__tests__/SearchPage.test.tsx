@@ -78,6 +78,16 @@ function renderSearch(path = '/search?q=Summa') {
   )
 }
 
+describe('SearchPage header', () => {
+  it('tells patrons they can search by name or browse with filters', () => {
+    renderSearch('/search')
+
+    expect(
+      screen.getByText(/Search for books and authors by title or name\. Use the filters to browse\./),
+    ).toBeInTheDocument()
+  })
+})
+
 describe('SearchPage covers', () => {
   it('shows book and author thumbnails the same way the Books table does', () => {
     renderSearch()
