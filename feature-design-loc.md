@@ -140,7 +140,9 @@ The application can automatically discover Grokipedia article URLs for books and
 ### URL Generation
 - Grokipedia URLs follow the pattern: `https://grokipedia.com/page/{Name_With_Underscores}`
 - Spaces in book titles or author names are converted to underscores
+- Book titles use `Book.stripCopySuffix` first so catalog copy numbers (`", c. 3"`) are not part of the URL
 - Example: "Little Women" → `https://grokipedia.com/page/Little_Women`
+- Example: "Catechism of the Catholic Church, c. 3" → `https://grokipedia.com/page/Catechism_of_the_Catholic_Church`
 - Example: "Louisa May Alcott" → `https://grokipedia.com/page/Louisa_May_Alcott`
 
 ### Quick lookup

@@ -106,6 +106,51 @@ class GrokipediaLookupServiceTest {
     }
 
     @Test
+    void lookupBook_stripsCopySuffixBeforeGeneratingUrl() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Catechism of the Catholic Church, c. 3");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Catechism_of_the_Catholic_Church"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Catechism_of_the_Catholic_Church", result.getGrokipediaUrl());
+        assertEquals("Catechism of the Catholic Church, c. 3", result.getName());
+        verify(restTemplate, never()).exchange(
+                eq("https://grokipedia.com/page/Catechism_of_the_Catholic_Church,_c._3"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class));
+    }
+
+    @Test
+    void lookupBook_slow_asksGrokWithTitleWithoutCopySuffix() {
+        Book book = bookWithAuthor(1L, "Catechism of the Catholic Church, c. 3", "Catholic Church");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook("Catechism of the Catholic Church", "Catholic Church"))
+                .thenReturn(List.of());
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        grokipediaLookupService.lookupBook(1L, true);
+
+        verify(askGrok).suggestGrokipediaUrlsForBook("Catechism of the Catholic Church", "Catholic Church");
+        verify(askGrok, never()).suggestGrokipediaUrlsForBook(
+                eq("Catechism of the Catholic Church, c. 3"), any());
+    }
+
+    @Test
     void lookupBook_urlNotFound() {
         Book book = new Book();
         book.setId(1L);
@@ -357,7 +402,7 @@ class GrokipediaLookupServiceTest {
         author.setId(1L);
         author.setName("Louisa May Alcott");
         Book related = new Book();
-        related.setTitle("Little Women");
+        related.setTitle("Little Women, c. 2");
         author.getBooks().add(related);
 
         when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));

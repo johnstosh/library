@@ -157,7 +157,8 @@ public class GrokipediaLookupService {
                     .build();
         }
 
-        String usualUrl = generateGrokipediaUrl(title);
+        String lookupTitle = Book.stripCopySuffix(title);
+        String usualUrl = generateGrokipediaUrl(lookupTitle);
         if (checkUrlExists(usualUrl)) {
             return saveBookUrl(book, title, usualUrl);
         }
@@ -175,7 +176,7 @@ public class GrokipediaLookupService {
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
         List<String> grokUrls;
         try {
-            grokUrls = askGrok.suggestGrokipediaUrlsForBook(title, authorName);
+            grokUrls = askGrok.suggestGrokipediaUrlsForBook(lookupTitle, authorName);
         } catch (Exception e) {
             log.error("Grok Grokipedia lookup failed for book {}: {}", book.getId(), e.getMessage());
             return GrokipediaLookupResultDto.builder()
@@ -331,7 +332,7 @@ public class GrokipediaLookupService {
         }
         for (Book book : author.getBooks()) {
             if (book != null && book.getTitle() != null && !book.getTitle().isBlank()) {
-                return book.getTitle();
+                return Book.stripCopySuffix(book.getTitle());
             }
         }
         return null;
