@@ -214,8 +214,9 @@ public class AskGrok {
         String prompt = String.format(
                 "This is in regard to authors and books.\n" +
                 "Find Grokipedia article URLs for the book \"%s\" by %s.\n" +
+                "Disambiguation in the URL (for example a parenthetical like (novel)) may or may not be necessary.\n" +
                 "Respond in JSON format with nothing before or after the JSON.\n" +
-                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Little_Women\"]",
+                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/The_Song_of_Bernadette_(novel)\"]",
                 title,
                 authorLabel
         );
@@ -238,8 +239,9 @@ public class AskGrok {
         String prompt = String.format(
                 "This is in regard to authors and books.\n" +
                 "Find Grokipedia article URLs for the author %s%s.\n" +
+                "Disambiguation in the URL (for example a parenthetical like (writer)) may or may not be necessary.\n" +
                 "Respond in JSON format with nothing before or after the JSON.\n" +
-                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Louisa_May_Alcott\"]",
+                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Louisa_May_Alcott_(writer)\"]",
                 authorName,
                 bookContext
         );

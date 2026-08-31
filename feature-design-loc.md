@@ -152,7 +152,7 @@ The application can automatically discover Grokipedia article URLs for books and
 
 ### Slow lookup
 1. Same generated-URL check as quick lookup. A 2xx result is saved and lookup stops (Grok is not called).
-2. Ask Grok for candidate Grokipedia URLs. The prompt asks for a JSON array of URL strings with nothing before or after the JSON, states that this is about authors and books, and includes the corresponding author for a book or a corresponding book for an author.
+2. Ask Grok for candidate Grokipedia URLs. The prompt asks for a JSON array of URL strings with nothing before or after the JSON, states that this is about authors and books, notes that URL disambiguation (for example `(novel)`) may or may not be necessary, includes a disambiguated example, and includes the corresponding author for a book or a corresponding book for an author.
 3. HEAD-check each candidate. Keep 2xx URLs and save the first working URL. Discard 4xx URLs.
 4. If no working URL remains, save `"-"` in the database to mean N/A. `"-"` is only saved when there are no working URLs; it is not saved for individual 4xx candidates when another URL worked, and it is not saved if the Grok call itself failed.
 

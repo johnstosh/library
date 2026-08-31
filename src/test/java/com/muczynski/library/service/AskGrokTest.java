@@ -356,7 +356,8 @@ public class AskGrokTest {
         assertTrue(prompt.contains("Little Women"));
         assertTrue(prompt.contains("Louisa May Alcott"));
         assertTrue(prompt.contains("nothing before or after the JSON"));
-        assertTrue(prompt.contains("[\"https://grokipedia.com/page/Little_Women\"]"));
+        assertTrue(prompt.contains("may or may not be necessary"));
+        assertTrue(prompt.contains("[\"https://grokipedia.com/page/The_Song_of_Bernadette_(novel)\"]"));
     }
 
     @Test
@@ -399,6 +400,8 @@ public class AskGrokTest {
         assertTrue(prompt.contains("Louisa May Alcott"));
         assertTrue(prompt.contains("Little Women"));
         assertTrue(prompt.contains("nothing before or after the JSON"));
+        assertTrue(prompt.contains("may or may not be necessary"));
+        assertTrue(prompt.contains("[\"https://grokipedia.com/page/Louisa_May_Alcott_(writer)\"]"));
     }
 
     @Test
