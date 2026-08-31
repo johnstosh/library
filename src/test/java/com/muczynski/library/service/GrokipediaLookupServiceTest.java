@@ -430,6 +430,42 @@ class GrokipediaLookupServiceTest {
     }
 
     @Test
+    void lookupAuthor_slow_skipsSearchUrlsAndKeepsPageUrls() {
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Clive Staples Lewis");
+
+        when(authorRepository.findByIdWithBooks(1L)).thenReturn(Optional.of(author));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Clive_Staples_Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForAuthor("Clive Staples Lewis", null))
+                .thenReturn(List.of(
+                        "https://grokipedia.com/search?q=Clive Staples Lewis",
+                        "https://grokipedia.com/page/C._S._Lewis"));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/C._S._Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(authorRepository.save(any(Author.class))).thenReturn(author);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupAuthor(1L, true);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/C._S._Lewis", result.getGrokipediaUrl());
+        verify(restTemplate, never()).exchange(
+                eq("https://grokipedia.com/search?q=Clive Staples Lewis"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class));
+    }
+
+    @Test
     void lookupAuthor_slow_savesDashOnlyWhenNoUrlsWork() {
         Author author = new Author();
         author.setId(1L);

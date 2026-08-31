@@ -319,6 +319,9 @@ public class GrokipediaLookupService {
                 continue;
             }
             String url = candidate.trim();
+            if (!isGrokipediaPageUrl(url)) {
+                continue;
+            }
             if (checkUrlExists(url)) {
                 return url;
             }
@@ -336,6 +339,10 @@ public class GrokipediaLookupService {
             }
         }
         return null;
+    }
+
+    static boolean isGrokipediaPageUrl(String url) {
+        return url.contains("grokipedia.com/page/");
     }
 
     /**

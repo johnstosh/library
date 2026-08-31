@@ -233,18 +233,34 @@ public class AskGrok {
      * The model must reply with a JSON array of URL strings and nothing else.
      */
     public List<String> suggestGrokipediaUrlsForAuthor(String authorName, String bookTitle) {
-        String bookContext = bookTitle != null && !bookTitle.isBlank()
-                ? " known for the book \"" + bookTitle + "\""
-                : "";
-        String prompt = String.format(
-                "This is in regard to authors and books.\n" +
-                "Find Grokipedia article URLs for the author %s%s.\n" +
-                "Disambiguation in the URL (for example a parenthetical like (writer)) may or may not be necessary.\n" +
-                "Respond in JSON format with nothing before or after the JSON.\n" +
-                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Louisa_May_Alcott_(writer)\"]",
-                authorName,
-                bookContext
-        );
+        String goalSubject = bookTitle != null && !bookTitle.isBlank()
+                ? authorName + ", known for the book \"" + bookTitle + "\""
+                : authorName;
+        String searchQuery = bookTitle != null && !bookTitle.isBlank()
+                ? authorName + " " + bookTitle
+                : authorName;
+        String prompt = """
+                This task is about authors and books.
+
+                Goal: find Grokipedia article URL(s) for the author %s.
+
+                Procedure:
+                1. Treat Grokipedia search as the source of truth.
+                   Search URL: https://grokipedia.com/search?q=%s
+                2. Prefer the primary biographical article about the person, not a book article, bibliography, course, or compilation unless no person page exists.
+                3. Grokipedia slugs are inconsistent. Common patterns:
+                   - C._S._Lewis
+                   - CS_Lewis
+                   - C_S_Lewis
+                   - First_Last
+                   - First_Last_(writer) or (author) or (book)
+                4. If you cannot verify a live page, return the Grokipedia search URL plus the best candidate page URLs rather than inventing a single slug.
+                5. Do not invent Wikipedia-style slugs unless they also appear in Grokipedia search results.
+
+                Respond in JSON only, with nothing before or after the JSON.
+                Return a JSON array of URL strings, most relevant first.
+                Example: ["https://grokipedia.com/page/C._S._Lewis"]
+                """.formatted(goalSubject, searchQuery);
         String response = askQuestion(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
