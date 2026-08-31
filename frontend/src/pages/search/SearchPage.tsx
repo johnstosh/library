@@ -158,69 +158,71 @@ export function SearchPage() {
       />
 
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Enter book title or author name..."
-              data-test="search-input"
-              className="text-lg"
+      <PageCard padding={false} className="mb-8">
+        <form onSubmit={handleSearch} className="p-4 space-y-3">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Enter book title or author name..."
+                data-test="search-input"
+                className="text-lg"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={isLoading}
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="search-button"
+            >
+              Search
+            </Button>
+            {(hasSearched || hasFilters) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={handleClear}
+                data-test="clear-search"
+              >
+                Clear
+              </Button>
+            )}
+            {isLibrarian && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={handleOpenInBooks}
+                leftIcon={<PiBooks />}
+                data-test="open-in-books"
+              >
+                Open in Books
+              </Button>
+            )}
+          </div>
+
+          <div data-test="search-filter-chips">
+            <BookFilters
+              chips={filters}
+              onToggle={handleFilterToggle}
+              showAvailabilityFilters
+              showCatalogerFilters={false}
             />
           </div>
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={isLoading}
-            leftIcon={<PiMagnifyingGlass />}
-            data-test="search-button"
-          >
-            Search
-          </Button>
-          {(hasSearched || hasFilters) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              onClick={handleClear}
-              data-test="clear-search"
-            >
-              Clear
-            </Button>
-          )}
-          {isLibrarian && (
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={handleOpenInBooks}
-              leftIcon={<PiBooks />}
-              data-test="open-in-books"
-            >
-              Open in Books
-            </Button>
-          )}
-        </div>
 
-        <div className="mt-4" data-test="search-filter-chips">
-          <BookFilters
-            chips={filters}
-            onToggle={handleFilterToggle}
-            showAvailabilityFilters
-            showCatalogerFilters={false}
+          {/* Label Filter Buttons */}
+          <BookLabelFilters
+            selectedLabels={selectedLabels}
+            onToggleLabel={handleToggleLabel}
+            onClearLabels={handleClearLabels}
           />
-        </div>
-
-        {/* Label Filter Buttons */}
-        <BookLabelFilters
-          selectedLabels={selectedLabels}
-          onToggleLabel={handleToggleLabel}
-          onClearLabels={handleClearLabels}
-        />
-      </form>
+        </form>
+      </PageCard>
 
       {/* Loading State */}
       {isLoading && (
