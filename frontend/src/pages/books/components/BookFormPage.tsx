@@ -100,7 +100,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const bookFromFirstPhoto = useBookFromFirstPhoto()
   const titleAuthorFromPhoto = useTitleAuthorFromPhoto()
   const bookFromTitleAuthor = useBookFromTitleAuthor()
-  const lookupGrokipedia = useLookupSingleBookGrokipedia()
+  const lookupGrokipediaQuick = useLookupSingleBookGrokipedia()
+  const lookupGrokipediaSlow = useLookupSingleBookGrokipedia()
   const lookupFreeText = useLookupSingleFreeText()
   const lookupGenres = useLookupGenres()
   const lookupYdl = useLookupSingleYdl()
@@ -368,17 +369,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
-  const handleGrokipediaLookup = async () => {
+  const handleGrokipediaLookup = async (slow: boolean) => {
     if (!book?.id) return
 
     setError('')
     setSuccessMessage('')
 
+    const lookup = slow ? lookupGrokipediaSlow : lookupGrokipediaQuick
     try {
-      const result = await lookupGrokipedia.mutateAsync(book.id)
+      const result = await lookup.mutateAsync({ bookId: book.id, slow })
       setGrokipediaResults([result])
       setShowGrokipediaResults(true)
-      if (result.success && result.grokipediaUrl) {
+      if (result.grokipediaUrl != null) {
         setFormData({ ...formData, grokipediaUrl: result.grokipediaUrl })
         setHasUnsavedChanges(true)
       }
@@ -665,7 +667,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
-    lookupGrokipedia.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
+    lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
     lookupYdl.isPending || lookupEmu.isPending || lookupLoc.isPending
 
   return (
@@ -705,13 +707,25 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
+              onClick={() => handleGrokipediaLookup(false)}
+              isLoading={lookupGrokipediaQuick.isPending}
               disabled={isOperationPending || isLoading}
               leftIcon={<GrokipediaIcon />}
-              data-test="book-operation-grokipedia"
+              data-test="book-operation-grokipedia-quick"
             >
-              Find Grokipedia URL
+              Quick Grokipedia lookup
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleGrokipediaLookup(true)}
+              isLoading={lookupGrokipediaSlow.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<GrokipediaIcon />}
+              data-test="book-operation-grokipedia-slow"
+            >
+              Slow Grokipedia lookup
             </Button>
             <Button
               type="button"
@@ -923,8 +937,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-detailed-description"
         />
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[12rem]">
             <Input
               label="Grokipedia URL"
               value={formData.grokipediaUrl}
@@ -934,19 +948,34 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             />
           </div>
           {isEditing && isLibrarian && (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
-              disabled={isOperationPending || isLoading}
-              leftIcon={<GrokipediaIcon />}
-              data-test="book-field-lookup-grokipedia"
-              className="mb-0"
-            >
-              Find Grokipedia URL
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(false)}
+                isLoading={lookupGrokipediaQuick.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="book-field-lookup-grokipedia-quick"
+                className="mb-0"
+              >
+                Quick lookup
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(true)}
+                isLoading={lookupGrokipediaSlow.isPending}
+                disabled={isOperationPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="book-field-lookup-grokipedia-slow"
+                className="mb-0"
+              >
+                Slow lookup
+              </Button>
+            </>
           )}
         </div>
 

@@ -6,7 +6,7 @@ import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
-import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
 import { formatBookLabel } from './components/BookLabelFilters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
@@ -227,7 +227,7 @@ export function BookViewPage() {
                   <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
-              {book.grokipediaUrl && (
+              {isValidUrl(book.grokipediaUrl) && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
                   <a

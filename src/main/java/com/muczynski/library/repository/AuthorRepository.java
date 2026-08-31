@@ -119,7 +119,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE NOT EXISTS (SELECT 1 FROM Book b WHERE b.author = a)")
     List<AuthorSummaryProjection> findSummariesWithZeroBooks();
 
-    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.grokipediaUrl IS NULL OR a.grokipediaUrl = ''")
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.grokipediaUrl IS NULL OR a.grokipediaUrl = '' OR a.grokipediaUrl = '-'")
     List<AuthorSummaryProjection> findSummariesWithoutGrokipedia();
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.id IN :ids")

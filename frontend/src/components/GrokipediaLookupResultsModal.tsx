@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { EntityLink } from '@/components/ui/EntityLink'
 import type { GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { isValidUrl } from '@/utils/formatters'
 import { PiCheckCircle, PiXCircle } from 'react-icons/pi'
 
 interface GrokipediaLookupResultsModalProps {
@@ -97,7 +98,7 @@ export function GrokipediaLookupResultsModal({
                     )}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-primary-600">
-                    {result.grokipediaUrl ? (
+                    {isValidUrl(result.grokipediaUrl) ? (
                       <a
                         href={result.grokipediaUrl}
                         target="_blank"
@@ -107,7 +108,7 @@ export function GrokipediaLookupResultsModal({
                         {result.grokipediaUrl}
                       </a>
                     ) : (
-                      '—'
+                      result.grokipediaUrl || '—'
                     )}
                   </td>
                   <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-600">

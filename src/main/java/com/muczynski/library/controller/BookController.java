@@ -214,9 +214,11 @@ public class BookController {
 
     @PostMapping("/grokipedia-lookup-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(@RequestBody List<Long> bookIds) {
-        logger.info("Looking up Grokipedia URLs for {} books", bookIds.size());
-        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupBooks(bookIds);
+    public ResponseEntity<List<GrokipediaLookupResultDto>> grokipediaLookupBulk(
+            @RequestBody List<Long> bookIds,
+            @RequestParam(defaultValue = "false") boolean slow) {
+        logger.info("Looking up Grokipedia URLs for {} books (slow={})", bookIds.size(), slow);
+        List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupBooks(bookIds, slow);
         return ResponseEntity.ok(results);
     }
 

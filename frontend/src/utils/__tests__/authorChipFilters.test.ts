@@ -71,6 +71,15 @@ describe('applyAuthorChipFilters', () => {
     expect(applyAuthorChipFilters(sample, chips({ withPhotos: true })).map((a) => a.id)).toEqual([1])
   })
 
+  it('without-grokipedia treats "-" as N/A', () => {
+    const authors = [
+      author({ id: 1, name: 'Has URL', grokipediaUrl: 'https://g' }),
+      author({ id: 2, name: 'N/A', grokipediaUrl: '-' }),
+    ]
+    expect(applyAuthorChipFilters(authors, chips({ withoutGrokipedia: true })).map((a) => a.id)).toEqual([2])
+    expect(applyAuthorChipFilters(authors, chips({ withGrokipedia: true })).map((a) => a.id)).toEqual([1])
+  })
+
   it('YDL/EMU chips keep authors who have that holding on any book', () => {
     const availability = new Map([
       [1, { hasYdlBook: true, hasEmuEbook: true, hasYdlAudio: true }],

@@ -133,7 +133,7 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 # Grokipedia URL Lookup
 
 ## Overview
-The application can automatically discover Grokipedia article URLs for books and authors. This helps populate the `grokipediaUrl` field by checking if a page exists on grokipedia.com.
+The application can automatically discover Grokipedia article URLs for books and authors. This helps populate the `grokipediaUrl` field by checking if a page exists on grokipedia.com. Librarians choose **quick lookup** (generated URL only) or **slow lookup** (generated URL, then Grok, then HTTP checks of Grok's candidates).
 
 ## How It Works
 
@@ -143,16 +143,24 @@ The application can automatically discover Grokipedia article URLs for books and
 - Example: "Little Women" → `https://grokipedia.com/page/Little_Women`
 - Example: "Louisa May Alcott" → `https://grokipedia.com/page/Louisa_May_Alcott`
 
-### URL Validation
-- The service makes a HEAD request to the generated URL
-- If the response is 2xx (success), the URL is saved to the entity
-- If the response is 4xx (not found), the URL is not saved
-- Each lookup attempt logs its result for debugging
+### Quick lookup
+- Checks the generated URL with a HEAD request
+- If the response is 2xx, the URL is saved and lookup stops
+- If the response is 4xx/5xx, nothing is saved
+
+### Slow lookup
+1. Same generated-URL check as quick lookup. A 2xx result is saved and lookup stops (Grok is not called).
+2. Ask Grok for candidate Grokipedia URLs. The prompt asks for a JSON array of URL strings with nothing before or after the JSON, states that this is about authors and books, and includes the corresponding author for a book or a corresponding book for an author.
+3. HEAD-check each candidate. Keep 2xx URLs and save the first working URL. Discard 4xx URLs.
+4. If no working URL remains, save `"-"` in the database to mean N/A. `"-"` is only saved when there are no working URLs; it is not saved for individual 4xx candidates when another URL worked, and it is not saved if the Grok call itself failed.
+
+`"-"` is treated as missing by without-Grokipedia filters and is not shown as a link.
 
 ## Endpoints
 
 ### Books Bulk Lookup
 - Endpoint: `POST /api/books/grokipedia-lookup-bulk`
+- Query: `slow=true` for slow lookup (default `false` = quick)
 - Authorization: LIBRARIAN only
 - Request Body: `List<Long>` (book IDs to look up)
 - Response: `List<GrokipediaLookupResultDto>` with success/failure for each book
@@ -160,6 +168,7 @@ The application can automatically discover Grokipedia article URLs for books and
 
 ### Authors Bulk Lookup
 - Endpoint: `POST /api/authors/grokipedia-lookup-bulk`
+- Query: `slow=true` for slow lookup (default `false` = quick)
 - Authorization: LIBRARIAN only
 - Request Body: `List<Long>` (author IDs to look up)
 - Response: `List<GrokipediaLookupResultDto>` with success/failure for each author
@@ -168,21 +177,22 @@ The application can automatically discover Grokipedia article URLs for books and
 ## Frontend Integration
 
 ### Books Page
-- "Find Grokipedia URLs" button in `BulkActionsToolbar`
+- "Quick Grokipedia lookup" and "Slow Grokipedia lookup" buttons in `BulkActionsToolbar`
 - Visible when books are selected
 - Shows results in `GrokipediaLookupResultsModal`
 - Results show success/failure count and individual results with URLs
 
 ### Authors Page
-- "Find Grokipedia URLs" button in bulk actions bar
+- "Quick Grokipedia lookup" and "Slow Grokipedia lookup" buttons in bulk actions bar
 - Visible when authors are selected
 - Shows results in `GrokipediaLookupResultsModal`
 - Results show success/failure count and individual results with URLs
 
 ## Implementation Files
 - `src/main/java/com/muczynski/library/service/GrokipediaLookupService.java` - Core lookup logic
+- `src/main/java/com/muczynski/library/service/AskGrok.java` - Grok prompt for candidate URLs
 - `src/main/java/com/muczynski/library/dto/GrokipediaLookupResultDto.java` - Result DTO
 - `frontend/src/api/grokipedia-lookup.ts` - API hooks
 - `frontend/src/components/GrokipediaLookupResultsModal.tsx` - Results modal
-- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Books bulk action button
-- `frontend/src/pages/authors/AuthorsPage.tsx` - Authors bulk action button
+- `frontend/src/pages/books/components/BulkActionsToolbar.tsx` - Books bulk action buttons
+- `frontend/src/pages/authors/components/AuthorBulkActionsToolbar.tsx` - Authors bulk action buttons

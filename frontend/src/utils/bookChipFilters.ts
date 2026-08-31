@@ -72,6 +72,11 @@ function isBlank(value: string | null | undefined): boolean {
   return !value || value.trim() === ''
 }
 
+function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  return !trimmed || trimmed === '-'
+}
+
 /**
  * Apply all chip filters to a book list (AND logic).
  * A book must satisfy every active chip, plus the always-on notActiveStatus constraint.
@@ -134,8 +139,8 @@ export function applyChipFilters<T extends Pick<
       }
     }
     if (chips.withoutLoc && !isBlank(book.locNumber)) return false
-    if (chips.withoutGrokipedia && !isBlank(book.grokipediaUrl)) return false
-    if (chips.withGrokipedia && isBlank(book.grokipediaUrl)) return false
+    if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
+    if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
     if (chips.notActiveStatus) {
       if (book.status === 'ACTIVE') return false

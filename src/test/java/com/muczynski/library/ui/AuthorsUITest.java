@@ -113,7 +113,8 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
-        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).not().isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).not().isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).not().isVisible();
     }
 
     @Test
@@ -246,8 +247,10 @@ public class AuthorsUITest {
 
         assertThat(page.locator("[data-test='bulk-generate-missing']")).isVisible();
         assertThat(page.locator("[data-test='bulk-generate-missing']")).containsText("Generate missing data");
-        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).isVisible();
-        assertThat(page.locator("[data-test='bulk-lookup-grokipedia']")).containsText("Find Grokipedia URLs");
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).containsText("Quick Grokipedia lookup");
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).containsText("Slow Grokipedia lookup");
         assertThat(page.locator("[data-test='bulk-delete']")).isVisible();
         assertThat(page.locator("[data-test='bulk-delete']")).containsText("Delete Selected");
     }

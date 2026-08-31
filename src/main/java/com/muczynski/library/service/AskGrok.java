@@ -206,10 +206,56 @@ public class AskGrok {
     }
 
     /**
-     * Parses a JSON array of call-number strings from a model reply and sorts
-     * them alphabetically, ignoring blank entries.
+     * Ask Grok for Grokipedia article URLs for a book, using the author as context.
+     * The model must reply with a JSON array of URL strings and nothing else.
      */
-    static List<String> parseCallNumberArray(String response) {
+    public List<String> suggestGrokipediaUrlsForBook(String title, String authorName) {
+        String authorLabel = authorName != null && !authorName.isBlank() ? authorName : "unknown author";
+        String prompt = String.format(
+                "This is in regard to authors and books.\n" +
+                "Find Grokipedia article URLs for the book \"%s\" by %s.\n" +
+                "Respond in JSON format with nothing before or after the JSON.\n" +
+                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Little_Women\"]",
+                title,
+                authorLabel
+        );
+        String response = askQuestion(prompt);
+        List<String> urls = parseJsonStringArray(response);
+        if (urls.isEmpty()) {
+            log.warn("Could not parse Grokipedia URL array for book \"{}\" by {}: {}", title, authorLabel, response);
+        }
+        return urls;
+    }
+
+    /**
+     * Ask Grok for Grokipedia article URLs for an author, using a book as context.
+     * The model must reply with a JSON array of URL strings and nothing else.
+     */
+    public List<String> suggestGrokipediaUrlsForAuthor(String authorName, String bookTitle) {
+        String bookContext = bookTitle != null && !bookTitle.isBlank()
+                ? " known for the book \"" + bookTitle + "\""
+                : "";
+        String prompt = String.format(
+                "This is in regard to authors and books.\n" +
+                "Find Grokipedia article URLs for the author %s%s.\n" +
+                "Respond in JSON format with nothing before or after the JSON.\n" +
+                "Return a JSON array of URL strings. Example: [\"https://grokipedia.com/page/Louisa_May_Alcott\"]",
+                authorName,
+                bookContext
+        );
+        String response = askQuestion(prompt);
+        List<String> urls = parseJsonStringArray(response);
+        if (urls.isEmpty()) {
+            log.warn("Could not parse Grokipedia URL array for author {}: {}", authorName, response);
+        }
+        return urls;
+    }
+
+    /**
+     * Parses a JSON array of strings from a model reply, ignoring blank entries.
+     * Does not sort; callers that need a specific order must sort themselves.
+     */
+    static List<String> parseJsonStringArray(String response) {
         if (response == null || response.isBlank()) {
             return List.of();
         }
@@ -231,11 +277,20 @@ public class AskGrok {
                     }
                 }
             }
-            cleaned.sort(String.CASE_INSENSITIVE_ORDER);
             return cleaned;
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    /**
+     * Parses a JSON array of call-number strings from a model reply and sorts
+     * them alphabetically, ignoring blank entries.
+     */
+    static List<String> parseCallNumberArray(String response) {
+        List<String> cleaned = new ArrayList<>(parseJsonStringArray(response));
+        cleaned.sort(String.CASE_INSENSITIVE_ORDER);
+        return cleaned;
     }
 
     /**

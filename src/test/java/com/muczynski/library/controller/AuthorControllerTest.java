@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -491,7 +492,7 @@ class AuthorControllerTest {
                 .errorMessage("No Grokipedia page found")
                 .build();
 
-        when(grokipediaLookupService.lookupAuthors(authorIds))
+        when(grokipediaLookupService.lookupAuthors(authorIds, false))
                 .thenReturn(Arrays.asList(result1, result2));
 
         mockMvc.perform(post("/api/authors/grokipedia-lookup-bulk")
@@ -502,6 +503,31 @@ class AuthorControllerTest {
                 .andExpect(jsonPath("$[0].success").value(true))
                 .andExpect(jsonPath("$[0].grokipediaUrl").value("https://grokipedia.com/page/Mark_Twain"))
                 .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void grokipediaLookupBulk_slow() throws Exception {
+        List<Long> authorIds = Arrays.asList(1L);
+
+        GrokipediaLookupResultDto result = GrokipediaLookupResultDto.builder()
+                .authorId(1L)
+                .name("Mark Twain")
+                .success(true)
+                .grokipediaUrl("https://grokipedia.com/page/Mark_Twain")
+                .build();
+
+        when(grokipediaLookupService.lookupAuthors(authorIds, true))
+                .thenReturn(Collections.singletonList(result));
+
+        mockMvc.perform(post("/api/authors/grokipedia-lookup-bulk")
+                        .param("slow", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(authorIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].success").value(true));
+
+        verify(grokipediaLookupService).lookupAuthors(authorIds, true);
     }
 
     @Test

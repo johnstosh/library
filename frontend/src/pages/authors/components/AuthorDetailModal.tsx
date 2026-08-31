@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useAuthor } from '@/api/authors'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, isValidUrl } from '@/utils/formatters'
 import { Spinner } from '@/components/progress/Spinner'
 
 interface AuthorDetailModalProps {
@@ -76,7 +76,7 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
                   <p className="text-gray-900">{author.nationality}</p>
                 </div>
               )}
-              {author.grokipediaUrl && (
+              {isValidUrl(author.grokipediaUrl) && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
                   <a

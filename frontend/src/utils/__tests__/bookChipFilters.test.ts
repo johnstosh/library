@@ -105,10 +105,18 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
+  it('withoutGrokipedia treats "-" as N/A', () => {
+    const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
+    const na = book({ id: 2, grokipediaUrl: '-' })
+    const result = applyChipFilters([withUrl, na], chips({ withoutGrokipedia: true }))
+    expect(result.map((b) => b.id)).toEqual([2])
+  })
+
   it('withGrokipedia keeps books that have a grokipediaUrl', () => {
     const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
     const without = book({ id: 2, grokipediaUrl: '' })
-    const result = applyChipFilters([withUrl, without], chips({ withGrokipedia: true }))
+    const na = book({ id: 3, grokipediaUrl: '-' })
+    const result = applyChipFilters([withUrl, without, na], chips({ withGrokipedia: true }))
     expect(result.map((b) => b.id)).toEqual([1])
   })
 

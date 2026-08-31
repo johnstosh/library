@@ -37,21 +37,26 @@ export function AuthorBulkActionsToolbar({
   const [deleteResults, setDeleteResults] = useState<BulkDeleteResultDto | null>(null)
   const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
   const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
-  const [grokipediaProgress, setGrokipediaProgress] = useState(0)
+  const [grokipediaQuickProgress, setGrokipediaQuickProgress] = useState(0)
+  const [grokipediaSlowProgress, setGrokipediaSlowProgress] = useState(0)
   const [showEnrichmentResults, setShowEnrichmentResults] = useState(false)
   const [enrichmentResults, setEnrichmentResults] = useState<AuthorEnrichmentResultDto[]>([])
   const [enrichmentProgress, setEnrichmentProgress] = useState(0)
 
   const deleteAuthors = useDeleteAuthors()
-  const lookupGrokipedia = useLookupBulkAuthorsGrokipediaWithProgress((completed) => {
-    setGrokipediaProgress(completed)
+  const lookupGrokipediaQuick = useLookupBulkAuthorsGrokipediaWithProgress((completed) => {
+    setGrokipediaQuickProgress(completed)
+  })
+  const lookupGrokipediaSlow = useLookupBulkAuthorsGrokipediaWithProgress((completed) => {
+    setGrokipediaSlowProgress(completed)
   })
   const generateMissing = useGenerateAuthorsMissingDataWithProgress((completed) => {
     setEnrichmentProgress(completed)
   })
 
   const selectedCount = selectedIds.size
-  const isOperationPending = lookupGrokipedia.isPending || generateMissing.isPending || deleteAuthors.isPending
+  const isOperationPending =
+    lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || generateMissing.isPending || deleteAuthors.isPending
 
   const handleBulkDelete = async () => {
     try {
@@ -69,10 +74,15 @@ export function AuthorBulkActionsToolbar({
     }
   }
 
-  const handleGrokipediaLookup = async () => {
-    setGrokipediaProgress(0)
+  const handleGrokipediaLookup = async (slow: boolean) => {
+    if (slow) {
+      setGrokipediaSlowProgress(0)
+    } else {
+      setGrokipediaQuickProgress(0)
+    }
+    const lookup = slow ? lookupGrokipediaSlow : lookupGrokipediaQuick
     try {
-      const results = await lookupGrokipedia.mutateAsync(Array.from(selectedIds))
+      const results = await lookup.mutateAsync({ ids: Array.from(selectedIds), slow })
       setGrokipediaResults(results)
       setShowGrokipediaResults(true)
     } catch (error) {
@@ -138,17 +148,34 @@ export function AuthorBulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
+              onClick={() => handleGrokipediaLookup(false)}
+              isLoading={lookupGrokipediaQuick.isPending}
               disabled={isOperationPending}
               leftIcon={<GrokipediaIcon />}
-              data-test="bulk-lookup-grokipedia"
+              data-test="bulk-lookup-grokipedia-quick"
             >
               {progressLabel(
-                'Find Grokipedia URLs',
-                'Grokipedia...',
-                lookupGrokipedia.isPending,
-                grokipediaProgress,
+                'Quick Grokipedia lookup',
+                'Quick lookup...',
+                lookupGrokipediaQuick.isPending,
+                grokipediaQuickProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleGrokipediaLookup(true)}
+              isLoading={lookupGrokipediaSlow.isPending}
+              disabled={isOperationPending}
+              leftIcon={<GrokipediaIcon />}
+              data-test="bulk-lookup-grokipedia-slow"
+            >
+              {progressLabel(
+                'Slow Grokipedia lookup',
+                'Slow lookup...',
+                lookupGrokipediaSlow.isPending,
+                grokipediaSlowProgress,
                 selectedCount
               )}
             </Button>

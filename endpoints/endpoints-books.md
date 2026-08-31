@@ -91,6 +91,28 @@ Returns book summaries for books without a Grokipedia URL.
 **Use Case:**
 - Books page "Without Grokipedia" filter
 - Identify books that need Grokipedia lookup
+- Includes books whose `grokipediaUrl` is `"-"` (N/A after a slow lookup found no working URL)
+
+---
+
+### POST /api/books/grokipedia-lookup-bulk
+Looks up Grokipedia URLs for selected books.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Query Parameters:**
+- `slow` (boolean, default `false`) — `false` is quick lookup (generated URL only). `true` is slow lookup (generated URL, then Grok candidates, then HTTP checks).
+
+**Request Body:** Array of book IDs
+```json
+[1, 2, 3]
+```
+
+**Response:** Array of `GrokipediaLookupResultDto`
+
+**Behavior:**
+- Quick: HEAD-check `https://grokipedia.com/page/{Title_With_Underscores}`. Save on 2xx; save nothing on 4xx.
+- Slow: same first. If that is not 2xx, ask Grok for a JSON array of URLs (author included as context). Keep 2xx URLs; discard 4xx. Save `"-"` only when no working URL is found.
 
 ---
 

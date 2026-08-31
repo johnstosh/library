@@ -63,7 +63,8 @@ export function BulkActionsToolbar({
   const [showFreeTextResults, setShowFreeTextResults] = useState(false)
   const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
   const [locProgress, setLocProgress] = useState(0)
-  const [grokipediaProgress, setGrokipediaProgress] = useState(0)
+  const [grokipediaQuickProgress, setGrokipediaQuickProgress] = useState(0)
+  const [grokipediaSlowProgress, setGrokipediaSlowProgress] = useState(0)
   const [bookFromImageProgress, setBookFromImageProgress] = useState(0)
   const [freeTextProgress, setFreeTextProgress] = useState(0)
   const [showGenreResults, setShowGenreResults] = useState(false)
@@ -80,8 +81,11 @@ export function BulkActionsToolbar({
   const lookupBulk = useLookupBulkBooksWithProgress((completed) => {
     setLocProgress(completed)
   })
-  const lookupGrokipedia = useLookupBulkBooksGrokipediaWithProgress((completed) => {
-    setGrokipediaProgress(completed)
+  const lookupGrokipediaQuick = useLookupBulkBooksGrokipediaWithProgress((completed) => {
+    setGrokipediaQuickProgress(completed)
+  })
+  const lookupGrokipediaSlow = useLookupBulkBooksGrokipediaWithProgress((completed) => {
+    setGrokipediaSlowProgress(completed)
   })
   const lookupFreeText = useLookupBulkFreeTextWithProgress((completed) => {
     setFreeTextProgress(completed)
@@ -130,10 +134,15 @@ export function BulkActionsToolbar({
     }
   }
 
-  const handleGrokipediaLookup = async () => {
-    setGrokipediaProgress(0)
+  const handleGrokipediaLookup = async (slow: boolean) => {
+    if (slow) {
+      setGrokipediaSlowProgress(0)
+    } else {
+      setGrokipediaQuickProgress(0)
+    }
+    const lookup = slow ? lookupGrokipediaSlow : lookupGrokipediaQuick
     try {
-      const results = await lookupGrokipedia.mutateAsync(Array.from(selectedIds))
+      const results = await lookup.mutateAsync({ ids: Array.from(selectedIds), slow })
       setGrokipediaResults(results)
       setShowGrokipediaResults(true)
     } catch (error) {
@@ -267,17 +276,34 @@ export function BulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleGrokipediaLookup}
-              isLoading={lookupGrokipedia.isPending}
-              disabled={lookupGrokipedia.isPending}
+              onClick={() => handleGrokipediaLookup(false)}
+              isLoading={lookupGrokipediaQuick.isPending}
+              disabled={lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending}
               leftIcon={<GrokipediaIcon />}
-              data-test="bulk-lookup-grokipedia"
+              data-test="bulk-lookup-grokipedia-quick"
             >
               {progressLabel(
-                'Find Grokipedia URLs',
-                'Grokipedia...',
-                lookupGrokipedia.isPending,
-                grokipediaProgress,
+                'Quick Grokipedia lookup',
+                'Quick lookup...',
+                lookupGrokipediaQuick.isPending,
+                grokipediaQuickProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleGrokipediaLookup(true)}
+              isLoading={lookupGrokipediaSlow.isPending}
+              disabled={lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending}
+              leftIcon={<GrokipediaIcon />}
+              data-test="bulk-lookup-grokipedia-slow"
+            >
+              {progressLabel(
+                'Slow Grokipedia lookup',
+                'Slow lookup...',
+                lookupGrokipediaSlow.isPending,
+                grokipediaSlowProgress,
                 selectedCount
               )}
             </Button>

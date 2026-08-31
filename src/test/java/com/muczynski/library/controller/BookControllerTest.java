@@ -35,6 +35,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -469,7 +470,7 @@ class BookControllerTest {
                 .errorMessage("No Grokipedia page found")
                 .build();
 
-        when(grokipediaLookupService.lookupBooks(bookIds))
+        when(grokipediaLookupService.lookupBooks(bookIds, false))
                 .thenReturn(Arrays.asList(result1, result2));
 
         mockMvc.perform(post("/api/books/grokipedia-lookup-bulk")
@@ -480,6 +481,31 @@ class BookControllerTest {
                 .andExpect(jsonPath("$[0].success").value(true))
                 .andExpect(jsonPath("$[0].grokipediaUrl").value("https://grokipedia.com/page/Little_Women"))
                 .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void grokipediaLookupBulk_slow() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L);
+
+        GrokipediaLookupResultDto result = GrokipediaLookupResultDto.builder()
+                .bookId(1L)
+                .name("Little Women")
+                .success(true)
+                .grokipediaUrl("https://grokipedia.com/page/Little_Women")
+                .build();
+
+        when(grokipediaLookupService.lookupBooks(bookIds, true))
+                .thenReturn(Collections.singletonList(result));
+
+        mockMvc.perform(post("/api/books/grokipedia-lookup-bulk")
+                        .param("slow", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].success").value(true));
+
+        verify(grokipediaLookupService).lookupBooks(bookIds, true);
     }
 
     @Test
