@@ -5,7 +5,7 @@ Returns the current authenticated user's information.
 
 **Authentication:** Authenticated users only (`isAuthenticated()`)
 
-**Response:** UserDto with user details including authorities and API keys
+**Response:** UserDto with user details including authorities, API keys, `createdAt` (account creation time; may be null for users created before this field existed), and `lastModified`
 
 ---
 

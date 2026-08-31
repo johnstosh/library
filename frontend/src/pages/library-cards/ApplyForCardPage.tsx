@@ -17,6 +17,7 @@ export function ApplyForCardPage() {
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [notifiedByEmail, setNotifiedByEmail] = useState(false)
 
   const applyForCard = useApplyForCard()
 
@@ -76,6 +77,7 @@ export function ApplyForCardPage() {
       })
 
       console.log('Application submitted successfully!')
+      setNotifiedByEmail(Boolean(email))
       setSuccess(true)
       setFormData({ username: '', password: '', confirmPassword: '', email: '' })
     } catch (err) {
@@ -103,9 +105,10 @@ export function ApplyForCardPage() {
       {success ? (
         <div className="bg-white rounded-lg shadow p-6" data-test="success-container">
           <SuccessMessage message="Application submitted successfully!" data-test="success-message" />
-          <p className="mt-4 text-gray-700">
-            A librarian will review your application. You will be notified when your
-            card is approved.
+          <p className="mt-4 text-gray-700" data-test="application-next-step">
+            {notifiedByEmail
+              ? 'A librarian will review your application. We will email you when your card is approved.'
+              : 'A librarian will review your application. We cannot notify you by email because no address was provided — check back later or ask a librarian.'}
           </p>
         </div>
       ) : (
@@ -198,7 +201,7 @@ export function ApplyForCardPage() {
         <h3 className="text-sm font-medium text-blue-900 mb-2">What happens next?</h3>
         <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
           <li>A librarian will review your application</li>
-          <li>You'll receive an email when approved</li>
+          <li>If you included an email, we will notify you when it is reviewed</li>
           <li>Log in to access your library card</li>
           <li>Start borrowing books!</li>
         </ol>

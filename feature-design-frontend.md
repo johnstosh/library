@@ -745,6 +745,10 @@ All features follow consistent CRUD pattern:
 
 ### Filter Pattern
 
+List pages use the shared `FilterChip` (`frontend/src/components/ui/FilterChip.tsx`). The chip label toggles the filter. The info icon is a separate control: hover or click shows the explanation, and clicking it does not toggle the filter.
+
+Older radio-button filters are no longer used:
+
 Radio buttons for mutually exclusive filters:
 
 ```typescript

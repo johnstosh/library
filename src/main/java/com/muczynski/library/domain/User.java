@@ -56,6 +56,8 @@ public class User implements Serializable {
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
     private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;
 
+    private LocalDateTime createdAt;
+
     private LocalDateTime lastModified;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -66,8 +68,16 @@ public class User implements Serializable {
     )
     private Set<Authority> authorities;
 
-    @PreUpdate
     @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        lastModified = now;
+    }
+
+    @PreUpdate
     protected void onUpdate() {
         lastModified = LocalDateTime.now();
     }

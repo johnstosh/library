@@ -9,6 +9,7 @@ export interface CurrentUser {
   username: string
   authority: UserAuthority
   ssoSubjectId?: string
+  createdAt?: string
 }
 
 interface AuthState {

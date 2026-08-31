@@ -160,6 +160,7 @@ export interface UserDto {
   googlePhotosAlbumId?: string
   lastPhotoTimestamp?: string
   lastModified: string
+  createdAt?: string
 }
 
 // Loan DTOs

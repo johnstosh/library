@@ -152,8 +152,8 @@ Generates and downloads a wallet-sized library card PDF for the current user.
 - 500: PDF generation failed
 
 **Use Case:**
-- Users print their library card for physical wallet
-- PDF can be saved or printed
+- Users download a wallet-sized PDF of their library card
+- The PDF can be saved or printed from the user's PDF viewer
 
 ---
 

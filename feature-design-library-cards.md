@@ -23,7 +23,8 @@ Displays the current user's library card information and allows them to download
 
 **Features**:
 - Display user's name and member ID
-- "Print Card" button to download PDF
+- "Member Since" year from the user's `createdAt` (shows "Member" when the account has no created date)
+- "Download PDF" and "Download All Card Designs" buttons (the files download; they do not open a print dialog)
 - PDF includes custom library branding (logo, colors)
 - Wallet-sized format (2.125" x 3.375")
 
@@ -51,7 +52,10 @@ Public-facing form where prospective patrons can submit library card application
 3. Application submitted to `/api/application/public/register`
 4. Application status set to `PENDING`
 5. User receives confirmation message (page remains on success screen permanently - no redirect)
+   - With email: "We will email you when your card is approved"
+   - Without email: the page says we cannot notify them because no address was provided
 6. Librarian reviews application in Applications page
+7. Pending-application email is sent only when the applicant provided an email (and email notifications are configured)
 
 ### 3. Applications (`/applications`)
 

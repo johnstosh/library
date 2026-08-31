@@ -138,6 +138,17 @@ public class BooksUITest {
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
 
+        Locator filterInfo = page.locator("[data-test='filter-in-library-info']");
+        assertThat(filterInfo).isVisible();
+        String pressedBefore = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
+        filterInfo.click();
+        assertThat(page.locator("[data-test='filter-in-library-tooltip']")).isVisible();
+        assertThat(page.locator("[data-test='filter-in-library-tooltip']"))
+                .containsText("Library of Congress");
+        String pressedAfter = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
+        assert pressedBefore != null && pressedBefore.equals(pressedAfter) :
+                "Clicking filter info should not toggle the filter";
+
         // Stats placeholder holds the bulk-action slot when nothing is selected
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();

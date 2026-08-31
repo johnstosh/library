@@ -144,8 +144,8 @@ export function LoginPage() {
             of the<br />
             Sacred Heart Library System
           </h1>
-          <p className="text-gray-600 text-lg">
-            Welcome to our digital library. Access your borrowed books, renew loans, and discover new reads.
+          <p className="text-gray-600 text-lg" data-test="login-welcome">
+            Welcome to our digital library. Access your borrowed books and discover new reads.
           </p>
         </div>
       </div>

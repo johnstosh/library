@@ -119,6 +119,11 @@ public class MyLibraryCardUITest {
         // Verify page title
         assertThat(page.locator("h1")).containsText("My Library Card");
 
+        // SQL-seeded users have no createdAt, so do not invent a membership year
+        assertThat(page.locator("[data-test='member-since']")).hasText("Member");
+        assertThat(page.locator("[data-test='print-library-card']")).containsText("Download PDF");
+        assertThat(page.locator("[data-test='print-all-library-cards']")).containsText("Download All Card Designs");
+
         // Verify Card Design section heading
         assertThat(page.locator("h2:has-text('Card Design')")).isVisible();
 

@@ -26,5 +26,6 @@ public class UserDto {
     private String email;
     private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
+    private LocalDateTime createdAt;
     private LocalDateTime lastModified;
 }

@@ -121,6 +121,11 @@ public class LoginUITest {
         // Verify page title heading contains library name (right panel branding)
         assertThat(page.locator("h1")).containsText("St. Martin de Porres");
 
+        Locator welcome = page.locator("[data-test='login-welcome']");
+        assertThat(welcome).isVisible();
+        assertThat(welcome).containsText("Access your borrowed books and discover new reads");
+        assertThat(welcome).not().containsText("renew");
+
         // Verify logo image exists (right panel branding)
         Locator logoImage = page.locator("[data-test='login-logo']");
         assertThat(logoImage).isVisible();

@@ -10,6 +10,12 @@ import { useToast } from '@/hooks/useToast'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import type { LibraryCardDesign } from '@/types/dtos'
 
+export function memberSinceLabel(createdAt?: string | null): string {
+  if (!createdAt) return 'Member'
+  const year = new Date(createdAt).getFullYear()
+  return Number.isFinite(year) ? `Member Since ${year}` : 'Member'
+}
+
 export function MyLibraryCardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
@@ -81,7 +87,7 @@ export function MyLibraryCardPage() {
     <div className="max-w-2xl mx-auto">
       <PageHeader
         title="My Library Card"
-        description="View and print your personalized library card"
+        description="View and download your personalized library card"
       />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -91,7 +97,7 @@ export function MyLibraryCardPage() {
             <PiIdentificationCard className="w-16 h-16" />
             <div>
               <h2 className="text-2xl font-bold">Library Card</h2>
-              <p className="text-blue-100">Member Since {new Date().getFullYear()}</p>
+              <p className="text-blue-100" data-test="member-since">{memberSinceLabel(user?.createdAt)}</p>
             </div>
           </div>
 
@@ -122,7 +128,7 @@ export function MyLibraryCardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Print Your Card
+                Download Your Card
               </h3>
               <p className="text-sm text-gray-600">
                 Download a wallet-sized PDF version of your library card
@@ -137,7 +143,7 @@ export function MyLibraryCardPage() {
                 leftIcon={<PiFilePdf />}
                 data-test="print-library-card"
               >
-                Print Card
+                Download PDF
               </Button>
               <Button
                 variant="secondary"
@@ -147,7 +153,7 @@ export function MyLibraryCardPage() {
                 leftIcon={<PiFilePdf />}
                 data-test="print-all-library-cards"
               >
-                Print All Card Designs
+                Download All Card Designs
               </Button>
             </div>
           </div>
