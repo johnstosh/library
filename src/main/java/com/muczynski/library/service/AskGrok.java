@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.text.Normalizer;
 import java.util.*;
 
 @Service
@@ -210,9 +211,11 @@ public class AskGrok {
      * The model must reply with a JSON array of URL strings and nothing else.
      */
     public List<String> suggestGrokipediaUrlsForBook(String title, String authorName) {
-        String goalSubject = authorName != null && !authorName.isBlank()
-                ? "\"" + title + "\" by " + authorName
-                : "\"" + title + "\"";
+        String asciiTitle = toAscii(title);
+        String asciiAuthor = toAscii(authorName);
+        String goalSubject = asciiAuthor != null && !asciiAuthor.isBlank()
+                ? "\"" + asciiTitle + "\" by " + asciiAuthor
+                : "\"" + asciiTitle + "\"";
         String prompt = """
                 This task is about authors and books.
 
@@ -234,7 +237,7 @@ public class AskGrok {
                 Respond in JSON only, with nothing before or after the JSON.
                 Return a JSON array of URL strings, most relevant first.
                 Example: ["https://grokipedia.com/page/The_Song_of_Bernadette_(novel)"]
-                """.formatted(goalSubject, title);
+                """.formatted(goalSubject, asciiTitle);
         String response = askQuestion(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
@@ -248,9 +251,11 @@ public class AskGrok {
      * The model must reply with a JSON array of URL strings and nothing else.
      */
     public List<String> suggestGrokipediaUrlsForAuthor(String authorName, String bookTitle) {
-        String goalSubject = bookTitle != null && !bookTitle.isBlank()
-                ? authorName + ", known for the book \"" + bookTitle + "\""
-                : authorName;
+        String asciiAuthor = toAscii(authorName);
+        String asciiBook = toAscii(bookTitle);
+        String goalSubject = asciiBook != null && !asciiBook.isBlank()
+                ? asciiAuthor + ", known for the book \"" + asciiBook + "\""
+                : asciiAuthor;
         String prompt = """
                 This task is about authors and books.
 
@@ -272,13 +277,42 @@ public class AskGrok {
                 Respond in JSON only, with nothing before or after the JSON.
                 Return a JSON array of URL strings, most relevant first.
                 Example: ["https://grokipedia.com/page/C._S._Lewis"]
-                """.formatted(goalSubject, authorName);
+                """.formatted(goalSubject, asciiAuthor);
         String response = askQuestion(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
             log.warn("Could not parse Grokipedia URL array for author {}: {}", authorName, response);
         }
         return urls;
+    }
+
+    /**
+     * Strip diacritics and fold Latin letters to ASCII, e.g. {@code Karol Józef Wojtyła}
+     * becomes {@code Karol Jozef Wojtyla}. Null is returned unchanged.
+     */
+    static String toAscii(String input) {
+        if (input == null) {
+            return null;
+        }
+        String folded = Normalizer.normalize(input, Normalizer.Form.NFKD)
+                .replace("ł", "l").replace("Ł", "L")
+                .replace("ø", "o").replace("Ø", "O")
+                .replace("đ", "d").replace("Đ", "D")
+                .replace("æ", "ae").replace("Æ", "AE")
+                .replace("œ", "oe").replace("Œ", "OE")
+                .replace("ß", "ss")
+                .replace("ð", "d").replace("Ð", "D")
+                .replace("þ", "th").replace("Þ", "Th")
+                .replace("ı", "i").replace("İ", "I")
+                .replaceAll("\\p{M}+", "");
+        StringBuilder ascii = new StringBuilder(folded.length());
+        for (int i = 0; i < folded.length(); i++) {
+            char c = folded.charAt(i);
+            if (c <= 0x7F) {
+                ascii.append(c);
+            }
+        }
+        return ascii.toString();
     }
 
     /**
