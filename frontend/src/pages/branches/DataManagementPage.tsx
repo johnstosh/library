@@ -5,6 +5,7 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { jobStatusTone } from '@/utils/status'
+import { formatBookLabel } from '@/pages/books/components/BookLabelFilters'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
   exportJsonData,
@@ -529,7 +530,7 @@ export function DataManagementPage() {
                   data-test={`label-count-${label}`}
                   className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
                 >
-                  <span className="text-sm font-medium text-gray-700 truncate mr-2">{label}</span>
+                  <span className="text-sm font-medium text-gray-700 truncate mr-2">{formatBookLabel(label)}</span>
                   <span className={`text-lg font-bold tabular-nums ${count > 0 ? 'text-green-700' : 'text-gray-400'}`}>
                     {count}
                   </span>

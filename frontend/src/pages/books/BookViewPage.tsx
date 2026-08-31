@@ -7,6 +7,7 @@ import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain } from '@/utils/formatters'
+import { formatBookLabel } from './components/BookLabelFilters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
@@ -316,7 +317,7 @@ export function BookViewPage() {
                         shape="rounded"
                         data-test={`book-tag-${tag}`}
                       >
-                        {tag}
+                        {formatBookLabel(tag)}
                       </StatusBadge>
                     ))}
                   </div>

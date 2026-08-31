@@ -28,15 +28,53 @@ export const ALL_BOOK_LABELS = [
 
 export type BookLabel = (typeof ALL_BOOK_LABELS)[number]
 
-const STANDARD_GENRES = new Set<string>(ALL_BOOK_LABELS)
+/** User-facing names for genre chips and badges. Stored values stay as slugs. */
+export const BOOK_LABEL_DISPLAY: Record<BookLabel, string> = {
+  fiction: 'Fiction',
+  'slice-of-life': 'Slice of Life',
+  hagiography: 'Hagiography',
+  saint: 'Saint',
+  fantasy: 'Fantasy',
+  family: 'Family',
+  childrens: "Children's",
+  adult: 'Adult',
+  philosophy: 'Philosophy',
+  theology: 'Theology',
+  discernment: 'Discernment',
+  'talking-animals': 'Talking Animals',
+  biography: 'Biography',
+  history: 'History',
+  prayer: 'Prayer',
+  classic: 'Classic',
+  poetry: 'Poetry',
+  science: 'Science',
+  music: 'Music',
+  mystery: 'Mystery',
+  adventure: 'Adventure',
+  romance: 'Romance',
+  humor: 'Humor',
+}
 
-export const SORTED_BOOK_LABELS: BookLabel[] = [...ALL_BOOK_LABELS].sort((a, b) =>
-  a.localeCompare(b),
-)
+const STANDARD_GENRES = new Set<string>(ALL_BOOK_LABELS)
 
 export function isStandardGenre(value: string): boolean {
   return STANDARD_GENRES.has(value)
 }
+
+export function formatBookLabel(slug: string): string {
+  if (isStandardGenre(slug)) {
+    return BOOK_LABEL_DISPLAY[slug as BookLabel]
+  }
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+export const SORTED_BOOK_LABELS: BookLabel[] = [...ALL_BOOK_LABELS].sort((a, b) =>
+  BOOK_LABEL_DISPLAY[a].localeCompare(BOOK_LABEL_DISPLAY[b]),
+)
 
 /** Keep only genres from the standard list, lowercased and de-duplicated. */
 export function standardGenresFrom(tags: string[] | undefined): string[] {
@@ -80,7 +118,7 @@ export function GenreChips({
             ].join(' ')}
             aria-pressed={isSelected}
           >
-            {label}
+            {formatBookLabel(label)}
           </button>
         )
       })}

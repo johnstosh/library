@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { EntityLink } from '@/components/ui/EntityLink'
 import type { GenreLookupResultDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { formatBookLabel } from './BookLabelFilters'
 
 interface GenreLookupResultsModalProps {
   isOpen: boolean
@@ -63,7 +64,7 @@ export function GenreLookupResultsModal({ isOpen, onClose, results, isRunning }:
                     <div className="flex flex-wrap gap-1 mt-2">
                       {result.suggestedGenres.map((genre) => (
                         <StatusBadge key={genre} tone="accent" shape="rounded">
-                          {genre}
+                          {formatBookLabel(genre)}
                         </StatusBadge>
                       ))}
                     </div>

@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { useDeleteBook } from '@/api/books'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
+import { formatBookLabel } from './BookLabelFilters'
 import type { BookDto } from '@/types/dtos'
 import { useToast } from '@/hooks/useToast'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -136,7 +137,7 @@ export function BookTable({
         <div className="flex flex-wrap gap-1">
           {book.tagsList?.map((tag) => (
             <StatusBadge key={tag} tone="accent" shape="rounded">
-              {tag}
+              {formatBookLabel(tag)}
             </StatusBadge>
           ))}
         </div>
