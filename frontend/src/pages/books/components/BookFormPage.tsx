@@ -106,16 +106,6 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
 
-  // Default branch to first branch when creating a new book
-  useEffect(() => {
-    if (!book && branches && branches.length > 0) {
-      setFormData((prev) => {
-        if (prev.branchId) return prev // don't override if already set
-        return { ...prev, branchId: branches[0].id.toString() }
-      })
-    }
-  }, [book, branches])
-
   useEffect(() => {
     if (book) {
       setFormData({
@@ -143,7 +133,10 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuEbookAvailable: book.emuEbookAvailable ?? false,
       })
     } else {
-      setFormData({
+      // Creating a new book: keep a branch already chosen (or the first branch
+      // if the list is already loaded). A later effect fills branchId if branches
+      // arrive after this reset.
+      setFormData((prev) => ({
         title: '',
         publicationYear: '',
         publisher: '',
@@ -156,7 +149,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         statusReason: '',
         locNumber: '',
         authorId: '',
-        branchId: '',
+        branchId: prev.branchId || (branches && branches.length > 0 ? branches[0].id.toString() : ''),
         tagsList: [],
         dateAddedToLibrary: '',
         electronicResource: false,
@@ -166,9 +159,22 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: false,
         emuPaperAvailable: false,
         emuEbookAvailable: false,
+      }))
+    }
+    // branches is read only if already loaded; the effect below fills branchId later.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book])
+
+  // Default branch to first branch when creating a new book. Must run after the
+  // form reset above so Strict Mode remounts cannot wipe the default.
+  useEffect(() => {
+    if (!book && branches && branches.length > 0) {
+      setFormData((prev) => {
+        if (prev.branchId) return prev // don't override if already set
+        return { ...prev, branchId: branches[0].id.toString() }
       })
     }
-  }, [book])
+  }, [book, branches])
 
   // Warn user about unsaved changes
   useEffect(() => {

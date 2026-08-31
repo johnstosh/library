@@ -163,6 +163,12 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-title']")).isVisible();
         assertThat(page.locator("[data-test='book-author']")).isVisible();
         assertThat(page.locator("[data-test='book-branch']")).isVisible();
+        page.waitForSelector("[data-test='book-branch'] option[value='1']",
+            new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10000L));
+        assertThat(page.locator("[data-test='book-branch']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='book-year']")).isVisible();
         assertThat(page.locator("[data-test='book-publisher']")).isVisible();
         assertThat(page.locator("[data-test='book-loc']")).isVisible();

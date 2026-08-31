@@ -99,7 +99,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
 
   const [formData, setFormData] = useState({
     bookId: initialFilters?.bookId || '',
-    userId: '',
+    userId: currentUser?.id?.toString() || '',
     checkoutDate: initialFilters?.checkoutDate
       ? normalizeDate(initialFilters.checkoutDate)
       : getTodayFormatted(),
@@ -185,12 +185,11 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
         dueDate: formatDateToInput(loan.dueDate),
       })
     } else {
-      // New loan - set user if applicable
-      if (currentUser && !isLibrarian) {
-        // Default to current user if not a librarian
+      // New loan - default borrower to the logged-in user (librarian can change it)
+      if (currentUser) {
         setFormData(prev => ({
           ...prev,
-          userId: currentUser.id.toString(),
+          userId: prev.userId || currentUser.id.toString(),
         }))
       }
       // Only set default dates if no transcription dates were provided
@@ -216,7 +215,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loan, currentUser, isLibrarian])
+  }, [loan, currentUser])
 
   // Helper function to format ISO date string to MM-DD-YYYY
   // Uses parseISODateSafe to avoid timezone issues with date-only strings

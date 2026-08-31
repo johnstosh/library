@@ -169,6 +169,12 @@ public class LoansUITest {
         assertThat(page.locator("[data-test='loan-book-select']")).isVisible();
         assertThat(page.locator("[data-test='loan-user-select']")).isVisible();
         assertThat(page.locator("text=testuser")).isVisible();
+        page.waitForSelector("[data-test='loan-user-select'] option[value='1']",
+            new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10000L));
+        assertThat(page.locator("[data-test='loan-user-select']"))
+                .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000L));
         assertThat(page.locator("[data-test='loan-form-submit']")).isVisible();
         assertThat(page.locator("[data-test='loan-form-cancel']")).isVisible();
     }
@@ -631,10 +637,18 @@ public class LoansUITest {
         // Select a book (Available Book 1 - book ID 1)
         page.selectOption("[data-test='loan-book-select']", "1");
 
-        // Select a user (librarian user - user ID 2)
-        page.selectOption("[data-test='loan-user-select']", "2");
+        // Borrower defaults to the logged-in librarian (user ID 2)
+        page.waitForSelector("[data-test='loan-user-select'] option[value='2']",
+            new Page.WaitForSelectorOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10000L));
+        assertThat(page.locator("[data-test='loan-user-select']"))
+                .hasValue("2", new LocatorAssertions.HasValueOptions().setTimeout(10000L));
 
-        // Submit checkout (will checkout to librarian user)
+        // Librarian can still checkout for another user
+        page.selectOption("[data-test='loan-user-select']", "3");
+
+        // Submit checkout (will checkout to otheruser)
         page.click("[data-test='loan-form-submit']");
 
         // Should navigate back to /loans after successful checkout
