@@ -24,6 +24,7 @@ public class UserDto {
     private String ssoProvider;
     private String ssoSubjectId;
     private String email;
+    private String phone;
     private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
     private LocalDateTime createdAt;

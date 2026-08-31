@@ -48,6 +48,7 @@ class AppliedServiceTest {
         Applied incoming = new Applied();
         incoming.setName("Jane Doe");
         incoming.setEmail("jane@example.com");
+        incoming.setPhone("555-0100");
         incoming.setPassword(SHA256);
 
         when(appliedRepository.findAllByNameOrderByIdAsc("Jane Doe")).thenReturn(List.of());
@@ -62,6 +63,7 @@ class AppliedServiceTest {
 
         assertEquals(42L, result.getId());
         assertEquals("jane@example.com", result.getEmail());
+        assertEquals("555-0100", result.getPhone());
         assertEquals(Applied.ApplicationStatus.PENDING, result.getStatus());
 
         ArgumentCaptor<PendingApplicationNotice> captor = ArgumentCaptor.forClass(PendingApplicationNotice.class);
@@ -84,6 +86,20 @@ class AppliedServiceTest {
 
         Applied result = appliedService.createApplied(incoming);
         assertNull(result.getEmail());
+        assertNull(result.getPhone());
+    }
+
+    @Test
+    void createApplied_invalidPhoneRejected() {
+        Applied incoming = new Applied();
+        incoming.setName("Jane Doe");
+        incoming.setPhone("abc");
+        incoming.setPassword(SHA256);
+
+        when(appliedRepository.findAllByNameOrderByIdAsc("Jane Doe")).thenReturn(List.of());
+
+        assertThrows(LibraryException.class, () -> appliedService.createApplied(incoming));
+        verify(appliedRepository, never()).save(any());
     }
 
     @Test

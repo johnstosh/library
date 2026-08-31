@@ -110,6 +110,27 @@ class AppliedControllerIntegrationTest {
     }
 
     @Test
+    void testPublicRegister_SavesOptionalPhone() throws Exception {
+        String validSHA256Hash = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+        String requestJson = """
+            {
+                "username": "Jane Phone",
+                "password": "%s",
+                "phone": "(555) 123-4567",
+                "authority": "USER"
+            }
+            """.formatted(validSHA256Hash);
+
+        mockMvc.perform(post("/api/application/public/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isNoContent());
+
+        Applied saved = appliedRepository.findAll().get(0);
+        assertThat(saved.getPhone()).isEqualTo("(555) 123-4567");
+    }
+
+    @Test
     void testPublicRegister_TrimmedUsername() throws Exception {
         // Arrange - Username with leading/trailing whitespace
         String validSHA256Hash = "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3";
@@ -237,6 +258,26 @@ class AppliedControllerIntegrationTest {
         mockMvc.perform(get("/api/applied"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.name == 'Approve Me')].status", hasItem("APPROVED")));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testApprove_CopiesEmailAndPhoneOntoUser() throws Exception {
+        Applied applied = new Applied();
+        applied.setName("Contact Patron");
+        applied.setPassword("$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3tKo6he");
+        applied.setEmail("patron@example.com");
+        applied.setPhone("555-0199");
+        applied.setStatus(Applied.ApplicationStatus.PENDING);
+        Applied saved = appliedRepository.save(applied);
+
+        mockMvc.perform(post("/api/applied/" + saved.getId() + "/approve"))
+                .andExpect(status().isOk());
+
+        List<User> users = userRepository.findAllByUsernameOrderByIdAsc("Contact Patron");
+        assertThat(users).isNotEmpty();
+        assertThat(users.get(0).getEmail()).isEqualTo("patron@example.com");
+        assertThat(users.get(0).getPhone()).isEqualTo("555-0199");
     }
 
     @Test

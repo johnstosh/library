@@ -153,7 +153,7 @@ export function UsersPage() {
             type="search"
             label="Search users"
             hideLabel
-            placeholder="Search by name, email, or SSO provider..."
+            placeholder="Search by name, email, phone, or SSO provider..."
             value={searchQuery}
             onChange={(e) => setUsersSearchQuery(e.target.value)}
             data-test="user-search"

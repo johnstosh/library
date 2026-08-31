@@ -43,6 +43,14 @@ describe('applyUserFilters', () => {
     expect(applyUserFilters(sample, chips(), 'EXAMPLE').map((u) => u.id)).toEqual([1])
   })
 
+  it('substring search matches phone', () => {
+    const withPhone = [
+      ...sample,
+      user({ id: 3, username: 'cara', phone: '555-0199' }),
+    ]
+    expect(applyUserFilters(withPhone, chips(), '555-0199').map((u) => u.id)).toEqual([3])
+  })
+
   it('ANDs librarian with has-active-loans', () => {
     expect(
       applyUserFilters(sample, chips({ librarian: true, hasActiveLoans: true }), '').map((u) => u.id)

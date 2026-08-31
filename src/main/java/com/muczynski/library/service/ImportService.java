@@ -201,6 +201,9 @@ public class ImportService {
                 if (uDto.getEmail() != null) {
                     user.setEmail(uDto.getEmail());
                 }
+                if (uDto.getPhone() != null) {
+                    user.setPhone(uDto.getPhone());
+                }
                 if (uDto.getLibraryCardDesign() != null) {
                     user.setLibraryCardDesign(uDto.getLibraryCardDesign());
                 }
@@ -592,6 +595,7 @@ public class ImportService {
             uDto.setSsoProvider(emptyToNull(user.getSsoProvider()));
             uDto.setSsoSubjectId(emptyToNull(user.getSsoSubjectId()));
             uDto.setEmail(emptyToNull(user.getEmail()));
+            uDto.setPhone(emptyToNull(user.getPhone()));
             uDto.setLibraryCardDesign(user.getLibraryCardDesign());
             if (user.getAuthorities() != null) {
                 java.util.List<String> authorityNames = user.getAuthorities().stream()

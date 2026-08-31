@@ -5,9 +5,11 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
+import com.muczynski.library.email.EmailAddresses;
 import com.muczynski.library.mapper.UserMapper;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
+import com.muczynski.library.util.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,8 +105,38 @@ public class UserSettingsService {
             user.setLibraryCardDesign(userSettingsDto.getLibraryCardDesign());
         }
 
+        if (userSettingsDto.getEmail() != null) {
+            user.setEmail(normalizeOptionalEmail(userSettingsDto.getEmail()));
+        }
+
+        if (userSettingsDto.getPhone() != null) {
+            user.setPhone(normalizeOptionalPhone(userSettingsDto.getPhone()));
+        }
+
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
+    }
+
+    private String normalizeOptionalEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        String trimmed = email.trim();
+        if (!EmailAddresses.isValid(trimmed)) {
+            throw new LibraryException("Invalid email address: " + trimmed);
+        }
+        return trimmed;
+    }
+
+    private String normalizeOptionalPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        String trimmed = phone.trim();
+        if (!PhoneNumbers.isValid(trimmed)) {
+            throw new LibraryException("Invalid phone number: " + trimmed);
+        }
+        return trimmed;
     }
 
     public void deleteUser(Long userId) {

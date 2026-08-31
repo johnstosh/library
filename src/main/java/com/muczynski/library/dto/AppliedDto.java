@@ -17,5 +17,6 @@ public class AppliedDto {
     private Long id;
     private String name;
     private String email;
+    private String phone;
     private Applied.ApplicationStatus status;
 }

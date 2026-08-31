@@ -27,8 +27,13 @@ export function useCreateUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { username: string; password: string; authority: string }) =>
-      api.post<UserDto>('/users', data),
+    mutationFn: (data: {
+      username: string
+      password: string
+      authority: string
+      email?: string
+      phone?: string
+    }) => api.post<UserDto>('/users', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
     },
@@ -40,8 +45,16 @@ export function useUpdateUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { id: number; user: { username: string; password?: string; authority: string } }) =>
-      api.put<UserDto>(`/users/${data.id}`, data.user),
+    mutationFn: (data: {
+      id: number
+      user: {
+        username: string
+        password?: string
+        authority: string
+        email?: string
+        phone?: string
+      }
+    }) => api.put<UserDto>(`/users/${data.id}`, data.user),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })

@@ -6,6 +6,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { useApplyForCard } from '@/api/library-cards'
 import { hashPassword } from '@/utils/auth'
+import { isValidOptionalEmail, isValidOptionalPhone } from '@/utils/contact'
 import { PiIdentificationCard } from 'react-icons/pi'
 
 export function ApplyForCardPage() {
@@ -14,6 +15,7 @@ export function ApplyForCardPage() {
     password: '',
     confirmPassword: '',
     email: '',
+    phone: '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -52,9 +54,15 @@ export function ApplyForCardPage() {
     }
 
     const email = formData.email.trim()
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const phone = formData.phone.trim()
+    if (!isValidOptionalEmail(email)) {
       console.log('Validation failed: Invalid email')
       setError('Enter a valid email address or leave it blank')
+      return
+    }
+    if (!isValidOptionalPhone(phone)) {
+      console.log('Validation failed: Invalid phone')
+      setError('Enter a valid phone number or leave it blank')
       return
     }
 
@@ -73,13 +81,14 @@ export function ApplyForCardPage() {
         username: formData.username.trim(),
         password: hashedPassword,
         email: email || undefined,
+        phone: phone || undefined,
         authority: 'USER',
       })
 
       console.log('Application submitted successfully!')
       setNotifiedByEmail(Boolean(email))
       setSuccess(true)
-      setFormData({ username: '', password: '', confirmPassword: '', email: '' })
+      setFormData({ username: '', password: '', confirmPassword: '', email: '', phone: '' })
     } catch (err) {
       console.error('Application submission failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit application')
@@ -140,6 +149,19 @@ export function ApplyForCardPage() {
               data-test="apply-email"
               autoComplete="email"
               helpText="Used to notify you when your application is reviewed"
+            />
+
+            <Input
+              label="Phone (optional)"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+              placeholder="(555) 123-4567"
+              data-test="apply-phone"
+              autoComplete="tel"
+              helpText="Librarians can use this to reach you"
             />
 
             <Input

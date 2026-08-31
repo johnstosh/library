@@ -39,7 +39,7 @@ export function UserTable({
           )}
         </div>
       ),
-      width: '22%',
+      width: '20%',
     },
     {
       key: 'email',
@@ -49,7 +49,18 @@ export function UserTable({
           {user.email?.trim() ? user.email : '—'}
         </span>
       ),
-      width: '28%',
+      width: '20%',
+      hideOnMobile: true,
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      accessor: (user) => (
+        <span className="text-gray-700" data-test={`user-phone-${user.id}`}>
+          {user.phone?.trim() ? user.phone : '—'}
+        </span>
+      ),
+      width: '16%',
       hideOnMobile: true,
     },
     {

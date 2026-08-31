@@ -55,7 +55,7 @@ export function applyApplicationFilters(
 
   return applications.filter((application) => {
     if (needle) {
-      const haystack = [application.name, application.email]
+      const haystack = [application.name, application.email, application.phone]
         .filter((value) => !isBlank(value))
         .join(' ')
         .toLowerCase()

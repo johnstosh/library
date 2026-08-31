@@ -72,6 +72,14 @@ describe('applyApplicationFilters', () => {
     expect(applyApplicationFilters(sample, chips(), 'ann@').map((a) => a.id)).toEqual([3])
   })
 
+  it('search matches phone', () => {
+    const withPhone = [
+      ...sample,
+      application({ id: 6, name: 'Phone Pat', phone: '555-0100', status: 'PENDING' }),
+    ]
+    expect(applyApplicationFilters(withPhone, chips(), '555-0100').map((a) => a.id)).toEqual([6])
+  })
+
   it('ANDs chips with search', () => {
     expect(
       applyApplicationFilters(sample, chips({ needsApproval: true }), 'pat').map((a) => a.id)

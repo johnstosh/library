@@ -13,11 +13,12 @@ Submit a library card application (public endpoint).
   "username": "john_doe",
   "password": "sha256-hashed-password",
   "email": "john@example.com",
+  "phone": "555-123-4567",
   "authority": "USER"
 }
 ```
 
-`email` is optional. When present it must look like an email address. It is stored on the application and used if "email the applicant" is enabled in global settings.
+`email` and `phone` are optional. When present, email must look like an email address and phone must be 7–15 digits with optional `+ - ( ) .` and spaces. Both are stored on the application and copied onto the user account when a librarian approves the card. Email is also used if "email the applicant" is enabled in global settings.
 
 **Password Requirements:**
 - Must be SHA-256 hashed client-side (64 hex characters)
@@ -50,6 +51,7 @@ Returns all library card applications. The Applications page filters this list i
     "id": 1,
     "name": "john_doe",
     "email": "john@example.com",
+    "phone": "555-123-4567",
     "status": "PENDING"
   }
 ]

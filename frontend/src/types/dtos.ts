@@ -151,6 +151,7 @@ export interface UserDto {
   ssoProvider?: string
   ssoSubjectId?: string
   email?: string
+  phone?: string
   libraryCardDesign?: LibraryCardDesign
   activeLoansCount?: number
   googlePhotosApiKey?: string

@@ -37,7 +37,9 @@ Creates a new user (librarian-created).
 {
   "username": "newuser",
   "password": "sha256-hashed-password",
-  "authority": "USER"
+  "authority": "USER",
+  "email": "newuser@example.com",
+  "phone": "555-123-4567"
 }
 ```
 
@@ -55,7 +57,9 @@ Public user self-registration endpoint.
 {
   "username": "newuser",
   "password": "sha256-hashed-password",
-  "authority": "USER"
+  "authority": "USER",
+  "email": "newuser@example.com",
+  "phone": "555-123-4567"
 }
 ```
 
@@ -68,7 +72,7 @@ Updates an existing user.
 
 **Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
 
-**Request Body:** CreateUserDto (password optional for update)
+**Request Body:** CreateUserDto (password optional for update). `email` and `phone` are optional contact fields; empty string clears them.
 
 **Response:** Updated UserDto
 

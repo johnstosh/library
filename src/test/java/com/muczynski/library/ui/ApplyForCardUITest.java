@@ -94,6 +94,10 @@ public class ApplyForCardUITest {
         Locator emailInput = page.locator("[data-test='apply-email']");
         assertThat(emailInput).isVisible();
 
+        // Verify optional phone input
+        Locator phoneInput = page.locator("[data-test='apply-phone']");
+        assertThat(phoneInput).isVisible();
+
         // Verify password input
         Locator passwordInput = page.locator("[data-test='apply-password']");
         assertThat(passwordInput).isVisible();

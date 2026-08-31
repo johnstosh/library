@@ -9,6 +9,7 @@ export interface AppliedDto {
   id: number
   name: string
   email?: string
+  phone?: string
   status?: ApplicationStatus
 }
 
@@ -16,6 +17,7 @@ export interface RegistrationRequest {
   username: string
   password: string
   email?: string
+  phone?: string
   authority: string
 }
 

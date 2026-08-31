@@ -113,6 +113,14 @@ export function UserViewPage() {
                 </p>
               </div>
               <div>
+                <p className="text-sm font-medium text-gray-500">Email</p>
+                <p className="text-gray-900" data-test="user-email">{user.email?.trim() ? user.email : '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Phone</p>
+                <p className="text-gray-900" data-test="user-phone">{user.phone?.trim() ? user.phone : '—'}</p>
+              </div>
+              <div>
                 <p className="text-sm font-medium text-gray-500">Active Loans</p>
                 <p
                   className={`text-sm ${

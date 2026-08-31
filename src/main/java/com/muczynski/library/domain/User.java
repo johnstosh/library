@@ -50,7 +50,10 @@ public class User implements Serializable {
     // SSO fields
     private String ssoProvider; // "google", "local", or null for legacy users
     private String ssoSubjectId; // OAuth "sub" claim - unique user ID from provider
-    private String email; // Email address from SSO provider
+    private String email; // Contact email (SSO, card application, or patron-edited)
+
+    @Column(length = 32)
+    private String phone; // Optional contact phone number
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")

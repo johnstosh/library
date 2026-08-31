@@ -127,7 +127,7 @@ export function ApplicationsPage() {
       accessor: (app) => (
         <span className="font-medium text-gray-900">{app.name}</span>
       ),
-      width: '28%',
+      width: '22%',
     },
     {
       key: 'email',
@@ -135,7 +135,17 @@ export function ApplicationsPage() {
       accessor: (app) => (
         <span className="text-sm text-gray-700">{app.email || '—'}</span>
       ),
-      width: '24%',
+      width: '20%',
+      hideOnMobile: true,
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      accessor: (app) => (
+        <span className="text-sm text-gray-700">{app.phone || '—'}</span>
+      ),
+      width: '16%',
+      hideOnMobile: true,
     },
     {
       key: 'status',
@@ -217,7 +227,7 @@ export function ApplicationsPage() {
             type="search"
             label="Search applications"
             hideLabel
-            placeholder="Search by name or email..."
+            placeholder="Search by name, email, or phone..."
             value={searchQuery}
             onChange={(e) => setApplicationsSearchQuery(e.target.value)}
             data-test="application-search"

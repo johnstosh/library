@@ -163,6 +163,31 @@ public class SettingsUITest {
     }
 
     @Test
+    @DisplayName("USER: Should change email and phone")
+    void testUserCanChangeEmailAndPhone() {
+        login("testuser", "password");
+        navigateToSettings();
+
+        page.waitForSelector("[data-test='settings-email']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        assertThat(page.locator("[data-test='settings-email']")).hasValue("testuser@example.com");
+        assertThat(page.locator("[data-test='settings-phone']")).hasValue("555-0100");
+
+        page.fill("[data-test='settings-email']", "updated@example.com");
+        page.fill("[data-test='settings-phone']", "555-0199");
+        page.click("[data-test='save-contact-info']");
+
+        page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
+
+        assertThat(page.locator("text=Contact information updated successfully"))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+        assertThat(page.locator("[data-test='settings-email']")).hasValue("updated@example.com");
+        assertThat(page.locator("[data-test='settings-phone']")).hasValue("555-0199");
+    }
+
+    @Test
     @DisplayName("USER: Should display password change form")
     void testUserCanViewPasswordChangeForm() {
         login("testuser", "password");
