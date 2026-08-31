@@ -35,6 +35,9 @@ public class ApplicationEmailService {
     static final String EVENT_APPLICANT_PENDING = "library.application.pending.applicant";
     static final String EVENT_TEST = "library.email.test";
 
+    private static final String EMAIL_FONT_FAMILY =
+            "Century Schoolbook L, Century Schoolbook, Times New Roman, Times, serif";
+
     private static final Logger logger = LoggerFactory.getLogger(ApplicationEmailService.class);
 
     private final GlobalSettingsService globalSettingsService;
@@ -203,14 +206,14 @@ public class ApplicationEmailService {
                         + "Email: " + email + "\n"
                         + "Application ID: " + notice.getApplicationId() + "\n"
                         + "Review: " + reviewUrl + "\n");
-        message.setHtmlBody(
+        message.setHtmlBody(htmlBody(
                 "<p>A library card application is pending review.</p>"
                         + "<ul>"
                         + "<li><strong>Applicant:</strong> " + HtmlText.escape(name) + "</li>"
                         + "<li><strong>Email:</strong> " + HtmlText.escape(email) + "</li>"
                         + "<li><strong>Application ID:</strong> " + notice.getApplicationId() + "</li>"
                         + "</ul>"
-                        + "<p><a href=\"" + HtmlText.escape(reviewUrl) + "\">Review applications</a></p>");
+                        + "<p><a href=\"" + HtmlText.escape(reviewUrl) + "\">Review applications</a></p>"));
         message.getEventPayload().put("applicationId", notice.getApplicationId());
         message.getEventPayload().put("applicantName", notice.getApplicantName());
         message.getEventPayload().put("applicantEmail", notice.getApplicantEmail());
@@ -228,10 +231,10 @@ public class ApplicationEmailService {
                 "Hello " + name + ",\n\n"
                         + "We received your library card application and a librarian will review it shortly.\n"
                         + "You will be able to sign in after it is approved.\n");
-        message.setHtmlBody(
+        message.setHtmlBody(htmlBody(
                 "<p>Hello " + HtmlText.escape(name) + ",</p>"
                         + "<p>We received your library card application and a librarian will review it shortly.</p>"
-                        + "<p>You will be able to sign in after it is approved.</p>");
+                        + "<p>You will be able to sign in after it is approved.</p>"));
         message.getEventPayload().put("applicationId", notice.getApplicationId());
         message.getEventPayload().put("applicantName", notice.getApplicantName());
         message.getEventPayload().put("status", "PENDING");
@@ -246,12 +249,16 @@ public class ApplicationEmailService {
                 "This is a test message from the library application.\n"
                         + "Email method: " + effectiveMethod(settings) + "\n"
                         + "If you received this, outbound email is working.\n");
-        message.setHtmlBody(
+        message.setHtmlBody(htmlBody(
                 "<p>This is a test message from the library application.</p>"
                         + "<p>Email method: <strong>" + HtmlText.escape(effectiveMethod(settings).name())
                         + "</strong></p>"
-                        + "<p>If you received this, outbound email is working.</p>");
+                        + "<p>If you received this, outbound email is working.</p>"));
         return message;
+    }
+
+    private static String htmlBody(String innerHtml) {
+        return "<div style=\"font-family:" + EMAIL_FONT_FAMILY + ";\">" + innerHtml + "</div>";
     }
 
     private EmailMessage baseMessage(GlobalSettings settings, List<String> recipients) {

@@ -22,6 +22,7 @@ GET /api/labels/generate?bookIds=1&bookIds=2&bookIds=3
 - Contains: Book title, author, LOC call number formatted for spine
 - Only books with LOC call numbers are included
 - Generated using iText 8
+- Uses Century Schoolbook L (embedded from `public/fonts/CenturySchL-*.ttf`)
 - Custom LOC formatting via `formatLocForSpine()` utility
 
 **Error Responses:**

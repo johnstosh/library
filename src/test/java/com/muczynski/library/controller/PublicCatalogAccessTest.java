@@ -38,6 +38,12 @@ class PublicCatalogAccessTest {
     private AuthorService authorService;
 
     @Test
+    void centurySchoolbookFontIsPublic() throws Exception {
+        mockMvc.perform(get("/fonts/CenturySchL-Roma.ttf"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void spaBookViewIsPublic() throws Exception {
         mockMvc.perform(get("/books/1"))
                 .andExpect(status().isOk());

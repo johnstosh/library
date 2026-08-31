@@ -51,6 +51,9 @@ class LabelsPdfServiceTest {
         // PDF files start with "%PDF-" signature
         assertTrue(pdfBytes[0] == 0x25 && pdfBytes[1] == 0x50 && pdfBytes[2] == 0x44 && pdfBytes[3] == 0x46,
                 "PDF should start with %PDF signature");
+        String pdf = new String(pdfBytes, java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertTrue(pdf.contains("CenturySchL") || pdf.contains("Century Schoolbook"),
+                "PDF should embed Century Schoolbook L");
     }
 
     @Test

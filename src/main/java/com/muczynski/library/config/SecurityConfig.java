@@ -73,7 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/photo-export/**").authenticated()
                         .requestMatchers("/api/oauth/google/authorize", "/api/oauth/google/callback").permitAll()
                         .requestMatchers("/api/import/**").hasAuthority("LIBRARIAN")
-                        .requestMatchers("/api/auth/**", "/login", "/search", "/oauth2/**", "/css/**", "/js/**", "/images/**", "/assets/**", "/vite.svg", "/", "/index.html", "/favicon.ico", "/apply-for-card.html", "/apply").permitAll()
+                        .requestMatchers("/api/auth/**", "/login", "/search", "/oauth2/**", "/css/**", "/js/**", "/images/**", "/fonts/**", "/assets/**", "/vite.svg", "/", "/index.html", "/favicon.ico", "/apply-for-card.html", "/apply").permitAll()
                         // Serve the SPA for public catalog views (React still protects list/edit routes)
                         .requestMatchers(HttpMethod.GET, "/books/**", "/authors/**", "/photos/**").permitAll()
                         .anyRequest().authenticated()

@@ -1,8 +1,37 @@
 /* (c) Copyright 2025 by Muczynski */
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Century Schoolbook L';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/CenturySchL-Roma.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Century Schoolbook L';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/CenturySchL-Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Century Schoolbook L';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/fonts/CenturySchL-Ital.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Century Schoolbook L';
+  font-style: italic;
+  font-weight: 700;
+  src: url('/fonts/CenturySchL-BoldItal.ttf') format('truetype');
+}
+
+@theme {
+  --font-sans: 'Century Schoolbook L', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', serif;
+}
+
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Century Schoolbook L', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', serif;
 }
 
 body {

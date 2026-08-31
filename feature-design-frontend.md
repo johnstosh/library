@@ -13,6 +13,7 @@ The frontend is a modern single-page application (SPA) built with React 18, Type
 ### Styling
 - **Tailwind CSS v4** - Utility-first CSS framework
 - **Headless UI** - Unstyled, accessible components (modals, dialogs)
+- **Century Schoolbook L** - App typeface (regular, bold, italic, bold italic). Loaded from `/fonts/CenturySchL-*.ttf` and set as `--font-sans`. `font-mono` is kept for IDs, filenames, API keys, and LOC call numbers.
 
 ### State & Data Management
 - **TanStack Query v5** - Server state management with automatic caching
