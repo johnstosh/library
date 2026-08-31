@@ -241,8 +241,8 @@ export function UserSettingsPage() {
         </div>
 
         {isSsoUser ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-900">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-primary-900">
               You are signed in with Google. Password changes are managed through your Google account.
             </p>
           </div>

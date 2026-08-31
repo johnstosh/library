@@ -19,7 +19,7 @@ export function SelectionToolbar({
   return (
     <div
       className={`border rounded-lg px-4 py-3 mb-4 min-h-[3.75rem] flex items-stretch ${
-        selected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 items-center'
+        selected ? 'bg-primary-50 border-primary-200' : 'bg-gray-50 border-gray-200 items-center'
       }`}
       data-test={dataTest}
     >
@@ -57,7 +57,7 @@ export function SelectionSummary({
 }) {
   return (
     <div className="flex flex-col items-start gap-0.5 min-w-0 max-w-full sm:max-w-[9.5rem]">
-      <span className="text-sm font-medium text-blue-900 whitespace-normal break-words leading-snug">
+      <span className="text-sm font-medium text-primary-900 whitespace-normal break-words leading-snug">
         {count} {count === 1 ? singular : plural} selected
       </span>
       <Button

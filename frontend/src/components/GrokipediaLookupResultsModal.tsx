@@ -96,7 +96,7 @@ export function GrokipediaLookupResultsModal({
                       result.name || `${entityType === 'book' ? 'Book' : 'Author'} ID: ${result.bookId ?? result.authorId}`
                     )}
                   </td>
-                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-blue-600">
+                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-primary-600">
                     {result.grokipediaUrl ? (
                       <a
                         href={result.grokipediaUrl}

@@ -327,7 +327,7 @@ export function BookForm({ isOpen, onClose, book }: BookFormProps) {
             id="electronicResource"
             checked={formData.electronicResource}
             onChange={(e) => setFormData({ ...formData, electronicResource: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             data-test="book-electronic-resource"
           />
           <label htmlFor="electronicResource" className="text-sm font-medium text-gray-700">

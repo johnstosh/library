@@ -398,15 +398,15 @@ export function PhotosPage() {
 
             {/* Paste Mode Instructions */}
             {pasteInstructions && (
-              <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-lg">
+              <div className="mb-3 bg-primary-50 border border-primary-200 rounded-lg p-4 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <PiUpload className="w-5 h-5 text-blue-600" />
-                    <p className="text-blue-900 font-medium">{pasteInstructions}</p>
+                    <PiUpload className="w-5 h-5 text-primary-600" />
+                    <p className="text-primary-900 font-medium">{pasteInstructions}</p>
                   </div>
                   <button
                     onClick={handleCancelPasteMode}
-                    className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    className="text-primary-600 hover:text-primary-800 font-medium text-sm"
                   >
                     Cancel
                   </button>
@@ -466,7 +466,7 @@ export function PhotosPage() {
           <div className="mb-4">
             <p className="text-sm">
               <strong>Google Photos Album:</strong>{' '}
-              <span className="font-mono text-blue-600" id="album-name">
+              <span className="font-mono text-primary-600" id="album-name">
                 {photoStats?.albumName || '(Not configured)'}
               </span>
             </p>
@@ -524,11 +524,11 @@ export function PhotosPage() {
               </div>
               <div className="text-xs text-green-700">Exported</div>
             </div>
-            <div className="bg-blue-100 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-800" id="stats-imported">
+            <div className="bg-primary-100 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-primary-800" id="stats-imported">
                 {photoStats?.imported ?? 0}
               </div>
-              <div className="text-xs text-blue-700">Imported</div>
+              <div className="text-xs text-primary-700">Imported</div>
             </div>
             <div className="bg-yellow-100 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-yellow-800" id="stats-pending-export">
@@ -690,7 +690,7 @@ export function PhotosPage() {
                               onClick={() => handleEnterPasteMode(photo.id)}
                               className={`px-2 py-1 text-xs rounded ${
                                 pasteModePhotoId === photo.id
-                                  ? 'bg-blue-600 text-white'
+                                  ? 'bg-primary-600 text-white'
                                   : 'border border-purple-600 text-purple-600 hover:bg-purple-50'
                               }`}
                               title="Paste image from clipboard"
@@ -703,7 +703,7 @@ export function PhotosPage() {
                             {photo.hasImage && !photo.permanentId && (
                               <button
                                 onClick={() => handleExportSinglePhoto(photo.id)}
-                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                className="px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
                                 title="Export to Google Photos"
                               >
                                 Export
@@ -727,7 +727,7 @@ export function PhotosPage() {
                                 href={`https://photos.google.com/lr/photo/${photo.permanentId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+                                className="px-2 py-1 text-xs border border-primary-600 text-primary-600 rounded hover:bg-primary-50"
                                 title="View in Google Photos"
                               >
                                 <PiEye className="w-3 h-3 inline" />

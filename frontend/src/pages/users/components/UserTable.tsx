@@ -84,7 +84,7 @@ export function UserTable({
         <span
           className={`text-sm ${
             (user.activeLoansCount ?? 0) > 0
-              ? 'text-blue-600 font-medium'
+              ? 'text-primary-600 font-medium'
               : 'text-gray-500'
           }`}
         >

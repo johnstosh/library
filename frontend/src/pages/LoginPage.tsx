@@ -121,7 +121,7 @@ export function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <a href="/apply" className="text-blue-600 hover:text-blue-500 font-medium">
+            <a href="/apply" className="text-primary-600 hover:text-primary-700 font-medium">
               Apply for a library card
             </a>
           </p>
@@ -129,7 +129,7 @@ export function LoginPage() {
       </div>
 
       {/* Right side: Branding */}
-      <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-50 to-indigo-100 p-8 flex flex-col justify-center">
+      <div className="w-full lg:w-1/2 bg-gradient-to-br from-primary-50 to-forest-100 p-8 flex flex-col justify-center">
         <div className="text-center">
           <div className="mb-6">
             <img

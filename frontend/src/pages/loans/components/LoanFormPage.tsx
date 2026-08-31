@@ -539,8 +539,8 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                   )}
                 </div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <p className="text-sm text-primary-900">
                   Loans cannot be edited directly. Use the Return button to mark this loan as returned, or use the Delete button to remove it.
                 </p>
               </div>

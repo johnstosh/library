@@ -136,7 +136,7 @@ export function FreeTextLookupResultsModal({
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                              className="text-primary-600 hover:underline"
                               title={url}
                             >
                               {extractDomain(url)}

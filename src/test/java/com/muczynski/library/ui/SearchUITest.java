@@ -631,7 +631,7 @@ public class SearchUITest {
         Locator freeTextChip = page.locator("[data-test='filter-free-text']");
         Locator audioChip    = page.locator("[data-test='filter-audio']");
 
-        // Both chips should be "active" (contain blue styling / checkmark)
+        // Both chips should be "active" (contain primary styling / checkmark)
         // Simplified check: the chip text content should still be correct
         assertThat(freeTextChip).isVisible();
         assertThat(audioChip).isVisible();

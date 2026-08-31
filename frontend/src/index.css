@@ -28,16 +28,67 @@
 
 @theme {
   --font-sans: 'Century Schoolbook L', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', serif;
+
+  --color-paper: #F4EBDA;
+
+  --color-primary-50: #F8F1F2;
+  --color-primary-100: #F0E2E5;
+  --color-primary-200: #DCC4C9;
+  --color-primary-300: #C3969F;
+  --color-primary-400: #9A5C68;
+  --color-primary-500: #7E3D4B;
+  --color-primary-600: #6B2D3C;
+  --color-primary-700: #572432;
+  --color-primary-800: #431C27;
+  --color-primary-900: #2F141B;
+  --color-primary-950: #1A0B0F;
+
+  --color-forest-50: #EAF2EE;
+  --color-forest-100: #D4E5DB;
+  --color-forest-200: #AECBB8;
+  --color-forest-300: #7EAB90;
+  --color-forest-400: #4D8566;
+  --color-forest-500: #2F664B;
+  --color-forest-600: #1F4D3A;
+  --color-forest-700: #173C2D;
+  --color-forest-800: #102B20;
+  --color-forest-900: #0A1C15;
+  --color-forest-950: #05110C;
+
+  --color-charcoal-50: #F4F3F1;
+  --color-charcoal-100: #E7E5E1;
+  --color-charcoal-200: #D1CEC8;
+  --color-charcoal-300: #B0ACA4;
+  --color-charcoal-400: #8A857C;
+  --color-charcoal-500: #6B665E;
+  --color-charcoal-600: #524E48;
+  --color-charcoal-700: #3E3B36;
+  --color-charcoal-800: #2C2825;
+  --color-charcoal-900: #1C1917;
+  --color-charcoal-950: #0F0D0C;
 }
 
 :root {
   font-family: 'Century Schoolbook L', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', serif;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: var(--color-paper);
+  background-image: url('/images/paper-books.svg');
+  background-repeat: repeat;
+  background-size: 240px 240px;
+}
+
+#root {
+  background-color: transparent;
 }
 
 /* Custom scrollbar styles */
@@ -47,14 +98,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #EFE6D2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #6B665E;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #2C2825;
 }

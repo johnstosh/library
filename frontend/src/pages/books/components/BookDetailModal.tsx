@@ -115,7 +115,7 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                     href={book.grokipediaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
+                    className="text-primary-600 hover:text-primary-800 underline"
                     data-test="book-grokipedia-link"
                   >
                     View on Grokipedia

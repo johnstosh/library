@@ -11,11 +11,11 @@ export type StatusTone =
 
 export const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
   success: 'bg-green-100 text-green-800',
-  info: 'bg-blue-100 text-blue-800',
+  info: 'bg-primary-100 text-primary-800',
   danger: 'bg-red-100 text-red-800',
   warning: 'bg-amber-100 text-amber-800',
   neutral: 'bg-gray-100 text-gray-800',
-  accent: 'bg-indigo-100 text-indigo-800',
+  accent: 'bg-forest-100 text-forest-800',
   emphasis: 'bg-purple-100 text-purple-800',
 }
 

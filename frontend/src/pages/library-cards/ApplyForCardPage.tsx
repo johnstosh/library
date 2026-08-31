@@ -101,7 +101,7 @@ export function ApplyForCardPage() {
     <div className="mx-auto max-w-md w-full">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          <PiIdentificationCard className="w-16 h-16 text-blue-600" />
+          <PiIdentificationCard className="w-16 h-16 text-primary-600" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Apply for a Library Card
@@ -210,7 +210,8 @@ export function ApplyForCardPage() {
               Already have an account?{' '}
               <a
                 href="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-primary-600 hover:text-primary-700 font-medium"
+                data-test="apply-sign-in"
               >
                 Sign in
               </a>
@@ -219,9 +220,9 @@ export function ApplyForCardPage() {
         </div>
       )}
 
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">What happens next?</h3>
-        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+      <div className="mt-6 bg-primary-50 border border-primary-200 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-primary-900 mb-2">What happens next?</h3>
+        <ol className="text-sm text-primary-800 space-y-1 list-decimal list-inside">
           <li>A librarian will review your application</li>
           <li>If you included an email, we will notify you when it is reviewed</li>
           <li>Log in to access your library card</li>

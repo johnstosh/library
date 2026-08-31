@@ -27,14 +27,14 @@ function getInitials(username: string | null | undefined): string {
 function desktopNavCls({ isActive }: { isActive: boolean }): string {
   return clsx(
     'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
   )
 }
 
 function mobileNavCls({ isActive }: { isActive: boolean }): string {
   return clsx(
     'block px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-    isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+    isActive ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900',
   )
 }
 
@@ -113,7 +113,7 @@ export function Navigation() {
 
                 {/* Hamburger — mobile only */}
                 <DisclosureButton
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   aria-label={open ? 'Close menu' : 'Open menu'}
                   data-test="mobile-menu-button"
                 >
@@ -126,7 +126,7 @@ export function Navigation() {
                     <MenuButton
                       aria-label="User menu"
                       data-test="nav-user-menu"
-                      className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                     >
                       {getInitials(user?.username)}
                     </MenuButton>

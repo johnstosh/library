@@ -156,8 +156,8 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
         {error && <ErrorMessage message={error} />}
 
         {isSsoUser && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+            <p className="text-sm text-primary-900">
               <strong>SSO User:</strong> This user authenticates via Google OAuth.
               Name and password cannot be changed.
             </p>

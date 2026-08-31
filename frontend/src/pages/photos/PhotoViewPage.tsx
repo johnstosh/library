@@ -61,7 +61,7 @@ export function PhotoViewPage() {
         )}
         <Link
           to="/"
-          className="text-blue-400 hover:text-blue-300 underline"
+          className="text-primary-300 hover:text-primary-200 underline"
           data-test="photo-error-home-link"
         >
           Return to Home

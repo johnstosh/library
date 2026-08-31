@@ -245,7 +245,7 @@ export function SearchPage() {
           {data.books.length > 0 && (
             <div data-test="search-results-books">
               <div className="flex items-center gap-2 mb-4">
-                <PiBook className="w-6 h-6 text-blue-600" />
+                <PiBook className="w-6 h-6 text-primary-600" />
                 <h2 className="text-2xl font-bold text-gray-900">
                   Books
                   <span className="ml-2 text-base font-normal text-gray-500">

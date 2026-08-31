@@ -75,7 +75,7 @@ export function GenreChips({
             className={[
               'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap',
               isSelected
-                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:border-gray-400',
             ].join(' ')}
             aria-pressed={isSelected}

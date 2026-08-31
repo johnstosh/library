@@ -113,7 +113,7 @@ public class ApplyForCardUITest {
 
         // Verify "Already have an account" link
         assertThat(page.locator("text=Already have an account?")).isVisible();
-        assertThat(page.locator("a[href='/login'].text-blue-600")).isVisible();
+        assertThat(page.locator("[data-test='apply-sign-in']")).isVisible();
 
         // Verify "What happens next" section does not promise email unless one is provided
         assertThat(page.locator("text=What happens next?")).isVisible();
@@ -247,7 +247,7 @@ public class ApplyForCardUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         // Click the "Sign in" link (the one inside the form area, not the nav link)
-        page.click("a[href='/login'].text-blue-600");
+        page.click("[data-test='apply-sign-in']");
 
         // Verify we navigated to login page
         page.waitForURL("**/login", new Page.WaitForURLOptions().setTimeout(10000L));

@@ -103,7 +103,7 @@ export function DataTable<T>({
                 className={clsx(
                   'hover:bg-gray-50 transition-colors',
                   onRowClick && 'cursor-pointer',
-                  isSelected && 'bg-blue-50'
+                  isSelected && 'bg-primary-50'
                 )}
                 onClick={() => onRowClick?.(item)}
                 data-entity-id={key}

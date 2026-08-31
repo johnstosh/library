@@ -51,8 +51,8 @@ export function FilterChip({
         disabled
           ? 'border-gray-200 text-gray-400 bg-gray-50'
           : active
-            ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
-            : 'border-gray-300 text-gray-600 bg-white hover:border-blue-400 hover:text-blue-600'
+            ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium hover:bg-primary-100'
+            : 'border-gray-300 text-gray-600 bg-white hover:border-primary-400 hover:text-primary-600'
       }`}
     >
       <button
@@ -67,7 +67,7 @@ export function FilterChip({
         }`}
       >
         {active ? (
-          <svg className="hidden sm:block w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <svg className="hidden sm:block w-3.5 h-3.5 text-primary-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         ) : (
@@ -94,7 +94,7 @@ export function FilterChip({
             setPinned((open) => !open)
           }}
           className={`inline-flex items-center pr-3 pl-0.5 py-1.5 ${
-            disabled ? 'cursor-not-allowed text-gray-300' : 'cursor-help text-gray-400 hover:text-blue-600'
+            disabled ? 'cursor-not-allowed text-gray-300' : 'cursor-help text-gray-400 hover:text-primary-600'
           }`}
         >
           <PiInfo className="w-3.5 h-3.5" aria-hidden="true" />

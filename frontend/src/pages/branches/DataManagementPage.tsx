@@ -213,12 +213,12 @@ export function DataManagementPage() {
 
       {/* JSON Export/Import Section */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
-        <div className="bg-blue-600 px-6 py-4 text-white">
+        <div className="bg-primary-600 px-6 py-4 text-white">
           <div className="flex items-center gap-3">
             <PiDatabase className="w-8 h-8" />
             <div>
               <h2 className="text-xl font-bold">Database Export/Import</h2>
-              <p className="text-sm text-blue-100">
+              <p className="text-sm text-primary-100">
                 Export all branch data to JSON or import from a backup file
               </p>
             </div>
@@ -255,7 +255,7 @@ export function DataManagementPage() {
           {/* Export JSON */}
           <div className="border border-gray-200 rounded-lg p-6">
             <div className="flex items-start gap-3 mb-4">
-              <PiFileArrowDown className="w-6 h-6 text-blue-600 mt-1" />
+              <PiFileArrowDown className="w-6 h-6 text-primary-600 mt-1" />
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Export Data
@@ -416,22 +416,22 @@ export function DataManagementPage() {
         {/* ZIP Upload Progress */}
         {zipUploadProgress.isUploading && (
           <div className="px-6 pb-4">
-            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+            <div className="border border-primary-200 rounded-lg p-4 bg-primary-50">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-900">
+                <span className="text-sm font-medium text-primary-900">
                   Uploading ZIP file...
                 </span>
-                <span className="text-sm text-blue-700">
+                <span className="text-sm text-primary-700">
                   {zipUploadProgress.mbSent.toFixed(1)} / {zipUploadProgress.totalMb.toFixed(1)} MB ({zipUploadProgress.percentage.toFixed(0)}%)
                 </span>
               </div>
-              <div className="w-full bg-blue-200 rounded-full h-3 mb-2">
+              <div className="w-full bg-primary-200 rounded-full h-3 mb-2">
                 <div
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  className="bg-primary-600 h-3 rounded-full transition-all duration-300"
                   style={{ width: `${zipUploadProgress.percentage}%` }}
                 />
               </div>
-              <div className="text-xs text-blue-700">
+              <div className="text-xs text-primary-700">
                 {zipUploadProgress.imagesProcessed} images processed: {zipUploadProgress.imagesSuccess} updated, {zipUploadProgress.imagesFailure} failed, {zipUploadProgress.imagesSkipped} skipped
               </div>
             </div>
