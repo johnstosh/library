@@ -12,7 +12,7 @@
     </symbol>
   </defs>
 
-  <g transform="translate(56,54) rotate(-74)" fill="#2C2825" opacity="0.34">
+  <g transform="translate(56,54) rotate(-34)" fill="#2C2825" opacity="0.34">
     <use href="#book" x="-14" y="-14" width="28" height="28"/>
   </g>
   <g transform="translate(121,117) rotate(-8)" fill="#6B2D3C" opacity="0.28">
@@ -27,13 +27,13 @@
   <g transform="translate(53,173) rotate(13)" fill="#2C2825" opacity="0.32">
     <use href="#books" x="-15" y="-15" width="30" height="30"/>
   </g>
-  <g transform="translate(432,146) rotate(58)" fill="#1F4D3A" opacity="0.36">
+  <g transform="translate(432,146) rotate(22)" fill="#1F4D3A" opacity="0.36">
     <use href="#book" x="-14" y="-14" width="28" height="28"/>
   </g>
   <g transform="translate(335,192) rotate(39)" fill="#2C2825" opacity="0.29">
     <use href="#book" x="-16" y="-16" width="32" height="32"/>
   </g>
-  <g transform="translate(161,254) rotate(113)" fill="#6B2D3C" opacity="0.38">
+  <g transform="translate(161,254) rotate(-28)" fill="#6B2D3C" opacity="0.38">
     <use href="#book" x="-19" y="-19" width="38" height="38"/>
   </g>
   <g transform="translate(245,222) rotate(32)" fill="#1F4D3A" opacity="0.27">
@@ -42,22 +42,22 @@
   <g transform="translate(73,265) rotate(-6)" fill="#1F4D3A" opacity="0.31">
     <use href="#book" x="-16" y="-16" width="32" height="32"/>
   </g>
-  <g transform="translate(437,248) rotate(-52)" fill="#6B2D3C" opacity="0.28">
+  <g transform="translate(437,248) rotate(-21)" fill="#6B2D3C" opacity="0.28">
     <use href="#book" x="-17" y="-17" width="34" height="34"/>
   </g>
   <g transform="translate(93,366) rotate(-18)" fill="#2C2825" opacity="0.26">
     <use href="#books" x="-21" y="-21" width="42" height="42"/>
   </g>
-  <g transform="translate(201,338) rotate(108)" fill="#6B2D3C" opacity="0.30">
+  <g transform="translate(201,338) rotate(44)" fill="#6B2D3C" opacity="0.30">
     <use href="#books" x="-17" y="-17" width="34" height="34"/>
   </g>
   <g transform="translate(354,312) rotate(5)" fill="#2C2825" opacity="0.40">
     <use href="#books" x="-22" y="-22" width="44" height="44"/>
   </g>
-  <g transform="translate(432,347) rotate(-94)" fill="#1F4D3A" opacity="0.33">
+  <g transform="translate(432,347) rotate(9)" fill="#1F4D3A" opacity="0.33">
     <use href="#book" x="-14" y="-14" width="28" height="28"/>
   </g>
-  <g transform="translate(283,387) rotate(-79)" fill="#6B2D3C" opacity="0.29">
+  <g transform="translate(283,387) rotate(-14)" fill="#6B2D3C" opacity="0.29">
     <use href="#book" x="-18" y="-18" width="36" height="36"/>
   </g>
   <g transform="translate(202,422) rotate(-10)" fill="#2C2825" opacity="0.27">

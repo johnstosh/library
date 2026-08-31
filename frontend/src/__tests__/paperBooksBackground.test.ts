@@ -49,6 +49,8 @@ describe('paper-books background', () => {
       .map((match) => Number(match[1]))
       .filter((size) => size < 100)
 
+    expect(rotations.length).toBeGreaterThan(0)
+    expect(rotations.every((angle) => angle >= -45 && angle <= 45)).toBe(true)
     expect(new Set(rotations).size).toBeGreaterThanOrEqual(12)
     expect(rotations.some((angle) => Math.abs(angle) % 45 !== 0)).toBe(true)
     expect(new Set(sizes).size).toBeGreaterThanOrEqual(5)
