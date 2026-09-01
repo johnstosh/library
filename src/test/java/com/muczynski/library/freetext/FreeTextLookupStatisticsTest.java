@@ -8,6 +8,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.muczynski.library.dto.importdtos.ImportBookDto;
+import com.muczynski.library.dto.importdtos.ImportRequestDto;
+import com.muczynski.library.service.ImportService;
+import com.muczynski.library.util.PasswordHashingUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,44 +29,53 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Integration test that gathers statistics about free text lookup providers.
+ * Integration test that gathers statistics about free text lookup providers
+ * and compares production free-text links against the latest algorithm/cache.
  * <p>
- * This test is manually executed and not part of normal test runs.
- * It reads books from branch-archive.json and tests each provider against each book,
- * collecting hit/miss statistics and detailed logs.
+ * Production JSON is downloaded once from {@code GET /api/import/json} and cached
+ * in a temp file so later runs (and the long provider scan) reuse it.
  * <p>
- * Processing approach: For each book, all providers are tested before moving to the next book.
- * This provides natural rate limiting - by the time the test cycles back to a provider for the
- * next book, sufficient time has passed to avoid overwhelming any external API.
+ * Compare existing links with:
+ * {@code RUN_FREETEXT_PROD_COMPARE=true ./gradlew test --tests '*.FreeTextLookupStatisticsTest.compareExistingLinksAgainstLatestAlgorithm'}
  * <p>
- * Output:
- * - ./book-lookup/[ProviderName].log - detailed log per provider
- * - ./book-lookup-statistics.json - aggregated statistics (also used for resume support)
- * <p>
- * Run with: ./gradlew test --tests "*.FreeTextLookupStatisticsTest" -DincludeTags=manual
+ * Full provider scan (long-running):
+ * {@code ./gradlew test --tests '*.FreeTextLookupStatisticsTest.gatherLookupStatistics'}
  */
 @SpringBootTest
 @ActiveProfiles("test")
 @Tag("manual")
-@Disabled("Long-running test - run manually with: ./gradlew test --tests '*.FreeTextLookupStatisticsTest'")
 class FreeTextLookupStatisticsTest {
 
-    private static final String ARCHIVE_FILE = "./branch-archive.json";
+    private static final String PROD_BASE = "https://library.muczynskifamily.com";
+    private static final Path EXPORT_CACHE = Path.of(System.getProperty("java.io.tmpdir"),
+            "library-prod-export.json");
+    private static final Path CACHE_REFRESH_FILE = Path.of(System.getProperty("java.io.tmpdir"),
+            "freetext-cache-refresh-adds.java");
+    private static final Path COMPARE_REPORT_FILE = Path.of(System.getProperty("java.io.tmpdir"),
+            "freetext-link-compare.txt");
     private static final String STATISTICS_FILE = "./book-lookup-statistics.json";
     private static final String LOG_DIRECTORY = "./book-lookup";
     private static final String PROGRESS_FILE = "./book-lookup-progress.log";
@@ -84,6 +98,7 @@ class FreeTextLookupStatisticsTest {
     }
 
     @Test
+    @Disabled("Long-running provider scan - run manually")
     void gatherLookupStatistics() throws Exception {
         System.out.println();
         System.out.println("=".repeat(60));
@@ -92,12 +107,9 @@ class FreeTextLookupStatisticsTest {
         System.out.println("=".repeat(60));
         System.out.println();
 
-        // Skip if archive file doesn't exist
-        File archiveFile = new File(ARCHIVE_FILE);
-        System.out.println("Checking for archive file: " + archiveFile.getAbsolutePath());
-        assumeTrue(archiveFile.exists(),
-                "Skipping test: " + ARCHIVE_FILE + " does not exist");
-        System.out.println("Archive file found. Size: " + (archiveFile.length() / 1024) + " KB");
+        Path archiveFile = loadOrDownloadExport();
+        System.out.println("Using export file: " + archiveFile.toAbsolutePath());
+        System.out.println("Export file size: " + (Files.size(archiveFile) / 1024) + " KB");
 
         // Sort providers by priority
         System.out.println();
@@ -122,7 +134,7 @@ class FreeTextLookupStatisticsTest {
         System.out.println();
         System.out.println("Loading archive file...");
         long parseStart = System.currentTimeMillis();
-        Map<String, Object> archive = objectMapper.readValue(archiveFile, new TypeReference<>() {});
+        Map<String, Object> archive = objectMapper.readValue(archiveFile.toFile(), new TypeReference<>() {});
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> books = (List<Map<String, Object>>) archive.get("books");
         long parseTime = System.currentTimeMillis() - parseStart;
@@ -404,6 +416,214 @@ class FreeTextLookupStatisticsTest {
     }
 
     /**
+     * Download the production JSON export (cached in a temp file) and compare each
+     * book's stored freeTextUrl against what the latest cache/algorithm would write
+     * if lookup overwrote the field. A 2→1 drop is a lost link.
+     * <p>
+     * Also writes suggested {@code add()} calls to refresh the cache with production
+     * titles and the union of existing URLs.
+     */
+    @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_FREETEXT_PROD_COMPARE", matches = "true")
+    void compareExistingLinksAgainstLatestAlgorithm() throws Exception {
+        Path exportFile = loadOrDownloadExport();
+        ImportRequestDto export = objectMapper.readValue(exportFile.toFile(), ImportRequestDto.class);
+        List<ImportBookDto> books = export.getBooks() != null ? export.getBooks() : List.of();
+
+        System.out.println();
+        System.out.println("=".repeat(72));
+        System.out.println("FREE TEXT LINK COMPARISON (production export vs latest algorithm)");
+        System.out.println("Export: " + exportFile.toAbsolutePath());
+        System.out.println("Books in export: " + books.size());
+        System.out.println("=".repeat(72));
+
+        int withLinks = 0;
+        int cacheHits = 0;
+        int cacheNotFound = 0;
+        int cacheMisses = 0;
+        int overwriteLosses = 0;
+        int mergeSafe = 0;
+        List<String> lossLines = new ArrayList<>();
+        List<String> missingFromCache = new ArrayList<>();
+        List<String> cacheRefreshAdds = new ArrayList<>();
+
+        for (ImportBookDto book : books) {
+            String title = book.getTitle();
+            if (title == null || title.isBlank()) {
+                continue;
+            }
+            String author = book.getAuthorName();
+            List<String> existingUrls = FreeTextLookupCache.extractUrls(book.getFreeTextUrl());
+            if (existingUrls.isEmpty()) {
+                continue;
+            }
+            withLinks++;
+
+            String cached = FreeTextLookupCache.lookup(author, title);
+            List<String> lost;
+            if (cached == null) {
+                cacheMisses++;
+                missingFromCache.add(formatBook(author, title) + "  existing=" + existingUrls);
+                // Cache miss: first provider hit would replace the field with a single URL.
+                lost = existingUrls.size() > 1 ? existingUrls.subList(1, existingUrls.size()) : List.of();
+            } else if (cached.isBlank()) {
+                cacheNotFound++;
+                missingFromCache.add(formatBook(author, title)
+                        + "  cached as NOT FOUND but production has " + existingUrls);
+                // Cached "not found" does not overwrite the book, so links stay
+                lost = List.of();
+            } else {
+                cacheHits++;
+                lost = FreeTextLookupCache.urlsLostIfReplaced(book.getFreeTextUrl(), cached);
+            }
+
+            if (!lost.isEmpty()) {
+                overwriteLosses++;
+                lossLines.add(formatBook(author, title)
+                        + "\n    existing (" + existingUrls.size() + "): " + existingUrls
+                        + "\n    algorithm/cache: " + FreeTextLookupCache.extractUrls(cached)
+                        + "\n    WOULD LOSE: " + lost);
+            }
+
+            String merged = FreeTextLookupCache.mergeUrls(book.getFreeTextUrl(),
+                    cached != null && !cached.isBlank() ? cached : book.getFreeTextUrl());
+            if (FreeTextLookupCache.urlsLostIfReplaced(book.getFreeTextUrl(), merged).isEmpty()) {
+                mergeSafe++;
+            }
+
+            LinkedHashSet<String> union = new LinkedHashSet<>(existingUrls);
+            union.addAll(FreeTextLookupCache.extractUrls(cached));
+            cacheRefreshAdds.add(toAddCall(author, title, union));
+        }
+
+        Files.writeString(CACHE_REFRESH_FILE, String.join("\n", cacheRefreshAdds) + "\n");
+
+        StringBuilder report = new StringBuilder();
+        report.append("Books with free-text URLs:     ").append(withLinks).append('\n');
+        report.append("Cache hits (has URLs):         ").append(cacheHits).append('\n');
+        report.append("Cache 'not found' marker:      ").append(cacheNotFound).append('\n');
+        report.append("Cache miss (never searched):   ").append(cacheMisses).append('\n');
+        report.append("Overwrite would lose URLs:     ").append(overwriteLosses).append('\n');
+        report.append("Safe if lookup merges URLs:    ").append(mergeSafe).append('\n');
+        if (!lossLines.isEmpty()) {
+            report.append("\nBOOKS THAT WOULD LOSE LINKS IF LOOKUP OVERWROTE:\n");
+            lossLines.forEach(line -> report.append(line).append('\n'));
+        }
+        if (!missingFromCache.isEmpty()) {
+            report.append("\nPRODUCTION TITLES TO ADD/REFRESH IN CACHE:\n");
+            missingFromCache.forEach(line -> report.append(line).append('\n'));
+        }
+        Files.writeString(COMPARE_REPORT_FILE, report.toString());
+
+        System.out.println();
+        System.out.printf("Books with free-text URLs:     %d%n", withLinks);
+        System.out.printf("Cache hits (has URLs):         %d%n", cacheHits);
+        System.out.printf("Cache 'not found' marker:      %d%n", cacheNotFound);
+        System.out.printf("Cache miss (never searched):   %d%n", cacheMisses);
+        System.out.printf("Overwrite would lose URLs:     %d%n", overwriteLosses);
+        System.out.printf("Safe if lookup merges URLs:    %d%n", mergeSafe);
+        System.out.println("Cache refresh add() calls:    " + CACHE_REFRESH_FILE);
+        System.out.println("Comparison report:            " + COMPARE_REPORT_FILE);
+
+        if (!lossLines.isEmpty()) {
+            System.out.println();
+            System.out.println("BOOKS THAT WOULD LOSE LINKS IF LOOKUP OVERWROTE:");
+            System.out.println("-".repeat(72));
+            lossLines.forEach(System.out::println);
+        }
+        if (!missingFromCache.isEmpty()) {
+            System.out.println();
+            System.out.println("PRODUCTION TITLES TO ADD/REFRESH IN CACHE:");
+            System.out.println("-".repeat(72));
+            missingFromCache.forEach(line -> System.out.println("  " + line));
+        }
+
+        System.out.println();
+        System.out.println("=".repeat(72));
+        // Merge is the runtime guarantee; overwrite losses are reported above for research.
+        assertTrue(mergeSafe == withLinks,
+                "Merging algorithm results into existing freeTextUrl must not drop links");
+        System.out.printf("Answer: overwrite would lose URLs on %d book(s); merge keeps all %d.%n",
+                overwriteLosses, withLinks);
+    }
+
+    /**
+     * Download GET /api/import/json from production once and reuse the temp file.
+     */
+    Path loadOrDownloadExport() throws Exception {
+        if (Files.exists(EXPORT_CACHE) && Files.size(EXPORT_CACHE) > 1000) {
+            System.out.println("Using cached production export: " + EXPORT_CACHE.toAbsolutePath()
+                    + " (" + (Files.size(EXPORT_CACHE) / 1024) + " KB)");
+            return EXPORT_CACHE;
+        }
+
+        System.out.println("Downloading production JSON export to " + EXPORT_CACHE.toAbsolutePath());
+        CookieManager cookies = new CookieManager();
+        cookies.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+        HttpClient client = HttpClient.newBuilder()
+                .cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(30))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        String hashed = PasswordHashingUtil.hashPasswordSHA256(ImportService.DEFAULT_PASSWORD);
+        String loginJson = "{\"username\":\"librarian\",\"password\":\"" + hashed + "\"}";
+        HttpRequest login = HttpRequest.newBuilder()
+                .uri(URI.create(PROD_BASE + "/api/auth/login"))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.ofString(loginJson))
+                .build();
+        HttpResponse<String> loginResponse = client.send(login, HttpResponse.BodyHandlers.ofString());
+        if (loginResponse.statusCode() == 429) {
+            throw new IllegalStateException("Production rate-limited login (429). Wait 3 minutes and retry.");
+        }
+        if (loginResponse.statusCode() != 200) {
+            throw new IllegalStateException("Login failed: HTTP " + loginResponse.statusCode()
+                    + " " + loginResponse.body());
+        }
+
+        HttpRequest export = HttpRequest.newBuilder()
+                .uri(URI.create(PROD_BASE + "/api/import/json"))
+                .timeout(Duration.ofMinutes(3))
+                .GET()
+                .build();
+        HttpResponse<Path> exportResponse = client.send(export,
+                HttpResponse.BodyHandlers.ofFile(EXPORT_CACHE));
+        if (exportResponse.statusCode() == 429) {
+            Files.deleteIfExists(EXPORT_CACHE);
+            throw new IllegalStateException("Production rate-limited export (429). Wait 3 minutes and retry.");
+        }
+        if (exportResponse.statusCode() != 200) {
+            Files.deleteIfExists(EXPORT_CACHE);
+            throw new IllegalStateException("Export failed: HTTP " + exportResponse.statusCode());
+        }
+        System.out.println("Downloaded export: " + Files.size(EXPORT_CACHE) + " bytes");
+        return EXPORT_CACHE;
+    }
+
+    private static String formatBook(String author, String title) {
+        return "\"" + title + "\" by " + (author != null ? author : "Unknown");
+    }
+
+    private static String toAddCall(String author, String title, Set<String> urls) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("        add(")
+                .append(javaQuote(author != null ? author : ""))
+                .append(", ")
+                .append(javaQuote(title));
+        for (String url : urls) {
+            sb.append(",\n            ").append(javaQuote(url));
+        }
+        sb.append(");");
+        return sb.toString();
+    }
+
+    private static String javaQuote(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    /**
      * Test with specific books to debug provider behavior:
      * - "Fireside Reader" by Reader's Digest - should NOT be found (copyrighted, only available for borrowing)
      * - "Eight Cousins" by Louisa May Alcott - expected to be found (public domain)
@@ -412,6 +632,7 @@ class FreeTextLookupStatisticsTest {
      */
     @Test
     @Tag("manual")
+    @Disabled("Hits live providers - run manually")
     void testDebugBooks() {
         System.out.println();
         System.out.println("=".repeat(60));
@@ -472,6 +693,7 @@ class FreeTextLookupStatisticsTest {
      */
     @Test
     @Tag("manual")
+    @Disabled("Hits live providers - run manually")
     void testTwoKnownBooks() {
         System.out.println();
         System.out.println("=".repeat(60));

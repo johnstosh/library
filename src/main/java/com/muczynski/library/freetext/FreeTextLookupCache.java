@@ -5,8 +5,12 @@ package com.muczynski.library.freetext;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Global cache of known free text URLs for books.
@@ -29,6 +33,12 @@ public final class FreeTextLookupCache {
      * Map structure: normalizedAuthor -> (normalizedTitle -> space-separated URLs)
      */
     private static final Map<String, Map<String, String>> CACHE = new HashMap<>();
+
+    /**
+     * Matches http(s) URLs in a freeTextUrl field. Trailing punctuation is stripped
+     * after the match so prose such as "Volume I: https://example.com/x." still works.
+     */
+    private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s]+");
 
     static {
         // Data extracted from book-lookup-reference-backup/*.log HITs
@@ -151,10 +161,16 @@ public final class FreeTextLookupCache {
             "https://librivox.org/orthodoxy-by-gk-chesterton/");
 
         add("Gilbert Keith Chesterton", "The Innocence of Father Brown",
-            "https://www.gutenberg.org/ebooks/204");
+            "https://www.gutenberg.org/ebooks/204",
+            "https://www.ewtn.com/catholicism/library/innocence-of-fr-brown-10829");
 
         add("Gilbert Keith Chesterton", "The Wisdom of Father Brown",
+            "https://archive.org/details/wisdomfatherbro01chesgoog",
             "https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+
+        add("Gilbert Keith Chesterton", "The Man Who Was Thursday",
+            "https://archive.org/details/manwhowasthursda0000gilb",
+            "https://www.ewtn.com/catholicism/library/man-who-was-thursday-10884");
 
         // Eleanor Estes
         add("Eleanor Estes", "Ginger Pye",
@@ -252,6 +268,153 @@ public final class FreeTextLookupCache {
 
         add("Catholic Church", "The Handbook of Indulgences: Norms and Grants",
             "https://www.vatican.va/roman_curia/tribunals/apost_penit/documents/rc_trib_appen_doc_20020826_enchiridion-indulgentiarum_lt.html");
+
+        // ===============================================
+        // Production catalog refresh (library.muczynskifamily.com export)
+        // Union of live freeTextUrl values. add() merges, so existing links stay.
+        // ===============================================
+        add("Victor J. Green", "Saints for All Seasons",
+            "https://www.loc.gov/item/28004743/");
+        add("Samuel Langhorne Clemens", "Personal Recollections of Joan of Arc",
+            "https://www.gutenberg.org/ebooks/2874");
+        add("Euripides", "Medea",
+            "https://archive.org/details/dictionaryofolde00pulv");
+        add("P. Daniello Bartoli", "The Life of St. Stanislas Kostka, of the Society of Jesus",
+            "https://www.saintsbooks.net/books/Edward%20Healy%20Thompson%20-%20The%20Life%20of%20St.%20Stanislas%20Kostka.pdf");
+        add("Gene Stratton-Porter", "Freckles",
+            "https://archive.org/details/freckles00stragoog");
+        add("Mary Healy", "Men & Women Are From Eden: A Study Guide to John Paul II's Theology of the Body",
+            "https://hdl.loc.gov/loc.music/musm1508.10038169");
+        add("Alberta Fowler Lutz", "Stories of the Child Jesus from Many Lands",
+            "https://www.loc.gov/item/38011674/");
+        add("Jane Austen", "Pride and Prejudice",
+            "https://archive.org/details/in.ernet.dli.2015.350309");
+        add("Teresa of Ávila", "Interior Castle",
+            "https://librivox.org/the-interior-castle-by-st-teresa-of-avila/");
+        add("Plutarch", "Roman Lives",
+            "http://hdl.loc.gov/loc.gdc/scd0001.00201416395");
+        add("Thomas à Kempis", "The Imitation of Christ",
+            "https://archive.org/details/theimitationchri00unknuoft");
+        add("Lew Wallace", "Ben-Hur: A Tale of the Christ",
+            "https://archive.org/details/benhurtaleofchri0000leww_f7z0");
+        add("Plato", "Republic",
+            "https://archive.org/details/republic0000plat_i4p1");
+        add("Louisa May Alcott", "Little Women, c. 3",
+            "https://www.loc.gov/item/28017387/");
+        add("William Shakespeare", "Othello",
+            "https://archive.org/details/othello01shakgoog");
+        add("Laura Ingalls Wilder", "Farmer Boy",
+            "https://www.loc.gov/item/15018178/");
+        add("Henry James Coleridge", "The Life of St. Stanislas Kostka",
+            "https://books.google.com/books?id=c0zE5fNnpZEC&printsec=frontcover&source=gbs_ge_summary_r&cad=0#v=onepage&q&f=false");
+        add("Lorenzo Scupoli", "Spiritual Combat",
+            "https://archive.org/details/spiritualcombat04scupgoog");
+        add("James Madison", "The Constitution of the United States of America",
+            "https://archive.org/details/debatesinthefede008819mbp");
+        add("Kenneth Grahame", "The Wind in the Willows",
+            "https://archive.org/details/windinwillows0000kenn_p4r1");
+        add("Mary of Ágreda", "The Mystical City of God",
+            "https://www.ecatholic2000.com/agreda/vol1/vol1.shtml",
+            "https://www.ecatholic2000.com/agreda/vol2/vol2.shtml",
+            "https://www.ecatholic2000.com/agreda/vol3/vol3.shtml",
+            "https://www.ecatholic2000.com/agreda/vol4/vol4.shtml",
+            "https://archive.org/details/MysticalCityOfGod",
+            "https://archive.org/details/mysticalcityofgo00maruoft",
+            "https://archive.org/details/mysticalcityofgo01maruoft");
+        add("Joseph Conrad", "Youth and Two Other Stories",
+            "https://hdl.loc.gov/loc.gdc/gdcscd.00014693981");
+        add("Ignatius of Loyola", "The Spiritual Exercises of Saint Ignatius",
+            "https://archive.org/details/TheTextOfTheSpiritualExercises");
+        add("Thelma Sargent", "The Homeric Hymns",
+            "https://librivox.org/homeric-hymns-epigrams-and-the-battle-of-frogs-and-mice-by-homer/");
+        add("Sophocles", "Sophocles: Antigone, Oedipus the King, Oedipus at Colonus",
+            "https://www.gutenberg.org/ebooks/31");
+        add("Publius Vergilius Maro", "The Aeneid",
+            "https://librivox.org/aeneid-by-vergil/");
+        add("Louisa May Alcott", "Little Women, c. 2",
+            "https://www.loc.gov/item/28017387/");
+        add("Bernard of Clairvaux", "On the Love of God",
+            "https://archive.org/details/OnTheLoveOfGod");
+        add("Lucy Maud Montgomery", "Anne of Avonlea",
+            "https://www.loc.gov/item/20018843/");
+        add("Titus Maccius Plautus", "Four Comedies",
+            "https://www.loc.gov/item/unk83076535/");
+        add("Avery Robert Dulles", "Coming Home",
+            "https://librivox.org/coming-home-by-ring-lardner/");
+        add("Francis de Sales", "Introduction to the Devout Life",
+            "https://archive.org/details/anintroductiont00salegoog");
+        add("Edward Morgan Forster", "Howards End",
+            "https://www.loc.gov/item/10030577/");
+        add("Francis de Sales", "Introduction to the Devout Life, c. 2",
+            "https://ccel.org/ccel/desales/devout_life/devout_life");
+        add("Charles Dickens", "David Copperfield",
+            "https://archive.org/details/in.ernet.dli.2015.195409");
+        add("Homer", "The Odyssey",
+            "https://www.loc.gov/item/10000284/");
+        add("William Bernard Ullathorne", "The Little Book of Humility and Patience",
+            "https://www.ewtn.com/catholicism/library/little-book-of-humility-and-patience-12588");
+        add("Edward Healy Thompson", "The Life and Glories of St. Joseph",
+            "https://archive.org/details/lifegloriesofstj00thomuoft/lifegloriesofstj00thomuoft/page/n4/mode/1up");
+        add("Thucydides", "History of the Peloponnesian War",
+            "https://archive.org/details/historyofpelopon0000thuc");
+        add("Irene Temple Bailey", "The Holly Hedge and Other Christmas Stories",
+            "https://www.loc.gov/item/43037323/");
+        add("Laura Ingalls Wilder", "Little House on the Prairie",
+            "https://www.loc.gov/item/24009997/");
+        add("John Croiset", "Devotion to the Sacred Heart of Jesus, c. 2",
+            "https://www.loc.gov/item/ltf90012752/");
+        add("Willa Cather", "My Ántonia",
+            "https://archive.org/details/myntonia00cathgoog");
+        add("Francis J. Finn", "Percy Wynn",
+            "https://www.loc.gov/item/06041141/");
+        add("Augustine of Hippo", "Confessions",
+            "http://www.sacred-texts.com/chr/augconf.htm");
+        add("Gene Stratton-Porter", "Freckles, c. 2",
+            "https://www.loc.gov/item/21013702/");
+        add("Robert Browning", "Selections from the Poetical Works of Robert Browning",
+            "https://archive.org/details/selectionsfromp00browgoog");
+        add("Alban Butler", "Lives of the Saints",
+            "https://archive.org/details/onehundredpious00butlgoog");
+        add("Michael E. Gaitley", "Consoling the Heart of Jesus: A Do-It-Yourself Retreat Inspired by the Spiritual Exercises of St. Ignatius",
+            "https://www.catholicplanet.com/ebooks/Spiritual-Exercises.pdf");
+        add("Aristotle", "Nicomachean Ethics",
+            "https://archive.org/details/nicomacheanethi06arisgoog");
+        add("Jane Austen", "Persuasion",
+            "https://archive.org/details/bwb_KU-258-069");
+        add("Claire Huchet Bishop", "Happy Christmas! Tales for Boys and Girls",
+            "https://www.loc.gov/item/22026982/");
+        add("Ignatius of Loyola", "The Spiritual Exercises of St. Ignatius",
+            "https://archive.org/details/TheSpiritualExercisesOfStIgnatius");
+        add("Anthony Trollope", "Doctor Thorne",
+            "https://archive.org/details/doctorthorne0000unse_d9v9");
+        add("Paul O'Sullivan", "Read Me or Rue It: How to Avoid Purgatory",
+            "https://www.ewtn.com/catholicism/library/read-me-or-rue-it-12622");
+        add("Plutarch", "Greek Lives",
+            "https://archive.org/details/greeklivesfrompl00plutuoft");
+        add("Johanna Spyri", "Heidi",
+            "https://archive.org/details/bwb_W9-AOB-952");
+        add("Homer", "The Odyssey, c. 2",
+            "https://www.loc.gov/item/10000284/");
+        add("Alphonsus Liguori", "The Glories of Mary",
+            "https://www.loc.gov/item/02025290/");
+        add("Harold and Grace Johnson", "The Broken Rosary",
+            "https://librivox.org/the-broken-rosary-by-grace-and-harold-johnson/");
+        add("Sir Walter Scott", "Ivanhoe",
+            "https://www.loc.gov/item/13007660/");
+        add("Louisa May Alcott", "Eight Cousins, c. 2",
+            "https://www.loc.gov/item/03020582/");
+        add("Thomas à Kempis", "The Imitation of Christ, c. 2",
+            "https://www.loc.gov/item/10017981/");
+        add("Hilaire Joseph Pierre René Belloc", "The Great Heresies",
+            "https://www.ewtn.com/catholicism/library/great-heresies-3103");
+        add("Dante Alighieri", "Inferno, c. 2",
+            "https://www.loc.gov/item/16003562/");
+        add("William Wilkie Collins", "The Moonstone",
+            "https://librivox.org/the-moonstone-by-wilkie-collins/");
+        add("Thomas à Kempis", "The Imitation of Christ, c. 3",
+            "https://www.loc.gov/item/10017981/");
+        add("Ignatius of Loyola", "The Spiritual Exercises, c. 2",
+            "http://www.ccel.org/ccel/ignatius/exercises.html");
 
         // ===============================================
         // Books searched but not found (cached as empty)
@@ -525,14 +688,23 @@ public final class FreeTextLookupCache {
 
     /**
      * Add an entry to the cache with multiple URLs.
+     * If the author/title is already cached with URLs, incoming URLs are unioned
+     * so a later refresh cannot drop a link the cache already knew about.
      */
     private static void add(String author, String title, String... urls) {
         String normalizedAuthor = normalizeAuthor(author);
         String normalizedTitle = normalizeTitle(title);
-        String urlString = String.join(" ", urls);
-
-        CACHE.computeIfAbsent(normalizedAuthor, k -> new HashMap<>())
-             .put(normalizedTitle, urlString);
+        String incoming = String.join(" ", urls);
+        Map<String, String> authorCache = CACHE.computeIfAbsent(normalizedAuthor, k -> new HashMap<>());
+        String existing = authorCache.get(normalizedTitle);
+        if (incoming.isBlank()) {
+            // "not found" marker: do not clobber a title that already has URLs
+            if (existing == null) {
+                authorCache.put(normalizedTitle, "");
+            }
+            return;
+        }
+        authorCache.put(normalizedTitle, mergeUrls(existing, incoming));
     }
 
     /**
@@ -541,6 +713,98 @@ public final class FreeTextLookupCache {
      */
     private static void addNotFound(String author, String title) {
         add(author, title); // varargs with no args = empty string
+    }
+
+    /**
+     * Extract http(s) URLs from a freeTextUrl field.
+     * Ignores surrounding prose so a labeled multi-volume field still yields its links.
+     */
+    public static List<String> extractUrls(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        List<String> urls = new ArrayList<>();
+        Matcher matcher = URL_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String url = matcher.group().replaceAll("[.,;:)\\]]+$", "");
+            boolean already = false;
+            for (String existing : urls) {
+                if (existing.equalsIgnoreCase(url)) {
+                    already = true;
+                    break;
+                }
+            }
+            if (!already) {
+                urls.add(url);
+            }
+        }
+        return urls;
+    }
+
+    /**
+     * Union URLs from {@code incoming} into {@code existing} without dropping any
+     * existing link. If {@code existing} contains prose around its URLs (volume
+     * labels, etc.), that text is kept and only genuinely new URLs are appended.
+     *
+     * @return existing unchanged when incoming adds nothing; otherwise a field
+     *         that still contains every previous URL
+     */
+    public static String mergeUrls(String existing, String incoming) {
+        List<String> incomingUrls = extractUrls(incoming);
+        if (incomingUrls.isEmpty()) {
+            return existing;
+        }
+        List<String> existingUrls = extractUrls(existing);
+        if (existingUrls.isEmpty()) {
+            return String.join(" ", incomingUrls);
+        }
+
+        List<String> extra = new ArrayList<>();
+        for (String url : incomingUrls) {
+            boolean already = false;
+            for (String known : existingUrls) {
+                if (known.equalsIgnoreCase(url)) {
+                    already = true;
+                    break;
+                }
+            }
+            if (!already) {
+                extra.add(url);
+            }
+        }
+        if (extra.isEmpty()) {
+            return existing;
+        }
+        if (existing == null || existing.isBlank()) {
+            return String.join(" ", incomingUrls);
+        }
+        return existing.trim() + " " + String.join(" ", extra);
+    }
+
+    /**
+     * URLs present in {@code existing} that are missing from {@code incoming}.
+     * Used to detect a 2→1 loss if lookup were to overwrite instead of merge.
+     */
+    public static List<String> urlsLostIfReplaced(String existing, String incoming) {
+        List<String> existingUrls = extractUrls(existing);
+        if (existingUrls.isEmpty()) {
+            return List.of();
+        }
+        List<String> incomingUrls = extractUrls(incoming);
+        List<String> lost = new ArrayList<>();
+        for (String url : existingUrls) {
+            boolean kept = false;
+            for (String found : incomingUrls) {
+                if (found.equalsIgnoreCase(url)) {
+                    kept = true;
+                    break;
+                }
+            }
+            if (!kept) {
+                lost.add(url);
+            }
+        }
+        return lost;
     }
 
     /**

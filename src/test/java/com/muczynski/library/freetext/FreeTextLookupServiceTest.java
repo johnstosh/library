@@ -54,10 +54,11 @@ class FreeTextLookupServiceTest {
 
     @Test
     void lookupBook_findsUrlFromFirstProvider() {
-        Book book = createBook(1L, "Pride and Prejudice", "Jane Austen");
+        String title = "Uncached Title " + java.util.UUID.randomUUID();
+        Book book = createBook(1L, title, "Jane Austen");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(mockProvider1.search(eq("Pride and Prejudice"), eq("Jane Austen")))
+        when(mockProvider1.search(eq(title), eq("Jane Austen")))
                 .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/book"));
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
@@ -268,6 +269,44 @@ class FreeTextLookupServiceTest {
     }
 
     @Test
+    void lookupBook_keepsExistingUrlWhenAlgorithmFindsOnlyOneOfTwo() {
+        Book book = createBook(1L, "Some Unique Title " + java.util.UUID.randomUUID(), "Some Author");
+        book.setFreeTextUrl("https://archive.org/details/book https://www.ewtn.com/catholicism/library/book-1");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://www.ewtn.com/catholicism/library/book-1"));
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertThatUrlsContain(result.getFreeTextUrl(),
+                "https://archive.org/details/book",
+                "https://www.ewtn.com/catholicism/library/book-1");
+        verify(bookRepository, never()).save(any());
+    }
+
+    @Test
+    void lookupBook_cacheHitMergesInsteadOfReplacingExistingUrls() {
+        Book book = createBook(1L, "The Wisdom of Father Brown", "Gilbert Keith Chesterton");
+        book.setFreeTextUrl(
+                "https://archive.org/details/wisdomfatherbro01chesgoog "
+                        + "https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("Cache", result.getProviderName());
+        assertThatUrlsContain(result.getFreeTextUrl(),
+                "https://archive.org/details/wisdomfatherbro01chesgoog",
+                "https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+        verify(mockProvider1, never()).search(anyString(), anyString());
+        verify(bookRepository, never()).save(any());
+    }
+
+    @Test
     void lookupBook_failsWhenAllProvidersReturnInvalidDomains() {
         // Use UUID to ensure this title is never in the global cache
         String uniqueTitle = "Domain Validation Test " + java.util.UUID.randomUUID();
@@ -287,6 +326,14 @@ class FreeTextLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not found in any provider", result.getErrorMessage());
         verify(bookRepository, never()).save(any());
+    }
+
+    private static void assertThatUrlsContain(String field, String... expected) {
+        java.util.List<String> actual = FreeTextLookupCache.extractUrls(field);
+        for (String url : expected) {
+            assertTrue(actual.stream().anyMatch(url::equalsIgnoreCase),
+                    "Expected " + url + " in " + field);
+        }
     }
 
     private Book createBook(Long id, String title, String authorName) {

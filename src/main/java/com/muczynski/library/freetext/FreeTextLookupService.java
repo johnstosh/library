@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Service that orchestrates free text lookup across multiple providers.
@@ -74,19 +75,17 @@ public class FreeTextLookupService {
         String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
         if (cachedUrls != null) {
             if (!cachedUrls.isBlank()) {
-                // Found URLs in cache
-                book.setFreeTextUrl(cachedUrls);
-                book.setLastModified(LocalDateTime.now());
-                bookRepository.save(book);
+                // Merge so a cache hit that knows 1 URL cannot drop a 2nd already on the book
+                String merged = applyFoundUrls(book, cachedUrls);
 
-                log.info("Found free text for book {} in cache: {}", bookId, cachedUrls);
+                log.info("Found free text for book {} in cache: {}", bookId, merged);
 
                 return FreeTextBulkLookupResultDto.builder()
                         .bookId(bookId)
                         .bookTitle(book.getTitle())
                         .authorName(authorName)
                         .success(true)
-                        .freeTextUrl(cachedUrls)
+                        .freeTextUrl(merged)
                         .providerName("Cache")
                         .providersSearched(List.of("Cache"))
                         .build();
@@ -132,20 +131,18 @@ public class FreeTextLookupService {
                         }
                     }
 
-                    // Update the book with the found URL
-                    book.setFreeTextUrl(result.getUrl());
-                    book.setLastModified(LocalDateTime.now());
-                    bookRepository.save(book);
+                    // Merge the found URL into any URLs already stored on the book
+                    String merged = applyFoundUrls(book, result.getUrl());
 
                     log.info("Found free text for book {}: {} via {}",
-                            bookId, result.getUrl(), provider.getProviderName());
+                            bookId, merged, provider.getProviderName());
 
                     return FreeTextBulkLookupResultDto.builder()
                             .bookId(bookId)
                             .bookTitle(book.getTitle())
                             .authorName(authorName)
                             .success(true)
-                            .freeTextUrl(result.getUrl())
+                            .freeTextUrl(merged)
                             .providerName(provider.getProviderName())
                             .providersSearched(searchedProviders)
                             .build();
@@ -208,6 +205,22 @@ public class FreeTextLookupService {
         return providers.stream()
                 .map(FreeTextProvider::getProviderName)
                 .toList();
+    }
+
+    /**
+     * Union {@code foundUrls} into the book's existing freeTextUrl and persist
+     * only when the stored field actually changed. Existing links are never dropped.
+     *
+     * @return the freeTextUrl value after the merge
+     */
+    private String applyFoundUrls(Book book, String foundUrls) {
+        String merged = FreeTextLookupCache.mergeUrls(book.getFreeTextUrl(), foundUrls);
+        if (!Objects.equals(merged, book.getFreeTextUrl())) {
+            book.setFreeTextUrl(merged);
+            book.setLastModified(LocalDateTime.now());
+            bookRepository.save(book);
+        }
+        return merged;
     }
 
     /**
