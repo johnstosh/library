@@ -220,6 +220,49 @@ class TitleMatcherTest {
     }
 
     @Test
+    void titleMatches_fatherVsFrAbbreviation() {
+        assertTrue(TitleMatcher.titleMatches(
+                "The Wisdom of Fr. Brown",
+                "The Wisdom of Father Brown"));
+        assertTrue(TitleMatcher.titleMatches(
+                "wisdom of fr brown",
+                "The Wisdom of Father Brown"));
+        assertTrue(TitleMatcher.titleMatches(
+                "The Innocence of Fr. Brown",
+                "The Innocence of Father Brown"));
+    }
+
+    @Test
+    void titleMatches_saintVsStAbbreviation() {
+        assertTrue(TitleMatcher.titleMatches("St. Augustine", "Saint Augustine"));
+        assertTrue(TitleMatcher.titleMatches(
+                "The Significance of St. Justin Martyr",
+                "The Significance of Saint Justin Martyr"));
+    }
+
+    @Test
+    void titleMatches_doesNotConfuseDifferentWisdomTitles() {
+        assertFalse(TitleMatcher.titleMatches(
+                "The Wisdom of Solomon",
+                "The Wisdom of Father Brown"));
+        assertFalse(TitleMatcher.titleMatches(
+                "The Wisdom of Fr. Brown",
+                "The Wisdom of Mr. Chesterton"));
+    }
+
+    @Test
+    void normalizeForSearch_expandsFrAbbreviation() {
+        assertEquals("wisdom father brown",
+                TitleMatcher.normalizeForSearch("The Wisdom of Fr. Brown"));
+    }
+
+    @Test
+    void normalizeForPrefixSearch_expandsFrAbbreviation() {
+        assertEquals("wisdom of father brown",
+                TitleMatcher.normalizeForPrefixSearch("The Wisdom of Fr. Brown"));
+    }
+
+    @Test
     void normalizeForSearch_removesNumbers() {
         // Pure numbers like publication years should be removed
         assertEquals("war peace edition", TitleMatcher.normalizeForSearch("War and Peace 1952 Edition"));

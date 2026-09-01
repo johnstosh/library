@@ -3,11 +3,15 @@
  */
 package com.muczynski.library.freetext;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Utility class for matching book titles with various normalization strategies.
- * Handles case differences, subtitles, articles, and punctuation variations.
+ * Handles case differences, subtitles, articles, punctuation, and common abbreviations
+ * such as Fr./Father and St./Saint.
  */
 public final class TitleMatcher {
 
@@ -21,6 +25,17 @@ public final class TitleMatcher {
             "on", "by", "for", "and",   // More prepositions/conjunctions
             "or", "with", "from"        // Additional common words
     );
+
+    /**
+     * Title abbreviations expanded to their full forms so "Fr. Brown" matches "Father Brown"
+     * and "St. Augustine" matches "Saint Augustine". Applied after punctuation is stripped.
+     */
+    private static final Map<String, String> ABBREVIATIONS = Map.of(
+            "fr", "father",
+            "st", "saint"
+    );
+
+    private static final Pattern ABBREVIATION_PATTERN = Pattern.compile("\\b(fr|st)\\b");
 
     private TitleMatcher() {
         // Utility class
@@ -42,9 +57,9 @@ public final class TitleMatcher {
             return "";
         }
 
-        // Remove punctuation, convert to lowercase, split into words
-        String[] words = title.toLowerCase()
-                .replaceAll("[^a-z0-9\\s]", "")
+        // Remove punctuation, convert to lowercase, expand Fr./St., split into words
+        String[] words = expandAbbreviations(title.toLowerCase()
+                .replaceAll("[^a-z0-9\\s]", ""))
                 .split("\\s+");
 
         // Keep only significant words (not in stop words list and not pure numbers)
@@ -89,11 +104,11 @@ public final class TitleMatcher {
             main = main.substring(0, colonIndex);
         }
 
-        String normalized = main.toLowerCase()
+        String normalized = expandAbbreviations(main.toLowerCase()
                 .replaceAll("\\s*\\([^)]*\\)\\s*$", "")
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", " ")
-                .trim();
+                .trim());
 
         return normalized.replaceFirst("^(the|a|an)(\\s+|$)", "");
     }
@@ -104,6 +119,7 @@ public final class TitleMatcher {
      * - Subtitle variations (text after colon)
      * - Articles (The, A, An)
      * - Punctuation differences
+     * - Fr./Father and St./Saint abbreviations
      *
      * @param candidate the title found from the provider
      * @param target    the title we're searching for
@@ -114,8 +130,8 @@ public final class TitleMatcher {
             return false;
         }
 
-        String normalizedCandidate = normalize(candidate);
-        String normalizedTarget = normalize(target);
+        String normalizedCandidate = normalizeForComparison(candidate);
+        String normalizedTarget = normalizeForComparison(target);
 
         // Exact match after normalization
         if (normalizedCandidate.equals(normalizedTarget)) {
@@ -160,15 +176,35 @@ public final class TitleMatcher {
      * - Remove trailing parenthetical content (dates, editions, etc.)
      * - Remove leading articles (the, a, an)
      * - Remove punctuation except spaces
+     * - Expand Fr./St. abbreviations
      * - Collapse multiple spaces
      */
-    private static String normalize(String title) {
-        return title.toLowerCase()
+    public static String normalizeForComparison(String title) {
+        return expandAbbreviations(title.toLowerCase()
                 .replaceAll("\\s*\\([^)]*\\)\\s*$", "") // Remove trailing (date), (edition), etc.
                 .replaceAll("^(the|a|an)\\s+", "")
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", " ")
-                .trim();
+                .trim());
+    }
+
+    /**
+     * Expand standalone title abbreviations to their full forms.
+     * "fr" becomes "father" and "st" becomes "saint". Safe to call after punctuation
+     * has already been stripped, so "Fr." has already become "fr".
+     */
+    static String expandAbbreviations(String title) {
+        if (title == null || title.isBlank()) {
+            return title == null ? "" : title;
+        }
+        Matcher matcher = ABBREVIATION_PATTERN.matcher(title);
+        StringBuilder expanded = new StringBuilder();
+        while (matcher.find()) {
+            matcher.appendReplacement(expanded,
+                    Matcher.quoteReplacement(ABBREVIATIONS.get(matcher.group(1))));
+        }
+        matcher.appendTail(expanded);
+        return expanded.toString();
     }
 
     /**

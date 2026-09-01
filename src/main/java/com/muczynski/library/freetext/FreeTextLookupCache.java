@@ -153,6 +153,9 @@ public final class FreeTextLookupCache {
         add("Gilbert Keith Chesterton", "The Innocence of Father Brown",
             "https://www.gutenberg.org/ebooks/204");
 
+        add("Gilbert Keith Chesterton", "The Wisdom of Father Brown",
+            "https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+
         // Eleanor Estes
         add("Eleanor Estes", "Ginger Pye",
             "https://archive.org/details/gingerpyeodyssey0000elea");
@@ -619,12 +622,7 @@ public final class FreeTextLookupCache {
      * - Collapse multiple spaces
      */
     static String normalizeTitle(String title) {
-        return title.toLowerCase()
-                .replaceAll("\\s*\\([^)]*\\)\\s*$", "") // Remove trailing (date), (edition), etc.
-                .replaceAll("^(the|a|an)\\s+", "")
-                .replaceAll("[^a-z0-9\\s]", "")
-                .replaceAll("\\s+", " ")
-                .trim();
+        return TitleMatcher.normalizeForComparison(title);
     }
 
     /**

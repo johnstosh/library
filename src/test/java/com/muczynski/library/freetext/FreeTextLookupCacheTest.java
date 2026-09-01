@@ -168,6 +168,20 @@ class FreeTextLookupCacheTest {
         assertThat(url).isNotNull();
     }
 
+    @Test
+    void testWisdomOfFatherBrownOnEwtn() {
+        String url = FreeTextLookupCache.lookupFirstUrl(
+                "Gilbert Keith Chesterton", "The Wisdom of Father Brown");
+        assertThat(url).isEqualTo("https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+    }
+
+    @Test
+    void testWisdomOfFatherBrownMatchesFrForm() {
+        String url = FreeTextLookupCache.lookupFirstUrl(
+                "Gilbert Keith Chesterton", "The Wisdom of Fr. Brown");
+        assertThat(url).isEqualTo("https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+    }
+
     /**
      * Test that books marked as "not found" return an empty string, not null.
      * This allows distinguishing between "never searched" (null) and "searched but not found" (empty string).
