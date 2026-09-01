@@ -168,6 +168,23 @@ class FreeTextLookupCacheTest {
         assertThat(url).isNotNull();
     }
 
+    @Test
+    void testWisdomOfFatherBrownOnEwtn() {
+        String urls = FreeTextLookupCache.lookup(
+                "Gilbert Keith Chesterton", "The Wisdom of Father Brown");
+        assertThat(FreeTextLookupCache.extractUrls(urls))
+                .contains("https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889")
+                .contains("https://archive.org/details/wisdomfatherbro01chesgoog");
+    }
+
+    @Test
+    void testWisdomOfFatherBrownMatchesFrForm() {
+        String urls = FreeTextLookupCache.lookup(
+                "Gilbert Keith Chesterton", "The Wisdom of Fr. Brown");
+        assertThat(FreeTextLookupCache.extractUrls(urls))
+                .contains("https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
+    }
+
     /**
      * Test that books marked as "not found" return an empty string, not null.
      * This allows distinguishing between "never searched" (null) and "searched but not found" (empty string).
@@ -207,7 +224,51 @@ class FreeTextLookupCacheTest {
     @Test
     void testCacheContainsBooksFromArchive() {
         // These books should be in the cache (either with URLs or as not-found)
-        // based on the branch-archive.json lookup
+        // based on the branch-archive.json lookup plus the production refresh
         assertThat(FreeTextLookupCache.getBookCount()).isGreaterThan(250);
+    }
+
+    @Test
+    void testProductionRefreshKeepsBothFatherBrownLinks() {
+        String urls = FreeTextLookupCache.lookup(
+                "Gilbert Keith Chesterton", "The Innocence of Father Brown");
+        assertThat(FreeTextLookupCache.extractUrls(urls))
+                .contains("https://www.gutenberg.org/ebooks/204")
+                .contains("https://www.ewtn.com/catholicism/library/innocence-of-fr-brown-10829");
+    }
+
+    @Test
+    void extractUrls_ignoresProseAroundLinks() {
+        String field = "Volume I: https://example.com/vol1 Volume II: https://example.com/vol2";
+        assertThat(FreeTextLookupCache.extractUrls(field))
+                .containsExactly("https://example.com/vol1", "https://example.com/vol2");
+    }
+
+    @Test
+    void mergeUrls_doesNotDropExistingLinkWhenIncomingHasFewer() {
+        String existing = "https://archive.org/a https://www.ewtn.com/b";
+        String incoming = "https://www.ewtn.com/b";
+        String merged = FreeTextLookupCache.mergeUrls(existing, incoming);
+        assertThat(FreeTextLookupCache.extractUrls(merged))
+                .containsExactlyInAnyOrder("https://archive.org/a", "https://www.ewtn.com/b");
+        assertThat(merged).isEqualTo(existing);
+    }
+
+    @Test
+    void mergeUrls_appendsOnlyNewLinksAndKeepsProse() {
+        String existing = "Volume I: https://example.com/vol1";
+        String incoming = "https://example.com/vol1 https://archive.org/set";
+        String merged = FreeTextLookupCache.mergeUrls(existing, incoming);
+        assertThat(merged).startsWith("Volume I:");
+        assertThat(FreeTextLookupCache.extractUrls(merged))
+                .containsExactly("https://example.com/vol1", "https://archive.org/set");
+    }
+
+    @Test
+    void urlsLostIfReplaced_detectsTwoToOneDrop() {
+        String existing = "https://archive.org/a https://www.ewtn.com/b";
+        String incoming = "https://www.ewtn.com/b";
+        assertThat(FreeTextLookupCache.urlsLostIfReplaced(existing, incoming))
+                .containsExactly("https://archive.org/a");
     }
 }
