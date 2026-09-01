@@ -62,6 +62,43 @@ public final class TitleMatcher {
     }
 
     /**
+     * Normalize a title for prefix (starts-with) API searches such as LibriVox.
+     * <p>
+     * LibriVox stores leading articles in a separate {@code title_prefix} column, so the
+     * API {@code title} field is typically "Wisdom of Father Brown" not "The Wisdom of
+     * Father Brown". Prefix match ({@code title=^...}) is SQL {@code LIKE 'term%'} with
+     * literal spaces, so middle words like "of" and "and" must be kept. Keyword-style
+     * stop-word stripping ({@link #normalizeForSearch}) would make "wisdom father brown"
+     * which does not prefix-match "Wisdom of Father Brown".
+     * <p>
+     * Example: "The Wisdom of Father Brown" -> "wisdom of father brown"
+     * Example: "A Tale of Two Cities" -> "tale of two cities"
+     * Example: "War and Peace" -> "war and peace"
+     *
+     * @param title the original title
+     * @return normalized title suitable for prefix API searches
+     */
+    public static String normalizeForPrefixSearch(String title) {
+        if (title == null || title.isBlank()) {
+            return "";
+        }
+
+        String main = title;
+        int colonIndex = main.indexOf(':');
+        if (colonIndex > 0) {
+            main = main.substring(0, colonIndex);
+        }
+
+        String normalized = main.toLowerCase()
+                .replaceAll("\\s*\\([^)]*\\)\\s*$", "")
+                .replaceAll("[^a-z0-9\\s]", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return normalized.replaceFirst("^(the|a|an)(\\s+|$)", "");
+    }
+
+    /**
      * Check if two titles match, accounting for:
      * - Case differences
      * - Subtitle variations (text after colon)

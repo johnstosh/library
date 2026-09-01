@@ -51,8 +51,13 @@ public class LibriVoxProvider implements FreeTextProvider {
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
         try {
-            // Normalize title for API search (removes articles, short words, punctuation)
-            String searchTitle = TitleMatcher.normalizeForSearch(title);
+            // Prefix search: strip a leading article only. LibriVox stores "The"/"A"/"An"
+            // in title_prefix, and title=^ is SQL LIKE 'term%' with literal spaces, so
+            // middle words like "of" must be kept. Do not use normalizeForSearch here.
+            String searchTitle = TitleMatcher.normalizeForPrefixSearch(title);
+            if (searchTitle.isBlank()) {
+                return FreeTextLookupResult.error(getProviderName(), "No audiobooks found");
+            }
 
             // Note: LibriVox API can be unreliable when combining title+author filters (returns 500),
             // so we search by title only and use TitleMatcher to validate results

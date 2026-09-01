@@ -173,6 +173,53 @@ class TitleMatcherTest {
     }
 
     @Test
+    void normalizeForPrefixSearch_stripsLeadingArticleButKeepsOf() {
+        assertEquals("wisdom of father brown",
+                TitleMatcher.normalizeForPrefixSearch("The Wisdom of Father Brown"));
+        assertEquals("tale of two cities",
+                TitleMatcher.normalizeForPrefixSearch("A Tale of Two Cities"));
+        assertEquals("introduction to programming",
+                TitleMatcher.normalizeForPrefixSearch("An Introduction to Programming"));
+    }
+
+    @Test
+    void normalizeForPrefixSearch_keepsMiddleStopWords() {
+        assertEquals("history of the world",
+                TitleMatcher.normalizeForPrefixSearch("The History of the World"));
+        assertEquals("war and peace",
+                TitleMatcher.normalizeForPrefixSearch("War and Peace"));
+        assertEquals("journey to the center of the earth",
+                TitleMatcher.normalizeForPrefixSearch("A Journey to the Center of the Earth"));
+    }
+
+    @Test
+    void normalizeForPrefixSearch_usesMainTitleBeforeColon() {
+        assertEquals("wisdom of father brown",
+                TitleMatcher.normalizeForPrefixSearch("The Wisdom of Father Brown: Twelve Stories"));
+    }
+
+    @Test
+    void normalizeForPrefixSearch_stripsTrailingParenthetical() {
+        assertEquals("war and peace",
+                TitleMatcher.normalizeForPrefixSearch("War and Peace (2nd Edition)"));
+    }
+
+    @Test
+    void normalizeForPrefixSearch_handlesNullAndEmpty() {
+        assertEquals("", TitleMatcher.normalizeForPrefixSearch(null));
+        assertEquals("", TitleMatcher.normalizeForPrefixSearch(""));
+        assertEquals("", TitleMatcher.normalizeForPrefixSearch("   "));
+        assertEquals("", TitleMatcher.normalizeForPrefixSearch("The"));
+    }
+
+    @Test
+    void titleMatches_wisdomOfFatherBrownWithAndWithoutThe() {
+        assertTrue(TitleMatcher.titleMatches(
+                "Wisdom of Father Brown",
+                "The Wisdom of Father Brown"));
+    }
+
+    @Test
     void normalizeForSearch_removesNumbers() {
         // Pure numbers like publication years should be removed
         assertEquals("war peace edition", TitleMatcher.normalizeForSearch("War and Peace 1952 Edition"));
