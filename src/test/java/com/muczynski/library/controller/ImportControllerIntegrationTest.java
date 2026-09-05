@@ -316,6 +316,37 @@ class ImportControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testExportJson_IncludesYdlEmuFields() throws Exception {
+        // Verify YDL/EMU availability fields are exported on books (export-only for #286; import is #287)
+        testBook.setYdlAudioAvailable(true);
+        testBook.setYdlPaperAvailable(true);
+        testBook.setYdlEbookAvailable(false);
+        testBook.setYdlLastChecked(LocalDateTime.of(2025, 6, 1, 12, 0));
+        testBook.setYdlLookupError("ydl-timeout");
+        testBook.setEmuAudioAvailable(false);
+        testBook.setEmuPaperAvailable(null);
+        testBook.setEmuEbookAvailable(true);
+        testBook.setEmuLastChecked(LocalDateTime.of(2025, 6, 2, 9, 30));
+        testBook.setEmuLookupError(null);
+        bookRepository.save(testBook);
+
+        mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlAudioAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlPaperAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlEbookAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLastChecked", hasItem("2025-06-01T12:00:00")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLookupError", hasItem("ydl-timeout")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuAudioAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuEbookAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLastChecked", hasItem("2025-06-02T09:30:00")))
+                // emuPaperAvailable null should be omitted (NON_NULL on DTO container); emuLookupError null omitted
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuPaperAvailable").doesNotExist())
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLookupError").doesNotExist());
+    }
+
     // ==================== GET /api/import/stats Integration Tests ====================
 
     @Test
@@ -601,5 +632,115 @@ class ImportControllerIntegrationTest {
     void testGetAvailabilityStats_Unauthorized() throws Exception {
         mockMvc.perform(get("/api/import/availability-stats"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ==================== YDL/EMU Import Persistence Tests (GitHub #287) ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_PersistsYdlEmuFields_RoundTrip() throws Exception {
+        // Set YDL/EMU fields on the test book and export
+        testBook.setYdlAudioAvailable(true);
+        testBook.setYdlPaperAvailable(false);
+        testBook.setYdlEbookAvailable(true);
+        testBook.setYdlLastChecked(LocalDateTime.of(2025, 8, 1, 10, 15));
+        testBook.setYdlLookupError("ydl-slow");
+        testBook.setEmuAudioAvailable(null);
+        testBook.setEmuPaperAvailable(true);
+        testBook.setEmuEbookAvailable(false);
+        testBook.setEmuLastChecked(LocalDateTime.of(2025, 8, 2, 14, 45));
+        testBook.setEmuLookupError("emu-404");
+        bookRepository.save(testBook);
+
+        // Export the data
+        String exportJson = mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // Simulate older state by clearing YDL/EMU fields on the entity
+        Book reloaded = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Test Book", "Test Author").get(0);
+        reloaded.setYdlAudioAvailable(null);
+        reloaded.setYdlPaperAvailable(null);
+        reloaded.setYdlEbookAvailable(null);
+        reloaded.setYdlLastChecked(null);
+        reloaded.setYdlLookupError(null);
+        reloaded.setEmuAudioAvailable(null);
+        reloaded.setEmuPaperAvailable(null);
+        reloaded.setEmuEbookAvailable(null);
+        reloaded.setEmuLastChecked(null);
+        reloaded.setEmuLookupError(null);
+        bookRepository.save(reloaded);
+
+        // Import the previously exported JSON (round-trip)
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(exportJson))
+                .andExpect(status().isOk());
+
+        // Verify YDL/EMU fields were restored from import
+        Book afterImport = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Test Book", "Test Author").get(0);
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getYdlAudioAvailable()), "ydlAudioAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(afterImport.getYdlPaperAvailable()), "ydlPaperAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getYdlEbookAvailable()), "ydlEbookAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 1, 10, 15), afterImport.getYdlLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("ydl-slow", afterImport.getYdlLookupError());
+        org.junit.jupiter.api.Assertions.assertNull(afterImport.getEmuAudioAvailable(), "null emuAudioAvailable should be set from import (present as null in JSON)");
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getEmuPaperAvailable()), "emuPaperAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(afterImport.getEmuEbookAvailable()), "emuEbookAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 2, 14, 45), afterImport.getEmuLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("emu-404", afterImport.getEmuLookupError());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_AbsentYdlEmuFields_PreservesExistingValues() throws Exception {
+        // Seed entity with YDL/EMU values
+        testBook.setYdlAudioAvailable(true);
+        testBook.setYdlPaperAvailable(true);
+        testBook.setYdlEbookAvailable(false);
+        testBook.setYdlLastChecked(LocalDateTime.of(2025, 7, 10, 9, 0));
+        testBook.setYdlLookupError("old-err");
+        testBook.setEmuAudioAvailable(false);
+        testBook.setEmuPaperAvailable(true);
+        testBook.setEmuEbookAvailable(true);
+        testBook.setEmuLastChecked(LocalDateTime.of(2025, 7, 11, 12, 30));
+        testBook.setEmuLookupError("old-emu-err");
+        bookRepository.save(testBook);
+
+        // Import JSON that does NOT include YDL/EMU fields at all (simulates older dump)
+        String minimalImportJson = """
+            {
+                "libraries": [{"branchName": "Test Library", "librarySystemName": "Test Library System"}],
+                "authors": [{"name": "Test Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Test Book",
+                    "libraryName": "Test Library",
+                    "authorName": "Test Author",
+                    "publicationYear": 2020,
+                    "publisher": "Test Publisher",
+                    "status": "ACTIVE"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(minimalImportJson))
+                .andExpect(status().isOk());
+
+        // Existing YDL/EMU values must be preserved (not wiped)
+        Book after = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Test Book", "Test Author").get(0);
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getYdlAudioAvailable()));
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getYdlPaperAvailable()));
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getYdlEbookAvailable()));
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 10, 9, 0), after.getYdlLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("old-err", after.getYdlLookupError());
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getEmuAudioAvailable()));
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getEmuPaperAvailable()));
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getEmuEbookAvailable()));
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 11, 12, 30), after.getEmuLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("old-emu-err", after.getEmuLookupError());
     }
 }

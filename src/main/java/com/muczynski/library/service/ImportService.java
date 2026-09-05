@@ -344,6 +344,38 @@ public class ImportService {
                 if (bDto.getTagsList() != null) {
                     book.setTagsList(bDto.getTagsList());
                 }
+                // YDL/EMU fields: only set when present in the import payload.
+                // Absence (older dumps) preserves existing entity values (merge-friendly).
+                if (bDto.getYdlAudioAvailable() != null) {
+                    book.setYdlAudioAvailable(bDto.getYdlAudioAvailable());
+                }
+                if (bDto.getYdlPaperAvailable() != null) {
+                    book.setYdlPaperAvailable(bDto.getYdlPaperAvailable());
+                }
+                if (bDto.getYdlEbookAvailable() != null) {
+                    book.setYdlEbookAvailable(bDto.getYdlEbookAvailable());
+                }
+                if (bDto.getYdlLastChecked() != null) {
+                    book.setYdlLastChecked(bDto.getYdlLastChecked());
+                }
+                if (bDto.getYdlLookupError() != null) {
+                    book.setYdlLookupError(bDto.getYdlLookupError());
+                }
+                if (bDto.getEmuAudioAvailable() != null) {
+                    book.setEmuAudioAvailable(bDto.getEmuAudioAvailable());
+                }
+                if (bDto.getEmuPaperAvailable() != null) {
+                    book.setEmuPaperAvailable(bDto.getEmuPaperAvailable());
+                }
+                if (bDto.getEmuEbookAvailable() != null) {
+                    book.setEmuEbookAvailable(bDto.getEmuEbookAvailable());
+                }
+                if (bDto.getEmuLastChecked() != null) {
+                    book.setEmuLastChecked(bDto.getEmuLastChecked());
+                }
+                if (bDto.getEmuLookupError() != null) {
+                    book.setEmuLookupError(bDto.getEmuLookupError());
+                }
                 book.setAuthor(author);
                 book.setLibrary(branch);
                 book = bookRepository.save(book);
@@ -640,6 +672,17 @@ public class ImportService {
             if (book.getLibrary() != null) {
                 bDto.setLibraryName(book.getLibrary().getBranchName());
             }
+            // Export YDL/EMU availability fields (diagnostics only; import persistence is follow-up #287)
+            bDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+            bDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+            bDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+            bDto.setYdlLastChecked(book.getYdlLastChecked());
+            bDto.setYdlLookupError(emptyToNull(book.getYdlLookupError()));
+            bDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+            bDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+            bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+            bDto.setEmuLastChecked(book.getEmuLastChecked());
+            bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
             bookDtos.add(bDto);
         }
         dto.setBooks(bookDtos);
