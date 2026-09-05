@@ -137,7 +137,7 @@ export function LoginPage() {
             <img
               src="/images/marian-m.png"
               alt={branchName}
-              className="w-48 h-auto mx-auto object-contain"
+              className="w-96 h-auto mx-auto object-contain"
               data-test="login-logo"
             />
           </div>
