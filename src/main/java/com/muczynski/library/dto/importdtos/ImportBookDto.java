@@ -45,14 +45,14 @@ public class ImportBookDto {
     // Export uses authorName only; this field is only read during import
     private ImportAuthorDto author;
 
-    // YDL availability fields (exported for diagnostics; import persistence is follow-up work)
+    // YDL availability fields (exported for diagnostics; persisted on import when present)
     private Boolean ydlAudioAvailable;
     private Boolean ydlPaperAvailable;
     private Boolean ydlEbookAvailable;
     private LocalDateTime ydlLastChecked;
     private String ydlLookupError;
 
-    // EMU availability fields (exported for diagnostics; import persistence is follow-up work)
+    // EMU availability fields (exported for diagnostics; persisted on import when present)
     private Boolean emuAudioAvailable;
     private Boolean emuPaperAvailable;
     private Boolean emuEbookAvailable;
