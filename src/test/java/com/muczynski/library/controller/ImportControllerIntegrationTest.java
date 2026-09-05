@@ -316,6 +316,37 @@ class ImportControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testExportJson_IncludesYdlEmuFields() throws Exception {
+        // Verify YDL/EMU availability fields are exported on books (export-only for #286; import is #287)
+        testBook.setYdlAudioAvailable(true);
+        testBook.setYdlPaperAvailable(true);
+        testBook.setYdlEbookAvailable(false);
+        testBook.setYdlLastChecked(LocalDateTime.of(2025, 6, 1, 12, 0));
+        testBook.setYdlLookupError("ydl-timeout");
+        testBook.setEmuAudioAvailable(false);
+        testBook.setEmuPaperAvailable(null);
+        testBook.setEmuEbookAvailable(true);
+        testBook.setEmuLastChecked(LocalDateTime.of(2025, 6, 2, 9, 30));
+        testBook.setEmuLookupError(null);
+        bookRepository.save(testBook);
+
+        mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlAudioAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlPaperAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlEbookAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLastChecked", hasItem("2025-06-01T12:00:00")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLookupError", hasItem("ydl-timeout")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuAudioAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuEbookAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLastChecked", hasItem("2025-06-02T09:30:00")))
+                // emuPaperAvailable null should be omitted (NON_NULL on DTO container); emuLookupError null omitted
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuPaperAvailable").doesNotExist())
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLookupError").doesNotExist());
+    }
+
     // ==================== GET /api/import/stats Integration Tests ====================
 
     @Test
