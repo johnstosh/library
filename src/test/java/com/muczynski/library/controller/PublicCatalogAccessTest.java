@@ -15,6 +15,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,8 +41,18 @@ class PublicCatalogAccessTest {
 
     @Test
     void centurySchoolbookFontIsPublic() throws Exception {
-        mockMvc.perform(get("/fonts/CenturySchL-Roma.ttf"))
-                .andExpect(status().isOk());
+        var result = mockMvc.perform(get("/fonts/CenturySchL-Roma.ttf"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Long-lived cache for fonts (issue #291): 1 year, public, immutable.
+        // This must NOT be applied to HTML or API responses.
+        String cacheControl = result.getResponse().getHeader("Cache-Control");
+        assertNotNull(cacheControl, "Cache-Control header should be present for fonts");
+        assertTrue(cacheControl.contains("max-age=31536000") || cacheControl.contains("max-age=365d"),
+                "Font should have ~1 year max-age (31536000s)");
+        assertTrue(cacheControl.contains("public"), "Font cache should be public");
+        assertTrue(cacheControl.contains("immutable"), "Font cache should be immutable");
     }
 
     @Test
