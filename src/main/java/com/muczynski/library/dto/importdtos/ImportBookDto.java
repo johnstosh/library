@@ -44,4 +44,18 @@ public class ImportBookDto {
     // Old format (deprecated): embedded author object for backward compatibility during import
     // Export uses authorName only; this field is only read during import
     private ImportAuthorDto author;
+
+    // YDL availability fields (exported for diagnostics; import persistence is follow-up work)
+    private Boolean ydlAudioAvailable;
+    private Boolean ydlPaperAvailable;
+    private Boolean ydlEbookAvailable;
+    private LocalDateTime ydlLastChecked;
+    private String ydlLookupError;
+
+    // EMU availability fields (exported for diagnostics; import persistence is follow-up work)
+    private Boolean emuAudioAvailable;
+    private Boolean emuPaperAvailable;
+    private Boolean emuEbookAvailable;
+    private LocalDateTime emuLastChecked;
+    private String emuLookupError;
 }

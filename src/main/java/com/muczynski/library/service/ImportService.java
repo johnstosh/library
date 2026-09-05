@@ -640,6 +640,17 @@ public class ImportService {
             if (book.getLibrary() != null) {
                 bDto.setLibraryName(book.getLibrary().getBranchName());
             }
+            // Export YDL/EMU availability fields (diagnostics only; import persistence is follow-up #287)
+            bDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+            bDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+            bDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+            bDto.setYdlLastChecked(book.getYdlLastChecked());
+            bDto.setYdlLookupError(emptyToNull(book.getYdlLookupError()));
+            bDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+            bDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+            bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+            bDto.setEmuLastChecked(book.getEmuLastChecked());
+            bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
             bookDtos.add(bDto);
         }
         dto.setBooks(bookDtos);
