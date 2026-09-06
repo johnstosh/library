@@ -5,6 +5,7 @@ package com.muczynski.library.dto.importdtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.ReadingDifficulty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -58,4 +59,12 @@ public class ImportBookDto {
     private Boolean emuEbookAvailable;
     private LocalDateTime emuLastChecked;
     private String emuLookupError;
+
+    /**
+     * Reading difficulty level (stored as enum key: children, accessible, moderate, demanding,
+     * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU fields.
+     */
+    private ReadingDifficulty readingDifficulty;
+    /** Nullable for legacy books; when present, must be 0 through 10 inclusive. */
+    private Integer desireToPurchase;
 }

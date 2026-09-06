@@ -8,6 +8,16 @@ export const BookStatus = {
 } as const
 
 export type BookStatus = (typeof BookStatus)[keyof typeof BookStatus]
+export const ReadingDifficulty = {
+  CHILDREN: 'children',
+  ACCESSIBLE: 'accessible',
+  MODERATE: 'moderate',
+  DEMANDING: 'demanding',
+  ADVANCED: 'advanced',
+  UNSET: 'unset',
+} as const
+
+export type ReadingDifficulty = (typeof ReadingDifficulty)[keyof typeof ReadingDifficulty]
 
 export const UserAuthority = {
   LIBRARIAN: 'LIBRARIAN',

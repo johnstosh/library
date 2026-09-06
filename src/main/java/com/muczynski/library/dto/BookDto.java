@@ -4,8 +4,11 @@
 package com.muczynski.library.dto;
 
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.ReadingDifficulty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -53,6 +56,16 @@ public class BookDto {
     private Boolean emuEbookAvailable;
     private LocalDateTime emuLastChecked;
     private String emuLookupError;
+
+    /**
+     * Reading difficulty level. Uses enum keys in JSON (children, accessible, etc.).
+     * Frontend displays short patron-facing labels.
+     */
+    private ReadingDifficulty readingDifficulty;
+    /** Nullable for legacy books; when present, must be 0 through 10 inclusive. */
+    @Min(0)
+    @Max(10)
+    private Integer desireToPurchase;
 
     /**
      * List of tags for categorizing the book.

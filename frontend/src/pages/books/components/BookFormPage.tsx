@@ -29,7 +29,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
-import { BookStatus } from '@/types/enums'
+import { BookStatus, ReadingDifficulty } from '@/types/enums'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 import { IconButton } from '@/components/ui/IconButton'
 import { AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
@@ -41,6 +41,21 @@ interface BookFormPageProps {
   onCancel: () => void
 }
 
+const readingDifficultyOptions = [
+  { value: ReadingDifficulty.CHILDREN, label: 'Children — kids / read-aloud' },
+  { value: ReadingDifficulty.ACCESSIBLE, label: 'Accessible — clear for teens & adults' },
+  { value: ReadingDifficulty.MODERATE, label: 'Moderate — takes patience; notes help' },
+  { value: ReadingDifficulty.DEMANDING, label: 'Demanding — serious study; guide recommended' },
+  { value: ReadingDifficulty.ADVANCED, label: 'Advanced — steep; best with direction' },
+  { value: ReadingDifficulty.UNSET, label: 'Unset — not yet reviewed' },
+]
+
+const desireLabels: Record<number, string> = {
+  0: 'Already own enough', 1: 'Too expensive', 2: 'Last resort',
+  3: 'Expensive; low priority', 4: 'Pricey; wait', 5: 'Fair; medium priority',
+  6: 'Good value', 7: 'Strong buy soon', 8: 'High priority',
+  9: 'Very high priority', 10: 'First priority',
+}
 export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageProps) {
   const navigate = useNavigate()
   const isEditing = !!book
@@ -70,6 +85,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     emuAudioAvailable: false,
     emuPaperAvailable: false,
     emuEbookAvailable: false,
+    readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
+    desireToPurchase: null as number | null,
   })
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -110,6 +127,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   useEffect(() => {
     if (book) {
       setFormData({
+        ...formData,
         title: book.title,
         publicationYear: book.publicationYear?.toString() || '',
         publisher: book.publisher || '',
@@ -132,6 +150,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: book.emuAudioAvailable ?? false,
         emuPaperAvailable: book.emuPaperAvailable ?? false,
         emuEbookAvailable: book.emuEbookAvailable ?? false,
+        readingDifficulty: book.readingDifficulty ?? ReadingDifficulty.UNSET,
+        desireToPurchase: book.desireToPurchase ?? null,
       })
     } else {
       // Creating a new book: keep a branch already chosen (or the first branch
@@ -160,6 +180,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: false,
         emuPaperAvailable: false,
         emuEbookAvailable: false,
+    readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
+    desireToPurchase: null as number | null,
       }))
     }
     // branches is read only if already loaded; the effect below fills branchId later.
@@ -238,6 +260,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       // temporary title) where availability is genuinely unknown and shouldn't be touched.
       if (typeof result.audioAvailable === 'boolean') {
         setFormData({
+        ...formData,
           ...formData,
           ydlAudioAvailable: result.audioAvailable,
           ydlPaperAvailable: result.paperAvailable ?? false,
@@ -268,6 +291,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       // temporary title) where availability is genuinely unknown and shouldn't be touched.
       if (typeof result.audioAvailable === 'boolean') {
         setFormData({
+        ...formData,
           ...formData,
           emuAudioAvailable: result.audioAvailable,
           emuPaperAvailable: result.paperAvailable ?? false,
@@ -418,6 +442,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       const updated = await bookFromImage.mutateAsync(book.id)
       // Update form with the extracted data
       setFormData({
+        ...formData,
         title: updated.title || formData.title,
         publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
         publisher: updated.publisher || formData.publisher,
@@ -440,6 +465,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        readingDifficulty: formData.readingDifficulty,
+        desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from image')
@@ -458,6 +485,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       const updated = await bookFromFirstPhoto.mutateAsync(book.id)
       // Update form with the extracted data
       setFormData({
+        ...formData,
         title: updated.title || formData.title,
         publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
         publisher: updated.publisher || formData.publisher,
@@ -480,6 +508,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        readingDifficulty: formData.readingDifficulty,
+        desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata extracted from first photo')
@@ -498,6 +528,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       const updated = await titleAuthorFromPhoto.mutateAsync(book.id)
       // Preview only — persist on Update, discard on Cancel.
       setFormData({
+        ...formData,
         ...formData,
         title: updated.title || formData.title,
         authorId: updated.authorId?.toString() || formData.authorId,
@@ -531,6 +562,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         authorName,
       })
       setFormData({
+        ...formData,
         title: updated.title || formData.title,
         publicationYear: updated.publicationYear?.toString() || formData.publicationYear,
         publisher: updated.publisher || formData.publisher,
@@ -553,6 +585,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        readingDifficulty: formData.readingDifficulty,
+        desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
       setSuccessMessage('Book metadata generated from title and author')
@@ -618,6 +652,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        readingDifficulty: formData.readingDifficulty,
+        desireToPurchase: formData.desireToPurchase,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
         tagsList: standardGenresFrom(formData.tagsList),
@@ -910,6 +946,31 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             value={formData.publisher}
             onChange={(e) => handleFieldChange('publisher', e.target.value)}
             data-test="book-publisher"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Reading Difficulty"
+            value={formData.readingDifficulty}
+            onChange={(e) => handleFieldChange('readingDifficulty', e.target.value)}
+            options={readingDifficultyOptions}
+            data-test="book-reading-difficulty"
+          />
+          <Input
+            label="Desire to Purchase"
+            type="number"
+            min={0}
+            max={10}
+            step={1}
+            value={formData.desireToPurchase ?? ''}
+            onChange={(e) => {
+              const value = e.target.value === '' ? null : Math.max(0, Math.min(10, parseInt(e.target.value, 10)))
+              setFormData({ ...formData, desireToPurchase: Number.isNaN(value as number) ? null : value })
+              setHasUnsavedChanges(true)
+            }}
+            helpText={formData.desireToPurchase == null ? 'Not set' : `${formData.desireToPurchase} — ${desireLabels[formData.desireToPurchase]}`}
+            data-test="book-desire-to-purchase"
           />
         </div>
 
