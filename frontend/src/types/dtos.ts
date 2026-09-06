@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import type { BookStatus } from './enums'
+import type { BookStatus, ReadingDifficulty } from './enums'
 
 // API Error Response
 export interface ErrorResponse {
@@ -124,6 +124,8 @@ export interface BookDto {
   emuEbookAvailable?: boolean
   emuLastChecked?: string
   emuLookupError?: string
+  readingDifficulty?: ReadingDifficulty
+  desireToPurchase?: number | null
 }
 
 export interface BookSummaryDto {

@@ -376,6 +376,9 @@ public class ImportService {
                 if (bDto.getEmuLookupError() != null) {
                     book.setEmuLookupError(bDto.getEmuLookupError());
                 }
+                // readingDifficulty: use provided value or default to UNSET (legacy books)
+                book.setReadingDifficulty(bDto.getReadingDifficulty() != null ? bDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+                book.setDesireToPurchase(bDto.getDesireToPurchase());
                 book.setAuthor(author);
                 book.setLibrary(branch);
                 book = bookRepository.save(book);
@@ -683,6 +686,8 @@ public class ImportService {
             bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
             bDto.setEmuLastChecked(book.getEmuLastChecked());
             bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
+            bDto.setReadingDifficulty(book.getReadingDifficulty());
+            bDto.setDesireToPurchase(book.getDesireToPurchase());
             bookDtos.add(bDto);
         }
         dto.setBooks(bookDtos);

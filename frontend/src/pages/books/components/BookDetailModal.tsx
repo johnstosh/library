@@ -8,6 +8,9 @@ import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
 
+const readingDifficultyLabels: Record<string, string> = { children: 'Children', accessible: 'Accessible', moderate: 'Moderate', demanding: 'Demanding', advanced: 'Advanced', unset: 'Unset' }
+const desirePurchaseLabels: Record<number, string> = { 0: 'Already own enough', 1: 'Too expensive', 2: 'Last resort', 3: 'Expensive; low priority', 4: 'Pricey; wait', 5: 'Fair; medium priority', 6: 'Good value', 7: 'Strong buy soon', 8: 'High priority', 9: 'Very high priority', 10: 'First priority' }
+
 interface BookDetailModalProps {
   isOpen: boolean
   onClose: () => void
@@ -90,6 +93,18 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
                 <p className="text-sm font-medium text-gray-500">Branch</p>
                 <p className="text-gray-900">{book.library}</p>
               </div>
+              {book.readingDifficulty && (
+                <div data-test="book-reading-difficulty">
+                  <p className="text-sm font-medium text-gray-500">Reading Difficulty</p>
+                  <p className="text-gray-900">{readingDifficultyLabels[book.readingDifficulty] || book.readingDifficulty}</p>
+                </div>
+              )}
+              {book.desireToPurchase != null && (
+                <div data-test="book-desire-to-purchase">
+                  <p className="text-sm font-medium text-gray-500">Desire to Purchase</p>
+                  <p className="text-gray-900">{book.desireToPurchase} — {desirePurchaseLabels[book.desireToPurchase]}</p>
+                </div>
+              )}
               {book.publicationYear && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Publication Year</p>

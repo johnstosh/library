@@ -6,6 +6,7 @@ package com.muczynski.library.mapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Library;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,8 @@ public class BookMapper {
         bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
         bookDto.setEmuLastChecked(book.getEmuLastChecked());
         bookDto.setEmuLookupError(book.getEmuLookupError());
+        bookDto.setReadingDifficulty(book.getReadingDifficulty());
+        bookDto.setDesireToPurchase(book.getDesireToPurchase());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName()); // Set author name for display
@@ -112,6 +115,8 @@ public class BookMapper {
         bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
         bookDto.setEmuLastChecked(book.getEmuLastChecked());
         bookDto.setEmuLookupError(book.getEmuLookupError());
+        bookDto.setReadingDifficulty(book.getReadingDifficulty());
+        bookDto.setDesireToPurchase(book.getDesireToPurchase());
         if (book.getAuthor() != null) {
             bookDto.setAuthorId(book.getAuthor().getId());
             bookDto.setAuthor(book.getAuthor().getName());
@@ -160,6 +165,8 @@ public class BookMapper {
         book.setEmuEbookAvailable(bookDto.getEmuEbookAvailable());
         book.setEmuLastChecked(bookDto.getEmuLastChecked());
         book.setEmuLookupError(bookDto.getEmuLookupError());
+        book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+        book.setDesireToPurchase(bookDto.getDesireToPurchase());
 
         if (bookDto.getAuthorId() != null) {
             Author author = new Author();
