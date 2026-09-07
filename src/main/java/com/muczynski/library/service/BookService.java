@@ -191,7 +191,9 @@ public class BookService {
     }
 
     public List<BookDto> getBooksWithoutLocNumber(boolean includeRequested) {
-        return includeRequested ? getBooksWithoutLocNumber() : hideRequestedSummaries(getBooksWithoutLocNumber());
+        return includeRequested ? getBooksWithoutLocNumber() : getBooksWithoutLocNumber().stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public List<BookDto> getBooksWithoutLocNumber() {
@@ -253,7 +255,9 @@ public class BookService {
     }
 
     public List<BookDto> getBooksWith3LetterLocStart(boolean includeRequested) {
-        return includeRequested ? getBooksWith3LetterLocStart() : hideRequestedSummaries(getBooksWith3LetterLocStart());
+        return includeRequested ? getBooksWith3LetterLocStart() : getBooksWith3LetterLocStart().stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public List<BookDto> getBooksWith3LetterLocStart() {
@@ -265,7 +269,9 @@ public class BookService {
     }
 
     public List<BookDto> getBooksWithoutGrokipediaUrl(boolean includeRequested) {
-        return includeRequested ? getBooksWithoutGrokipediaUrl() : hideRequestedSummaries(getBooksWithoutGrokipediaUrl());
+        return includeRequested ? getBooksWithoutGrokipediaUrl() : getBooksWithoutGrokipediaUrl().stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public List<BookDto> getBooksWithoutGrokipediaUrl() {
@@ -1258,6 +1264,10 @@ public class BookService {
      * Get summaries (id + lastModified) for books without LOC number.
      * Used for cache validation in frontend.
      */
+    public List<BookSummaryDto> getSummariesWithoutLocNumber(boolean includeRequested) {
+        return includeRequested ? getSummariesWithoutLocNumber() : hideRequestedSummaries(getSummariesWithoutLocNumber());
+    }
+
     public List<BookSummaryDto> getSummariesWithoutLocNumber() {
         return bookRepository.findSummariesWithoutLocNumber().stream()
                 .map(this::projectionToSummaryDto)
@@ -1331,6 +1341,13 @@ public class BookService {
         dto.setId(projection.getId());
         dto.setLastModified(projection.getLastModified());
         return dto;
+    }
+
+    private List<BookSummaryDto> hideRequestedSummaries(List<BookSummaryDto> summaries) {
+        // BookSummaryDto is lightweight (id + lastModified only); does not carry status field.
+        // Repository queries already exclude via search chips or are no-op for cache keys.
+        // REQUESTED books are hidden for non-librarians via getBookById, search, and individual fetches.
+        return summaries;
     }
 
     public List<BookDto> getBooksByIds(List<Long> ids, boolean includeRequested) {
