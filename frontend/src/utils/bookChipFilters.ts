@@ -8,10 +8,10 @@ import type { BookDto } from '@/types/dtos'
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
  * Row 2: inLibrary, electronic, freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
- *   withoutGenres, notActiveStatus, withoutFreeTextUrls
+ *   withoutGenres, requestedStatus, notActiveStatus, withoutFreeTextUrls
  *
  * notActiveStatus is special and always constrains:
- *   off → hide WITHDRAWN; on → only non-ACTIVE statuses.
+ *   off → hide WITHDRAWN and REQUESTED; on → only non-ACTIVE statuses (including REQUESTED).
  */
 export interface BookChipFilters {
   hasYdlAudio: boolean
@@ -30,6 +30,7 @@ export interface BookChipFilters {
   withGrokipedia: boolean
   withoutGenres: boolean
   notActiveStatus: boolean
+  requestedStatus: boolean
   withoutFreeTextUrls: boolean
 }
 
@@ -52,6 +53,7 @@ export const defaultBookChipFilters: BookChipFilters = {
   withGrokipedia: false,
   withoutGenres: false,
   notActiveStatus: false,
+  requestedStatus: false,
   withoutFreeTextUrls: false,
 }
 
@@ -142,9 +144,11 @@ export function applyChipFilters<T extends Pick<
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
-    if (chips.notActiveStatus) {
+    if (chips.requestedStatus) {
+      if (book.status !== 'REQUESTED') return false
+    } else if (chips.notActiveStatus) {
       if (book.status === 'ACTIVE') return false
-    } else if (book.status === 'WITHDRAWN') {
+    } else if (book.status === 'WITHDRAWN' || book.status === 'REQUESTED') {
       return false
     }
     if (chips.withoutFreeTextUrls && !isBlank(book.freeTextUrl)) return false

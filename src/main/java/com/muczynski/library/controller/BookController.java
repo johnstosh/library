@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
@@ -19,6 +20,7 @@ import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.util.SecurityUtils;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -67,7 +69,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllBooks() {
         try {
-            List<BookDto> books = bookService.getAllBooks();
+            List<BookDto> books = bookService.getAllBooks(isLibrarian());
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             logger.warn("Failed to retrieve all books: {}", e.getMessage(), e);
@@ -79,7 +81,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWithoutLocNumber() {
         try {
-            List<BookSummaryDto> summaries = bookService.getSummariesWithoutLocNumber();
+            List<BookSummaryDto> summaries = bookService.getSummariesWithoutLocNumber(isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books without LOC number: {}", e.getMessage(), e);
@@ -95,7 +97,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksFromMostRecentDay() {
         try {
-            List<BookSummaryDto> summaries = bookService.getSummariesFromMostRecentDay();
+            List<BookSummaryDto> summaries = bookService.getSummariesFromMostRecentDay(isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books from most recent 2 days: {}", e.getMessage(), e);
@@ -107,7 +109,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWith3LetterLocStart() {
         try {
-            List<BookSummaryDto> summaries = bookService.getSummariesWith3LetterLocStart();
+            List<BookSummaryDto> summaries = bookService.getSummariesWith3LetterLocStart(isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
@@ -129,7 +131,7 @@ public class BookController {
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
-            List<BookSummaryDto> summaries = bookService.getSummariesByAllLabels(labelList);
+            List<BookSummaryDto> summaries = bookService.getSummariesByAllLabels(labelList, isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books by labels '{}': {}", labels, e.getMessage(), e);
@@ -141,7 +143,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksWithoutGrokipediaUrl() {
         try {
-            List<BookSummaryDto> summaries = bookService.getSummariesWithoutGrokipediaUrl();
+            List<BookSummaryDto> summaries = bookService.getSummariesWithoutGrokipediaUrl(isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books without Grokipedia URL: {}", e.getMessage(), e);
@@ -154,11 +156,16 @@ public class BookController {
     public ResponseEntity<?> getBookById(@PathVariable Long id) {
         try {
             BookDto book = bookService.getBookById(id);
-            return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
+            return book != null && (isLibrarian() || !BookStatus.REQUESTED.equals(book.getStatus())) ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.warn("Failed to retrieve book by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    private boolean isLibrarian() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && SecurityUtils.isLibrarian(authentication);
     }
 
     @PostMapping
@@ -460,7 +467,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<CountDto> getBookCount() {
         try {
-            return ResponseEntity.ok(new CountDto(bookService.countBooks()));
+            return ResponseEntity.ok(new CountDto(bookService.countBooks(isLibrarian())));
         } catch (Exception e) {
             logger.warn("Failed to count books: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -471,7 +478,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getAllBookSummaries() {
         try {
-            List<BookSummaryDto> summaries = bookService.getAllBookSummaries();
+            List<BookSummaryDto> summaries = bookService.getAllBookSummaries(isLibrarian());
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve book summaries: {}", e.getMessage(), e);
@@ -483,7 +490,7 @@ public class BookController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<?> getBooksByIds(@RequestBody List<Long> ids) {
         try {
-            List<BookDto> books = bookService.getBooksByIds(ids);
+            List<BookDto> books = bookService.getBooksByIds(ids, isLibrarian());
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);

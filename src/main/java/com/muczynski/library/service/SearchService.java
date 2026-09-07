@@ -46,7 +46,7 @@ public class SearchService {
     /**
      * Search books and authors with AND-combined type filters.
      * A book must satisfy ALL active type filters (not any one of them).
-     * notActiveStatus always constrains books: off hides WITHDRAWN; on excludes ACTIVE.
+     * notActiveStatus always constrains books: off hides WITHDRAWN and REQUESTED; on excludes ACTIVE and REQUESTED.
      *
      * @param query          title search text (empty = match all)
      * @param bookPage       zero-based page number for book results
@@ -62,7 +62,7 @@ public class SearchService {
      * @param filterWithoutGrokipedia limit to books with no grokipedia URL
      * @param filterWithGrokipedia limit to books with a grokipedia URL
      * @param filterWithoutGenres limit to books with no genre tags
-     * @param filterNotActiveStatus when true, only non-ACTIVE statuses; when false, hide WITHDRAWN
+     * @param filterNotActiveStatus when true, only non-ACTIVE statuses; when false, hide WITHDRAWN and REQUESTED
      * @param filterWithoutFreeTextUrls limit to books with no free text URL
      * @param filterYdlAudio limit to books with YDL audio
      * @param filterYdlBook limit to books with YDL paper

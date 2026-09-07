@@ -27,6 +27,8 @@ export function bookStatusTone(status: string | null | undefined): StatusTone {
     case 'ON_ORDER':
     case 'CHECKED_OUT':
       return 'info'
+    case 'REQUESTED':
+      return 'warning'
     case 'LOST':
     case 'WITHDRAWN':
       return 'danger'

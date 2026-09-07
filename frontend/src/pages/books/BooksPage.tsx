@@ -160,6 +160,7 @@ export function BooksPage() {
             onToggle={handleToggleChip}
             showAvailabilityFilters
             mostRecentDisabled={intakeConstrained}
+            showCatalogerFilters
           />
           <BookLabelFilters
             selectedLabels={selectedLabels}

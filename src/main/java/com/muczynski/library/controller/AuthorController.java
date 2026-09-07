@@ -20,6 +20,7 @@ import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.util.SecurityUtils;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -190,12 +191,17 @@ public class AuthorController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<BookDto>> getBooksByAuthorId(@PathVariable Long id) {
         try {
-            List<BookDto> books = bookService.getBooksByAuthorId(id);
+            List<BookDto> books = bookService.getBooksByAuthorId(id, isLibrarian());
             return ResponseEntity.ok(books);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private boolean isLibrarian() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && SecurityUtils.isLibrarian(authentication);
     }
 
     @GetMapping("/{id}")
