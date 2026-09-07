@@ -4,6 +4,10 @@
 -- Drop the auto-generated Hibernate check constraint on library_card_design so new enum values are accepted.
 ALTER TABLE IF EXISTS users DROP CONSTRAINT IF EXISTS users_library_card_design_check;
 
+-- Hibernate ddl-auto=update does not widen CHECK constraints on enum columns. Widen book_status_check to include REQUESTED.
+ALTER TABLE IF EXISTS book DROP CONSTRAINT IF EXISTS book_status_check;
+ALTER TABLE book ADD CONSTRAINT book_status_check CHECK (status IN ('ACTIVE', 'LOST', 'WITHDRAWN', 'ON_ORDER', 'REQUESTED'));
+
 CREATE TABLE IF NOT EXISTS SPRING_SESSION (
     PRIMARY_ID CHAR(36) NOT NULL,
     SESSION_ID CHAR(36) NOT NULL,
