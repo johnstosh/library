@@ -60,6 +60,7 @@ export function BookViewPage() {
   const currentUser = useAuthStore((state) => state.user)
   const loaned = titleLoaned?.loaned === true
   const canCheckout = isAuthenticated && book?.status === 'ACTIVE' && titleLoaned != null && !loaned
+  const canView = isLibrarian || book?.status !== 'REQUESTED'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
@@ -115,7 +116,7 @@ export function BookViewPage() {
     return <PageLoading />
   }
 
-  if (!book) {
+  if (!book || !canView) {
     return (
       <EntityNotFound
         title="Book Not Found"

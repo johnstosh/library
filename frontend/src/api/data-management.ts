@@ -56,6 +56,7 @@ export interface BookAvailabilityStatsDto {
   hasFreeOnlineText: number
   hasFreeOnlineAudio: number
   withdrawn: number
+  requested: number
   availableAtYdl: number
   ydlPaper: number
   ydlEbook: number

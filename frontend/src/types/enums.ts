@@ -5,6 +5,7 @@ export const BookStatus = {
   LOST: 'LOST',
   WITHDRAWN: 'WITHDRAWN',
   ON_ORDER: 'ON_ORDER',
+  REQUESTED: 'REQUESTED',
 } as const
 
 export type BookStatus = (typeof BookStatus)[keyof typeof BookStatus]

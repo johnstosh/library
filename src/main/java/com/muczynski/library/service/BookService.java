@@ -176,12 +176,22 @@ public class BookService {
         return bookRepository.save(book);
     }
 
+    public List<BookDto> getAllBooks(boolean includeRequested) {
+        return includeRequested ? getAllBooks() : getAllBooks().stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
+    }
+
     public List<BookDto> getAllBooks() {
         return bookRepository.findAll().stream()
                 .map(bookMapper::toDto)
                 .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksWithoutLocNumber(boolean includeRequested) {
+        return includeRequested ? getBooksWithoutLocNumber() : hideRequestedSummaries(getBooksWithoutLocNumber());
     }
 
     public List<BookDto> getBooksWithoutLocNumber() {
@@ -242,12 +252,20 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    public List<BookDto> getBooksWith3LetterLocStart(boolean includeRequested) {
+        return includeRequested ? getBooksWith3LetterLocStart() : hideRequestedSummaries(getBooksWith3LetterLocStart());
+    }
+
     public List<BookDto> getBooksWith3LetterLocStart() {
         return bookRepository.findBooksWith3LetterLocStart().stream()
                 .map(bookMapper::toDto)
                 .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
+    }
+
+    public List<BookDto> getBooksWithoutGrokipediaUrl(boolean includeRequested) {
+        return includeRequested ? getBooksWithoutGrokipediaUrl() : hideRequestedSummaries(getBooksWithoutGrokipediaUrl());
     }
 
     public List<BookDto> getBooksWithoutGrokipediaUrl() {
@@ -262,6 +280,12 @@ public class BookService {
         return bookRepository.findById(id)
                 .map(bookMapper::toDto)
                 .orElse(null);
+    }
+
+    public List<BookDto> getBooksByAuthorId(Long authorId, boolean includeRequested) {
+        return includeRequested ? getBooksByAuthorId(authorId) : getBooksByAuthorId(authorId).stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public List<BookDto> getBooksByAuthorId(Long authorId) {
@@ -1212,10 +1236,18 @@ public class BookService {
         return updateBook(id, dto);
     }
 
+    public List<BookSummaryDto> getAllBookSummaries(boolean includeRequested) {
+        return includeRequested ? getAllBookSummaries() : hideRequestedSummaries(getAllBookSummaries());
+    }
+
     public List<BookSummaryDto> getAllBookSummaries() {
         return bookRepository.findAllSummaries().stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
+    }
+
+    public long countBooks(boolean includeRequested) {
+        return includeRequested ? countBooks() : countBooks() - bookRepository.countByStatus(BookStatus.REQUESTED);
     }
 
     public long countBooks() {
@@ -1236,6 +1268,10 @@ public class BookService {
      * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
      * Used for cache validation in frontend.
      */
+    public List<BookSummaryDto> getSummariesFromMostRecentDay(boolean includeRequested) {
+        return includeRequested ? getSummariesFromMostRecentDay() : hideRequestedSummaries(getSummariesFromMostRecentDay());
+    }
+
     public List<BookSummaryDto> getSummariesFromMostRecentDay() {
         return bookRepository.findSummariesFromMostRecentDay().stream()
                 .map(this::projectionToSummaryDto)
@@ -1246,6 +1282,10 @@ public class BookService {
      * Get summaries (id + lastModified) for books with 3-letter LOC start.
      * Used for cache validation in frontend.
      */
+    public List<BookSummaryDto> getSummariesWith3LetterLocStart(boolean includeRequested) {
+        return includeRequested ? getSummariesWith3LetterLocStart() : hideRequestedSummaries(getSummariesWith3LetterLocStart());
+    }
+
     public List<BookSummaryDto> getSummariesWith3LetterLocStart() {
         return bookRepository.findSummariesWith3LetterLocStart().stream()
                 .map(this::projectionToSummaryDto)
@@ -1256,6 +1296,10 @@ public class BookService {
      * Get summaries (id + lastModified) for books without Grokipedia URL.
      * Used for cache validation in frontend.
      */
+    public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl(boolean includeRequested) {
+        return includeRequested ? getSummariesWithoutGrokipediaUrl() : hideRequestedSummaries(getSummariesWithoutGrokipediaUrl());
+    }
+
     public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl() {
         return bookRepository.findSummariesWithoutGrokipediaUrl().stream()
                 .map(this::projectionToSummaryDto)
@@ -1269,6 +1313,10 @@ public class BookService {
      * @param labels List of labels to filter by (book matches if it has at least one)
      * @return List of BookSummaryDto for matching books
      */
+    public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels, boolean includeRequested) {
+        return includeRequested ? getSummariesByAllLabels(labels) : hideRequestedSummaries(getSummariesByAllLabels(labels));
+    }
+
     public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels) {
         if (labels == null || labels.isEmpty()) {
             return getAllBookSummaries();
@@ -1283,6 +1331,12 @@ public class BookService {
         dto.setId(projection.getId());
         dto.setLastModified(projection.getLastModified());
         return dto;
+    }
+
+    public List<BookDto> getBooksByIds(List<Long> ids, boolean includeRequested) {
+        return includeRequested ? getBooksByIds(ids) : getBooksByIds(ids).stream()
+                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public List<BookDto> getBooksByIds(List<Long> ids) {

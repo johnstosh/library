@@ -20,6 +20,7 @@ public class BookAvailabilityStatsDto {
     private long hasFreeOnlineText;
     private long hasFreeOnlineAudio;
     private long withdrawn;
+    private long requested;
     private long availableAtYdl;
     private long ydlPaper;
     private long ydlEbook;

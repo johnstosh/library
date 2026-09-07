@@ -222,7 +222,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     /**
      * AND-combined chip predicates shared by book and author search queries.
      * Alias {@code b} is the Book. notActiveStatus always constrains:
-     * off → exclude WITHDRAWN; on → exclude ACTIVE.
+     * off → exclude WITHDRAWN and REQUESTED; on → exclude ACTIVE and REQUESTED.
      */
     String SEARCH_CHIP_PREDICATE =
         "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
@@ -235,7 +235,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-') AND " +
         "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '' AND b.grokipediaUrl <> '-')) AND " +
         "(:filterWithoutGenres = false OR NOT EXISTS (SELECT 1 FROM Book bNoTags JOIN bNoTags.tagsList tNoTags WHERE bNoTags = b)) AND " +
-        "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE)) AND " +
+        "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED)) AND " +
         "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '') AND " +
         "(:filterYdlAudio = false OR b.ydlAudioAvailable = true) AND " +
         "(:filterYdlBook = false OR b.ydlPaperAvailable = true) AND " +
@@ -246,7 +246,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Unified search with AND-combined type filters (no labels).
-     * When no optional chips are active, still applies notActiveStatus (hide WITHDRAWN when off).
+     * When no optional chips are active, still applies notActiveStatus (hide WITHDRAWN and REQUESTED when off).
      * When any filter is active, a book must satisfy ALL active filters (AND logic).
      * Audio filter matches books whose freeTextUrl contains "librivox".
      */
