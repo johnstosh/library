@@ -4,12 +4,15 @@
 package com.muczynski.library.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.regex.Pattern;
+
 
 @Entity
 @Table(
@@ -66,7 +69,6 @@ public class Book {
     private LocalDateTime dateAddedToLibrary;
 
     private LocalDateTime lastModified;
-
     @Enumerated(EnumType.STRING)
     private BookStatus status;
 
@@ -77,9 +79,7 @@ public class Book {
     private String statusReason;
 
     private Boolean ydlAudioAvailable;
-
     private Boolean ydlPaperAvailable;
-
     private Boolean ydlEbookAvailable;
 
     private LocalDateTime ydlLastChecked;
@@ -87,14 +87,22 @@ public class Book {
     private String ydlLookupError;
 
     private Boolean emuAudioAvailable;
-
     private Boolean emuPaperAvailable;
-
     private Boolean emuEbookAvailable;
 
     private LocalDateTime emuLastChecked;
 
     private String emuLookupError;
+
+
+    @Convert(converter = ReadingDifficultyConverter.class)
+    @Column(length = 20)
+    private ReadingDifficulty readingDifficulty = ReadingDifficulty.UNSET;
+
+    /** Purchase priority, from 0 (already own enough) through 10 (first priority). */
+    @Min(0)
+    @Max(10)
+    private Integer desireToPurchase;
 
     /**
      * List of tags for categorizing the book (e.g., fiction, fantasy, theology).

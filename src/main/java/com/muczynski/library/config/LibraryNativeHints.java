@@ -35,6 +35,7 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(Photo.ExportStatus.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(Applied.ApplicationStatus.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(EmailMethod.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(ReadingDifficulty.class, MemberCategory.INVOKE_DECLARED_METHODS);
 
         // Spring Session JDBC serializes the full SecurityContext object graph to bytes.
         // Every class in the graph must be registered for Java serialization in native image.

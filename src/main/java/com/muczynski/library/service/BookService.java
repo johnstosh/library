@@ -11,6 +11,7 @@ import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.RandomAuthor;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
@@ -289,6 +290,8 @@ public class BookService {
         book.setLocNumber(bookDto.getLocNumber());
         book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
+        book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+        book.setDesireToPurchase(bookDto.getDesireToPurchase());
         if (bookDto.getAuthorId() != null) {
             book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
         }
@@ -378,6 +381,8 @@ public class BookService {
         clone.setStatus(original.getStatus());
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
+        clone.setReadingDifficulty(original.getReadingDifficulty());
+        clone.setDesireToPurchase(original.getDesireToPurchase());
         clone.setAuthor(original.getAuthor());
         clone.setLibrary(original.getLibrary());
 
