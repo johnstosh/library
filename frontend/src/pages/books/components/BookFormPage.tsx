@@ -695,6 +695,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     { value: BookStatus.LOST, label: 'Lost' },
     { value: BookStatus.WITHDRAWN, label: 'Withdrawn' },
     { value: BookStatus.ON_ORDER, label: 'On Order' },
+    { value: BookStatus.REQUESTED, label: 'Requested' },
   ]
 
   const isLoading = createBook.isPending || updateBook.isPending

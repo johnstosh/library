@@ -33,6 +33,7 @@ class ImportServiceTest {
         when(bookRepository.countWithFreeOnlineText()).thenReturn(7L);
         when(bookRepository.countWithFreeOnlineAudio()).thenReturn(2L);
         when(bookRepository.countByStatus(BookStatus.WITHDRAWN)).thenReturn(1L);
+        when(bookRepository.countByStatus(BookStatus.REQUESTED)).thenReturn(9L);
         when(bookRepository.countAvailableAtYdl()).thenReturn(5L);
         when(bookRepository.countByYdlPaperAvailableTrue()).thenReturn(2L);
         when(bookRepository.countByYdlEbookAvailableTrue()).thenReturn(4L);
@@ -49,6 +50,7 @@ class ImportServiceTest {
         assertEquals(7L, stats.getHasFreeOnlineText());
         assertEquals(2L, stats.getHasFreeOnlineAudio());
         assertEquals(1L, stats.getWithdrawn());
+        assertEquals(9L, stats.getRequested());
         assertEquals(5L, stats.getAvailableAtYdl());
         assertEquals(2L, stats.getYdlPaper());
         assertEquals(4L, stats.getYdlEbook());

@@ -109,6 +109,7 @@ export function formatLocForSpine(locNumber: string | undefined): string {
  */
 export function formatBookStatus(status: string | null | undefined): string {
   if (!status) return '—'
+  if (status === 'REQUESTED') return 'Requested'
   return status
     .split('_')
     .map((word) => word.charAt(0) + word.slice(1).toLowerCase())

@@ -42,6 +42,7 @@ const AVAILABILITY_COUNT_ITEMS: {
   { key: 'hasFreeOnlineText', label: 'Has free online text', test: 'availability-count-free-text' },
   { key: 'hasFreeOnlineAudio', label: 'Has free online audio', test: 'availability-count-free-audio' },
   { key: 'withdrawn', label: 'Withdrawn', test: 'availability-count-withdrawn' },
+  { key: 'requested', label: 'Requested', test: 'availability-count-requested' },
   { key: 'availableAtYdl', label: 'Available at YDL', test: 'availability-count-ydl' },
   { key: 'ydlPaper', label: 'YDL paper', test: 'availability-count-ydl-paper' },
   { key: 'ydlEbook', label: 'YDL ebook', test: 'availability-count-ydl-ebook' },

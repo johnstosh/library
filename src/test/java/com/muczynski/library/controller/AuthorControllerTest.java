@@ -336,7 +336,7 @@ class AuthorControllerTest {
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
         bookDto.setTitle("Test Book");
-        when(bookService.getBooksByAuthorId(1L)).thenReturn(Collections.singletonList(bookDto));
+        when(bookService.getBooksByAuthorId(1L, false)).thenReturn(Collections.singletonList(bookDto));
 
         mockMvc.perform(get("/api/authors/1/books"))
                 .andExpect(status().isOk());
@@ -400,7 +400,7 @@ class AuthorControllerTest {
         BookDto bookDto = new BookDto();
         bookDto.setId(1L);
         bookDto.setTitle("Test Book");
-        when(bookService.getBooksByAuthorId(1L)).thenReturn(Collections.singletonList(bookDto));
+        when(bookService.getBooksByAuthorId(1L, false)).thenReturn(Collections.singletonList(bookDto));
 
         mockMvc.perform(get("/api/authors/1/books"))
                 .andExpect(status().isOk());

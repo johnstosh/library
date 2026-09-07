@@ -816,6 +816,7 @@ public class ImportService {
             bookRepository.countWithFreeOnlineText(),
             bookRepository.countWithFreeOnlineAudio(),
             bookRepository.countByStatus(BookStatus.WITHDRAWN),
+            bookRepository.countByStatus(BookStatus.REQUESTED),
             bookRepository.countAvailableAtYdl(),
             bookRepository.countByYdlPaperAvailableTrue(),
             bookRepository.countByYdlEbookAvailableTrue(),

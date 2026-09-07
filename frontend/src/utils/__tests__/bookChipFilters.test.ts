@@ -49,17 +49,23 @@ describe('applyChipFilters', () => {
     const lost = book({ id: 2, status: 'LOST', title: 'Lost' })
     const withdrawn = book({ id: 3, status: 'WITHDRAWN', title: 'Withdrawn' })
     const onOrder = book({ id: 4, status: 'ON_ORDER', title: 'On order' })
-    const books = [active, lost, withdrawn, onOrder]
+    const requested = book({ id: 5, status: 'REQUESTED', title: 'Requested' })
+    const books = [active, lost, withdrawn, onOrder, requested]
 
-    it('when off, hides WITHDRAWN and still shows ACTIVE, LOST, ON_ORDER', () => {
+    it('when off, hides WITHDRAWN and REQUESTED and still shows ACTIVE, LOST, ON_ORDER', () => {
       const result = applyChipFilters(books, chips({ notActiveStatus: false }))
       expect(result.map((b) => b.status)).toEqual(['ACTIVE', 'LOST', 'ON_ORDER'])
     })
 
-    it('when on, hides ACTIVE and shows LOST, WITHDRAWN, ON_ORDER', () => {
+    it('when on, hides ACTIVE and shows LOST, WITHDRAWN, ON_ORDER, REQUESTED', () => {
       const result = applyChipFilters(books, chips({ notActiveStatus: true }))
-      expect(result.map((b) => b.status)).toEqual(['LOST', 'WITHDRAWN', 'ON_ORDER'])
+      expect(result.map((b) => b.status)).toEqual(['LOST', 'WITHDRAWN', 'ON_ORDER', 'REQUESTED'])
     })
+  })
+
+  it('requestedStatus shows only requested books and overrides default hiding', () => {
+    const requested = book({ id: 2, status: 'REQUESTED' })
+    expect(applyChipFilters([requested, active], chips({ requestedStatus: true }))).toEqual([requested])
   })
 
   it('inLibrary keeps only books with a non-blank locNumber', () => {

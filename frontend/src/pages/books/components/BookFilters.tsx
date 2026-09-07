@@ -55,7 +55,7 @@ interface BookFiltersProps {
   /** Books page: Recent Arrivals cannot be combined with other filters. */
   mostRecentDisabled?: boolean
   showAvailabilityFilters?: boolean
-  /** Search page: hide cataloger-only chips (Without *, Not Active). */
+  /** Search page: hide cataloger-only chips (Without *, Requested Status, Not Active). */
   showCatalogerFilters?: boolean
 }
 
@@ -208,13 +208,24 @@ export function BookFilters({
           tooltip="Only books with no genres assigned"
           dataTest="filter-without-genres"
         />
+        {showCatalogerFilters && (
+        <FilterChip
+          label="Requested Status"
+          active={chips.requestedStatus}
+          onClick={() => toggle('requestedStatus')}
+          tooltip="Only books with Requested status"
+          dataTest="filter-requested-status"
+        />
+        )}
+        {showCatalogerFilters && (
         <FilterChip
           label="Not Active Status"
           active={chips.notActiveStatus}
           onClick={() => toggle('notActiveStatus')}
-          tooltip="When off: hide withdrawn books. When on: only books that are not Active (lost, withdrawn, on order, etc.)"
+          tooltip="When off: hide withdrawn and requested books. When on: only books that are not Active (lost, withdrawn, on order, requested, etc.)"
           dataTest="filter-not-active-status"
         />
+        )}
         <FilterChip
           label="Without Free-Text URLs"
           active={chips.withoutFreeTextUrls}
