@@ -6,6 +6,11 @@ package com.muczynski.library.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * Reading difficulty level for books. Used to help patrons select appropriate titles.
  * Patron-facing short labels are shown in UI; enum values are stored in DB/JSON.
@@ -56,5 +61,32 @@ public enum ReadingDifficulty {
             }
         }
         return UNSET;
+    }
+
+    /**
+     * Parse a comma-separated filter value into known enum constants.
+     * Unknown tokens are ignored; blank or null returns an empty list.
+     */
+    public static List<ReadingDifficulty> parseFilterValues(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        List<ReadingDifficulty> selected = new ArrayList<>();
+        Set<ReadingDifficulty> seen = EnumSet.noneOf(ReadingDifficulty.class);
+        for (String part : raw.split(",")) {
+            String token = part.trim();
+            if (token.isEmpty()) {
+                continue;
+            }
+            for (ReadingDifficulty value : values()) {
+                if (value.getKey().equalsIgnoreCase(token) || value.name().equalsIgnoreCase(token)) {
+                    if (seen.add(value)) {
+                        selected.add(value);
+                    }
+                    break;
+                }
+            }
+        }
+        return selected;
     }
 }

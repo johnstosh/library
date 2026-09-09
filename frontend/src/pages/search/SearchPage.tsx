@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useSearch, type SearchFilters } from '@/api/search'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
+import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
 import { isAnyChipActive } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
@@ -16,6 +17,8 @@ import {
   labelsFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
+import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
+import type { ReadingDifficulty } from '@/types/enums'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiBooks, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -54,6 +57,7 @@ export function SearchPage() {
 
   const filters: SearchFilters = chipsFromSearchParams(searchParams, 'search')
   const selectedLabels = labelsFromSearchParams(searchParams)
+  const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
 
   const [inputValue, setInputValue] = useState(urlQuery)
   const pageSize = 20
@@ -63,7 +67,8 @@ export function SearchPage() {
   }, [urlQuery])
 
   const hasSearched = searchParams.has('q')
-  const hasFilters = isAnyChipActive(filters) || selectedLabels.length > 0
+  const hasFilters =
+    isAnyChipActive(filters) || selectedLabels.length > 0 || selectedDifficulties.length > 0
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -73,12 +78,14 @@ export function SearchPage() {
     filters,
     hasSearched || hasFilters,
     selectedLabels,
+    selectedDifficulties,
   )
   const isLibrarian = useIsLibrarian()
 
   const writeUrl = (next: {
     chips?: SearchFilters
     labels?: string[]
+    readingDifficulties?: string[]
     q?: string
     includeQ?: boolean
     bookPage?: number
@@ -90,6 +97,7 @@ export function SearchPage() {
         {
           chips: next.chips ?? filters,
           labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
           q: next.q !== undefined ? next.q : urlQuery,
           bookPage: next.bookPage ?? 0,
           authorPage: next.authorPage ?? 0,
@@ -125,6 +133,17 @@ export function SearchPage() {
     writeUrl({ labels: [] })
   }
 
+  const handleToggleDifficulty = (value: ReadingDifficulty) => {
+    const next = selectedDifficulties.includes(value)
+      ? selectedDifficulties.filter((item) => item !== value)
+      : [...selectedDifficulties, value]
+    writeUrl({ readingDifficulties: next })
+  }
+
+  const handleClearDifficulties = () => {
+    writeUrl({ readingDifficulties: [] })
+  }
+
   const handleBookPageChange = (newPage: number) => {
     writeUrl({ bookPage: newPage, authorPage, includeQ: hasSearched })
   }
@@ -137,6 +156,7 @@ export function SearchPage() {
     navigate(booksPathFromFilters({
       chips: filters,
       labels: selectedLabels,
+      readingDifficulties: selectedDifficulties,
       q: inputValue.trim() || urlQuery,
     }))
   }
@@ -220,6 +240,11 @@ export function SearchPage() {
             selectedLabels={selectedLabels}
             onToggleLabel={handleToggleLabel}
             onClearLabels={handleClearLabels}
+          />
+          <ReadingDifficultyFilters
+            selected={selectedDifficulties}
+            onToggle={handleToggleDifficulty}
+            onClear={handleClearDifficulties}
           />
         </form>
       </PageCard>

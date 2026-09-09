@@ -14,6 +14,7 @@ const { catalog } = vi.hoisted(() => {
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
       dateAddedToLibrary: '2026-08-30T00:00:00',
+      readingDifficulty: 'children',
     },
     {
       id: 2,
@@ -55,7 +56,12 @@ vi.mock('../components/BulkActionsToolbar', () => ({
 
 function UrlQuery() {
   const [params] = useSearchParams()
-  return <div data-test="url-q">{params.get('q') ?? ''}</div>
+  return (
+    <>
+      <div data-test="url-q">{params.get('q') ?? ''}</div>
+      <div data-test="url-reading-difficulty">{params.get('readingDifficulty') ?? ''}</div>
+    </>
+  )
 }
 
 function renderBooksPage(path = '/books') {
@@ -93,5 +99,25 @@ describe('BooksPage title filter', () => {
     expect(screen.getByTestId('url-q')).toHaveTextContent('NoSuchTitleZZZ')
     expect(screen.queryByTestId('book-row-1')).not.toBeInTheDocument()
     expect(screen.queryByTestId('book-row-2')).not.toBeInTheDocument()
+  })
+})
+
+describe('BooksPage reading difficulty filter', () => {
+  it('ORs selected difficulties and treats a missing value as Unset', () => {
+    renderBooksPage('/books?readingDifficulty=children')
+    expect(screen.getByTestId('book-row-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('book-row-2')).not.toBeInTheDocument()
+  })
+
+  it('keeps Unset books when Unset is selected', () => {
+    renderBooksPage('/books?readingDifficulty=unset')
+    expect(screen.queryByTestId('book-row-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('book-row-2')).toBeInTheDocument()
+  })
+
+  it('writes the selected chip into the URL', () => {
+    renderBooksPage('/books?mostRecent=false')
+    fireEvent.click(screen.getByTestId('reading-difficulty-filter-children'))
+    expect(screen.getByTestId('url-reading-difficulty')).toHaveTextContent('children')
   })
 })

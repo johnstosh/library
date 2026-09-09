@@ -4,6 +4,7 @@ import {
   isOtherBookChipActive,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
+import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 
 /** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
 export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
@@ -73,8 +74,14 @@ export function isBooksIntakeConstrained(
   chips: BookChipFilters,
   labels: string[],
   q: string,
+  readingDifficulties: string[] = [],
 ): boolean {
-  return isOtherBookChipActive(chips) || labels.length > 0 || q.trim().length > 0
+  return (
+    isOtherBookChipActive(chips) ||
+    labels.length > 0 ||
+    readingDifficulties.length > 0 ||
+    q.trim().length > 0
+  )
 }
 
 export function chipsFromSearchParams(
@@ -89,8 +96,9 @@ export function chipsFromSearchParams(
   }
   if (mode === 'books') {
     const labels = labelsFromSearchParams(params)
+    const readingDifficulties = readingDifficultiesFromSearchParams(params)
     const q = (params.get('q') ?? '').trim()
-    const othersOn = isBooksIntakeConstrained(chips, labels, q)
+    const othersOn = isBooksIntakeConstrained(chips, labels, q, readingDifficulties)
     if (othersOn) {
       chips.mostRecent = false
     } else if (params.get(CHIP_URL_KEYS.mostRecent) === 'false') {
@@ -105,6 +113,7 @@ export function chipsFromSearchParams(
 export interface BookFilterUrlState {
   chips: BookChipFilters
   labels: string[]
+  readingDifficulties?: string[]
   q: string
   bookPage?: number
   authorPage?: number
@@ -124,6 +133,10 @@ export function bookFilterParamsForUrl(
     params.q = ''
   }
   if (state.labels.length > 0) params.labels = state.labels.join(',')
+  const readingDifficulties = state.readingDifficulties ?? []
+  if (readingDifficulties.length > 0) {
+    params.readingDifficulty = readingDifficulties.join(',')
+  }
 
   const keys = mode === 'search' ? SEARCH_VISIBLE_CHIPS : ALL_CHIP_KEYS
   for (const chip of keys) {
@@ -132,7 +145,7 @@ export function bookFilterParamsForUrl(
   }
 
   if (mode === 'books') {
-    const othersOn = isBooksIntakeConstrained(state.chips, state.labels, q)
+    const othersOn = isBooksIntakeConstrained(state.chips, state.labels, q, readingDifficulties)
     if (!othersOn && !state.chips.mostRecent) {
       params[CHIP_URL_KEYS.mostRecent] = 'false'
     }
@@ -150,6 +163,7 @@ export function bookFilterParamsForUrl(
 export function booksPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
+  readingDifficulties?: string[]
   q: string
 }): string {
   const discoveryChips: BookChipFilters = { ...defaultBookChipFilters, mostRecent: true }
@@ -159,7 +173,12 @@ export function booksPathFromFilters(state: {
     discoveryChips[key] = state.chips[key]
   }
   const params = bookFilterParamsForUrl(
-    { chips: discoveryChips, labels: state.labels, q: state.q },
+    {
+      chips: discoveryChips,
+      labels: state.labels,
+      readingDifficulties: state.readingDifficulties ?? [],
+      q: state.q,
+    },
     'books',
   )
   const qs = new URLSearchParams(params).toString()

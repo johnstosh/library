@@ -134,6 +134,8 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-not-active-status']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
         assertThat(page.locator("[data-test='open-in-books']")).hasCount(0);
+        assertThat(page.locator("[data-test='reading-difficulty-filters']")).isVisible();
+        assertThat(page.locator("[data-test='reading-difficulty-filter-unset']")).containsText("Unset");
     }
 
     @Test
@@ -710,6 +712,51 @@ public class SearchUITest {
         Assertions.assertTrue(page.url().contains("labels=fiction"),
                 "URL should contain labels=fiction, got: " + page.url());
         assertThat(page.locator("[data-test='clear-search']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Reading difficulty chips OR selected values and treat blank as Unset")
+    void testReadingDifficultyFilter() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+        assertThat(page.locator("[data-test='reading-difficulty-filters']")).isVisible();
+        assertThat(page.locator("[data-test='reading-difficulty-filters']")).containsText("Reading Difficulty");
+        assertThat(page.locator("[data-test='reading-difficulty-filter-unset']")).containsText("Unset");
+
+        page.click("[data-test='reading-difficulty-filter-demanding']");
+        page.waitForURL(url -> url.contains("readingDifficulty=demanding"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Confessions")))
+                .not().isVisible();
+
+        page.click("[data-test='reading-difficulty-filter-accessible']");
+        page.waitForURL(url -> url.contains("accessible"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Confessions"))).isVisible();
+
+        page.click("[data-test='reading-difficulty-filter-clear']");
+        page.click("[data-test='reading-difficulty-filter-unset']");
+        page.waitForURL(url -> url.contains("readingDifficulty=unset"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Canticle of the Sun"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica")))
+                .not().isVisible();
     }
 
     @Test

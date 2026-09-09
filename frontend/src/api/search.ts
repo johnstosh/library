@@ -58,15 +58,29 @@ export function useSearch(
   filters: SearchFilters = defaultSearchFilters,
   enabled = true,
   selectedLabels?: string[],
+  selectedDifficulties?: string[],
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
+  const hasDifficulties = selectedDifficulties != null && selectedDifficulties.length > 0
+  const difficultyParam = hasDifficulties
+    ? `&readingDifficulty=${encodeURIComponent((selectedDifficulties ?? []).join(','))}`
+    : ''
   const filterParams = chipQueryParams(filters)
   return useQuery({
-    queryKey: ['search', query, bookPage, authorPage, size, filters, selectedLabels ?? []],
+    queryKey: [
+      'search',
+      query,
+      bookPage,
+      authorPage,
+      size,
+      filters,
+      selectedLabels ?? [],
+      selectedDifficulties ?? [],
+    ],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}`,
+        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}`,
         { requireAuth: false },
       ),
     enabled,

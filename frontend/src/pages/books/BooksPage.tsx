@@ -11,6 +11,7 @@ import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from './components/BookFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
+import { ReadingDifficultyFilters } from './components/ReadingDifficultyFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBookCount, useBooks } from '@/api/books'
@@ -23,6 +24,11 @@ import {
   labelsFromSearchParams,
   matchesBookQuery,
 } from '@/utils/bookFilterParams'
+import {
+  applyReadingDifficultyFilter,
+  readingDifficultiesFromSearchParams,
+} from '@/utils/readingDifficulty'
+import type { ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
@@ -32,6 +38,7 @@ export function BooksPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const chips = chipsFromSearchParams(searchParams, 'books')
   const selectedLabels = labelsFromSearchParams(searchParams)
+  const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
   const { selectedIds, selectAll } = useBooksTableSelection()
@@ -42,12 +49,18 @@ export function BooksPage() {
     setInputValue(urlQuery)
   }, [urlQuery])
 
-  const writeUrl = (next: { chips?: BookChipFilters; labels?: string[]; q?: string }) => {
+  const writeUrl = (next: {
+    chips?: BookChipFilters
+    labels?: string[]
+    readingDifficulties?: string[]
+    q?: string
+  }) => {
     setSearchParams(
       bookFilterParamsForUrl(
         {
           chips: next.chips ?? chips,
           labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
           q: next.q !== undefined ? next.q : urlQuery,
         },
         'books',
@@ -59,11 +72,19 @@ export function BooksPage() {
   const { data: bookCount } = useBookCount()
 
   const books = useMemo(
-    () => applyChipFilters(allBooks, chips).filter((book) => matchesBookQuery(book, urlQuery)),
-    [allBooks, chips, urlQuery],
+    () =>
+      applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties).filter(
+        (book) => matchesBookQuery(book, urlQuery),
+      ),
+    [allBooks, chips, selectedDifficulties, urlQuery],
   )
 
-  const intakeConstrained = isBooksIntakeConstrained(chips, selectedLabels, urlQuery)
+  const intakeConstrained = isBooksIntakeConstrained(
+    chips,
+    selectedLabels,
+    urlQuery,
+    selectedDifficulties,
+  )
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
@@ -101,6 +122,13 @@ export function BooksPage() {
       ? selectedLabels.filter((l) => l !== label)
       : [...selectedLabels, label]
     writeUrl({ labels: nextLabels })
+  }
+
+  const handleToggleDifficulty = (value: ReadingDifficulty) => {
+    const next = selectedDifficulties.includes(value)
+      ? selectedDifficulties.filter((item) => item !== value)
+      : [...selectedDifficulties, value]
+    writeUrl({ readingDifficulties: next })
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -166,6 +194,11 @@ export function BooksPage() {
             selectedLabels={selectedLabels}
             onToggleLabel={handleToggleLabel}
             onClearLabels={() => writeUrl({ labels: [] })}
+          />
+          <ReadingDifficultyFilters
+            selected={selectedDifficulties}
+            onToggle={handleToggleDifficulty}
+            onClear={() => writeUrl({ readingDifficulties: [] })}
           />
         </div>
 

@@ -30,8 +30,9 @@ Returns search results for books and authors matching the query.
 - `filterEmuBook` (boolean, optional, default `false`) - Books with EMU paper
 - `filterEmuEbook` (boolean, optional, default `false`) - Books with EMU ebook
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
+- `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values
 
-All active boolean chips AND labels AND together. Conflicting chips may yield empty results.
+All active boolean chips AND labels AND reading-difficulty (OR within that list) AND together. Conflicting chips may yield empty results.
 
 **Response:** SearchResponseDto containing:
 ```json

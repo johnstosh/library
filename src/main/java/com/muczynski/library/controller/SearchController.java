@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.service.SearchService;
 import org.slf4j.Logger;
@@ -55,7 +56,8 @@ public class SearchController {
             @RequestParam(defaultValue = "false") boolean filterEmuAudio,
             @RequestParam(defaultValue = "false") boolean filterEmuBook,
             @RequestParam(defaultValue = "false") boolean filterEmuEbook,
-            @RequestParam(required = false) String labels) {
+            @RequestParam(required = false) String labels,
+            @RequestParam(required = false) String readingDifficulty) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
                     ? null
@@ -63,6 +65,10 @@ public class SearchController {
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
+            List<ReadingDifficulty> readingDifficultyList = ReadingDifficulty.parseFilterValues(readingDifficulty);
+            if (readingDifficultyList.isEmpty()) {
+                readingDifficultyList = null;
+            }
             int resolvedBookPage = bookPage != null ? bookPage : (page != null ? page : 0);
             int resolvedAuthorPage = authorPage != null ? authorPage : (page != null ? page : 0);
             SearchResponseDto results = searchService.search(query, resolvedBookPage, resolvedAuthorPage, size,
@@ -73,7 +79,8 @@ public class SearchController {
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
-                    labelList);
+                    labelList,
+                    readingDifficultyList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', bookPage {}, authorPage {}, size {}: {}",

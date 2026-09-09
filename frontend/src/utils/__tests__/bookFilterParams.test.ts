@@ -79,6 +79,9 @@ describe('chipsFromSearchParams books mode', () => {
     expect(chipsFromSearchParams(new URLSearchParams('labels=fiction'), 'books').mostRecent).toBe(
       false,
     )
+    expect(
+      chipsFromSearchParams(new URLSearchParams('readingDifficulty=children'), 'books').mostRecent,
+    ).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
   })
 })
@@ -107,6 +110,7 @@ describe('bookFilterParamsForUrl', () => {
       {
         chips: chips({ inLibrary: true, withoutLoc: true, mostRecent: true }),
         labels: ['fiction'],
+        readingDifficulties: ['children', 'unset'],
         q: 'Augustine',
         bookPage: 2,
         authorPage: 1,
@@ -116,6 +120,7 @@ describe('bookFilterParamsForUrl', () => {
     expect(params).toEqual({
       q: 'Augustine',
       labels: 'fiction',
+      readingDifficulty: 'children,unset',
       inLib: 'true',
       mostRecent: 'true',
       bookPage: '2',
@@ -143,9 +148,10 @@ describe('booksPathFromFilters', () => {
       booksPathFromFilters({
         chips: chips({ inLibrary: true, withoutLoc: true }),
         labels: ['classic'],
+        readingDifficulties: ['demanding'],
         q: 'Summa',
       }),
-    ).toBe('/books?q=Summa&labels=classic&inLib=true')
+    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&inLib=true')
   })
 
   it('does not copy Search Recent Arrivals off-state onto Books intake', () => {
@@ -174,6 +180,7 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips({ mostRecent: true }), [], '')).toBe(false)
     expect(isBooksIntakeConstrained(chips({ withoutLoc: true }), [], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), ['fiction'], '')).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', ['children'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)
   })
 })
