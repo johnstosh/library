@@ -63,8 +63,9 @@ Returns paginated search results for books and authors.
 - `filterFreeText` (boolean, optional, default `false`) - Limit books to those with a free online text URL (`freeTextUrl IS NOT NULL`)
 - `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
 - `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
+- `readingDifficulty` (string, optional, multi-value) - Limit books to those whose reading difficulty is any of the listed enum keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`). Null or blank stored values match `unset`.
 
-Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included.
+Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included. Selected reading-difficulty values are ORed with each other, then ANDed with the other filters.
 
 **Response**: `SearchResponseDto` containing books, authors, and pagination info for each
 
@@ -139,6 +140,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
 - `inLib`, `elec`, `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
 - `labels` (string, optional) - Comma-separated genre tags (AND)
+- `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 
 Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `notActiveStatus`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`.
 
@@ -148,6 +150,7 @@ Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedi
 - `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in books that are BOTH in-library AND electronic
 - `/search?audio=true` - All LibriVox audio books
 - `/search?q=Narnia&labels=fiction,classic` - Query plus genre filters
+- `/search?readingDifficulty=children,unset` - Children or Unset (including books with a blank difficulty)
 - `/search?q=Augustine&bookPage=1&authorPage=0` - Independent list pages
 
 Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). That is a one-way handoff, not live sync.

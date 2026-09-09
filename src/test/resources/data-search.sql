@@ -52,6 +52,10 @@ INSERT INTO book (id, title, publication_year, publisher, author_id, library_id,
      'https://librivox.org/city-of-god-by-saint-augustine', false);
 
 -- Photos for cover thumbnails on Search (image bytes are unused; UI tests intercept thumbnail URLs)
+UPDATE book SET reading_difficulty = 'demanding' WHERE id = 1;
+UPDATE book SET reading_difficulty = 'accessible' WHERE id = 2;
+UPDATE book SET reading_difficulty = 'moderate' WHERE id = 3;
+
 INSERT INTO photo (id, book_id, content_type, image_checksum, photo_order)
 VALUES (1, 1, 'image/png', 'checksum_summa', 1);
 INSERT INTO photo (id, book_id, content_type, image_checksum, photo_order)

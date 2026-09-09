@@ -97,6 +97,8 @@ describe('SearchPage header', () => {
     expect(card).toContainElement(screen.getByTestId('search-button'))
     expect(card).toContainElement(screen.getByTestId('search-filter-chips'))
     expect(card).toContainElement(screen.getByTestId('book-label-filters'))
+    expect(card).toContainElement(screen.getByTestId('reading-difficulty-filters'))
+    expect(screen.getByTestId('reading-difficulty-filter-unset')).toHaveTextContent('Unset')
   })
 })
 

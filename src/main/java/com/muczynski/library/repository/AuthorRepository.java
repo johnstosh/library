@@ -4,6 +4,7 @@
 package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.ReadingDifficulty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -60,6 +61,9 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterEmuBook") boolean filterEmuBook,
         @Param("filterEmuEbook") boolean filterEmuEbook,
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
         Pageable pageable);
 
     /**
@@ -98,6 +102,9 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
         Pageable pageable);
 
     /**

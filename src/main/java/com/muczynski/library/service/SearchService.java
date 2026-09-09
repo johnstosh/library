@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PageInfoDto;
@@ -30,6 +31,7 @@ public class SearchService {
     private static final LocalDateTime UNUSED_MOST_RECENT_CUTOFF = LocalDateTime.of(1970, 1, 1, 0, 0);
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
     private static final List<Long> NO_TEMP_TITLE_IDS = List.of(-1L);
+    private static final List<ReadingDifficulty> UNUSED_READING_DIFFICULTIES = List.of(ReadingDifficulty.UNSET);
 
     @Autowired
     private BookRepository bookRepository;
@@ -71,6 +73,8 @@ public class SearchService {
      * @param filterEmuBook limit to books with EMU paper
      * @param filterEmuEbook limit to books with EMU ebook
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
+     * @param readingDifficulties selected reading-difficulty values; a book matches ANY of them (OR).
+     *                        null/empty = no reading-difficulty filter. Unset also matches null or blank.
      */
     @Transactional(readOnly = true)
     public SearchResponseDto search(String query, int bookPageNumber, int authorPageNumber, int size,
@@ -83,13 +87,20 @@ public class SearchService {
             boolean filterYdlAudio, boolean filterYdlBook, boolean filterYdlEbook,
             boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
             boolean filterWithGrokipedia,
-            List<String> labels) {
+            List<String> labels,
+            List<ReadingDifficulty> readingDifficulties) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
         Pageable bookPageable = PageRequest.of(bookPageNumber, size);
         Pageable authorPageable = PageRequest.of(authorPageNumber, size);
         boolean hasLabels = labels != null && !labels.isEmpty();
         long labelCount = hasLabels ? labels.size() : 0;
+        boolean hasReadingDifficulties = readingDifficulties != null && !readingDifficulties.isEmpty();
+        boolean includeUnsetReadingDifficulty = hasReadingDifficulties
+                && readingDifficulties.contains(ReadingDifficulty.UNSET);
+        List<ReadingDifficulty> readingDifficultyParam = hasReadingDifficulties
+                ? readingDifficulties
+                : UNUSED_READING_DIFFICULTIES;
 
         LocalDateTime mostRecentCutoff = UNUSED_MOST_RECENT_CUTOFF;
         List<Long> mostRecentTempTitleIds = NO_TEMP_TITLE_IDS;
@@ -112,7 +123,9 @@ public class SearchService {
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
-                    labels, labelCount, bookPageable);
+                    labels, labelCount,
+                    hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                    bookPageable);
         } else {
             bookPage = bookRepository.findWithFilters(
                     trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
@@ -122,6 +135,7 @@ public class SearchService {
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
+                    hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
                     bookPageable);
         }
 
@@ -134,7 +148,7 @@ public class SearchService {
                 || filterWithoutFreeTextUrls
                 || filterYdlAudio || filterYdlBook || filterYdlEbook
                 || filterEmuAudio || filterEmuBook || filterEmuEbook
-                || hasLabels;
+                || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasFilters) {
             if (hasLabels) {
@@ -146,7 +160,9 @@ public class SearchService {
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
-                        labels, labelCount, authorPageable);
+                        labels, labelCount,
+                        hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                        authorPageable);
             } else {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
                         trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
@@ -156,6 +172,7 @@ public class SearchService {
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
+                        hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
                         authorPageable);
             }
         } else if (!trimmedQuery.isEmpty()) {

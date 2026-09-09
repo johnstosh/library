@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.PageInfoDto;
 import com.muczynski.library.dto.SearchResponseDto;
@@ -65,7 +66,7 @@ class SearchControllerTest {
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull(), isNull()))
                 .thenReturn(response);
     }
 
@@ -77,7 +78,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull()))
                 .thenReturn(response);
     }
 
@@ -188,7 +189,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull());
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull());
     }
 
     @Test
@@ -220,7 +221,7 @@ class SearchControllerTest {
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull(), isNull()))
                 .thenThrow(new RuntimeException("Database error"));
 
         given()
@@ -332,7 +333,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -350,7 +351,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull());
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull());
     }
 
     @Test
@@ -360,7 +361,7 @@ class SearchControllerTest {
                 eq(true), eq(true), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -382,7 +383,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(true), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -403,7 +404,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(true), isNull()))
+                eq(false), eq(false), eq(false), eq(true), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -424,7 +425,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull()))
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -442,6 +443,36 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), isNull());
+                eq(false), eq(false), eq(false), eq(false), isNull(), isNull());
+    }
+
+    @Test
+    void testSearch_WithReadingDifficultyFilter() {
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull(),
+                eq(List.of(ReadingDifficulty.CHILDREN, ReadingDifficulty.UNSET))))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("readingDifficulty", "children,unset,bogus")
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+
+        verify(searchService).search(eq("test"), eq(0), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false), isNull(),
+                eq(List.of(ReadingDifficulty.CHILDREN, ReadingDifficulty.UNSET)));
     }
 }

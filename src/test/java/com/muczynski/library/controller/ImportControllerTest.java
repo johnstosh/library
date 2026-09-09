@@ -414,7 +414,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_Success() {
         BookAvailabilityStatsDto stats = new BookAvailabilityStatsDto(
-            3L, 8L, 7L, 2L, 1L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
+            3L, 8L, 7L, 2L, 1L, 9L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
         );
         when(importService.getAvailabilityStats()).thenReturn(stats);
 
@@ -454,7 +454,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_HasAllFields() {
         when(importService.getAvailabilityStats()).thenReturn(
-            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         );
 
         given()

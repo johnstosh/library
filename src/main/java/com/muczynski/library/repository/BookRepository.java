@@ -5,6 +5,7 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.ReadingDifficulty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -242,7 +243,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterYdlEbook = false OR b.ydlEbookAvailable = true) AND " +
         "(:filterEmuAudio = false OR b.emuAudioAvailable = true) AND " +
         "(:filterEmuBook = false OR b.emuPaperAvailable = true) AND " +
-        "(:filterEmuEbook = false OR b.emuEbookAvailable = true)";
+        "(:filterEmuEbook = false OR b.emuEbookAvailable = true) AND " +
+        "(:filterReadingDifficulty = false OR b.readingDifficulty IN :readingDifficulties OR " +
+        "(:includeUnsetReadingDifficulty = true AND (b.readingDifficulty IS NULL " +
+        "OR b.readingDifficulty = com.muczynski.library.domain.ReadingDifficulty.UNSET " +
+        "OR TRIM(CAST(b.readingDifficulty AS string)) = '')))";
 
     /**
      * Unified search with AND-combined type filters (no labels).
@@ -275,6 +280,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterEmuBook") boolean filterEmuBook,
         @Param("filterEmuEbook") boolean filterEmuEbook,
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
         Pageable pageable);
 
     /**
@@ -310,6 +318,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
         Pageable pageable);
 
     /**

@@ -134,6 +134,9 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
+        assertThat(page.locator("[data-test='reading-difficulty-filters']")).isVisible();
+        assertThat(page.locator("[data-test='reading-difficulty-filters']")).containsText("Reading Difficulty");
+        assertThat(page.locator("[data-test='reading-difficulty-filter-unset']")).containsText("Unset");
 
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
