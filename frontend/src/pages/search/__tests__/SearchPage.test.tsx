@@ -1,12 +1,12 @@
 // (c) Copyright 2025 by Muczynski
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SearchPage } from '../SearchPage'
 import type { AuthorDto, BookDto } from '@/types/dtos'
 import type { SearchResponse } from '@/api/search'
 
-const { searchResult } = vi.hoisted(() => {
+const { searchResult, librarianState } = vi.hoisted(() => {
   const books: BookDto[] = [
     {
       id: 1,
@@ -43,7 +43,7 @@ const { searchResult } = vi.hoisted(() => {
     bookPage: { totalPages: 1, totalElements: 2, currentPage: 0, pageSize: 20 },
     authorPage: { totalPages: 1, totalElements: 1, currentPage: 0, pageSize: 20 },
   }
-  return { searchResult }
+  return { searchResult, librarianState: { current: false } }
 })
 
 vi.mock('@/api/search', () => ({
@@ -63,7 +63,7 @@ vi.mock('@/api/authors', () => ({
 }))
 
 vi.mock('@/stores/authStore', () => ({
-  useIsLibrarian: () => false,
+  useIsLibrarian: () => librarianState.current,
 }))
 
 vi.mock('@/hooks/useToast', () => ({
@@ -77,6 +77,10 @@ function renderSearch(path = '/search?q=Summa') {
     </MemoryRouter>,
   )
 }
+
+beforeEach(() => {
+  librarianState.current = false
+})
 
 describe('SearchPage header', () => {
   it('tells patrons they can search by name or browse with filters', () => {
@@ -123,5 +127,42 @@ describe('SearchPage covers', () => {
     expect(authorImg).toHaveAttribute('src', '/api/photos/20/thumbnail?width=70&v=author-teresa')
     fireEvent.load(authorImg)
     expect(authorImg).toHaveAttribute('data-test', 'thumbnail-img')
+  })
+})
+
+describe('SearchPage librarian controls', () => {
+  it('renders Open in Books below the search row, not in the same flex container as the input', () => {
+    librarianState.current = true
+    renderSearch('/search')
+
+    const searchInput = screen.getByTestId('search-input')
+    const searchButton = screen.getByTestId('search-button')
+    const openInBooks = screen.getByTestId('open-in-books')
+    const searchControls = screen.getByTestId('search-controls')
+    const form = searchInput.closest('form')
+
+    expect(openInBooks).toHaveTextContent('Open in Books')
+    expect(searchControls).toContainElement(searchInput)
+    expect(searchControls).toContainElement(searchButton)
+    expect(searchControls).not.toContainElement(openInBooks)
+    expect(form).toContainElement(openInBooks)
+    expect(openInBooks.parentElement).toBe(form)
+    expect(searchControls.parentElement).toBe(form)
+  })
+
+  it('uses default md sizes like Books instead of lg', () => {
+    librarianState.current = true
+    renderSearch('/search?q=Summa')
+
+    expect(screen.getByTestId('search-input')).not.toHaveClass('text-lg')
+
+    for (const testId of ['search-button', 'clear-search', 'open-in-books']) {
+      const button = screen.getByTestId(testId)
+      expect(button).toHaveClass('text-base')
+      expect(button).toHaveClass('px-4')
+      expect(button).toHaveClass('py-2.5')
+      expect(button).not.toHaveClass('text-lg')
+      expect(button).not.toHaveClass('px-6')
+    }
   })
 })

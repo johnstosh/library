@@ -4,6 +4,7 @@
 package com.muczynski.library.ui;
 
 import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.BoundingBox;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.assertions.LocatorAssertions;
@@ -158,6 +159,69 @@ public class SearchUITest {
 
             assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
             assertThat(mobilePage.locator("[data-test='filter-free-text']")).isVisible();
+        } finally {
+            mobileContext.close();
+        }
+    }
+
+    @Test
+    @DisplayName("Phone search field stays wide and Open in Books sits below it")
+    void testSearchFieldLayoutOnPhone() {
+        BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(375, 667));
+        Page mobilePage = mobileContext.newPage();
+        mobilePage.setDefaultTimeout(20000L);
+        try {
+            mobilePage.navigate(getBaseUrl() + "/search");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+            mobilePage.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+
+            Locator searchInput = mobilePage.locator("[data-test='search-input']");
+            searchInput.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+            assertThat(searchInput).isVisible();
+
+            BoundingBox inputBox = searchInput.boundingBox();
+            Assertions.assertNotNull(inputBox, "Search input should have a bounding box");
+            Assertions.assertTrue(inputBox.width >= 180,
+                    "Search input should be a large fraction of the 375px phone viewport, got width="
+                            + inputBox.width);
+
+            mobilePage.navigate(getBaseUrl() + "/login");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+            mobilePage.waitForSelector("[data-test='login-username']",
+                    new Page.WaitForSelectorOptions().setTimeout(30000L)
+                            .setState(WaitForSelectorState.VISIBLE));
+            mobilePage.fill("[data-test='login-username']", "librarian");
+            mobilePage.fill("[data-test='login-password']", "password");
+            mobilePage.click("[data-test='login-submit']");
+            mobilePage.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+
+            Locator booksInput = mobilePage.locator("[data-test='books-title-filter']");
+            booksInput.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+            BoundingBox booksInputBox = booksInput.boundingBox();
+            Assertions.assertNotNull(booksInputBox, "Books filter input should have a bounding box");
+
+            mobilePage.navigate(getBaseUrl() + "/search");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+            mobilePage.waitForSelector("[data-test='open-in-books']",
+                    new Page.WaitForSelectorOptions().setTimeout(10000L)
+                            .setState(WaitForSelectorState.VISIBLE));
+
+            Locator librarianSearchInput = mobilePage.locator("[data-test='search-input']");
+            Locator openInBooks = mobilePage.locator("[data-test='open-in-books']");
+            assertThat(librarianSearchInput).isVisible();
+            assertThat(openInBooks).isVisible();
+
+            BoundingBox librarianInputBox = librarianSearchInput.boundingBox();
+            BoundingBox openBox = openInBooks.boundingBox();
+            Assertions.assertNotNull(librarianInputBox, "Search input should have a bounding box after login");
+            Assertions.assertNotNull(openBox, "Open in Books should have a bounding box");
+            Assertions.assertTrue(librarianInputBox.width >= booksInputBox.width * 0.8,
+                    "Search input should stay about as wide as the Books filter, search="
+                            + librarianInputBox.width + " books=" + booksInputBox.width);
+            Assertions.assertTrue(openBox.y >= librarianInputBox.y + librarianInputBox.height,
+                    "Open in Books should be below the search input, open.y=" + openBox.y
+                            + " input.bottom=" + (librarianInputBox.y + librarianInputBox.height));
         } finally {
             mobileContext.close();
         }

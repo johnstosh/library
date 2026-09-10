@@ -171,9 +171,11 @@ Librarians can copy the current Search filters onto Books with **Open in Books**
 #### 1. Search Input
 
 - Text input field synced with URL `q` parameter
+- Search row matches the Books page: the input sits in `flex-1 min-w-0` with the Search button using the default `md` size (not `lg` / `text-lg`)
 - Search button is **always enabled** — blank search is valid and returns all books
 - Search executes on form submit (Enter key or Search button click)
-- Clear button resets query text AND all filter chips, then clears URL parameters
+- Clear button (default `md` size, `ghost` variant) appears on the search row after a search or when filters are active; on a phone it wraps under the input+Search row so the field stays usable
+- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`)
 
 #### 2. Filter Chips
 
@@ -210,7 +212,7 @@ Note: When any filter chip or label is active, the author list shows only author
 
 #### 5. Clear Button
 
-Visible when `hasSearched || hasFilters`. Resets all state: clears input, deactivates all filter chips, clears URL params.
+Visible when `hasSearched || hasFilters`. Resets all state: clears input, deactivates all filter chips, clears URL params. Uses the same default `md` button size as Books. On phones it sits below the input+Search row rather than shrinking the text field.
 
 ### React Query Integration
 
