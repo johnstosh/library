@@ -171,9 +171,11 @@ Librarians can copy the current Search filters onto Books with **Open in Books**
 #### 1. Search Input
 
 - Text input field synced with URL `q` parameter
+- Search row matches the Books page: the input sits in `flex-1 min-w-0` with the Search button using the default `md` size (not `lg` / `text-lg`)
 - Search button is **always enabled** — blank search is valid and returns all books
 - Search executes on form submit (Enter key or Search button click)
-- Clear button resets query text AND all filter chips, then clears URL parameters
+- The query field is `type="search"` (`data-test="search-input"`), so the browser’s native (x) clears the typed text the same way the Books title filter does. There is no separate Clear button. The (x) only clears the field; apply it with Search or Enter. Filter chips stay until toggled off individually.
+- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`)
 
 #### 2. Filter Chips
 
@@ -210,7 +212,7 @@ Note: When any filter chip or label is active, the author list shows only author
 
 #### 5. Clear Button
 
-Visible when `hasSearched || hasFilters`. Resets all state: clears input, deactivates all filter chips, clears URL params.
+Visible when `hasSearched || hasFilters`. Resets all state: clears input, deactivates all filter chips, clears URL params. Uses the same default `md` button size as Books. On phones it sits below the input+Search row rather than shrinking the text field.
 
 ### React Query Integration
 
@@ -274,7 +276,7 @@ Playwright UI test coverage:
 - `testSearchForAuthors()` - Search returns author results
 - `testSearchForBooksAndAuthors()` - Search returns both types
 - `testNoResultsFound()` - No results message displayed
-- `testClearSearch()` - Clear button resets results
+- `testClearSearch()` - Query field is `type="search"` (native (x)); no Clear button
 - `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
 - `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
 - `testBookResultDetails()` - Book details displayed correctly
@@ -284,7 +286,7 @@ Playwright UI test coverage:
 - `testAuthorResultDetails()` - Author details displayed correctly
 - `testSearchUpdatesUrl()` - Search updates URL with `?q=` parameter
 - `testSearchFromUrlParameter()` - URL with `?q=` loads search results
-- `testClearSearchUpdatesUrl()` - Clear removes URL parameters
+- `testClearSearchUpdatesUrl()` - Search after clearing the query field applies the empty query
 - `testViewBookNavigatesToPage()` - View navigates to `/books/{id}`
 - `testViewAuthorNavigatesToPage()` - View navigates to `/authors/{id}`
 - `testFilterChipsVisible()` - All 4 chips visible with correct text and tooltip
@@ -292,7 +294,7 @@ Playwright UI test coverage:
 - `testAudioFilterReturnsLibriVoxBooks()` - Audio filter returns only LibriVox book
 - `testFreeTextFilterReturnsOnlineTextBooks()` - Free-text filter returns 2 books with URLs
 - `testFilterChipStateRestoredFromUrl()` - Navigating with filter params shows active chips
-- `testClearRemovesFilterChips()` - Clear button removes filter params from URL
+- `testClearRemovesFilterChips()` - Clearing the query field does not remove filter params from URL
 
 ## Performance Considerations
 

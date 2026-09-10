@@ -113,11 +113,6 @@ export function SearchPage() {
     writeUrl({ q: inputValue.trim(), includeQ: true })
   }
 
-  const handleClear = () => {
-    setInputValue('')
-    setSearchParams({})
-  }
-
   const handleFilterToggle = (key: keyof SearchFilters) => {
     writeUrl({ chips: { ...filters, [key]: !filters[key] } })
   }
@@ -180,51 +175,37 @@ export function SearchPage() {
       {/* Search Form */}
       <PageCard padding={false} className="mb-8">
         <form onSubmit={handleSearch} className="p-4 space-y-3">
-          <div className="flex gap-2">
-            <div className="flex-1">
+          <div className="flex gap-2 items-start" data-test="search-controls">
+            <div className="flex-1 min-w-0">
               <Input
-                type="text"
+                type="search"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Enter book title or author name..."
                 data-test="search-input"
-                className="text-lg"
               />
             </div>
             <Button
               type="submit"
               variant="primary"
-              size="lg"
               disabled={isLoading}
               leftIcon={<PiMagnifyingGlass />}
               data-test="search-button"
             >
               Search
             </Button>
-            {(hasSearched || hasFilters) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                onClick={handleClear}
-                data-test="clear-search"
-              >
-                Clear
-              </Button>
-            )}
-            {isLibrarian && (
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={handleOpenInBooks}
-                leftIcon={<PiBooks />}
-                data-test="open-in-books"
-              >
-                Open in Books
-              </Button>
-            )}
           </div>
+          {isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleOpenInBooks}
+              leftIcon={<PiBooks />}
+              data-test="open-in-books"
+            >
+              Open in Books
+            </Button>
+          )}
 
           <div data-test="search-filter-chips">
             <BookFilters

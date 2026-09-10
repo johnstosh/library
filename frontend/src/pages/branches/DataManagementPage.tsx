@@ -564,7 +564,7 @@ export function DataManagementPage() {
           ) : !availabilityStats ? (
             <p className="text-gray-500 text-sm">No availability data available.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-test="availability-stats-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" data-test="availability-stats-grid">
               {AVAILABILITY_COUNT_ITEMS.map(({ key, label, test }) => {
                 const count = availabilityStats[key]
                 return (
@@ -573,8 +573,8 @@ export function DataManagementPage() {
                     data-test={test}
                     className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
                   >
-                    <span className="text-sm font-medium text-gray-700 truncate mr-2">{label}</span>
-                    <span className={`text-lg font-bold tabular-nums ${count > 0 ? 'text-teal-700' : 'text-gray-400'}`}>
+                    <span className="text-sm font-medium text-gray-700 mr-2 min-w-0">{label}</span>
+                    <span className={`text-lg font-bold tabular-nums flex-shrink-0 ${count > 0 ? 'text-teal-700' : 'text-gray-400'}`}>
                       {count}
                     </span>
                   </div>

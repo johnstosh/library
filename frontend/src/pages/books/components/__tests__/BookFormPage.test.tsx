@@ -200,3 +200,14 @@ describe('BookFormPage title and author from photo', () => {
     expect(onSuccess).toHaveBeenCalled()
   })
 })
+
+describe('BookFormPage catalog links', () => {
+  it('labels the YDL and EMU catalog links as Go to, not Check', () => {
+    renderForm({ book: editedBook })
+
+    expect(screen.getByTestId('book-form-ydl-check-link')).toHaveTextContent('Go to YDL')
+    expect(screen.getByTestId('book-form-emu-check-link')).toHaveTextContent('Go to EMU')
+    expect(screen.queryByText('Check YDL')).not.toBeInTheDocument()
+    expect(screen.queryByText('Check EMU')).not.toBeInTheDocument()
+  })
+})

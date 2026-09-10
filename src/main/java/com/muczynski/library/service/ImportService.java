@@ -807,6 +807,8 @@ public class ImportService {
     /**
      * Returns named book counts for the Data Management availability section.
      * Boolean flags are counted only when true; null and false are excluded.
+     * In-library materials (hasCallNumber) are books with a non-blank LOC call number,
+     * excluding WITHDRAWN and REQUESTED.
      */
     @Transactional(readOnly = true)
     public BookAvailabilityStatsDto getAvailabilityStats() {
