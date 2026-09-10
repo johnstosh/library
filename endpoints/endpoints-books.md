@@ -322,4 +322,47 @@ Deletes multiple books with partial success handling. Books that can be deleted 
 
 ---
 
-**Related:** BookController.java, BookService.java, AskGrok.java, BookDto.java, BookSummaryDto.java, BulkDeleteResultDto.java
+### POST /api/books/lookup-reading-difficulty-bulk
+Fills reading difficulty on selected books using Grok AI. The frontend sends up to 10 IDs per request; the backend also batches unset books into groups of 10 per Grok prompt.
+
+**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
+
+**Request Body:** Array of Long (book IDs)
+```json
+[1, 2, 3]
+```
+
+**Response:** Array of ReadingDifficultyLookupResultDto
+```json
+[
+  {
+    "bookId": 1,
+    "title": "Little Women",
+    "success": true,
+    "suggestedDifficulty": "children",
+    "updatedBook": { "id": 1, "title": "Little Women", "readingDifficulty": "children" }
+  },
+  {
+    "bookId": 2,
+    "title": "Summa Theologica",
+    "success": false,
+    "errorMessage": "Already has a reading difficulty"
+  }
+]
+```
+
+**Behavior:**
+- Books that already have a non-`unset` difficulty are skipped
+- Missing IDs are reported as `"Book not found"`
+- Grok is asked for a JSON array of candidate difficulty keys per book (most appropriate first); the first assignable key is stored
+- Valid keys: `children`, `accessible`, `moderate`, `demanding`, `advanced`
+- On success, `updatedBook` is returned so the frontend can seed its cache without a follow-up fetch
+- User must have an xAI API key configured
+
+**Use Case:**
+- Books page bulk action "Fill Reading Difficulty"
+- Filter to Unset, select books, fill in batches of 10
+
+---
+
+**Related:** BookController.java, BookService.java, AskGrok.java, BookDto.java, BookSummaryDto.java, BulkDeleteResultDto.java, ReadingDifficultyLookupResultDto.java

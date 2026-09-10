@@ -703,6 +703,19 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should show bulk fill reading difficulty button when a book is selected")
+    void testBulkFillReadingDifficultyButtonVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.click("[data-test='select-checkbox-1']");
+
+        assertThat(page.locator("[data-test='bulk-fill-reading-difficulty']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-fill-reading-difficulty']")).containsText("Fill Reading Difficulty");
+    }
+
+    @Test
     @DisplayName("Should navigate to edit form from book view page")
     void testEditFromViewPage() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

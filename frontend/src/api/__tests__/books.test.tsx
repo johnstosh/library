@@ -2,11 +2,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { type ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto } from '@/types/dtos'
-import { useTitleAuthorFromPhoto } from '../books'
+import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress } from '../books'
 import { api } from '../client'
+
+afterEach(() => {
+  vi.clearAllMocks()
+})
 
 vi.mock('../client', () => ({
   api: {
@@ -51,5 +55,42 @@ describe('useTitleAuthorFromPhoto', () => {
 
     expect(queryClient.getQueryData(queryKeys.books.detail(1))).toEqual(originalBook)
     expect(api.put).toHaveBeenCalledWith('/books/1/title-author-from-photo')
+  })
+})
+
+describe('useLookupBulkReadingDifficultyWithProgress', () => {
+  it('posts book IDs in batches of 10 and seeds the book cache', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    const posted: number[][] = []
+    vi.mocked(api.post).mockImplementation(async (_url, body) => {
+      const ids = body as number[]
+      posted.push(ids)
+      return ids.map((id) => ({
+        bookId: id,
+        success: true,
+        suggestedDifficulty: 'children',
+        updatedBook: { ...originalBook, id, readingDifficulty: 'children' },
+      }))
+    })
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useLookupBulkReadingDifficultyWithProgress(), { wrapper })
+
+    const ids = Array.from({ length: 11 }, (_, i) => i + 1)
+    await result.current.mutateAsync(ids)
+
+    expect(posted).toEqual([
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      [11],
+    ])
+    expect(api.post).toHaveBeenNthCalledWith(1, '/books/lookup-reading-difficulty-bulk', posted[0])
+    expect(queryClient.getQueryData(queryKeys.books.detail(11))).toMatchObject({
+      id: 11,
+      readingDifficulty: 'children',
+    })
   })
 })

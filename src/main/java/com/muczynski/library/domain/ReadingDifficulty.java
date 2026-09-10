@@ -64,6 +64,26 @@ public enum ReadingDifficulty {
     }
 
     /**
+     * Parse an assignable reading-difficulty key (not {@link #UNSET}).
+     * Unknown, blank, and {@code unset} values return null.
+     */
+    public static ReadingDifficulty tryParseAssignable(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String token = value.trim();
+        for (ReadingDifficulty rd : values()) {
+            if (rd == UNSET) {
+                continue;
+            }
+            if (rd.getKey().equalsIgnoreCase(token) || rd.name().equalsIgnoreCase(token)) {
+                return rd;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Parse a comma-separated filter value into known enum constants.
      * Unknown tokens are ignored; blank or null returns an empty list.
      */
