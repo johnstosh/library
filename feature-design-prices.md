@@ -5,15 +5,19 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
 
 ## Lookup
 - Trigger: **Lookup Prices** on the Books page bulk-action carousel (`data-test="bulk-lookup-prices"`).
-- For each selected book the backend searches AbeBooks twice:
-  - Hardcover (`bi=h`)
-  - Softcover (`bi=s`)
+- For each selected book the backend searches AbeBooks **once per query** (not once per cover). Binding is read from each listing instead of the `bi` filter, so unknown-binding copies are not dropped.
 - Search URL: `https://www.abebooks.com/servlet/SearchResults`
-  - `tn` = title (copy-number and format suffixes stripped)
-  - `an` = author last name, then full name if the last-name search is empty
+  - `tn` = title (copy-number and format suffixes stripped; slashes kept)
+  - `an` = first author's last name (semicolons, `et al.`, honorifics, generational and religious-order suffixes stripped)
+  - no `bi` parameter
   - `sortby=17` = lowest total price (item + shipping)
   - `cond=new an fine nf vg good` = good or better (excludes Fair, Poor, As Described)
-- The cheapest remaining listing is saved. Fair/Poor listings are also rejected in the HTML parser as a second filter.
+  - `ds=30`; further pages use `p` / `spo` when the first page does not yet have both covers
+- Query strategy:
+  1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages).
+  2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`) with the same paging.
+- Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown** and fill any cover that still lacks a typed listing.
+- The cheapest remaining listing per cover is saved. Fair/Poor listings are also rejected in the HTML parser as a second filter.
 
 ## Saved fields (`book_price`)
 One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrites.

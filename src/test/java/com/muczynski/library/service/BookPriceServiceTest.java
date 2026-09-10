@@ -48,20 +48,23 @@ class BookPriceServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
         when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(abeBooksClient.findCheapestGoodOrBetter(eq("Pride and Prejudice"), eq("Jane Austen"), eq(BookCoverType.HARDCOVER)))
-                .thenReturn(Optional.of(AbeBooksListing.builder()
-                        .priceDollars(new BigDecimal("4.86"))
-                        .shippingDollars(BigDecimal.ZERO)
-                        .condition("Used - Good")
-                        .detailsUrl("https://www.abebooks.com/h")
-                        .build()));
-        when(abeBooksClient.findCheapestGoodOrBetter(eq("Pride and Prejudice"), eq("Jane Austen"), eq(BookCoverType.SOFTCOVER)))
-                .thenReturn(Optional.of(AbeBooksListing.builder()
-                        .priceDollars(new BigDecimal("3.00"))
-                        .shippingDollars(new BigDecimal("4.00"))
-                        .condition("Used - Very good")
-                        .detailsUrl("https://www.abebooks.com/s")
-                        .build()));
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("4.86"))
+                                .shippingDollars(BigDecimal.ZERO)
+                                .condition("Used - Good")
+                                .detailsUrl("https://www.abebooks.com/h")
+                                .binding(BookCoverType.HARDCOVER)
+                                .build())
+                        .softcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("3.00"))
+                                .shippingDollars(new BigDecimal("4.00"))
+                                .condition("Used - Very good")
+                                .detailsUrl("https://www.abebooks.com/s")
+                                .binding(BookCoverType.SOFTCOVER)
+                                .build())
+                        .build());
 
         BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
 
@@ -70,6 +73,7 @@ class BookPriceServiceTest {
         assertEquals(new BigDecimal("4.86"), result.getHardcover().getPriceDollars());
         assertEquals(new BigDecimal("7.00"), result.getSoftcover().getTotalDollars());
         verify(bookPriceRepository, times(2)).save(any(BookPrice.class));
+        verify(abeBooksClient, times(1)).findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen");
     }
 
     @Test
@@ -78,7 +82,8 @@ class BookPriceServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
         when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(abeBooksClient.findCheapestGoodOrBetter(any(), any(), any())).thenReturn(Optional.empty());
+        when(abeBooksClient.findCheapestGoodOrBetter(any(), any()))
+                .thenReturn(AbeBooksCoverListings.builder().build());
 
         BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
 
@@ -100,7 +105,7 @@ class BookPriceServiceTest {
 
         assertFalse(result.isSuccess());
         assertEquals("Not Ready - Temporary title", result.getErrorMessage());
-        verify(abeBooksClient, times(0)).findCheapestGoodOrBetter(any(), any(), any());
+        verify(abeBooksClient, times(0)).findCheapestGoodOrBetter(any(), any());
     }
 
     private static Book book(String title, String authorName) {

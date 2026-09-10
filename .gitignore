@@ -33,5 +33,6 @@ book-lookup-progress.log
 book-lookup-reference-backup/
 *.zip
 *.json
+tmp/
 
 .claude

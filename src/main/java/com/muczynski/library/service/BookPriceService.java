@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -67,8 +66,25 @@ public class BookPriceService {
                     .build();
         }
 
-        BookPrice hardcover = lookupCover(book, BookCoverType.HARDCOVER);
-        BookPrice softcover = lookupCover(book, BookCoverType.SOFTCOVER);
+        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+        BookPrice hardcover;
+        BookPrice softcover;
+        try {
+            AbeBooksCoverListings found = abeBooksClient.findCheapestGoodOrBetter(
+                    book.getTitle(), authorName);
+            hardcover = found.getHardcover() != null
+                    ? saveListing(book, BookCoverType.HARDCOVER, found.getHardcover())
+                    : saveError(book, BookCoverType.HARDCOVER, "No matching listing");
+            softcover = found.getSoftcover() != null
+                    ? saveListing(book, BookCoverType.SOFTCOVER, found.getSoftcover())
+                    : saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+        } catch (Exception ex) {
+            log.warn("AbeBooks lookup failed for book {}", book.getId(), ex);
+            String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
+            String truncated = truncate(message, 500);
+            hardcover = saveError(book, BookCoverType.HARDCOVER, truncated);
+            softcover = saveError(book, BookCoverType.SOFTCOVER, truncated);
+        }
         boolean success = hasListing(hardcover) || hasListing(softcover);
         String error = success ? null : joinErrors(hardcover, softcover);
         return BookPriceLookupResultDto.builder()
@@ -79,22 +95,6 @@ public class BookPriceService {
                 .softcover(toDto(softcover))
                 .errorMessage(error)
                 .build();
-    }
-
-    private BookPrice lookupCover(Book book, BookCoverType cover) {
-        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
-        try {
-            Optional<AbeBooksListing> listing = abeBooksClient.findCheapestGoodOrBetter(
-                    book.getTitle(), authorName, cover);
-            if (listing.isEmpty()) {
-                return saveError(book, cover, "No matching listing");
-            }
-            return saveListing(book, cover, listing.get());
-        } catch (Exception ex) {
-            log.warn("AbeBooks lookup failed for book {} ({})", book.getId(), cover, ex);
-            String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
-            return saveError(book, cover, truncate(message, 500));
-        }
     }
 
     private BookPrice saveListing(Book book, BookCoverType cover, AbeBooksListing listing) {

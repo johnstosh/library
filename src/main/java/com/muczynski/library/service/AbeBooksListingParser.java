@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.BookCoverType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -10,15 +11,16 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Parses AbeBooks SearchResults HTML for the cheapest listing that is
- * good condition or better. Relies on stable {@code data-test-id} hooks
- * rather than hashed CSS class names.
+ * Parses AbeBooks SearchResults HTML for good-or-better listings.
+ * Relies on stable {@code data-test-id} hooks rather than hashed CSS class names.
  */
 @Component
 public class AbeBooksListingParser {
@@ -29,15 +31,16 @@ public class AbeBooksListingParser {
             Pattern.CASE_INSENSITIVE);
 
     /**
-     * Returns the cheapest good-or-better listing on the page, if any.
+     * Good-or-better listings on the page, cheapest-first is not applied here —
+     * callers pick the cheapest per binding.
      */
-    public Optional<AbeBooksListing> cheapestGoodOrBetter(String html) {
+    public List<AbeBooksListing> parseGoodOrBetter(String html) {
+        List<AbeBooksListing> found = new ArrayList<>();
         if (html == null || html.isBlank()) {
-            return Optional.empty();
+            return found;
         }
         Document doc = Jsoup.parse(html);
         Elements listings = doc.select("li[data-srp-item-role=listing]");
-        AbeBooksListing best = null;
         for (Element listing : listings) {
             Optional<AbeBooksListing> parsed = parseListing(listing);
             if (parsed.isEmpty()) {
@@ -47,11 +50,28 @@ public class AbeBooksListingParser {
             if (!isGoodOrBetter(candidate.getCondition())) {
                 continue;
             }
-            if (best == null || candidate.totalDollars().compareTo(best.totalDollars()) < 0) {
-                best = candidate;
-            }
+            found.add(candidate);
         }
-        return Optional.ofNullable(best);
+        return found;
+    }
+
+    /**
+     * True when the search-results pager has an enabled Next control.
+     */
+    public boolean hasNextPage(String html) {
+        if (html == null || html.isBlank()) {
+            return false;
+        }
+        Document doc = Jsoup.parse(html);
+        Element next = doc.selectFirst("[data-test-id=next-page]");
+        if (next == null) {
+            return false;
+        }
+        if (next.hasAttr("disabled")) {
+            return false;
+        }
+        String ariaDisabled = next.attr("aria-disabled");
+        return !"true".equalsIgnoreCase(ariaDisabled);
     }
 
     Optional<AbeBooksListing> parseListing(Element listing) {
@@ -76,7 +96,46 @@ public class AbeBooksListingParser {
                 .shippingDollars(shipping != null ? shipping : BigDecimal.ZERO)
                 .condition(normalizeCondition(condition))
                 .detailsUrl(absoluteUrl(href))
+                .binding(parseBinding(listing))
                 .build());
+    }
+
+    /**
+     * Hardcover/softcover from the listing Attributes row. Null when the
+     * listing does not name a binding (AbeBooks "Unknown").
+     */
+    static BookCoverType parseBinding(Element listing) {
+        Element attributes = listing.selectFirst("ul[aria-label=Attributes]");
+        if (attributes == null) {
+            return null;
+        }
+        for (Element labeled : attributes.select("[aria-label]")) {
+            BookCoverType type = bindingFromLabel(labeled.attr("aria-label"));
+            if (type != null) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    static BookCoverType bindingFromLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+        String normalized = label.toLowerCase(Locale.ROOT);
+        if (normalized.contains("hardcover")
+                || normalized.contains("hard cover")
+                || normalized.contains("hardback")
+                || normalized.equals("cloth")) {
+            return BookCoverType.HARDCOVER;
+        }
+        if (normalized.contains("softcover")
+                || normalized.contains("soft cover")
+                || normalized.contains("paperback")
+                || normalized.contains("mass market")) {
+            return BookCoverType.SOFTCOVER;
+        }
+        return null;
     }
 
     static boolean isGoodOrBetter(String condition) {
