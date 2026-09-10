@@ -1100,7 +1100,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   className="text-primary-600 hover:text-primary-800 underline text-sm"
                   data-test="book-form-ydl-check-link"
                 >
-                  Check YDL
+                  Go to YDL
                 </a>
               )}
               {isEditing && isLibrarian && (
@@ -1188,7 +1188,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   className="text-primary-600 hover:text-primary-800 underline text-sm"
                   data-test="book-form-emu-check-link"
                 >
-                  Check EMU
+                  Go to EMU
                 </a>
               )}
               {isEditing && isLibrarian && (

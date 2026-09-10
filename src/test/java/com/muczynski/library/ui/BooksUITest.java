@@ -634,6 +634,8 @@ public class BooksUITest {
 
         // Verify the YDL Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='ydl-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-ydl-check-link']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-ydl-check-link']")).hasText("Go to YDL");
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).containsText("Lookup YDL Availability");
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
@@ -676,6 +678,8 @@ public class BooksUITest {
 
         // Verify the EMU Availability section and its lookup button are visible
         assertThat(page.locator("[data-test='emu-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-check-link']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-emu-check-link']")).hasText("Go to EMU");
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).containsText("Lookup EMU Availability");
         assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");

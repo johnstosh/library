@@ -382,7 +382,7 @@ export function BookViewPage() {
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
                   data-test="book-view-ydl-check-link"
                 >
-                  Check YDL
+                  Go to YDL
                 </a>
                 <Button
                   variant="outline"
@@ -439,7 +439,7 @@ export function BookViewPage() {
                   className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
                   data-test="book-view-emu-check-link"
                 >
-                  Check EMU
+                  Go to EMU
                 </a>
                 <Button
                   variant="outline"
