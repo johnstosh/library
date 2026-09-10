@@ -62,6 +62,7 @@ frontend/src/
 │   ├── library-cards.ts     # Library card API + hooks
 │   ├── labels.ts            # Label generation API + hooks
 │   ├── loc-lookup.ts        # LOC lookup API + hooks
+│   ├── prices.ts            # AbeBooks price lookup API + hooks
 │   ├── books-from-feed.ts   # Google Photos import API + hooks
 │   ├── search.ts            # Search API + hooks
 │   ├── settings.ts          # Settings API + hooks
@@ -174,6 +175,13 @@ frontend/src/
 │   │
 │   ├── search/              # Search feature
 │   │   └── SearchPage.tsx
+│   │
+│   ├── prices/              # AbeBooks used-book prices (librarians)
+│   │   ├── PricesPage.tsx
+│   │   └── components/
+│   │       ├── PriceFilters.tsx
+│   │       ├── PriceTable.tsx
+│   │       └── PriceLookupResultsModal.tsx
 │   │
 │   ├── settings/            # Settings pages
 │   │   ├── UserSettingsPage.tsx

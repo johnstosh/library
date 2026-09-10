@@ -25,11 +25,14 @@ import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { ReadingDifficultyLookupResultsModal } from './ReadingDifficultyLookupResultsModal'
 import { YdlLookupResultsModal } from './YdlLookupResultsModal'
 import { EmuLookupResultsModal } from './EmuLookupResultsModal'
+import { useLookupBulkPricesWithProgress } from '@/api/prices'
+import { PriceLookupResultsModal } from '@/pages/prices/components/PriceLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
+import { PiCurrencyDollar } from 'react-icons/pi'
 import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
-import type { BulkDeleteResultDto, GenreLookupResultDto, ReadingDifficultyLookupResultDto } from '@/types/dtos'
+import type { BookPriceLookupResultDto, BulkDeleteResultDto, GenreLookupResultDto, ReadingDifficultyLookupResultDto } from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
@@ -85,6 +88,9 @@ export function BulkActionsToolbar({
   const [showReadingDifficultyResults, setShowReadingDifficultyResults] = useState(false)
   const [readingDifficultyResults, setReadingDifficultyResults] = useState<ReadingDifficultyLookupResultDto[]>([])
   const [readingDifficultyProgress, setReadingDifficultyProgress] = useState(0)
+  const [showPriceResults, setShowPriceResults] = useState(false)
+  const [priceResults, setPriceResults] = useState<BookPriceLookupResultDto[]>([])
+  const [priceProgress, setPriceProgress] = useState(0)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooksWithProgress((completed) => {
@@ -113,6 +119,9 @@ export function BulkActionsToolbar({
   })
   const lookupReadingDifficulty = useLookupBulkReadingDifficultyWithProgress((completed) => {
     setReadingDifficultyProgress(completed)
+  })
+  const lookupPrices = useLookupBulkPricesWithProgress((completed) => {
+    setPriceProgress(completed)
   })
 
   const selectedCount = selectedIds.size
@@ -244,6 +253,18 @@ export function BulkActionsToolbar({
     } catch (error) {
       console.error('Failed to lookup EMU availability:', error)
       toast.error('Failed to lookup EMU availability')
+    }
+  }
+
+  const handlePriceLookup = async () => {
+    setPriceProgress(0)
+    try {
+      const results = await lookupPrices.mutateAsync(Array.from(selectedIds))
+      setPriceResults(results)
+      setShowPriceResults(true)
+    } catch (error) {
+      console.error('Failed to lookup AbeBooks prices:', error)
+      toast.error('Failed to lookup AbeBooks prices')
     }
   }
 
@@ -407,6 +428,23 @@ export function BulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
+              onClick={handlePriceLookup}
+              isLoading={lookupPrices.isPending}
+              disabled={lookupPrices.isPending}
+              leftIcon={<PiCurrencyDollar />}
+              data-test="bulk-lookup-prices"
+            >
+              {progressLabel(
+                'Lookup Prices',
+                'Prices...',
+                lookupPrices.isPending,
+                priceProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleYdlLookup}
               isLoading={lookupYdl.isPending}
               disabled={lookupYdl.isPending}
@@ -510,6 +548,12 @@ export function BulkActionsToolbar({
         isOpen={showEmuResults}
         onClose={() => setShowEmuResults(false)}
         results={emuResults}
+      />
+
+      <PriceLookupResultsModal
+        isOpen={showPriceResults}
+        onClose={() => setShowPriceResults(false)}
+        results={priceResults}
       />
 
       <Modal

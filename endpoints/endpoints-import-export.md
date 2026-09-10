@@ -14,6 +14,7 @@ Exports database to JSON format for backup/migration.
 - Books
 - Loans
 - Favorites (username, list name, book title+author or author name)
+- Prices (AbeBooks listings keyed by book title+author and cover)
 - **Photos:** NOT INCLUDED - photos are excluded due to size
 
 **Important Notes:**
@@ -49,6 +50,7 @@ Returns database statistics with total counts for each entity type.
 - `authorCount` - Total number of authors
 - `userCount` - Total number of users
 - `loanCount` - Total number of loans
+- `priceCount` - Total number of saved AbeBooks price rows
 
 **Example Response:**
 ```json
@@ -57,7 +59,8 @@ Returns database statistics with total counts for each entity type.
   "bookCount": 300,
   "authorCount": 150,
   "userCount": 25,
-  "loanCount": 50
+  "loanCount": 50,
+  "priceCount": 12
 }
 ```
 

@@ -98,6 +98,7 @@ export function Navigation() {
                     <NavLink to="/users"           className={desktopNavCls} data-test="nav-users">Users</NavLink>
                     <NavLink to="/applications"    className={desktopNavCls} data-test="nav-applications">Applications</NavLink>
                     <NavLink to="/data-management" className={desktopNavCls} data-test="nav-data">Data</NavLink>
+                    <NavLink to="/prices" className={desktopNavCls} data-test="nav-prices">Prices</NavLink>
                     <NavLink to="/photos-management" className={desktopNavCls} data-test="nav-photos">Photos</NavLink>
                     <NavLink to="/global-settings" className={desktopNavCls} data-test="nav-global-settings">Global Settings</NavLink>
                   </>
@@ -218,6 +219,7 @@ export function Navigation() {
                   <NavLink to="/users"             className={mobileNavCls} data-test="nav-users-mobile"         onClick={() => close()}>Users</NavLink>
                   <NavLink to="/applications"      className={mobileNavCls} data-test="nav-applications-mobile"  onClick={() => close()}>Applications</NavLink>
                   <NavLink to="/data-management"   className={mobileNavCls} data-test="nav-data-mobile"          onClick={() => close()}>Data Management</NavLink>
+                  <NavLink to="/prices"            className={mobileNavCls} data-test="nav-prices-mobile"        onClick={() => close()}>Prices</NavLink>
                   <NavLink to="/photos-management" className={mobileNavCls} data-test="nav-photos-mobile"        onClick={() => close()}>Photos</NavLink>
                   <NavLink to="/global-settings"   className={mobileNavCls} data-test="nav-global-settings-mobile" onClick={() => close()}>Global Settings</NavLink>
                 </>

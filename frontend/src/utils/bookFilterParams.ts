@@ -43,7 +43,7 @@ export const SEARCH_VISIBLE_CHIPS: (keyof BookChipFilters)[] = [
   'mostRecent',
 ]
 
-export type BookFilterUrlMode = 'search' | 'books'
+export type BookFilterUrlMode = 'search' | 'books' | 'prices'
 
 const ALL_CHIP_KEYS = Object.keys(CHIP_URL_KEYS) as (keyof BookChipFilters)[]
 
@@ -102,8 +102,11 @@ export function chipsFromSearchParams(
   const chips: BookChipFilters = { ...defaultBookChipFilters }
   const keys = mode === 'search' ? SEARCH_VISIBLE_CHIPS : ALL_CHIP_KEYS
   for (const chip of keys) {
-    if (chip === 'mostRecent' && mode === 'books') continue
+    if (chip === 'mostRecent' && (mode === 'books' || mode === 'prices')) continue
     chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
+  }
+  if (mode === 'prices') {
+    chips.mostRecent = params.get(CHIP_URL_KEYS.mostRecent) === 'true'
   }
   if (mode === 'books') {
     const labels = labelsFromSearchParams(params)
@@ -155,8 +158,12 @@ export function bookFilterParamsForUrl(
 
   const keys = mode === 'search' ? SEARCH_VISIBLE_CHIPS : ALL_CHIP_KEYS
   for (const chip of keys) {
-    if (chip === 'mostRecent' && mode === 'books') continue
+    if (chip === 'mostRecent' && (mode === 'books' || mode === 'prices')) continue
     if (state.chips[chip]) params[CHIP_URL_KEYS[chip]] = 'true'
+  }
+
+  if (mode === 'prices' && state.chips.mostRecent) {
+    params[CHIP_URL_KEYS.mostRecent] = 'true'
   }
 
   if (mode === 'books') {
@@ -206,6 +213,28 @@ export function booksPathFromFilters(state: {
   )
   const qs = new URLSearchParams(params).toString()
   return qs ? `/books?${qs}` : '/books'
+}
+
+/** One-way handoff: copy Books inventory filters onto the Prices page URL. */
+export function pricesPathFromFilters(state: {
+  chips: BookChipFilters
+  labels: string[]
+  readingDifficulties?: string[]
+  favoriteLists?: string[]
+  q: string
+}): string {
+  const params = bookFilterParamsForUrl(
+    {
+      chips: state.chips,
+      labels: state.labels,
+      readingDifficulties: state.readingDifficulties ?? [],
+      favoriteLists: state.favoriteLists ?? [],
+      q: state.q,
+    },
+    'prices',
+  )
+  const qs = new URLSearchParams(params).toString()
+  return qs ? `/prices?${qs}` : '/prices'
 }
 
 export function matchesBookQuery(

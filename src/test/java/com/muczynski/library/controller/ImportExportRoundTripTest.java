@@ -68,6 +68,9 @@ class ImportExportRoundTripTest {
     private PhotoRepository photoRepository;
 
     @Autowired
+    private BookPriceRepository bookPriceRepository;
+
+    @Autowired
     private RandomAuthor randomAuthor;
 
     @Autowired
@@ -156,6 +159,26 @@ class ImportExportRoundTripTest {
             authorPhoto = photoRepository.save(authorPhoto);
             photos.add(authorPhoto);
         }
+
+        BookPrice hardcover = new BookPrice();
+        hardcover.setBook(books.get(0));
+        hardcover.setCover(BookCoverType.HARDCOVER);
+        hardcover.setPriceDollars(java.math.BigDecimal.valueOf(4.86));
+        hardcover.setShippingDollars(java.math.BigDecimal.ZERO);
+        hardcover.setCondition("Used - Good");
+        hardcover.setDetailsUrl("https://www.abebooks.com/example/bd");
+        hardcover.setLookedUpAt(java.time.LocalDateTime.of(2026, 9, 1, 12, 0));
+        bookPriceRepository.save(hardcover);
+
+        BookPrice softcover = new BookPrice();
+        softcover.setBook(books.get(0));
+        softcover.setCover(BookCoverType.SOFTCOVER);
+        softcover.setPriceDollars(java.math.BigDecimal.valueOf(3.00));
+        softcover.setShippingDollars(java.math.BigDecimal.valueOf(4.00));
+        softcover.setCondition("Used - Very good");
+        softcover.setDetailsUrl("https://www.abebooks.com/example-s/bd");
+        softcover.setLookedUpAt(java.time.LocalDateTime.of(2026, 9, 1, 12, 0));
+        bookPriceRepository.save(softcover);
     }
 
     @Test
@@ -167,6 +190,7 @@ class ImportExportRoundTripTest {
         long initialUserCount = userRepository.count();
         long initialLoanCount = loanRepository.count();
         long initialPhotoCount = photoRepository.count();
+        long initialPriceCount = bookPriceRepository.count();
 
         // Export data
         MvcResult exportResult = mockMvc.perform(get("/api/import/json"))
@@ -183,6 +207,8 @@ class ImportExportRoundTripTest {
         assertTrue(exportedData.getUsers().size() >= 20, "Should export at least 20 users");
         assertTrue(exportedData.getLoans().size() >= 20, "Should export at least 20 loans");
         assertTrue(exportedData.getPhotos().size() >= 15, "Should export photo metadata");
+        assertTrue(exportedData.getPrices() != null && exportedData.getPrices().size() >= 2,
+                "Should export AbeBooks prices");
 
         // Verify exported data has proper field values (not null/empty)
         exportedData.getAuthors().stream()
@@ -239,6 +265,7 @@ class ImportExportRoundTripTest {
         assertEquals(initialUserCount, userRepository.count(), "User count should remain the same after re-import");
         assertEquals(initialLoanCount, loanRepository.count(), "Loan count should remain the same after re-import");
         assertEquals(initialPhotoCount, photoRepository.count(), "Photo count should remain the same after re-import");
+        assertEquals(initialPriceCount, bookPriceRepository.count(), "Price count should remain the same after re-import");
     }
 
     @Test

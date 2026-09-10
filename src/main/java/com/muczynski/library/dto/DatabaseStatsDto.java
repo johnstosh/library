@@ -20,4 +20,5 @@ public class DatabaseStatsDto {
     private Long authorCount;
     private Long userCount;
     private Long loanCount;
+    private Long priceCount;
 }

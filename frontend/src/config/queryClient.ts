@@ -84,4 +84,8 @@ export const queryKeys = {
     item: (itemType: string, itemId: number) => [...queryKeys.favorites.all, 'item', itemType, itemId] as const,
     stats: () => [...queryKeys.favorites.all, 'stats'] as const,
   },
+  prices: {
+    all: ['prices'] as const,
+    list: () => [...queryKeys.prices.all, 'list'] as const,
+  },
 }

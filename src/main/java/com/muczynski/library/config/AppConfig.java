@@ -104,6 +104,27 @@ public class AppConfig {
     }
 
     /**
+     * RestTemplate for AbeBooks used-book price lookup. Browser-like User-Agent
+     * reduces empty/blocked SearchResults pages.
+     */
+    @Bean("abeBooksRestTemplate")
+    public RestTemplate abeBooksRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000);
+        factory.setReadTimeout(20000);
+        restTemplate.setRequestFactory(factory);
+
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+        return restTemplate;
+    }
+
+    /**
      * RestTemplate for outbound email HTTP transports (SendGrid, webhook).
      */
     @Bean("emailRestTemplate")

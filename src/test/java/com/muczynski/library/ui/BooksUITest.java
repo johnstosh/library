@@ -660,6 +660,8 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='table-stats-placeholder']")).not().isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).containsText("Lookup YDL Availability");
+        assertThat(page.locator("[data-test='bulk-lookup-prices']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-prices']")).containsText("Lookup Prices");
     }
 
     @Test

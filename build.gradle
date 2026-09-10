@@ -66,6 +66,9 @@ dependencies {
     // Metadata-extractor for reading EXIF orientation data
     implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 
+    // Jsoup for AbeBooks search-result HTML parsing
+    implementation 'org.jsoup:jsoup:1.18.3'
+
     // Jakarta Mail (SMTP sender; configured at send time from global settings)
     implementation 'org.eclipse.angus:angus-mail:2.0.3'
 }

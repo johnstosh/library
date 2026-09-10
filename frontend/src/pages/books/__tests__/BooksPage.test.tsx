@@ -1,11 +1,11 @@
 // (c) Copyright 2025 by Muczynski
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useSearchParams } from 'react-router-dom'
+import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
 import { BooksPage } from '../BooksPage'
 import type { BookDto } from '@/types/dtos'
 
-const { catalog } = vi.hoisted(() => {
+const { catalog, librarianState } = vi.hoisted(() => {
   const catalog: BookDto[] = [
     {
       id: 1,
@@ -25,8 +25,12 @@ const { catalog } = vi.hoisted(() => {
       dateAddedToLibrary: '2026-08-30T00:00:00',
     },
   ]
-  return { catalog }
+  return { catalog, librarianState: { current: true } }
 })
+
+vi.mock('@/stores/authStore', () => ({
+  useIsLibrarian: () => librarianState.current,
+}))
 
 vi.mock('@/api/books', () => ({
   useBooks: () => ({
@@ -63,10 +67,12 @@ vi.mock('@/api/favorites', () => ({
 
 function UrlQuery() {
   const [params] = useSearchParams()
+  const location = useLocation()
   return (
     <>
       <div data-test="url-q">{params.get('q') ?? ''}</div>
       <div data-test="url-reading-difficulty">{params.get('readingDifficulty') ?? ''}</div>
+      <div data-test="location">{`${location.pathname}${location.search}`}</div>
     </>
   )
 }
@@ -79,6 +85,20 @@ function renderBooksPage(path = '/books') {
     </MemoryRouter>,
   )
 }
+
+describe('BooksPage Open in Prices', () => {
+  it('hands current filters to /prices', () => {
+    librarianState.current = true
+    renderBooksPage('/books?q=Initial&inLib=true')
+
+    const button = screen.getByTestId('open-in-prices')
+    expect(button).toHaveTextContent('Open in Prices')
+    expect(button.closest('form')).toBeNull()
+    expect(button.getAttribute('href')).toBeNull()
+    fireEvent.click(button)
+    expect(screen.getByTestId('location')).toHaveTextContent('/prices?q=Initial&inLib=true')
+  })
+})
 
 describe('BooksPage title filter', () => {
   it('does not search until Enter or the Search button', () => {

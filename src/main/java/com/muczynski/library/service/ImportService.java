@@ -46,18 +46,20 @@ public class ImportService {
     private final AuthorityRepository authorityRepository;
     private final PhotoRepository photoRepository;
     private final FavoriteRepository favoriteRepository;
+    private final BookPriceRepository bookPriceRepository;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
 
     public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
-        logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}, Favorites: {}",
+        logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}, Favorites: {}, Prices: {}",
             dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
             dto.getUsers() != null ? dto.getUsers().size() : 0,
             dto.getBooks() != null ? dto.getBooks().size() : 0,
             dto.getLoans() != null ? dto.getLoans().size() : 0,
             dto.getPhotos() != null ? dto.getPhotos().size() : 0,
-            dto.getFavorites() != null ? dto.getFavorites().size() : 0);
+            dto.getFavorites() != null ? dto.getFavorites().size() : 0,
+            dto.getPrices() != null ? dto.getPrices().size() : 0);
 
         int branchCount = 0;
         int authorCount = 0;
@@ -66,6 +68,7 @@ public class ImportService {
         int loanCount = 0;
         int photoCount = 0;
         int favoriteCount = 0;
+        int priceCount = 0;
 
         Map<String, Library> branchMap = new HashMap<>();
         if (dto.getBranches() != null) {
@@ -645,11 +648,46 @@ public class ImportService {
         }
         logger.info("Imported {} favorites", favoriteCount);
 
-        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos, {} favorites",
-            branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount);
+        if (dto.getPrices() != null) {
+            for (ImportPriceDto pDto : dto.getPrices()) {
+                if (pDto.getBookTitle() == null || pDto.getBookTitle().isBlank() || pDto.getCover() == null) {
+                    continue;
+                }
+                String authorKey = pDto.getBookAuthorName() != null ? pDto.getBookAuthorName() : "";
+                String key = pDto.getBookTitle() + "|" + authorKey;
+                Book book = bookMap.get(key);
+                if (book == null) {
+                    if (authorKey.isEmpty()) {
+                        book = bookRepository.findByTitleAndAuthorIsNull(pDto.getBookTitle()).orElse(null);
+                    } else {
+                        book = bookRepository.findByTitleAndAuthor_Name(pDto.getBookTitle(), authorKey).orElse(null);
+                    }
+                }
+                if (book == null) {
+                    throw new LibraryException("Book not found for price: " + pDto.getBookTitle()
+                            + " by " + (authorKey.isEmpty() ? "(no author)" : authorKey));
+                }
+                BookPrice price = bookPriceRepository.findByBook_IdAndCover(book.getId(), pDto.getCover())
+                        .orElseGet(BookPrice::new);
+                price.setBook(book);
+                price.setCover(pDto.getCover());
+                price.setPriceDollars(pDto.getPriceDollars());
+                price.setShippingDollars(pDto.getShippingDollars());
+                price.setCondition(pDto.getCondition());
+                price.setLookedUpAt(pDto.getLookedUpAt());
+                price.setDetailsUrl(pDto.getDetailsUrl());
+                price.setLookupError(pDto.getLookupError());
+                bookPriceRepository.save(price);
+                priceCount++;
+            }
+        }
+        logger.info("Imported {} prices", priceCount);
+
+        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos, {} favorites, {} prices",
+            branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount, priceCount);
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(
-                branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount);
+                branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount, priceCount);
         return new ImportResponseDto.ImportResult(counts);
     }
 
@@ -839,6 +877,27 @@ public class ImportService {
         }
         dto.setFavorites(favoriteDtos);
 
+        List<ImportPriceDto> priceDtos = new ArrayList<>();
+        for (BookPrice price : bookPriceRepository.findAllWithBookAndAuthor()) {
+            if (price.getBook() == null || price.getCover() == null) {
+                continue;
+            }
+            ImportPriceDto pDto = new ImportPriceDto();
+            pDto.setBookTitle(price.getBook().getTitle());
+            if (price.getBook().getAuthor() != null) {
+                pDto.setBookAuthorName(price.getBook().getAuthor().getName());
+            }
+            pDto.setCover(price.getCover());
+            pDto.setPriceDollars(price.getPriceDollars());
+            pDto.setShippingDollars(price.getShippingDollars());
+            pDto.setCondition(emptyToNull(price.getCondition()));
+            pDto.setLookedUpAt(price.getLookedUpAt());
+            pDto.setDetailsUrl(emptyToNull(price.getDetailsUrl()));
+            pDto.setLookupError(emptyToNull(price.getLookupError()));
+            priceDtos.add(pDto);
+        }
+        dto.setPrices(priceDtos);
+
         return dto;
     }
 
@@ -869,7 +928,8 @@ public class ImportService {
             bookRepository.count(),
             authorRepository.count(),
             userRepository.count(),
-            loanRepository.count()
+            loanRepository.count(),
+            bookPriceRepository.count()
         );
     }
 

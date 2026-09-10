@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import type { BookStatus, ReadingDifficulty } from './enums'
+import type { BookCoverType, BookStatus, ReadingDifficulty } from './enums'
 
 // API Error Response
 export interface ErrorResponse {
@@ -131,6 +131,31 @@ export interface BookDto {
 export interface BookSummaryDto {
   id: number
   lastModified: string
+}
+
+export interface BookPriceDto {
+  id: number
+  bookId: number
+  bookTitle?: string
+  author?: string
+  cover: BookCoverType
+  priceDollars?: number | null
+  shippingDollars?: number | null
+  totalDollars?: number | null
+  condition?: string
+  lookedUpAt?: string
+  detailsUrl?: string
+  lookupError?: string
+  lastModified?: string
+}
+
+export interface BookPriceLookupResultDto {
+  bookId: number
+  bookTitle?: string
+  success: boolean
+  hardcover?: BookPriceDto
+  softcover?: BookPriceDto
+  errorMessage?: string
 }
 
 // Photo DTOs

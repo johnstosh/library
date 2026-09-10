@@ -44,6 +44,7 @@ const TestDataPage = lazy(() => import('@/pages/test-data/TestDataPage').then(m 
 const BooksFromFeedPage = lazy(() => import('@/pages/books-from-feed/BooksFromFeedPage').then(m => ({ default: m.BooksFromFeedPage })))
 const PhotosPage = lazy(() => import('@/pages/photos/PhotosPage').then(m => ({ default: m.PhotosPage })))
 const PhotoViewPage = lazy(() => import('@/pages/photos/PhotoViewPage').then(m => ({ default: m.PhotoViewPage })))
+const PricesPage = lazy(() => import('@/pages/prices/PricesPage').then(m => ({ default: m.PricesPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -118,6 +119,7 @@ function App() {
                 <Route path="/branches/:id/edit" element={<BranchEditPage />} />
                 <Route path="/data-management" element={<DataManagementPage />} />
                 <Route path="/photos-management" element={<PhotosPage />} />
+                <Route path="/prices" element={<PricesPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/new" element={<UserNewPage />} />
                 <Route path="/users/:id" element={<UserViewPage />} />
