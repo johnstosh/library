@@ -141,6 +141,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `inLib`, `elec`, `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
 - `labels` (string, optional) - Comma-separated genre tags (AND)
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
+- `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
 Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `notActiveStatus`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`.
 

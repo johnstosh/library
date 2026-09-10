@@ -10,6 +10,7 @@ import com.muczynski.library.domain.FavoriteItemType;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.FavoriteItemDto;
 import com.muczynski.library.dto.FavoriteListCountDto;
+import com.muczynski.library.dto.FavoriteListMembershipDto;
 import com.muczynski.library.dto.FavoriteSummaryDto;
 import com.muczynski.library.dto.FavoriteUpdateDto;
 import com.muczynski.library.exception.LibraryException;
@@ -54,12 +55,64 @@ public class FavoriteService {
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
 
+    public record FavoriteIdSets(List<Long> bookIds, List<Long> authorIds) {
+    }
+
     @Transactional(readOnly = true)
     public FavoriteSummaryDto getSummary(Long userId) {
         requireUser(userId);
         Set<Long> bookIds = new LinkedHashSet<>();
         Set<Long> authorIds = new LinkedHashSet<>();
+        Map<String, FavoriteListMembershipDto> byName = new LinkedHashMap<>();
         for (Favorite favorite : favoriteRepository.findByUser_Id(userId)) {
+            FavoriteListMembershipDto row = byName.computeIfAbsent(
+                    favorite.getListName(),
+                    name -> new FavoriteListMembershipDto(name, new ArrayList<>(), new ArrayList<>()));
+            if (favorite.getBook() != null) {
+                bookIds.add(favorite.getBook().getId());
+                if (!row.getBookIds().contains(favorite.getBook().getId())) {
+                    row.getBookIds().add(favorite.getBook().getId());
+                }
+            }
+            if (favorite.getAuthor() != null) {
+                authorIds.add(favorite.getAuthor().getId());
+                if (!row.getAuthorIds().contains(favorite.getAuthor().getId())) {
+                    row.getAuthorIds().add(favorite.getAuthor().getId());
+                }
+            }
+        }
+        List<FavoriteListMembershipDto> lists = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String name : builtInListOrder()) {
+            FavoriteListMembershipDto row = byName.get(name);
+            if (row != null) {
+                lists.add(row);
+                seen.add(name.toLowerCase(Locale.ROOT));
+            }
+        }
+        byName.values().stream()
+                .filter(row -> !seen.contains(row.getListName().toLowerCase(Locale.ROOT)))
+                .sorted(Comparator.comparing(FavoriteListMembershipDto::getListName, String.CASE_INSENSITIVE_ORDER))
+                .forEach(lists::add);
+        return new FavoriteSummaryDto(new ArrayList<>(bookIds), new ArrayList<>(authorIds), lists);
+    }
+
+    @Transactional(readOnly = true)
+    public FavoriteIdSets resolveIds(Long userId, List<String> listNames) {
+        Set<String> wanted = listNames == null ? Set.of() : listNames.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(name -> name.trim().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        Set<Long> bookIds = new LinkedHashSet<>();
+        Set<Long> authorIds = new LinkedHashSet<>();
+        if (wanted.isEmpty()) {
+            return new FavoriteIdSets(List.of(), List.of());
+        }
+        for (Favorite favorite : favoriteRepository.findByUser_Id(userId)) {
+            if (favorite.getListName() == null
+                    || !wanted.contains(favorite.getListName().toLowerCase(Locale.ROOT))) {
+                continue;
+            }
             if (favorite.getBook() != null) {
                 bookIds.add(favorite.getBook().getId());
             }
@@ -67,7 +120,13 @@ public class FavoriteService {
                 authorIds.add(favorite.getAuthor().getId());
             }
         }
-        return new FavoriteSummaryDto(new ArrayList<>(bookIds), new ArrayList<>(authorIds));
+        return new FavoriteIdSets(new ArrayList<>(bookIds), new ArrayList<>(authorIds));
+    }
+
+    private List<String> builtInListOrder() {
+        List<String> names = new ArrayList<>(PATRON_LISTS);
+        names.addAll(LIBRARIAN_LISTS);
+        return names;
     }
 
     @Transactional(readOnly = true)

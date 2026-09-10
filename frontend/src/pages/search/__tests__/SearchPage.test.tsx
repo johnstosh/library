@@ -71,6 +71,12 @@ vi.mock('@/components/favorites/FavoriteStar', () => ({
   FavoriteStar: () => null,
 }))
 
+vi.mock('@/api/favorites', () => ({
+  useFavoriteSummary: () => ({ data: { lists: [] } }),
+  favoriteListChips: () => [],
+  listNameToTestId: (name: string) => name,
+}))
+
 vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }))

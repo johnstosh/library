@@ -69,7 +69,7 @@ class SearchServiceTest {
             boolean inLib, boolean elec, boolean freeText, boolean audio, List<String> labels) {
         return searchService.search(query, page, page, size, inLib, elec, freeText, audio,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, labels, null);
+                false, false, false, false, false, false, false, labels, null, null, null);
     }
 
     private void stubFindWithFilters(String query, boolean inLib, boolean elec, boolean freeText, boolean audio,
@@ -81,6 +81,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(bookPage);
     }
@@ -94,6 +95,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(authorPage);
     }
@@ -438,6 +440,7 @@ class SearchServiceTest {
                 eq(false),
                 eq(labels), eq(2L),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(bookPageOf(pageable, book));
         when(authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
@@ -448,6 +451,7 @@ class SearchServiceTest {
                 eq(false),
                 eq(labels), eq(2L),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
@@ -474,6 +478,7 @@ class SearchServiceTest {
                 eq(false),
                 eq(labels), eq(1L),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
@@ -484,6 +489,7 @@ class SearchServiceTest {
                 eq(false),
                 eq(labels), eq(1L),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
@@ -523,7 +529,7 @@ class SearchServiceTest {
 
         searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null);
+                false, false, false, false, false, false, false, null, null, null, null);
 
         verify(bookRepository).findWithFilters(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
@@ -532,6 +538,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class));
     }
 
@@ -548,6 +555,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -557,12 +565,13 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, true, false,
-                false, false, false, false, false, false, false, null, null);
+                false, false, false, false, false, false, false, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -572,6 +581,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class));
         verify(authorRepository).findAuthorsOfBooksMatchingFilters(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
@@ -580,6 +590,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class));
     }
 
@@ -601,6 +612,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -610,12 +622,13 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 true, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null);
+                false, false, false, false, false, false, false, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -625,6 +638,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class));
     }
 
@@ -641,6 +655,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -650,12 +665,13 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, true, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null);
+                false, false, false, false, false, false, false, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -665,6 +681,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
+                eq(false), anyList(),
                 any(Pageable.class));
     }
 
@@ -682,6 +699,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
+                eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyBookPage(pageable));
         when(authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -691,12 +709,13 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class)))
                 .thenReturn(emptyAuthorPage(pageable));
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, difficulties);
+                false, false, false, false, false, false, false, null, difficulties, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -706,6 +725,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
+                eq(false), anyList(),
                 any(Pageable.class));
         verify(authorRepository).findAuthorsOfBooksMatchingFilters(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
@@ -714,6 +734,7 @@ class SearchServiceTest {
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
+                eq(false), anyList(), eq(false), anyList(),
                 any(Pageable.class));
     }
 }

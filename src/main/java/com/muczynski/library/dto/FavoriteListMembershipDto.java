@@ -13,8 +13,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FavoriteSummaryDto {
-    private List<Long> favoriteBookIds = new ArrayList<>();
-    private List<Long> favoriteAuthorIds = new ArrayList<>();
-    private List<FavoriteListMembershipDto> lists = new ArrayList<>();
+public class FavoriteListMembershipDto {
+    private String listName;
+    private List<Long> bookIds = new ArrayList<>();
+    private List<Long> authorIds = new ArrayList<>();
 }

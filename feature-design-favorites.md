@@ -46,5 +46,15 @@ JSON export/import uses natural keys:
 
 Authentication: summary/item require login. Stats require `LIBRARIAN`.
 
+## Filters
+Logged-in users see a **Favorites** chip row on Search, Books, and Authors. Each chip is `{count} {list name}`. Only lists with a count greater than zero for that page appear (a selected empty list still shows so it can be turned off).
+
+- **Search** count = books + authors in that list. Filter applies to both result lists.
+- **Books** count/filter = books only.
+- **Authors** count/filter = authors only.
+- Multiple favorite-list chips **OR** together.
+- Favorite lists **AND** with the other filters on the page.
+- Search **Open in Books** copies selected favorite lists onto `/books?favoriteLists=`.
+
 ## Data Management
 **Favorites Statistics** shows each list name with book count and author count, highest total first.

@@ -53,7 +53,7 @@ class FavoriteControllerTest {
     @WithMockUser(username = "1", authorities = "USER")
     void testGetSummary_Success() throws Exception {
         when(favoriteService.getSummary(1L))
-                .thenReturn(new FavoriteSummaryDto(List.of(9L), List.of(4L)));
+                .thenReturn(new FavoriteSummaryDto(List.of(9L), List.of(4L), List.of()));
 
         mockMvc.perform(get("/api/favorites/summary"))
                 .andExpect(status().isOk())

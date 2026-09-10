@@ -6,9 +6,16 @@ import { useIsAuthenticated } from '@/stores/authStore'
 
 export type FavoriteItemType = 'BOOK' | 'AUTHOR'
 
+export interface FavoriteListMembershipDto {
+  listName: string
+  bookIds: number[]
+  authorIds: number[]
+}
+
 export interface FavoriteSummaryDto {
   favoriteBookIds: number[]
   favoriteAuthorIds: number[]
+  lists: FavoriteListMembershipDto[]
 }
 
 export interface FavoriteItemDto {
@@ -67,6 +74,39 @@ export function useFavoriteStats() {
     queryKey: queryKeys.favorites.stats(),
     queryFn: () => api.get<FavoriteListCountDto[]>('/import/favorite-stats'),
   })
+}
+
+export function favoriteListChips(
+  lists: FavoriteListMembershipDto[] | undefined,
+  mode: 'search' | 'books' | 'authors',
+): { listName: string; count: number }[] {
+  if (!lists) return []
+  return lists
+    .map((list) => {
+      const count =
+        mode === 'search'
+          ? list.bookIds.length + list.authorIds.length
+          : mode === 'books'
+            ? list.bookIds.length
+            : list.authorIds.length
+      return { listName: list.listName, count }
+    })
+    .filter((list) => list.count > 0)
+}
+
+export function favoriteItemIdsForLists(
+  lists: FavoriteListMembershipDto[] | undefined,
+  selected: string[],
+  field: 'bookIds' | 'authorIds',
+): Set<number> {
+  const wanted = new Set(selected)
+  const ids = new Set<number>()
+  if (!lists || wanted.size === 0) return ids
+  for (const list of lists) {
+    if (!wanted.has(list.listName)) continue
+    for (const id of list[field]) ids.add(id)
+  }
+  return ids
 }
 
 export function listNameToTestId(listName: string): string {

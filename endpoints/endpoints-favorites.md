@@ -3,12 +3,15 @@
 **Authentication:** all `/api/favorites/**` endpoints require a logged-in user (`isAuthenticated()`).
 
 ### GET /api/favorites/summary
-Returns the current user’s favorited item IDs (any list).
+Returns the current user’s favorited item IDs (any list) plus per-list book and author IDs for filter chips.
 
 ```json
 {
   "favoriteBookIds": [1, 9],
-  "favoriteAuthorIds": [4]
+  "favoriteAuthorIds": [4],
+  "lists": [
+    { "listName": "Have Read", "bookIds": [1], "authorIds": [4] }
+  ]
 }
 ```
 

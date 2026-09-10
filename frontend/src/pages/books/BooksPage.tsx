@@ -12,6 +12,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from './components/BookFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
 import { ReadingDifficultyFilters } from './components/ReadingDifficultyFilters'
+import { FavoriteListFilters } from './components/FavoriteListFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBookCount, useBooks } from '@/api/books'
@@ -20,6 +21,7 @@ import { applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
+  favoriteListsFromSearchParams,
   isBooksIntakeConstrained,
   labelsFromSearchParams,
   matchesBookQuery,
@@ -30,6 +32,7 @@ import {
 } from '@/utils/readingDifficulty'
 import type { ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
+import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
 
@@ -39,6 +42,9 @@ export function BooksPage() {
   const chips = chipsFromSearchParams(searchParams, 'books')
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const { data: favoriteSummary } = useFavoriteSummary()
+  const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
   const { selectedIds, selectAll } = useBooksTableSelection()
@@ -53,6 +59,7 @@ export function BooksPage() {
     chips?: BookChipFilters
     labels?: string[]
     readingDifficulties?: string[]
+    favoriteLists?: string[]
     q?: string
   }) => {
     setSearchParams(
@@ -61,6 +68,7 @@ export function BooksPage() {
           chips: next.chips ?? chips,
           labels: next.labels ?? selectedLabels,
           readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
         },
         'books',
@@ -71,19 +79,23 @@ export function BooksPage() {
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
 
-  const books = useMemo(
-    () =>
-      applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties).filter(
-        (book) => matchesBookQuery(book, urlQuery),
-      ),
-    [allBooks, chips, selectedDifficulties, urlQuery],
-  )
+  const books = useMemo(() => {
+    const favoriteIds = favoriteItemIdsForLists(
+      favoriteSummary?.lists,
+      selectedFavoriteLists,
+      'bookIds',
+    )
+    return applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
+      .filter((book) => matchesBookQuery(book, urlQuery))
+      .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id))
+  }, [allBooks, chips, favoriteSummary?.lists, selectedDifficulties, selectedFavoriteLists, urlQuery])
 
   const intakeConstrained = isBooksIntakeConstrained(
     chips,
     selectedLabels,
     urlQuery,
     selectedDifficulties,
+    selectedFavoriteLists,
   )
 
   const handleSelectToggle = (id: number) => {
@@ -199,6 +211,17 @@ export function BooksPage() {
             selected={selectedDifficulties}
             onToggle={handleToggleDifficulty}
             onClear={() => writeUrl({ readingDifficulties: [] })}
+          />
+          <FavoriteListFilters
+            lists={favoriteChips}
+            selected={selectedFavoriteLists}
+            onToggle={(listName) => {
+              const next = selectedFavoriteLists.includes(listName)
+                ? selectedFavoriteLists.filter((name) => name !== listName)
+                : [...selectedFavoriteLists, listName]
+              writeUrl({ favoriteLists: next })
+            }}
+            onClear={() => writeUrl({ favoriteLists: [] })}
           />
         </div>
 

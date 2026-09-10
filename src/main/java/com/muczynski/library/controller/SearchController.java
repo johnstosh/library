@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,7 +58,9 @@ public class SearchController {
             @RequestParam(defaultValue = "false") boolean filterEmuBook,
             @RequestParam(defaultValue = "false") boolean filterEmuEbook,
             @RequestParam(required = false) String labels,
-            @RequestParam(required = false) String readingDifficulty) {
+            @RequestParam(required = false) String readingDifficulty,
+            @RequestParam(required = false) String favoriteLists,
+            Principal principal) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
                     ? null
@@ -68,6 +71,20 @@ public class SearchController {
             List<ReadingDifficulty> readingDifficultyList = ReadingDifficulty.parseFilterValues(readingDifficulty);
             if (readingDifficultyList.isEmpty()) {
                 readingDifficultyList = null;
+            }
+            List<String> favoriteList = (favoriteLists == null || favoriteLists.isBlank())
+                    ? null
+                    : Arrays.stream(favoriteLists.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+            Long userId = null;
+            if (principal != null && principal.getName() != null) {
+                try {
+                    userId = Long.parseLong(principal.getName());
+                } catch (NumberFormatException ignored) {
+                    userId = null;
+                }
             }
             int resolvedBookPage = bookPage != null ? bookPage : (page != null ? page : 0);
             int resolvedAuthorPage = authorPage != null ? authorPage : (page != null ? page : 0);
@@ -80,7 +97,9 @@ public class SearchController {
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
                     labelList,
-                    readingDifficultyList);
+                    readingDifficultyList,
+                    userId,
+                    favoriteList);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', bookPage {}, authorPage {}, size {}: {}",

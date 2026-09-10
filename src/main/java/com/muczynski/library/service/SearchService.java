@@ -31,6 +31,7 @@ public class SearchService {
     private static final LocalDateTime UNUSED_MOST_RECENT_CUTOFF = LocalDateTime.of(1970, 1, 1, 0, 0);
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
     private static final List<Long> NO_TEMP_TITLE_IDS = List.of(-1L);
+    private static final List<Long> NO_FAVORITE_IDS = List.of(-1L);
     private static final List<ReadingDifficulty> UNUSED_READING_DIFFICULTIES = List.of(ReadingDifficulty.UNSET);
 
     @Autowired
@@ -44,6 +45,9 @@ public class SearchService {
 
     @Autowired
     private AuthorMapper authorMapper;
+
+    @Autowired
+    private FavoriteService favoriteService;
 
     /**
      * Search books and authors with AND-combined type filters.
@@ -88,7 +92,9 @@ public class SearchService {
             boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
             boolean filterWithGrokipedia,
             List<String> labels,
-            List<ReadingDifficulty> readingDifficulties) {
+            List<ReadingDifficulty> readingDifficulties,
+            Long userId,
+            List<String> favoriteLists) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
         Pageable bookPageable = PageRequest.of(bookPageNumber, size);
@@ -113,6 +119,15 @@ public class SearchService {
             mostRecentTempTitleIds = (tempIds == null || tempIds.isEmpty()) ? NO_TEMP_TITLE_IDS : tempIds;
         }
 
+        boolean hasFavoriteLists = userId != null && favoriteLists != null && !favoriteLists.isEmpty();
+        FavoriteService.FavoriteIdSets favoriteIds = hasFavoriteLists
+                ? favoriteService.resolveIds(userId, favoriteLists)
+                : new FavoriteService.FavoriteIdSets(List.of(), List.of());
+        boolean filterFavoriteBooks = hasFavoriteLists;
+        boolean filterFavoriteAuthors = hasFavoriteLists;
+        List<Long> favoriteBookIds = favoriteIds.bookIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.bookIds();
+        List<Long> favoriteAuthorIds = favoriteIds.authorIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.authorIds();
+
         Page<Book> bookPage;
         if (hasLabels) {
             bookPage = bookRepository.findWithFiltersAndLabels(
@@ -125,6 +140,7 @@ public class SearchService {
                     filterWithGrokipedia,
                     labels, labelCount,
                     hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                    filterFavoriteBooks, favoriteBookIds,
                     bookPageable);
         } else {
             bookPage = bookRepository.findWithFilters(
@@ -136,13 +152,14 @@ public class SearchService {
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
                     hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                    filterFavoriteBooks, favoriteBookIds,
                     bookPageable);
         }
 
         // Optional chips and labels switch authors to "authors of matching books".
         // Withdrawn hide (notActiveStatus off) always applies to the book WHERE, including
         // those author-of-books queries, but does not by itself switch away from name search.
-        boolean hasFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio
+        boolean hasBookFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio
                 || filterMostRecent || filterWithoutLoc || filterThreeLetterLoc
                 || filterWithoutGrokipedia || filterWithGrokipedia || filterWithoutGenres || filterNotActiveStatus
                 || filterWithoutFreeTextUrls
@@ -150,7 +167,7 @@ public class SearchService {
                 || filterEmuAudio || filterEmuBook || filterEmuEbook
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
-        if (hasFilters) {
+        if (hasBookFilters) {
             if (hasLabels) {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
                         trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
@@ -162,6 +179,7 @@ public class SearchService {
                         filterWithGrokipedia,
                         labels, labelCount,
                         hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                        filterFavoriteBooks, favoriteBookIds, filterFavoriteAuthors, favoriteAuthorIds,
                         authorPageable);
             } else {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
@@ -173,8 +191,12 @@ public class SearchService {
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
                         hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
+                        filterFavoriteBooks, favoriteBookIds, filterFavoriteAuthors, favoriteAuthorIds,
                         authorPageable);
             }
+        } else if (hasFavoriteLists) {
+            authorPage = authorRepository.findByIdsAndNameContaining(
+                    favoriteAuthorIds, trimmedQuery, authorPageable);
         } else if (!trimmedQuery.isEmpty()) {
             authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, authorPageable);
         } else {

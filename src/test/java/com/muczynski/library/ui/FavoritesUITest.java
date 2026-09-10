@@ -114,5 +114,11 @@ public class FavoritesUITest {
         page.click("[data-test='modal-close']");
         assertThat(page.locator("[data-test='favorite-modal']")).not().isVisible();
         assertThat(page.locator("[data-test='favorite-star-book-1-filled']")).isVisible();
+
+        assertThat(page.locator("[data-test='favorite-filter-have-read']")).isVisible();
+        assertThat(page.locator("[data-test='favorite-filter-have-read']")).containsText("1 Have Read");
+        page.click("[data-test='favorite-filter-have-read']");
+        page.waitForURL(url -> url.contains("favoriteLists="),
+                new Page.WaitForURLOptions().setTimeout(10000L));
     }
 }
