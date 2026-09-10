@@ -20,6 +20,7 @@ import {
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
+import { useFavoriteStats } from '@/api/favorites'
 import { Spinner } from '@/components/progress/Spinner'
 import {
   PiDownload,
@@ -30,6 +31,7 @@ import {
   PiImage,
   PiTag,
   PiBooks,
+  PiStar,
 } from 'react-icons/pi'
 
 const AVAILABILITY_COUNT_ITEMS: {
@@ -69,6 +71,7 @@ export function DataManagementPage() {
   // Fetch label counts for the Books by Label section
   const { data: labelCounts = [] } = useLabelCounts()
   const { data: availabilityStats, isLoading: isLoadingAvailabilityStats } = useAvailabilityStats()
+  const { data: favoriteStats = [], isLoading: isLoadingFavoriteStats } = useFavoriteStats()
   // Fetch branches for filename generation (this is a small list)
   const { data: branches = [] } = useBranches()
 
@@ -264,7 +267,7 @@ export function DataManagementPage() {
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Download all branch data as a JSON file. Includes branches, authors,
-                  books, users, and loans. Photos are excluded.
+                  books, users, loans, and favorites. Photos are excluded.
                 </p>
                 <Button
                   variant="primary"
@@ -580,6 +583,46 @@ export function DataManagementPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="favorite-stats-section">
+        <div className="bg-rose-700 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiStar className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Favorites Statistics</h2>
+              <p className="text-sm text-rose-100">
+                Favorite-list memberships across all users, books and authors counted separately
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          {isLoadingFavoriteStats ? (
+            <div className="flex justify-center py-4">
+              <Spinner />
+            </div>
+          ) : favoriteStats.length === 0 ? (
+            <p className="text-gray-500 text-sm">No favorites data available.</p>
+          ) : (
+            <div className="space-y-2" data-test="favorite-stats-list">
+              {favoriteStats.map((row) => (
+                <div
+                  key={row.listName}
+                  data-test={`favorite-stat-${row.listName}`}
+                  className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
+                >
+                  <span className="text-sm font-medium text-gray-700 mr-2">{row.listName}</span>
+                  <span className="text-sm tabular-nums text-gray-800">
+                    <span data-test={`favorite-stat-books-${row.listName}`}>{row.bookCount} books</span>
+                    <span className="text-gray-400 mx-2">·</span>
+                    <span data-test={`favorite-stat-authors-${row.listName}`}>{row.authorCount} authors</span>
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

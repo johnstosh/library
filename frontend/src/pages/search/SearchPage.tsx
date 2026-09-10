@@ -39,6 +39,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/hooks/useToast'
 import { PageCard } from '@/components/ui/PageCard'
 import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -466,6 +467,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
               </div>
             )}
             <div className="flex gap-1 items-center">
+              <FavoriteStar itemType="BOOK" itemId={book.id} />
               <IconButton
                 to={`/books/${book.id}`}
                 icon={<BookIcon />}
@@ -576,6 +578,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
               </StatusBadge>
             )}
             <div className="flex items-center gap-1">
+              <FavoriteStar itemType="AUTHOR" itemId={author.id} />
               <IconButton
                 to={`/authors/${author.id}`}
                 icon={<AuthorIcon />}

@@ -78,4 +78,10 @@ export const queryKeys = {
     all: ['settings'] as const,
     global: () => [...queryKeys.settings.all, 'global'] as const,
   },
+  favorites: {
+    all: ['favorites'] as const,
+    summary: () => [...queryKeys.favorites.all, 'summary'] as const,
+    item: (itemType: string, itemId: number) => [...queryKeys.favorites.all, 'item', itemType, itemId] as const,
+    stats: () => [...queryKeys.favorites.all, 'stats'] as const,
+  },
 }

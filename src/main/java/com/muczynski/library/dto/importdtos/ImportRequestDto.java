@@ -20,4 +20,5 @@ public class ImportRequestDto {
     private List<ImportBookDto> books;
     private List<ImportLoanDto> loans;
     private List<ImportPhotoDto> photos;
+    private List<ImportFavoriteDto> favorites;
 }

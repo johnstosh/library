@@ -18,6 +18,7 @@ The JSON export includes:
 - Users (including hashed passwords)
 - Books
 - Loans
+- **Favorites** (per-user list names, referenced by book title+author or author name)
 - **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included

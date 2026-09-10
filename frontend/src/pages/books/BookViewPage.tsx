@@ -20,6 +20,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -143,8 +144,9 @@ export function BookViewPage() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
-            <h1 className="text-2xl font-bold text-gray-900" data-test="book-title">
-              {book.title}
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-test="book-title">
+              <span>{book.title}</span>
+              <FavoriteStar itemType="BOOK" itemId={book.id} />
             </h1>
             {(canCheckout || isLibrarian) && (
               <div className="flex flex-wrap gap-3 justify-end">

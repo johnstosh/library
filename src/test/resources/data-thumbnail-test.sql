@@ -5,6 +5,7 @@
 -- Clean up existing data in correct order (respecting foreign keys)
 DELETE FROM loan;
 DELETE FROM photo;
+DELETE FROM favorites;
 DELETE FROM book;
 DELETE FROM author;
 DELETE FROM users_roles;

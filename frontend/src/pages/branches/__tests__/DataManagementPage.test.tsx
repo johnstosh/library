@@ -50,6 +50,16 @@ vi.mock('@/api/branches', () => ({
   }),
 }))
 
+vi.mock('@/api/favorites', () => ({
+  useFavoriteStats: () => ({
+    data: [
+      { listName: 'Have Read', bookCount: 4, authorCount: 1 },
+      { listName: 'Want to Read', bookCount: 2, authorCount: 0 },
+    ],
+    isLoading: false,
+  }),
+}))
+
 vi.mock('@/api/photos', () => ({
   useImportPhotosFromZipChunked: () => ({
     progress: {
@@ -81,5 +91,16 @@ describe('DataManagementPage Books Availability', () => {
     const label = inLibrary.querySelector('span')
     expect(label).not.toBeNull()
     expect(label!.className.split(/\s+/)).not.toContain('truncate')
+  })
+})
+
+describe('DataManagementPage Favorites Statistics', () => {
+  it('lists favorite counts split by books and authors', () => {
+    render(<DataManagementPage />)
+
+    expect(screen.getByTestId('favorite-stats-section')).toHaveTextContent('Favorites Statistics')
+    expect(screen.getByTestId('favorite-stat-Have Read')).toHaveTextContent('Have Read')
+    expect(screen.getByTestId('favorite-stat-books-Have Read')).toHaveTextContent('4 books')
+    expect(screen.getByTestId('favorite-stat-authors-Have Read')).toHaveTextContent('1 authors')
   })
 })

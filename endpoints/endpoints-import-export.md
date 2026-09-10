@@ -13,6 +13,7 @@ Exports database to JSON format for backup/migration.
 - Users (including hashed passwords)
 - Books
 - Loans
+- Favorites (username, list name, book title+author or author name)
 - **Photos:** NOT INCLUDED - photos are excluded due to size
 
 **Important Notes:**
@@ -59,6 +60,13 @@ Returns database statistics with total counts for each entity type.
   "loanCount": 50
 }
 ```
+
+### GET /api/import/favorite-stats
+Returns favorite-list membership counts for the Data Management **Favorites Statistics** section.
+
+**Authentication:** Librarian only
+
+**Response:** array of `{ "listName", "bookCount", "authorCount" }`, sorted by `(bookCount + authorCount)` descending then name.
 
 **Purpose:**
 - Provides accurate database counts for the Data Management page

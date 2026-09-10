@@ -4,6 +4,7 @@
 DELETE FROM applied;
 DELETE FROM loan;
 DELETE FROM photo;
+DELETE FROM favorites;
 DELETE FROM book;
 DELETE FROM author;
 DELETE FROM users_roles;
