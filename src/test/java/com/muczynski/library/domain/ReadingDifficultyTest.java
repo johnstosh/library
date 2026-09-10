@@ -28,4 +28,14 @@ class ReadingDifficultyTest {
         assertEquals(ReadingDifficulty.UNSET, ReadingDifficulty.fromString("  "));
         assertEquals(ReadingDifficulty.CHILDREN, ReadingDifficulty.fromString("children"));
     }
+
+    @Test
+    void tryParseAssignable_rejectsUnsetBlankAndUnknown() {
+        assertEquals(null, ReadingDifficulty.tryParseAssignable(null));
+        assertEquals(null, ReadingDifficulty.tryParseAssignable(""));
+        assertEquals(null, ReadingDifficulty.tryParseAssignable("unset"));
+        assertEquals(null, ReadingDifficulty.tryParseAssignable("bogus"));
+        assertEquals(ReadingDifficulty.DEMANDING, ReadingDifficulty.tryParseAssignable("DEMANDING"));
+        assertEquals(ReadingDifficulty.CHILDREN, ReadingDifficulty.tryParseAssignable("children"));
+    }
 }

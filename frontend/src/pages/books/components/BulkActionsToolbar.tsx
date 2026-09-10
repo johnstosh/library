@@ -4,7 +4,12 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
-import { useDeleteBooks, useBulkBookFromImage, useLookupBulkGenresWithProgress } from '@/api/books'
+import {
+  useDeleteBooks,
+  useBulkBookFromImage,
+  useLookupBulkGenresWithProgress,
+  useLookupBulkReadingDifficultyWithProgress,
+} from '@/api/books'
 import { useLookupBulkBooksWithProgress, type LocLookupResultDto } from '@/api/loc-lookup'
 import { useLookupBulkBooksGrokipediaWithProgress, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
@@ -17,13 +22,14 @@ import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResul
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { BookFromImageResultsModal } from './BookFromImageResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
+import { ReadingDifficultyLookupResultsModal } from './ReadingDifficultyLookupResultsModal'
 import { YdlLookupResultsModal } from './YdlLookupResultsModal'
 import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
-import type { BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
+import type { BulkDeleteResultDto, GenreLookupResultDto, ReadingDifficultyLookupResultDto } from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
@@ -76,6 +82,9 @@ export function BulkActionsToolbar({
   const [showEmuResults, setShowEmuResults] = useState(false)
   const [emuResults, setEmuResults] = useState<EmuLookupResultDto[]>([])
   const [emuProgress, setEmuProgress] = useState(0)
+  const [showReadingDifficultyResults, setShowReadingDifficultyResults] = useState(false)
+  const [readingDifficultyResults, setReadingDifficultyResults] = useState<ReadingDifficultyLookupResultDto[]>([])
+  const [readingDifficultyProgress, setReadingDifficultyProgress] = useState(0)
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooksWithProgress((completed) => {
@@ -101,6 +110,9 @@ export function BulkActionsToolbar({
   })
   const lookupEmu = useLookupBulkEmuWithProgress((completed) => {
     setEmuProgress(completed)
+  })
+  const lookupReadingDifficulty = useLookupBulkReadingDifficultyWithProgress((completed) => {
+    setReadingDifficultyProgress(completed)
   })
 
   const selectedCount = selectedIds.size
@@ -235,6 +247,18 @@ export function BulkActionsToolbar({
     }
   }
 
+  const handleReadingDifficultyLookup = async () => {
+    setReadingDifficultyProgress(0)
+    try {
+      const results = await lookupReadingDifficulty.mutateAsync(Array.from(selectedIds))
+      setReadingDifficultyResults(results)
+      setShowReadingDifficultyResults(true)
+    } catch (error) {
+      console.error('Failed to fill reading difficulty:', error)
+      toast.error('Failed to fill reading difficulty')
+    }
+  }
+
   if (selectedIds.size === 0) {
     return (
       <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
@@ -366,6 +390,23 @@ export function BulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
+              onClick={handleReadingDifficultyLookup}
+              isLoading={lookupReadingDifficulty.isPending}
+              disabled={lookupReadingDifficulty.isPending}
+              leftIcon={<AiIcon />}
+              data-test="bulk-fill-reading-difficulty"
+            >
+              {progressLabel(
+                'Fill Reading Difficulty',
+                'Difficulty...',
+                lookupReadingDifficulty.isPending,
+                readingDifficultyProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleYdlLookup}
               isLoading={lookupYdl.isPending}
               disabled={lookupYdl.isPending}
@@ -451,6 +492,12 @@ export function BulkActionsToolbar({
         isOpen={showGenreResults}
         onClose={() => setShowGenreResults(false)}
         results={genreResults}
+      />
+
+      <ReadingDifficultyLookupResultsModal
+        isOpen={showReadingDifficultyResults}
+        onClose={() => setShowReadingDifficultyResults(false)}
+        results={readingDifficultyResults}
       />
 
       <YdlLookupResultsModal

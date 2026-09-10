@@ -232,6 +232,16 @@ export interface GenreLookupResultDto {
   updatedBook?: BookDto
 }
 
+export interface ReadingDifficultyLookupResultDto {
+  bookId: number
+  title?: string
+  success: boolean
+  suggestedDifficulty?: ReadingDifficulty
+  errorMessage?: string
+  /** Populated on success so the frontend can seed the book cache without a follow-up by-ids fetch. */
+  updatedBook?: BookDto
+}
+
 // Chunked Upload DTOs
 export interface ChunkUploadResultDto {
   uploadId: string

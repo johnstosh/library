@@ -9,6 +9,8 @@ import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
+import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
@@ -514,6 +516,48 @@ class BookControllerTest {
         List<Long> bookIds = Arrays.asList(1L, 2L);
 
         mockMvc.perform(post("/api/books/grokipedia-lookup-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void lookupReadingDifficultyBulk() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L);
+
+        ReadingDifficultyLookupResultDto filled = ReadingDifficultyLookupResultDto.builder()
+                .bookId(1L)
+                .title("Little Women")
+                .success(true)
+                .suggestedDifficulty(ReadingDifficulty.CHILDREN)
+                .build();
+        ReadingDifficultyLookupResultDto skipped = ReadingDifficultyLookupResultDto.builder()
+                .bookId(2L)
+                .title("Summa")
+                .success(false)
+                .errorMessage("Already has a reading difficulty")
+                .build();
+
+        when(bookService.lookupReadingDifficultyForBooks(bookIds))
+                .thenReturn(Arrays.asList(filled, skipped));
+
+        mockMvc.perform(post("/api/books/lookup-reading-difficulty-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].success").value(true))
+                .andExpect(jsonPath("$[0].suggestedDifficulty").value("children"))
+                .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void lookupReadingDifficultyBulk_requiresLibrarianAuthority() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L);
+
+        mockMvc.perform(post("/api/books/lookup-reading-difficulty-bulk")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bookIds)))
                 .andExpect(status().isForbidden());

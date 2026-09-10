@@ -10,6 +10,7 @@ import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GenreLookupResultDto;
+import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
@@ -532,6 +533,15 @@ public class BookController {
     public ResponseEntity<List<GenreLookupResultDto>> lookupGenresBulk(@RequestBody List<Long> bookIds) {
         logger.info("Looking up genres for {} books", bookIds.size());
         List<GenreLookupResultDto> results = bookService.lookupGenresForBooks(bookIds);
+        return ResponseEntity.ok(results);
+    }
+
+    @PostMapping("/lookup-reading-difficulty-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<ReadingDifficultyLookupResultDto>> lookupReadingDifficultyBulk(
+            @RequestBody List<Long> bookIds) {
+        logger.info("Filling reading difficulty for {} books", bookIds.size());
+        List<ReadingDifficultyLookupResultDto> results = bookService.lookupReadingDifficultyForBooks(bookIds);
         return ResponseEntity.ok(results);
     }
 }

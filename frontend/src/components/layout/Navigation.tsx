@@ -16,6 +16,7 @@ import {
 import { PiList, PiX } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
+import { isDevSite } from '@/utils/environment'
 
 function getInitials(username: string | null | undefined): string {
   const name = (username ?? '').trim()
@@ -54,7 +55,9 @@ export function Navigation() {
   const { branchName, librarySystemName, hasBranch } = useFirstBranch()
 
   useEffect(() => {
-    if (hasBranch) {
+    if (isDevSite()) {
+      document.title = 'DEV'
+    } else if (hasBranch) {
       document.title = `The ${branchName} Branch of the ${librarySystemName}`
     } else {
       document.title = 'Library'

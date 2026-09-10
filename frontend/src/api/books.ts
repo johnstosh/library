@@ -3,7 +3,16 @@ import React, { useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { BookDto, BookSummaryDto, BulkDeleteResultDto, GenreLookupResultDto } from '@/types/dtos'
+import type {
+  BookDto,
+  BookSummaryDto,
+  BulkDeleteResultDto,
+  GenreLookupResultDto,
+  ReadingDifficultyLookupResultDto,
+} from '@/types/dtos'
+
+/** Must match AskGrok.READING_DIFFICULTY_BATCH_SIZE. */
+export const READING_DIFFICULTY_LOOKUP_BATCH_SIZE = 10
 
 // Hook to get books with optimized lastModified caching.
 // When selectedLabels are provided, the backend pre-filters to only books with those labels
@@ -401,6 +410,54 @@ export function useLookupGenresBulk() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (ids: number[]) => api.post<GenreLookupResultDto[]>('/books/lookup-genres-bulk', ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+    },
+  })
+}
+
+/**
+ * Fill reading difficulty for multiple books with progress tracking.
+ * Sends up to READING_DIFFICULTY_LOOKUP_BATCH_SIZE IDs per request.
+ */
+export function useLookupBulkReadingDifficultyWithProgress(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results: ReadingDifficultyLookupResultDto[] = []
+      const total = ids.length
+
+      for (let i = 0; i < ids.length; i += READING_DIFFICULTY_LOOKUP_BATCH_SIZE) {
+        const batch = ids.slice(i, i + READING_DIFFICULTY_LOOKUP_BATCH_SIZE)
+        try {
+          const batchResults = await api.post<ReadingDifficultyLookupResultDto[]>(
+            '/books/lookup-reading-difficulty-bulk',
+            batch,
+          )
+          for (const result of batchResults) {
+            results.push(result)
+            if (result.updatedBook) {
+              queryClient.setQueryData(queryKeys.books.detail(result.bookId), result.updatedBook)
+            }
+          }
+        } catch (error) {
+          for (const id of batch) {
+            results.push({
+              bookId: id,
+              success: false,
+              errorMessage: error instanceof Error ? error.message : String(error),
+            })
+          }
+        }
+        onProgress?.(Math.min(i + batch.length, total), total)
+      }
+
+      return results
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })

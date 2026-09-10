@@ -464,4 +464,88 @@ public class AskGrokTest {
         assertEquals(List.of(), AskGrok.parseJsonStringArray(null));
         assertEquals(List.of(), AskGrok.parseJsonStringArray("not json"));
     }
+
+    @Test
+    void parseJsonStringArrayOfArrays_nestedAndFlat() {
+        assertEquals(
+                List.of(List.of("children"), List.of("moderate", "accessible")),
+                AskGrok.parseJsonStringArrayOfArrays(
+                        "Here:\n[[\"children\"],[\"moderate\",\"accessible\"]]\n"));
+        assertEquals(
+                List.of(List.of("moderate"), List.of("accessible")),
+                AskGrok.parseJsonStringArrayOfArrays("[\"moderate\",\"accessible\"]"));
+        assertEquals(List.of(), AskGrok.parseJsonStringArrayOfArrays(null));
+        assertEquals(List.of(), AskGrok.parseJsonStringArrayOfArrays("not json"));
+    }
+
+    @Test
+    void suggestReadingDifficulties_returnsFirstKeyPerBook() {
+        stubGrokContent("[[\"moderate\",\"accessible\"],[\"children\"]]");
+
+        List<String> firsts = askGrok.suggestReadingDifficulties(List.of(
+                "{\"id\":1,\"title\":\"Summa\"}",
+                "{\"id\":2,\"title\":\"Little Women\"}"));
+
+        assertEquals(List.of("moderate", "children"), firsts);
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                entityCaptor.capture(),
+                eq(Map.class));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
+        String prompt = (String) messages.get(0).get("content");
+        assertTrue(prompt.contains("children: for kids / read-aloud"));
+        assertTrue(prompt.contains("JSON array of those arrays"));
+        assertTrue(prompt.contains("\"title\":\"Summa\""));
+    }
+
+    @Test
+    void suggestReadingDifficulties_singleBookFlatArrayUsesFirst() {
+        stubGrokContent("[\"demanding\",\"advanced\"]");
+
+        List<String> firsts = askGrok.suggestReadingDifficulties(List.of("{\"id\":1,\"title\":\"Summa\"}"));
+
+        assertEquals(List.of("demanding"), firsts);
+    }
+
+    @Test
+    void suggestReadingDifficulties_rejectsMoreThanBatchSize() {
+        List<String> tooMany = new ArrayList<>();
+        for (int i = 0; i < AskGrok.READING_DIFFICULTY_BATCH_SIZE + 1; i++) {
+            tooMany.add("{\"id\":" + i + "}");
+        }
+        assertThrows(IllegalArgumentException.class, () -> askGrok.suggestReadingDifficulties(tooMany));
+        verifyNoInteractions(restTemplate);
+    }
+
+    private void stubGrokContent(String content) {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        Map<String, Object> mockResponse = new HashMap<>();
+        List<Map<String, Object>> choices = new ArrayList<>();
+        Map<String, Object> choice = new HashMap<>();
+        Map<String, Object> message = new HashMap<>();
+        message.put("content", content);
+        choice.put("message", message);
+        choices.add(choice);
+        mockResponse.put("choices", choices);
+
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+    }
 }

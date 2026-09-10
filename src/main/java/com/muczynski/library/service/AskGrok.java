@@ -5,7 +5,9 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.UserDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,8 @@ public class AskGrok {
     public static final String MODEL_GROK_4 = MODEL_GROK_FLAGSHIP;
     public static final String MODEL_GROK_4_FAST = "grok-4-1-fast-reasoning";
     public static final String IMAGE_DETAIL_HIGH = "high";
+    /** Max books per reading-difficulty Grok prompt. */
+    public static final int READING_DIFFICULTY_BATCH_SIZE = 10;
 
     private static final int CATALOG_MAX_COMPLETION_TOKENS = 8000;
     private static final int FAST_MAX_COMPLETION_TOKENS = 500;
@@ -355,6 +359,105 @@ public class AskGrok {
         List<String> cleaned = new ArrayList<>(parseJsonStringArray(response));
         cleaned.sort(String.CASE_INSENSITIVE_ORDER);
         return cleaned;
+    }
+
+    /**
+     * Classify reading difficulty for up to {@link #READING_DIFFICULTY_BATCH_SIZE} books.
+     * The model must reply with a JSON array of candidate-key arrays (most appropriate first);
+     * this method returns the first key of each inner array, aligned to the input order.
+     *
+     * @param bookJsons JSON object strings, one per book (id, title, author, etc.)
+     * @return one suggested key per book; null when that book had no usable answer
+     */
+    public List<String> suggestReadingDifficulties(List<String> bookJsons) {
+        if (bookJsons == null || bookJsons.isEmpty()) {
+            return List.of();
+        }
+        if (bookJsons.size() > READING_DIFFICULTY_BATCH_SIZE) {
+            throw new IllegalArgumentException(
+                    "At most " + READING_DIFFICULTY_BATCH_SIZE + " books per reading-difficulty prompt");
+        }
+
+        StringBuilder levelLines = new StringBuilder();
+        for (ReadingDifficulty rd : ReadingDifficulty.values()) {
+            if (rd == ReadingDifficulty.UNSET) {
+                continue;
+            }
+            levelLines.append("- ").append(rd.getKey()).append(": ").append(rd.getDescription()).append('\n');
+        }
+
+        String prompt = """
+                Classify the reading difficulty of each book.
+
+                Valid keys (use only these; do not use unset):
+                %s
+                For each book, return an array of applicable keys, most appropriate first.
+                Respond with only a JSON array of those arrays, in the same order as the books, nothing else.
+                Example: [["children"],["moderate","accessible"],["demanding","advanced"]]
+
+                Books:
+                [%s]
+                """.formatted(levelLines, String.join(",\n", bookJsons));
+
+        String response = askQuestionFast(prompt);
+        List<List<String>> parsed = parseJsonStringArrayOfArrays(response);
+        List<String> firsts = new ArrayList<>(bookJsons.size());
+        for (int i = 0; i < bookJsons.size(); i++) {
+            if (i < parsed.size() && !parsed.get(i).isEmpty()) {
+                firsts.add(parsed.get(i).get(0));
+            } else {
+                firsts.add(null);
+            }
+        }
+        if (parsed.isEmpty()) {
+            log.warn("Could not parse reading-difficulty array for {} book(s): {}", bookJsons.size(), response);
+        }
+        return firsts;
+    }
+
+    /**
+     * Parses a JSON array whose elements are either strings or arrays of strings.
+     * Textual elements are wrapped as a one-element list so a flat array of answers
+     * still works. Blank entries are dropped. Invalid JSON returns an empty list.
+     */
+    static List<List<String>> parseJsonStringArrayOfArrays(String response) {
+        if (response == null || response.isBlank()) {
+            return List.of();
+        }
+        String trimmed = response.trim();
+        int start = trimmed.indexOf('[');
+        int end = trimmed.lastIndexOf(']');
+        if (start < 0 || end <= start) {
+            return List.of();
+        }
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(trimmed.substring(start, end + 1));
+            if (root == null || !root.isArray()) {
+                return List.of();
+            }
+            List<List<String>> result = new ArrayList<>();
+            for (JsonNode item : root) {
+                if (item == null || item.isNull()) {
+                    result.add(List.of());
+                } else if (item.isTextual()) {
+                    String text = item.asText();
+                    result.add(text == null || text.isBlank() ? List.of() : List.of(text.trim()));
+                } else if (item.isArray()) {
+                    List<String> inner = new ArrayList<>();
+                    for (JsonNode el : item) {
+                        if (el != null && el.isTextual() && !el.asText().isBlank()) {
+                            inner.add(el.asText().trim());
+                        }
+                    }
+                    result.add(inner);
+                } else {
+                    result.add(List.of());
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GenreLookupResultDto;
+import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -41,6 +42,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -1499,6 +1501,148 @@ public class BookService {
                 .filter(tag -> !tag.isEmpty())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Fill reading difficulty for selected books using Grok AI.
+     * Processes up to {@link AskGrok#READING_DIFFICULTY_BATCH_SIZE} unset books per prompt.
+     * Books that already have a difficulty are skipped.
+     */
+    public List<ReadingDifficultyLookupResultDto> lookupReadingDifficultyForBooks(List<Long> bookIds) {
+        if (bookIds == null || bookIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Book> booksById = new HashMap<>();
+        for (Book book : bookRepository.findAllById(bookIds)) {
+            booksById.put(book.getId(), book);
+        }
+
+        Map<Long, ReadingDifficultyLookupResultDto> byId = new LinkedHashMap<>();
+        List<Book> toFill = new ArrayList<>();
+        for (Long bookId : bookIds) {
+            Book book = booksById.get(bookId);
+            if (book == null) {
+                byId.put(bookId, ReadingDifficultyLookupResultDto.builder()
+                        .bookId(bookId)
+                        .success(false)
+                        .errorMessage("Book not found")
+                        .build());
+                continue;
+            }
+            ReadingDifficulty current = book.getReadingDifficulty();
+            if (current != null && current != ReadingDifficulty.UNSET) {
+                byId.put(bookId, ReadingDifficultyLookupResultDto.builder()
+                        .bookId(bookId)
+                        .title(book.getTitle())
+                        .success(false)
+                        .suggestedDifficulty(current)
+                        .errorMessage("Already has a reading difficulty")
+                        .build());
+                continue;
+            }
+            toFill.add(book);
+        }
+
+        for (int start = 0; start < toFill.size(); start += AskGrok.READING_DIFFICULTY_BATCH_SIZE) {
+            int end = Math.min(start + AskGrok.READING_DIFFICULTY_BATCH_SIZE, toFill.size());
+            List<Book> batch = toFill.subList(start, end);
+            for (ReadingDifficultyLookupResultDto result : fillReadingDifficultyBatch(batch)) {
+                byId.put(result.getBookId(), result);
+            }
+        }
+
+        List<ReadingDifficultyLookupResultDto> results = new ArrayList<>(bookIds.size());
+        for (Long bookId : bookIds) {
+            ReadingDifficultyLookupResultDto result = byId.get(bookId);
+            if (result != null) {
+                results.add(result);
+            }
+        }
+        return results;
+    }
+
+    private List<ReadingDifficultyLookupResultDto> fillReadingDifficultyBatch(List<Book> batch) {
+        List<String> bookJsons = new ArrayList<>(batch.size());
+        for (Book book : batch) {
+            try {
+                bookJsons.add(objectMapper.writeValueAsString(toReadingDifficultyPromptMap(book)));
+            } catch (Exception e) {
+                logger.warn("Failed to serialize book ID {} for reading-difficulty prompt: {}",
+                        book.getId(), e.getMessage());
+                bookJsons.add("{\"id\":" + book.getId() + "}");
+            }
+        }
+
+        List<String> suggestions;
+        try {
+            suggestions = askGrok.suggestReadingDifficulties(bookJsons);
+        } catch (Exception e) {
+            logger.error("Failed to lookup reading difficulty for {} books: {}", batch.size(), e.getMessage(), e);
+            List<ReadingDifficultyLookupResultDto> failed = new ArrayList<>(batch.size());
+            for (Book book : batch) {
+                failed.add(ReadingDifficultyLookupResultDto.builder()
+                        .bookId(book.getId())
+                        .title(book.getTitle())
+                        .success(false)
+                        .errorMessage(e.getMessage())
+                        .build());
+            }
+            return failed;
+        }
+
+        List<ReadingDifficultyLookupResultDto> batchResults = new ArrayList<>(batch.size());
+        for (int i = 0; i < batch.size(); i++) {
+            Book book = batch.get(i);
+            String suggested = i < suggestions.size() ? suggestions.get(i) : null;
+            ReadingDifficulty difficulty = ReadingDifficulty.tryParseAssignable(suggested);
+            if (difficulty == null) {
+                batchResults.add(ReadingDifficultyLookupResultDto.builder()
+                        .bookId(book.getId())
+                        .title(book.getTitle())
+                        .success(false)
+                        .errorMessage("Could not determine reading difficulty")
+                        .build());
+                continue;
+            }
+            book.setReadingDifficulty(difficulty);
+            bookRepository.save(book);
+            logger.info("Set reading difficulty on book '{}' (ID: {}) to {}", book.getTitle(), book.getId(), difficulty.getKey());
+            batchResults.add(ReadingDifficultyLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .title(book.getTitle())
+                    .success(true)
+                    .suggestedDifficulty(difficulty)
+                    .updatedBook(bookMapper.toDto(book))
+                    .build());
+        }
+        return batchResults;
+    }
+
+    private Map<String, Object> toReadingDifficultyPromptMap(Book book) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", book.getId());
+        item.put("title", book.getTitle());
+        item.put("author", book.getAuthor() != null ? book.getAuthor().getName() : null);
+        item.put("publicationYear", book.getPublicationYear());
+        item.put("tags", book.getTagsList());
+        item.put("plotSummary", truncateForPrompt(book.getPlotEssay(), 400));
+        item.put("description", truncateForPrompt(book.getDetailedDescription(), 400));
+        return item;
+    }
+
+    private static String truncateForPrompt(String value, int maxChars) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() <= maxChars) {
+            return trimmed;
+        }
+        return trimmed.substring(0, maxChars);
     }
 
 }
