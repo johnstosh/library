@@ -12,6 +12,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { isValidUrl } from '@/utils/formatters'
 
@@ -76,8 +77,9 @@ export function AuthorViewPage() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
-            <h1 className="text-2xl font-bold text-gray-900" data-test="author-name">
-              {author.name}
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-test="author-name">
+              <span>{author.name}</span>
+              <FavoriteStar itemType="AUTHOR" itemId={author.id} />
             </h1>
             {isLibrarian && (
               <div className="flex gap-3">

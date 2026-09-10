@@ -149,9 +149,10 @@ describe('booksPathFromFilters', () => {
         chips: chips({ inLibrary: true, withoutLoc: true }),
         labels: ['classic'],
         readingDifficulties: ['demanding'],
+        favoriteLists: ['Have Read'],
         q: 'Summa',
       }),
-    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&inLib=true')
+    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&favoriteLists=Have+Read&inLib=true')
   })
 
   it('does not copy Search Recent Arrivals off-state onto Books intake', () => {
@@ -182,5 +183,6 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips(), ['fiction'], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', ['children'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], ['Have Read'])).toBe(true)
   })
 })

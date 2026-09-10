@@ -5,9 +5,11 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
+import com.muczynski.library.dto.FavoriteListCountDto;
 import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
+import com.muczynski.library.service.FavoriteService;
 import com.muczynski.library.service.ImportService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -30,6 +32,7 @@ public class ImportController {
     private static final Logger logger = LoggerFactory.getLogger(ImportController.class);
 
     private final ImportService importService;
+    private final FavoriteService favoriteService;
 
     @PostMapping("/json")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
@@ -81,5 +84,15 @@ public class ImportController {
     public ResponseEntity<BookAvailabilityStatsDto> getAvailabilityStats() {
         BookAvailabilityStatsDto stats = importService.getAvailabilityStats();
         return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Returns favorite-list membership counts across all users, split by books and authors.
+     * Sorted by total count descending, then list name.
+     */
+    @GetMapping("/favorite-stats")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<FavoriteListCountDto>> getFavoriteStats() {
+        return ResponseEntity.ok(favoriteService.getListCounts());
     }
 }

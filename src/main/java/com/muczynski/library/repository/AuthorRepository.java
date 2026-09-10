@@ -34,7 +34,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
      * BookRepository.findWithFilters so authors track the filtered book result set.
      * Type filters use AND logic: a book must satisfy every active filter.
      */
-    @Query("SELECT a FROM Author a WHERE EXISTS (" +
+    @Query("SELECT a FROM Author a WHERE " +
+        "(:filterFavoriteAuthors = false OR a.id IN :favoriteAuthorIds) AND EXISTS (" +
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         BookRepository.SEARCH_CHIP_PREDICATE + ") " +
@@ -64,6 +65,10 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
         @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
         @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
+        @Param("filterFavoriteAuthors") boolean filterFavoriteAuthors,
+        @Param("favoriteAuthorIds") List<Long> favoriteAuthorIds,
         Pageable pageable);
 
     /**
@@ -72,7 +77,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
      * BookRepository.findWithFiltersAndLabels so authors track the filtered book result set.
      * Type filters use AND logic: a book must satisfy every active filter.
      */
-    @Query("SELECT a FROM Author a WHERE EXISTS (" +
+    @Query("SELECT a FROM Author a WHERE " +
+        "(:filterFavoriteAuthors = false OR a.id IN :favoriteAuthorIds) AND EXISTS (" +
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
@@ -105,6 +111,18 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
         @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
         @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
+        @Param("filterFavoriteAuthors") boolean filterFavoriteAuthors,
+        @Param("favoriteAuthorIds") List<Long> favoriteAuthorIds,
+        Pageable pageable);
+
+    @Query("SELECT a FROM Author a WHERE a.id IN :ids AND " +
+        "(:query = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+        "ORDER BY LOWER(a.name)")
+    Page<Author> findByIdsAndNameContaining(
+        @Param("ids") List<Long> ids,
+        @Param("query") String query,
         Pageable pageable);
 
     /**

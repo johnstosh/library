@@ -51,6 +51,15 @@ export function isSearchVisibleChip(chip: keyof BookChipFilters): boolean {
   return SEARCH_VISIBLE_CHIPS.includes(chip)
 }
 
+export function favoriteListsFromSearchParams(params: URLSearchParams): string[] {
+  const raw = params.get('favoriteLists')
+  if (!raw) return []
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 export function labelsFromSearchParams(params: URLSearchParams): string[] {
   const raw = params.get('labels')
   if (!raw) return []
@@ -75,11 +84,13 @@ export function isBooksIntakeConstrained(
   labels: string[],
   q: string,
   readingDifficulties: string[] = [],
+  favoriteLists: string[] = [],
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
     labels.length > 0 ||
     readingDifficulties.length > 0 ||
+    favoriteLists.length > 0 ||
     q.trim().length > 0
   )
 }
@@ -98,7 +109,8 @@ export function chipsFromSearchParams(
     const labels = labelsFromSearchParams(params)
     const readingDifficulties = readingDifficultiesFromSearchParams(params)
     const q = (params.get('q') ?? '').trim()
-    const othersOn = isBooksIntakeConstrained(chips, labels, q, readingDifficulties)
+    const favoriteLists = favoriteListsFromSearchParams(params)
+    const othersOn = isBooksIntakeConstrained(chips, labels, q, readingDifficulties, favoriteLists)
     if (othersOn) {
       chips.mostRecent = false
     } else if (params.get(CHIP_URL_KEYS.mostRecent) === 'false') {
@@ -114,6 +126,7 @@ export interface BookFilterUrlState {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  favoriteLists?: string[]
   q: string
   bookPage?: number
   authorPage?: number
@@ -137,6 +150,8 @@ export function bookFilterParamsForUrl(
   if (readingDifficulties.length > 0) {
     params.readingDifficulty = readingDifficulties.join(',')
   }
+  const favoriteLists = state.favoriteLists ?? []
+  if (favoriteLists.length > 0) params.favoriteLists = favoriteLists.join(',')
 
   const keys = mode === 'search' ? SEARCH_VISIBLE_CHIPS : ALL_CHIP_KEYS
   for (const chip of keys) {
@@ -145,7 +160,13 @@ export function bookFilterParamsForUrl(
   }
 
   if (mode === 'books') {
-    const othersOn = isBooksIntakeConstrained(state.chips, state.labels, q, readingDifficulties)
+    const othersOn = isBooksIntakeConstrained(
+      state.chips,
+      state.labels,
+      q,
+      readingDifficulties,
+      favoriteLists,
+    )
     if (!othersOn && !state.chips.mostRecent) {
       params[CHIP_URL_KEYS.mostRecent] = 'false'
     }
@@ -164,6 +185,7 @@ export function booksPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  favoriteLists?: string[]
   q: string
 }): string {
   const discoveryChips: BookChipFilters = { ...defaultBookChipFilters, mostRecent: true }
@@ -177,6 +199,7 @@ export function booksPathFromFilters(state: {
       chips: discoveryChips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      favoriteLists: state.favoriteLists ?? [],
       q: state.q,
     },
     'books',

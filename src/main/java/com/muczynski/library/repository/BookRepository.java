@@ -247,7 +247,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterReadingDifficulty = false OR b.readingDifficulty IN :readingDifficulties OR " +
         "(:includeUnsetReadingDifficulty = true AND (b.readingDifficulty IS NULL " +
         "OR b.readingDifficulty = com.muczynski.library.domain.ReadingDifficulty.UNSET " +
-        "OR TRIM(CAST(b.readingDifficulty AS string)) = '')))";
+        "OR TRIM(CAST(b.readingDifficulty AS string)) = ''))) AND " +
+        "(:filterFavoriteBooks = false OR b.id IN :favoriteBookIds)";
 
     /**
      * Unified search with AND-combined type filters (no labels).
@@ -283,6 +284,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
         @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
         @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
         Pageable pageable);
 
     /**
@@ -321,6 +324,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
         @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
         @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
         Pageable pageable);
 
     /**

@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
@@ -8,15 +8,22 @@ import { TableSummary } from '@/components/table/TableSummary'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { AuthorFilters } from './components/AuthorFilters'
+import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
 import { useAuthorAvailability, useAuthorCount, useAuthors } from '@/api/authors'
 import { applyAuthorChipFilters, isAvailabilityChipActive, isOtherAuthorChipActive } from '@/utils/authorChipFilters'
+import { favoriteListsFromSearchParams } from '@/utils/bookFilterParams'
+import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
 export function AuthorsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const { data: favoriteSummary } = useFavoriteSummary()
+  const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'authors')
 
   const chips = useAuthorsChips()
   const { selectedIds, selectAll } = useAuthorsTableSelection()
@@ -24,8 +31,9 @@ export function AuthorsPage() {
 
   // mostRecent defaults on in uiStore so this uses GET /authors/most-recent-day
   // (faster than GET /authors/summaries). Remaining chips still apply client-side.
+  const favoriteFilterOn = selectedFavoriteLists.length > 0
   const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors(
-    chips.mostRecent ? 'most-recent' : undefined
+    chips.mostRecent && !favoriteFilterOn ? 'most-recent' : undefined
   )
   const { data: authorCount } = useAuthorCount()
   const {
@@ -44,8 +52,14 @@ export function AuthorsPage() {
   const authors = useMemo(() => {
     if (isAvailabilityChipActive(chips) && availabilityLoading) return []
     // mostRecent is applied by the summaries endpoint, same as BooksPage + GET /books/most-recent-day
+    const favoriteIds = favoriteItemIdsForLists(
+      favoriteSummary?.lists,
+      selectedFavoriteLists,
+      'authorIds',
+    )
     return applyAuthorChipFilters(allAuthors, { ...chips, mostRecent: false }, undefined, availabilityByAuthorId)
-  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips])
+      .filter((author) => favoriteIds.size === 0 || favoriteIds.has(author.id))
+  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips, favoriteSummary?.lists, selectedFavoriteLists])
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -96,7 +110,25 @@ export function AuthorsPage() {
           <AuthorFilters
             chips={chips}
             onToggle={toggleAuthorsChip}
-            mostRecentDisabled={isOtherAuthorChipActive(chips)}
+            mostRecentDisabled={isOtherAuthorChipActive(chips) || favoriteFilterOn}
+          />
+          <FavoriteListFilters
+            lists={favoriteChips}
+            selected={selectedFavoriteLists}
+            onToggle={(listName) => {
+              const next = selectedFavoriteLists.includes(listName)
+                ? selectedFavoriteLists.filter((name) => name !== listName)
+                : [...selectedFavoriteLists, listName]
+              const nextParams = new URLSearchParams(searchParams)
+              if (next.length > 0) nextParams.set('favoriteLists', next.join(','))
+              else nextParams.delete('favoriteLists')
+              setSearchParams(nextParams)
+            }}
+            onClear={() => {
+              const nextParams = new URLSearchParams(searchParams)
+              nextParams.delete('favoriteLists')
+              setSearchParams(nextParams)
+            }}
           />
         </div>
 

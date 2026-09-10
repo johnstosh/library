@@ -7,6 +7,7 @@ import type { BookDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
 import { EntityLink } from '@/components/ui/EntityLink'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { IconButton } from '@/components/ui/IconButton'
 import { BookIcon, EditIcon } from '@/components/ui/Icons'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -66,6 +67,7 @@ export function AuthorBooksTable({ books, isLoading = false }: AuthorBooksTableP
         onRowClick={handleRowClick}
         actions={(book) => (
           <>
+            <FavoriteStar itemType="BOOK" itemId={book.id} />
             <IconButton
               to={`/books/${book.id}`}
               icon={<BookIcon />}

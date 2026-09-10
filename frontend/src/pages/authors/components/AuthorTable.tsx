@@ -7,6 +7,7 @@ import { useDeleteAuthor } from '@/api/authors'
 import { truncate, isValidUrl } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { IconButton } from '@/components/ui/IconButton'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { AuthorIcon, BooksIcon, DeleteIcon, EditIcon, GrokipediaIcon } from '@/components/ui/Icons'
@@ -98,6 +99,7 @@ export function AuthorTable({
         onRowClick={onView}
         actions={(author) => (
           <>
+            <FavoriteStar itemType="AUTHOR" itemId={author.id} />
             <IconButton
               to={`/authors/${author.id}`}
               icon={<AuthorIcon />}

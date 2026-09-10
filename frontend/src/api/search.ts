@@ -59,12 +59,17 @@ export function useSearch(
   enabled = true,
   selectedLabels?: string[],
   selectedDifficulties?: string[],
+  favoriteLists?: string[],
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
   const hasDifficulties = selectedDifficulties != null && selectedDifficulties.length > 0
   const difficultyParam = hasDifficulties
     ? `&readingDifficulty=${encodeURIComponent((selectedDifficulties ?? []).join(','))}`
+    : ''
+  const hasFavoriteLists = favoriteLists != null && favoriteLists.length > 0
+  const favoriteParam = hasFavoriteLists
+    ? `&favoriteLists=${encodeURIComponent((favoriteLists ?? []).join(','))}`
     : ''
   const filterParams = chipQueryParams(filters)
   return useQuery({
@@ -77,10 +82,11 @@ export function useSearch(
       filters,
       selectedLabels ?? [],
       selectedDifficulties ?? [],
+      favoriteLists ?? [],
     ],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}`,
+        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}${favoriteParam}`,
         { requireAuth: false },
       ),
     enabled,

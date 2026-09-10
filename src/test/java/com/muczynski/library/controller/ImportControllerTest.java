@@ -8,6 +8,7 @@ import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LabelCountDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
+import com.muczynski.library.service.FavoriteService;
 import com.muczynski.library.service.ImportService;
 import io.restassured.http.ContentType;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -44,6 +45,9 @@ class ImportControllerTest {
     @MockitoBean
     private ImportService importService;
 
+    @MockitoBean
+    private FavoriteService favoriteService;
+
     @BeforeEach
     void setUp() {
         RestAssuredMockMvc.mockMvc(mockMvc);
@@ -60,7 +64,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 
@@ -126,7 +130,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 

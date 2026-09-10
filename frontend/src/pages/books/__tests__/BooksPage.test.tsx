@@ -54,6 +54,13 @@ vi.mock('../components/BulkActionsToolbar', () => ({
   BulkActionsToolbar: () => null,
 }))
 
+vi.mock('@/api/favorites', () => ({
+  useFavoriteSummary: () => ({ data: { lists: [] } }),
+  favoriteListChips: () => [],
+  favoriteItemIdsForLists: () => new Set(),
+  listNameToTestId: (name: string) => name,
+}))
+
 function UrlQuery() {
   const [params] = useSearchParams()
   return (

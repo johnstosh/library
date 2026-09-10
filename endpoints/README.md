@@ -12,6 +12,7 @@ This folder contains the complete API endpoint documentation for the Library Man
 - **[endpoints-authors.md](endpoints-authors.md)** - Author filtering and statistics endpoints
 - **[endpoints-libraries.md](endpoints-libraries.md)** - Library statistics and management
 - **[endpoints-search.md](endpoints-search.md)** - Global search across books and authors
+- **[endpoints-favorites.md](endpoints-favorites.md)** - Per-user favorite lists for books and authors
 
 ### Photo Management
 - **[endpoints-photo-management.md](endpoints-photo-management.md)** - Photo CRUD operations for books and authors (upload, rotate, reorder, delete)

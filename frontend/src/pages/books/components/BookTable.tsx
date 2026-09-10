@@ -11,6 +11,7 @@ import type { BookDto } from '@/types/dtos'
 import { useToast } from '@/hooks/useToast'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { IconButton } from '@/components/ui/IconButton'
 import { EntityLink } from '@/components/ui/EntityLink'
 import {
@@ -191,6 +192,7 @@ export function BookTable({
             )}
             {/* Line 2: view, author */}
             <div className="flex gap-1 justify-end items-center">
+              <FavoriteStar itemType="BOOK" itemId={book.id} />
               <IconButton
                 to={`/books/${book.id}`}
                 icon={<BookIcon />}

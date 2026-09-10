@@ -45,17 +45,19 @@ public class ImportService {
     private final LoanRepository loanRepository;
     private final AuthorityRepository authorityRepository;
     private final PhotoRepository photoRepository;
+    private final FavoriteRepository favoriteRepository;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
 
     public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
-        logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}",
+        logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}, Favorites: {}",
             dto.getBranches() != null ? dto.getBranches().size() : 0,
             dto.getAuthors() != null ? dto.getAuthors().size() : 0,
             dto.getUsers() != null ? dto.getUsers().size() : 0,
             dto.getBooks() != null ? dto.getBooks().size() : 0,
             dto.getLoans() != null ? dto.getLoans().size() : 0,
-            dto.getPhotos() != null ? dto.getPhotos().size() : 0);
+            dto.getPhotos() != null ? dto.getPhotos().size() : 0,
+            dto.getFavorites() != null ? dto.getFavorites().size() : 0);
 
         int branchCount = 0;
         int authorCount = 0;
@@ -63,6 +65,7 @@ public class ImportService {
         int bookCount = 0;
         int loanCount = 0;
         int photoCount = 0;
+        int favoriteCount = 0;
 
         Map<String, Library> branchMap = new HashMap<>();
         if (dto.getBranches() != null) {
@@ -579,11 +582,74 @@ public class ImportService {
         }
         logger.info("Imported {} photos", photoCount);
 
-        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos",
-            branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
+        if (dto.getFavorites() != null) {
+            for (ImportFavoriteDto fDto : dto.getFavorites()) {
+                if (fDto.getListName() == null || fDto.getListName().isBlank()
+                        || fDto.getUsername() == null || fDto.getUsername().isBlank()) {
+                    continue;
+                }
+                User user = userMap.get(fDto.getUsername());
+                if (user == null) {
+                    List<User> existingUsers = userRepository.findAllByUsernameOrderByIdAsc(fDto.getUsername());
+                    user = existingUsers.isEmpty() ? null : existingUsers.get(0);
+                }
+                if (user == null) {
+                    throw new LibraryException("User not found for favorite: " + fDto.getUsername());
+                }
+                String listName = fDto.getListName().trim();
+                boolean isBook = fDto.getBookTitle() != null && !fDto.getBookTitle().isBlank();
+                boolean isAuthor = fDto.getAuthorName() != null && !fDto.getAuthorName().isBlank();
+                if (isBook == isAuthor) {
+                    throw new LibraryException("Favorite must reference a book or an author, not both or neither: " + listName);
+                }
+                Favorite favorite = new Favorite();
+                favorite.setUser(user);
+                favorite.setListName(listName);
+                if (isBook) {
+                    String authorName = fDto.getBookAuthorName() != null ? fDto.getBookAuthorName() : "";
+                    Book book = bookMap.get(fDto.getBookTitle() + "|" + authorName);
+                    if (book == null) {
+                        List<Book> existingBooks = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(
+                                fDto.getBookTitle(), authorName);
+                        book = existingBooks.isEmpty() ? null : existingBooks.get(0);
+                    }
+                    if (book == null) {
+                        throw new LibraryException("Book not found for favorite: " + fDto.getBookTitle()
+                                + " by " + authorName);
+                    }
+                    boolean exists = favoriteRepository.findByUser_IdAndBook_Id(user.getId(), book.getId()).stream()
+                            .anyMatch(existing -> existing.getListName().equalsIgnoreCase(listName));
+                    if (exists) {
+                        continue;
+                    }
+                    favorite.setBook(book);
+                } else {
+                    Author author = authMap.get(fDto.getAuthorName());
+                    if (author == null) {
+                        List<Author> existingAuthors = authorRepository.findAllByNameOrderByIdAsc(fDto.getAuthorName());
+                        author = existingAuthors.isEmpty() ? null : existingAuthors.get(0);
+                    }
+                    if (author == null) {
+                        throw new LibraryException("Author not found for favorite: " + fDto.getAuthorName());
+                    }
+                    boolean exists = favoriteRepository.findByUser_IdAndAuthor_Id(user.getId(), author.getId()).stream()
+                            .anyMatch(existing -> existing.getListName().equalsIgnoreCase(listName));
+                    if (exists) {
+                        continue;
+                    }
+                    favorite.setAuthor(author);
+                }
+                favoriteRepository.save(favorite);
+                favoriteCount++;
+            }
+        }
+        logger.info("Imported {} favorites", favoriteCount);
+
+        logger.info("Import completed successfully. Total: {} branches, {} authors, {} users, {} books, {} loans, {} photos, {} favorites",
+            branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount);
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(
-                branchCount, authorCount, userCount, bookCount, loanCount, photoCount);
+                branchCount, authorCount, userCount, bookCount, loanCount, photoCount, favoriteCount);
         return new ImportResponseDto.ImportResult(counts);
     }
 
@@ -750,6 +816,28 @@ public class ImportService {
             photoDtos.add(pDto);
         }
         dto.setPhotos(photoDtos);
+
+        List<ImportFavoriteDto> favoriteDtos = new ArrayList<>();
+        for (Favorite favorite : favoriteRepository.findAllWithRefs()) {
+            if (favorite.getUser() == null || favorite.getListName() == null || favorite.getListName().isBlank()) {
+                continue;
+            }
+            ImportFavoriteDto fDto = new ImportFavoriteDto();
+            fDto.setUsername(favorite.getUser().getUsername());
+            fDto.setListName(favorite.getListName());
+            if (favorite.getBook() != null) {
+                fDto.setBookTitle(favorite.getBook().getTitle());
+                if (favorite.getBook().getAuthor() != null) {
+                    fDto.setBookAuthorName(favorite.getBook().getAuthor().getName());
+                }
+            } else if (favorite.getAuthor() != null) {
+                fDto.setAuthorName(favorite.getAuthor().getName());
+            } else {
+                continue;
+            }
+            favoriteDtos.add(fDto);
+        }
+        dto.setFavorites(favoriteDtos);
 
         return dto;
     }

@@ -64,6 +64,17 @@ vi.mock('@/api/authors', () => ({
 
 vi.mock('@/stores/authStore', () => ({
   useIsLibrarian: () => librarianState.current,
+  useIsAuthenticated: () => librarianState.current,
+}))
+
+vi.mock('@/components/favorites/FavoriteStar', () => ({
+  FavoriteStar: () => null,
+}))
+
+vi.mock('@/api/favorites', () => ({
+  useFavoriteSummary: () => ({ data: { lists: [] } }),
+  favoriteListChips: () => [],
+  listNameToTestId: (name: string) => name,
 }))
 
 vi.mock('@/hooks/useToast', () => ({

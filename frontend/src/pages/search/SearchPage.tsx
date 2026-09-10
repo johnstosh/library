@@ -14,10 +14,13 @@ import {
   bookFilterParamsForUrl,
   booksPathFromFilters,
   chipsFromSearchParams,
+  favoriteListsFromSearchParams,
   labelsFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
+import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
+import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { ReadingDifficulty } from '@/types/enums'
 import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiBooks, PiUser } from 'react-icons/pi'
@@ -39,6 +42,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/hooks/useToast'
 import { PageCard } from '@/components/ui/PageCard'
 import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
+import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -58,6 +62,9 @@ export function SearchPage() {
   const filters: SearchFilters = chipsFromSearchParams(searchParams, 'search')
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const { data: favoriteSummary } = useFavoriteSummary()
+  const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'search')
 
   const [inputValue, setInputValue] = useState(urlQuery)
   const pageSize = 20
@@ -68,7 +75,10 @@ export function SearchPage() {
 
   const hasSearched = searchParams.has('q')
   const hasFilters =
-    isAnyChipActive(filters) || selectedLabels.length > 0 || selectedDifficulties.length > 0
+    isAnyChipActive(filters)
+    || selectedLabels.length > 0
+    || selectedDifficulties.length > 0
+    || selectedFavoriteLists.length > 0
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -79,6 +89,7 @@ export function SearchPage() {
     hasSearched || hasFilters,
     selectedLabels,
     selectedDifficulties,
+    selectedFavoriteLists,
   )
   const isLibrarian = useIsLibrarian()
 
@@ -86,6 +97,7 @@ export function SearchPage() {
     chips?: SearchFilters
     labels?: string[]
     readingDifficulties?: string[]
+    favoriteLists?: string[]
     q?: string
     includeQ?: boolean
     bookPage?: number
@@ -98,6 +110,7 @@ export function SearchPage() {
           chips: next.chips ?? filters,
           labels: next.labels ?? selectedLabels,
           readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
           bookPage: next.bookPage ?? 0,
           authorPage: next.authorPage ?? 0,
@@ -139,6 +152,17 @@ export function SearchPage() {
     writeUrl({ readingDifficulties: [] })
   }
 
+  const handleToggleFavoriteList = (listName: string) => {
+    const next = selectedFavoriteLists.includes(listName)
+      ? selectedFavoriteLists.filter((name) => name !== listName)
+      : [...selectedFavoriteLists, listName]
+    writeUrl({ favoriteLists: next })
+  }
+
+  const handleClearFavoriteLists = () => {
+    writeUrl({ favoriteLists: [] })
+  }
+
   const handleBookPageChange = (newPage: number) => {
     writeUrl({ bookPage: newPage, authorPage, includeQ: hasSearched })
   }
@@ -152,6 +176,7 @@ export function SearchPage() {
       chips: filters,
       labels: selectedLabels,
       readingDifficulties: selectedDifficulties,
+      favoriteLists: selectedFavoriteLists,
       q: inputValue.trim() || urlQuery,
     }))
   }
@@ -226,6 +251,12 @@ export function SearchPage() {
             selected={selectedDifficulties}
             onToggle={handleToggleDifficulty}
             onClear={handleClearDifficulties}
+          />
+          <FavoriteListFilters
+            lists={favoriteChips}
+            selected={selectedFavoriteLists}
+            onToggle={handleToggleFavoriteList}
+            onClear={handleClearFavoriteLists}
           />
         </form>
       </PageCard>
@@ -466,6 +497,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
               </div>
             )}
             <div className="flex gap-1 items-center">
+              <FavoriteStar itemType="BOOK" itemId={book.id} />
               <IconButton
                 to={`/books/${book.id}`}
                 icon={<BookIcon />}
@@ -576,6 +608,7 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
               </StatusBadge>
             )}
             <div className="flex items-center gap-1">
+              <FavoriteStar itemType="AUTHOR" itemId={author.id} />
               <IconButton
                 to={`/authors/${author.id}`}
                 icon={<AuthorIcon />}
