@@ -78,7 +78,8 @@ frontend/src/
 ├── components/              # Reusable components
 │   ├── layout/
 │   │   ├── AppLayout.tsx    # Main layout wrapper
-│   │   └── Navigation.tsx   # Top navigation menu
+│   │   ├── Navigation.tsx   # Top navigation menu
+│   │   └── BranchNameDisplay.tsx # Nav brand; says DEV on library-dev hosts
 │   │
 │   ├── ui/                  # Basic UI components
 │   │   ├── Button.tsx       # Styled button variants

@@ -281,4 +281,19 @@ public class NavigationUITest {
         assertThat(page.locator("[data-test='nav-authors']")).isVisible();
         assertThat(page.locator("[data-test='nav-search']")).isVisible();
     }
+
+    @Test
+    @DisplayName("Upper left brand shows the branch name on local hosts, not DEV")
+    void testNavBrandShowsBranchNameLocally() {
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='navigation']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
+
+        Locator brand = page.locator("[data-test='branch-name']");
+        assertThat(brand).isVisible();
+        assertThat(brand).containsText("The Test Library Branch");
+        assertThat(brand).containsText("of the Test Library System");
+        assertThat(brand).not().hasText("DEV");
+    }
 }
