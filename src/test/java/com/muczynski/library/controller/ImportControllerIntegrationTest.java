@@ -561,6 +561,7 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.hasFreeOnlineText").exists())
                 .andExpect(jsonPath("$.hasFreeOnlineAudio").exists())
                 .andExpect(jsonPath("$.withdrawn").exists())
+                .andExpect(jsonPath("$.requested").exists())
                 .andExpect(jsonPath("$.availableAtYdl").exists())
                 .andExpect(jsonPath("$.ydlPaper").exists())
                 .andExpect(jsonPath("$.ydlEbook").exists())
@@ -611,13 +612,30 @@ class ImportControllerIntegrationTest {
         ignored.setLibrary(testLibrary);
         bookRepository.save(ignored);
 
+        Book withdrawnWithLoc = new Book();
+        withdrawnWithLoc.setTitle("Availability Stats Withdrawn With Loc");
+        withdrawnWithLoc.setDateAddedToLibrary(LocalDateTime.now());
+        withdrawnWithLoc.setStatus(BookStatus.WITHDRAWN);
+        withdrawnWithLoc.setLocNumber("PS3001.W11");
+        withdrawnWithLoc.setLibrary(testLibrary);
+        bookRepository.save(withdrawnWithLoc);
+
+        Book requestedWithLoc = new Book();
+        requestedWithLoc.setTitle("Availability Stats Requested With Loc");
+        requestedWithLoc.setDateAddedToLibrary(LocalDateTime.now());
+        requestedWithLoc.setStatus(BookStatus.REQUESTED);
+        requestedWithLoc.setLocNumber("PS3001.R11");
+        requestedWithLoc.setLibrary(testLibrary);
+        bookRepository.save(requestedWithLoc);
+
         mockMvc.perform(get("/api/import/availability-stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.electronicResource", equalTo(before.get("electronicResource").asInt() + 1)))
                 .andExpect(jsonPath("$.hasCallNumber", equalTo(before.get("hasCallNumber").asInt() + 1)))
                 .andExpect(jsonPath("$.hasFreeOnlineText", equalTo(before.get("hasFreeOnlineText").asInt() + 2)))
                 .andExpect(jsonPath("$.hasFreeOnlineAudio", equalTo(before.get("hasFreeOnlineAudio").asInt() + 1)))
-                .andExpect(jsonPath("$.withdrawn", equalTo(before.get("withdrawn").asInt() + 1)))
+                .andExpect(jsonPath("$.withdrawn", equalTo(before.get("withdrawn").asInt() + 2)))
+                .andExpect(jsonPath("$.requested", equalTo(before.get("requested").asInt() + 1)))
                 .andExpect(jsonPath("$.availableAtYdl", equalTo(before.get("availableAtYdl").asInt() + 1)))
                 .andExpect(jsonPath("$.ydlPaper", equalTo(before.get("ydlPaper").asInt() + 1)))
                 .andExpect(jsonPath("$.ydlEbook", equalTo(before.get("ydlEbook").asInt() + 1)))

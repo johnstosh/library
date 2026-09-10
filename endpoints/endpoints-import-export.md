@@ -67,4 +67,42 @@ Returns database statistics with total counts for each entity type.
 
 ---
 
-**Related:** ImportController.java, ImportService.java, ImportRequestDto.java, DatabaseStatsDto.java, feature-design-import-export.md
+### GET /api/import/availability-stats
+Returns named book-count statistics for the Data Management Books Availability section.
+
+**Authentication:** Librarian only
+
+**Response:** BookAvailabilityStatsDto containing:
+- `electronicResource` - books with `electronicResource = true`
+- `hasCallNumber` - books with a non-blank LOC call number, excluding `WITHDRAWN` and `REQUESTED`
+- `hasFreeOnlineText` - books with a non-blank free-text URL
+- `hasFreeOnlineAudio` - books whose free-text URL contains "librivox"
+- `withdrawn` / `requested` - books with those statuses
+- `availableAtYdl` / `ydlPaper` / `ydlEbook` / `ydlAudio`
+- `availableAtEmu` / `emuPaper` / `emuEbook` / `emuAudio`
+
+Boolean flags are counted only when true (null/false are excluded).
+
+**Example Response:**
+```json
+{
+  "electronicResource": 3,
+  "hasCallNumber": 8,
+  "hasFreeOnlineText": 7,
+  "hasFreeOnlineAudio": 2,
+  "withdrawn": 1,
+  "requested": 9,
+  "availableAtYdl": 5,
+  "ydlPaper": 2,
+  "ydlEbook": 4,
+  "ydlAudio": 1,
+  "availableAtEmu": 6,
+  "emuPaper": 3,
+  "emuEbook": 2,
+  "emuAudio": 1
+}
+```
+
+---
+
+**Related:** ImportController.java, ImportService.java, ImportRequestDto.java, DatabaseStatsDto.java, BookAvailabilityStatsDto.java, feature-design-import-export.md

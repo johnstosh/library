@@ -50,6 +50,13 @@ The Data Management page displays real-time database statistics showing:
 
 These statistics are fetched from the `/api/import/stats` endpoint which returns actual database counts (not cached/paginated data from the frontend). The statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
 
+### Books Availability (Data Management)
+
+The Data Management page (`/data-management`) includes a **Books Availability** section with named counts from `GET /api/import/availability-stats`.
+
+- **Layout**: Availability chips are a **single column on phone** (`grid-cols-1`) so labels such as "In-library materials" can be read in full. Labels wrap (no `truncate`). From `sm` the grid uses 2 columns, and from `md` it uses 3.
+- **In-library materials** (`hasCallNumber`): books with a non-blank LOC call number, **excluding** status `WITHDRAWN` and `REQUESTED`. Other statuses with a call number (ACTIVE, LOST, ON_ORDER) are counted.
+
 **API Response (DatabaseStatsDto)**:
 ```json
 {

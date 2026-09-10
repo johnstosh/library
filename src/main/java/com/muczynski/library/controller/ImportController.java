@@ -74,6 +74,7 @@ public class ImportController {
 
     /**
      * Returns named book-count statistics for electronic, call number, withdrawn, YDL, and EMU.
+     * hasCallNumber excludes WITHDRAWN and REQUESTED even when a call number is present.
      */
     @GetMapping("/availability-stats")
     @PreAuthorize("hasAuthority('LIBRARIAN')")

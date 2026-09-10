@@ -331,7 +331,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     long countByElectronicResourceTrue();
 
-    @Query("SELECT COUNT(b) FROM Book b WHERE b.locNumber IS NOT NULL AND TRIM(b.locNumber) <> ''")
+    /**
+     * Count books with a non-blank LOC call number, excluding WITHDRAWN and REQUESTED.
+     */
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.locNumber IS NOT NULL AND TRIM(b.locNumber) <> '' "
+            + "AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN "
+            + "AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED")
     long countWithCallNumber();
 
     @Query("SELECT COUNT(b) FROM Book b WHERE b.freeTextUrl IS NOT NULL AND TRIM(b.freeTextUrl) <> ''")

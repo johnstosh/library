@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 /**
  * Named book-count statistics for the Data Management availability section.
  * Boolean availability fields are counted only when true (null/false are excluded).
+ * hasCallNumber counts books with a non-blank LOC call number, excluding WITHDRAWN and REQUESTED.
  */
 @Data
 @AllArgsConstructor
