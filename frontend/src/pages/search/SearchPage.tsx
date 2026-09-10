@@ -113,11 +113,6 @@ export function SearchPage() {
     writeUrl({ q: inputValue.trim(), includeQ: true })
   }
 
-  const handleClear = () => {
-    setInputValue('')
-    setSearchParams({})
-  }
-
   const handleFilterToggle = (key: keyof SearchFilters) => {
     writeUrl({ chips: { ...filters, [key]: !filters[key] } })
   }
@@ -180,37 +175,25 @@ export function SearchPage() {
       {/* Search Form */}
       <PageCard padding={false} className="mb-8">
         <form onSubmit={handleSearch} className="p-4 space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start" data-test="search-controls">
-            <div className="flex min-w-0 flex-1 gap-2 items-start">
-              <div className="flex-1 min-w-0">
-                <Input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Enter book title or author name..."
-                  data-test="search-input"
-                />
-              </div>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isLoading}
-                leftIcon={<PiMagnifyingGlass />}
-                data-test="search-button"
-              >
-                Search
-              </Button>
+          <div className="flex gap-2 items-start" data-test="search-controls">
+            <div className="flex-1 min-w-0">
+              <Input
+                type="search"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Enter book title or author name..."
+                data-test="search-input"
+              />
             </div>
-            {(hasSearched || hasFilters) && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleClear}
-                data-test="clear-search"
-              >
-                Clear
-              </Button>
-            )}
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isLoading}
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="search-button"
+            >
+              Search
+            </Button>
           </div>
           {isLibrarian && (
             <Button

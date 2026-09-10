@@ -102,7 +102,9 @@ public class SearchUITest {
         // Verify search input field
         Locator searchInput = page.locator("[data-test='search-input']");
         assertThat(searchInput).isVisible();
+        assertThat(searchInput).hasAttribute("type", "search");
         assertThat(searchInput).hasAttribute("placeholder", "Enter book title or author name...");
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
 
         // Verify search button
         Locator searchButton = page.locator("[data-test='search-button']");
@@ -317,30 +319,19 @@ public class SearchUITest {
     }
 
     @Test
-    @DisplayName("Should clear search when clear button is clicked")
+    @DisplayName("Search query uses a native (x) like Books instead of a Clear button")
     void testClearSearch() {
         page.navigate(getBaseUrl() + "/search");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Perform a search
         page.fill("[data-test='search-input']", "Confessions");
         page.click("[data-test='search-button']");
-
-        // Wait for results
         page.waitForSelector("h2:has-text('Books')", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Click clear button
-        Locator clearButton = page.locator("[data-test='clear-search']");
-        assertThat(clearButton).isVisible();
-        clearButton.click();
-
-        // Verify search input is cleared
         Locator searchInput = page.locator("[data-test='search-input']");
-        assertThat(searchInput).hasValue("");
-
-        // Verify results are no longer displayed
-        Locator results = page.locator("h2:has-text('Books')");
-        assertThat(results).not().isVisible();
+        assertThat(searchInput).hasAttribute("type", "search");
+        assertThat(searchInput).hasValue("Confessions");
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
     }
 
     @Test
@@ -511,24 +502,26 @@ public class SearchUITest {
     }
 
     @Test
-    @DisplayName("Should clear URL when clearing search")
+    @DisplayName("Search after clearing the query field applies the empty query")
     void testClearSearchUpdatesUrl() {
         page.navigate(getBaseUrl() + "/search");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Perform a search
         page.fill("[data-test='search-input']", "Augustine");
         page.click("[data-test='search-button']");
-
-        // Wait for results and verify URL
         page.waitForSelector("[data-test^='author-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
         Assertions.assertTrue(page.url().contains("q=Augustine"), "URL should contain search query");
 
-        // Click clear button
-        page.click("[data-test='clear-search']");
+        page.fill("[data-test='search-input']", "");
+        assertThat(page.locator("[data-test='search-input']")).hasValue("");
+        Assertions.assertTrue(page.url().contains("q=Augustine"),
+                "URL should keep the query until Search, got: " + page.url());
 
-        // Verify URL no longer contains query parameter
-        Assertions.assertFalse(page.url().contains("q="), "URL should not contain search query after clear");
+        page.click("[data-test='search-button']");
+        page.waitForURL(url -> !url.contains("Augustine"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        Assertions.assertFalse(page.url().contains("Augustine"),
+                "URL should not contain the old query after Search, got: " + page.url());
     }
 
     @Test
@@ -619,7 +612,7 @@ public class SearchUITest {
                 new Page.WaitForURLOptions().setTimeout(10000L));
         Assertions.assertTrue(page.url().contains("mostRecent=true"),
                 "URL should contain mostRecent=true, got: " + page.url());
-        assertThat(page.locator("[data-test='clear-search']")).isVisible();
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
     }
 
     @Test
@@ -642,9 +635,7 @@ public class SearchUITest {
 
         // Results should show (test data has books with loc_number)
         assertThat(page.locator("h2:has-text('Books')")).isVisible();
-
-        // Clear button should appear
-        assertThat(page.locator("[data-test='clear-search']")).isVisible();
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
     }
 
     @Test
@@ -724,25 +715,20 @@ public class SearchUITest {
     }
 
     @Test
-    @DisplayName("Clearing search also deactivates filter chips")
+    @DisplayName("Clearing the query field does not deactivate filter chips")
     void testClearRemovesFilterChips() {
-        // Start with a filter chip active
-        page.navigate(getBaseUrl() + "/search?inLib=true");
+        page.navigate(getBaseUrl() + "/search?q=Summa&inLib=true");
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
+        page.waitForSelector("[data-test='search-results-books']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        // Wait for clear button to appear (filter active)
-        page.waitForSelector("[data-test='clear-search']", new Page.WaitForSelectorOptions().setTimeout(10000L));
-
-        // Click clear
-        page.click("[data-test='clear-search']");
-
-        // URL should no longer contain the filter param
-        Assertions.assertFalse(page.url().contains("inLib=true"),
-                "URL should not contain inLib=true after clear");
-
-        // Clear button should disappear
-        assertThat(page.locator("[data-test='clear-search']")).not().isVisible();
+        assertThat(page.locator("[data-test='search-input']")).hasAttribute("type", "search");
+        page.fill("[data-test='search-input']", "");
+        assertThat(page.locator("[data-test='search-input']")).hasValue("");
+        Assertions.assertTrue(page.url().contains("inLib=true"),
+                "Filter chips should stay after clearing the query, got: " + page.url());
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
     }
 
     @Test
@@ -775,7 +761,7 @@ public class SearchUITest {
                 new Page.WaitForURLOptions().setTimeout(10000L));
         Assertions.assertTrue(page.url().contains("labels=fiction"),
                 "URL should contain labels=fiction, got: " + page.url());
-        assertThat(page.locator("[data-test='clear-search']")).isVisible();
+        assertThat(page.locator("[data-test='clear-search']")).hasCount(0);
     }
 
     @Test

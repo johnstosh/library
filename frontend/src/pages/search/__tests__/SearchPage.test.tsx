@@ -156,7 +156,7 @@ describe('SearchPage librarian controls', () => {
 
     expect(screen.getByTestId('search-input')).not.toHaveClass('text-lg')
 
-    for (const testId of ['search-button', 'clear-search', 'open-in-books']) {
+    for (const testId of ['search-button', 'open-in-books']) {
       const button = screen.getByTestId(testId)
       expect(button).toHaveClass('text-base')
       expect(button).toHaveClass('px-4')
@@ -164,5 +164,15 @@ describe('SearchPage librarian controls', () => {
       expect(button).not.toHaveClass('text-lg')
       expect(button).not.toHaveClass('px-6')
     }
+  })
+})
+
+describe('SearchPage clear control', () => {
+  it('uses a search input (x) like Books instead of a Clear button', () => {
+    renderSearch('/search?q=Summa')
+
+    expect(screen.getByTestId('search-input')).toHaveAttribute('type', 'search')
+    expect(screen.queryByTestId('clear-search')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument()
   })
 })
