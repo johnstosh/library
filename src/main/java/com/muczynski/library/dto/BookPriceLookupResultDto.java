@@ -16,6 +16,8 @@ public class BookPriceLookupResultDto {
     private Long bookId;
     private String bookTitle;
     private boolean success;
+    private boolean rateLimited;
+    private boolean cancelled;
     private BookPriceDto hardcover;
     private BookPriceDto softcover;
     private String errorMessage;

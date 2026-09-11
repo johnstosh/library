@@ -153,6 +153,8 @@ export interface BookPriceLookupResultDto {
   bookId: number
   bookTitle?: string
   success: boolean
+  rateLimited?: boolean
+  cancelled?: boolean
   hardcover?: BookPriceDto
   softcover?: BookPriceDto
   errorMessage?: string

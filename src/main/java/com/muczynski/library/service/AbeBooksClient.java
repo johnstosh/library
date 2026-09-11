@@ -4,13 +4,18 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.BookCoverType;
+import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -61,11 +66,20 @@ public class AbeBooksClient {
 
     private final RestTemplate restTemplate;
     private final AbeBooksListingParser parser;
+    private final long requestDelayMs;
 
     public AbeBooksClient(@Qualifier("abeBooksRestTemplate") RestTemplate restTemplate,
                           AbeBooksListingParser parser) {
+        this(restTemplate, parser, 0);
+    }
+
+    @Autowired
+    public AbeBooksClient(@Qualifier("abeBooksRestTemplate") RestTemplate restTemplate,
+                          AbeBooksListingParser parser,
+                          @Value("${abebooks.request-delay-ms:500}") long requestDelayMs) {
         this.restTemplate = restTemplate;
         this.parser = parser;
+        this.requestDelayMs = requestDelayMs;
     }
 
     /**
@@ -112,13 +126,44 @@ public class AbeBooksClient {
     }
 
     private String fetch(URI uri) {
+        pauseBetweenRequests();
         log.info("AbeBooks search: {}", uri);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
         headers.set(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9");
-        ResponseEntity<String> response = restTemplate.exchange(
-                uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
-        return response.getBody();
+        long started = System.nanoTime();
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.exchange(
+                    uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        } catch (HttpStatusCodeException ex) {
+            HttpStatusCode status = ex.getStatusCode();
+            if (status.value() == 403 || status.value() == 429 || status.value() == 503) {
+                log.warn("AbeBooks HTTP {} for {}", status.value(), uri);
+                throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, ex);
+            }
+            throw ex;
+        }
+        long elapsedMs = (System.nanoTime() - started) / 1_000_000L;
+        String body = response.getBody();
+        if (parser.isRateLimited(body, elapsedMs)) {
+            log.warn("AbeBooks rate-limited response ({} ms, {} bytes) for {}",
+                    elapsedMs, body == null ? 0 : body.length(), uri);
+            throw new AbeBooksRateLimitedException();
+        }
+        return body;
+    }
+
+    private void pauseBetweenRequests() {
+        if (requestDelayMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(requestDelayMs);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+        }
     }
 
     URI buildSearchUri(String title, String author, int page) {
