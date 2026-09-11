@@ -27,7 +27,8 @@ export function PriceLookupResultsModal({
   results,
 }: PriceLookupResultsModalProps) {
   const successCount = results.filter((r) => r.success).length
-  const failureCount = results.length - successCount
+  const cancelledCount = results.filter((r) => r.cancelled).length
+  const failureCount = results.filter((r) => !r.success && !r.cancelled).length
 
   return (
     <Modal
@@ -45,7 +46,7 @@ export function PriceLookupResultsModal({
     >
       <div className="space-y-4">
         <div className="bg-gray-50 rounded-lg p-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${cancelledCount > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <div>
               <p className="text-sm font-medium text-gray-500">Total</p>
               <p className="text-2xl font-bold text-gray-900">{results.length}</p>
@@ -58,6 +59,12 @@ export function PriceLookupResultsModal({
               <p className="text-sm font-medium text-gray-500">None found</p>
               <p className="text-2xl font-bold text-red-600">{failureCount}</p>
             </div>
+            {cancelledCount > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-500">Cancelled</p>
+                <p className="text-2xl font-bold text-amber-600">{cancelledCount}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -86,11 +93,14 @@ export function PriceLookupResultsModal({
                     {result.success ? (
                       <PiCheckCircle className="w-5 h-5 text-green-600" />
                     ) : (
-                      <PiXCircle className="w-5 h-5 text-red-600" />
+                      <PiXCircle className={`w-5 h-5 ${result.cancelled ? 'text-amber-500' : 'text-red-600'}`} />
                     )}
                   </td>
                   <td className="px-4 py-3 truncate">
                     <EntityLink to={`/books/${result.bookId}`}>{result.bookTitle ?? `Book ${result.bookId}`}</EntityLink>
+                    {result.errorMessage && !result.success && (
+                      <p className="text-xs text-gray-500 truncate">{result.errorMessage}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800">{listingCell(result.hardcover)}</td>
                   <td className="px-4 py-3 text-sm text-gray-800">{listingCell(result.softcover)}</td>

@@ -93,7 +93,11 @@ public class PricesUITest {
         page.click("[data-test='nav-prices']");
         page.waitForURL("**/prices", new Page.WaitForURLOptions().setTimeout(10000L));
         assertThat(page.locator("h1")).containsText("Prices");
+        assertThat(page.locator("[data-test='book-price-filters']")).isVisible();
+        assertThat(page.locator("[data-test='book-price-filters']")).containsText("Pricing");
         assertThat(page.locator("[data-test='prices-max-total']")).isVisible();
+        assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-hardcover']")).isVisible();
         assertThat(page.locator("text=No prices match the current filters.")).isVisible();
     }

@@ -4,15 +4,19 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.BookCoverType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -21,6 +25,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -35,8 +40,12 @@ class AbeBooksClientTest {
     @Mock
     private AbeBooksListingParser parser;
 
-    @InjectMocks
     private AbeBooksClient client;
+
+    @BeforeEach
+    void setUp() {
+        client = new AbeBooksClient(restTemplate, parser);
+    }
 
     @Test
     void buildSearchUri_titleAndAuthorNoBindingFilter() {
@@ -90,6 +99,15 @@ class AbeBooksClientTest {
         assertEquals("O'Connor", AbeBooksClient.authorLastName("O'Connor, Joseph"));
         assertNull(AbeBooksClient.authorLastName("et al."));
         assertNull(AbeBooksClient.authorLastName(""));
+    }
+
+    @Test
+    void delayForRequestNumber_everyTenthIsLonger() {
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(1, 500, 5000));
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(9, 500, 5000));
+        assertEquals(5000, AbeBooksClient.delayForRequestNumber(10, 500, 5000));
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(11, 500, 5000));
+        assertEquals(5000, AbeBooksClient.delayForRequestNumber(20, 500, 5000));
     }
 
     @Test
@@ -167,6 +185,26 @@ class AbeBooksClientTest {
         assertTrue(first.contains("cond="));
         assertFalse(fallback.contains("an="));
         assertFalse(fallback.contains("cond="));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_httpForbidden_isRateLimited() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.FORBIDDEN, "Forbidden", new HttpHeaders(), new byte[0], null));
+
+        assertThrows(AbeBooksRateLimitedException.class,
+                () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_parserDetectsRateLimit() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("blocked"));
+        when(parser.isRateLimited(eq("blocked"), anyLong())).thenReturn(true);
+
+        assertThrows(AbeBooksRateLimitedException.class,
+                () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
     }
 
     @Test

@@ -8,12 +8,13 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -39,8 +40,12 @@ class BookPriceServiceTest {
     @Mock
     private AbeBooksClient abeBooksClient;
 
-    @InjectMocks
     private BookPriceService bookPriceService;
+
+    @BeforeEach
+    void setUp() {
+        bookPriceService = new BookPriceService(bookRepository, bookPriceRepository, abeBooksClient);
+    }
 
     @Test
     void lookupAndUpdateBook_savesHardcoverAndSoftcover() {
@@ -92,6 +97,51 @@ class BookPriceServiceTest {
         ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
         verify(bookPriceRepository, times(2)).save(captor.capture());
         assertEquals("No matching listing", captor.getAllValues().get(0).getLookupError());
+    }
+
+    @Test
+    void lookupAndUpdateBook_rateLimited_setsFlagWithoutRetryWhenRetriesZero() {
+        Book book = book("Emma", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(abeBooksClient.findCheapestGoodOrBetter(any(), any()))
+                .thenThrow(new AbeBooksRateLimitedException());
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.isRateLimited());
+        assertEquals(AbeBooksRateLimitedException.MESSAGE, result.getErrorMessage());
+        verify(abeBooksClient, times(1)).findCheapestGoodOrBetter(any(), any());
+    }
+
+    @Test
+    void lookupAndUpdateBook_rateLimited_retriesThenSucceeds() {
+        Book book = book("Emma", "Jane Austen");
+        BookPriceService retrying = new BookPriceService(
+                bookRepository, bookPriceRepository, abeBooksClient, 2, 0);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(abeBooksClient.findCheapestGoodOrBetter("Emma", "Jane Austen"))
+                .thenThrow(new AbeBooksRateLimitedException())
+                .thenThrow(new AbeBooksRateLimitedException())
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("4.86"))
+                                .shippingDollars(BigDecimal.ZERO)
+                                .condition("Used - Good")
+                                .detailsUrl("https://www.abebooks.com/h")
+                                .binding(BookCoverType.HARDCOVER)
+                                .build())
+                        .build());
+
+        BookPriceLookupResultDto result = retrying.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertFalse(result.isRateLimited());
+        verify(abeBooksClient, times(3)).findCheapestGoodOrBetter("Emma", "Jane Austen");
     }
 
     @Test

@@ -1,5 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import type { BookDto } from '@/types/dtos'
+import type { BookDto, BookPriceDto } from '@/types/dtos'
+
+/** Default "price older than N days" window on the Books page. */
+export const DEFAULT_PRICE_OLDER_DAYS = 90
 
 /**
  * Independent boolean chip filters shared by the Books and Search pages.
@@ -9,6 +12,7 @@ import type { BookDto } from '@/types/dtos'
  * Row 2: inLibrary, electronic, freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, requestedStatus, notActiveStatus, withoutFreeTextUrls
+ * Pricing (Books, librarians): noPrices, priceOlder
  *
  * notActiveStatus is special and always constrains:
  *   off → hide WITHDRAWN and REQUESTED; on → only non-ACTIVE statuses (including REQUESTED).
@@ -32,6 +36,8 @@ export interface BookChipFilters {
   notActiveStatus: boolean
   requestedStatus: boolean
   withoutFreeTextUrls: boolean
+  noPrices: boolean
+  priceOlder: boolean
 }
 
 export const defaultBookChipFilters: BookChipFilters = {
@@ -55,6 +61,8 @@ export const defaultBookChipFilters: BookChipFilters = {
   notActiveStatus: false,
   requestedStatus: false,
   withoutFreeTextUrls: false,
+  noPrices: false,
+  priceOlder: false,
 }
 
 const TEMP_TITLE_RE = /^\d{4}-\d{1,2}-\d{1,2}/
@@ -154,5 +162,52 @@ export function applyChipFilters<T extends Pick<
     if (chips.withoutFreeTextUrls && !isBlank(book.freeTextUrl)) return false
 
     return true
+  })
+}
+
+/** True when a row is an actual AbeBooks listing, not a failed/cancelled lookup. */
+export function isSavedPriceListing(price: BookPriceDto): boolean {
+  return price.priceDollars != null && !price.lookupError
+}
+
+/**
+ * Books/Prices price chips. When both are on they OR: no usable listing
+ * (missing rows, "No matching listing", rate-limited) or a successful
+ * lookup older than {@code priceOlderDays}.
+ */
+export function applyBookPriceFilters<T extends { id: number }>(
+  books: T[],
+  prices: BookPriceDto[],
+  options: { noPrices: boolean; priceOlder: boolean; priceOlderDays: number },
+  now = Date.now(),
+): T[] {
+  if (!options.noPrices && !options.priceOlder) {
+    return books
+  }
+  const latestSavedByBook = new Map<number, number>()
+  for (const price of prices) {
+    if (!isSavedPriceListing(price)) {
+      continue
+    }
+    const parsed = price.lookedUpAt ? Date.parse(price.lookedUpAt) : Number.NaN
+    const ts = Number.isFinite(parsed) ? parsed : 0
+    const prev = latestSavedByBook.get(price.bookId)
+    if (prev == null || ts > prev) {
+      latestSavedByBook.set(price.bookId, ts)
+    }
+  }
+  const days = options.priceOlderDays > 0 ? options.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS
+  const cutoff = now - days * 24 * 60 * 60 * 1000
+  return books.filter((book) => {
+    const latest = latestSavedByBook.get(book.id)
+    const noPricesMatch = options.noPrices && latest == null
+    const olderMatch = options.priceOlder && latest != null && latest < cutoff
+    if (options.noPrices && options.priceOlder) {
+      return noPricesMatch || olderMatch
+    }
+    if (options.noPrices) {
+      return noPricesMatch
+    }
+    return olderMatch
   })
 }
