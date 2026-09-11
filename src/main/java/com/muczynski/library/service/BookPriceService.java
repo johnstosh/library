@@ -8,10 +8,13 @@ import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +32,26 @@ public class BookPriceService {
     private final BookRepository bookRepository;
     private final BookPriceRepository bookPriceRepository;
     private final AbeBooksClient abeBooksClient;
+    private final int rateLimitRetries;
+    private final long rateLimitBackoffMs;
 
     public BookPriceService(BookRepository bookRepository,
                             BookPriceRepository bookPriceRepository,
                             AbeBooksClient abeBooksClient) {
+        this(bookRepository, bookPriceRepository, abeBooksClient, 0, 0);
+    }
+
+    @Autowired
+    public BookPriceService(BookRepository bookRepository,
+                            BookPriceRepository bookPriceRepository,
+                            AbeBooksClient abeBooksClient,
+                            @Value("${abebooks.rate-limit-retries:2}") int rateLimitRetries,
+                            @Value("${abebooks.rate-limit-backoff-ms:2000}") long rateLimitBackoffMs) {
         this.bookRepository = bookRepository;
         this.bookPriceRepository = bookPriceRepository;
         this.abeBooksClient = abeBooksClient;
+        this.rateLimitRetries = rateLimitRetries;
+        this.rateLimitBackoffMs = rateLimitBackoffMs;
     }
 
     @Transactional(readOnly = true)
@@ -70,14 +86,26 @@ public class BookPriceService {
         BookPrice hardcover;
         BookPrice softcover;
         try {
-            AbeBooksCoverListings found = abeBooksClient.findCheapestGoodOrBetter(
-                    book.getTitle(), authorName);
+            AbeBooksCoverListings found = findWithBackoff(book.getTitle(), authorName);
             hardcover = found.getHardcover() != null
                     ? saveListing(book, BookCoverType.HARDCOVER, found.getHardcover())
                     : saveError(book, BookCoverType.HARDCOVER, "No matching listing");
             softcover = found.getSoftcover() != null
                     ? saveListing(book, BookCoverType.SOFTCOVER, found.getSoftcover())
                     : saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+        } catch (AbeBooksRateLimitedException ex) {
+            log.warn("AbeBooks rate limited for book {}", book.getId());
+            hardcover = saveError(book, BookCoverType.HARDCOVER, AbeBooksRateLimitedException.MESSAGE);
+            softcover = saveError(book, BookCoverType.SOFTCOVER, AbeBooksRateLimitedException.MESSAGE);
+            return BookPriceLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .bookTitle(book.getTitle())
+                    .success(false)
+                    .rateLimited(true)
+                    .hardcover(toDto(hardcover))
+                    .softcover(toDto(softcover))
+                    .errorMessage(AbeBooksRateLimitedException.MESSAGE)
+                    .build();
         } catch (Exception ex) {
             log.warn("AbeBooks lookup failed for book {}", book.getId(), ex);
             String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
@@ -95,6 +123,36 @@ public class BookPriceService {
                 .softcover(toDto(softcover))
                 .errorMessage(error)
                 .build();
+    }
+
+    private AbeBooksCoverListings findWithBackoff(String title, String author) {
+        AbeBooksRateLimitedException last = null;
+        int attempts = Math.max(1, rateLimitRetries + 1);
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            if (attempt > 0) {
+                long waitMs = rateLimitBackoffMs <= 0 ? 0 : rateLimitBackoffMs * (1L << (attempt - 1));
+                log.info("AbeBooks backoff {} ms before retry {} for title {}", waitMs, attempt, title);
+                sleepQuietly(waitMs);
+            }
+            try {
+                return abeBooksClient.findCheapestGoodOrBetter(title, author);
+            } catch (AbeBooksRateLimitedException ex) {
+                last = ex;
+            }
+        }
+        throw last != null ? last : new AbeBooksRateLimitedException();
+    }
+
+    private static void sleepQuietly(long waitMs) {
+        if (waitMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(waitMs);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+        }
     }
 
     private BookPrice saveListing(Book book, BookCoverType cover, AbeBooksListing listing) {

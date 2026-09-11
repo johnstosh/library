@@ -22,6 +22,13 @@ const { prices, books } = vi.hoisted(() => {
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
     },
+    {
+      id: 3,
+      title: 'Missing Listing',
+      author: 'Unknown',
+      status: 'ACTIVE',
+      lastModified: '2026-01-01T00:00:00',
+    },
   ]
   const prices: BookPriceDto[] = [
     {
@@ -47,6 +54,18 @@ const { prices, books } = vi.hoisted(() => {
       shippingDollars: 5,
       totalDollars: 45,
       condition: 'Used - Very good',
+      lookedUpAt: '2026-09-10T12:00:00',
+    },
+    {
+      id: 13,
+      bookId: 3,
+      bookTitle: 'Missing Listing',
+      author: 'Unknown',
+      cover: 'HARDCOVER',
+      priceDollars: null,
+      shippingDollars: null,
+      totalDollars: null,
+      lookupError: 'No matching listing',
       lookedUpAt: '2026-09-10T12:00:00',
     },
   ]
@@ -93,8 +112,11 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-11')).toHaveTextContent('$4.86')
     expect(screen.getByTestId('price-total-12')).toHaveTextContent('$45.00')
 
+    expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
+    expect(screen.getByTestId('filter-no-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+
     fireEvent.change(screen.getByTestId('prices-max-total'), { target: { value: '10' } })
-    fireEvent.click(screen.getByTestId('prices-search-button'))
 
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
@@ -104,5 +126,12 @@ describe('PricesPage', () => {
     renderPrices('/prices?hardcover=true')
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+  })
+
+  it('noPrices keeps No matching listing rows and hides real listings', () => {
+    renderPrices('/prices?noPrices=true')
+    expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+    expect(screen.getByTestId('price-error-13')).toHaveTextContent('No matching listing')
   })
 })

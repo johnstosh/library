@@ -64,6 +64,22 @@ class AbeBooksListingParserTest {
     }
 
     @Test
+    void isRateLimited_blockPageAndFastEmptyResponse() {
+        assertTrue(parser.isBlockedPage(""));
+        assertTrue(parser.isBlockedPage("<html>Pardon Our Interruption captcha</html>"));
+        assertTrue(parser.isBlockedPage("<html>Access Denied</html>"));
+        assertFalse(parser.isBlockedPage(
+                "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>"));
+        assertFalse(parser.isRateLimited(PAGE, 80));
+        assertTrue(parser.isRateLimited(
+                "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>",
+                80));
+        assertFalse(parser.isRateLimited(
+                "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>",
+                400));
+    }
+
+    @Test
     void hasNextPage_enabledAndDisabled() {
         assertTrue(parser.hasNextPage(PAGE));
         assertFalse(parser.hasNextPage("<html><button data-test-id=\"next-page\" disabled>Next</button></html>"));

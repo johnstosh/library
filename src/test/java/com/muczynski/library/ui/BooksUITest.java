@@ -130,6 +130,11 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
+        assertThat(page.locator("[data-test='book-price-filters']")).isVisible();
+        assertThat(page.locator("[data-test='book-price-filters']")).containsText("Pricing");
+        assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-in-library']")).isVisible();

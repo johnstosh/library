@@ -1,7 +1,8 @@
 // (c) Copyright 2025 by Muczynski
 import { describe, expect, it } from 'vitest'
-import type { BookDto } from '@/types/dtos'
+import type { BookDto, BookPriceDto } from '@/types/dtos'
 import {
+  applyBookPriceFilters,
   applyChipFilters,
   defaultBookChipFilters,
   isAnyChipActive,
@@ -30,6 +31,8 @@ describe('defaultBookChipFilters', () => {
     // Shared defaults stay off (Search). The Books page turns mostRecent on
     // from an empty /books URL (see bookFilterParams.ts).
     expect(defaultBookChipFilters.mostRecent).toBe(false)
+    expect(defaultBookChipFilters.noPrices).toBe(false)
+    expect(defaultBookChipFilters.priceOlder).toBe(false)
     expect(isAnyChipActive(defaultBookChipFilters)).toBe(false)
   })
 })
@@ -64,6 +67,7 @@ describe('applyChipFilters', () => {
   })
 
   it('requestedStatus shows only requested books and overrides default hiding', () => {
+    const active = book({ id: 1, status: 'ACTIVE' })
     const requested = book({ id: 2, status: 'REQUESTED' })
     expect(applyChipFilters([requested, active], chips({ requestedStatus: true }))).toEqual([requested])
   })
@@ -192,5 +196,74 @@ describe('applyChipFilters', () => {
       const result = applyChipFilters([temp, dated], chips({ mostRecent: true }))
       expect(result.map((b) => b.id)).toEqual([1, 2])
     })
+  })
+})
+
+function price(overrides: Partial<BookPriceDto> = {}): BookPriceDto {
+  return {
+    id: 1,
+    bookId: 1,
+    cover: 'HARDCOVER',
+    lookedUpAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+describe('applyBookPriceFilters', () => {
+  const books = [book({ id: 1 }), book({ id: 2 }), book({ id: 3 })]
+  const now = Date.parse('2026-09-11T00:00:00Z')
+
+  it('keeps all books when both chips are off', () => {
+    expect(
+      applyBookPriceFilters(books, [price({ bookId: 1 })], { noPrices: false, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1, 2, 3])
+  })
+
+  it('noPrices keeps books with no price rows', () => {
+    expect(
+      applyBookPriceFilters(books, [price({ bookId: 1, priceDollars: 4.86 })], { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([2, 3])
+  })
+
+  it('noPrices keeps books whose only rows are No matching listing or rate-limited', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: null, lookupError: 'No matching listing' }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'AbeBooks rate limited' }),
+      price({ bookId: 3, priceDollars: 4.86, lookupError: undefined }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1, 2])
+  })
+
+  it('noPrices is false when at least one cover has a listing', () => {
+    const prices = [
+      price({ bookId: 1, cover: 'HARDCOVER', priceDollars: 4.86 }),
+      price({ bookId: 1, id: 2, cover: 'SOFTCOVER', priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([2, 3])
+  })
+
+  it('priceOlder keeps books whose latest lookup is older than N days', () => {
+    const prices = [
+      price({ id: 1, bookId: 1, priceDollars: 4.86, lookedUpAt: '2026-01-01T00:00:00Z' }),
+      price({ id: 2, bookId: 2, priceDollars: 4.86, lookedUpAt: '2026-09-01T00:00:00Z' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: false, priceOlder: true, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1])
+  })
+
+  it('ORs noPrices with priceOlder when both are on', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: 4.86, lookedUpAt: '2026-01-01T00:00:00Z' }),
+      price({ bookId: 2, priceDollars: 4.86, lookedUpAt: '2026-09-01T00:00:00Z' }),
+      price({ id: 4, bookId: 3, priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: true, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1, 3])
   })
 })

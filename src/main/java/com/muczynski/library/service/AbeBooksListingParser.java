@@ -56,6 +56,47 @@ public class AbeBooksListingParser {
     }
 
     /**
+     * True when the HTML (or lack of it) looks like a block/captcha page
+     * rather than an AbeBooks search-results page.
+     */
+    public boolean isBlockedPage(String html) {
+        if (html == null || html.isBlank()) {
+            return true;
+        }
+        String lower = html.toLowerCase(Locale.ROOT);
+        if (lower.contains("pardon our interruption")
+                || lower.contains("captcha")
+                || lower.contains("access denied")
+                || lower.contains("unusual traffic")
+                || lower.contains("verify you are human")
+                || lower.contains("cf-browser-verification")
+                || lower.contains("request unsuccessful")) {
+            return true;
+        }
+        boolean hasListing = html.contains("data-srp-item-role=\"listing\"")
+                || html.contains("data-srp-item-role='listing'");
+        if (hasListing) {
+            return false;
+        }
+        boolean looksLikeSearchResults = html.contains("srp-search-results-list")
+                || lower.contains("closest match to your search")
+                || html.contains("data-test-id=\"result-count\"");
+        return !looksLikeSearchResults;
+    }
+
+    /**
+     * Rate-limited when the body is a block page, or when a no-listing
+     * response returned faster than a real SearchResults page (~250ms).
+     */
+    public boolean isRateLimited(String html, long elapsedMs) {
+        if (isBlockedPage(html)) {
+            return true;
+        }
+        boolean hasListing = html != null && html.contains("data-srp-item-role=\"listing\"");
+        return !hasListing && elapsedMs >= 0 && elapsedMs < 250;
+    }
+
+    /**
      * True when the search-results pager has an enabled Next control.
      */
     public boolean hasNextPage(String html) {
