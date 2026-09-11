@@ -223,6 +223,7 @@ export function BooksPage() {
                     readingDifficulties: selectedDifficulties,
                     favoriteLists: selectedFavoriteLists,
                     q: inputValue.trim() || urlQuery,
+                    priceOlderDays,
                   }),
                 )
               }

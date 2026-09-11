@@ -240,6 +240,7 @@ export function pricesPathFromFilters(state: {
   readingDifficulties?: string[]
   favoriteLists?: string[]
   q: string
+  priceOlderDays?: number
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -248,6 +249,7 @@ export function pricesPathFromFilters(state: {
       readingDifficulties: state.readingDifficulties ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
+      priceOlderDays: state.priceOlderDays,
     },
     'prices',
   )

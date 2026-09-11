@@ -212,6 +212,17 @@ describe('pricesPathFromFilters', () => {
       }),
     ).toBe('/prices?q=Summa&labels=classic&inLib=true&mostRecent=true')
   })
+
+  it('copies Pricing chips and days onto /prices', () => {
+    expect(
+      pricesPathFromFilters({
+        chips: chips({ noPrices: true, priceOlder: true }),
+        labels: [],
+        q: '',
+        priceOlderDays: 45,
+      }),
+    ).toBe('/prices?noPrices=true&priceOlder=true&priceOlderDays=45')
+  })
 })
 
 describe('matchesBookQuery', () => {

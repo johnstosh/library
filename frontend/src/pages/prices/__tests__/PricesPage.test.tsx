@@ -93,8 +93,11 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-11')).toHaveTextContent('$4.86')
     expect(screen.getByTestId('price-total-12')).toHaveTextContent('$45.00')
 
+    expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
+    expect(screen.getByTestId('filter-no-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+
     fireEvent.change(screen.getByTestId('prices-max-total'), { target: { value: '10' } })
-    fireEvent.click(screen.getByTestId('prices-search-button'))
 
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
@@ -103,6 +106,12 @@ describe('PricesPage', () => {
   it('filters by hardcover chip', () => {
     renderPrices('/prices?hardcover=true')
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+  })
+
+  it('noPrices hides every saved listing', () => {
+    renderPrices('/prices?noPrices=true')
+    expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
   })
 })

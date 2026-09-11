@@ -45,11 +45,11 @@ Deleting a book cascades to its prices.
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
 - Filters:
-  - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
-  - Hardcover / Softcover
-  - Has listing / Lookup failed
-  - Looked up recently (last 30 days)
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
+  - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
+    - Hardcover / Softcover, Has listing / Lookup failed, Looked up recently (last 30 days)
+    - **No prices saved** and **Price older than N days** (default 90), matching Books
+    - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
 - Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Visiting `/prices` from the nav with no query shows every saved price.
 
 ## API

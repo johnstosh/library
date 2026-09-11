@@ -16,14 +16,16 @@ import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
 import { useBooks } from '@/api/books'
-import { applyChipFilters } from '@/utils/bookChipFilters'
+import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
   matchesBookQuery,
+  priceOlderDaysFromSearchParams,
 } from '@/utils/bookFilterParams'
+import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
 import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
@@ -42,6 +44,7 @@ import {
 export function PricesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const chips = chipsFromSearchParams(searchParams, 'prices')
+  const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
@@ -69,6 +72,7 @@ export function PricesPage() {
     q?: string
     priceChips?: PriceChipFilters
     maxTotal?: string
+    priceOlderDays?: number
   }) => {
     const bookParams = bookFilterParamsForUrl(
       {
@@ -77,6 +81,7 @@ export function PricesPage() {
         readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
         favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
         q: next.q !== undefined ? next.q : urlQuery,
+        priceOlderDays: next.priceOlderDays ?? priceOlderDays,
       },
       'prices',
     )
@@ -97,12 +102,19 @@ export function PricesPage() {
       'bookIds',
     )
     return new Set(
-      applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
-        .filter((book) => matchesBookQuery(book, urlQuery))
-        .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id))
-        .map((book) => book.id),
+      applyBookPriceFilters(
+        applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
+          .filter((book) => matchesBookQuery(book, urlQuery))
+          .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
+        allPrices,
+        {
+          noPrices: chips.noPrices,
+          priceOlder: chips.priceOlder,
+          priceOlderDays,
+        },
+      ).map((book) => book.id),
     )
-  }, [allBooks, chips, favoriteSummary?.lists, selectedDifficulties, selectedFavoriteLists, urlQuery])
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, urlQuery])
 
   const bookFiltersActive =
     urlQuery.trim().length > 0 ||
@@ -151,27 +163,10 @@ export function PricesPage() {
                 data-test="prices-title-filter"
               />
             </div>
-            <div className="w-full sm:w-48">
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                label="Total less than"
-                hideLabel
-                placeholder="Total less than $"
-                value={maxTotalInput}
-                onChange={(e) => setMaxTotalInput(e.target.value)}
-                data-test="prices-max-total"
-              />
-            </div>
             <Button type="submit" variant="primary" data-test="prices-search-button">
               Apply
             </Button>
           </form>
-          <PriceFilters
-            chips={priceChips}
-            onToggle={(key) => writeUrl({ priceChips: { ...priceChips, [key]: !priceChips[key] } })}
-          />
           <BookFilters
             chips={chips}
             onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
@@ -208,6 +203,25 @@ export function PricesPage() {
               writeUrl({ favoriteLists: next })
             }}
             onClear={() => writeUrl({ favoriteLists: [] })}
+          />
+          <BookPriceFilters
+            chips={chips}
+            onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
+            priceOlderDays={priceOlderDays}
+            onPriceOlderDaysChange={(days) =>
+              writeUrl({ chips: { ...chips, priceOlder: true }, priceOlderDays: days })
+            }
+            listingFilters={
+              <PriceFilters
+                chips={priceChips}
+                onToggle={(key) => writeUrl({ priceChips: { ...priceChips, [key]: !priceChips[key] } })}
+              />
+            }
+            maxTotal={maxTotalInput}
+            onMaxTotalChange={(value) => {
+              setMaxTotalInput(value)
+              writeUrl({ maxTotal: value.trim() })
+            }}
           />
         </div>
 
