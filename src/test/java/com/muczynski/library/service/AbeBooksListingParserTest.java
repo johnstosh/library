@@ -76,6 +76,7 @@ class AbeBooksListingParserTest {
         assertTrue(AbeBooksListingParser.isGoodOrBetter("Used - Very good"));
         assertTrue(AbeBooksListingParser.isGoodOrBetter("Used - Good"));
         assertTrue(AbeBooksListingParser.isGoodOrBetter("As New"));
+        assertTrue(AbeBooksListingParser.isGoodOrBetter("Used"));
         assertFalse(AbeBooksListingParser.isGoodOrBetter("Used - Fair"));
         assertFalse(AbeBooksListingParser.isGoodOrBetter("Poor"));
         assertFalse(AbeBooksListingParser.isGoodOrBetter("As Described"));

@@ -11,13 +11,13 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
   - `an` = first author's last name (semicolons, `et al.`, honorifics, generational and religious-order suffixes stripped)
   - no `bi` parameter
   - `sortby=17` = lowest total price (item + shipping)
-  - `cond=new an fine nf vg good` = good or better (excludes Fair, Poor, As Described)
+  - `cond=new an fine nf vg good` = good or better on the first search (excludes Fair, Poor, As Described). Title-only fallback omits `cond` so ungraded `Used` listings still appear.
   - `ds=30`; further pages use `p` / `spo` when the first page does not yet have both covers
 - Query strategy:
   1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages).
-  2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`) with the same paging.
+  2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`, no `cond`) with the same paging.
 - Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown** and fill any cover that still lacks a typed listing.
-- The cheapest remaining listing per cover is saved. Fair/Poor listings are also rejected in the HTML parser as a second filter.
+- The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
 
 ## Saved fields (`book_price`)
 One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrites.

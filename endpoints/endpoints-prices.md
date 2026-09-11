@@ -32,7 +32,7 @@ Returns every saved price row, including book title and author.
 
 ## POST /api/prices/lookup/{bookId}
 
-Looks up the cheapest AbeBooks hardcover and softcover listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill a cover that has no typed match.
+Looks up the cheapest AbeBooks hardcover and softcover listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only without the condition filter for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill a cover that has no typed match. Ungraded `Used` listings are kept; Fair/Poor/As Described are not.
 
 **Authentication:** Librarian
 

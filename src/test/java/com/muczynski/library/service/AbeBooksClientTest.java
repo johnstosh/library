@@ -6,6 +6,7 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.BookCoverType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -152,13 +153,20 @@ class AbeBooksClientTest {
         when(parser.hasNextPage("title-only")).thenReturn(false);
 
         AbeBooksCoverListings found = client.findCheapestGoodOrBetter(
-                "The Norwayman / Bernadette of Lourdes / The Woodcarver of Tyrol / Sea of Glory",
-                "Nobody");
+                "The Story of Thomas More / Weddings in the Family / The Road to Damascus / From an Altar Screen",
+                "John Farrow; et al. (Fife; O'Brien; Chavez; Luce)");
 
         assertEquals(unknown, found.getHardcover());
         assertEquals(unknown, found.getSoftcover());
+        ArgumentCaptor<URI> uris = ArgumentCaptor.forClass(URI.class);
         verify(restTemplate, times(2))
-                .exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+                .exchange(uris.capture(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+        String first = uris.getAllValues().get(0).toString();
+        String fallback = uris.getAllValues().get(1).toString();
+        assertTrue(first.contains("an=Farrow"));
+        assertTrue(first.contains("cond="));
+        assertFalse(fallback.contains("an="));
+        assertFalse(fallback.contains("cond="));
     }
 
     @Test

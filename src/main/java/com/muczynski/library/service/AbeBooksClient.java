@@ -72,7 +72,8 @@ public class AbeBooksClient {
      * Searches AbeBooks by title and author last name, pages until both
      * covers have a typed listing (or pages run out), then fills any missing
      * cover from the cheapest unknown-binding listing. Long titles retry
-     * without the author when the first search cannot fill both covers.
+     * title-only without the Good-or-better URL filter when the first search
+     * cannot fill both covers (ungraded "Used" listings are excluded by {@code cond}).
      */
     public AbeBooksCoverListings findCheapestGoodOrBetter(String title, String author) {
         String cleanedTitle = cleanTitle(title);
@@ -81,19 +82,19 @@ public class AbeBooksClient {
         }
         String lastName = authorLastName(author);
         CoverAccumulator acc = new CoverAccumulator();
-        searchPaged(cleanedTitle, lastName, acc);
+        searchPaged(cleanedTitle, lastName, acc, true);
         if (!acc.canAssignBoth()
                 && lastName != null
                 && letterWordCount(cleanedTitle) >= TITLE_ONLY_MIN_WORDS) {
             log.info("AbeBooks title-only fallback for long title: {}", cleanedTitle);
-            searchPaged(cleanedTitle, null, acc);
+            searchPaged(cleanedTitle, null, acc, false);
         }
         return acc.toResult();
     }
 
-    private void searchPaged(String title, String author, CoverAccumulator acc) {
+    private void searchPaged(String title, String author, CoverAccumulator acc, boolean restrictCondition) {
         for (int page = 0; page < MAX_PAGES; page++) {
-            String html = fetch(buildSearchUri(title, author, page));
+            String html = fetch(buildSearchUri(title, author, page, restrictCondition));
             if (html == null || html.isBlank()) {
                 break;
             }
@@ -121,14 +122,20 @@ public class AbeBooksClient {
     }
 
     URI buildSearchUri(String title, String author, int page) {
+        return buildSearchUri(title, author, page, true);
+    }
+
+    URI buildSearchUri(String title, String author, int page, boolean restrictCondition) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(SEARCH_URL)
                 .queryParam("sts", "t")
                 .queryParam("tn", title)
                 .queryParam("sortby", "17")
                 .queryParam("ds", PAGE_SIZE)
                 .queryParam("pt", "book")
-                .queryParam("cond", GOOD_OR_BETTER_COND)
                 .queryParam("dym", "on");
+        if (restrictCondition) {
+            builder.queryParam("cond", GOOD_OR_BETTER_COND);
+        }
         if (author != null && !author.isBlank()) {
             builder.queryParam("an", author);
         }

@@ -155,7 +155,8 @@ public class AbeBooksListingParser {
                 || normalized.contains("like new")
                 || normalized.contains("as new")
                 || normalized.contains("near fine")
-                || containsWord(normalized, "new");
+                || containsWord(normalized, "new")
+                || containsWord(normalized, "used");
     }
 
     static BigDecimal parseMoney(String text) {
