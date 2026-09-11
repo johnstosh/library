@@ -221,14 +221,35 @@ describe('applyBookPriceFilters', () => {
 
   it('noPrices keeps books with no price rows', () => {
     expect(
-      applyBookPriceFilters(books, [price({ bookId: 1 })], { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+      applyBookPriceFilters(books, [price({ bookId: 1, priceDollars: 4.86 })], { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([2, 3])
+  })
+
+  it('noPrices keeps books whose only rows are No matching listing or rate-limited', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: null, lookupError: 'No matching listing' }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'AbeBooks rate limited' }),
+      price({ bookId: 3, priceDollars: 4.86, lookupError: undefined }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1, 2])
+  })
+
+  it('noPrices is false when at least one cover has a listing', () => {
+    const prices = [
+      price({ bookId: 1, cover: 'HARDCOVER', priceDollars: 4.86 }),
+      price({ bookId: 1, id: 2, cover: 'SOFTCOVER', priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
     ).toEqual([2, 3])
   })
 
   it('priceOlder keeps books whose latest lookup is older than N days', () => {
     const prices = [
-      price({ id: 1, bookId: 1, lookedUpAt: '2026-01-01T00:00:00Z' }),
-      price({ id: 2, bookId: 2, lookedUpAt: '2026-09-01T00:00:00Z' }),
+      price({ id: 1, bookId: 1, priceDollars: 4.86, lookedUpAt: '2026-01-01T00:00:00Z' }),
+      price({ id: 2, bookId: 2, priceDollars: 4.86, lookedUpAt: '2026-09-01T00:00:00Z' }),
     ]
     expect(
       applyBookPriceFilters(books, prices, { noPrices: false, priceOlder: true, priceOlderDays: 90 }, now).map((b) => b.id),
@@ -237,8 +258,9 @@ describe('applyBookPriceFilters', () => {
 
   it('ORs noPrices with priceOlder when both are on', () => {
     const prices = [
-      price({ bookId: 1, lookedUpAt: '2026-01-01T00:00:00Z' }),
-      price({ bookId: 2, lookedUpAt: '2026-09-01T00:00:00Z' }),
+      price({ bookId: 1, priceDollars: 4.86, lookedUpAt: '2026-01-01T00:00:00Z' }),
+      price({ bookId: 2, priceDollars: 4.86, lookedUpAt: '2026-09-01T00:00:00Z' }),
+      price({ id: 4, bookId: 3, priceDollars: null, lookupError: 'No matching listing' }),
     ]
     expect(
       applyBookPriceFilters(books, prices, { noPrices: true, priceOlder: true, priceOlderDays: 90 }, now).map((b) => b.id),

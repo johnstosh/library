@@ -35,7 +35,7 @@ export function BookPriceFilters({
             label="No prices saved"
             active={chips.noPrices}
             onClick={() => onToggle('noPrices')}
-            tooltip="Only books with no AbeBooks price rows"
+            tooltip="Only books with no usable AbeBooks listing — no rows, No matching listing, or a cancelled/rate-limited lookup"
             dataTest="filter-no-prices"
           />
           <FilterChip

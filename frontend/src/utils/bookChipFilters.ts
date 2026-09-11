@@ -165,9 +165,15 @@ export function applyChipFilters<T extends Pick<
   })
 }
 
+/** True when a row is an actual AbeBooks listing, not a failed/cancelled lookup. */
+export function isSavedPriceListing(price: BookPriceDto): boolean {
+  return price.priceDollars != null && !price.lookupError
+}
+
 /**
- * Books-page price chips. When both are on they OR: missing prices or a
- * lookup older than {@code priceOlderDays}. Otherwise each chip applies alone.
+ * Books/Prices price chips. When both are on they OR: no usable listing
+ * (missing rows, "No matching listing", rate-limited) or a successful
+ * lookup older than {@code priceOlderDays}.
  */
 export function applyBookPriceFilters<T extends { id: number }>(
   books: T[],
@@ -178,19 +184,22 @@ export function applyBookPriceFilters<T extends { id: number }>(
   if (!options.noPrices && !options.priceOlder) {
     return books
   }
-  const latestByBook = new Map<number, number>()
+  const latestSavedByBook = new Map<number, number>()
   for (const price of prices) {
+    if (!isSavedPriceListing(price)) {
+      continue
+    }
     const parsed = price.lookedUpAt ? Date.parse(price.lookedUpAt) : Number.NaN
     const ts = Number.isFinite(parsed) ? parsed : 0
-    const prev = latestByBook.get(price.bookId)
+    const prev = latestSavedByBook.get(price.bookId)
     if (prev == null || ts > prev) {
-      latestByBook.set(price.bookId, ts)
+      latestSavedByBook.set(price.bookId, ts)
     }
   }
   const days = options.priceOlderDays > 0 ? options.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS
   const cutoff = now - days * 24 * 60 * 60 * 1000
   return books.filter((book) => {
-    const latest = latestByBook.get(book.id)
+    const latest = latestSavedByBook.get(book.id)
     const noPricesMatch = options.noPrices && latest == null
     const olderMatch = options.priceOlder && latest != null && latest < cutoff
     if (options.noPrices && options.priceOlder) {
