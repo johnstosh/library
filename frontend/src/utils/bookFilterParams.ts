@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import {
+  DEFAULT_PRICE_OLDER_DAYS,
   defaultBookChipFilters,
   isOtherBookChipActive,
   type BookChipFilters,
@@ -26,6 +27,8 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   notActiveStatus: 'notActiveStatus',
   requestedStatus: 'requestedStatus',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
+  noPrices: 'noPrices',
+  priceOlder: 'priceOlder',
 }
 
 /** Discovery chips shown on Search. Cataloger chips stay on Books only. */
@@ -58,6 +61,12 @@ export function favoriteListsFromSearchParams(params: URLSearchParams): string[]
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+}
+
+export function priceOlderDaysFromSearchParams(params: URLSearchParams): number {
+  const raw = params.get('priceOlderDays')
+  const n = parseInt(raw ?? '', 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_PRICE_OLDER_DAYS
 }
 
 export function labelsFromSearchParams(params: URLSearchParams): string[] {
@@ -133,6 +142,8 @@ export interface BookFilterUrlState {
   q: string
   bookPage?: number
   authorPage?: number
+  /** Days for the Books "price older than" chip. Default 90 when the chip is on. */
+  priceOlderDays?: number
   /** When true, emit `q=` even if the query is blank (Search “has searched”). */
   includeBlankQuery?: boolean
 }
@@ -182,6 +193,13 @@ export function bookFilterParamsForUrl(
   if (mode === 'search') {
     if ((state.bookPage ?? 0) > 0) params.bookPage = String(state.bookPage)
     if ((state.authorPage ?? 0) > 0) params.authorPage = String(state.authorPage)
+  }
+
+  if (state.chips.priceOlder) {
+    const days = state.priceOlderDays != null && state.priceOlderDays >= 1
+      ? state.priceOlderDays
+      : DEFAULT_PRICE_OLDER_DAYS
+    params.priceOlderDays = String(days)
   }
 
   return params

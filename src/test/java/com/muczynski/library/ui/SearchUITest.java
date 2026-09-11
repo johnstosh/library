@@ -136,6 +136,7 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-without-genres']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-not-active-status']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
+        assertThat(page.locator("[data-test='book-price-filters']")).hasCount(0);
         assertThat(page.locator("[data-test='open-in-books']")).hasCount(0);
         assertThat(page.locator("[data-test='reading-difficulty-filters']")).isVisible();
         assertThat(page.locator("[data-test='reading-difficulty-filter-unset']")).containsText("Unset");

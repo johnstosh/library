@@ -7,15 +7,23 @@ import type { BookPriceDto, BookPriceLookupResultDto } from '@/types/dtos'
 /** Pause between books so AbeBooks does not throttle the Cloud Run IP. */
 export const PRICE_LOOKUP_PAUSE_MS = 500
 
+/** Every 10th lookup waits longer than the usual pause. */
+export const PRICE_LOOKUP_TENTH_PAUSE_MS = 5000
+
+export function priceLookupPauseMs(oneBasedIndex: number): number {
+  return oneBasedIndex % 10 === 0 ? PRICE_LOOKUP_TENTH_PAUSE_MS : PRICE_LOOKUP_PAUSE_MS
+}
+
 /** Extra waits before retrying a rate-limited book; then the rest of the batch is cancelled. */
 export const PRICE_LOOKUP_BACKOFF_MS = [2000, 4000]
 
 export const PRICE_LOOKUP_CANCELLED_MESSAGE = 'Cancelled: AbeBooks rate limited'
 
-export function usePrices() {
+export function usePrices(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.prices.list(),
     queryFn: () => api.get<BookPriceDto[]>('/prices'),
+    enabled: options?.enabled ?? true,
   })
 }
 
@@ -42,7 +50,7 @@ export async function lookupPricesForIds(
 
   for (let i = 0; i < bookIds.length; i++) {
     if (i > 0) {
-      await sleep(PRICE_LOOKUP_PAUSE_MS)
+      await sleep(priceLookupPauseMs(i + 1))
     }
     const bookId = bookIds[i]
     let result = await lookupOne(bookId, lookup)

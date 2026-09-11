@@ -58,6 +58,15 @@ vi.mock('../components/BulkActionsToolbar', () => ({
   BulkActionsToolbar: () => null,
 }))
 
+vi.mock('@/api/prices', () => ({
+  usePrices: () => ({
+    data: [],
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  }),
+}))
+
 vi.mock('@/api/favorites', () => ({
   useFavoriteSummary: () => ({ data: { lists: [] } }),
   favoriteListChips: () => [],
@@ -85,6 +94,16 @@ function renderBooksPage(path = '/books') {
     </MemoryRouter>,
   )
 }
+
+describe('BooksPage Pricing filters', () => {
+  it('shows Pricing at the bottom of the filters for librarians', () => {
+    librarianState.current = true
+    renderBooksPage('/books?mostRecent=false')
+    expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
+    expect(screen.getByTestId('filter-no-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+  })
+})
 
 describe('BooksPage Open in Prices', () => {
   it('hands current filters to /prices', () => {

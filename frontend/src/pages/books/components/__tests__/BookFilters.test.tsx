@@ -29,6 +29,7 @@ describe('BookFilters', () => {
     expect(screen.queryByTestId('filter-not-active-status')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-with-grokipedia')).not.toBeInTheDocument()
     expect(screen.queryByTestId('book-source-filter-chips')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('book-price-filters')).not.toBeInTheDocument()
 
     expect(screen.getByTestId('filter-in-library')).toBeInTheDocument()
     expect(screen.getByTestId('filter-electronic')).toBeInTheDocument()

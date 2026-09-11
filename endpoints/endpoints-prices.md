@@ -34,7 +34,7 @@ Returns every saved price row, including book title and author.
 
 Looks up the cheapest AbeBooks hardcover and softcover listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only without the condition filter for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill a cover that has no typed match. Ungraded `Used` listings are kept; Fair/Poor/As Described are not.
 
-Pauses 500ms between AbeBooks HTTP calls. On HTTP 403/429/503, a captcha/block page, or a no-listing response faster than 250ms, retries with backoff then returns `rateLimited: true` so the bulk carousel can cancel remaining books.
+Pauses 500ms between AbeBooks HTTP calls (5s on every 10th call). On HTTP 403/429/503, a captcha/block page, or a no-listing response faster than 250ms, retries with backoff then returns `rateLimited: true` so the bulk carousel can cancel remaining books.
 
 **Authentication:** Librarian
 

@@ -10,6 +10,7 @@ import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from './components/BookFilters'
+import { BookPriceFilters } from './components/BookPriceFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
 import { ReadingDifficultyFilters } from './components/ReadingDifficultyFilters'
 import { FavoriteListFilters } from './components/FavoriteListFilters'
@@ -17,7 +18,7 @@ import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBookCount, useBooks } from '@/api/books'
 import { useUiStore, useBooksTableSelection } from '@/stores/uiStore'
-import { applyChipFilters } from '@/utils/bookChipFilters'
+import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
@@ -25,8 +26,10 @@ import {
   isBooksIntakeConstrained,
   labelsFromSearchParams,
   matchesBookQuery,
+  priceOlderDaysFromSearchParams,
   pricesPathFromFilters,
 } from '@/utils/bookFilterParams'
+import { usePrices } from '@/api/prices'
 import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
@@ -41,6 +44,7 @@ export function BooksPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const chips = chipsFromSearchParams(searchParams, 'books')
+  const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
@@ -62,6 +66,7 @@ export function BooksPage() {
     readingDifficulties?: string[]
     favoriteLists?: string[]
     q?: string
+    priceOlderDays?: number
   }) => {
     setSearchParams(
       bookFilterParamsForUrl(
@@ -71,6 +76,7 @@ export function BooksPage() {
           readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
           favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
+          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
         },
         'books',
       ),
@@ -79,6 +85,7 @@ export function BooksPage() {
 
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
+  const { data: allPrices = [] } = usePrices({ enabled: isLibrarian })
 
   const books = useMemo(() => {
     const favoriteIds = favoriteItemIdsForLists(
@@ -86,10 +93,18 @@ export function BooksPage() {
       selectedFavoriteLists,
       'bookIds',
     )
-    return applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
-      .filter((book) => matchesBookQuery(book, urlQuery))
-      .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id))
-  }, [allBooks, chips, favoriteSummary?.lists, selectedDifficulties, selectedFavoriteLists, urlQuery])
+    return applyBookPriceFilters(
+      applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
+        .filter((book) => matchesBookQuery(book, urlQuery))
+        .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
+      allPrices,
+      {
+        noPrices: chips.noPrices,
+        priceOlder: chips.priceOlder,
+        priceOlderDays,
+      },
+    )
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, urlQuery])
 
   const intakeConstrained = isBooksIntakeConstrained(
     chips,
@@ -245,6 +260,16 @@ export function BooksPage() {
             }}
             onClear={() => writeUrl({ favoriteLists: [] })}
           />
+          {isLibrarian && (
+            <BookPriceFilters
+              chips={chips}
+              onToggle={handleToggleChip}
+              priceOlderDays={priceOlderDays}
+              onPriceOlderDaysChange={(days) =>
+                writeUrl({ chips: { ...chips, priceOlder: true }, priceOlderDays: days })
+              }
+            />
+          )}
         </div>
 
         <div className="p-4">

@@ -102,6 +102,15 @@ class AbeBooksClientTest {
     }
 
     @Test
+    void delayForRequestNumber_everyTenthIsLonger() {
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(1, 500, 5000));
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(9, 500, 5000));
+        assertEquals(5000, AbeBooksClient.delayForRequestNumber(10, 500, 5000));
+        assertEquals(500, AbeBooksClient.delayForRequestNumber(11, 500, 5000));
+        assertEquals(5000, AbeBooksClient.delayForRequestNumber(20, 500, 5000));
+    }
+
+    @Test
     void letterWordCount_ignoresSlashTokens() {
         assertEquals(12, AbeBooksClient.letterWordCount(
                 "The Norwayman / Bernadette of Lourdes / The Woodcarver of Tyrol / Sea of Glory"));

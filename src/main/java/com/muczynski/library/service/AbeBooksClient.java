@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
@@ -67,19 +68,23 @@ public class AbeBooksClient {
     private final RestTemplate restTemplate;
     private final AbeBooksListingParser parser;
     private final long requestDelayMs;
+    private final long tenthRequestDelayMs;
+    private final AtomicLong requestCount = new AtomicLong();
 
     public AbeBooksClient(@Qualifier("abeBooksRestTemplate") RestTemplate restTemplate,
                           AbeBooksListingParser parser) {
-        this(restTemplate, parser, 0);
+        this(restTemplate, parser, 0, 0);
     }
 
     @Autowired
     public AbeBooksClient(@Qualifier("abeBooksRestTemplate") RestTemplate restTemplate,
                           AbeBooksListingParser parser,
-                          @Value("${abebooks.request-delay-ms:500}") long requestDelayMs) {
+                          @Value("${abebooks.request-delay-ms:500}") long requestDelayMs,
+                          @Value("${abebooks.tenth-request-delay-ms:5000}") long tenthRequestDelayMs) {
         this.restTemplate = restTemplate;
         this.parser = parser;
         this.requestDelayMs = requestDelayMs;
+        this.tenthRequestDelayMs = tenthRequestDelayMs;
     }
 
     /**
@@ -154,12 +159,21 @@ public class AbeBooksClient {
         return body;
     }
 
+    static long delayForRequestNumber(long oneBasedCount, long normalDelayMs, long tenthDelayMs) {
+        if (oneBasedCount > 0 && oneBasedCount % 10 == 0) {
+            return Math.max(0, tenthDelayMs);
+        }
+        return Math.max(0, normalDelayMs);
+    }
+
     private void pauseBetweenRequests() {
-        if (requestDelayMs <= 0) {
+        long n = requestCount.incrementAndGet();
+        long delayMs = delayForRequestNumber(n, requestDelayMs, tenthRequestDelayMs);
+        if (delayMs <= 0) {
             return;
         }
         try {
-            Thread.sleep(requestDelayMs);
+            Thread.sleep(delayMs);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);

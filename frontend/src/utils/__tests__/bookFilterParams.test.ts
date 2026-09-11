@@ -11,6 +11,7 @@ import {
   labelsFromSearchParams,
   matchesBookQuery,
   pageFromSearchParams,
+  priceOlderDaysFromSearchParams,
   SEARCH_VISIBLE_CHIPS,
 } from '@/utils/bookFilterParams'
 
@@ -26,6 +27,8 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('withoutLoc')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('notActiveStatus')).toBe(false)
+    expect(isSearchVisibleChip('noPrices')).toBe(false)
+    expect(isSearchVisibleChip('priceOlder')).toBe(false)
     expect(SEARCH_VISIBLE_CHIPS).not.toContain('withGrokipedia')
   })
 })
@@ -84,6 +87,34 @@ describe('chipsFromSearchParams books mode', () => {
       chipsFromSearchParams(new URLSearchParams('readingDifficulty=children'), 'books').mostRecent,
     ).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
+    expect(chipsFromSearchParams(new URLSearchParams('noPrices=true'), 'books').mostRecent).toBe(false)
+  })
+})
+
+describe('priceOlderDaysFromSearchParams', () => {
+  it('defaults to 90', () => {
+    expect(priceOlderDaysFromSearchParams(new URLSearchParams())).toBe(90)
+  })
+
+  it('reads a positive integer', () => {
+    expect(priceOlderDaysFromSearchParams(new URLSearchParams('priceOlderDays=30'))).toBe(30)
+  })
+})
+
+describe('bookFilterParamsForUrl price chips', () => {
+  it('emits noPrices and priceOlderDays when those chips are on', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips({ noPrices: true, priceOlder: true }),
+        labels: [],
+        q: '',
+        priceOlderDays: 45,
+      },
+      'books',
+    )
+    expect(params.noPrices).toBe('true')
+    expect(params.priceOlder).toBe('true')
+    expect(params.priceOlderDays).toBe('45')
   })
 })
 

@@ -19,8 +19,8 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
 - Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown** and fill any cover that still lacks a typed listing.
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
 - Politeness / rate limits:
-  - 500ms pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`)
-  - 500ms pause between books in the bulk carousel
+  - 500ms pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 5s (`abebooks.tenth-request-delay-ms`)
+  - 500ms pause between books in the bulk carousel; every 10th book waits 5s
   - A 403/429/503, captcha/block page, or a no-listing response faster than 250ms is treated as rate-limited
   - The current book is retried with 2s then 4s backoff (`abebooks.rate-limit-retries`, `abebooks.rate-limit-backoff-ms`)
   - If still rate-limited, remaining selected books are **cancelled** (not recorded as "no listing") so the batch stops hammering AbeBooks

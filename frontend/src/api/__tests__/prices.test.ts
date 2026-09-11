@@ -4,7 +4,9 @@ import {
   PRICE_LOOKUP_BACKOFF_MS,
   PRICE_LOOKUP_CANCELLED_MESSAGE,
   PRICE_LOOKUP_PAUSE_MS,
+  PRICE_LOOKUP_TENTH_PAUSE_MS,
   lookupPricesForIds,
+  priceLookupPauseMs,
 } from '../prices'
 import type { BookPriceLookupResultDto } from '@/types/dtos'
 
@@ -27,6 +29,20 @@ describe('lookupPricesForIds', () => {
     expect(sleep).toHaveBeenCalledTimes(2)
     expect(sleep).toHaveBeenNthCalledWith(1, PRICE_LOOKUP_PAUSE_MS)
     expect(sleep).toHaveBeenNthCalledWith(2, PRICE_LOOKUP_PAUSE_MS)
+  })
+
+  it('waits 5s before every 10th book', async () => {
+    expect(priceLookupPauseMs(9)).toBe(PRICE_LOOKUP_PAUSE_MS)
+    expect(priceLookupPauseMs(10)).toBe(PRICE_LOOKUP_TENTH_PAUSE_MS)
+    expect(priceLookupPauseMs(20)).toBe(PRICE_LOOKUP_TENTH_PAUSE_MS)
+
+    const lookup = vi.fn(async (id: number) => ok(id))
+    const sleep = vi.fn(async () => undefined)
+    const ids = Array.from({ length: 11 }, (_, i) => i + 1)
+    await lookupPricesForIds(ids, lookup, undefined, sleep)
+
+    expect(sleep).toHaveBeenNthCalledWith(9, PRICE_LOOKUP_TENTH_PAUSE_MS)
+    expect(sleep).toHaveBeenNthCalledWith(10, PRICE_LOOKUP_PAUSE_MS)
   })
 
   it('backs off then cancels remaining books when still rate limited', async () => {
