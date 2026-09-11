@@ -26,3 +26,10 @@ export const UserAuthority = {
 } as const
 
 export type UserAuthority = (typeof UserAuthority)[keyof typeof UserAuthority]
+
+export const BookCoverType = {
+  HARDCOVER: 'HARDCOVER',
+  SOFTCOVER: 'SOFTCOVER',
+} as const
+
+export type BookCoverType = (typeof BookCoverType)[keyof typeof BookCoverType]

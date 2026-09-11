@@ -280,6 +280,7 @@ public class NavigationUITest {
         assertThat(page.locator("[data-test='nav-books']")).isVisible();
         assertThat(page.locator("[data-test='nav-authors']")).isVisible();
         assertThat(page.locator("[data-test='nav-search']")).isVisible();
+        assertThat(page.locator("[data-test='nav-prices']")).isVisible();
     }
 
     @Test

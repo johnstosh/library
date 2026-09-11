@@ -64,7 +64,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 
@@ -130,7 +130,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
 
@@ -270,7 +270,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetDatabaseStats_Success() {
         // Arrange
-        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L);
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L, 4L);
         when(importService.getDatabaseStats()).thenReturn(statsDto);
 
         // Act & Assert
@@ -285,7 +285,8 @@ class ImportControllerTest {
             .body("bookCount", equalTo(100))
             .body("authorCount", equalTo(50))
             .body("userCount", equalTo(10))
-            .body("loanCount", equalTo(25));
+            .body("loanCount", equalTo(25))
+            .body("priceCount", equalTo(4));
     }
 
     @Test
@@ -302,7 +303,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetDatabaseStats_ZeroCounts() {
         // Arrange - Empty database
-        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L);
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L, 0L);
         when(importService.getDatabaseStats()).thenReturn(statsDto);
 
         // Act & Assert
@@ -317,7 +318,8 @@ class ImportControllerTest {
             .body("bookCount", equalTo(0))
             .body("authorCount", equalTo(0))
             .body("userCount", equalTo(0))
-            .body("loanCount", equalTo(0));
+            .body("loanCount", equalTo(0))
+            .body("priceCount", equalTo(0));
     }
 
     @Test

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { PiMagnifyingGlass } from 'react-icons/pi'
+import { PiCurrencyDollar, PiMagnifyingGlass } from 'react-icons/pi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
@@ -25,6 +25,7 @@ import {
   isBooksIntakeConstrained,
   labelsFromSearchParams,
   matchesBookQuery,
+  pricesPathFromFilters,
 } from '@/utils/bookFilterParams'
 import {
   applyReadingDifficultyFilter,
@@ -195,6 +196,27 @@ export function BooksPage() {
               Search
             </Button>
           </form>
+          {isLibrarian && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                navigate(
+                  pricesPathFromFilters({
+                    chips,
+                    labels: selectedLabels,
+                    readingDifficulties: selectedDifficulties,
+                    favoriteLists: selectedFavoriteLists,
+                    q: inputValue.trim() || urlQuery,
+                  }),
+                )
+              }
+              leftIcon={<PiCurrencyDollar />}
+              data-test="open-in-prices"
+            >
+              Open in Prices
+            </Button>
+          )}
           <BookFilters
             chips={chips}
             onToggle={handleToggleChip}

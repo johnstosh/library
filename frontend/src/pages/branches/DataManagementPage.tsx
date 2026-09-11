@@ -101,10 +101,11 @@ export function DataManagementPage() {
       const authorCount = dbStats?.authorCount ?? 0
       const userCount = dbStats?.userCount ?? 0
       const loanCount = dbStats?.loanCount ?? 0
+      const priceCount = dbStats?.priceCount ?? 0
       const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${photoCount}-photos.json`
+      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${priceCount}-prices-${photoCount}-photos.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
@@ -232,7 +233,7 @@ export function DataManagementPage() {
 
         {/* Database Statistics */}
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-5 gap-4 text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 text-center">
             <div data-test="stat-branches">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.branchCount ?? 0}</div>
               <div className="text-sm text-gray-600">Branches</div>
@@ -252,6 +253,10 @@ export function DataManagementPage() {
             <div data-test="stat-loans">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.loanCount ?? 0}</div>
               <div className="text-sm text-gray-600">Loans</div>
+            </div>
+            <div data-test="stat-prices">
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.priceCount ?? 0}</div>
+              <div className="text-sm text-gray-600">Prices</div>
             </div>
           </div>
         </div>

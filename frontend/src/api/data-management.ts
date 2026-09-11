@@ -30,6 +30,8 @@ export interface ImportResponseDto {
     books: number
     loans: number
     photos: number
+    favorites?: number
+    prices?: number
   }
   errors?: ImportErrorDto[]
 }
@@ -41,6 +43,7 @@ export interface DatabaseStatsDto {
   authorCount: number
   userCount: number
   loanCount: number
+  priceCount: number
 }
 
 // Label count from backend

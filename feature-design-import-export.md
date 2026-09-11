@@ -19,6 +19,7 @@ The JSON export includes:
 - Books
 - Loans
 - **Favorites** (per-user list names, referenced by book title+author or author name)
+- **Prices** (AbeBooks listings: book title+author, cover, price, shipping, condition, date, URL)
 - **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included
@@ -48,6 +49,7 @@ The Data Management page displays real-time database statistics showing:
 - **Authors** - Total number of authors
 - **Users** - Total number of user accounts
 - **Loans** - Total number of loan records
+- **Prices** - Total number of saved AbeBooks price rows
 
 These statistics are fetched from the `/api/import/stats` endpoint which returns actual database counts (not cached/paginated data from the frontend). The statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
 
@@ -65,7 +67,8 @@ The Data Management page (`/data-management`) includes a **Books Availability** 
   "bookCount": 300,
   "authorCount": 150,
   "userCount": 25,
-  "loanCount": 50
+  "loanCount": 50,
+  "priceCount": 12
 }
 ```
 

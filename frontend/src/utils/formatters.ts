@@ -47,6 +47,14 @@ export function formatDate(dateString: string | undefined, formatStr = 'MMM d, y
   }
 }
 
+/** Format a dollar amount as US currency, or an em dash when missing. */
+export function formatUsd(value?: number | string | null): string {
+  if (value == null || value === '') return '—'
+  const amount = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(amount)) return '—'
+  return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+}
+
 /**
  * Format an ISO datetime string to a readable datetime format
  *

@@ -4,6 +4,7 @@ import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFi
 import {
   bookFilterParamsForUrl,
   booksPathFromFilters,
+  pricesPathFromFilters,
   chipsFromSearchParams,
   isBooksIntakeConstrained,
   isSearchVisibleChip,
@@ -163,6 +164,22 @@ describe('booksPathFromFilters', () => {
         q: '',
       }),
     ).toBe('/books')
+  })
+})
+
+describe('pricesPathFromFilters', () => {
+  it('opens /prices with no query when nothing is set', () => {
+    expect(pricesPathFromFilters({ chips: chips({ mostRecent: false }), labels: [], q: '' })).toBe('/prices')
+  })
+
+  it('copies books filters including mostRecent onto /prices', () => {
+    expect(
+      pricesPathFromFilters({
+        chips: chips({ inLibrary: true, mostRecent: true }),
+        labels: ['classic'],
+        q: 'Summa',
+      }),
+    ).toBe('/prices?q=Summa&labels=classic&inLib=true&mostRecent=true')
   })
 })
 
