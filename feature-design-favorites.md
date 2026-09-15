@@ -7,6 +7,7 @@ Logged-in patrons and librarians can mark books and authors as favorites using a
 - **Not a favorite** (no lists selected): black outline star (`PiStar`, `w-5 h-5`)
 - **Favorite** (one or more lists): red filled star (`PiStarFill`, `w-6 h-6`)
 - Clicking the star opens a modal. There is no Cancel/Save; the modal closes with the header **(X)** (`data-test="modal-close"`). Checkbox changes persist immediately.
+- The modal checkbox list is derived from the already-loaded `GET /api/favorites/summary` payload. It does **not** wait on `GET /api/favorites/item`.
 
 Stars appear for authenticated users on:
 - Book and author view pages (next to the title/name)
@@ -32,6 +33,12 @@ This version does not delete or rename lists. Unchecking a list removes the item
 ## Data model
 Runtime storage uses **book ID** or **author ID** plus **user ID** and **list name**. Exactly one of book or author is set.
 
+`favorites` indexes:
+- `user_id`, `book_id`, `author_id`, `list_name`
+- composite `(user_id, book_id)` and `(user_id, author_id)` for per-item list lookups
+
+Summary and item reads use ID/list-name projections (or `existsById`) so they do not load Book/Author entities.
+
 JSON export/import uses natural keys:
 - `username`
 - `listName`
@@ -39,8 +46,8 @@ JSON export/import uses natural keys:
 - author favorites: `authorName`
 
 ## API
-- `GET /api/favorites/summary` — current user’s favorited book/author IDs
-- `GET /api/favorites/item?itemType=BOOK|AUTHOR&itemId=` — selected lists and available lists
+- `GET /api/favorites/summary` — current user’s favorited book/author IDs, per-list memberships, and `availableLists` (built-in for the caller’s role plus custom names)
+- `GET /api/favorites/item?itemType=BOOK|AUTHOR&itemId=` — selected lists and available lists (kept for API clients; the star editor uses summary)
 - `PUT /api/favorites/item` — replace selected lists for that item (immediate)
 - `GET /api/import/favorite-stats` — librarian; global counts per list name, books and authors separate, sorted by total descending
 

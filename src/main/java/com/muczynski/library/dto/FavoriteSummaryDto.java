@@ -17,4 +17,5 @@ public class FavoriteSummaryDto {
     private List<Long> favoriteBookIds = new ArrayList<>();
     private List<Long> favoriteAuthorIds = new ArrayList<>();
     private List<FavoriteListMembershipDto> lists = new ArrayList<>();
+    private List<String> availableLists = new ArrayList<>();
 }
