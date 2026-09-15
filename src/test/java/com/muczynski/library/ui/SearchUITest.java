@@ -124,8 +124,9 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
-        assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
-        assertThat(page.locator("[data-test='filter-electronic']")).isVisible();
+        assertThat(page.locator("[data-test='status-filters']")).isVisible();
+        assertThat(page.locator("[data-test='status-filter-in-library']")).isVisible();
+        assertThat(page.locator("[data-test='status-filter-electronic-resource']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
@@ -160,7 +161,7 @@ public class SearchUITest {
             assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-most-recent']")).isVisible();
 
-            assertThat(mobilePage.locator("[data-test='filter-in-library']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='status-filter-in-library']")).isVisible();
             assertThat(mobilePage.locator("[data-test='filter-free-text']")).isVisible();
         } finally {
             mobileContext.close();
@@ -576,25 +577,24 @@ public class SearchUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
 
-        Locator inLibChip    = page.locator("[data-test='filter-in-library']");
-        Locator elecChip     = page.locator("[data-test='filter-electronic']");
+        Locator inLibChip    = page.locator("[data-test='status-filter-in-library']");
+        Locator elecChip     = page.locator("[data-test='status-filter-electronic-resource']");
         Locator freeTextChip = page.locator("[data-test='filter-free-text']");
         Locator audioChip    = page.locator("[data-test='filter-audio']");
         Locator recentChip   = page.locator("[data-test='filter-most-recent']");
 
+        assertThat(page.locator("[data-test='status-filters']")).isVisible();
         assertThat(inLibChip).isVisible();
         assertThat(elecChip).isVisible();
         assertThat(freeTextChip).isVisible();
         assertThat(audioChip).isVisible();
         assertThat(recentChip).isVisible();
 
-        assertThat(page.locator("[data-test='filter-in-library-info']")).isVisible();
-        assertThat(page.locator("[data-test='filter-electronic-info']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text-info']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio-info']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent-info']")).isVisible();
 
-        assertThat(inLibChip).containsText("In-library materials");
+        assertThat(inLibChip).containsText("In-library");
         assertThat(elecChip).containsText("Electronic resource");
         assertThat(freeTextChip).containsText("Has free online text");
         assertThat(audioChip).containsText("Has free online audio");
@@ -624,15 +624,15 @@ public class SearchUITest {
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
 
         // Click the in-library chip (no prior text search)
-        page.click("[data-test='filter-in-library']");
+        page.click("[data-test='status-filter-in-library']");
 
         // Wait for results to appear (filter triggers search; 6 books have loc_number in test data)
         page.waitForSelector("h2:has-text('Books')", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // URL should contain the filter param
         String currentUrl = page.url();
-        Assertions.assertTrue(currentUrl.contains("inLib=true"),
-                "URL should contain inLib=true filter param, got: " + currentUrl);
+        Assertions.assertTrue(currentUrl.contains("status=in-library"),
+                "URL should contain status=in-library filter param, got: " + currentUrl);
 
         // Results should show (test data has books with loc_number)
         assertThat(page.locator("h2:has-text('Books')")).isVisible();
@@ -831,17 +831,17 @@ public class SearchUITest {
         String booksUrl = page.url();
         Assertions.assertTrue(booksUrl.contains("/books"), "Should navigate to Books, got: " + booksUrl);
         Assertions.assertTrue(booksUrl.contains("q=Summa"), "Should copy query, got: " + booksUrl);
-        Assertions.assertTrue(booksUrl.contains("inLib=true"), "Should copy in-library chip, got: " + booksUrl);
+        Assertions.assertTrue(booksUrl.contains("status=in-library"), "Should copy in-library status, got: " + booksUrl);
     }
 
     @Test
-    @DisplayName("In-library AND electronic chips together hide books matching only one")
-    void testInLibraryAndElectronicChipsRestrictTogether() {
+    @DisplayName("In-library and electronic status chips OR together")
+    void testInLibraryAndElectronicStatusChipsOrTogether() {
         page.navigate(getBaseUrl() + "/search");
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("#root:has(*)", new Page.WaitForSelectorOptions().setTimeout(30000L));
 
-        page.click("[data-test='filter-in-library']");
+        page.click("[data-test='status-filter-in-library']");
         page.waitForSelector("[data-test='search-results-books']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
         assertThat(page.locator("[data-test^='book-result-title-']")
@@ -849,11 +849,14 @@ public class SearchUITest {
         assertThat(page.locator("[data-test^='book-result-title-']")
                 .filter(new Locator.FilterOptions().setHasText("Gutenberg"))).not().isVisible();
 
-        page.click("[data-test='filter-electronic']");
-
-        page.waitForSelector("text=No books or authors found",
+        page.click("[data-test='status-filter-electronic-resource']");
+        page.waitForURL(url -> url.contains("electronic-resource"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='search-results-books']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
-        assertThat(page.locator("text=Summa Theologica")).not().isVisible();
-        assertThat(page.locator("text=Gutenberg")).not().isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Summa Theologica"))).isVisible();
+        assertThat(page.locator("[data-test^='book-result-title-']")
+                .filter(new Locator.FilterOptions().setHasText("Gutenberg"))).isVisible();
     }
 }

@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.BookStatusFilter;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.service.SearchService;
@@ -58,6 +59,7 @@ public class SearchController {
             @RequestParam(defaultValue = "false") boolean filterEmuBook,
             @RequestParam(defaultValue = "false") boolean filterEmuEbook,
             @RequestParam(required = false) String labels,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) String readingDifficulty,
             @RequestParam(required = false) String favoriteLists,
             Principal principal) {
@@ -68,6 +70,10 @@ public class SearchController {
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
                             .collect(Collectors.toList());
+            List<BookStatusFilter> statusList = BookStatusFilter.parseFilterValues(status);
+            if (statusList.isEmpty()) {
+                statusList = null;
+            }
             List<ReadingDifficulty> readingDifficultyList = ReadingDifficulty.parseFilterValues(readingDifficulty);
             if (readingDifficultyList.isEmpty()) {
                 readingDifficultyList = null;
@@ -97,6 +103,7 @@ public class SearchController {
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
                     labelList,
+                    statusList,
                     readingDifficultyList,
                     userId,
                     favoriteList);

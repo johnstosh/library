@@ -222,12 +222,18 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * AND-combined chip predicates shared by book and author search queries.
-     * Alias {@code b} is the Book. notActiveStatus always constrains:
-     * off → exclude WITHDRAWN and REQUESTED; on → exclude ACTIVE and REQUESTED.
+     * Alias {@code b} is the Book. Status chips OR together: in-library and
+     * electronic-resource are Active-only; when none are selected, WITHDRAWN
+     * and REQUESTED stay hidden.
      */
     String SEARCH_CHIP_PREDICATE =
-        "(:filterInLibrary = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '')) AND " +
-        "(:filterElectronic = false OR b.electronicResource = true) AND " +
+        "((:filterInLibrary = false AND :filterElectronic = false AND :filterStatusLost = false AND :filterStatusWithdrawn = false AND :filterStatusOnOrder = false AND :filterStatusRequested = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR " +
+        "(:filterInLibrary = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.locNumber IS NOT NULL AND b.locNumber <> '') OR " +
+        "(:filterElectronic = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.electronicResource = true) OR " +
+        "(:filterStatusLost = true AND b.status = com.muczynski.library.domain.BookStatus.LOST) OR " +
+        "(:filterStatusWithdrawn = true AND b.status = com.muczynski.library.domain.BookStatus.WITHDRAWN) OR " +
+        "(:filterStatusOnOrder = true AND b.status = com.muczynski.library.domain.BookStatus.ON_ORDER) OR " +
+        "(:filterStatusRequested = true AND b.status = com.muczynski.library.domain.BookStatus.REQUESTED)) AND " +
         "(:filterFreeText = false OR (b.freeTextUrl IS NOT NULL AND b.freeTextUrl <> '')) AND " +
         "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%')) AND " +
         "(:filterMostRecent = false OR b.dateAddedToLibrary >= :mostRecentCutoff OR b.id IN :mostRecentTempTitleIds) AND " +
@@ -236,7 +242,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-') AND " +
         "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '' AND b.grokipediaUrl <> '-')) AND " +
         "(:filterWithoutGenres = false OR NOT EXISTS (SELECT 1 FROM Book bNoTags JOIN bNoTags.tagsList tNoTags WHERE bNoTags = b)) AND " +
-        "((:filterNotActiveStatus = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR (:filterNotActiveStatus = true AND b.status <> com.muczynski.library.domain.BookStatus.ACTIVE AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED)) AND " +
         "(:filterWithoutFreeTextUrls = false OR b.freeTextUrl IS NULL OR b.freeTextUrl = '') AND " +
         "(:filterYdlAudio = false OR b.ydlAudioAvailable = true) AND " +
         "(:filterYdlBook = false OR b.ydlPaperAvailable = true) AND " +
@@ -252,8 +257,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Unified search with AND-combined type filters (no labels).
-     * When no optional chips are active, still applies notActiveStatus (hide WITHDRAWN and REQUESTED when off).
-     * When any filter is active, a book must satisfy ALL active filters (AND logic).
+     * When no status chips are active, WITHDRAWN and REQUESTED stay hidden.
+     * When any filter is active, a book must satisfy ALL active filters (AND logic);
+     * selected status values OR together.
      * Audio filter matches books whose freeTextUrl contains "librivox".
      */
     @Query("SELECT b FROM Book b WHERE " +
@@ -272,7 +278,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
         @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
-        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterStatusLost") boolean filterStatusLost,
+        @Param("filterStatusWithdrawn") boolean filterStatusWithdrawn,
+        @Param("filterStatusOnOrder") boolean filterStatusOnOrder,
+        @Param("filterStatusRequested") boolean filterStatusRequested,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         @Param("filterYdlAudio") boolean filterYdlAudio,
         @Param("filterYdlBook") boolean filterYdlBook,
@@ -310,7 +319,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
         @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
         @Param("filterWithoutGenres") boolean filterWithoutGenres,
-        @Param("filterNotActiveStatus") boolean filterNotActiveStatus,
+        @Param("filterStatusLost") boolean filterStatusLost,
+        @Param("filterStatusWithdrawn") boolean filterStatusWithdrawn,
+        @Param("filterStatusOnOrder") boolean filterStatusOnOrder,
+        @Param("filterStatusRequested") boolean filterStatusRequested,
         @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
         @Param("filterYdlAudio") boolean filterYdlAudio,
         @Param("filterYdlBook") boolean filterYdlBook,

@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -79,8 +80,8 @@ public class AbeBooksClient {
     @Autowired
     public AbeBooksClient(@Qualifier("abeBooksRestTemplate") RestTemplate restTemplate,
                           AbeBooksListingParser parser,
-                          @Value("${abebooks.request-delay-ms:500}") long requestDelayMs,
-                          @Value("${abebooks.tenth-request-delay-ms:5000}") long tenthRequestDelayMs) {
+                          @Value("${abebooks.request-delay-ms:1000}") long requestDelayMs,
+                          @Value("${abebooks.tenth-request-delay-ms:10000}") long tenthRequestDelayMs) {
         this.restTemplate = restTemplate;
         this.parser = parser;
         this.requestDelayMs = requestDelayMs;
@@ -131,8 +132,18 @@ public class AbeBooksClient {
     }
 
     private String fetch(URI uri) {
-        pauseBetweenRequests();
-        log.info("AbeBooks search: {}", uri);
+        long n = requestCount.incrementAndGet();
+        long delayMs = delayForRequestNumber(n, requestDelayMs, tenthRequestDelayMs);
+        if (delayMs > 0) {
+            log.info("AbeBooks request #{} delaying {} ms before {}", n, delayMs, uri);
+            try {
+                Thread.sleep(delayMs);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+            }
+        }
+        log.info("AbeBooks search requestCount={} uri={}", n, uri);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
         headers.set(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9");
@@ -143,19 +154,28 @@ public class AbeBooksClient {
                     uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
         } catch (HttpStatusCodeException ex) {
             HttpStatusCode status = ex.getStatusCode();
-            if (status.value() == 403 || status.value() == 429 || status.value() == 503) {
-                log.warn("AbeBooks HTTP {} for {}", status.value(), uri);
+            int code = status.value();
+            if (code == 403 || code == 429 || code == 502 || code == 503 || code == 504) {
+                log.warn("AbeBooks HTTP {} for {} (treating as rate limited)", code, uri);
                 throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, ex);
             }
+            log.warn("AbeBooks HTTP {} for {}", code, uri);
             throw ex;
+        } catch (ResourceAccessException ex) {
+            log.warn("AbeBooks I/O or timeout for {}: {}", uri, ex.getMessage());
+            throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, ex);
         }
         long elapsedMs = (System.nanoTime() - started) / 1_000_000L;
         String body = response.getBody();
+        int bytes = body == null ? 0 : body.length();
         if (parser.isRateLimited(body, elapsedMs)) {
-            log.warn("AbeBooks rate-limited response ({} ms, {} bytes) for {}",
-                    elapsedMs, body == null ? 0 : body.length(), uri);
+            boolean blocked = parser.isBlockedPage(body);
+            log.warn("AbeBooks rate-limited response ({} ms, {} bytes, blockedPage={}) for {}",
+                    elapsedMs, bytes, blocked, uri);
             throw new AbeBooksRateLimitedException();
         }
+        log.info("AbeBooks response requestCount={} elapsedMs={} bytes={} uri={}",
+                n, elapsedMs, bytes, uri);
         return body;
     }
 
@@ -164,20 +184,6 @@ public class AbeBooksClient {
             return Math.max(0, tenthDelayMs);
         }
         return Math.max(0, normalDelayMs);
-    }
-
-    private void pauseBetweenRequests() {
-        long n = requestCount.incrementAndGet();
-        long delayMs = delayForRequestNumber(n, requestDelayMs, tenthRequestDelayMs);
-        if (delayMs <= 0) {
-            return;
-        }
-        try {
-            Thread.sleep(delayMs);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
-        }
     }
 
     URI buildSearchUri(String title, String author, int page) {

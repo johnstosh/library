@@ -13,6 +13,7 @@ import { BookFilters } from './components/BookFilters'
 import { BookPriceFilters } from './components/BookPriceFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
 import { ReadingDifficultyFilters } from './components/ReadingDifficultyFilters'
+import { StatusFilters } from './components/StatusFilters'
 import { FavoriteListFilters } from './components/FavoriteListFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
@@ -34,6 +35,11 @@ import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
 } from '@/utils/readingDifficulty'
+import {
+  applyBookStatusFilter,
+  bookStatusesFromSearchParams,
+  type BookStatusFilter,
+} from '@/utils/bookStatus'
 import type { ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
 import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
@@ -47,6 +53,7 @@ export function BooksPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
@@ -64,6 +71,7 @@ export function BooksPage() {
     chips?: BookChipFilters
     labels?: string[]
     readingDifficulties?: string[]
+    statuses?: string[]
     favoriteLists?: string[]
     q?: string
     priceOlderDays?: number
@@ -74,6 +82,7 @@ export function BooksPage() {
           chips: next.chips ?? chips,
           labels: next.labels ?? selectedLabels,
           readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          statuses: next.statuses ?? selectedStatuses,
           favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
           priceOlderDays: next.priceOlderDays ?? priceOlderDays,
@@ -94,17 +103,21 @@ export function BooksPage() {
       'bookIds',
     )
     return applyBookPriceFilters(
-      applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
+      applyReadingDifficultyFilter(
+        applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+        selectedDifficulties,
+      )
         .filter((book) => matchesBookQuery(book, urlQuery))
         .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
       allPrices,
       {
+        withPrices: chips.withPrices,
         noPrices: chips.noPrices,
         priceOlder: chips.priceOlder,
         priceOlderDays,
       },
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, urlQuery])
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
 
   const intakeConstrained = isBooksIntakeConstrained(
     chips,
@@ -112,6 +125,7 @@ export function BooksPage() {
     urlQuery,
     selectedDifficulties,
     selectedFavoriteLists,
+    selectedStatuses,
   )
 
   const handleSelectToggle = (id: number) => {
@@ -157,6 +171,13 @@ export function BooksPage() {
       ? selectedDifficulties.filter((item) => item !== value)
       : [...selectedDifficulties, value]
     writeUrl({ readingDifficulties: next })
+  }
+
+  const handleToggleStatus = (value: BookStatusFilter) => {
+    const next = selectedStatuses.includes(value)
+      ? selectedStatuses.filter((item) => item !== value)
+      : [...selectedStatuses, value]
+    writeUrl({ statuses: next })
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -221,6 +242,7 @@ export function BooksPage() {
                     chips,
                     labels: selectedLabels,
                     readingDifficulties: selectedDifficulties,
+                    statuses: selectedStatuses,
                     favoriteLists: selectedFavoriteLists,
                     q: inputValue.trim() || urlQuery,
                     priceOlderDays,
@@ -244,6 +266,11 @@ export function BooksPage() {
             selectedLabels={selectedLabels}
             onToggleLabel={handleToggleLabel}
             onClearLabels={() => writeUrl({ labels: [] })}
+          />
+          <StatusFilters
+            selected={selectedStatuses}
+            onToggle={handleToggleStatus}
+            onClear={() => writeUrl({ statuses: [] })}
           />
           <ReadingDifficultyFilters
             selected={selectedDifficulties}

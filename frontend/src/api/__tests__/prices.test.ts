@@ -19,6 +19,12 @@ function rateLimited(bookId: number): BookPriceLookupResultDto {
 }
 
 describe('lookupPricesForIds', () => {
+  it('uses doubled pauses between books', () => {
+    expect(PRICE_LOOKUP_PAUSE_MS).toBe(1000)
+    expect(PRICE_LOOKUP_TENTH_PAUSE_MS).toBe(10000)
+    expect(PRICE_LOOKUP_BACKOFF_MS).toEqual([4000, 8000])
+  })
+
   it('pauses between books', async () => {
     const lookup = vi.fn(async (id: number) => ok(id))
     const sleep = vi.fn(async () => undefined)
@@ -31,7 +37,7 @@ describe('lookupPricesForIds', () => {
     expect(sleep).toHaveBeenNthCalledWith(2, PRICE_LOOKUP_PAUSE_MS)
   })
 
-  it('waits 5s before every 10th book', async () => {
+  it('waits the tenth-book pause before every 10th book', async () => {
     expect(priceLookupPauseMs(9)).toBe(PRICE_LOOKUP_PAUSE_MS)
     expect(priceLookupPauseMs(10)).toBe(PRICE_LOOKUP_TENTH_PAUSE_MS)
     expect(priceLookupPauseMs(20)).toBe(PRICE_LOOKUP_TENTH_PAUSE_MS)

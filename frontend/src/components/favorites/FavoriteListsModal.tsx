@@ -4,9 +4,11 @@ import { Modal } from '@/components/ui/Modal'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { useIsLibrarian } from '@/stores/authStore'
 import {
+  itemListsFromSummary,
   listNameToTestId,
-  useFavoriteItem,
+  useFavoriteSummary,
   useReplaceFavoriteItem,
   type FavoriteItemType,
 } from '@/api/favorites'
@@ -19,24 +21,25 @@ interface FavoriteListsModalProps {
 }
 
 export function FavoriteListsModal({ isOpen, onClose, itemType, itemId }: FavoriteListsModalProps) {
-  const { data, isLoading } = useFavoriteItem(itemType, itemId, isOpen)
+  const isLibrarian = useIsLibrarian()
+  const { data: summary } = useFavoriteSummary()
   const replaceItem = useReplaceFavoriteItem()
   const [newListName, setNewListName] = useState('')
-  const [availableLists, setAvailableLists] = useState<string[] | undefined>(undefined)
-  const [selectedLists, setSelectedLists] = useState<string[] | undefined>(undefined)
+  const [override, setOverride] = useState<{ available: string[]; selected: string[] } | null>(null)
 
   useEffect(() => {
-    if (!data) return
-    setAvailableLists(data.availableLists)
-    setSelectedLists(data.selectedLists)
-  }, [data])
+    if (!isOpen) {
+      setOverride(null)
+      setNewListName('')
+    }
+  }, [isOpen])
 
-  const available = availableLists ?? data?.availableLists ?? []
-  const selected = selectedLists ?? data?.selectedLists ?? []
+  const derived = itemListsFromSummary(summary, itemType, itemId, isLibrarian)
+  const available = override?.available ?? derived.availableLists
+  const selected = override?.selected ?? derived.selectedLists
 
   const persist = (nextSelected: string[], nextAvailable = available) => {
-    setSelectedLists(nextSelected)
-    setAvailableLists(nextAvailable)
+    setOverride({ available: nextAvailable, selected: nextSelected })
     replaceItem.mutate({ itemType, itemId, listNames: nextSelected })
   }
 
@@ -63,21 +66,17 @@ export function FavoriteListsModal({ isOpen, onClose, itemType, itemId }: Favori
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Favorite lists" size="sm">
       <div data-test="favorite-modal" className="space-y-4">
-        {isLoading && !data ? (
-          <p className="text-sm text-gray-500">Loading lists…</p>
-        ) : (
-          <div className="space-y-2" data-test="favorite-list-checkboxes">
-            {available.map((listName) => (
-              <Checkbox
-                key={listName}
-                label={listName}
-                checked={selected.includes(listName)}
-                onChange={() => toggleList(listName)}
-                data-test={`favorite-list-${listNameToTestId(listName)}`}
-              />
-            ))}
-          </div>
-        )}
+        <div className="space-y-2" data-test="favorite-list-checkboxes">
+          {available.map((listName) => (
+            <Checkbox
+              key={listName}
+              label={listName}
+              checked={selected.includes(listName)}
+              onChange={() => toggleList(listName)}
+              data-test={`favorite-list-${listNameToTestId(listName)}`}
+            />
+          ))}
+        </div>
 
         <div className="flex gap-2 items-start pt-2 border-t border-gray-200">
           <Input

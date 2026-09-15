@@ -31,6 +31,7 @@ describe('defaultBookChipFilters', () => {
     // Shared defaults stay off (Search). The Books page turns mostRecent on
     // from an empty /books URL (see bookFilterParams.ts).
     expect(defaultBookChipFilters.mostRecent).toBe(false)
+    expect(defaultBookChipFilters.withPrices).toBe(false)
     expect(defaultBookChipFilters.noPrices).toBe(false)
     expect(defaultBookChipFilters.priceOlder).toBe(false)
     expect(isAnyChipActive(defaultBookChipFilters)).toBe(false)
@@ -42,51 +43,11 @@ describe('isOtherBookChipActive', () => {
     expect(isOtherBookChipActive(chips({ mostRecent: true }))).toBe(false)
     expect(isOtherBookChipActive(chips({ withoutLoc: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ hasYdlAudio: true }))).toBe(true)
-    expect(isOtherBookChipActive(chips({ mostRecent: true, electronic: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ mostRecent: true, freeText: true }))).toBe(true)
   })
 })
 
 describe('applyChipFilters', () => {
-  describe('notActiveStatus', () => {
-    const active = book({ id: 1, status: 'ACTIVE', title: 'Active' })
-    const lost = book({ id: 2, status: 'LOST', title: 'Lost' })
-    const withdrawn = book({ id: 3, status: 'WITHDRAWN', title: 'Withdrawn' })
-    const onOrder = book({ id: 4, status: 'ON_ORDER', title: 'On order' })
-    const requested = book({ id: 5, status: 'REQUESTED', title: 'Requested' })
-    const books = [active, lost, withdrawn, onOrder, requested]
-
-    it('when off, hides WITHDRAWN and REQUESTED and still shows ACTIVE, LOST, ON_ORDER', () => {
-      const result = applyChipFilters(books, chips({ notActiveStatus: false }))
-      expect(result.map((b) => b.status)).toEqual(['ACTIVE', 'LOST', 'ON_ORDER'])
-    })
-
-    it('when on, hides ACTIVE and shows LOST, WITHDRAWN, ON_ORDER, REQUESTED', () => {
-      const result = applyChipFilters(books, chips({ notActiveStatus: true }))
-      expect(result.map((b) => b.status)).toEqual(['LOST', 'WITHDRAWN', 'ON_ORDER', 'REQUESTED'])
-    })
-  })
-
-  it('requestedStatus shows only requested books and overrides default hiding', () => {
-    const active = book({ id: 1, status: 'ACTIVE' })
-    const requested = book({ id: 2, status: 'REQUESTED' })
-    expect(applyChipFilters([requested, active], chips({ requestedStatus: true }))).toEqual([requested])
-  })
-
-  it('inLibrary keeps only books with a non-blank locNumber', () => {
-    const withLoc = book({ id: 1, locNumber: 'PS3511' })
-    const blank = book({ id: 2, locNumber: '  ' })
-    const missing = book({ id: 3, locNumber: undefined })
-    const result = applyChipFilters([withLoc, blank, missing], chips({ inLibrary: true }))
-    expect(result.map((b) => b.id)).toEqual([1])
-  })
-
-  it('electronic keeps only electronicResource books', () => {
-    const elec = book({ id: 1, electronicResource: true })
-    const paper = book({ id: 2, electronicResource: false })
-    const result = applyChipFilters([elec, paper], chips({ electronic: true }))
-    expect(result.map((b) => b.id)).toEqual([1])
-  })
-
   it('freeText keeps only books with a non-blank freeTextUrl', () => {
     const withUrl = book({ id: 1, freeTextUrl: 'https://gutenberg.org/1' })
     const blank = book({ id: 2, freeTextUrl: '' })
@@ -156,8 +117,8 @@ describe('applyChipFilters', () => {
   })
 
   it('ANDs active chips so conflicting filters yield empty', () => {
-    const physical = book({ id: 1, locNumber: 'PS3511' })
-    const result = applyChipFilters([physical], chips({ inLibrary: true, withoutLoc: true }))
+    const withUrl = book({ id: 1, freeTextUrl: 'https://gutenberg.org/1' })
+    const result = applyChipFilters([withUrl], chips({ freeText: true, withoutFreeTextUrls: true }))
     expect(result).toEqual([])
   })
 
@@ -217,6 +178,26 @@ describe('applyBookPriceFilters', () => {
     expect(
       applyBookPriceFilters(books, [price({ bookId: 1 })], { noPrices: false, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
     ).toEqual([1, 2, 3])
+  })
+
+  it('withPrices keeps books with at least one usable listing', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: 4.86 }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { withPrices: true, noPrices: false, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1])
+  })
+
+  it('withPrices and noPrices together match nothing', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: 4.86 }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { withPrices: true, noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([])
   })
 
   it('noPrices keeps books with no price rows', () => {

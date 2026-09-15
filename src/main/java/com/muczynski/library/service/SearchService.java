@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookStatusFilter;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.BookDto;
@@ -52,14 +53,14 @@ public class SearchService {
     /**
      * Search books and authors with AND-combined type filters.
      * A book must satisfy ALL active type filters (not any one of them).
-     * notActiveStatus always constrains books: off hides WITHDRAWN and REQUESTED; on excludes ACTIVE and REQUESTED.
+     * Selected status values OR together; when none are selected, WITHDRAWN and REQUESTED stay hidden.
      *
      * @param query          title search text (empty = match all)
      * @param bookPage       zero-based page number for book results
      * @param authorPage     zero-based page number for author results
      * @param size           results per page
-     * @param filterInLibrary limit to books with a LOC call number (physical collection)
-     * @param filterElectronic limit to books with electronicResource = true
+     * @param filterInLibrary legacy: Active in-library when {@code statusFilters} is empty
+     * @param filterElectronic legacy: Active electronic-resource when {@code statusFilters} is empty
      * @param filterFreeText  limit to books with a free online text URL
      * @param filterAudio     limit to books whose free text URL contains "librivox"
      * @param filterMostRecent limit to books added on the most recent day UTC, or temp-title regex
@@ -68,7 +69,7 @@ public class SearchService {
      * @param filterWithoutGrokipedia limit to books with no grokipedia URL
      * @param filterWithGrokipedia limit to books with a grokipedia URL
      * @param filterWithoutGenres limit to books with no genre tags
-     * @param filterNotActiveStatus when true, only non-ACTIVE statuses; when false, hide WITHDRAWN and REQUESTED
+     * @param filterNotActiveStatus legacy: Lost/Withdrawn/On Order/Requested when {@code statusFilters} is empty
      * @param filterWithoutFreeTextUrls limit to books with no free text URL
      * @param filterYdlAudio limit to books with YDL audio
      * @param filterYdlBook limit to books with YDL paper
@@ -77,6 +78,8 @@ public class SearchService {
      * @param filterEmuBook limit to books with EMU paper
      * @param filterEmuEbook limit to books with EMU ebook
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
+     * @param statusFilters   selected status-filter values; a book matches ANY of them (OR).
+     *                        null/empty falls back to the legacy boolean flags, then the default hide.
      * @param readingDifficulties selected reading-difficulty values; a book matches ANY of them (OR).
      *                        null/empty = no reading-difficulty filter. Unset also matches null or blank.
      */
@@ -92,6 +95,7 @@ public class SearchService {
             boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
             boolean filterWithGrokipedia,
             List<String> labels,
+            List<BookStatusFilter> statusFilters,
             List<ReadingDifficulty> readingDifficulties,
             Long userId,
             List<String> favoriteLists) {
@@ -128,13 +132,30 @@ public class SearchService {
         List<Long> favoriteBookIds = favoriteIds.bookIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.bookIds();
         List<Long> favoriteAuthorIds = favoriteIds.authorIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.authorIds();
 
+        boolean hasStatusFilters = statusFilters != null && !statusFilters.isEmpty();
+        boolean statusInLibrary = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.IN_LIBRARY) : filterInLibrary;
+        boolean statusElectronic = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.ELECTRONIC_RESOURCE) : filterElectronic;
+        boolean statusLost = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.LOST) : filterNotActiveStatus;
+        boolean statusWithdrawn = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.WITHDRAWN) : filterNotActiveStatus;
+        boolean statusOnOrder = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.ON_ORDER) : filterNotActiveStatus;
+        boolean statusRequested = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.REQUESTED) : filterNotActiveStatus;
+        boolean hasStatusConstraint = statusInLibrary || statusElectronic || statusLost
+                || statusWithdrawn || statusOnOrder || statusRequested;
+
         Page<Book> bookPage;
         if (hasLabels) {
             bookPage = bookRepository.findWithFiltersAndLabels(
-                    trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                    trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                     filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                    filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                    filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
+                    filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
@@ -144,10 +165,11 @@ public class SearchService {
                     bookPageable);
         } else {
             bookPage = bookRepository.findWithFilters(
-                    trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                    trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                     filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                    filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                    filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
+                    filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
                     filterWithGrokipedia,
@@ -157,11 +179,11 @@ public class SearchService {
         }
 
         // Optional chips and labels switch authors to "authors of matching books".
-        // Withdrawn hide (notActiveStatus off) always applies to the book WHERE, including
+        // Default withdrawn/requested hide always applies to the book WHERE, including
         // those author-of-books queries, but does not by itself switch away from name search.
-        boolean hasBookFilters = filterInLibrary || filterElectronic || filterFreeText || filterAudio
+        boolean hasBookFilters = hasStatusConstraint || filterFreeText || filterAudio
                 || filterMostRecent || filterWithoutLoc || filterThreeLetterLoc
-                || filterWithoutGrokipedia || filterWithGrokipedia || filterWithoutGenres || filterNotActiveStatus
+                || filterWithoutGrokipedia || filterWithGrokipedia || filterWithoutGenres
                 || filterWithoutFreeTextUrls
                 || filterYdlAudio || filterYdlBook || filterYdlEbook
                 || filterEmuAudio || filterEmuBook || filterEmuEbook
@@ -170,10 +192,11 @@ public class SearchService {
         if (hasBookFilters) {
             if (hasLabels) {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
-                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                         filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                        filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                        filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
+                        filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,
@@ -183,10 +206,11 @@ public class SearchService {
                         authorPageable);
             } else {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
-                        trimmedQuery, filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                        trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
                         filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                        filterWithoutGenres, filterNotActiveStatus, filterWithoutFreeTextUrls,
+                        filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
+                        filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
                         filterWithGrokipedia,

@@ -132,30 +132,30 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
         assertThat(page.locator("[data-test='book-price-filters']")).isVisible();
         assertThat(page.locator("[data-test='book-price-filters']")).containsText("Pricing");
+        assertThat(page.locator("[data-test='filter-with-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-prices']")).containsText("Books with Pricing");
         assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-no-prices']")).containsText("Books without Pricing");
         assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-hardcover']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-price-other-unknown']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-price-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
-        assertThat(page.locator("[data-test='filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
+        assertThat(page.locator("[data-test='status-filters']")).isVisible();
+        assertThat(page.locator("[data-test='status-filters']")).containsText("Status");
+        assertThat(page.locator("[data-test='status-filter-in-library']")).containsText("In-library");
+        assertThat(page.locator("[data-test='status-filter-electronic-resource']")).containsText("Electronic resource");
+        assertThat(page.locator("[data-test='status-filter-requested']")).containsText("Requested");
+        assertThat(page.locator("[data-test='filter-requested-status']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-not-active-status']")).hasCount(0);
         assertThat(page.locator("[data-test='reading-difficulty-filters']")).isVisible();
         assertThat(page.locator("[data-test='reading-difficulty-filters']")).containsText("Reading Difficulty");
         assertThat(page.locator("[data-test='reading-difficulty-filter-unset']")).containsText("Unset");
 
         // Verify initial book is displayed
         assertThat(page.locator("text=Initial Book")).isVisible();
-
-        Locator filterInfo = page.locator("[data-test='filter-in-library-info']");
-        assertThat(filterInfo).isVisible();
-        String pressedBefore = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
-        filterInfo.click();
-        assertThat(page.locator("[data-test='filter-in-library-tooltip']")).isVisible();
-        assertThat(page.locator("[data-test='filter-in-library-tooltip']"))
-                .containsText("Library of Congress");
-        String pressedAfter = page.locator("[data-test='filter-in-library']").getAttribute("aria-pressed");
-        assert pressedBefore != null && pressedBefore.equals(pressedAfter) :
-                "Clicking filter info should not toggle the filter";
 
         // Stats placeholder holds the bulk-action slot when nothing is selected
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();

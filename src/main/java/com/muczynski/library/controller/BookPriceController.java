@@ -37,10 +37,17 @@ public class BookPriceController {
         return ResponseEntity.ok(bookPriceService.listAll());
     }
 
+    /**
+     * Not {@code @Transactional}: AbeBooks HTTP must not hold a pool connection.
+     */
     @PostMapping("/lookup/{bookId}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<BookPriceLookupResultDto> lookupBook(@PathVariable Long bookId) {
         log.info("Looking up AbeBooks prices for book ID: {}", bookId);
-        return ResponseEntity.ok(bookPriceService.lookupAndUpdateBook(bookId));
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(bookId);
+        log.info("AbeBooks lookup result bookId={} success={} rateLimited={} cancelled={} error={}",
+                bookId, result.isSuccess(), result.isRateLimited(), result.isCancelled(),
+                result.getErrorMessage());
+        return ResponseEntity.ok(result);
     }
 }

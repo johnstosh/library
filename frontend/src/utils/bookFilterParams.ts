@@ -5,9 +5,10 @@ import {
   isOtherBookChipActive,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
+import { bookStatusesFromSearchParams } from '@/utils/bookStatus'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 
-/** URL query keys for chip state. inLib/elec keep existing shareable URLs. */
+/** URL query keys for chip state. */
 export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   hasYdlAudio: 'ydlAudio',
   hasYdlBook: 'ydlBook',
@@ -15,8 +16,6 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   hasEmuAudio: 'emuAudio',
   hasEmuBook: 'emuBook',
   hasEmuEbook: 'emuEbook',
-  inLibrary: 'inLib',
-  electronic: 'elec',
   freeText: 'freeText',
   audio: 'audio',
   mostRecent: 'mostRecent',
@@ -24,9 +23,8 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   withoutGrokipedia: 'withoutGrokipedia',
   withGrokipedia: 'withGrokipedia',
   withoutGenres: 'withoutGenres',
-  notActiveStatus: 'notActiveStatus',
-  requestedStatus: 'requestedStatus',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
+  withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',
 }
@@ -39,8 +37,6 @@ export const SEARCH_VISIBLE_CHIPS: (keyof BookChipFilters)[] = [
   'hasEmuAudio',
   'hasEmuBook',
   'hasEmuEbook',
-  'inLibrary',
-  'electronic',
   'freeText',
   'audio',
   'mostRecent',
@@ -94,12 +90,14 @@ export function isBooksIntakeConstrained(
   q: string,
   readingDifficulties: string[] = [],
   favoriteLists: string[] = [],
+  statuses: string[] = [],
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
     labels.length > 0 ||
     readingDifficulties.length > 0 ||
     favoriteLists.length > 0 ||
+    statuses.length > 0 ||
     q.trim().length > 0
   )
 }
@@ -120,9 +118,17 @@ export function chipsFromSearchParams(
   if (mode === 'books') {
     const labels = labelsFromSearchParams(params)
     const readingDifficulties = readingDifficultiesFromSearchParams(params)
+    const statuses = bookStatusesFromSearchParams(params)
     const q = (params.get('q') ?? '').trim()
     const favoriteLists = favoriteListsFromSearchParams(params)
-    const othersOn = isBooksIntakeConstrained(chips, labels, q, readingDifficulties, favoriteLists)
+    const othersOn = isBooksIntakeConstrained(
+      chips,
+      labels,
+      q,
+      readingDifficulties,
+      favoriteLists,
+      statuses,
+    )
     if (othersOn) {
       chips.mostRecent = false
     } else if (params.get(CHIP_URL_KEYS.mostRecent) === 'false') {
@@ -138,6 +144,7 @@ export interface BookFilterUrlState {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  statuses?: string[]
   favoriteLists?: string[]
   q: string
   bookPage?: number
@@ -164,6 +171,10 @@ export function bookFilterParamsForUrl(
   if (readingDifficulties.length > 0) {
     params.readingDifficulty = readingDifficulties.join(',')
   }
+  const statuses = state.statuses ?? []
+  if (statuses.length > 0) {
+    params.status = statuses.join(',')
+  }
   const favoriteLists = state.favoriteLists ?? []
   if (favoriteLists.length > 0) params.favoriteLists = favoriteLists.join(',')
 
@@ -184,6 +195,7 @@ export function bookFilterParamsForUrl(
       q,
       readingDifficulties,
       favoriteLists,
+      statuses,
     )
     if (!othersOn && !state.chips.mostRecent) {
       params[CHIP_URL_KEYS.mostRecent] = 'false'
@@ -210,6 +222,7 @@ export function booksPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  statuses?: string[]
   favoriteLists?: string[]
   q: string
 }): string {
@@ -224,6 +237,7 @@ export function booksPathFromFilters(state: {
       chips: discoveryChips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
     },
@@ -238,6 +252,7 @@ export function pricesPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  statuses?: string[]
   favoriteLists?: string[]
   q: string
   priceOlderDays?: number
@@ -247,6 +262,7 @@ export function pricesPathFromFilters(state: {
       chips: state.chips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
       priceOlderDays: state.priceOlderDays,

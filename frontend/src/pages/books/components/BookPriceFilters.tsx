@@ -32,7 +32,14 @@ export function BookPriceFilters({
         {listingFilters}
         <div className="flex flex-wrap items-center gap-2" data-test="book-price-filter-chips">
           <FilterChip
-            label="No prices saved"
+            label="Books with Pricing"
+            active={chips.withPrices}
+            onClick={() => onToggle('withPrices')}
+            tooltip="Only books with at least one usable AbeBooks listing"
+            dataTest="filter-with-prices"
+          />
+          <FilterChip
+            label="Books without Pricing"
             active={chips.noPrices}
             onClick={() => onToggle('noPrices')}
             tooltip="Only books with no usable AbeBooks listing — no rows, No matching listing, or a cancelled/rate-limited lookup"
@@ -42,7 +49,7 @@ export function BookPriceFilters({
             label="Price older than"
             active={chips.priceOlder}
             onClick={() => onToggle('priceOlder')}
-            tooltip="Only books whose latest AbeBooks lookup is older than N days. Combine with No prices saved to find books that need a lookup."
+            tooltip="Only books whose latest AbeBooks lookup is older than N days. Combine with Books without Pricing to find books that need a lookup."
             dataTest="filter-price-older"
           />
           <label className="inline-flex items-center gap-1 text-sm text-gray-600">

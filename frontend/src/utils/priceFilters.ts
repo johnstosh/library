@@ -5,6 +5,7 @@ import type { BookCoverType } from '@/types/enums'
 export interface PriceChipFilters {
   hardcover: boolean
   softcover: boolean
+  otherUnknown: boolean
   hasListing: boolean
   lookupFailed: boolean
   recent: boolean
@@ -13,6 +14,7 @@ export interface PriceChipFilters {
 export const defaultPriceChipFilters: PriceChipFilters = {
   hardcover: false,
   softcover: false,
+  otherUnknown: false,
   hasListing: false,
   lookupFailed: false,
   recent: false,
@@ -24,6 +26,7 @@ export function priceChipsFromSearchParams(params: URLSearchParams): PriceChipFi
   return {
     hardcover: params.get('hardcover') === 'true',
     softcover: params.get('softcover') === 'true',
+    otherUnknown: params.get('otherUnknown') === 'true',
     hasListing: params.get('hasListing') === 'true',
     lookupFailed: params.get('lookupFailed') === 'true',
     recent: params.get('recent') === 'true',
@@ -41,6 +44,7 @@ export function priceFilterParamsForUrl(state: {
   const params: Record<string, string> = {}
   if (state.chips.hardcover) params.hardcover = 'true'
   if (state.chips.softcover) params.softcover = 'true'
+  if (state.chips.otherUnknown) params.otherUnknown = 'true'
   if (state.chips.hasListing) params.hasListing = 'true'
   if (state.chips.lookupFailed) params.lookupFailed = 'true'
   if (state.chips.recent) params.recent = 'true'
@@ -63,7 +67,7 @@ export function applyPriceFilters(
   now = Date.now(),
 ): BookPriceDto[] {
   const maxTotal = parseMaxTotal(maxTotalRaw)
-  const coverActive = chips.hardcover || chips.softcover
+  const coverActive = chips.hardcover || chips.softcover || chips.otherUnknown
   const statusActive = chips.hasListing || chips.lookupFailed
   const recentCutoff = now - RECENT_DAYS * 24 * 60 * 60 * 1000
 
@@ -71,7 +75,8 @@ export function applyPriceFilters(
     if (coverActive) {
       const coverOk =
         (chips.hardcover && price.cover === 'HARDCOVER') ||
-        (chips.softcover && price.cover === 'SOFTCOVER')
+        (chips.softcover && price.cover === 'SOFTCOVER') ||
+        (chips.otherUnknown && isOtherOrUnknownCover(price.cover))
       if (!coverOk) return false
     }
     if (statusActive) {
@@ -93,6 +98,12 @@ export function applyPriceFilters(
   })
 }
 
+export function isOtherOrUnknownCover(cover: BookCoverType | string): boolean {
+  return cover !== 'HARDCOVER' && cover !== 'SOFTCOVER'
+}
+
 export function coverLabel(cover: BookCoverType | string): string {
-  return cover === 'HARDCOVER' ? 'Hardcover' : 'Softcover'
+  if (cover === 'HARDCOVER') return 'Hardcover'
+  if (cover === 'SOFTCOVER') return 'Softcover'
+  return 'Other/Unknown'
 }

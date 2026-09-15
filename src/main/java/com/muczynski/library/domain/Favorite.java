@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
         @Index(name = "idx_favorite_user", columnList = "user_id"),
         @Index(name = "idx_favorite_book", columnList = "book_id"),
         @Index(name = "idx_favorite_author", columnList = "author_id"),
-        @Index(name = "idx_favorite_list", columnList = "list_name")
+        @Index(name = "idx_favorite_list", columnList = "list_name"),
+        @Index(name = "idx_favorite_user_book", columnList = "user_id, book_id"),
+        @Index(name = "idx_favorite_user_author", columnList = "user_id, author_id")
     }
 )
 @Getter

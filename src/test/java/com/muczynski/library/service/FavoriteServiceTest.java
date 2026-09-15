@@ -8,6 +8,7 @@ import com.muczynski.library.domain.Favorite;
 import com.muczynski.library.domain.FavoriteItemType;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.FavoriteItemDto;
+import com.muczynski.library.dto.FavoriteSummaryDto;
 import com.muczynski.library.dto.FavoriteUpdateDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.AuthorRepository;
@@ -23,9 +24,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,8 +62,10 @@ class FavoriteServiceTest {
 
     @Test
     void replaceItem_SavesCheckedListsAndReturnsLibrarianLists() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(bookRepository.findById(9L)).thenReturn(Optional.of(book));
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+        when(bookRepository.existsById(9L)).thenReturn(true);
+        when(bookRepository.getReferenceById(9L)).thenReturn(book);
         when(favoriteRepository.findDistinctListNamesByUserId(1L)).thenReturn(List.of("Have Read", "Shelf"));
 
         FavoriteUpdateDto update = new FavoriteUpdateDto(
@@ -76,12 +79,16 @@ class FavoriteServiceTest {
         assertEquals(List.of("Have Read", "Needs Review", "Shelf"), result.getSelectedLists());
         assertTrue(result.getAvailableLists().contains("Need to Locate"));
         assertTrue(result.getAvailableLists().contains("Shelf"));
+        verify(bookRepository, never()).findById(any());
+        verify(userRepository, never()).findById(any());
     }
 
     @Test
     void replaceItem_RejectsLibrarianListsForPatrons() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(bookRepository.findById(9L)).thenReturn(Optional.of(book));
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+        when(bookRepository.existsById(9L)).thenReturn(true);
+        when(bookRepository.getReferenceById(9L)).thenReturn(book);
 
         FavoriteUpdateDto update = new FavoriteUpdateDto(
                 FavoriteItemType.BOOK, 9L, List.of("Needs Review"));
@@ -92,13 +99,79 @@ class FavoriteServiceTest {
 
     @Test
     void getItem_OmitsLibrarianListsForPatrons() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(bookRepository.findById(9L)).thenReturn(Optional.of(book));
-        when(favoriteRepository.findByUser_IdAndBook_Id(1L, 9L)).thenReturn(List.of());
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(bookRepository.existsById(9L)).thenReturn(true);
+        when(favoriteRepository.findListNamesByUserIdAndBookId(1L, 9L)).thenReturn(List.of());
         when(favoriteRepository.findDistinctListNamesByUserId(1L)).thenReturn(List.of("Needs Review", "Mine"));
 
         FavoriteItemDto result = favoriteService.getItem(1L, FavoriteItemType.BOOK, 9L, false);
 
         assertEquals(List.of("Have Read", "Want to Read", "Want to Recommend", "Mine"), result.getAvailableLists());
+        verify(bookRepository, never()).findById(any());
+        verify(favoriteRepository, never()).findByUser_IdAndBook_Id(any(), any());
+    }
+
+    @Test
+    void getItem_ReturnsSelectedListNamesWithoutLoadingFavoriteEntities() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(bookRepository.existsById(9L)).thenReturn(true);
+        when(favoriteRepository.findListNamesByUserIdAndBookId(1L, 9L)).thenReturn(List.of("Have Read", "Shelf"));
+        when(favoriteRepository.findDistinctListNamesByUserId(1L)).thenReturn(List.of("Have Read", "Shelf"));
+
+        FavoriteItemDto result = favoriteService.getItem(1L, FavoriteItemType.BOOK, 9L, true);
+
+        assertEquals(List.of("Have Read", "Shelf"), result.getSelectedLists());
+        assertTrue(result.getAvailableLists().contains("Needs Review"));
+        verify(bookRepository, never()).findById(any());
+    }
+
+    @Test
+    void getSummary_UsesMembershipProjectionAndIncludesAvailableLists() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(favoriteRepository.findMembershipRowsByUserId(1L)).thenReturn(List.of(
+                new Object[]{"Have Read", 9L, null},
+                new Object[]{"Shelf", 9L, null},
+                new Object[]{"Have Read", null, 4L}
+        ));
+
+        FavoriteSummaryDto result = favoriteService.getSummary(1L, false);
+
+        assertEquals(List.of(9L), result.getFavoriteBookIds());
+        assertEquals(List.of(4L), result.getFavoriteAuthorIds());
+        assertEquals("Have Read", result.getLists().get(0).getListName());
+        assertEquals(List.of(9L), result.getLists().get(0).getBookIds());
+        assertEquals(List.of(4L), result.getLists().get(0).getAuthorIds());
+        assertEquals("Shelf", result.getLists().get(1).getListName());
+        assertTrue(result.getAvailableLists().contains("Want to Read"));
+        assertTrue(result.getAvailableLists().contains("Shelf"));
+        assertFalse(result.getAvailableLists().contains("Needs Review"));
+        verify(favoriteRepository, never()).findByUser_Id(any());
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void getSummary_IncludesLibrarianListsForLibrarians() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(favoriteRepository.findMembershipRowsByUserId(1L)).thenReturn(List.of());
+
+        FavoriteSummaryDto result = favoriteService.getSummary(1L, true);
+
+        assertTrue(result.getAvailableLists().contains("Needs Review"));
+        assertTrue(result.getAvailableLists().contains("Need to Locate"));
+    }
+
+    @Test
+    void resolveIds_UsesMembershipProjection() {
+        when(favoriteRepository.findMembershipRowsByUserId(1L)).thenReturn(List.of(
+                new Object[]{"Have Read", 9L, null},
+                new Object[]{"Shelf", 11L, null},
+                new Object[]{"Have Read", null, 4L}
+        ));
+
+        FavoriteService.FavoriteIdSets ids = favoriteService.resolveIds(1L, List.of("Have Read"));
+
+        assertEquals(List.of(9L), ids.bookIds());
+        assertEquals(List.of(4L), ids.authorIds());
+        verify(favoriteRepository, never()).findByUser_Id(any());
     }
 }

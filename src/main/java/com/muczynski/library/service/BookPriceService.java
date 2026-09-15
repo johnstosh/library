@@ -12,33 +12,53 @@ import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@Transactional
 public class BookPriceService {
+
+    /** Cap so retries=20 cannot wait days via unbounded exponential backoff. */
+    static final long MAX_RATE_LIMIT_BACKOFF_MS = 300_000L;
 
     private final BookRepository bookRepository;
     private final BookPriceRepository bookPriceRepository;
     private final AbeBooksClient abeBooksClient;
+    private final TransactionTemplate transactionTemplate;
+    private final DataSource dataSource;
     private final int rateLimitRetries;
     private final long rateLimitBackoffMs;
 
     public BookPriceService(BookRepository bookRepository,
                             BookPriceRepository bookPriceRepository,
                             AbeBooksClient abeBooksClient) {
-        this(bookRepository, bookPriceRepository, abeBooksClient, 0, 0);
+        this(bookRepository, bookPriceRepository, abeBooksClient, 0, 0, null, null);
+    }
+
+    public BookPriceService(BookRepository bookRepository,
+                            BookPriceRepository bookPriceRepository,
+                            AbeBooksClient abeBooksClient,
+                            int rateLimitRetries,
+                            long rateLimitBackoffMs) {
+        this(bookRepository, bookPriceRepository, abeBooksClient, rateLimitRetries, rateLimitBackoffMs, null, null);
     }
 
     @Autowired
@@ -46,12 +66,22 @@ public class BookPriceService {
                             BookPriceRepository bookPriceRepository,
                             AbeBooksClient abeBooksClient,
                             @Value("${abebooks.rate-limit-retries:2}") int rateLimitRetries,
-                            @Value("${abebooks.rate-limit-backoff-ms:2000}") long rateLimitBackoffMs) {
+                            @Value("${abebooks.rate-limit-backoff-ms:4000}") long rateLimitBackoffMs,
+                            PlatformTransactionManager transactionManager,
+                            DataSource dataSource) {
         this.bookRepository = bookRepository;
         this.bookPriceRepository = bookPriceRepository;
         this.abeBooksClient = abeBooksClient;
         this.rateLimitRetries = rateLimitRetries;
         this.rateLimitBackoffMs = rateLimitBackoffMs;
+        if (transactionManager == null) {
+            this.transactionTemplate = null;
+        } else {
+            TransactionTemplate template = new TransactionTemplate(transactionManager);
+            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            this.transactionTemplate = template;
+        }
+        this.dataSource = dataSource;
     }
 
     @Transactional(readOnly = true)
@@ -62,67 +92,96 @@ public class BookPriceService {
     }
 
     /**
-     * Looks up hardcover and softcover AbeBooks prices for a book and upserts
-     * one {@link BookPrice} row per cover.
+     * Looks up AbeBooks prices for a book and upserts one {@link BookPrice} row
+     * per cover. Listings with no hardcover/softcover binding are stored as
+     * {@link BookCoverType#UNKNOWN}.
+     *
+     * <p>AbeBooks HTTP and throttling sleeps run <em>outside</em> a database
+     * transaction so the Hikari pool (size 3) stays available for other tabs
+     * such as Data Management. {@link Propagation#NOT_SUPPORTED} suspends any
+     * caller transaction for the duration of the HTTP work.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BookPriceLookupResultDto lookupAndUpdateBook(Long bookId) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new LibraryException("Book not found: " + bookId));
-
-        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
-            BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, "Not Ready - Temporary title");
-            BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, "Not Ready - Temporary title");
-            return BookPriceLookupResultDto.builder()
-                    .bookId(book.getId())
-                    .bookTitle(book.getTitle())
-                    .success(false)
-                    .hardcover(toDto(hardcover))
-                    .softcover(toDto(softcover))
-                    .errorMessage("Not Ready - Temporary title")
-                    .build();
+        PreparedLookup prepared = inTransaction(() -> prepareLookup(bookId));
+        if (prepared.completed != null) {
+            return prepared.completed;
         }
 
-        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
-        BookPrice hardcover;
-        BookPrice softcover;
+        log.info("AbeBooks lookup starting bookId={} title='{}' author='{}'",
+                bookId, prepared.title, prepared.authorName);
+        logPool("before-http", bookId);
+        long started = System.nanoTime();
         try {
-            AbeBooksCoverListings found = findWithBackoff(book.getTitle(), authorName);
-            hardcover = found.getHardcover() != null
-                    ? saveListing(book, BookCoverType.HARDCOVER, found.getHardcover())
-                    : saveError(book, BookCoverType.HARDCOVER, "No matching listing");
-            softcover = found.getSoftcover() != null
-                    ? saveListing(book, BookCoverType.SOFTCOVER, found.getSoftcover())
-                    : saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+            AbeBooksCoverListings found = findWithBackoff(prepared.title, prepared.authorName);
+            long elapsedMs = elapsedMs(started);
+            log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} hardcover={} softcover={}",
+                    bookId, elapsedMs,
+                    found.getHardcover() != null, found.getSoftcover() != null);
+            logPool("after-http", bookId);
+            return inTransaction(() -> saveFoundResult(bookId, found));
         } catch (AbeBooksRateLimitedException ex) {
-            log.warn("AbeBooks rate limited for book {}", book.getId());
-            hardcover = saveError(book, BookCoverType.HARDCOVER, AbeBooksRateLimitedException.MESSAGE);
-            softcover = saveError(book, BookCoverType.SOFTCOVER, AbeBooksRateLimitedException.MESSAGE);
-            return BookPriceLookupResultDto.builder()
-                    .bookId(book.getId())
-                    .bookTitle(book.getTitle())
-                    .success(false)
-                    .rateLimited(true)
-                    .hardcover(toDto(hardcover))
-                    .softcover(toDto(softcover))
-                    .errorMessage(AbeBooksRateLimitedException.MESSAGE)
-                    .build();
+            long elapsedMs = elapsedMs(started);
+            log.warn("AbeBooks lookup rate-limited bookId={} title='{}' elapsedMs={}",
+                    bookId, prepared.title, elapsedMs);
+            logPool("rate-limited", bookId);
+            return inTransaction(() -> saveErrorResult(bookId, AbeBooksRateLimitedException.MESSAGE, true));
         } catch (Exception ex) {
-            log.warn("AbeBooks lookup failed for book {}", book.getId(), ex);
+            long elapsedMs = elapsedMs(started);
+            log.warn("AbeBooks lookup failed bookId={} title='{}' elapsedMs={}: {}",
+                    bookId, prepared.title, elapsedMs, ex.getMessage(), ex);
+            logPool("failed", bookId);
             String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
-            String truncated = truncate(message, 500);
-            hardcover = saveError(book, BookCoverType.HARDCOVER, truncated);
-            softcover = saveError(book, BookCoverType.SOFTCOVER, truncated);
+            return inTransaction(() -> saveErrorResult(bookId, truncate(message, 500), false));
         }
-        boolean success = hasListing(hardcover) || hasListing(softcover);
-        String error = success ? null : joinErrors(hardcover, softcover);
+    }
+
+    private PreparedLookup prepareLookup(Long bookId) {
+        Book book = requireBook(bookId);
+        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+            return new PreparedLookup(null, null, saveErrorResult(book, "Not Ready - Temporary title", false));
+        }
+        return new PreparedLookup(book.getTitle(), authorName, null);
+    }
+
+    private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
+        Book book = requireBook(bookId);
+        CoverSaveResult saved = saveFoundCovers(book, found);
+        boolean success = hasListing(saved.hardcover) || hasListing(saved.softcover);
+        String error = success ? null : joinErrors(saved.hardcover, saved.softcover);
         return BookPriceLookupResultDto.builder()
                 .bookId(book.getId())
                 .bookTitle(book.getTitle())
                 .success(success)
-                .hardcover(toDto(hardcover))
-                .softcover(toDto(softcover))
+                .hardcover(toDto(saved.hardcover))
+                .softcover(toDto(saved.softcover))
                 .errorMessage(error)
                 .build();
+    }
+
+    private BookPriceLookupResultDto saveErrorResult(Long bookId, String message, boolean rateLimited) {
+        return saveErrorResult(requireBook(bookId), message, rateLimited);
+    }
+
+    private BookPriceLookupResultDto saveErrorResult(Book book, String message, boolean rateLimited) {
+        deleteCover(book, BookCoverType.UNKNOWN);
+        BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, message);
+        BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, message);
+        return BookPriceLookupResultDto.builder()
+                .bookId(book.getId())
+                .bookTitle(book.getTitle())
+                .success(false)
+                .rateLimited(rateLimited)
+                .hardcover(toDto(hardcover))
+                .softcover(toDto(softcover))
+                .errorMessage(message)
+                .build();
+    }
+
+    private Book requireBook(Long bookId) {
+        return bookRepository.findById(bookId)
+                .orElseThrow(() -> new LibraryException("Book not found: " + bookId));
     }
 
     private AbeBooksCoverListings findWithBackoff(String title, String author) {
@@ -130,8 +189,9 @@ public class BookPriceService {
         int attempts = Math.max(1, rateLimitRetries + 1);
         for (int attempt = 0; attempt < attempts; attempt++) {
             if (attempt > 0) {
-                long waitMs = rateLimitBackoffMs <= 0 ? 0 : rateLimitBackoffMs * (1L << (attempt - 1));
-                log.info("AbeBooks backoff {} ms before retry {} for title {}", waitMs, attempt, title);
+                long waitMs = backoffMsForAttempt(attempt - 1, rateLimitBackoffMs);
+                log.info("AbeBooks backoff {} ms before retry {} of {} for title '{}'",
+                        waitMs, attempt, rateLimitRetries, title);
                 sleepQuietly(waitMs);
             }
             try {
@@ -143,6 +203,20 @@ public class BookPriceService {
         throw last != null ? last : new AbeBooksRateLimitedException();
     }
 
+    /**
+     * Exponential backoff capped at 8× the base, then at
+     * {@link #MAX_RATE_LIMIT_BACKOFF_MS}, so a large retry count cannot stall
+     * a lookup for days.
+     */
+    static long backoffMsForAttempt(int zeroBasedRetry, long baseMs) {
+        if (baseMs <= 0 || zeroBasedRetry < 0) {
+            return 0;
+        }
+        int shift = Math.min(zeroBasedRetry, 3);
+        long raw = baseMs * (1L << shift);
+        return Math.min(raw, MAX_RATE_LIMIT_BACKOFF_MS);
+    }
+
     private static void sleepQuietly(long waitMs) {
         if (waitMs <= 0) {
             return;
@@ -152,6 +226,74 @@ public class BookPriceService {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+        }
+    }
+
+    private CoverSaveResult saveFoundCovers(Book book, AbeBooksCoverListings found) {
+        AbeBooksListing hcListing = found.getHardcover();
+        AbeBooksListing scListing = found.getSoftcover();
+        boolean hcUnknown = isUnknownBinding(hcListing);
+        boolean scUnknown = isUnknownBinding(scListing);
+
+        BookPrice unknown = null;
+        if (hcUnknown || scUnknown) {
+            AbeBooksListing unknownListing = hcUnknown ? hcListing : scListing;
+            unknown = saveListing(book, BookCoverType.UNKNOWN, unknownListing);
+        } else {
+            deleteCover(book, BookCoverType.UNKNOWN);
+        }
+
+        BookPrice hardcover;
+        if (hcListing != null && !hcUnknown) {
+            hardcover = saveListing(book, BookCoverType.HARDCOVER, hcListing);
+        } else if (hcUnknown) {
+            deleteCover(book, BookCoverType.HARDCOVER);
+            hardcover = unknown;
+        } else {
+            hardcover = saveError(book, BookCoverType.HARDCOVER, "No matching listing");
+        }
+
+        BookPrice softcover;
+        if (scListing != null && !scUnknown) {
+            softcover = saveListing(book, BookCoverType.SOFTCOVER, scListing);
+        } else if (scUnknown) {
+            deleteCover(book, BookCoverType.SOFTCOVER);
+            softcover = unknown;
+        } else {
+            softcover = saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+        }
+        return new CoverSaveResult(hardcover, softcover);
+    }
+
+    private static boolean isUnknownBinding(AbeBooksListing listing) {
+        return listing != null
+                && (listing.getBinding() == null || listing.getBinding() == BookCoverType.UNKNOWN);
+    }
+
+    private void deleteCover(Book book, BookCoverType cover) {
+        bookPriceRepository.findByBook_IdAndCover(book.getId(), cover)
+                .ifPresent(bookPriceRepository::delete);
+    }
+
+    private static final class CoverSaveResult {
+        private final BookPrice hardcover;
+        private final BookPrice softcover;
+
+        private CoverSaveResult(BookPrice hardcover, BookPrice softcover) {
+            this.hardcover = hardcover;
+            this.softcover = softcover;
+        }
+    }
+
+    private static final class PreparedLookup {
+        private final String title;
+        private final String authorName;
+        private final BookPriceLookupResultDto completed;
+
+        private PreparedLookup(String title, String authorName, BookPriceLookupResultDto completed) {
+            this.title = title;
+            this.authorName = authorName;
+            this.completed = completed;
         }
     }
 
@@ -241,5 +383,44 @@ public class BookPriceService {
             return value;
         }
         return value.substring(0, max);
+    }
+
+    private <T> T inTransaction(Supplier<T> work) {
+        if (transactionTemplate == null) {
+            return work.get();
+        }
+        return transactionTemplate.execute(status -> work.get());
+    }
+
+    private void logPool(String phase, Long bookId) {
+        HikariPoolMXBean pool = hikariPool();
+        if (pool == null) {
+            return;
+        }
+        log.info("AbeBooks {} bookId={} hikari active={} idle={} awaiting={} total={}",
+                phase, bookId,
+                pool.getActiveConnections(),
+                pool.getIdleConnections(),
+                pool.getThreadsAwaitingConnection(),
+                pool.getTotalConnections());
+    }
+
+    private HikariPoolMXBean hikariPool() {
+        if (dataSource == null) {
+            return null;
+        }
+        try {
+            HikariDataSource hikari = dataSource instanceof HikariDataSource hikariDataSource
+                    ? hikariDataSource
+                    : dataSource.unwrap(HikariDataSource.class);
+            return hikari.getHikariPoolMXBean();
+        } catch (Exception ex) {
+            log.debug("Could not read Hikari pool stats: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000L;
     }
 }

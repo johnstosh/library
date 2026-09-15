@@ -12,10 +12,14 @@ export interface FavoriteListMembershipDto {
   authorIds: number[]
 }
 
+export const PATRON_FAVORITE_LISTS = ['Have Read', 'Want to Read', 'Want to Recommend'] as const
+export const LIBRARIAN_FAVORITE_LISTS = ['Needs Review', 'Need to Locate'] as const
+
 export interface FavoriteSummaryDto {
   favoriteBookIds: number[]
   favoriteAuthorIds: number[]
   lists: FavoriteListMembershipDto[]
+  availableLists?: string[]
 }
 
 export interface FavoriteItemDto {
@@ -115,4 +119,47 @@ export function listNameToTestId(listName: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+/**
+ * Lists for the star editor, derived from the already-loaded summary so the
+ * modal does not wait on GET /favorites/item.
+ */
+export function itemListsFromSummary(
+  summary: FavoriteSummaryDto | undefined,
+  itemType: FavoriteItemType,
+  itemId: number,
+  isLibrarian: boolean,
+): { availableLists: string[]; selectedLists: string[] } {
+  const selectedLists: string[] = []
+  const idField = itemType === 'BOOK' ? 'bookIds' : 'authorIds'
+  for (const list of summary?.lists ?? []) {
+    if (list[idField].includes(itemId)) {
+      selectedLists.push(list.listName)
+    }
+  }
+  if (summary?.availableLists && summary.availableLists.length > 0) {
+    return { availableLists: summary.availableLists, selectedLists }
+  }
+  const availableLists = [
+    ...PATRON_FAVORITE_LISTS,
+    ...(isLibrarian ? LIBRARIAN_FAVORITE_LISTS : []),
+  ]
+  const builtInLower = new Set(availableLists.map((name) => name.toLowerCase()))
+  const librarianLower = new Set(
+    LIBRARIAN_FAVORITE_LISTS.map((name) => name.toLowerCase()),
+  )
+  const seenCustom = new Set<string>()
+  const custom: string[] = []
+  for (const list of summary?.lists ?? []) {
+    const name = list.listName
+    if (!name) continue
+    const lower = name.toLowerCase()
+    if (builtInLower.has(lower) || seenCustom.has(lower)) continue
+    if (!isLibrarian && librarianLower.has(lower)) continue
+    seenCustom.add(lower)
+    custom.push(name)
+  }
+  custom.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  return { availableLists: [...availableLists, ...custom], selectedLists }
 }

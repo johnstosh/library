@@ -81,6 +81,7 @@ function UrlQuery() {
     <>
       <div data-test="url-q">{params.get('q') ?? ''}</div>
       <div data-test="url-reading-difficulty">{params.get('readingDifficulty') ?? ''}</div>
+      <div data-test="url-status">{params.get('status') ?? ''}</div>
       <div data-test="location">{`${location.pathname}${location.search}`}</div>
     </>
   )
@@ -100,22 +101,25 @@ describe('BooksPage Pricing filters', () => {
     librarianState.current = true
     renderBooksPage('/books?mostRecent=false')
     expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
-    expect(screen.getByTestId('filter-no-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-with-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+    expect(screen.queryByTestId('filter-price-hardcover')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()
   })
 })
 
 describe('BooksPage Open in Prices', () => {
   it('hands current filters to /prices', () => {
     librarianState.current = true
-    renderBooksPage('/books?q=Initial&inLib=true')
+    renderBooksPage('/books?q=Initial&status=in-library')
 
     const button = screen.getByTestId('open-in-prices')
     expect(button).toHaveTextContent('Open in Prices')
     expect(button.closest('form')).toBeNull()
     expect(button.getAttribute('href')).toBeNull()
     fireEvent.click(button)
-    expect(screen.getByTestId('location')).toHaveTextContent('/prices?q=Initial&inLib=true')
+    expect(screen.getByTestId('location')).toHaveTextContent('/prices?q=Initial&status=in-library')
   })
 })
 
@@ -165,5 +169,13 @@ describe('BooksPage reading difficulty filter', () => {
     renderBooksPage('/books?mostRecent=false')
     fireEvent.click(screen.getByTestId('reading-difficulty-filter-children'))
     expect(screen.getByTestId('url-reading-difficulty')).toHaveTextContent('children')
+  })
+})
+
+describe('BooksPage status filter', () => {
+  it('writes the selected status chip into the URL', () => {
+    renderBooksPage('/books?mostRecent=false')
+    fireEvent.click(screen.getByTestId('status-filter-requested'))
+    expect(screen.getByTestId('url-status')).toHaveTextContent('requested')
   })
 })

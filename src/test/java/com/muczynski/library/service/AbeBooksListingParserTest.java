@@ -71,12 +71,12 @@ class AbeBooksListingParserTest {
         assertFalse(parser.isBlockedPage(
                 "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>"));
         assertFalse(parser.isRateLimited(PAGE, 80));
-        assertTrue(parser.isRateLimited(
-                "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>",
-                80));
-        assertFalse(parser.isRateLimited(
-                "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>",
-                400));
+        String emptyResults = "<html>Closest match to your search<div data-test-id=\"srp-search-results-list\"></div></html>";
+        assertFalse(parser.isRateLimited(emptyResults, 80),
+                "a real empty SearchResults page is not a rate limit even when fast");
+        assertFalse(parser.isRateLimited(emptyResults, 400));
+        assertTrue(parser.isRateLimited("<html>not a search page</html>", 80),
+                "a tiny non-search page that returns too fast is treated as rate limited");
     }
 
     @Test

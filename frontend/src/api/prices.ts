@@ -5,17 +5,17 @@ import { queryKeys } from '@/config/queryClient'
 import type { BookPriceDto, BookPriceLookupResultDto } from '@/types/dtos'
 
 /** Pause between books so AbeBooks does not throttle the Cloud Run IP. */
-export const PRICE_LOOKUP_PAUSE_MS = 500
+export const PRICE_LOOKUP_PAUSE_MS = 1000
 
 /** Every 10th lookup waits longer than the usual pause. */
-export const PRICE_LOOKUP_TENTH_PAUSE_MS = 5000
+export const PRICE_LOOKUP_TENTH_PAUSE_MS = 10000
 
 export function priceLookupPauseMs(oneBasedIndex: number): number {
   return oneBasedIndex % 10 === 0 ? PRICE_LOOKUP_TENTH_PAUSE_MS : PRICE_LOOKUP_PAUSE_MS
 }
 
 /** Extra waits before retrying a rate-limited book; then the rest of the batch is cancelled. */
-export const PRICE_LOOKUP_BACKOFF_MS = [2000, 4000]
+export const PRICE_LOOKUP_BACKOFF_MS = [4000, 8000]
 
 export const PRICE_LOOKUP_CANCELLED_MESSAGE = 'Cancelled: AbeBooks rate limited'
 
@@ -53,13 +53,21 @@ export async function lookupPricesForIds(
       await sleep(priceLookupPauseMs(i + 1))
     }
     const bookId = bookIds[i]
+    console.info(`Price lookup ${i + 1}/${total} bookId=${bookId}`)
     let result = await lookupOne(bookId, lookup)
     for (let backoff = 0; result.rateLimited && backoff < PRICE_LOOKUP_BACKOFF_MS.length; backoff++) {
+      console.warn(
+        `Price lookup rate-limited bookId=${bookId}; retry backoff ${PRICE_LOOKUP_BACKOFF_MS[backoff]} ms`,
+      )
       await sleep(PRICE_LOOKUP_BACKOFF_MS[backoff])
       result = await lookupOne(bookId, lookup)
     }
     results.push(result)
     if (result.rateLimited) {
+      const remaining = bookIds.length - i - 1
+      console.warn(
+        `Price lookup still rate-limited bookId=${bookId}; cancelling ${remaining} remaining`,
+      )
       for (let j = i + 1; j < bookIds.length; j++) {
         results.push({
           bookId: bookIds[j],
@@ -70,6 +78,11 @@ export async function lookupPricesForIds(
       }
       onProgress?.(total, total)
       return results
+    }
+    if (!result.success) {
+      console.warn(
+        `Price lookup failed bookId=${bookId}: ${result.errorMessage ?? 'unknown error'}`,
+      )
     }
     onProgress?.(i + 1, total)
   }

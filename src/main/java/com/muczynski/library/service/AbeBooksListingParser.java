@@ -73,27 +73,41 @@ public class AbeBooksListingParser {
                 || lower.contains("request unsuccessful")) {
             return true;
         }
-        boolean hasListing = html.contains("data-srp-item-role=\"listing\"")
-                || html.contains("data-srp-item-role='listing'");
-        if (hasListing) {
+        if (hasListing(html)) {
             return false;
         }
-        boolean looksLikeSearchResults = html.contains("srp-search-results-list")
-                || lower.contains("closest match to your search")
-                || html.contains("data-test-id=\"result-count\"");
-        return !looksLikeSearchResults;
+        return !looksLikeSearchResults(html);
     }
 
     /**
-     * Rate-limited when the body is a block page, or when a no-listing
-     * response returned faster than a real SearchResults page (~250ms).
+     * Rate-limited when the body is a block/captcha page, or a tiny no-listing
+     * response that came back faster than a real SearchResults page (~250ms).
+     * Full AbeBooks result pages (even with zero listings) often arrive in
+     * under 250ms and must not be retried as rate limits.
      */
     public boolean isRateLimited(String html, long elapsedMs) {
         if (isBlockedPage(html)) {
             return true;
         }
-        boolean hasListing = html != null && html.contains("data-srp-item-role=\"listing\"");
-        return !hasListing && elapsedMs >= 0 && elapsedMs < 250;
+        if (looksLikeSearchResults(html) || hasListing(html)) {
+            return false;
+        }
+        return elapsedMs >= 0 && elapsedMs < 250;
+    }
+
+    static boolean hasListing(String html) {
+        return html != null && (html.contains("data-srp-item-role=\"listing\"")
+                || html.contains("data-srp-item-role='listing'"));
+    }
+
+    static boolean looksLikeSearchResults(String html) {
+        if (html == null || html.isBlank()) {
+            return false;
+        }
+        String lower = html.toLowerCase(Locale.ROOT);
+        return html.contains("srp-search-results-list")
+                || lower.contains("closest match to your search")
+                || html.contains("data-test-id=\"result-count\"");
     }
 
     /**

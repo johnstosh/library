@@ -52,13 +52,30 @@ class FavoriteControllerTest {
     @Test
     @WithMockUser(username = "1", authorities = "USER")
     void testGetSummary_Success() throws Exception {
-        when(favoriteService.getSummary(1L))
-                .thenReturn(new FavoriteSummaryDto(List.of(9L), List.of(4L), List.of()));
+        when(favoriteService.getSummary(1L, false))
+                .thenReturn(new FavoriteSummaryDto(
+                        List.of(9L), List.of(4L), List.of(), List.of("Have Read", "Want to Read")));
 
         mockMvc.perform(get("/api/favorites/summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.favoriteBookIds[0]").value(9))
-                .andExpect(jsonPath("$.favoriteAuthorIds[0]").value(4));
+                .andExpect(jsonPath("$.favoriteAuthorIds[0]").value(4))
+                .andExpect(jsonPath("$.availableLists[0]").value("Have Read"));
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "USER")
+    void testGetItem_Success() throws Exception {
+        when(favoriteService.getItem(1L, FavoriteItemType.BOOK, 9L, false))
+                .thenReturn(new FavoriteItemDto(
+                        FavoriteItemType.BOOK, 9L, List.of("Have Read"), List.of("Have Read", "Want to Read")));
+
+        mockMvc.perform(get("/api/favorites/item")
+                        .param("itemType", "BOOK")
+                        .param("itemId", "9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.selectedLists[0]").value("Have Read"))
+                .andExpect(jsonPath("$.availableLists[0]").value("Have Read"));
     }
 
     @Test

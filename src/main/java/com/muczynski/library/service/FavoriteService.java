@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -59,42 +60,52 @@ public class FavoriteService {
     }
 
     @Transactional(readOnly = true)
-    public FavoriteSummaryDto getSummary(Long userId) {
-        requireUser(userId);
+    public FavoriteSummaryDto getSummary(Long userId, boolean librarian) {
+        requireUserExists(userId);
         Set<Long> bookIds = new LinkedHashSet<>();
         Set<Long> authorIds = new LinkedHashSet<>();
         Map<String, FavoriteListMembershipDto> byName = new LinkedHashMap<>();
-        for (Favorite favorite : favoriteRepository.findByUser_Id(userId)) {
-            FavoriteListMembershipDto row = byName.computeIfAbsent(
-                    favorite.getListName(),
+        for (Object[] row : favoriteRepository.findMembershipRowsByUserId(userId)) {
+            String listName = (String) row[0];
+            if (listName == null) {
+                continue;
+            }
+            Long bookId = asLong(row[1]);
+            Long authorId = asLong(row[2]);
+            FavoriteListMembershipDto membership = byName.computeIfAbsent(
+                    listName,
                     name -> new FavoriteListMembershipDto(name, new ArrayList<>(), new ArrayList<>()));
-            if (favorite.getBook() != null) {
-                bookIds.add(favorite.getBook().getId());
-                if (!row.getBookIds().contains(favorite.getBook().getId())) {
-                    row.getBookIds().add(favorite.getBook().getId());
+            if (bookId != null) {
+                bookIds.add(bookId);
+                if (!membership.getBookIds().contains(bookId)) {
+                    membership.getBookIds().add(bookId);
                 }
             }
-            if (favorite.getAuthor() != null) {
-                authorIds.add(favorite.getAuthor().getId());
-                if (!row.getAuthorIds().contains(favorite.getAuthor().getId())) {
-                    row.getAuthorIds().add(favorite.getAuthor().getId());
+            if (authorId != null) {
+                authorIds.add(authorId);
+                if (!membership.getAuthorIds().contains(authorId)) {
+                    membership.getAuthorIds().add(authorId);
                 }
             }
         }
         List<FavoriteListMembershipDto> lists = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (String name : builtInListOrder()) {
-            FavoriteListMembershipDto row = byName.get(name);
-            if (row != null) {
-                lists.add(row);
+            FavoriteListMembershipDto membership = byName.get(name);
+            if (membership != null) {
+                lists.add(membership);
                 seen.add(name.toLowerCase(Locale.ROOT));
             }
         }
         byName.values().stream()
-                .filter(row -> !seen.contains(row.getListName().toLowerCase(Locale.ROOT)))
+                .filter(membership -> !seen.contains(membership.getListName().toLowerCase(Locale.ROOT)))
                 .sorted(Comparator.comparing(FavoriteListMembershipDto::getListName, String.CASE_INSENSITIVE_ORDER))
                 .forEach(lists::add);
-        return new FavoriteSummaryDto(new ArrayList<>(bookIds), new ArrayList<>(authorIds), lists);
+        return new FavoriteSummaryDto(
+                new ArrayList<>(bookIds),
+                new ArrayList<>(authorIds),
+                lists,
+                mergeAvailableLists(byName.keySet(), librarian));
     }
 
     @Transactional(readOnly = true)
@@ -108,16 +119,18 @@ public class FavoriteService {
         if (wanted.isEmpty()) {
             return new FavoriteIdSets(List.of(), List.of());
         }
-        for (Favorite favorite : favoriteRepository.findByUser_Id(userId)) {
-            if (favorite.getListName() == null
-                    || !wanted.contains(favorite.getListName().toLowerCase(Locale.ROOT))) {
+        for (Object[] row : favoriteRepository.findMembershipRowsByUserId(userId)) {
+            String listName = (String) row[0];
+            if (listName == null || !wanted.contains(listName.toLowerCase(Locale.ROOT))) {
                 continue;
             }
-            if (favorite.getBook() != null) {
-                bookIds.add(favorite.getBook().getId());
+            Long bookId = asLong(row[1]);
+            Long authorId = asLong(row[2]);
+            if (bookId != null) {
+                bookIds.add(bookId);
             }
-            if (favorite.getAuthor() != null) {
-                authorIds.add(favorite.getAuthor().getId());
+            if (authorId != null) {
+                authorIds.add(authorId);
             }
         }
         return new FavoriteIdSets(new ArrayList<>(bookIds), new ArrayList<>(authorIds));
@@ -129,10 +142,14 @@ public class FavoriteService {
         return names;
     }
 
+    /**
+     * Item editor payload. Uses existence checks and list-name projections so opening
+     * the star modal does not load Book/Author rows (LOB columns and eager associations).
+     */
     @Transactional(readOnly = true)
     public FavoriteItemDto getItem(Long userId, FavoriteItemType itemType, Long itemId, boolean librarian) {
-        requireUser(userId);
-        requireItem(itemType, itemId);
+        requireUserExists(userId);
+        requireItemExists(itemType, itemId);
         List<String> selected = selectedListNames(userId, itemType, itemId);
         return new FavoriteItemDto(itemType, itemId, selected, availableLists(userId, librarian));
     }
@@ -141,11 +158,19 @@ public class FavoriteService {
         if (update == null || update.getItemType() == null || update.getItemId() == null) {
             throw new LibraryException("itemType and itemId are required");
         }
-        User user = requireUser(userId);
+        requireUserExists(userId);
+        User user = userRepository.getReferenceById(userId);
         FavoriteItemType itemType = update.getItemType();
         Long itemId = update.getItemId();
-        Book book = itemType == FavoriteItemType.BOOK ? requireBook(itemId) : null;
-        Author author = itemType == FavoriteItemType.AUTHOR ? requireAuthor(itemId) : null;
+        Book book = null;
+        Author author = null;
+        if (itemType == FavoriteItemType.BOOK) {
+            requireBookExists(itemId);
+            book = bookRepository.getReferenceById(itemId);
+        } else {
+            requireAuthorExists(itemId);
+            author = authorRepository.getReferenceById(itemId);
+        }
 
         List<String> listNames = normalizeListNames(update.getListNames(), librarian);
 
@@ -192,6 +217,10 @@ public class FavoriteService {
     }
 
     public List<String> availableLists(Long userId, boolean librarian) {
+        return mergeAvailableLists(favoriteRepository.findDistinctListNamesByUserId(userId), librarian);
+    }
+
+    private List<String> mergeAvailableLists(Collection<String> existingNames, boolean librarian) {
         LinkedHashSet<String> lists = new LinkedHashSet<>(PATRON_LISTS);
         if (librarian) {
             lists.addAll(LIBRARIAN_LISTS);
@@ -202,13 +231,12 @@ public class FavoriteService {
         Set<String> librarianLower = LIBRARIAN_LISTS.stream()
                 .map(name -> name.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toSet());
-        List<String> custom = favoriteRepository.findDistinctListNamesByUserId(userId).stream()
+        existingNames.stream()
                 .filter(name -> name != null && !name.isBlank())
                 .filter(name -> !builtInLower.contains(name.toLowerCase(Locale.ROOT)))
                 .filter(name -> librarian || !librarianLower.contains(name.toLowerCase(Locale.ROOT)))
                 .sorted(String.CASE_INSENSITIVE_ORDER)
-                .toList();
-        lists.addAll(custom);
+                .forEach(lists::add);
         return new ArrayList<>(lists);
     }
 
@@ -221,10 +249,9 @@ public class FavoriteService {
     }
 
     private List<String> selectedListNames(Long userId, FavoriteItemType itemType, Long itemId) {
-        List<Favorite> rows = itemType == FavoriteItemType.BOOK
-                ? favoriteRepository.findByUser_IdAndBook_Id(userId, itemId)
-                : favoriteRepository.findByUser_IdAndAuthor_Id(userId, itemId);
-        return rows.stream().map(Favorite::getListName).collect(Collectors.toList());
+        return itemType == FavoriteItemType.BOOK
+                ? favoriteRepository.findListNamesByUserIdAndBookId(userId, itemId)
+                : favoriteRepository.findListNamesByUserIdAndAuthorId(userId, itemId);
     }
 
     private List<String> normalizeListNames(List<String> raw, boolean librarian) {
@@ -248,29 +275,36 @@ public class FavoriteService {
         return new ArrayList<>(unique.values());
     }
 
-    private User requireUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+    private void requireUserExists(Long userId) {
+        if (userId == null || !userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User", userId);
+        }
     }
 
-    private Book requireBook(Long itemId) {
-        return bookRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Book", itemId));
+    private void requireBookExists(Long itemId) {
+        if (itemId == null || !bookRepository.existsById(itemId)) {
+            throw new ResourceNotFoundException("Book", itemId);
+        }
     }
 
-    private Author requireAuthor(Long itemId) {
-        return authorRepository.findById(itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Author", itemId));
+    private void requireAuthorExists(Long itemId) {
+        if (itemId == null || !authorRepository.existsById(itemId)) {
+            throw new ResourceNotFoundException("Author", itemId);
+        }
     }
 
-    private void requireItem(FavoriteItemType itemType, Long itemId) {
+    private void requireItemExists(FavoriteItemType itemType, Long itemId) {
         if (itemType == null || itemId == null) {
             throw new LibraryException("itemType and itemId are required");
         }
         if (itemType == FavoriteItemType.BOOK) {
-            requireBook(itemId);
+            requireBookExists(itemId);
         } else {
-            requireAuthor(itemId);
+            requireAuthorExists(itemId);
         }
+    }
+
+    private static Long asLong(Object value) {
+        return value == null ? null : ((Number) value).longValue();
     }
 }

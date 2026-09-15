@@ -9,13 +9,13 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
- * Row 2: inLibrary, electronic, freeText, audio, mostRecent
+ * Row 2: freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
- *   withoutGenres, requestedStatus, notActiveStatus, withoutFreeTextUrls
- * Pricing (Books, librarians): noPrices, priceOlder
+ *   withoutGenres, withoutFreeTextUrls
+ * Pricing (Books, librarians): withPrices, noPrices, priceOlder
  *
- * notActiveStatus is special and always constrains:
- *   off → hide WITHDRAWN and REQUESTED; on → only non-ACTIVE statuses (including REQUESTED).
+ * Status (in-library, electronic-resource, lost, withdrawn, on-order, requested)
+ * is a separate OR group — see bookStatus.ts — not a boolean chip.
  */
 export interface BookChipFilters {
   hasYdlAudio: boolean
@@ -24,8 +24,6 @@ export interface BookChipFilters {
   hasEmuAudio: boolean
   hasEmuBook: boolean
   hasEmuEbook: boolean
-  inLibrary: boolean
-  electronic: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
@@ -33,9 +31,8 @@ export interface BookChipFilters {
   withoutGrokipedia: boolean
   withGrokipedia: boolean
   withoutGenres: boolean
-  notActiveStatus: boolean
-  requestedStatus: boolean
   withoutFreeTextUrls: boolean
+  withPrices: boolean
   noPrices: boolean
   priceOlder: boolean
 }
@@ -47,8 +44,6 @@ export const defaultBookChipFilters: BookChipFilters = {
   hasEmuAudio: false,
   hasEmuBook: false,
   hasEmuEbook: false,
-  inLibrary: false,
-  electronic: false,
   freeText: false,
   audio: false,
   // Shared default is off (Search). The Books page turns mostRecent on when
@@ -58,9 +53,8 @@ export const defaultBookChipFilters: BookChipFilters = {
   withoutGrokipedia: false,
   withGrokipedia: false,
   withoutGenres: false,
-  notActiveStatus: false,
-  requestedStatus: false,
   withoutFreeTextUrls: false,
+  withPrices: false,
   noPrices: false,
   priceOlder: false,
 }
@@ -89,20 +83,19 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
 
 /**
  * Apply all chip filters to a book list (AND logic).
- * A book must satisfy every active chip, plus the always-on notActiveStatus constraint.
+ * A book must satisfy every active chip. Status is applied separately
+ * by {@code applyBookStatusFilter}.
  * "Recent Arrivals" matches dateAddedToLibrary on the most recent day UTC
  * (cutoff = UTC start of max-1 day) or a temporary date-format title.
  */
 export function applyChipFilters<T extends Pick<
   BookDto,
   | 'locNumber'
-  | 'electronicResource'
   | 'freeTextUrl'
   | 'title'
   | 'dateAddedToLibrary'
   | 'grokipediaUrl'
   | 'tagsList'
-  | 'status'
   | 'ydlAudioAvailable'
   | 'ydlPaperAvailable'
   | 'ydlEbookAvailable'
@@ -133,8 +126,6 @@ export function applyChipFilters<T extends Pick<
     if (chips.hasEmuAudio && book.emuAudioAvailable !== true) return false
     if (chips.hasEmuBook && book.emuPaperAvailable !== true) return false
     if (chips.hasEmuEbook && book.emuEbookAvailable !== true) return false
-    if (chips.inLibrary && isBlank(book.locNumber)) return false
-    if (chips.electronic && !book.electronicResource) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
     if (chips.audio) {
       if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false
@@ -152,13 +143,6 @@ export function applyChipFilters<T extends Pick<
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
-    if (chips.requestedStatus) {
-      if (book.status !== 'REQUESTED') return false
-    } else if (chips.notActiveStatus) {
-      if (book.status === 'ACTIVE') return false
-    } else if (book.status === 'WITHDRAWN' || book.status === 'REQUESTED') {
-      return false
-    }
     if (chips.withoutFreeTextUrls && !isBlank(book.freeTextUrl)) return false
 
     return true
@@ -170,18 +154,27 @@ export function isSavedPriceListing(price: BookPriceDto): boolean {
   return price.priceDollars != null && !price.lookupError
 }
 
+export interface BookPriceFilterOptions {
+  withPrices?: boolean
+  noPrices: boolean
+  priceOlder: boolean
+  priceOlderDays: number
+}
+
 /**
- * Books/Prices price chips. When both are on they OR: no usable listing
- * (missing rows, "No matching listing", rate-limited) or a successful
- * lookup older than {@code priceOlderDays}.
+ * Books/Prices price chips. withPrices keeps books that have a usable listing.
+ * noPrices and priceOlder OR when both are on: no usable listing (missing rows,
+ * "No matching listing", rate-limited) or a successful lookup older than
+ * {@code priceOlderDays}. withPrices ANDs with that pair.
  */
 export function applyBookPriceFilters<T extends { id: number }>(
   books: T[],
   prices: BookPriceDto[],
-  options: { noPrices: boolean; priceOlder: boolean; priceOlderDays: number },
+  options: BookPriceFilterOptions,
   now = Date.now(),
 ): T[] {
-  if (!options.noPrices && !options.priceOlder) {
+  const withPrices = Boolean(options.withPrices)
+  if (!withPrices && !options.noPrices && !options.priceOlder) {
     return books
   }
   const latestSavedByBook = new Map<number, number>()
@@ -200,14 +193,19 @@ export function applyBookPriceFilters<T extends { id: number }>(
   const cutoff = now - days * 24 * 60 * 60 * 1000
   return books.filter((book) => {
     const latest = latestSavedByBook.get(book.id)
-    const noPricesMatch = options.noPrices && latest == null
-    const olderMatch = options.priceOlder && latest != null && latest < cutoff
+    const hasPricing = latest != null
+    if (withPrices && !hasPricing) {
+      return false
+    }
     if (options.noPrices && options.priceOlder) {
-      return noPricesMatch || olderMatch
+      return !hasPricing || latest < cutoff
     }
     if (options.noPrices) {
-      return noPricesMatch
+      return !hasPricing
     }
-    return olderMatch
+    if (options.priceOlder) {
+      return hasPricing && latest < cutoff
+    }
+    return true
   })
 }

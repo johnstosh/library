@@ -31,8 +31,9 @@ public class FavoriteController {
     private final FavoriteService favoriteService;
 
     @GetMapping("/summary")
-    public ResponseEntity<FavoriteSummaryDto> getSummary(Principal principal) {
-        return ResponseEntity.ok(favoriteService.getSummary(userId(principal)));
+    public ResponseEntity<FavoriteSummaryDto> getSummary(Principal principal, Authentication authentication) {
+        return ResponseEntity.ok(favoriteService.getSummary(
+                userId(principal), SecurityUtils.isLibrarian(authentication)));
     }
 
     @GetMapping("/item")
