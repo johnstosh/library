@@ -21,7 +21,7 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
 - Politeness / rate limits:
   - 8s pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 30s (`abebooks.tenth-request-delay-ms`)
   - 1s pause between books in the bulk carousel; every 10th book waits 10s
-  - HTTP 403/429/502/503/504, I/O timeout, a captcha/block page, or a no-listing response faster than 250ms is treated as rate-limited
+  - HTTP 403/429/502/503/504, I/O timeout, or a captcha/block page is treated as rate-limited. A real SearchResults page with zero listings is not, even when it arrives in under 250ms.
   - The current book is retried with exponential backoff capped at 5 minutes (`abebooks.rate-limit-retries`, `abebooks.rate-limit-backoff-ms`)
   - If still rate-limited, remaining selected books are **cancelled** (not recorded as "no listing") so the batch stops hammering AbeBooks
   - AbeBooks HTTP and throttling sleeps run **outside** a database transaction so the Hikari pool (size 3) stays available for other tabs (Data Management) during a long bulk lookup
