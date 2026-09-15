@@ -31,6 +31,7 @@ describe('defaultBookChipFilters', () => {
     // Shared defaults stay off (Search). The Books page turns mostRecent on
     // from an empty /books URL (see bookFilterParams.ts).
     expect(defaultBookChipFilters.mostRecent).toBe(false)
+    expect(defaultBookChipFilters.withPrices).toBe(false)
     expect(defaultBookChipFilters.noPrices).toBe(false)
     expect(defaultBookChipFilters.priceOlder).toBe(false)
     expect(isAnyChipActive(defaultBookChipFilters)).toBe(false)
@@ -217,6 +218,26 @@ describe('applyBookPriceFilters', () => {
     expect(
       applyBookPriceFilters(books, [price({ bookId: 1 })], { noPrices: false, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
     ).toEqual([1, 2, 3])
+  })
+
+  it('withPrices keeps books with at least one usable listing', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: 4.86 }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { withPrices: true, noPrices: false, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([1])
+  })
+
+  it('withPrices and noPrices together match nothing', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: 4.86 }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'No matching listing' }),
+    ]
+    expect(
+      applyBookPriceFilters(books, prices, { withPrices: true, noPrices: true, priceOlder: false, priceOlderDays: 90 }, now).map((b) => b.id),
+    ).toEqual([])
   })
 
   it('noPrices keeps books with no price rows', () => {

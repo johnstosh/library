@@ -96,9 +96,14 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='book-price-filters']")).isVisible();
         assertThat(page.locator("[data-test='book-price-filters']")).containsText("Pricing");
         assertThat(page.locator("[data-test='prices-max-total']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-with-prices']")).containsText("Books with Pricing");
         assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
+        assertThat(page.locator("[data-test='filter-no-prices']")).containsText("Books without Pricing");
         assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-hardcover']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-softcover']")).isVisible();
+        assertThat(page.locator("[data-test='filter-price-other-unknown']")).isVisible();
         assertThat(page.locator("text=No prices match the current filters.")).isVisible();
     }
 

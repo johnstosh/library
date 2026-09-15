@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { BookPriceDto } from '@/types/dtos'
 import {
   applyPriceFilters,
+  coverLabel,
   defaultPriceChipFilters,
   parseMaxTotal,
 } from '@/utils/priceFilters'
@@ -36,6 +37,7 @@ describe('applyPriceFilters', () => {
       totalDollars: null,
       lookupError: 'No matching listing',
     }),
+    price({ id: 4, cover: 'UNKNOWN', totalDollars: 15, priceDollars: 15, shippingDollars: 0 }),
   ]
 
   it('keeps totals strictly less than maxTotal', () => {
@@ -46,6 +48,20 @@ describe('applyPriceFilters', () => {
   it('filters by cover chip', () => {
     const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, softcover: true }, '')
     expect(filtered.map((row) => row.id)).toEqual([2])
+  })
+
+  it('filters Other/Unknown covers', () => {
+    const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, otherUnknown: true }, '')
+    expect(filtered.map((row) => row.id)).toEqual([4])
+  })
+
+  it('ORs hardcover with Other/Unknown', () => {
+    const filtered = applyPriceFilters(
+      rows,
+      { ...defaultPriceChipFilters, hardcover: true, otherUnknown: true },
+      '',
+    )
+    expect(filtered.map((row) => row.id)).toEqual([1, 3, 4])
   })
 
   it('filters lookup failures', () => {
@@ -59,6 +75,14 @@ describe('parseMaxTotal', () => {
     expect(parseMaxTotal('12.50')).toBe(12.5)
     expect(parseMaxTotal('')).toBeNull()
     expect(parseMaxTotal('nope')).toBeNull()
+  })
+})
+
+describe('coverLabel', () => {
+  it('labels hardcover, softcover, and other/unknown', () => {
+    expect(coverLabel('HARDCOVER')).toBe('Hardcover')
+    expect(coverLabel('SOFTCOVER')).toBe('Softcover')
+    expect(coverLabel('UNKNOWN')).toBe('Other/Unknown')
   })
 })
 

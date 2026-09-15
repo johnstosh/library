@@ -27,6 +27,7 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('withoutLoc')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('notActiveStatus')).toBe(false)
+    expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)
     expect(isSearchVisibleChip('priceOlder')).toBe(false)
     expect(SEARCH_VISIBLE_CHIPS).not.toContain('withGrokipedia')
@@ -88,6 +89,7 @@ describe('chipsFromSearchParams books mode', () => {
     ).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('noPrices=true'), 'books').mostRecent).toBe(false)
+    expect(chipsFromSearchParams(new URLSearchParams('withPrices=true'), 'books').mostRecent).toBe(false)
   })
 })
 
@@ -115,6 +117,18 @@ describe('bookFilterParamsForUrl price chips', () => {
     expect(params.noPrices).toBe('true')
     expect(params.priceOlder).toBe('true')
     expect(params.priceOlderDays).toBe('45')
+  })
+
+  it('emits withPrices when that chip is on', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips({ withPrices: true }),
+        labels: [],
+        q: '',
+      },
+      'books',
+    )
+    expect(params.withPrices).toBe('true')
   })
 })
 
@@ -222,6 +236,16 @@ describe('pricesPathFromFilters', () => {
         priceOlderDays: 45,
       }),
     ).toBe('/prices?noPrices=true&priceOlder=true&priceOlderDays=45')
+  })
+
+  it('copies Books with Pricing onto /prices', () => {
+    expect(
+      pricesPathFromFilters({
+        chips: chips({ withPrices: true }),
+        labels: [],
+        q: '',
+      }),
+    ).toBe('/prices?withPrices=true')
   })
 })
 

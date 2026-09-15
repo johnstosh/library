@@ -12,7 +12,7 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * Row 2: inLibrary, electronic, freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, requestedStatus, notActiveStatus, withoutFreeTextUrls
- * Pricing (Books, librarians): noPrices, priceOlder
+ * Pricing (Books, librarians): withPrices, noPrices, priceOlder
  *
  * notActiveStatus is special and always constrains:
  *   off → hide WITHDRAWN and REQUESTED; on → only non-ACTIVE statuses (including REQUESTED).
@@ -36,6 +36,7 @@ export interface BookChipFilters {
   notActiveStatus: boolean
   requestedStatus: boolean
   withoutFreeTextUrls: boolean
+  withPrices: boolean
   noPrices: boolean
   priceOlder: boolean
 }
@@ -61,6 +62,7 @@ export const defaultBookChipFilters: BookChipFilters = {
   notActiveStatus: false,
   requestedStatus: false,
   withoutFreeTextUrls: false,
+  withPrices: false,
   noPrices: false,
   priceOlder: false,
 }
@@ -170,18 +172,27 @@ export function isSavedPriceListing(price: BookPriceDto): boolean {
   return price.priceDollars != null && !price.lookupError
 }
 
+export interface BookPriceFilterOptions {
+  withPrices?: boolean
+  noPrices: boolean
+  priceOlder: boolean
+  priceOlderDays: number
+}
+
 /**
- * Books/Prices price chips. When both are on they OR: no usable listing
- * (missing rows, "No matching listing", rate-limited) or a successful
- * lookup older than {@code priceOlderDays}.
+ * Books/Prices price chips. withPrices keeps books that have a usable listing.
+ * noPrices and priceOlder OR when both are on: no usable listing (missing rows,
+ * "No matching listing", rate-limited) or a successful lookup older than
+ * {@code priceOlderDays}. withPrices ANDs with that pair.
  */
 export function applyBookPriceFilters<T extends { id: number }>(
   books: T[],
   prices: BookPriceDto[],
-  options: { noPrices: boolean; priceOlder: boolean; priceOlderDays: number },
+  options: BookPriceFilterOptions,
   now = Date.now(),
 ): T[] {
-  if (!options.noPrices && !options.priceOlder) {
+  const withPrices = Boolean(options.withPrices)
+  if (!withPrices && !options.noPrices && !options.priceOlder) {
     return books
   }
   const latestSavedByBook = new Map<number, number>()
@@ -200,14 +211,19 @@ export function applyBookPriceFilters<T extends { id: number }>(
   const cutoff = now - days * 24 * 60 * 60 * 1000
   return books.filter((book) => {
     const latest = latestSavedByBook.get(book.id)
-    const noPricesMatch = options.noPrices && latest == null
-    const olderMatch = options.priceOlder && latest != null && latest < cutoff
+    const hasPricing = latest != null
+    if (withPrices && !hasPricing) {
+      return false
+    }
     if (options.noPrices && options.priceOlder) {
-      return noPricesMatch || olderMatch
+      return !hasPricing || latest < cutoff
     }
     if (options.noPrices) {
-      return noPricesMatch
+      return !hasPricing
     }
-    return olderMatch
+    if (options.priceOlder) {
+      return hasPricing && latest < cutoff
+    }
+    return true
   })
 }

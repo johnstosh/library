@@ -68,6 +68,18 @@ const { prices, books } = vi.hoisted(() => {
       lookupError: 'No matching listing',
       lookedUpAt: '2026-09-10T12:00:00',
     },
+    {
+      id: 14,
+      bookId: 1,
+      bookTitle: 'Pride and Prejudice',
+      author: 'Jane Austen',
+      cover: 'UNKNOWN',
+      priceDollars: 6,
+      shippingDollars: 0,
+      totalDollars: 6,
+      condition: 'Used - Good',
+      lookedUpAt: '2026-09-10T12:00:00',
+    },
   ]
   return { prices, books }
 })
@@ -113,8 +125,12 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-12')).toHaveTextContent('$45.00')
 
     expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
-    expect(screen.getByTestId('filter-no-prices')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-with-prices')).toHaveTextContent('Books with Pricing')
+    expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-hardcover')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-softcover')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-other-unknown')).toBeInTheDocument()
 
     fireEvent.change(screen.getByTestId('prices-max-total'), { target: { value: '10' } })
 
@@ -126,6 +142,22 @@ describe('PricesPage', () => {
     renderPrices('/prices?hardcover=true')
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-14')).not.toBeInTheDocument()
+  })
+
+  it('filters by Other/Unknown cover chip', () => {
+    renderPrices('/prices?otherUnknown=true')
+    expect(screen.getByTestId('price-total-14')).toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+  })
+
+  it('withPrices keeps books that have a usable listing', () => {
+    renderPrices('/prices?withPrices=true')
+    expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
+    expect(screen.getByTestId('price-total-12')).toBeInTheDocument()
+    expect(screen.getByTestId('price-total-14')).toBeInTheDocument()
+    expect(screen.queryByTestId('price-error-13')).not.toBeInTheDocument()
   })
 
   it('noPrices keeps No matching listing rows and hides real listings', () => {

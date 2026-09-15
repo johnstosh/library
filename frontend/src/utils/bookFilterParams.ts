@@ -27,6 +27,7 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   notActiveStatus: 'notActiveStatus',
   requestedStatus: 'requestedStatus',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
+  withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',
 }

@@ -16,7 +16,7 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
 - Query strategy:
   1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages).
   2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`, no `cond`) with the same paging.
-- Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown** and fill any cover that still lacks a typed listing.
+- Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown**: they fill any cover that still lacks a typed listing during search, and are saved as `UNKNOWN` (shown as Other/Unknown).
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
 - Politeness / rate limits:
   - 500ms pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 5s (`abebooks.tenth-request-delay-ms`)
@@ -31,7 +31,7 @@ One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrite
 | Field | Meaning |
 | --- | --- |
 | book | Catalog book |
-| cover | `HARDCOVER` or `SOFTCOVER` |
+| cover | `HARDCOVER`, `SOFTCOVER`, or `UNKNOWN` |
 | priceDollars | Item price |
 | shippingDollars | Shipping; `0` for free shipping |
 | condition | AbeBooks condition text (e.g. `Used - Good`) |
@@ -47,8 +47,9 @@ Deleting a book cascades to its prices.
 - Filters:
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
   - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
-    - Hardcover / Softcover, Has listing / Lookup failed, Looked up recently (last 30 days)
-    - **No prices saved** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
+    - Cover chips (Prices only): Hardcover, Softcover, **Other/Unknown** (`data-test="filter-price-other-unknown"`)
+    - Has listing / Lookup failed, Looked up recently (last 30 days)
+    - **Books with Pricing** and **Books without Pricing** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
     - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
 - Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Visiting `/prices` from the nav with no query shows every saved price.
 

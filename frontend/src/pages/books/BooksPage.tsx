@@ -99,6 +99,7 @@ export function BooksPage() {
         .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
       allPrices,
       {
+        withPrices: chips.withPrices,
         noPrices: chips.noPrices,
         priceOlder: chips.priceOlder,
         priceOlderDays,

@@ -8,14 +8,27 @@ package com.muczynski.library.domain;
  */
 public enum BookCoverType {
     HARDCOVER,
-    SOFTCOVER;
+    SOFTCOVER,
+    UNKNOWN;
 
     /** AbeBooks SearchResults {@code bi} parameter: {@code h} or {@code s}. */
     public String abeBooksBindingParam() {
-        return this == HARDCOVER ? "h" : "s";
+        if (this == HARDCOVER) {
+            return "h";
+        }
+        if (this == SOFTCOVER) {
+            return "s";
+        }
+        return "";
     }
 
     public String displayName() {
-        return this == HARDCOVER ? "Hardcover" : "Softcover";
+        if (this == HARDCOVER) {
+            return "Hardcover";
+        }
+        if (this == SOFTCOVER) {
+            return "Softcover";
+        }
+        return "Other/Unknown";
     }
 }

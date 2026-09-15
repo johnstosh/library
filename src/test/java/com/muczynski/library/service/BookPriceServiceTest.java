@@ -145,6 +145,71 @@ class BookPriceServiceTest {
     }
 
     @Test
+    void lookupAndUpdateBook_unknownBinding_savesUnknownCover() {
+        Book book = book("Pride and Prejudice", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        AbeBooksListing unknown = AbeBooksListing.builder()
+                .priceDollars(new BigDecimal("4.86"))
+                .shippingDollars(BigDecimal.ZERO)
+                .condition("Used - Good")
+                .detailsUrl("https://www.abebooks.com/u")
+                .binding(null)
+                .build();
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(unknown)
+                        .softcover(unknown)
+                        .build());
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(BookCoverType.UNKNOWN, result.getHardcover().getCover());
+        assertEquals(BookCoverType.UNKNOWN, result.getSoftcover().getCover());
+        ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
+        verify(bookPriceRepository, times(1)).save(captor.capture());
+        assertEquals(BookCoverType.UNKNOWN, captor.getValue().getCover());
+        assertEquals(new BigDecimal("4.86"), captor.getValue().getPriceDollars());
+    }
+
+    @Test
+    void lookupAndUpdateBook_typedHardcoverAndUnknownSoftcover_savesBoth() {
+        Book book = book("Pride and Prejudice", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("4.86"))
+                                .shippingDollars(BigDecimal.ZERO)
+                                .condition("Used - Good")
+                                .detailsUrl("https://www.abebooks.com/h")
+                                .binding(BookCoverType.HARDCOVER)
+                                .build())
+                        .softcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("3.00"))
+                                .shippingDollars(new BigDecimal("4.00"))
+                                .condition("Used - Very good")
+                                .detailsUrl("https://www.abebooks.com/u")
+                                .binding(null)
+                                .build())
+                        .build());
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(BookCoverType.HARDCOVER, result.getHardcover().getCover());
+        assertEquals(BookCoverType.UNKNOWN, result.getSoftcover().getCover());
+        ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
+        verify(bookPriceRepository, times(2)).save(captor.capture());
+        assertEquals(BookCoverType.UNKNOWN, captor.getAllValues().get(0).getCover());
+        assertEquals(BookCoverType.HARDCOVER, captor.getAllValues().get(1).getCover());
+    }
+
+    @Test
     void lookupAndUpdateBook_skipsTemporaryTitle() {
         Book book = book("2026-09-10 photo", "Author");
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));

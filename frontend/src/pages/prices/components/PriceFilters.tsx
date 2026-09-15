@@ -25,6 +25,13 @@ export function PriceFilters({ chips, onToggle }: PriceFiltersProps) {
         dataTest="filter-price-softcover"
       />
       <FilterChip
+        label="Other/Unknown"
+        active={chips.otherUnknown}
+        onClick={() => onToggle('otherUnknown')}
+        tooltip="Only listings whose binding is not hardcover or softcover"
+        dataTest="filter-price-other-unknown"
+      />
+      <FilterChip
         label="Has listing"
         active={chips.hasListing}
         onClick={() => onToggle('hasListing')}

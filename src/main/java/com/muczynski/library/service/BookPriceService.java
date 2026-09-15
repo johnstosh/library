@@ -62,14 +62,16 @@ public class BookPriceService {
     }
 
     /**
-     * Looks up hardcover and softcover AbeBooks prices for a book and upserts
-     * one {@link BookPrice} row per cover.
+     * Looks up AbeBooks prices for a book and upserts one {@link BookPrice} row
+     * per cover. Listings with no hardcover/softcover binding are stored as
+     * {@link BookCoverType#UNKNOWN}.
      */
     public BookPriceLookupResultDto lookupAndUpdateBook(Long bookId) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new LibraryException("Book not found: " + bookId));
 
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+            deleteCover(book, BookCoverType.UNKNOWN);
             BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, "Not Ready - Temporary title");
             BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, "Not Ready - Temporary title");
             return BookPriceLookupResultDto.builder()
@@ -87,14 +89,12 @@ public class BookPriceService {
         BookPrice softcover;
         try {
             AbeBooksCoverListings found = findWithBackoff(book.getTitle(), authorName);
-            hardcover = found.getHardcover() != null
-                    ? saveListing(book, BookCoverType.HARDCOVER, found.getHardcover())
-                    : saveError(book, BookCoverType.HARDCOVER, "No matching listing");
-            softcover = found.getSoftcover() != null
-                    ? saveListing(book, BookCoverType.SOFTCOVER, found.getSoftcover())
-                    : saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+            CoverSaveResult saved = saveFoundCovers(book, found);
+            hardcover = saved.hardcover;
+            softcover = saved.softcover;
         } catch (AbeBooksRateLimitedException ex) {
             log.warn("AbeBooks rate limited for book {}", book.getId());
+            deleteCover(book, BookCoverType.UNKNOWN);
             hardcover = saveError(book, BookCoverType.HARDCOVER, AbeBooksRateLimitedException.MESSAGE);
             softcover = saveError(book, BookCoverType.SOFTCOVER, AbeBooksRateLimitedException.MESSAGE);
             return BookPriceLookupResultDto.builder()
@@ -110,6 +110,7 @@ public class BookPriceService {
             log.warn("AbeBooks lookup failed for book {}", book.getId(), ex);
             String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
             String truncated = truncate(message, 500);
+            deleteCover(book, BookCoverType.UNKNOWN);
             hardcover = saveError(book, BookCoverType.HARDCOVER, truncated);
             softcover = saveError(book, BookCoverType.SOFTCOVER, truncated);
         }
@@ -152,6 +153,62 @@ public class BookPriceService {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+        }
+    }
+
+    private CoverSaveResult saveFoundCovers(Book book, AbeBooksCoverListings found) {
+        AbeBooksListing hcListing = found.getHardcover();
+        AbeBooksListing scListing = found.getSoftcover();
+        boolean hcUnknown = isUnknownBinding(hcListing);
+        boolean scUnknown = isUnknownBinding(scListing);
+
+        BookPrice unknown = null;
+        if (hcUnknown || scUnknown) {
+            AbeBooksListing unknownListing = hcUnknown ? hcListing : scListing;
+            unknown = saveListing(book, BookCoverType.UNKNOWN, unknownListing);
+        } else {
+            deleteCover(book, BookCoverType.UNKNOWN);
+        }
+
+        BookPrice hardcover;
+        if (hcListing != null && !hcUnknown) {
+            hardcover = saveListing(book, BookCoverType.HARDCOVER, hcListing);
+        } else if (hcUnknown) {
+            deleteCover(book, BookCoverType.HARDCOVER);
+            hardcover = unknown;
+        } else {
+            hardcover = saveError(book, BookCoverType.HARDCOVER, "No matching listing");
+        }
+
+        BookPrice softcover;
+        if (scListing != null && !scUnknown) {
+            softcover = saveListing(book, BookCoverType.SOFTCOVER, scListing);
+        } else if (scUnknown) {
+            deleteCover(book, BookCoverType.SOFTCOVER);
+            softcover = unknown;
+        } else {
+            softcover = saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+        }
+        return new CoverSaveResult(hardcover, softcover);
+    }
+
+    private static boolean isUnknownBinding(AbeBooksListing listing) {
+        return listing != null
+                && (listing.getBinding() == null || listing.getBinding() == BookCoverType.UNKNOWN);
+    }
+
+    private void deleteCover(Book book, BookCoverType cover) {
+        bookPriceRepository.findByBook_IdAndCover(book.getId(), cover)
+                .ifPresent(bookPriceRepository::delete);
+    }
+
+    private static final class CoverSaveResult {
+        private final BookPrice hardcover;
+        private final BookPrice softcover;
+
+        private CoverSaveResult(BookPrice hardcover, BookPrice softcover) {
+            this.hardcover = hardcover;
+            this.softcover = softcover;
         }
     }
 
