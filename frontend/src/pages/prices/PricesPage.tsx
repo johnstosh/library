@@ -11,6 +11,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
+import { StatusFilters } from '@/pages/books/components/StatusFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
@@ -30,6 +31,11 @@ import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
 } from '@/utils/readingDifficulty'
+import {
+  applyBookStatusFilter,
+  bookStatusesFromSearchParams,
+  type BookStatusFilter,
+} from '@/utils/bookStatus'
 import type { ReadingDifficulty } from '@/types/enums'
 import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
@@ -47,6 +53,7 @@ export function PricesPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
@@ -68,6 +75,7 @@ export function PricesPage() {
     chips?: BookChipFilters
     labels?: string[]
     readingDifficulties?: string[]
+    statuses?: string[]
     favoriteLists?: string[]
     q?: string
     priceChips?: PriceChipFilters
@@ -79,6 +87,7 @@ export function PricesPage() {
         chips: next.chips ?? chips,
         labels: next.labels ?? selectedLabels,
         readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+        statuses: next.statuses ?? selectedStatuses,
         favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
         q: next.q !== undefined ? next.q : urlQuery,
         priceOlderDays: next.priceOlderDays ?? priceOlderDays,
@@ -103,7 +112,10 @@ export function PricesPage() {
     )
     return new Set(
       applyBookPriceFilters(
-        applyReadingDifficultyFilter(applyChipFilters(allBooks, chips), selectedDifficulties)
+        applyReadingDifficultyFilter(
+          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+          selectedDifficulties,
+        )
           .filter((book) => matchesBookQuery(book, urlQuery))
           .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
         allPrices,
@@ -115,12 +127,13 @@ export function PricesPage() {
         },
       ).map((book) => book.id),
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, urlQuery])
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
 
   const bookFiltersActive =
     urlQuery.trim().length > 0 ||
     selectedLabels.length > 0 ||
     selectedDifficulties.length > 0 ||
+    selectedStatuses.length > 0 ||
     selectedFavoriteLists.length > 0 ||
     Object.entries(chips).some(([, on]) => on)
 
@@ -183,6 +196,16 @@ export function PricesPage() {
               writeUrl({ labels: nextLabels })
             }}
             onClearLabels={() => writeUrl({ labels: [] })}
+          />
+          <StatusFilters
+            selected={selectedStatuses}
+            onToggle={(value: BookStatusFilter) => {
+              const next = selectedStatuses.includes(value)
+                ? selectedStatuses.filter((item) => item !== value)
+                : [...selectedStatuses, value]
+              writeUrl({ statuses: next })
+            }}
+            onClear={() => writeUrl({ statuses: [] })}
           />
           <ReadingDifficultyFilters
             selected={selectedDifficulties}

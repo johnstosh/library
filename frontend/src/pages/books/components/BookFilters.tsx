@@ -55,7 +55,7 @@ interface BookFiltersProps {
   /** Books page: Recent Arrivals cannot be combined with other filters. */
   mostRecentDisabled?: boolean
   showAvailabilityFilters?: boolean
-  /** Search page: hide cataloger-only chips (Without *, Requested Status, Not Active). */
+  /** Search page: hide cataloger-only chips (Without *). */
   showCatalogerFilters?: boolean
 }
 
@@ -134,20 +134,6 @@ export function BookFilters({
       {/* Type filters */}
       <div className="flex flex-wrap gap-2" data-test="book-type-filter-chips">
         <FilterChip
-          label="In-library materials"
-          active={chips.inLibrary}
-          onClick={() => toggle('inLibrary')}
-          tooltip="Only books with a Library of Congress call number — physically in the collection"
-          dataTest="filter-in-library"
-        />
-        <FilterChip
-          label="Electronic resource"
-          active={chips.electronic}
-          onClick={() => toggle('electronic')}
-          tooltip="Only books marked as electronic resources"
-          dataTest="filter-electronic"
-        />
-        <FilterChip
           label="Has free online text"
           active={chips.freeText}
           onClick={() => toggle('freeText')}
@@ -208,24 +194,6 @@ export function BookFilters({
           tooltip="Only books with no genres assigned"
           dataTest="filter-without-genres"
         />
-        {showCatalogerFilters && (
-        <FilterChip
-          label="Requested Status"
-          active={chips.requestedStatus}
-          onClick={() => toggle('requestedStatus')}
-          tooltip="Only books with Requested status"
-          dataTest="filter-requested-status"
-        />
-        )}
-        {showCatalogerFilters && (
-        <FilterChip
-          label="Not Active Status"
-          active={chips.notActiveStatus}
-          onClick={() => toggle('notActiveStatus')}
-          tooltip="When off: hide withdrawn and requested books. When on: only books that are not Active (lost, withdrawn, on order, requested, etc.)"
-          dataTest="filter-not-active-status"
-        />
-        )}
         <FilterChip
           label="Without Free-Text URLs"
           active={chips.withoutFreeTextUrls}

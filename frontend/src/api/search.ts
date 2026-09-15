@@ -30,8 +30,6 @@ export const defaultSearchFilters: SearchFilters = { ...defaultBookChipFilters }
 
 function chipQueryParams(filters: SearchFilters): string {
   return [
-    filters.inLibrary ? '&filterInLibrary=true' : '',
-    filters.electronic ? '&filterElectronic=true' : '',
     filters.freeText ? '&filterFreeText=true' : '',
     filters.audio ? '&filterAudio=true' : '',
     filters.mostRecent ? '&filterMostRecent=true' : '',
@@ -39,7 +37,6 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.withoutGrokipedia ? '&filterWithoutGrokipedia=true' : '',
     filters.withGrokipedia ? '&filterWithGrokipedia=true' : '',
     filters.withoutGenres ? '&filterWithoutGenres=true' : '',
-    filters.notActiveStatus ? '&filterNotActiveStatus=true' : '',
     filters.withoutFreeTextUrls ? '&filterWithoutFreeTextUrls=true' : '',
     filters.hasYdlAudio ? '&filterYdlAudio=true' : '',
     filters.hasYdlBook ? '&filterYdlBook=true' : '',
@@ -60,6 +57,7 @@ export function useSearch(
   selectedLabels?: string[],
   selectedDifficulties?: string[],
   favoriteLists?: string[],
+  selectedStatuses?: string[],
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
@@ -70,6 +68,10 @@ export function useSearch(
   const hasFavoriteLists = favoriteLists != null && favoriteLists.length > 0
   const favoriteParam = hasFavoriteLists
     ? `&favoriteLists=${encodeURIComponent((favoriteLists ?? []).join(','))}`
+    : ''
+  const hasStatuses = selectedStatuses != null && selectedStatuses.length > 0
+  const statusParam = hasStatuses
+    ? `&status=${encodeURIComponent((selectedStatuses ?? []).join(','))}`
     : ''
   const filterParams = chipQueryParams(filters)
   return useQuery({
@@ -83,10 +85,11 @@ export function useSearch(
       selectedLabels ?? [],
       selectedDifficulties ?? [],
       favoriteLists ?? [],
+      selectedStatuses ?? [],
     ],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}${favoriteParam}`,
+        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}${favoriteParam}${statusParam}`,
         { requireAuth: false },
       ),
     enabled,

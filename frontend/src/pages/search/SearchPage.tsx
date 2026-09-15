@@ -9,6 +9,7 @@ import { useSearch, type SearchFilters } from '@/api/search'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
+import { StatusFilters } from '@/pages/books/components/StatusFilters'
 import { isAnyChipActive } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
@@ -19,6 +20,10 @@ import {
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
+import {
+  bookStatusesFromSearchParams,
+  type BookStatusFilter,
+} from '@/utils/bookStatus'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { ReadingDifficulty } from '@/types/enums'
@@ -62,6 +67,7 @@ export function SearchPage() {
   const filters: SearchFilters = chipsFromSearchParams(searchParams, 'search')
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'search')
@@ -78,6 +84,7 @@ export function SearchPage() {
     isAnyChipActive(filters)
     || selectedLabels.length > 0
     || selectedDifficulties.length > 0
+    || selectedStatuses.length > 0
     || selectedFavoriteLists.length > 0
 
   const { data, isLoading, error } = useSearch(
@@ -90,6 +97,7 @@ export function SearchPage() {
     selectedLabels,
     selectedDifficulties,
     selectedFavoriteLists,
+    selectedStatuses,
   )
   const isLibrarian = useIsLibrarian()
 
@@ -97,6 +105,7 @@ export function SearchPage() {
     chips?: SearchFilters
     labels?: string[]
     readingDifficulties?: string[]
+    statuses?: string[]
     favoriteLists?: string[]
     q?: string
     includeQ?: boolean
@@ -110,6 +119,7 @@ export function SearchPage() {
           chips: next.chips ?? filters,
           labels: next.labels ?? selectedLabels,
           readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          statuses: next.statuses ?? selectedStatuses,
           favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
           bookPage: next.bookPage ?? 0,
@@ -152,6 +162,17 @@ export function SearchPage() {
     writeUrl({ readingDifficulties: [] })
   }
 
+  const handleToggleStatus = (value: BookStatusFilter) => {
+    const next = selectedStatuses.includes(value)
+      ? selectedStatuses.filter((item) => item !== value)
+      : [...selectedStatuses, value]
+    writeUrl({ statuses: next })
+  }
+
+  const handleClearStatuses = () => {
+    writeUrl({ statuses: [] })
+  }
+
   const handleToggleFavoriteList = (listName: string) => {
     const next = selectedFavoriteLists.includes(listName)
       ? selectedFavoriteLists.filter((name) => name !== listName)
@@ -176,6 +197,7 @@ export function SearchPage() {
       chips: filters,
       labels: selectedLabels,
       readingDifficulties: selectedDifficulties,
+      statuses: selectedStatuses,
       favoriteLists: selectedFavoriteLists,
       q: inputValue.trim() || urlQuery,
     }))
@@ -246,6 +268,11 @@ export function SearchPage() {
             selectedLabels={selectedLabels}
             onToggleLabel={handleToggleLabel}
             onClearLabels={handleClearLabels}
+          />
+          <StatusFilters
+            selected={selectedStatuses}
+            onToggle={handleToggleStatus}
+            onClear={handleClearStatuses}
           />
           <ReadingDifficultyFilters
             selected={selectedDifficulties}

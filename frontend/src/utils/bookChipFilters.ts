@@ -9,13 +9,13 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
- * Row 2: inLibrary, electronic, freeText, audio, mostRecent
+ * Row 2: freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
- *   withoutGenres, requestedStatus, notActiveStatus, withoutFreeTextUrls
+ *   withoutGenres, withoutFreeTextUrls
  * Pricing (Books, librarians): withPrices, noPrices, priceOlder
  *
- * notActiveStatus is special and always constrains:
- *   off → hide WITHDRAWN and REQUESTED; on → only non-ACTIVE statuses (including REQUESTED).
+ * Status (in-library, electronic-resource, lost, withdrawn, on-order, requested)
+ * is a separate OR group — see bookStatus.ts — not a boolean chip.
  */
 export interface BookChipFilters {
   hasYdlAudio: boolean
@@ -24,8 +24,6 @@ export interface BookChipFilters {
   hasEmuAudio: boolean
   hasEmuBook: boolean
   hasEmuEbook: boolean
-  inLibrary: boolean
-  electronic: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
@@ -33,8 +31,6 @@ export interface BookChipFilters {
   withoutGrokipedia: boolean
   withGrokipedia: boolean
   withoutGenres: boolean
-  notActiveStatus: boolean
-  requestedStatus: boolean
   withoutFreeTextUrls: boolean
   withPrices: boolean
   noPrices: boolean
@@ -48,8 +44,6 @@ export const defaultBookChipFilters: BookChipFilters = {
   hasEmuAudio: false,
   hasEmuBook: false,
   hasEmuEbook: false,
-  inLibrary: false,
-  electronic: false,
   freeText: false,
   audio: false,
   // Shared default is off (Search). The Books page turns mostRecent on when
@@ -59,8 +53,6 @@ export const defaultBookChipFilters: BookChipFilters = {
   withoutGrokipedia: false,
   withGrokipedia: false,
   withoutGenres: false,
-  notActiveStatus: false,
-  requestedStatus: false,
   withoutFreeTextUrls: false,
   withPrices: false,
   noPrices: false,
@@ -91,20 +83,19 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
 
 /**
  * Apply all chip filters to a book list (AND logic).
- * A book must satisfy every active chip, plus the always-on notActiveStatus constraint.
+ * A book must satisfy every active chip. Status is applied separately
+ * by {@code applyBookStatusFilter}.
  * "Recent Arrivals" matches dateAddedToLibrary on the most recent day UTC
  * (cutoff = UTC start of max-1 day) or a temporary date-format title.
  */
 export function applyChipFilters<T extends Pick<
   BookDto,
   | 'locNumber'
-  | 'electronicResource'
   | 'freeTextUrl'
   | 'title'
   | 'dateAddedToLibrary'
   | 'grokipediaUrl'
   | 'tagsList'
-  | 'status'
   | 'ydlAudioAvailable'
   | 'ydlPaperAvailable'
   | 'ydlEbookAvailable'
@@ -135,8 +126,6 @@ export function applyChipFilters<T extends Pick<
     if (chips.hasEmuAudio && book.emuAudioAvailable !== true) return false
     if (chips.hasEmuBook && book.emuPaperAvailable !== true) return false
     if (chips.hasEmuEbook && book.emuEbookAvailable !== true) return false
-    if (chips.inLibrary && isBlank(book.locNumber)) return false
-    if (chips.electronic && !book.electronicResource) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
     if (chips.audio) {
       if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false
@@ -154,13 +143,6 @@ export function applyChipFilters<T extends Pick<
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
-    if (chips.requestedStatus) {
-      if (book.status !== 'REQUESTED') return false
-    } else if (chips.notActiveStatus) {
-      if (book.status === 'ACTIVE') return false
-    } else if (book.status === 'WITHDRAWN' || book.status === 'REQUESTED') {
-      return false
-    }
     if (chips.withoutFreeTextUrls && !isBlank(book.freeTextUrl)) return false
 
     return true

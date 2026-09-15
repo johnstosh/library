@@ -21,12 +21,10 @@ function chips(overrides: Partial<BookChipFilters> = {}): BookChipFilters {
 
 describe('isSearchVisibleChip', () => {
   it('keeps discovery chips and rejects cataloger chips', () => {
-    expect(isSearchVisibleChip('inLibrary')).toBe(true)
     expect(isSearchVisibleChip('freeText')).toBe(true)
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutLoc')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
-    expect(isSearchVisibleChip('notActiveStatus')).toBe(false)
     expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)
     expect(isSearchVisibleChip('priceOlder')).toBe(false)
@@ -58,9 +56,9 @@ describe('pageFromSearchParams', () => {
 
 describe('chipsFromSearchParams search mode', () => {
   it('reads discovery chips and ignores cataloger params', () => {
-    const params = new URLSearchParams('inLib=true&withoutLoc=true&mostRecent=true')
+    const params = new URLSearchParams('freeText=true&withoutLoc=true&mostRecent=true')
     const result = chipsFromSearchParams(params, 'search')
-    expect(result.inLibrary).toBe(true)
+    expect(result.freeText).toBe(true)
     expect(result.withoutLoc).toBe(false)
     expect(result.mostRecent).toBe(true)
   })
@@ -154,9 +152,10 @@ describe('bookFilterParamsForUrl', () => {
   it('writes discovery chips, labels, and q for Search and omits cataloger chips', () => {
     const params = bookFilterParamsForUrl(
       {
-        chips: chips({ inLibrary: true, withoutLoc: true, mostRecent: true }),
+        chips: chips({ freeText: true, withoutLoc: true, mostRecent: true }),
         labels: ['fiction'],
         readingDifficulties: ['children', 'unset'],
+        statuses: ['in-library'],
         q: 'Augustine',
         bookPage: 2,
         authorPage: 1,
@@ -167,7 +166,8 @@ describe('bookFilterParamsForUrl', () => {
       q: 'Augustine',
       labels: 'fiction',
       readingDifficulty: 'children,unset',
-      inLib: 'true',
+      status: 'in-library',
+      freeText: 'true',
       mostRecent: 'true',
       bookPage: '2',
       authorPage: '1',
@@ -192,13 +192,14 @@ describe('booksPathFromFilters', () => {
   it('copies discovery filters and query onto /books', () => {
     expect(
       booksPathFromFilters({
-        chips: chips({ inLibrary: true, withoutLoc: true }),
+        chips: chips({ withoutLoc: true }),
         labels: ['classic'],
         readingDifficulties: ['demanding'],
+        statuses: ['in-library'],
         favoriteLists: ['Have Read'],
         q: 'Summa',
       }),
-    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&favoriteLists=Have+Read&inLib=true')
+    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&favoriteLists=Have+Read')
   })
 
   it('does not copy Search Recent Arrivals off-state onto Books intake', () => {
@@ -220,11 +221,12 @@ describe('pricesPathFromFilters', () => {
   it('copies books filters including mostRecent onto /prices', () => {
     expect(
       pricesPathFromFilters({
-        chips: chips({ inLibrary: true, mostRecent: true }),
+        chips: chips({ mostRecent: true }),
         labels: ['classic'],
+        statuses: ['in-library'],
         q: 'Summa',
       }),
-    ).toBe('/prices?q=Summa&labels=classic&inLib=true&mostRecent=true')
+    ).toBe('/prices?q=Summa&labels=classic&status=in-library&mostRecent=true')
   })
 
   it('copies Pricing chips and days onto /prices', () => {
@@ -267,5 +269,6 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips(), [], '', ['children'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], ['Have Read'])).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], ['in-library'])).toBe(true)
   })
 })

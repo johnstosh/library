@@ -58,14 +58,15 @@ Returns paginated search results for books and authors.
 - `bookPage` (int, optional, default `0`) - Zero-based page number for book results
 - `authorPage` (int, optional, default `0`) - Zero-based page number for author results
 - `size` (int, required) - Number of results per page (default: 20)
-- `filterInLibrary` (boolean, optional, default `false`) - Limit books to those with a LOC call number (physical collection)
-- `filterElectronic` (boolean, optional, default `false`) - Limit books to those marked as electronic resources (`electronicResource = true`)
+- `filterInLibrary` (boolean, optional, default `false`) - Legacy: Active books with a LOC call number. Prefer `status`.
+- `filterElectronic` (boolean, optional, default `false`) - Legacy: Active electronic resources. Prefer `status`.
 - `filterFreeText` (boolean, optional, default `false`) - Limit books to those with a free online text URL (`freeTextUrl IS NOT NULL`)
 - `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
 - `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
+- `status` (string, optional, multi-value) - Limit books to those matching any listed status-filter key (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`). `in-library` and `electronic-resource` are Active-only. When omitted, WITHDRAWN and REQUESTED stay hidden.
 - `readingDifficulty` (string, optional, multi-value) - Limit books to those whose reading difficulty is any of the listed enum keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`). Null or blank stored values match `unset`.
 
-Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included. Selected reading-difficulty values are ORed with each other, then ANDed with the other filters.
+Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included. Selected status values and selected reading-difficulty values are each ORed with each other, then ANDed with the other filters.
 
 **Response**: `SearchResponseDto` containing books, authors, and pagination info for each
 
@@ -102,8 +103,9 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 | Filter | Condition |
 |--------|-----------|
-| In-library materials | `locNumber IS NOT NULL AND locNumber <> ''` |
-| Electronic resource | `electronicResource = true` |
+| In-library (status) | `status = ACTIVE AND locNumber IS NOT NULL AND locNumber <> ''` |
+| Electronic resource (status) | `status = ACTIVE AND electronicResource = true` |
+| Lost / Withdrawn / On Order / Requested | matching `BookStatus` |
 | Has free online text | `freeTextUrl IS NOT NULL` |
 | Has free online audio | `freeTextUrl IS NOT NULL AND LOWER(freeTextUrl) LIKE '%librivox%'` |
 
@@ -129,7 +131,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 Search state is persisted in the URL for better UX and shareability:
 
-**URL Pattern**: `/search?q=<query>&bookPage=<n>&authorPage=<n>&inLib=<bool>&elec=<bool>&freeText=<bool>&audio=<bool>&labels=<csv>`
+**URL Pattern**: `/search?q=<query>&bookPage=<n>&authorPage=<n>&status=<csv>&freeText=<bool>&audio=<bool>&labels=<csv>`
 
 Search and Books share the same chip/label query-key vocabulary (`bookFilterParams.ts`) but **not** the same URL or state. Search is the public catalog; Books is the inventory table.
 
@@ -138,17 +140,18 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `bookPage` (number, optional) - Zero-based book results page (omitted when 0)
 - `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
-- `inLib`, `elec`, `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
+- `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
+- `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only). Legacy `inLib`/`elec`/`requestedStatus`/`notActiveStatus` still read.
 - `labels` (string, optional) - Comma-separated genre tags (AND)
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
-Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `notActiveStatus`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`.
+Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`. Status chips are shown on Search, Books, and Prices.
 
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)
-- `/search?inLib=true` - All in-library books (blank query with filter)
-- `/search?q=Augustine&inLib=true&elec=true` - "Augustine" in books that are BOTH in-library AND electronic
+- `/search?status=in-library` - Active in-library books (blank query with filter)
+- `/search?q=Augustine&status=in-library,electronic-resource` - "Augustine" in Active in-library OR Active electronic books
 - `/search?audio=true` - All LibriVox audio books
 - `/search?q=Narnia&labels=fiction,classic` - Query plus genre filters
 - `/search?readingDifficulty=children,unset` - Children or Unset (including books with a blank difficulty)
@@ -185,8 +188,7 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 | Chip | `data-test` |
 |------|-------------|
 | YDL / EMU Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*` |
-| In-library materials | `filter-in-library` |
-| Electronic resource | `filter-electronic` |
+| Status (In-library, Electronic resource, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |
 | Genres | `label-filter-<genre>` |
@@ -220,21 +222,23 @@ Visible when `hasSearched || hasFilters`. Resets all state: clears input, deacti
 **API Function**: `frontend/src/api/search.ts`
 
 ```typescript
-export interface SearchFilters {
-  inLib: boolean
-  elec: boolean
-  freeText: boolean
-  audio: boolean
-}
+export type SearchFilters = BookChipFilters
 
-export const defaultSearchFilters: SearchFilters = {
-  inLib: false, elec: false, freeText: false, audio: false
-}
-
-export const useSearch = (query: string, page: number, size: number, filters: SearchFilters, enabled: boolean)
+export const useSearch = (
+  query: string,
+  bookPage: number,
+  authorPage: number,
+  size: number,
+  filters: SearchFilters,
+  enabled: boolean,
+  selectedLabels?: string[],
+  selectedDifficulties?: string[],
+  favoriteLists?: string[],
+  selectedStatuses?: string[],
+)
 ```
 
-**Query Key**: `['search', query, page, size, filters]` — cache is keyed by all filter values
+**Query Key**: `['search', query, bookPage, authorPage, size, filters, labels, difficulties, favoriteLists, statuses]` — cache is keyed by all filter values
 
 ## Security
 
@@ -290,8 +294,9 @@ Playwright UI test coverage:
 - `testClearSearchUpdatesUrl()` - Search after clearing the query field applies the empty query
 - `testViewBookNavigatesToPage()` - View navigates to `/books/{id}`
 - `testViewAuthorNavigatesToPage()` - View navigates to `/authors/{id}`
-- `testFilterChipsVisible()` - All 4 chips visible with correct text and tooltip
-- `testInLibraryFilterChipUpdatesUrl()` - Clicking chip sets `inLib=true` in URL and returns books
+- `testFilterChipsVisible()` - Discovery chips plus Status section visible
+- `testInLibraryFilterChipUpdatesUrl()` - Clicking In-library sets `status=in-library` in URL and returns books
+- `testInLibraryAndElectronicStatusChipsOrTogether()` - In-library and electronic-resource OR together
 - `testAudioFilterReturnsLibriVoxBooks()` - Audio filter returns only LibriVox book
 - `testFreeTextFilterReturnsOnlineTextBooks()` - Free-text filter returns 2 books with URLs
 - `testFilterChipStateRestoredFromUrl()` - Navigating with filter params shows active chips
