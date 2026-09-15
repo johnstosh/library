@@ -106,6 +106,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 | In-library (status) | `status = ACTIVE AND locNumber IS NOT NULL AND locNumber <> ''` |
 | Electronic resource (status) | `status = ACTIVE AND electronicResource = true` |
 | Lost / Withdrawn / On Order / Requested | matching `BookStatus` |
+| Without LOC | `(locNumber IS NULL OR locNumber = '') AND (electronicResource IS NULL OR electronicResource = false)` |
 | Has free online text | `freeTextUrl IS NOT NULL` |
 | Has free online audio | `freeTextUrl IS NOT NULL AND LOWER(freeTextUrl) LIKE '%librivox%'` |
 

@@ -14,6 +14,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlMergeMode;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -356,18 +357,24 @@ public class BooksUITest {
 
     @Test
     @DisplayName("Should filter books by 'Without LOC' chip")
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql(scripts = "/data-books-electronic-without-loc.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void testFilterWithoutLoc() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        // Both print and electronic books were added today, so Recent Arrivals shows them.
+        assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+        assertThat(page.locator("text=Electronic Resource Without LOC"))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
         // Click "Without LOC" filter chip
         page.click("[data-test='filter-without-loc']");
 
-        // Wait for filter to apply
-        page.waitForTimeout(1000);
-
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
-        // under the "Without LOC" chip.
+        // under the "Without LOC" chip. Electronic resources are not shelved and must be excluded.
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
+        assertThat(page.locator("text=Electronic Resource Without LOC"))
+                .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         // Recent Arrivals cannot be combined with other filters
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
         Assertions.assertTrue(page.url().contains("withoutLoc=true"),

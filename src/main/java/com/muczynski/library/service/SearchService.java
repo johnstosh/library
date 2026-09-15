@@ -64,7 +64,7 @@ public class SearchService {
      * @param filterFreeText  limit to books with a free online text URL
      * @param filterAudio     limit to books whose free text URL contains "librivox"
      * @param filterMostRecent limit to books added on the most recent day UTC, or temp-title regex
-     * @param filterWithoutLoc limit to books with no LOC call number
+     * @param filterWithoutLoc limit to books with no LOC call number, excluding electronic resources
      * @param filterThreeLetterLoc limit to locNumbers starting with three uppercase letters
      * @param filterWithoutGrokipedia limit to books with no grokipedia URL
      * @param filterWithGrokipedia limit to books with a grokipedia URL

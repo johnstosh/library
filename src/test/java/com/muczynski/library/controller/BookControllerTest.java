@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -329,7 +330,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getSummariesWithoutLocNumber()).thenReturn(Arrays.asList(summary1, summary2));
+        when(bookService.getSummariesWithoutLocNumber(anyBoolean())).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/without-loc"))
                 .andExpect(status().isOk())

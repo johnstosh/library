@@ -69,6 +69,14 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
+  it('withoutLoc excludes electronic resources even when locNumber is blank', () => {
+    const print = book({ id: 1, locNumber: '' })
+    const electronic = book({ id: 2, locNumber: '', electronicResource: true })
+    const withLoc = book({ id: 3, locNumber: 'PS3511' })
+    const result = applyChipFilters([print, electronic, withLoc], chips({ withoutLoc: true }))
+    expect(result.map((b) => b.id)).toEqual([1])
+  })
+
   it('withoutGrokipedia keeps books with no grokipediaUrl', () => {
     const withUrl = book({ id: 1, grokipediaUrl: 'https://grokipedia.com/x' })
     const without = book({ id: 2, grokipediaUrl: '' })

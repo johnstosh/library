@@ -91,6 +91,7 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
 export function applyChipFilters<T extends Pick<
   BookDto,
   | 'locNumber'
+  | 'electronicResource'
   | 'freeTextUrl'
   | 'title'
   | 'dateAddedToLibrary'
@@ -139,7 +140,11 @@ export function applyChipFilters<T extends Pick<
         if (!cutoff || bookDate < cutoff) return false
       }
     }
-    if (chips.withoutLoc && !isBlank(book.locNumber)) return false
+    if (chips.withoutLoc) {
+      if (!isBlank(book.locNumber)) return false
+      // Electronic resources are not shelved, so they do not need LOC numbers.
+      if (book.electronicResource === true) return false
+    }
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false

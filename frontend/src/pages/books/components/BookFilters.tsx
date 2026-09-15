@@ -170,7 +170,7 @@ export function BookFilters({
           label="Without LOC"
           active={chips.withoutLoc}
           onClick={() => toggle('withoutLoc')}
-          tooltip="Only books without a Library of Congress call number"
+          tooltip="Only books without a Library of Congress call number, excluding electronic resources"
           dataTest="filter-without-loc"
         />
         <FilterChip
