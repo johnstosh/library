@@ -19,11 +19,12 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
 - Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown**: they fill any cover that still lacks a typed listing during search, and are saved as `UNKNOWN` (shown as Other/Unknown).
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
 - Politeness / rate limits:
-  - 500ms pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 5s (`abebooks.tenth-request-delay-ms`)
-  - 500ms pause between books in the bulk carousel; every 10th book waits 5s
-  - A 403/429/503, captcha/block page, or a no-listing response faster than 250ms is treated as rate-limited
-  - The current book is retried with 2s then 4s backoff (`abebooks.rate-limit-retries`, `abebooks.rate-limit-backoff-ms`)
+  - 8s pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 30s (`abebooks.tenth-request-delay-ms`)
+  - 1s pause between books in the bulk carousel; every 10th book waits 10s
+  - HTTP 403/429/502/503/504, I/O timeout, a captcha/block page, or a no-listing response faster than 250ms is treated as rate-limited
+  - The current book is retried with exponential backoff capped at 5 minutes (`abebooks.rate-limit-retries`, `abebooks.rate-limit-backoff-ms`)
   - If still rate-limited, remaining selected books are **cancelled** (not recorded as "no listing") so the batch stops hammering AbeBooks
+  - AbeBooks HTTP and throttling sleeps run **outside** a database transaction so the Hikari pool (size 3) stays available for other tabs (Data Management) during a long bulk lookup
 
 ## Saved fields (`book_price`)
 One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrites.

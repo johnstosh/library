@@ -210,6 +210,18 @@ class BookPriceServiceTest {
     }
 
     @Test
+    void backoffMsForAttempt_capsExponentialGrowth() {
+        assertEquals(4000, BookPriceService.backoffMsForAttempt(0, 4000));
+        assertEquals(8000, BookPriceService.backoffMsForAttempt(1, 4000));
+        assertEquals(16000, BookPriceService.backoffMsForAttempt(2, 4000));
+        assertEquals(32000, BookPriceService.backoffMsForAttempt(3, 4000));
+        assertEquals(32000, BookPriceService.backoffMsForAttempt(20, 4000));
+        assertEquals(BookPriceService.MAX_RATE_LIMIT_BACKOFF_MS,
+                BookPriceService.backoffMsForAttempt(10, 60_000));
+        assertEquals(0, BookPriceService.backoffMsForAttempt(0, 0));
+    }
+
+    @Test
     void lookupAndUpdateBook_skipsTemporaryTitle() {
         Book book = book("2026-09-10 photo", "Author");
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));

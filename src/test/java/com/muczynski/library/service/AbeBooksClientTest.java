@@ -17,6 +17,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -192,6 +194,25 @@ class AbeBooksClientTest {
         when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                 .thenThrow(HttpClientErrorException.create(
                         HttpStatus.FORBIDDEN, "Forbidden", new HttpHeaders(), new byte[0], null));
+
+        assertThrows(AbeBooksRateLimitedException.class,
+                () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_httpBadGateway_isRateLimited() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(HttpServerErrorException.create(
+                        HttpStatus.BAD_GATEWAY, "Bad Gateway", new HttpHeaders(), new byte[0], null));
+
+        assertThrows(AbeBooksRateLimitedException.class,
+                () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_timeout_isRateLimited() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(new ResourceAccessException("Read timed out"));
 
         assertThrows(AbeBooksRateLimitedException.class,
                 () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));

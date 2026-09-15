@@ -4,8 +4,8 @@
 package com.muczynski.library.exception;
 
 /**
- * AbeBooks rejected or throttled a SearchResults request (HTTP 403/429/503,
- * captcha/block page, or a no-listing response that came back too quickly).
+ * AbeBooks rejected or throttled a SearchResults request (HTTP 403/429/502/503/504,
+ * I/O timeout, captcha/block page, or a no-listing response that came back too quickly).
  */
 public class AbeBooksRateLimitedException extends RuntimeException {
 
