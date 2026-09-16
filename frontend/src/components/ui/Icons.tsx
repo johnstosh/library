@@ -132,8 +132,9 @@ export function EmuIcon({ className }: IconProps) {
 }
 
 /**
- * Stylized A for Allegheny County Library Association.
- * Drawn as an SVG so it matches on web and phone.
+ * Allegheny County Library Association mark: three folded blue
+ * book-pillars (light face + navy face) and two green wrapping swooshes.
+ * Drawn as SVG so it matches on web and phone at toolbar size.
  */
 export function AclaIcon({ className }: IconProps) {
   return (
@@ -145,22 +146,22 @@ export function AclaIcon({ className }: IconProps) {
       aria-hidden
       data-test="acla-icon"
     >
+      <polygon fill="#1973B1" points="5.25,4.63 7.88,6.75 7.88,21.50 5.25,19.50" />
+      <polygon fill="#214098" points="8.38,6.50 11.00,4.63 11.00,19.38 8.38,21.50" />
+      <polygon fill="#1973B1" points="11.38,2.38 14.00,4.38 14.00,19.13 11.38,17.25" />
+      <polygon fill="#214098" points="14.50,4.25 17.00,2.25 17.00,17.13 14.50,19.13" />
+      <polygon fill="#1973B1" points="17.50,4.50 20.13,6.63 20.13,21.38 17.50,19.50" />
+      <polygon fill="#214098" points="20.63,6.63 23.25,4.63 23.25,19.38 20.63,21.50" />
       <path
-        d="M12 4.5L4.8 20.2"
-        stroke="#0F766E"
-        strokeWidth="2.6"
+        d="M 0.7 12.55 C 0.0 9.35, 7.6 9.9, 16.25 12.2"
+        stroke="#8CC449"
+        strokeWidth="1.4"
         strokeLinecap="round"
       />
       <path
-        d="M12 4.5L19.2 20.2"
-        stroke="#0F766E"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M8.2 14.8H15.8"
-        stroke="#D97706"
-        strokeWidth="2.6"
+        d="M 1.55 13.5 C 4.0 12.5, 9.5 13.4, 13.9 13.92"
+        stroke="#8CC449"
+        strokeWidth="1.05"
         strokeLinecap="round"
       />
     </svg>

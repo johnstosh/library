@@ -18,16 +18,24 @@ describe('YdlIcon', () => {
 })
 
 describe('AclaIcon', () => {
-  it('renders a vector A with teal and amber strokes', () => {
+  it('renders three folded blue book-pillars and two green wrapping swooshes', () => {
     render(<AclaIcon />)
 
     const icon = screen.getByTestId('acla-icon')
     expect(icon.tagName.toLowerCase()).toBe('svg')
 
-    const paths = icon.querySelectorAll('path')
-    expect(paths).toHaveLength(3)
-    expect(paths[0]).toHaveAttribute('stroke', '#0F766E')
-    expect(paths[1]).toHaveAttribute('stroke', '#0F766E')
-    expect(paths[2]).toHaveAttribute('stroke', '#D97706')
+    const faces = icon.querySelectorAll('polygon')
+    expect(faces).toHaveLength(6)
+    expect(faces[0]).toHaveAttribute('fill', '#1973B1')
+    expect(faces[1]).toHaveAttribute('fill', '#214098')
+    expect(faces[2]).toHaveAttribute('fill', '#1973B1')
+    expect(faces[3]).toHaveAttribute('fill', '#214098')
+    expect(faces[4]).toHaveAttribute('fill', '#1973B1')
+    expect(faces[5]).toHaveAttribute('fill', '#214098')
+
+    const swooshes = icon.querySelectorAll('path')
+    expect(swooshes).toHaveLength(2)
+    expect(swooshes[0]).toHaveAttribute('stroke', '#8CC449')
+    expect(swooshes[1]).toHaveAttribute('stroke', '#8CC449')
   })
 })
