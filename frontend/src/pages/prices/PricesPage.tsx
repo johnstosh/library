@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
-import { TableSummary } from '@/components/table/TableSummary'
+import { PriceStatisticsSummary } from '@/components/table/PriceStatisticsSummary'
 import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from '@/pages/books/components/BookFilters'
@@ -55,6 +55,7 @@ import {
   recentHoursFromSearchParams,
   type PriceChipFilters,
 } from '@/utils/priceFilters'
+import { summarizeBookPrices } from '@/utils/priceStatistics'
 
 export function PricesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -120,34 +121,42 @@ export function PricesPage() {
   const { data: allBooks = [], isLoading: booksLoading } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
 
-  const matchingBookIds = useMemo(() => {
+  const matchingBooks = useMemo(() => {
     const favoriteIds = favoriteItemIdsForLists(
       favoriteSummary?.lists,
       selectedFavoriteLists,
       'bookIds',
     )
-    return new Set(
-      applyBookPriceFilters(
-        applyDesireToPurchaseFilter(
-          applyReadingDifficultyFilter(
-            applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-            selectedDifficulties,
-          ),
-          selectedDesireToPurchase,
-        )
-          .filter((book) => matchesBookQuery(book, urlQuery))
-          .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
-        allPrices,
-        {
-          withPrices: chips.withPrices,
-          noPrices: chips.noPrices,
-          priceOlder: chips.priceOlder,
-          priceOlderDays,
-          lookupErrors: chips.lookupErrors,
-        },
-      ).map((book) => book.id),
+    return applyBookPriceFilters(
+      applyDesireToPurchaseFilter(
+        applyReadingDifficultyFilter(
+          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+          selectedDifficulties,
+        ),
+        selectedDesireToPurchase,
+      )
+        .filter((book) => matchesBookQuery(book, urlQuery))
+        .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
+      allPrices,
+      {
+        withPrices: chips.withPrices,
+        noPrices: chips.noPrices,
+        priceOlder: chips.priceOlder,
+        priceOlderDays,
+        lookupErrors: chips.lookupErrors,
+      },
     )
   }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDesireToPurchase, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
+
+  const matchingBookIds = useMemo(
+    () => new Set(matchingBooks.map((book) => book.id)),
+    [matchingBooks],
+  )
+
+  const priceStatistics = useMemo(
+    () => summarizeBookPrices(matchingBooks, allPrices),
+    [matchingBooks, allPrices],
+  )
 
   const bookFiltersActive =
     urlQuery.trim().length > 0 ||
@@ -336,7 +345,7 @@ export function PricesPage() {
         </div>
 
         <LoadingOverlay show={isFetching && !isLoading} />
-        <TableSummary count={prices.length} singular="price" plural="prices" isLoading={isLoading} />
+        <PriceStatisticsSummary stats={priceStatistics} isLoading={isLoading} />
       </PageCard>
     </div>
   )

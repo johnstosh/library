@@ -119,6 +119,13 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='table-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
         assertThat(page.locator("[data-test='price-row-count']")).isVisible();
+        assertThat(page.locator("[data-test='price-statistics']")).isVisible();
+        assertThat(page.locator("[data-test='price-stats-total-cost']")).containsText("$0.00");
+        assertThat(page.locator("[data-test='price-stats-over-20']")).containsText("0");
+        assertThat(page.locator("[data-test='price-stats-over-40']")).containsText("0");
+        assertThat(page.locator("[data-test='price-stats-over-80']")).containsText("0");
+        assertThat(page.locator("[data-test='price-stats-total-books']")).containsText("1");
+        assertThat(page.locator("[data-test='price-stats-without-prices']")).containsText("1");
         assertThat(page.locator("text=No prices match the current filters.")).isVisible();
     }
 
@@ -164,6 +171,33 @@ public class PricesUITest {
         assertThat(page).hasURL(java.util.regex.Pattern.compile(".*[?&]q=Initial.*"));
         assertThat(page.locator("h1")).containsText("Books");
         assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
+    }
+
+    @Test
+    @Sql(value = "classpath:data-price-statistics.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @DisplayName("Price statistics at the bottom use the cheaper cover per book")
+    void testPriceStatisticsFooter() {
+        page.click("[data-test='nav-prices']");
+        page.waitForURL("**/prices", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='price-statistics']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='price-stats-total-cost']")).containsText("$188.00");
+        assertThat(page.locator("[data-test='price-stats-over-20']")).containsText("3");
+        assertThat(page.locator("[data-test='price-stats-over-40']")).containsText("2");
+        assertThat(page.locator("[data-test='price-stats-over-80']")).containsText("1");
+        assertThat(page.locator("[data-test='price-stats-total-books']")).containsText("7");
+        assertThat(page.locator("[data-test='price-stats-without-prices']")).containsText("2");
+
+        page.click("[data-test='nav-books']");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='price-statistics']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='price-stats-total-cost']")).containsText("$188.00");
+        assertThat(page.locator("[data-test='price-stats-over-20']")).containsText("3");
+        assertThat(page.locator("[data-test='price-stats-over-40']")).containsText("2");
+        assertThat(page.locator("[data-test='price-stats-over-80']")).containsText("1");
+        assertThat(page.locator("[data-test='price-stats-total-books']")).containsText("7");
+        assertThat(page.locator("[data-test='price-stats-without-prices']")).containsText("2");
     }
 
     @Test

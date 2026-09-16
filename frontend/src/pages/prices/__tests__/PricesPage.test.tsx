@@ -155,6 +155,17 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-row-count')).toHaveTextContent('5 prices in this table')
   })
 
+  it('reports cheapest-cover totals and threshold counts at the bottom of the page', () => {
+    renderPrices('/prices')
+    expect(screen.getByTestId('price-statistics')).toHaveTextContent('Price statistics')
+    expect(screen.getByTestId('price-stats-total-cost')).toHaveTextContent('$49.86')
+    expect(screen.getByTestId('price-stats-over-20')).toHaveTextContent('1')
+    expect(screen.getByTestId('price-stats-over-40')).toHaveTextContent('1')
+    expect(screen.getByTestId('price-stats-over-80')).toHaveTextContent('0')
+    expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('4')
+    expect(screen.getByTestId('price-stats-without-prices')).toHaveTextContent('2')
+  })
+
   it('renders listings and filters by max total', () => {
     renderPrices('/prices')
 
@@ -178,6 +189,8 @@ describe('PricesPage', () => {
 
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+    expect(screen.getByTestId('price-stats-total-cost')).toHaveTextContent('$49.86')
+    expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('4')
   })
 
   it('filters by hardcover chip', () => {
@@ -236,6 +249,14 @@ describe('PricesPage', () => {
       'href',
       'https://www.abebooks.com/servlet/SearchResults?tn=Missing',
     )
+  })
+
+  it('price statistics follow the current book filters', () => {
+    renderPrices('/prices?q=Pride')
+    expect(screen.getByTestId('price-stats-total-cost')).toHaveTextContent('$4.86')
+    expect(screen.getByTestId('price-stats-over-20')).toHaveTextContent('0')
+    expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('1')
+    expect(screen.getByTestId('price-stats-without-prices')).toHaveTextContent('0')
   })
 
   it('filters by Desire to Purchase like Reading Difficulty', () => {

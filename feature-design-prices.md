@@ -63,6 +63,11 @@ Deleting a book cascades to its prices.
     - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
 - Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), total books in the database (`database-count`), plus price rows in the table (`price-row-count`).
+- Footer (`data-test="price-statistics"`) on Prices and on Books (librarians) reports:
+  - **Total cost** — sum of the cheaper hardcover/softcover total (item + shipping) per book in the current book filters. Other/Unknown listings are used only when neither typed cover has a usable price.
+  - **Over $20 / Over $40 / Over $80** — counts of books whose cheapest total is strictly greater than that amount (cumulative).
+  - **Total books** — books in the current book filters.
+  - **Without prices** — books with no usable listing (missing rows, `No matching listing`, rate-limited, or other lookup errors).
 - Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Open in Books (`data-test="open-in-books"`) on Prices copies the current Prices inventory filters onto `/books?...`. Both are React Router links (Button `to=`) so they can be opened in a new tab. Visiting `/prices` from the nav with no query shows every saved price. Direct loads and new-tab opens of `/prices` are forwarded to `index.html` by `SpaController` (same as `/books`).
 
 ## API

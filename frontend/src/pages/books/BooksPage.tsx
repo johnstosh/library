@@ -7,6 +7,7 @@ import { PiCurrencyDollar, PiMagnifyingGlass } from 'react-icons/pi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { PriceStatisticsSummary } from '@/components/table/PriceStatisticsSummary'
 import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from './components/BookFilters'
@@ -31,6 +32,7 @@ import {
   pricesPathFromFilters,
 } from '@/utils/bookFilterParams'
 import { usePrices } from '@/api/prices'
+import { summarizeBookPrices } from '@/utils/priceStatistics'
 import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
@@ -119,6 +121,11 @@ export function BooksPage() {
       },
     )
   }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
+
+  const priceStatistics = useMemo(
+    () => summarizeBookPrices(books, allPrices),
+    [books, allPrices],
+  )
 
   const intakeConstrained = isBooksIntakeConstrained(
     chips,
@@ -317,7 +324,11 @@ export function BooksPage() {
         </div>
 
         <LoadingOverlay show={isFetching && !isLoading} />
-        <TableSummary count={books.length} singular="book" plural="books" isLoading={isLoading} />
+        {isLibrarian ? (
+          <PriceStatisticsSummary stats={priceStatistics} isLoading={isLoading} />
+        ) : (
+          <TableSummary count={books.length} singular="book" plural="books" isLoading={isLoading} />
+        )}
       </PageCard>
 
     </div>
