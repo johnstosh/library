@@ -64,4 +64,6 @@ Logged-in users see a **Favorites** chip row on Search, Books, and Authors. Each
 - Search **Open in Books** copies selected favorite lists onto `/books?favoriteLists=`.
 
 ## Data Management
+The top-of-page database statistics include **Favorites**, a raw count of favorite-list membership rows, after Loans and before Prices.
+
 **Favorites Statistics** shows each list name with book count and author count, highest total first.

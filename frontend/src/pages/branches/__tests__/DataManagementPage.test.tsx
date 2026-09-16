@@ -10,7 +10,15 @@ vi.mock('@/api/data-management', () => ({
     isPending: false,
   }),
   useDatabaseStats: () => ({
-    data: { branchCount: 1, bookCount: 10, authorCount: 5, userCount: 3, loanCount: 2 },
+    data: {
+      branchCount: 1,
+      bookCount: 10,
+      authorCount: 5,
+      userCount: 3,
+      loanCount: 2,
+      favoriteCount: 7,
+      priceCount: 4,
+    },
   }),
   usePhotoExportStats: () => ({
     data: { total: 0 },
@@ -102,5 +110,23 @@ describe('DataManagementPage Favorites Statistics', () => {
     expect(screen.getByTestId('favorite-stat-Have Read')).toHaveTextContent('Have Read')
     expect(screen.getByTestId('favorite-stat-books-Have Read')).toHaveTextContent('4 books')
     expect(screen.getByTestId('favorite-stat-authors-Have Read')).toHaveTextContent('1 authors')
+  })
+})
+
+describe('DataManagementPage database statistics', () => {
+  it('shows Favorites after Loans and before Prices', () => {
+    render(<DataManagementPage />)
+
+    const loans = screen.getByTestId('stat-loans')
+    const favorites = screen.getByTestId('stat-favorites')
+    const prices = screen.getByTestId('stat-prices')
+
+    expect(favorites).toHaveTextContent('7')
+    expect(favorites).toHaveTextContent('Favorites')
+    expect(prices).toHaveTextContent('4')
+    expect(prices).toHaveTextContent('Prices')
+
+    expect(loans.compareDocumentPosition(favorites) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(favorites.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

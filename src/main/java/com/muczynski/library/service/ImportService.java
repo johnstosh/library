@@ -920,6 +920,8 @@ public class ImportService {
      * Get database statistics with total counts.
      * Used by the Data Management page to show accurate database statistics
      * rather than cached/paginated data from the frontend.
+     * {@code priceCount} is unique books with at least one usable listing,
+     * not the raw number of {@code book_price} rows.
      */
     @Transactional(readOnly = true)
     public DatabaseStatsDto getDatabaseStats() {
@@ -929,7 +931,8 @@ public class ImportService {
             authorRepository.count(),
             userRepository.count(),
             loanRepository.count(),
-            bookPriceRepository.count()
+            favoriteRepository.count(),
+            bookPriceRepository.countDistinctBooksWithValidPrices()
         );
     }
 

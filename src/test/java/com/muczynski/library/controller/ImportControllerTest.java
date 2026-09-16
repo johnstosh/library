@@ -270,7 +270,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetDatabaseStats_Success() {
         // Arrange
-        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L, 4L);
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(5L, 100L, 50L, 10L, 25L, 7L, 4L);
         when(importService.getDatabaseStats()).thenReturn(statsDto);
 
         // Act & Assert
@@ -286,6 +286,7 @@ class ImportControllerTest {
             .body("authorCount", equalTo(50))
             .body("userCount", equalTo(10))
             .body("loanCount", equalTo(25))
+            .body("favoriteCount", equalTo(7))
             .body("priceCount", equalTo(4));
     }
 
@@ -303,7 +304,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetDatabaseStats_ZeroCounts() {
         // Arrange - Empty database
-        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L, 0L);
+        DatabaseStatsDto statsDto = new DatabaseStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L);
         when(importService.getDatabaseStats()).thenReturn(statsDto);
 
         // Act & Assert
@@ -319,6 +320,7 @@ class ImportControllerTest {
             .body("authorCount", equalTo(0))
             .body("userCount", equalTo(0))
             .body("loanCount", equalTo(0))
+            .body("favoriteCount", equalTo(0))
             .body("priceCount", equalTo(0));
     }
 

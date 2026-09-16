@@ -233,7 +233,7 @@ export function DataManagementPage() {
 
         {/* Database Statistics */}
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-4 text-center" data-test="database-stats">
             <div data-test="stat-branches">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.branchCount ?? 0}</div>
               <div className="text-sm text-gray-600">Branches</div>
@@ -253,6 +253,10 @@ export function DataManagementPage() {
             <div data-test="stat-loans">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.loanCount ?? 0}</div>
               <div className="text-sm text-gray-600">Loans</div>
+            </div>
+            <div data-test="stat-favorites">
+              <div className="text-2xl font-bold text-gray-900">{dbStats?.favoriteCount ?? 0}</div>
+              <div className="text-sm text-gray-600">Favorites</div>
             </div>
             <div data-test="stat-prices">
               <div className="text-2xl font-bold text-gray-900">{dbStats?.priceCount ?? 0}</div>

@@ -4,7 +4,9 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.*;
+import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.repository.*;
+import com.muczynski.library.service.BookPriceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,12 @@ class ImportControllerIntegrationTest {
 
     @Autowired
     private PhotoRepository photoRepository;
+
+    @Autowired
+    private FavoriteRepository favoriteRepository;
+
+    @Autowired
+    private BookPriceRepository bookPriceRepository;
 
     private Library testLibrary;
     private Author testAuthor;
@@ -361,7 +369,9 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.bookCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.authorCount", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.userCount", greaterThanOrEqualTo(1)))
-                .andExpect(jsonPath("$.loanCount", greaterThanOrEqualTo(0)));
+                .andExpect(jsonPath("$.loanCount", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.favoriteCount", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.priceCount", greaterThanOrEqualTo(0)));
     }
 
     @Test
@@ -397,6 +407,72 @@ class ImportControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bookCount", equalTo((int) (initialBooks + 2))))
                 .andExpect(jsonPath("$.authorCount", equalTo((int) (initialAuthors + 1))));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_FavoriteCountIsRawRowCount() throws Exception {
+        long initialFavorites = favoriteRepository.count();
+
+        Favorite bookFavorite = new Favorite();
+        bookFavorite.setUser(testUser);
+        bookFavorite.setBook(testBook);
+        bookFavorite.setListName("Have Read");
+        favoriteRepository.save(bookFavorite);
+
+        Favorite authorFavorite = new Favorite();
+        authorFavorite.setUser(testUser);
+        authorFavorite.setAuthor(testAuthor);
+        authorFavorite.setListName("Want to Read");
+        favoriteRepository.save(authorFavorite);
+
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.favoriteCount", equalTo((int) (initialFavorites + 2))));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testGetDatabaseStats_PriceCountIsUniqueBooksWithValidPrices() throws Exception {
+        bookPriceRepository.deleteAll();
+
+        Book secondBook = new Book();
+        secondBook.setTitle("Stats Price Book 2");
+        secondBook.setDateAddedToLibrary(LocalDateTime.now());
+        secondBook.setStatus(BookStatus.ACTIVE);
+        secondBook.setLibrary(testLibrary);
+        secondBook.setAuthor(testAuthor);
+        secondBook = bookRepository.save(secondBook);
+
+        Book thirdBook = new Book();
+        thirdBook.setTitle("Stats Price Book 3");
+        thirdBook.setDateAddedToLibrary(LocalDateTime.now());
+        thirdBook.setStatus(BookStatus.ACTIVE);
+        thirdBook.setLibrary(testLibrary);
+        thirdBook.setAuthor(testAuthor);
+        thirdBook = bookRepository.save(thirdBook);
+
+        // Two valid listings for the same book count as one
+        savePrice(testBook, BookCoverType.HARDCOVER, java.math.BigDecimal.valueOf(10.00), null);
+        savePrice(testBook, BookCoverType.SOFTCOVER, java.math.BigDecimal.valueOf(5.00), null);
+        // Failed lookups do not contribute
+        savePrice(secondBook, BookCoverType.HARDCOVER, null, BookPriceService.NO_MATCHING_LISTING);
+        savePrice(thirdBook, BookCoverType.HARDCOVER, null, AbeBooksRateLimitedException.MESSAGE);
+        savePrice(thirdBook, BookCoverType.SOFTCOVER, null, "AbeBooks timeout");
+
+        mockMvc.perform(get("/api/import/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceCount", equalTo(1)));
+    }
+
+    private void savePrice(Book book, BookCoverType cover, java.math.BigDecimal priceDollars, String lookupError) {
+        BookPrice price = new BookPrice();
+        price.setBook(book);
+        price.setCover(cover);
+        price.setPriceDollars(priceDollars);
+        price.setLookupError(lookupError);
+        price.setLookedUpAt(LocalDateTime.now());
+        bookPriceRepository.save(price);
     }
 
     @Test

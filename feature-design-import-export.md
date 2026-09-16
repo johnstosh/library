@@ -49,7 +49,8 @@ The Data Management page displays real-time database statistics showing:
 - **Authors** - Total number of authors
 - **Users** - Total number of user accounts
 - **Loans** - Total number of loan records
-- **Prices** - Total number of saved AbeBooks price rows
+- **Favorites** - Total number of favorite-list membership rows
+- **Prices** - Unique books with at least one usable AbeBooks listing (failed lookups and duplicate covers for the same book are not extra counts)
 
 These statistics are fetched from the `/api/import/stats` endpoint which returns actual database counts (not cached/paginated data from the frontend). The statistics are displayed in a grid format below the "Database Export/Import" header, providing a quick overview of the database contents before export. The same counts are used in the export filename.
 
@@ -68,6 +69,7 @@ The Data Management page (`/data-management`) includes a **Books Availability** 
   "authorCount": 150,
   "userCount": 25,
   "loanCount": 50,
+  "favoriteCount": 18,
   "priceCount": 12
 }
 ```

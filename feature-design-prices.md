@@ -74,4 +74,4 @@ See `endpoints/endpoints-prices.md`.
 Librarian only.
 
 ## Import/export
-JSON export includes a `prices` array keyed by `bookTitle` + `bookAuthorName` + `cover`. Import merges on that key. Database stats include `priceCount`.
+JSON export includes a `prices` array keyed by `bookTitle` + `bookAuthorName` + `cover`. Import merges on that key. Database stats `priceCount` is unique books with at least one usable listing (`priceDollars` present and no `lookupError`).
