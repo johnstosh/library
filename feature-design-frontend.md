@@ -97,8 +97,10 @@ frontend/src/
 │   │   └── DataTable.tsx    # Generic table component
 │   │
 │   ├── progress/
-│   │   ├── Spinner.tsx      # Loading spinner
-│   │   └── ProgressBar.tsx  # Progress bar
+│   │   ├── Spinner.tsx         # Loading spinner
+│   │   ├── LoadingOverlay.tsx  # Dims parent content; spinner is viewport-centered
+│   │   ├── PageLoading.tsx     # Full-page loading placeholder
+│   │   └── ProgressBar.tsx     # Progress bar
 │   │
 │   ├── photos/
 │   │   ├── PhotoGallery.tsx    # Photo grid display
@@ -697,6 +699,8 @@ Note: Books and Authors menu items are only visible to authenticated users. Unau
 3. Loading spinner displayed
 4. Data cached and displayed
 5. Background refetch (if stale)
+   - `LoadingOverlay` dims the list and shows an indefinite spinner
+     `position:fixed` at the center of the window so it stays visible while the user scrolls a tall table
 
 ### Write Operations
 1. User submits form

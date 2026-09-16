@@ -16,6 +16,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 /**
@@ -791,5 +795,66 @@ public class BooksUITest {
         // The clone gets ", c. 2" because the original "Initial Book" already exists (counts as copy 1)
         assertThat(page.locator("text=Initial Book, c. 2"))
             .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(30000));
+    }
+
+    @Test
+    @DisplayName("Indefinite loading spinner stays in the window center while the page is scrolled")
+    void testLoadingSpinnerStaysCenteredInViewport() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.setViewportSize(1280, 720);
+
+        // Make the overlay parent taller than the viewport so a content-centered
+        // spinner would sit below the fold after scrolling to the top (issue 330).
+        page.evaluate("""
+            () => {
+              const card = document.querySelector('.bg-white.rounded-lg.shadow.relative');
+              if (!card) throw new Error('loading overlay parent not found');
+              const spacer = document.createElement('div');
+              spacer.setAttribute('data-test', 'loading-overlay-height-spacer');
+              spacer.style.height = '4000px';
+              card.appendChild(spacer);
+            }
+            """);
+
+        // Hold the summaries fetch until assertions finish so the overlay stays visible.
+        CompletableFuture<Void> releaseFetch = new CompletableFuture<>();
+        page.route(Pattern.compile(".*/api/books/summaries.*"), route -> {
+            try {
+                releaseFetch.get(20, TimeUnit.SECONDS);
+            } catch (Exception ignored) {
+                // Test finished or timed out; still complete the request so Playwright can close.
+            }
+            route.resume();
+        });
+
+        try {
+            page.locator("[data-test='filter-most-recent']").click();
+            page.evaluate("window.scrollTo(0, 0)");
+
+            page.waitForFunction("""
+                () => {
+                  const host = document.querySelector('[data-test="loading-overlay-spinner"]');
+                  const spinner = host && host.querySelector('[data-test="spinner"]');
+                  if (!host || !spinner) return false;
+                  const style = getComputedStyle(host);
+                  const r = spinner.getBoundingClientRect();
+                  const dx = Math.abs((r.left + r.width / 2) - window.innerWidth / 2);
+                  const dy = Math.abs((r.top + r.height / 2) - window.innerHeight / 2);
+                  const inViewport = r.top >= 0 && r.bottom <= window.innerHeight
+                      && r.left >= 0 && r.right <= window.innerWidth;
+                  return style.position === 'fixed'
+                      && host.parentElement === document.body
+                      && inViewport
+                      && dx < 40
+                      && dy < 40;
+                }
+                """, null, new Page.WaitForFunctionOptions().setTimeout(10000.0));
+
+            assertThat(page.locator("[data-test='loading-overlay']")).isVisible();
+            assertThat(page.locator("[data-test='loading-overlay-spinner'] [data-test='spinner']")).isVisible();
+        } finally {
+            releaseFetch.complete(null);
+        }
     }
 }
