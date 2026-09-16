@@ -39,8 +39,8 @@ INSERT INTO users_roles (user_id, role_id) VALUES (2, 1); -- testuser has USER r
 INSERT INTO author (id, name) VALUES (1, 'Initial Author');
 
 -- Insert test book with current timestamp for most-recent filter
-INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, status_reason, date_added_to_library, last_modified)
-VALUES (1, 'Initial Book', 2023, 'Test Publisher', 1, 1, 'ACTIVE', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, status_reason, date_added_to_library, last_modified, reading_difficulty)
+VALUES (1, 'Initial Book', 2023, 'Test Publisher', 1, 1, 'ACTIVE', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'children');
 
 -- No loan inserted here: tests that check loan count just verify element visibility (count can be 0).
 -- A loan with null return_date would block book deletion in testDeleteBook.

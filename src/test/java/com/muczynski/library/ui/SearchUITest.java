@@ -387,11 +387,41 @@ public class SearchUITest {
         // Wait for results
         page.waitForSelector("[data-test^='book-result-']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
-        Locator bookResult = page.locator("[data-test^='book-result-']").first();
+        Locator bookResult = page.locator("[data-test='book-result-3']");
 
         // Verify book details are shown
         assertThat(bookResult).containsText("City of God");
         assertThat(bookResult).containsText("Augustine"); // Author name
+        assertThat(bookResult.locator("[data-test='book-result-reading-difficulty-3']")).containsText("Moderate");
+        Locator meta = bookResult.locator("[data-test='book-result-meta-3']");
+        assertThat(meta).isVisible();
+        assertThat(meta).containsText("426");
+        assertThat(meta).containsText("Ancient Books");
+        assertThat(meta).containsText("St. Martin de Porres");
+    }
+
+    @Test
+    @DisplayName("Phone search results hide year, publisher, and branch")
+    void testBookResultHidesYearPublisherBranchOnPhone() {
+        BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()
+                .setViewportSize(375, 667));
+        Page mobilePage = mobileContext.newPage();
+        mobilePage.setDefaultTimeout(20000L);
+        try {
+            mobilePage.navigate(getBaseUrl() + "/search");
+            mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
+
+            mobilePage.fill("[data-test='search-input']", "City of God");
+            mobilePage.click("[data-test='search-button']");
+            mobilePage.waitForSelector("[data-test='book-result-3']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+            Locator bookResult = mobilePage.locator("[data-test='book-result-3']");
+            assertThat(bookResult).containsText("City of God");
+            assertThat(bookResult.locator("[data-test='book-result-reading-difficulty-3']")).containsText("Moderate");
+            assertThat(bookResult.locator("[data-test='book-result-meta-3']")).isHidden();
+        } finally {
+            mobileContext.close();
+        }
     }
 
     @Test

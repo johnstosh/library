@@ -17,6 +17,10 @@ const { searchResult, librarianState } = vi.hoisted(() => {
       lastModified: '2026-01-01T00:00:00',
       firstPhotoId: 10,
       firstPhotoChecksum: 'cover-summa',
+      readingDifficulty: 'demanding',
+      publicationYear: 1485,
+      publisher: 'Catholic Press',
+      library: 'St. Martin de Porres',
     },
     {
       id: 8,
@@ -138,6 +142,25 @@ describe('SearchPage covers', () => {
     expect(authorImg).toHaveAttribute('src', '/api/photos/20/thumbnail?width=70&v=author-teresa')
     fireEvent.load(authorImg)
     expect(authorImg).toHaveAttribute('data-test', 'thumbnail-img')
+  })
+
+  it('shows reading difficulty as a third line under title and author', () => {
+    renderSearch()
+
+    expect(screen.getByTestId('book-result-reading-difficulty-1')).toHaveTextContent('Demanding')
+    expect(screen.getByTestId('book-result-reading-difficulty-8')).toHaveTextContent('Unset')
+  })
+
+  it('hides year, publisher, and branch on phone widths', () => {
+    renderSearch()
+
+    const meta = screen.getByTestId('book-result-meta-1')
+    expect(meta).toHaveClass('hidden')
+    expect(meta).toHaveClass('sm:flex')
+    expect(meta).toHaveTextContent('1485')
+    expect(meta).toHaveTextContent('Catholic Press')
+    expect(meta).toHaveTextContent('St. Martin de Porres')
+    expect(screen.queryByTestId('book-result-meta-8')).not.toBeInTheDocument()
   })
 })
 

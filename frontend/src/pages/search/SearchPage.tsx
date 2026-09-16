@@ -19,7 +19,7 @@ import {
   labelsFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
-import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
+import { readingDifficultiesFromSearchParams, readingDifficultyLabel } from '@/utils/readingDifficulty'
 import {
   bookStatusesFromSearchParams,
   type BookStatusFilter,
@@ -477,11 +477,19 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                   book.author
                 )}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                {book.publicationYear && <span>{book.publicationYear}</span>}
-                {book.publisher && <span>{book.publisher}</span>}
-                {book.library && <span className="font-medium">{book.library}</span>}
+              <div className="text-sm text-gray-500 mt-1" data-test={`book-result-reading-difficulty-${book.id}`}>
+                {readingDifficultyLabel(book.readingDifficulty)}
               </div>
+              {(book.publicationYear || book.publisher || book.library) && (
+                <div
+                  className="hidden sm:flex items-center gap-4 mt-2 text-sm text-gray-500"
+                  data-test={`book-result-meta-${book.id}`}
+                >
+                  {book.publicationYear && <span>{book.publicationYear}</span>}
+                  {book.publisher && <span>{book.publisher}</span>}
+                  {book.library && <span className="font-medium">{book.library}</span>}
+                </div>
+              )}
               {book.locNumber && (
                 <div className="mt-2 text-sm text-gray-500">
                   <span className="font-medium">LOC:</span> {book.locNumber}

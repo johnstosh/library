@@ -199,7 +199,8 @@ Note: When any filter chip or label is active, the author list shows only author
 #### 3. Results Display
 
 **Books Section**:
-- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, Library name, Publication year, LOC number
+- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, and a third line for reading difficulty (`data-test="book-result-reading-difficulty-{id}"`; blank values show Unset)
+- Year, publisher, and branch sit under the difficulty line (`data-test="book-result-meta-{id}"`) and are hidden on phone widths (`hidden sm:flex`). LOC number stays visible on all sizes.
 - Cover links open `/photos/{id}` in a new tab (`data-test="book-result-cover-{id}"`)
 - Book count and pagination controls
 - "No books found" message when empty
@@ -285,7 +286,8 @@ Playwright UI test coverage:
 - `testClearSearch()` - Query field is `type="search"` (native (x)); no Clear button
 - `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
 - `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
-- `testBookResultDetails()` - Book details displayed correctly
+- `testBookResultDetails()` - Book details displayed correctly, including reading difficulty and year/publisher/branch on desktop
+- `testBookResultHidesYearPublisherBranchOnPhone()` - Phone results keep title, author, and difficulty but hide year, publisher, and branch
 - `testBookResultsShowCoverThumbnails()` - Book results with photos show the same cover thumbnail as the Books table
 - `testBookResultsShowCoverPlaceholderWhenNoPhoto()` - Books without photos show a dash placeholder
 - `testAuthorResultsShowPhotoThumbnails()` - Author results with photos show a thumbnail

@@ -601,6 +601,7 @@ public class BooksUITest {
         // Verify book details are shown
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
+        assertThat(page.locator("[data-test='book-reading-difficulty-1']")).containsText("Children");
         // Active status badge is shown in the Status column (exact: not "Not Active Status")
         assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
     }
