@@ -113,15 +113,17 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
-  it('YDL and EMU chips keep books with that holding', () => {
+  it('YDL, EMU, and ACLA chips keep books with that holding', () => {
     const ydlAudio = book({ id: 1, ydlAudioAvailable: true })
     const ydlPaper = book({ id: 2, ydlPaperAvailable: true })
     const emuEbook = book({ id: 3, emuEbookAvailable: true })
-    const none = book({ id: 4 })
-    const sample = [ydlAudio, ydlPaper, emuEbook, none]
+    const aclaPaper = book({ id: 4, aclaPaperAvailable: true })
+    const none = book({ id: 5 })
+    const sample = [ydlAudio, ydlPaper, emuEbook, aclaPaper, none]
     expect(applyChipFilters(sample, chips({ hasYdlAudio: true })).map((b) => b.id)).toEqual([1])
     expect(applyChipFilters(sample, chips({ hasYdlBook: true })).map((b) => b.id)).toEqual([2])
     expect(applyChipFilters(sample, chips({ hasEmuEbook: true })).map((b) => b.id)).toEqual([3])
+    expect(applyChipFilters(sample, chips({ hasAclaBook: true })).map((b) => b.id)).toEqual([4])
   })
 
   it('ANDs active chips so conflicting filters yield empty', () => {

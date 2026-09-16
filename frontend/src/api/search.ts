@@ -44,6 +44,9 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.hasEmuAudio ? '&filterEmuAudio=true' : '',
     filters.hasEmuBook ? '&filterEmuBook=true' : '',
     filters.hasEmuEbook ? '&filterEmuEbook=true' : '',
+    filters.hasAclaAudio ? '&filterAclaAudio=true' : '',
+    filters.hasAclaBook ? '&filterAclaBook=true' : '',
+    filters.hasAclaEbook ? '&filterAclaEbook=true' : '',
   ].join('')
 }
 

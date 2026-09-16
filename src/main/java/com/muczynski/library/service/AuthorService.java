@@ -430,6 +430,9 @@ public class AuthorService {
         dto.setHasEmuBook(positive(projection.getEmuPaperCount()));
         dto.setHasEmuEbook(positive(projection.getEmuEbookCount()));
         dto.setHasEmuAudio(positive(projection.getEmuAudioCount()));
+        dto.setHasAclaBook(positive(projection.getAclaPaperCount()));
+        dto.setHasAclaEbook(positive(projection.getAclaEbookCount()));
+        dto.setHasAclaAudio(positive(projection.getAclaAudioCount()));
         return dto;
     }
 
@@ -439,7 +442,10 @@ public class AuthorService {
                 || Boolean.TRUE.equals(dto.getHasYdlAudio())
                 || Boolean.TRUE.equals(dto.getHasEmuBook())
                 || Boolean.TRUE.equals(dto.getHasEmuEbook())
-                || Boolean.TRUE.equals(dto.getHasEmuAudio());
+                || Boolean.TRUE.equals(dto.getHasEmuAudio())
+                || Boolean.TRUE.equals(dto.getHasAclaBook())
+                || Boolean.TRUE.equals(dto.getHasAclaEbook())
+                || Boolean.TRUE.equals(dto.getHasAclaAudio());
     }
 
     private static boolean positive(Long count) {

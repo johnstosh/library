@@ -124,12 +124,16 @@ public class BooksUITest {
         // Verify filter chip rows are present (chip-style, not radio buttons)
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='book-filter-acla']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
@@ -177,6 +181,24 @@ public class BooksUITest {
         assertThat(tableBranch).containsText("The St. Martin de Porres Branch");
         assertThat(tableBranch).containsText("of the Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-acla']")).not().isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show the author's Grokipedia link on the books table and book view")
+    void shouldShowAuthorGrokipediaLinkOnBooksTableAndView() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator tableLink = page.locator("[data-test='book-author-grokipedia-1']");
+        assertThat(tableLink).isVisible();
+        assertThat(tableLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
+
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+        Locator viewLink = page.locator("[data-test='book-author-grokipedia-link']");
+        assertThat(viewLink).isVisible();
+        assertThat(viewLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
     }
 
     @Test
@@ -499,6 +521,7 @@ public class BooksUITest {
                 .hasText("Available", new LocatorAssertions.HasTextOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-acla-lookup']")).isVisible();
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
 
         page.click("[data-test='checkout-this-book']");
@@ -725,6 +748,36 @@ public class BooksUITest {
         // Verify the bulk actions toolbar appears with the EMU lookup button
         assertThat(page.locator("[data-test='bulk-lookup-emu']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-emu']")).containsText("Lookup EMU Availability");
+    }
+
+    @Test
+    @DisplayName("Should display ACLA availability section and retry button on book view page")
+    void testAclaAvailabilitySectionVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='acla-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-acla-check-link']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-acla-check-link']")).hasText("Go to ACLA");
+        assertThat(page.locator("[data-test='book-view-acla-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-acla-lookup']")).containsText("Lookup ACLA Availability");
+        assertThat(page.locator("[data-test='acla-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='acla-audio-status']")).containsText("Unknown");
+    }
+
+    @Test
+    @DisplayName("Should show bulk ACLA lookup button when a book is selected")
+    void testBulkAclaLookupButtonVisible() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("[data-test='select-checkbox-1']");
+
+        assertThat(page.locator("[data-test='bulk-lookup-acla']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-acla']")).containsText("Lookup ACLA Availability");
     }
 
     @Test

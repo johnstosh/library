@@ -42,6 +42,26 @@ export function useLookupSingleBookGrokipedia() {
   })
 }
 
+// Lookup Grokipedia URL for a single author
+export function useLookupSingleAuthorGrokipedia() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ authorId, slow }: { authorId: number; slow?: boolean }) => {
+      const results = await api.post<GrokipediaLookupResultDto[]>(
+        grokipediaLookupPath('authors', slow),
+        [authorId]
+      )
+      return results[0]
+    },
+    onSuccess: (_, { authorId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.detail(authorId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
+    },
+  })
+}
+
 // Lookup Grokipedia URLs for multiple books (bulk)
 export function useLookupBulkBooksGrokipedia() {
   const queryClient = useQueryClient()

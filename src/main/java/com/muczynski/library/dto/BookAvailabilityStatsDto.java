@@ -30,4 +30,8 @@ public class BookAvailabilityStatsDto {
     private long emuPaper;
     private long emuEbook;
     private long emuAudio;
+    private long availableAtAcla;
+    private long aclaPaper;
+    private long aclaEbook;
+    private long aclaAudio;
 }

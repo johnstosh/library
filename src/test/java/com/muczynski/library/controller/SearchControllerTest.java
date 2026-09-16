@@ -67,6 +67,7 @@ class SearchControllerTest {
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(response);
     }
@@ -77,6 +78,7 @@ class SearchControllerTest {
         when(searchService.search(eq(query), eq(page), eq(page), eq(size),
                 eq(inLib), eq(elec), eq(freeText), eq(audio),
                 eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
@@ -190,6 +192,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
@@ -220,6 +223,7 @@ class SearchControllerTest {
         when(searchService.search(anyString(), anyInt(), anyInt(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+                anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), isNull(), isNull(), isNull(), isNull(), isNull()))
@@ -334,6 +338,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
@@ -352,6 +357,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
@@ -360,6 +366,7 @@ class SearchControllerTest {
         when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(true), eq(true), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
@@ -384,6 +391,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(true), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
@@ -399,10 +407,33 @@ class SearchControllerTest {
     }
 
     @Test
+    void testSearch_WithAclaAudioFilter() {
+        when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
+                eq(true), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(emptyResponse(10));
+
+        given()
+            .param("query", "test")
+            .param("page", 0)
+            .param("size", 10)
+            .param("filterAclaAudio", true)
+        .when()
+            .get("/api/search")
+        .then()
+            .statusCode(200);
+    }
+
+    @Test
     void testSearch_WithGrokipediaFilter() {
         when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(true), isNull(), isNull(), isNull(), isNull(), isNull()))
@@ -426,6 +457,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
@@ -444,6 +476,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
@@ -452,6 +485,7 @@ class SearchControllerTest {
         when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(),
@@ -474,6 +508,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(), isNull(),
                 eq(List.of(ReadingDifficulty.CHILDREN, ReadingDifficulty.UNSET)),
                 isNull(), isNull());
@@ -484,6 +519,7 @@ class SearchControllerTest {
         when(searchService.search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(),
@@ -504,6 +540,7 @@ class SearchControllerTest {
         verify(searchService).search(eq("test"), eq(0), eq(0), eq(10),
                 eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), isNull(),

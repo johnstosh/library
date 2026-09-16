@@ -70,6 +70,10 @@ export interface BookAvailabilityStatsDto {
   emuPaper: number
   emuEbook: number
   emuAudio: number
+  availableAtAcla: number
+  aclaPaper: number
+  aclaEbook: number
+  aclaAudio: number
 }
 
 // Photo Export Types

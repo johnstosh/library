@@ -130,3 +130,39 @@ export function YdlIcon({ className }: IconProps) {
 export function EmuIcon({ className }: IconProps) {
   return <PiClock className={clsx(sizeClass, className)} />
 }
+
+/**
+ * Stylized A for Allegheny County Library Association.
+ * Drawn as an SVG so it matches on web and phone.
+ */
+export function AclaIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={clsx(sizeClass, className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      overflow="visible"
+      aria-hidden
+      data-test="acla-icon"
+    >
+      <path
+        d="M12 4.5L4.8 20.2"
+        stroke="#0F766E"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 4.5L19.2 20.2"
+        stroke="#0F766E"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.2 14.8H15.8"
+        stroke="#D97706"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}

@@ -27,7 +27,7 @@ const sample: AuthorDto[] = [
 ]
 
 describe('defaultAuthorChipFilters', () => {
-  it('starts with YDL/EMU chips off', () => {
+  it('starts with YDL/EMU/ACLA chips off', () => {
     expect(isAvailabilityChipActive(defaultAuthorChipFilters)).toBe(false)
   })
 
@@ -80,9 +80,9 @@ describe('applyAuthorChipFilters', () => {
     expect(applyAuthorChipFilters(authors, chips({ withGrokipedia: true })).map((a) => a.id)).toEqual([1])
   })
 
-  it('YDL/EMU chips keep authors who have that holding on any book', () => {
+  it('YDL/EMU/ACLA chips keep authors who have that holding on any book', () => {
     const availability = new Map([
-      [1, { hasYdlBook: true, hasEmuEbook: true, hasYdlAudio: true }],
+      [1, { hasYdlBook: true, hasEmuEbook: true, hasYdlAudio: true, hasAclaBook: true }],
       [2, { hasYdlEbook: true }],
     ])
     expect(
@@ -97,5 +97,8 @@ describe('applyAuthorChipFilters', () => {
     expect(
       applyAuthorChipFilters(sample, chips({ hasEmuAudio: true }), undefined, availability).map((a) => a.id)
     ).toEqual([])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasAclaBook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1])
   })
 })

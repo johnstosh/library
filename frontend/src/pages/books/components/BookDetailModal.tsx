@@ -88,7 +88,20 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
-                <p className="text-gray-900">{book.author}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-gray-900">{book.author}</p>
+                  {isValidUrl(book.authorGrokipediaUrl) && (
+                    <a
+                      href={book.authorGrokipediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-800 underline"
+                      data-test="book-author-grokipedia-link"
+                    >
+                      Grokipedia
+                    </a>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Branch</p>

@@ -5,7 +5,8 @@ import type { AuthorDto } from '@/types/dtos'
  * Independent boolean chip filters for the Authors page.
  * All active chips AND together — more buttons on = fewer results.
  *
- * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
+ *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
  *   zeroBooks, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */
@@ -16,6 +17,9 @@ export interface AuthorChipFilters {
   hasEmuBook: boolean
   hasEmuEbook: boolean
   hasEmuAudio: boolean
+  hasAclaBook: boolean
+  hasAclaEbook: boolean
+  hasAclaAudio: boolean
   mostRecent: boolean
   withoutDescription: boolean
   withoutGrokipedia: boolean
@@ -34,6 +38,9 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   hasEmuBook: false,
   hasEmuEbook: false,
   hasEmuAudio: false,
+  hasAclaBook: false,
+  hasAclaEbook: false,
+  hasAclaAudio: false,
   // Shared default is off. The Authors page overrides this to true in uiStore
   // so it can use GET /authors/most-recent-day instead of GET /authors/summaries.
   mostRecent: false,
@@ -54,6 +61,9 @@ const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
   'hasEmuBook',
   'hasEmuEbook',
   'hasEmuAudio',
+  'hasAclaBook',
+  'hasAclaEbook',
+  'hasAclaAudio',
 ]
 
 export function isAvailabilityChipActive(chips: AuthorChipFilters): boolean {
@@ -74,6 +84,9 @@ export interface AuthorAvailabilityFlags {
   hasEmuBook?: boolean
   hasEmuEbook?: boolean
   hasEmuAudio?: boolean
+  hasAclaBook?: boolean
+  hasAclaEbook?: boolean
+  hasAclaAudio?: boolean
 }
 
 function isBlank(value: string | null | undefined): boolean {
@@ -102,6 +115,9 @@ export function applyAuthorChipFilters(
     if (chips.hasEmuBook && !availability?.hasEmuBook) return false
     if (chips.hasEmuEbook && !availability?.hasEmuEbook) return false
     if (chips.hasEmuAudio && !availability?.hasEmuAudio) return false
+    if (chips.hasAclaBook && !availability?.hasAclaBook) return false
+    if (chips.hasAclaEbook && !availability?.hasAclaEbook) return false
+    if (chips.hasAclaAudio && !availability?.hasAclaAudio) return false
     if (chips.withoutDescription && !isBlank(author.briefBiography)) return false
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(author.grokipediaUrl)) return false

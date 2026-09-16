@@ -117,12 +117,16 @@ public class SearchUITest {
         // Discovery chips (including Recent Arrivals) — cataloger chips belong on Books
         assertThat(page.locator("[data-test='book-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='book-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='book-filter-acla']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='status-filters']")).isVisible();
         assertThat(page.locator("[data-test='status-filter-in-library']")).isVisible();
@@ -255,6 +259,9 @@ public class SearchUITest {
 
         // Verify the book title contains our search term
         assertThat(bookResults.first()).containsText("Summa");
+        Locator authorGrokipedia = page.locator("[data-test='book-result-author-grokipedia-1']");
+        assertThat(authorGrokipedia).isVisible();
+        assertThat(authorGrokipedia).hasAttribute("href", "https://grokipedia.com/page/Thomas_Aquinas");
     }
 
     @Test

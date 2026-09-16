@@ -93,6 +93,7 @@ Returns named book-count statistics for the Data Management Books Availability s
 - `withdrawn` / `requested` - books with those statuses
 - `availableAtYdl` / `ydlPaper` / `ydlEbook` / `ydlAudio`
 - `availableAtEmu` / `emuPaper` / `emuEbook` / `emuAudio`
+- `availableAtAcla` / `aclaPaper` / `aclaEbook` / `aclaAudio`
 
 Boolean flags are counted only when true (null/false are excluded).
 
@@ -112,7 +113,11 @@ Boolean flags are counted only when true (null/false are excluded).
   "availableAtEmu": 6,
   "emuPaper": 3,
   "emuEbook": 2,
-  "emuAudio": 1
+  "emuAudio": 1,
+  "availableAtAcla": 4,
+  "aclaPaper": 2,
+  "aclaEbook": 1,
+  "aclaAudio": 1
 }
 ```
 

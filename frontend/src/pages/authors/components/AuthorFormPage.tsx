@@ -5,7 +5,11 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { AuthorBooksTable } from './AuthorBooksTable'
+import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { useAuthorBooks, useCreateAuthor, useUpdateAuthor } from '@/api/authors'
+import { useLookupSingleAuthorGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
+import { useIsLibrarian } from '@/stores/authStore'
+import { GrokipediaIcon } from '@/components/ui/Icons'
 import type { AuthorDto } from '@/types/dtos'
 
 interface AuthorFormPageProps {
@@ -31,9 +35,14 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
   })
   const [error, setError] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
+  const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
 
   const createAuthor = useCreateAuthor()
   const updateAuthor = useUpdateAuthor()
+  const lookupGrokipediaQuick = useLookupSingleAuthorGrokipedia()
+  const lookupGrokipediaSlow = useLookupSingleAuthorGrokipedia()
+  const isLibrarian = useIsLibrarian()
 
   useEffect(() => {
     if (author) {
@@ -66,6 +75,25 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
   const handleFieldChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value })
     setHasUnsavedChanges(true)
+  }
+
+  const handleGrokipediaLookup = async (slow: boolean) => {
+    if (!author?.id) return
+
+    setError('')
+
+    const lookup = slow ? lookupGrokipediaSlow : lookupGrokipediaQuick
+    try {
+      const result = await lookup.mutateAsync({ authorId: author.id, slow })
+      setGrokipediaResults([result])
+      setShowGrokipediaResults(true)
+      if (result.grokipediaUrl != null) {
+        setFormData({ ...formData, grokipediaUrl: result.grokipediaUrl })
+        setHasUnsavedChanges(true)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup Grokipedia URL')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,6 +141,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
   }
 
   const isLoading = createAuthor.isPending || updateAuthor.isPending
+  const isLookupPending = lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -185,14 +214,48 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
           data-test="author-biography"
         />
 
-        <Input
-          label="Grokipedia URL"
-          type="url"
-          value={formData.grokipediaUrl}
-          onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
-          placeholder="https://grokipedia.example.com/..."
-          data-test="author-grokipedia-url"
-        />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[12rem]">
+            <Input
+              label="Grokipedia URL"
+              type="url"
+              value={formData.grokipediaUrl}
+              onChange={(e) => handleFieldChange('grokipediaUrl', e.target.value)}
+              placeholder="https://grokipedia.com/page/..."
+              data-test="author-grokipedia-url"
+            />
+          </div>
+          {isEditing && isLibrarian && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(false)}
+                isLoading={lookupGrokipediaQuick.isPending}
+                disabled={isLookupPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="author-field-lookup-grokipedia-quick"
+                className="mb-0"
+              >
+                Quick lookup
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => handleGrokipediaLookup(true)}
+                isLoading={lookupGrokipediaSlow.isPending}
+                disabled={isLookupPending || isLoading}
+                leftIcon={<GrokipediaIcon />}
+                data-test="author-field-lookup-grokipedia-slow"
+                className="mb-0"
+              >
+                Slow lookup
+              </Button>
+            </>
+          )}
+        </div>
 
         {/* Books Section - Only show when editing */}
         {isEditing && author && (
@@ -226,6 +289,13 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
           </Button>
         </div>
       </div>
+
+      <GrokipediaLookupResultsModal
+        isOpen={showGrokipediaResults}
+        onClose={() => setShowGrokipediaResults(false)}
+        results={grokipediaResults}
+        entityType="author"
+      />
     </div>
   )
 }

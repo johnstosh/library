@@ -54,6 +54,10 @@ class AuthorAvailabilityIntegrationTest {
         noneAuthor.setName("Availability None Author");
         noneAuthor = authorRepository.save(noneAuthor);
 
+        Author aclaAuthor = new Author();
+        aclaAuthor.setName("Availability ACLA Author");
+        aclaAuthor = authorRepository.save(aclaAuthor);
+
         Book ydlBook = new Book();
         ydlBook.setTitle("YDL Paper and Audio");
         ydlBook.setAuthor(ydlAuthor);
@@ -80,12 +84,25 @@ class AuthorAvailabilityIntegrationTest {
         noneBook.setYdlPaperAvailable(false);
         bookRepository.save(noneBook);
 
+        Book aclaBook = new Book();
+        aclaBook.setTitle("ACLA Paper and Ebook");
+        aclaBook.setAuthor(aclaAuthor);
+        aclaBook.setStatus(BookStatus.ACTIVE);
+        aclaBook.setDateAddedToLibrary(LocalDateTime.now());
+        aclaBook.setAclaPaperAvailable(true);
+        aclaBook.setAclaEbookAvailable(true);
+        aclaBook.setAclaAudioAvailable(false);
+        bookRepository.save(aclaBook);
+
         mockMvc.perform(get("/api/authors/availability"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.authorId == " + ydlAuthor.getId() + ")].hasYdlBook").value(hasItem(true)))
                 .andExpect(jsonPath("$[?(@.authorId == " + ydlAuthor.getId() + ")].hasYdlEbook").value(hasItem(false)))
                 .andExpect(jsonPath("$[?(@.authorId == " + ydlAuthor.getId() + ")].hasYdlAudio").value(hasItem(true)))
                 .andExpect(jsonPath("$[?(@.authorId == " + emuAuthor.getId() + ")].hasEmuEbook").value(hasItem(true)))
+                .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaBook").value(hasItem(true)))
+                .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaEbook").value(hasItem(true)))
+                .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaAudio").value(hasItem(false)))
                 .andExpect(jsonPath("$[?(@.authorId == " + noneAuthor.getId() + ")]").isEmpty());
     }
 }

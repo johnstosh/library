@@ -467,14 +467,26 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                   {book.title}
                 </EntityLink>
               </h3>
-              <p className="text-gray-600 mt-1">
-                by{' '}
-                {book.authorId ? (
-                  <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
-                    {book.author}
-                  </EntityLink>
-                ) : (
-                  book.author
+              <p className="text-gray-600 mt-1 flex items-center gap-1 flex-wrap">
+                <span>
+                  by{' '}
+                  {book.authorId ? (
+                    <EntityLink to={`/authors/${book.authorId}`} data-test={`book-result-author-name-${book.id}`}>
+                      {book.author}
+                    </EntityLink>
+                  ) : (
+                    book.author
+                  )}
+                </span>
+                {isValidUrl(book.authorGrokipediaUrl) && (
+                  <IconButton
+                    href={book.authorGrokipediaUrl}
+                    icon={<GrokipediaIcon />}
+                    label={`View ${book.author} on Grokipedia`}
+                    tone="warning"
+                    data-test={`book-result-author-grokipedia-${book.id}`}
+                    className="!p-0.5"
+                  />
                 )}
               </p>
               <div className="text-sm text-gray-500 mt-1" data-test={`book-result-reading-difficulty-${book.id}`}>

@@ -68,7 +68,7 @@ export interface AuthorSummaryDto {
   lastModified: string
 }
 
-/** Per-author YDL/EMU holdings rolled up from that author's books. */
+/** Per-author YDL/EMU/ACLA holdings rolled up from that author's books. */
 export interface AuthorAvailabilityDto {
   authorId: number
   hasYdlBook?: boolean
@@ -77,6 +77,9 @@ export interface AuthorAvailabilityDto {
   hasEmuBook?: boolean
   hasEmuEbook?: boolean
   hasEmuAudio?: boolean
+  hasAclaBook?: boolean
+  hasAclaEbook?: boolean
+  hasAclaAudio?: boolean
 }
 
 export interface AuthorEnrichmentResultDto {
@@ -109,6 +112,7 @@ export interface BookDto {
   library?: string
   authorId?: number
   author?: string
+  authorGrokipediaUrl?: string
   firstPhotoId?: number
   firstPhotoChecksum?: string
   loanCount?: number
@@ -124,6 +128,11 @@ export interface BookDto {
   emuEbookAvailable?: boolean
   emuLastChecked?: string
   emuLookupError?: string
+  aclaAudioAvailable?: boolean
+  aclaPaperAvailable?: boolean
+  aclaEbookAvailable?: boolean
+  aclaLastChecked?: string
+  aclaLookupError?: string
   readingDifficulty?: ReadingDifficulty
   desireToPurchase?: number | null
 }

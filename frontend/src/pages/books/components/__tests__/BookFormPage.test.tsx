@@ -64,6 +64,10 @@ vi.mock('@/api/emu-lookup', () => ({
   useLookupSingleEmu: () => idleMutation(),
 }))
 
+vi.mock('@/api/acla-lookup', () => ({
+  useLookupSingleAcla: () => idleMutation(),
+}))
+
 vi.mock('@/api/labels', () => ({
   generateLabelsPdf: vi.fn(),
 }))
@@ -207,6 +211,7 @@ describe('BookFormPage catalog links', () => {
 
     expect(screen.getByTestId('book-form-ydl-check-link')).toHaveTextContent('Go to YDL')
     expect(screen.getByTestId('book-form-emu-check-link')).toHaveTextContent('Go to EMU')
+    expect(screen.getByTestId('book-form-acla-check-link')).toHaveTextContent('Go to ACLA')
     expect(screen.queryByText('Check YDL')).not.toBeInTheDocument()
     expect(screen.queryByText('Check EMU')).not.toBeInTheDocument()
   })

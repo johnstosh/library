@@ -8,7 +8,8 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * Independent boolean chip filters shared by the Books and Search pages.
  * All active chips AND together with genre labels — more buttons on = fewer results.
  *
- * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook
+ * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
+ *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, withoutFreeTextUrls
@@ -24,6 +25,9 @@ export interface BookChipFilters {
   hasEmuAudio: boolean
   hasEmuBook: boolean
   hasEmuEbook: boolean
+  hasAclaAudio: boolean
+  hasAclaBook: boolean
+  hasAclaEbook: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
@@ -45,6 +49,9 @@ export const defaultBookChipFilters: BookChipFilters = {
   hasEmuAudio: false,
   hasEmuBook: false,
   hasEmuEbook: false,
+  hasAclaAudio: false,
+  hasAclaBook: false,
+  hasAclaEbook: false,
   freeText: false,
   audio: false,
   // Shared default is off (Search). The Books page turns mostRecent on when
@@ -105,6 +112,9 @@ export function applyChipFilters<T extends Pick<
   | 'emuAudioAvailable'
   | 'emuPaperAvailable'
   | 'emuEbookAvailable'
+  | 'aclaAudioAvailable'
+  | 'aclaPaperAvailable'
+  | 'aclaEbookAvailable'
 >>(books: T[], chips: BookChipFilters): T[] {
   let maxDate: Date | null = null
   if (chips.mostRecent) {
@@ -129,6 +139,9 @@ export function applyChipFilters<T extends Pick<
     if (chips.hasEmuAudio && book.emuAudioAvailable !== true) return false
     if (chips.hasEmuBook && book.emuPaperAvailable !== true) return false
     if (chips.hasEmuEbook && book.emuEbookAvailable !== true) return false
+    if (chips.hasAclaAudio && book.aclaAudioAvailable !== true) return false
+    if (chips.hasAclaBook && book.aclaPaperAvailable !== true) return false
+    if (chips.hasAclaEbook && book.aclaEbookAvailable !== true) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
     if (chips.audio) {
       if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false

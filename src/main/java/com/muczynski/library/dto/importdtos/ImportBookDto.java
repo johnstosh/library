@@ -60,9 +60,16 @@ public class ImportBookDto {
     private LocalDateTime emuLastChecked;
     private String emuLookupError;
 
+    // ACLA availability fields (exported for diagnostics; persisted on import when present)
+    private Boolean aclaAudioAvailable;
+    private Boolean aclaPaperAvailable;
+    private Boolean aclaEbookAvailable;
+    private LocalDateTime aclaLastChecked;
+    private String aclaLookupError;
+
     /**
      * Reading difficulty level (stored as enum key: children, accessible, moderate, demanding,
-     * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU fields.
+     * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU/ACLA fields.
      */
     private ReadingDifficulty readingDifficulty;
     /** Nullable for legacy books; when present, must be 0 through 10 inclusive. */

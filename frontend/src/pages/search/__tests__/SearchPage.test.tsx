@@ -13,6 +13,7 @@ const { searchResult, librarianState } = vi.hoisted(() => {
       title: 'Summa Theologica',
       author: 'Thomas Aquinas',
       authorId: 1,
+      authorGrokipediaUrl: 'https://grokipedia.com/page/Thomas_Aquinas',
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
       firstPhotoId: 10,
@@ -149,6 +150,14 @@ describe('SearchPage covers', () => {
 
     expect(screen.getByTestId('book-result-reading-difficulty-1')).toHaveTextContent('Demanding')
     expect(screen.getByTestId('book-result-reading-difficulty-8')).toHaveTextContent('Unset')
+  })
+
+  it('shows a Grokipedia link next to the author when the author has a URL', () => {
+    renderSearch()
+
+    const authorLink = screen.getByTestId('book-result-author-grokipedia-1')
+    expect(authorLink).toHaveAttribute('href', 'https://grokipedia.com/page/Thomas_Aquinas')
+    expect(screen.queryByTestId('book-result-author-grokipedia-8')).not.toBeInTheDocument()
   })
 
   it('hides year, publisher, and branch on phone widths', () => {

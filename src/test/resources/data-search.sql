@@ -23,12 +23,12 @@ VALUES (1, 'librarian', '$2a$10$8r2Q3l5gvhlkBNCv32DqI.TRbcvs6up4ATM46w4RgmE2dW3t
 INSERT INTO users_roles (user_id, role_id) VALUES (1, 2);
 
 -- Insert authors
-INSERT INTO author (id, name, date_of_birth, date_of_death) VALUES
-    (1, 'Thomas Aquinas', '1225-01-01', '1274-03-07'),
-    (2, 'Augustine of Hippo', '0354-11-13', '0430-08-28'),
-    (3, 'John Paul II', '1920-05-18', '2005-04-02'),
-    (4, 'Teresa of Avila', '1515-03-28', '1582-10-04'),
-    (5, 'Francis of Assisi', '1181-09-26', '1226-10-03');
+INSERT INTO author (id, name, date_of_birth, date_of_death, grokipedia_url) VALUES
+    (1, 'Thomas Aquinas', '1225-01-01', '1274-03-07', 'https://grokipedia.com/page/Thomas_Aquinas'),
+    (2, 'Augustine of Hippo', '0354-11-13', '0430-08-28', NULL),
+    (3, 'John Paul II', '1920-05-18', '2005-04-02', NULL),
+    (4, 'Teresa of Avila', '1515-03-28', '1582-10-04', NULL),
+    (5, 'Francis of Assisi', '1181-09-26', '1226-10-03', NULL);
 
 -- Insert books with various titles for searching
 -- Books 1-8: physical collection (have loc_number or are missing it)

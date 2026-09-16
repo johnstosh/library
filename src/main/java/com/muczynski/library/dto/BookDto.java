@@ -36,6 +36,9 @@ public class BookDto {
 
     private String author; // Author name for display purposes
 
+    /** Author's Grokipedia URL, copied from the related Author for display on book pages. */
+    private String authorGrokipediaUrl;
+
     private Long libraryId;
     private String library; // Library name for display purposes
     private Long firstPhotoId;
@@ -56,6 +59,12 @@ public class BookDto {
     private Boolean emuEbookAvailable;
     private LocalDateTime emuLastChecked;
     private String emuLookupError;
+
+    private Boolean aclaAudioAvailable;
+    private Boolean aclaPaperAvailable;
+    private Boolean aclaEbookAvailable;
+    private LocalDateTime aclaLastChecked;
+    private String aclaLookupError;
 
     /**
      * Reading difficulty level. Uses enum keys in JSON (children, accessible, etc.).

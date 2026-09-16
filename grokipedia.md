@@ -39,6 +39,8 @@ Add a `grokipediaUrl` field to both Author and Book entities to store links to g
 ### Author Pages
 - [x] Add `grokipediaUrl` input field to `AuthorFormPage.tsx` (used by New and Edit)
 - [x] Display `grokipediaUrl` as clickable link in `AuthorViewPage.tsx`
+- [x] Quick/Slow Grokipedia lookup buttons on Author edit form (librarian)
+- [x] Show author Grokipedia link next to author name on book table, book view, and search
 - [ ] Add `grokipediaUrl` column to authors table (optional - may be too wide)
 
 ### Book Pages
@@ -60,10 +62,9 @@ Add a `grokipediaUrl` field to both Author and Book entities to store links to g
 - [ ] Test import/export with `grokipediaUrl` field
 
 ### Frontend UI Tests (Playwright)
-- [ ] Update `authors.spec.ts` to test `grokipediaUrl` input in create/edit
-- [ ] Update `authors.spec.ts` to verify `grokipediaUrl` display in view page
-- [ ] Update `books.spec.ts` to test `grokipediaUrl` input in create/edit
-- [ ] Update `books.spec.ts` to verify `grokipediaUrl` display in view page
+- [x] Authors UI tests for grokipedia URL display and edit-page lookup buttons
+- [x] Books UI tests for author Grokipedia link on table and view
+- [x] Search UI tests for author Grokipedia link on book results
 
 ## Documentation
 - [ ] Update `feature-design-frontend.md` if CRUD patterns are affected

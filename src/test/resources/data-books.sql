@@ -36,7 +36,7 @@ INSERT INTO users_roles (user_id, role_id) VALUES (1, 2); -- librarian has LIBRA
 INSERT INTO users_roles (user_id, role_id) VALUES (2, 1); -- testuser has USER role
 
 -- Insert test author
-INSERT INTO author (id, name) VALUES (1, 'Initial Author');
+INSERT INTO author (id, name, grokipedia_url) VALUES (1, 'Initial Author', 'https://grokipedia.com/page/Initial_Author');
 
 -- Insert test book with current timestamp for most-recent filter
 INSERT INTO book (id, title, publication_year, publisher, author_id, library_id, status, loc_number, status_reason, date_added_to_library, last_modified, reading_difficulty)

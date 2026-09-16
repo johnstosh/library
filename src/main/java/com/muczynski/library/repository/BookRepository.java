@@ -250,6 +250,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterEmuAudio = false OR b.emuAudioAvailable = true) AND " +
         "(:filterEmuBook = false OR b.emuPaperAvailable = true) AND " +
         "(:filterEmuEbook = false OR b.emuEbookAvailable = true) AND " +
+        "(:filterAclaAudio = false OR b.aclaAudioAvailable = true) AND " +
+        "(:filterAclaBook = false OR b.aclaPaperAvailable = true) AND " +
+        "(:filterAclaEbook = false OR b.aclaEbookAvailable = true) AND " +
         "(:filterReadingDifficulty = false OR b.readingDifficulty IN :readingDifficulties OR " +
         "(:includeUnsetReadingDifficulty = true AND (b.readingDifficulty IS NULL " +
         "OR b.readingDifficulty = com.muczynski.library.domain.ReadingDifficulty.UNSET " +
@@ -290,6 +293,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterEmuAudio") boolean filterEmuAudio,
         @Param("filterEmuBook") boolean filterEmuBook,
         @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterAclaAudio") boolean filterAclaAudio,
+        @Param("filterAclaBook") boolean filterAclaBook,
+        @Param("filterAclaEbook") boolean filterAclaEbook,
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
         @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
@@ -331,6 +337,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterEmuAudio") boolean filterEmuAudio,
         @Param("filterEmuBook") boolean filterEmuBook,
         @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterAclaAudio") boolean filterAclaAudio,
+        @Param("filterAclaBook") boolean filterAclaBook,
+        @Param("filterAclaEbook") boolean filterAclaEbook,
         @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
         @Param("labels") List<String> labels,
         @Param("labelCount") long labelCount,
@@ -377,14 +386,23 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     long countByEmuAudioAvailableTrue();
 
+    long countByAclaPaperAvailableTrue();
+
+    long countByAclaEbookAvailableTrue();
+
+    long countByAclaAudioAvailableTrue();
+
     @Query("SELECT COUNT(b) FROM Book b WHERE b.ydlPaperAvailable = true OR b.ydlEbookAvailable = true OR b.ydlAudioAvailable = true")
     long countAvailableAtYdl();
 
     @Query("SELECT COUNT(b) FROM Book b WHERE b.emuPaperAvailable = true OR b.emuEbookAvailable = true OR b.emuAudioAvailable = true")
     long countAvailableAtEmu();
 
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.aclaPaperAvailable = true OR b.aclaEbookAvailable = true OR b.aclaAudioAvailable = true")
+    long countAvailableAtAcla();
+
     /**
-     * Per-author counts of books held as paper/ebook/audio at YDL and EMU.
+     * Per-author counts of books held as paper/ebook/audio at YDL, EMU, and ACLA.
      * Authors with no matching books are omitted (treat missing as all false).
      */
     interface AuthorAvailabilityProjection {
@@ -395,6 +413,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         Long getEmuPaperCount();
         Long getEmuEbookCount();
         Long getEmuAudioCount();
+        Long getAclaPaperCount();
+        Long getAclaEbookCount();
+        Long getAclaAudioCount();
     }
 
     @Query("""
@@ -404,7 +425,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                    SUM(CASE WHEN b.ydlAudioAvailable = true THEN 1 ELSE 0 END) as ydlAudioCount,
                    SUM(CASE WHEN b.emuPaperAvailable = true THEN 1 ELSE 0 END) as emuPaperCount,
                    SUM(CASE WHEN b.emuEbookAvailable = true THEN 1 ELSE 0 END) as emuEbookCount,
-                   SUM(CASE WHEN b.emuAudioAvailable = true THEN 1 ELSE 0 END) as emuAudioCount
+                   SUM(CASE WHEN b.emuAudioAvailable = true THEN 1 ELSE 0 END) as emuAudioCount,
+                   SUM(CASE WHEN b.aclaPaperAvailable = true THEN 1 ELSE 0 END) as aclaPaperCount,
+                   SUM(CASE WHEN b.aclaEbookAvailable = true THEN 1 ELSE 0 END) as aclaEbookCount,
+                   SUM(CASE WHEN b.aclaAudioAvailable = true THEN 1 ELSE 0 END) as aclaAudioCount
             FROM Book b
             WHERE b.author IS NOT NULL
             GROUP BY b.author.id

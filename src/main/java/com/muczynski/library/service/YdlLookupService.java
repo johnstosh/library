@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.YdlLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
@@ -168,13 +169,14 @@ public class YdlLookupService {
 
         } catch (Exception e) {
             log.error("Error during YDL lookup for book {}: {}", book.getId(), e.getMessage());
+            String lookupError = LookupErrorMessages.fromException(e);
             book.setYdlLastChecked(LocalDateTime.now());
-            book.setYdlLookupError("Error: " + e.getMessage());
+            book.setYdlLookupError(lookupError);
             bookRepository.save(book);
             return YdlLookupResultDto.builder()
                     .bookId(book.getId())
                     .success(false)
-                    .errorMessage("Error: " + e.getMessage())
+                    .errorMessage(lookupError)
                     .build();
         }
     }

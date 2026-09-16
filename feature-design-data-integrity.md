@@ -21,7 +21,7 @@ Every entity with a natural key has a unique constraint:
 | PhotoUploadSession | uk_upload_session_upload_id | uploadId |
 | Author | uk_author_name | name (pre-existing) |
 
-Any constraint violation caught at the DB level returns **409 CONFLICT** via `DataIntegrityViolationException` handler in `GlobalExceptionHandler`.
+Unique-constraint violations caught at the DB level return **409 CONFLICT** (`DUPLICATE_ENTITY`) via the `DataIntegrityViolationException` handler in `GlobalExceptionHandler`. Value-too-long errors (`SQLState 22001`, e.g. `ERROR: value too long for type character varying(255)`) return **400 BAD REQUEST** (`VALUE_TOO_LONG`) so they are not misreported as duplicates. Spring wraps both as `DataIntegrityViolationException`.
 
 ### 2. Service-Layer Duplicate Checks
 

@@ -141,7 +141,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `bookPage` (number, optional) - Zero-based book results page (omitted when 0)
 - `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
-- `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook` (boolean, optional) - Discovery chips
+- `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook` (boolean, optional) - Discovery chips
 - `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only). Legacy `inLib`/`elec`/`requestedStatus`/`notActiveStatus` still read.
 - `labels` (string, optional) - Comma-separated genre tags (AND)
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
@@ -188,7 +188,7 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 
 | Chip | `data-test` |
 |------|-------------|
-| YDL / EMU Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*` |
+| YDL / EMU / ACLA Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*`, `filter-has-acla-*` |
 | Status (In-library, Electronic resource, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |
@@ -344,6 +344,8 @@ Actions are arranged in up to three rows (rows omitted when empty):
 **Row 1 — URL links** (shown only when present; all users)
 - **Free text links** (open-book icon, green) — one per URL in `freeTextUrl`; opens in new tab; `data-test="book-result-free-text-{id}-{index}"`
 - **Grokipedia** (🅶, orange) — links to `grokipediaUrl`; `data-test="book-result-grokipedia-{id}"`
+
+Author line — Grokipedia (🅶, orange) next to the author name when `authorGrokipediaUrl` is a valid URL; `data-test="book-result-author-grokipedia-{id}"`
 
 **Row 2 — Navigation** (all users)
 - **View** (eye icon, gray) — navigates to `/books/{id}`; `data-test="book-result-view-{id}"`

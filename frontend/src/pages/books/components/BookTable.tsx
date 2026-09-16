@@ -85,13 +85,24 @@ export function BookTable({
             {truncate(book.title, 50)}
           </EntityLink>
           {book.author && (
-            <div className="text-sm">
+            <div className="text-sm flex items-center gap-1 min-w-0">
               {book.authorId ? (
                 <EntityLink to={`/authors/${book.authorId}`} data-test={`book-author-link-${book.id}`}>
                   {truncate(book.author, 40)}
                 </EntityLink>
               ) : (
                 <span className="text-gray-500">{truncate(book.author, 40)}</span>
+              )}
+              {isValidUrl(book.authorGrokipediaUrl) && (
+                <IconButton
+                  href={book.authorGrokipediaUrl}
+                  icon={<GrokipediaIcon />}
+                  label={`View ${book.author} on Grokipedia`}
+                  tone="warning"
+                  onClick={(e) => e.stopPropagation()}
+                  data-test={`book-author-grokipedia-${book.id}`}
+                  className="!p-0.5 shrink-0"
+                />
               )}
             </div>
           )}
