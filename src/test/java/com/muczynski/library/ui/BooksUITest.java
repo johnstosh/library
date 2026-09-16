@@ -137,6 +137,8 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-with-prices']")).containsText("Books with Pricing");
         assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
         assertThat(page.locator("[data-test='filter-no-prices']")).containsText("Books without Pricing");
+        assertThat(page.locator("[data-test='filter-lookup-errors']")).isVisible();
+        assertThat(page.locator("[data-test='filter-lookup-errors']")).containsText("Lookup Errors");
         assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-hardcover']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-price-other-unknown']")).hasCount(0);

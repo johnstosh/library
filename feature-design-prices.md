@@ -18,6 +18,7 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
   2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`, no `cond`) with the same paging.
 - Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown**: they fill any cover that still lacks a typed listing during search, and are saved as `UNKNOWN` (shown as Other/Unknown).
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
+- HTTP 500 (and other non-rate-limit errors) are stored as `lookupError` `AbeBooks HTTP {code}` — not swallowed, and not shown as a listing.
 - Politeness / rate limits:
   - 8s pause before each AbeBooks HTTP call (`abebooks.request-delay-ms`); every 10th call waits 30s (`abebooks.tenth-request-delay-ms`)
   - 1s pause between books in the bulk carousel; every 10th book waits 10s
@@ -37,24 +38,32 @@ One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrite
 | shippingDollars | Shipping; `0` for free shipping |
 | condition | AbeBooks condition text (e.g. `Used - Good`) |
 | lookedUpAt | When the lookup ran |
-| detailsUrl | Listing URL |
-| lookupError | Set when no listing was found or the request failed |
+| detailsUrl | Listing URL when a price was found; otherwise the last AbeBooks SearchResults URL used |
+| lookupError | Set when no listing was found (`No matching listing`) or the request failed (`AbeBooks rate limited`, `AbeBooks HTTP 500`, …) |
 
 Deleting a book cascades to its prices.
+
+`book_price.book_id` is indexed (`idx_book_price_book` and unique `uk_book_price_book_cover`). Lookup slowness is the AbeBooks politeness delay (8s / 30s), not missing Book ID indexes.
 
 ## Prices page
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
+- Table:
+  - **Book** column is 20% of table width
+  - **Status** (`data-test="price-status-{id}"`) shows `lookupError` (`No matching listing`, `AbeBooks rate limited`, `AbeBooks HTTP 500`, …); blank (`—`) when the row is a real listing
+  - **Listing** shows an AbeBooks URL: the listing when a price was found (`AbeBooks`), or the last search used when no price was found (`Search`)
 - Filters:
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
+  - **Desire to Purchase** (`data-test="desire-to-purchase-filters"`) — OR chips for 0–10 plus Unset, same pattern as Reading Difficulty (`desireToPurchase=0,10,unset`)
   - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
     - Cover chips (Prices only): Hardcover, Softcover, **Other/Unknown** (`data-test="filter-price-other-unknown"`)
-    - Has listing / Lookup failed, Looked up recently (last 30 days)
+    - Has listing / Lookup failed, Looked up recently (last **N hours**, default 24; `data-test="filter-price-recent-hours"`)
     - **Books with Pricing** and **Books without Pricing** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
+    - **Lookup Errors** (`data-test="filter-lookup-errors"`) on Books and Prices: rate limited, HTTP errors, and other failures — **not** `No matching listing`
     - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
 - Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), total books in the database (`database-count`), plus price rows in the table (`price-row-count`).
-- Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). It is a React Router link (Button `to=`) so it can be opened in a new tab. Visiting `/prices` from the nav with no query shows every saved price. Direct loads and new-tab opens of `/prices` are forwarded to `index.html` by `SpaController` (same as `/books`).
+- Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Open in Books (`data-test="open-in-books"`) on Prices copies the current Prices inventory filters onto `/books?...`. Both are React Router links (Button `to=`) so they can be opened in a new tab. Visiting `/prices` from the nav with no query shows every saved price. Direct loads and new-tab opens of `/prices` are forwarded to `index.html` by `SpaController` (same as `/books`).
 
 ## API
 See `endpoints/endpoints-prices.md`.

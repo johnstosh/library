@@ -103,6 +103,7 @@ describe('BooksPage Pricing filters', () => {
     expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
     expect(screen.getByTestId('filter-with-prices')).toBeInTheDocument()
     expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
+    expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-hardcover')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()

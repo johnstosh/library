@@ -34,7 +34,7 @@ Returns every saved price row, including book title and author.
 
 Looks up the cheapest AbeBooks hardcover and softcover listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only without the condition filter for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill a cover that has no typed match during search and are saved as `UNKNOWN`. Ungraded `Used` listings are kept; Fair/Poor/As Described are not.
 
-Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/502/503/504, I/O timeout, or a captcha/block page, retries with capped exponential backoff then returns `rateLimited: true` so the bulk carousel can cancel remaining books. A real SearchResults page with zero listings is not treated as rate-limited. AbeBooks HTTP runs outside a DB transaction so other librarian tabs stay usable.
+Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/502/503/504, I/O timeout, or a captcha/block page, retries with capped exponential backoff then returns `rateLimited: true` so the bulk carousel can cancel remaining books. A real SearchResults page with zero listings is not treated as rate-limited. HTTP 500 and other non-rate-limit errors are stored as `lookupError` `AbeBooks HTTP {code}` with the last SearchResults URL in `detailsUrl`. When no listing is found, `lookupError` is `No matching listing` and `detailsUrl` is that search URL. AbeBooks HTTP runs outside a DB transaction so other librarian tabs stay usable. `book_price.book_id` is indexed.
 
 **Authentication:** Librarian
 

@@ -104,6 +104,16 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='filter-price-hardcover']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-softcover']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-other-unknown']")).isVisible();
+        assertThat(page.locator("[data-test='filter-lookup-errors']")).isVisible();
+        assertThat(page.locator("[data-test='filter-lookup-errors']")).containsText("Lookup Errors");
+        assertThat(page.locator("[data-test='filter-price-recent-hours']")).isVisible();
+        assertThat(page.locator("[data-test='desire-to-purchase-filters']")).isVisible();
+        assertThat(page.locator("[data-test='desire-to-purchase-filters']")).containsText("Desire to Purchase");
+        assertThat(page.locator("[data-test='desire-to-purchase-filter-unset']")).containsText("Unset");
+        assertThat(page.locator("[data-test='open-in-books']")).isVisible();
+        assertThat(page.locator("[data-test='open-in-books']")).containsText("Open in Books");
+        assertThat(page.locator("[data-test='open-in-books']")).hasAttribute("href",
+                java.util.regex.Pattern.compile(".*/books.*"));
         assertThat(page.locator("[data-test='prices-search-button']")).containsText("Search");
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
@@ -137,6 +147,23 @@ public class PricesUITest {
         assertThat(page).hasURL(java.util.regex.Pattern.compile(".*[?&]q=Initial.*"));
         assertThat(page.locator("h1")).containsText("Prices");
         assertThat(page.locator("[data-test='prices-title-filter']")).hasValue("Initial");
+    }
+
+    @Test
+    @DisplayName("Open in Books copies the current Prices filters")
+    void testOpenInBooksCopiesFilters() {
+        page.click("[data-test='nav-prices']");
+        page.waitForURL("**/prices", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.fill("[data-test='prices-title-filter']", "Initial");
+        page.click("[data-test='prices-search-button']");
+        assertThat(page.locator("[data-test='open-in-books']")).isVisible();
+        assertThat(page.locator("[data-test='open-in-books']")).hasAttribute("href",
+                java.util.regex.Pattern.compile(".*/books\\?q=Initial.*"));
+        page.click("[data-test='open-in-books']");
+        page.waitForURL("**/books**", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page).hasURL(java.util.regex.Pattern.compile(".*[?&]q=Initial.*"));
+        assertThat(page.locator("h1")).containsText("Books");
+        assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
     }
 
     @Test

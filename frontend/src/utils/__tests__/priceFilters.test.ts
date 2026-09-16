@@ -68,6 +68,22 @@ describe('applyPriceFilters', () => {
     const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, lookupFailed: true }, '')
     expect(filtered.map((row) => row.id)).toEqual([3])
   })
+
+  it('filters looked up recently by hours', () => {
+    const now = Date.parse('2026-09-10T12:00:00Z')
+    const recentRows = [
+      price({ id: 1, lookedUpAt: '2026-09-10T11:00:00Z' }),
+      price({ id: 2, lookedUpAt: '2026-09-09T12:00:00Z' }),
+    ]
+    const filtered = applyPriceFilters(
+      recentRows,
+      { ...defaultPriceChipFilters, recent: true },
+      '',
+      now,
+      6,
+    )
+    expect(filtered.map((row) => row.id)).toEqual([1])
+  })
 })
 
 describe('parseMaxTotal', () => {

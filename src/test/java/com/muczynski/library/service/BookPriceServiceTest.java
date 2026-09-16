@@ -8,6 +8,7 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -93,10 +94,52 @@ class BookPriceServiceTest {
         BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
 
         assertFalse(result.isSuccess());
-        assertEquals("No matching listing", result.getErrorMessage());
+        assertEquals(BookPriceService.NO_MATCHING_LISTING, result.getErrorMessage());
         ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
         verify(bookPriceRepository, times(2)).save(captor.capture());
-        assertEquals("No matching listing", captor.getAllValues().get(0).getLookupError());
+        assertEquals(BookPriceService.NO_MATCHING_LISTING, captor.getAllValues().get(0).getLookupError());
+    }
+
+    @Test
+    void lookupAndUpdateBook_noListing_savesSearchUrlOnErrorRow() {
+        Book book = book("Unknown Book", "Nobody");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        String searchUrl = "https://www.abebooks.com/servlet/SearchResults?tn=Unknown+Book";
+        when(abeBooksClient.findCheapestGoodOrBetter(any(), any()))
+                .thenReturn(AbeBooksCoverListings.builder().searchUrl(searchUrl).build());
+
+        bookPriceService.lookupAndUpdateBook(1L);
+
+        ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
+        verify(bookPriceRepository, times(2)).save(captor.capture());
+        for (BookPrice saved : captor.getAllValues()) {
+            assertEquals(BookPriceService.NO_MATCHING_LISTING, saved.getLookupError());
+            assertEquals(searchUrl, saved.getDetailsUrl());
+            assertNull(saved.getPriceDollars());
+        }
+    }
+
+    @Test
+    void lookupAndUpdateBook_http500_savesStatusAndSearchUrl() {
+        Book book = book("Emma", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        String searchUrl = "https://www.abebooks.com/servlet/SearchResults?tn=Emma";
+        when(abeBooksClient.findCheapestGoodOrBetter(any(), any()))
+                .thenThrow(new AbeBooksHttpException(500, searchUrl, null));
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertFalse(result.isRateLimited());
+        assertEquals("AbeBooks HTTP 500", result.getErrorMessage());
+        ArgumentCaptor<BookPrice> captor = ArgumentCaptor.forClass(BookPrice.class);
+        verify(bookPriceRepository, times(2)).save(captor.capture());
+        assertEquals("AbeBooks HTTP 500", captor.getAllValues().get(0).getLookupError());
+        assertEquals(searchUrl, captor.getAllValues().get(0).getDetailsUrl());
     }
 
     @Test

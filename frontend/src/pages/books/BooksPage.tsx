@@ -115,6 +115,7 @@ export function BooksPage() {
         noPrices: chips.noPrices,
         priceOlder: chips.priceOlder,
         priceOlderDays,
+        lookupErrors: chips.lookupErrors,
       },
     )
   }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])

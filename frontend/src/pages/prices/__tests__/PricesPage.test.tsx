@@ -14,6 +14,7 @@ const { prices, books } = vi.hoisted(() => {
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
       locNumber: 'PR4034 .P7',
+      desireToPurchase: 10,
     },
     {
       id: 2,
@@ -21,6 +22,7 @@ const { prices, books } = vi.hoisted(() => {
       author: 'Someone',
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
+      desireToPurchase: 1,
     },
     {
       id: 3,
@@ -28,6 +30,14 @@ const { prices, books } = vi.hoisted(() => {
       author: 'Unknown',
       status: 'ACTIVE',
       lastModified: '2026-01-01T00:00:00',
+    },
+    {
+      id: 4,
+      title: 'Rate Limited Book',
+      author: 'Someone',
+      status: 'ACTIVE',
+      lastModified: '2026-01-01T00:00:00',
+      desireToPurchase: 10,
     },
   ]
   const prices: BookPriceDto[] = [
@@ -67,6 +77,20 @@ const { prices, books } = vi.hoisted(() => {
       totalDollars: null,
       lookupError: 'No matching listing',
       lookedUpAt: '2026-09-10T12:00:00',
+      detailsUrl: 'https://www.abebooks.com/servlet/SearchResults?tn=Missing',
+    },
+    {
+      id: 15,
+      bookId: 4,
+      bookTitle: 'Rate Limited Book',
+      author: 'Someone',
+      cover: 'HARDCOVER',
+      priceDollars: null,
+      shippingDollars: null,
+      totalDollars: null,
+      lookupError: 'AbeBooks rate limited',
+      lookedUpAt: '2026-09-10T12:00:00',
+      detailsUrl: 'https://www.abebooks.com/servlet/SearchResults?tn=Rate',
     },
     {
       id: 14,
@@ -126,9 +150,9 @@ describe('PricesPage', () => {
 
   it('reports books in the table, books in the database, and price rows', () => {
     renderPrices('/prices')
-    expect(screen.getByTestId('table-count')).toHaveTextContent('3 books in this table')
+    expect(screen.getByTestId('table-count')).toHaveTextContent('4 books in this table')
     expect(screen.getByTestId('database-count')).toHaveTextContent('12 books in the database')
-    expect(screen.getByTestId('price-row-count')).toHaveTextContent('4 prices in this table')
+    expect(screen.getByTestId('price-row-count')).toHaveTextContent('5 prices in this table')
   })
 
   it('renders listings and filters by max total', () => {
@@ -144,6 +168,11 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('filter-price-hardcover')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-softcover')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-other-unknown')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
+    expect(screen.getByTestId('filter-price-recent-hours')).toBeInTheDocument()
+    expect(screen.getByTestId('desire-to-purchase-filters')).toHaveTextContent('Desire to Purchase')
+    expect(screen.getByTestId('open-in-books')).toHaveTextContent('Open in Books')
+    expect(screen.getByTestId('open-in-books')).toHaveAttribute('href', '/books?mostRecent=false')
 
     fireEvent.change(screen.getByTestId('prices-max-total'), { target: { value: '10' } })
 
@@ -156,8 +185,10 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-total-14')).not.toBeInTheDocument()
-    expect(screen.getByTestId('table-count')).toHaveTextContent('2 books in this table')
-    expect(screen.getByTestId('price-row-count')).toHaveTextContent('2 prices in this table')
+    expect(screen.getByTestId('price-status-13')).toBeInTheDocument()
+    expect(screen.getByTestId('price-status-15')).toBeInTheDocument()
+    expect(screen.getByTestId('table-count')).toHaveTextContent('3 books in this table')
+    expect(screen.getByTestId('price-row-count')).toHaveTextContent('3 prices in this table')
   })
 
   it('filters by Other/Unknown cover chip', () => {
@@ -172,13 +203,56 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.getByTestId('price-total-12')).toBeInTheDocument()
     expect(screen.getByTestId('price-total-14')).toBeInTheDocument()
-    expect(screen.queryByTestId('price-error-13')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-status-13')).not.toBeInTheDocument()
   })
 
   it('noPrices keeps No matching listing rows and hides real listings', () => {
     renderPrices('/prices?noPrices=true')
     expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
-    expect(screen.getByTestId('price-error-13')).toHaveTextContent('No matching listing')
+    expect(screen.getByTestId('price-status-13')).toHaveTextContent('No matching listing')
+    expect(screen.getByTestId('price-listing-13')).toHaveTextContent('Search')
+    expect(screen.getByTestId('price-status-15')).toHaveTextContent('AbeBooks rate limited')
+  })
+
+  it('lookupErrors keeps rate-limited rows and hides No matching listing', () => {
+    renderPrices('/prices?lookupErrors=true')
+    expect(screen.getByTestId('price-status-15')).toHaveTextContent('AbeBooks rate limited')
+    expect(screen.queryByTestId('price-status-13')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
+  })
+
+  it('puts lookup status in the Status column and listing URL in Listing', () => {
+    renderPrices('/prices')
+    expect(screen.getByTestId('price-status-11')).toHaveTextContent('—')
+    expect(screen.getByTestId('price-listing-11')).toHaveTextContent('AbeBooks')
+    expect(screen.getByTestId('price-listing-11')).toHaveAttribute(
+      'href',
+      'https://www.abebooks.com/pride/bd',
+    )
+    expect(screen.getByTestId('price-status-13')).toHaveTextContent('No matching listing')
+    expect(screen.getByTestId('price-listing-13')).toHaveTextContent('Search')
+    expect(screen.getByTestId('price-listing-13')).toHaveAttribute(
+      'href',
+      'https://www.abebooks.com/servlet/SearchResults?tn=Missing',
+    )
+  })
+
+  it('filters by Desire to Purchase like Reading Difficulty', () => {
+    renderPrices('/prices?desireToPurchase=10')
+    expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
+    expect(screen.getByTestId('price-status-15')).toBeInTheDocument()
+    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-status-13')).not.toBeInTheDocument()
+  })
+
+  it('Open in Books copies current filters as a URL', () => {
+    renderPrices('/prices?q=Pride&status=in-library&lookupErrors=true')
+    const link = screen.getByTestId('open-in-books')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute(
+      'href',
+      '/books?q=Pride&status=in-library&lookupErrors=true',
+    )
   })
 })

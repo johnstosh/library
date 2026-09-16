@@ -11,15 +11,26 @@ public class AbeBooksRateLimitedException extends RuntimeException {
 
     public static final String MESSAGE = "AbeBooks rate limited";
 
+    private final String searchUrl;
+
     public AbeBooksRateLimitedException() {
-        super(MESSAGE);
+        this(MESSAGE, null, null);
     }
 
     public AbeBooksRateLimitedException(String message) {
-        super(message);
+        this(message, null, null);
     }
 
     public AbeBooksRateLimitedException(String message, Throwable cause) {
+        this(message, null, cause);
+    }
+
+    public AbeBooksRateLimitedException(String message, String searchUrl, Throwable cause) {
         super(message, cause);
+        this.searchUrl = searchUrl;
+    }
+
+    public String getSearchUrl() {
+        return searchUrl;
     }
 }

@@ -4,6 +4,7 @@ import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFi
 import {
   bookFilterParamsForUrl,
   booksPathFromFilters,
+  booksPathFromPriceFilters,
   pricesPathFromFilters,
   chipsFromSearchParams,
   isBooksIntakeConstrained,
@@ -28,6 +29,7 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)
     expect(isSearchVisibleChip('priceOlder')).toBe(false)
+    expect(isSearchVisibleChip('lookupErrors')).toBe(false)
     expect(SEARCH_VISIBLE_CHIPS).not.toContain('withGrokipedia')
   })
 })
@@ -115,6 +117,19 @@ describe('bookFilterParamsForUrl price chips', () => {
     expect(params.noPrices).toBe('true')
     expect(params.priceOlder).toBe('true')
     expect(params.priceOlderDays).toBe('45')
+  })
+
+  it('emits desireToPurchase when those chips are on', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips(),
+        labels: [],
+        q: '',
+        desireToPurchase: [0, 'unset'],
+      },
+      'prices',
+    )
+    expect(params.desireToPurchase).toBe('0,unset')
   })
 
   it('emits withPrices when that chip is on', () => {
@@ -240,6 +255,16 @@ describe('pricesPathFromFilters', () => {
     ).toBe('/prices?noPrices=true&priceOlder=true&priceOlderDays=45')
   })
 
+  it('copies Lookup Errors onto /prices', () => {
+    expect(
+      pricesPathFromFilters({
+        chips: chips({ lookupErrors: true }),
+        labels: [],
+        q: '',
+      }),
+    ).toBe('/prices?lookupErrors=true')
+  })
+
   it('copies Books with Pricing onto /prices', () => {
     expect(
       pricesPathFromFilters({
@@ -248,6 +273,28 @@ describe('pricesPathFromFilters', () => {
         q: '',
       }),
     ).toBe('/prices?withPrices=true')
+  })
+})
+
+describe('booksPathFromPriceFilters', () => {
+  it('opens /books with mostRecent=false when Prices has no filters', () => {
+    expect(
+      booksPathFromPriceFilters({ chips: chips({ mostRecent: false }), labels: [], q: '' }),
+    ).toBe('/books?mostRecent=false')
+  })
+
+  it('copies Prices inventory filters onto /books', () => {
+    expect(
+      booksPathFromPriceFilters({
+        chips: chips({ lookupErrors: true, noPrices: true }),
+        labels: ['classic'],
+        readingDifficulties: ['demanding'],
+        statuses: ['in-library'],
+        q: 'Summa',
+      }),
+    ).toBe(
+      '/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&noPrices=true&lookupErrors=true',
+    )
   })
 })
 

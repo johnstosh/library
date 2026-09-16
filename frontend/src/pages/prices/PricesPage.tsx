@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PiMagnifyingGlass } from 'react-icons/pi'
+import { PiBooks, PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -12,6 +12,7 @@ import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/Sele
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
+import { DesireToPurchaseFilters } from '@/pages/books/components/DesireToPurchaseFilters'
 import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
 import { StatusFilters } from '@/pages/books/components/StatusFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
@@ -19,9 +20,10 @@ import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
 import { useBookCount, useBooks } from '@/api/books'
-import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
+import { applyBookPriceFilters, applyChipFilters, isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
+  booksPathFromPriceFilters,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
@@ -29,6 +31,11 @@ import {
   priceOlderDaysFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
+import {
+  applyDesireToPurchaseFilter,
+  desireToPurchaseFromSearchParams,
+  type DesireToPurchaseFilter,
+} from '@/utils/desireToPurchase'
 import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
@@ -40,12 +47,12 @@ import {
 } from '@/utils/bookStatus'
 import type { ReadingDifficulty } from '@/types/enums'
 import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
-import type { BookChipFilters } from '@/utils/bookChipFilters'
 import {
   applyPriceFilters,
   maxTotalFromSearchParams,
   priceChipsFromSearchParams,
   priceFilterParamsForUrl,
+  recentHoursFromSearchParams,
   type PriceChipFilters,
 } from '@/utils/priceFilters'
 
@@ -55,6 +62,7 @@ export function PricesPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedDesireToPurchase = desireToPurchaseFromSearchParams(searchParams)
   const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
   const urlQuery = searchParams.get('q') ?? ''
@@ -62,6 +70,7 @@ export function PricesPage() {
   const priceChips = priceChipsFromSearchParams(searchParams)
   const maxTotal = maxTotalFromSearchParams(searchParams)
   const [maxTotalInput, setMaxTotalInput] = useState(maxTotal)
+  const recentHours = recentHoursFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
 
   useEffect(() => {
@@ -77,18 +86,21 @@ export function PricesPage() {
     chips?: BookChipFilters
     labels?: string[]
     readingDifficulties?: string[]
+    desireToPurchase?: DesireToPurchaseFilter[]
     statuses?: string[]
     favoriteLists?: string[]
     q?: string
     priceChips?: PriceChipFilters
     maxTotal?: string
     priceOlderDays?: number
+    recentHours?: number
   }) => {
     const bookParams = bookFilterParamsForUrl(
       {
         chips: next.chips ?? chips,
         labels: next.labels ?? selectedLabels,
         readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+        desireToPurchase: next.desireToPurchase ?? selectedDesireToPurchase,
         statuses: next.statuses ?? selectedStatuses,
         favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
         q: next.q !== undefined ? next.q : urlQuery,
@@ -99,6 +111,7 @@ export function PricesPage() {
     const priceParams = priceFilterParamsForUrl({
       chips: next.priceChips ?? priceChips,
       maxTotal: next.maxTotal !== undefined ? next.maxTotal : maxTotal,
+      recentHours: next.recentHours ?? recentHours,
     })
     setSearchParams({ ...bookParams, ...priceParams })
   }
@@ -115,9 +128,12 @@ export function PricesPage() {
     )
     return new Set(
       applyBookPriceFilters(
-        applyReadingDifficultyFilter(
-          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-          selectedDifficulties,
+        applyDesireToPurchaseFilter(
+          applyReadingDifficultyFilter(
+            applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+            selectedDifficulties,
+          ),
+          selectedDesireToPurchase,
         )
           .filter((book) => matchesBookQuery(book, urlQuery))
           .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
@@ -127,15 +143,17 @@ export function PricesPage() {
           noPrices: chips.noPrices,
           priceOlder: chips.priceOlder,
           priceOlderDays,
+          lookupErrors: chips.lookupErrors,
         },
       ).map((book) => book.id),
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDesireToPurchase, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
 
   const bookFiltersActive =
     urlQuery.trim().length > 0 ||
     selectedLabels.length > 0 ||
     selectedDifficulties.length > 0 ||
+    selectedDesireToPurchase.length > 0 ||
     selectedStatuses.length > 0 ||
     selectedFavoriteLists.length > 0 ||
     Object.entries(chips).some(([, on]) => on)
@@ -144,8 +162,9 @@ export function PricesPage() {
     const scoped = bookFiltersActive
       ? allPrices.filter((price) => matchingBookIds.has(price.bookId))
       : allPrices
-    return applyPriceFilters(scoped, priceChips, maxTotal)
-  }, [allPrices, bookFiltersActive, matchingBookIds, priceChips, maxTotal])
+    const rows = chips.lookupErrors ? scoped.filter(isLookupError) : scoped
+    return applyPriceFilters(rows, priceChips, maxTotal, Date.now(), recentHours)
+  }, [allPrices, bookFiltersActive, chips.lookupErrors, matchingBookIds, maxTotal, priceChips, recentHours])
 
   const displayedBookCount = useMemo(() => {
     const ids = new Set<number>()
@@ -197,6 +216,22 @@ export function PricesPage() {
               Search
             </Button>
           </form>
+          <Button
+            variant="outline"
+            to={booksPathFromPriceFilters({
+              chips,
+              labels: selectedLabels,
+              readingDifficulties: selectedDifficulties,
+              statuses: selectedStatuses,
+              favoriteLists: selectedFavoriteLists,
+              q: inputValue.trim() || urlQuery,
+              priceOlderDays,
+            })}
+            leftIcon={<PiBooks />}
+            data-test="open-in-books"
+          >
+            Open in Books
+          </Button>
           <BookFilters
             chips={chips}
             onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
@@ -233,6 +268,16 @@ export function PricesPage() {
             }}
             onClear={() => writeUrl({ readingDifficulties: [] })}
           />
+          <DesireToPurchaseFilters
+            selected={selectedDesireToPurchase}
+            onToggle={(value: DesireToPurchaseFilter) => {
+              const next = selectedDesireToPurchase.includes(value)
+                ? selectedDesireToPurchase.filter((item) => item !== value)
+                : [...selectedDesireToPurchase, value]
+              writeUrl({ desireToPurchase: next })
+            }}
+            onClear={() => writeUrl({ desireToPurchase: [] })}
+          />
           <FavoriteListFilters
             lists={favoriteChips}
             selected={selectedFavoriteLists}
@@ -255,6 +300,10 @@ export function PricesPage() {
               <PriceFilters
                 chips={priceChips}
                 onToggle={(key) => writeUrl({ priceChips: { ...priceChips, [key]: !priceChips[key] } })}
+                recentHours={recentHours}
+                onRecentHoursChange={(hours) =>
+                  writeUrl({ priceChips: { ...priceChips, recent: true }, recentHours: hours })
+                }
               />
             }
             maxTotal={maxTotalInput}

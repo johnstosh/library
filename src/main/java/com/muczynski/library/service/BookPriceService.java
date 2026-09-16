@@ -8,6 +8,7 @@ import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookPriceRepository;
@@ -23,6 +24,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
@@ -38,6 +40,9 @@ public class BookPriceService {
 
     /** Cap so retries=20 cannot wait days via unbounded exponential backoff. */
     static final long MAX_RATE_LIMIT_BACKOFF_MS = 300_000L;
+
+    /** Stored when AbeBooks returned a real SearchResults page with no usable listing. */
+    public static final String NO_MATCHING_LISTING = "No matching listing";
 
     private final BookRepository bookRepository;
     private final BookPriceRepository bookPriceRepository;
@@ -125,14 +130,30 @@ public class BookPriceService {
             log.warn("AbeBooks lookup rate-limited bookId={} title='{}' elapsedMs={}",
                     bookId, prepared.title, elapsedMs);
             logPool("rate-limited", bookId);
-            return inTransaction(() -> saveErrorResult(bookId, AbeBooksRateLimitedException.MESSAGE, true));
+            return inTransaction(() -> saveErrorResult(
+                    bookId, AbeBooksRateLimitedException.MESSAGE, true, ex.getSearchUrl()));
+        } catch (AbeBooksHttpException ex) {
+            long elapsedMs = elapsedMs(started);
+            log.warn("AbeBooks lookup HTTP {} bookId={} title='{}' elapsedMs={}",
+                    ex.getStatusCode(), bookId, prepared.title, elapsedMs);
+            logPool("http-error", bookId);
+            return inTransaction(() -> saveErrorResult(
+                    bookId, ex.getMessage(), false, ex.getSearchUrl()));
+        } catch (HttpStatusCodeException ex) {
+            long elapsedMs = elapsedMs(started);
+            int code = ex.getStatusCode().value();
+            log.warn("AbeBooks lookup HTTP {} bookId={} title='{}' elapsedMs={}",
+                    code, bookId, prepared.title, elapsedMs);
+            logPool("http-error", bookId);
+            return inTransaction(() -> saveErrorResult(
+                    bookId, AbeBooksHttpException.messageFor(code), false, null));
         } catch (Exception ex) {
             long elapsedMs = elapsedMs(started);
             log.warn("AbeBooks lookup failed bookId={} title='{}' elapsedMs={}: {}",
                     bookId, prepared.title, elapsedMs, ex.getMessage(), ex);
             logPool("failed", bookId);
             String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
-            return inTransaction(() -> saveErrorResult(bookId, truncate(message, 500), false));
+            return inTransaction(() -> saveErrorResult(bookId, truncate(message, 500), false, null));
         }
     }
 
@@ -140,14 +161,15 @@ public class BookPriceService {
         Book book = requireBook(bookId);
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
-            return new PreparedLookup(null, null, saveErrorResult(book, "Not Ready - Temporary title", false));
+            return new PreparedLookup(null, null,
+                    saveErrorResult(book, "Not Ready - Temporary title", false, null));
         }
         return new PreparedLookup(book.getTitle(), authorName, null);
     }
 
     private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
         Book book = requireBook(bookId);
-        CoverSaveResult saved = saveFoundCovers(book, found);
+        CoverSaveResult saved = saveFoundCovers(book, found, found.getSearchUrl());
         boolean success = hasListing(saved.hardcover) || hasListing(saved.softcover);
         String error = success ? null : joinErrors(saved.hardcover, saved.softcover);
         return BookPriceLookupResultDto.builder()
@@ -160,14 +182,16 @@ public class BookPriceService {
                 .build();
     }
 
-    private BookPriceLookupResultDto saveErrorResult(Long bookId, String message, boolean rateLimited) {
-        return saveErrorResult(requireBook(bookId), message, rateLimited);
+    private BookPriceLookupResultDto saveErrorResult(Long bookId, String message, boolean rateLimited,
+                                                    String searchUrl) {
+        return saveErrorResult(requireBook(bookId), message, rateLimited, searchUrl);
     }
 
-    private BookPriceLookupResultDto saveErrorResult(Book book, String message, boolean rateLimited) {
+    private BookPriceLookupResultDto saveErrorResult(Book book, String message, boolean rateLimited,
+                                                    String searchUrl) {
         deleteCover(book, BookCoverType.UNKNOWN);
-        BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, message);
-        BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, message);
+        BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, message, searchUrl);
+        BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, message, searchUrl);
         return BookPriceLookupResultDto.builder()
                 .bookId(book.getId())
                 .bookTitle(book.getTitle())
@@ -229,7 +253,7 @@ public class BookPriceService {
         }
     }
 
-    private CoverSaveResult saveFoundCovers(Book book, AbeBooksCoverListings found) {
+    private CoverSaveResult saveFoundCovers(Book book, AbeBooksCoverListings found, String searchUrl) {
         AbeBooksListing hcListing = found.getHardcover();
         AbeBooksListing scListing = found.getSoftcover();
         boolean hcUnknown = isUnknownBinding(hcListing);
@@ -250,7 +274,7 @@ public class BookPriceService {
             deleteCover(book, BookCoverType.HARDCOVER);
             hardcover = unknown;
         } else {
-            hardcover = saveError(book, BookCoverType.HARDCOVER, "No matching listing");
+            hardcover = saveError(book, BookCoverType.HARDCOVER, NO_MATCHING_LISTING, searchUrl);
         }
 
         BookPrice softcover;
@@ -260,7 +284,7 @@ public class BookPriceService {
             deleteCover(book, BookCoverType.SOFTCOVER);
             softcover = unknown;
         } else {
-            softcover = saveError(book, BookCoverType.SOFTCOVER, "No matching listing");
+            softcover = saveError(book, BookCoverType.SOFTCOVER, NO_MATCHING_LISTING, searchUrl);
         }
         return new CoverSaveResult(hardcover, softcover);
     }
@@ -311,7 +335,7 @@ public class BookPriceService {
         return bookPriceRepository.save(row);
     }
 
-    private BookPrice saveError(Book book, BookCoverType cover, String error) {
+    private BookPrice saveError(Book book, BookCoverType cover, String error, String searchUrl) {
         BookPrice row = bookPriceRepository.findByBook_IdAndCover(book.getId(), cover)
                 .orElseGet(BookPrice::new);
         row.setBook(book);
@@ -319,7 +343,7 @@ public class BookPriceService {
         row.setPriceDollars(null);
         row.setShippingDollars(null);
         row.setCondition(null);
-        row.setDetailsUrl(null);
+        row.setDetailsUrl(searchUrl);
         row.setLookupError(error);
         row.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
         return bookPriceRepository.save(row);
@@ -375,7 +399,7 @@ public class BookPriceService {
             }
             sb.append("Softcover: ").append(soft);
         }
-        return sb.length() == 0 ? "No matching listing" : sb.toString();
+        return sb.length() == 0 ? NO_MATCHING_LISTING : sb.toString();
     }
 
     private static String truncate(String value, int max) {

@@ -245,6 +245,22 @@ describe('applyBookPriceFilters', () => {
     ).toEqual([1])
   })
 
+  it('lookupErrors keeps rate-limited and HTTP errors but not No matching listing', () => {
+    const prices = [
+      price({ bookId: 1, priceDollars: null, lookupError: 'AbeBooks rate limited' }),
+      price({ bookId: 2, priceDollars: null, lookupError: 'No matching listing' }),
+      price({ bookId: 3, priceDollars: null, lookupError: 'AbeBooks HTTP 500' }),
+    ]
+    expect(
+      applyBookPriceFilters(
+        books,
+        prices,
+        { noPrices: false, priceOlder: false, priceOlderDays: 90, lookupErrors: true },
+        now,
+      ).map((b) => b.id),
+    ).toEqual([1, 3])
+  })
+
   it('ORs noPrices with priceOlder when both are on', () => {
     const prices = [
       price({ bookId: 1, priceDollars: 4.86, lookedUpAt: '2026-01-01T00:00:00Z' }),
