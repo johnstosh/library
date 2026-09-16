@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.sql.SQLException;
+import java.util.Locale;
+
 /**
  * Global exception handler for all controllers
  * Provides standardized error responses and proper HTTP status codes
@@ -157,13 +160,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle database unique constraint violations (409 Conflict)
+     * Handle database constraint and column-length violations.
+     * Unique-key failures are 409 Conflict; value-too-long is 400 so it is not
+     * reported as a duplicate entry (PostgreSQL SQLState 22001 is wrapped as
+     * DataIntegrityViolationException by Spring).
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException ex, WebRequest request) {
         String message = extractConstraintMessage(ex);
         logger.warn("Data integrity violation on path {}: {}", request.getDescription(false), message);
+
+        if (isValueTooLong(ex)) {
+            ErrorResponse response = new ErrorResponse("VALUE_TOO_LONG", message);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
 
         ErrorResponse response = new ErrorResponse("DUPLICATE_ENTITY", message);
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
@@ -174,23 +185,38 @@ public class GlobalExceptionHandler {
      * Attempts to identify the constraint name from the root cause.
      */
     private String extractConstraintMessage(DataIntegrityViolationException ex) {
+        if (isValueTooLong(ex)) {
+            return "A value exceeds the maximum allowed length";
+        }
+
         String rootMessage = ex.getMostSpecificCause().getMessage();
         if (rootMessage == null) {
-            return "A duplicate entry was detected";
+            return "A data integrity violation was detected";
         }
 
         // Try to extract constraint name from PostgreSQL error message
         // Format: "ERROR: duplicate key value violates unique constraint "uk_xxx""
-        if (rootMessage.contains("unique constraint")) {
+        if (rootMessage.contains("unique constraint")
+                || rootMessage.toLowerCase(Locale.ROOT).contains("duplicate key")) {
             int start = rootMessage.indexOf('"');
             int end = rootMessage.indexOf('"', start + 1);
             if (start >= 0 && end > start) {
                 String constraintName = rootMessage.substring(start + 1, end);
                 return "Duplicate entry violates constraint: " + constraintName;
             }
+            return "A duplicate entry was detected: " + rootMessage;
         }
 
-        return "A duplicate entry was detected: " + rootMessage;
+        return "A data integrity violation was detected: " + rootMessage;
+    }
+
+    private boolean isValueTooLong(DataIntegrityViolationException ex) {
+        Throwable cause = ex.getMostSpecificCause();
+        if (cause instanceof SQLException sqlEx && "22001".equals(sqlEx.getSQLState())) {
+            return true;
+        }
+        String rootMessage = cause.getMessage();
+        return rootMessage != null && rootMessage.toLowerCase(Locale.ROOT).contains("value too long");
     }
 
     /**

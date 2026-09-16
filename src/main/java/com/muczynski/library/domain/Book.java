@@ -84,6 +84,8 @@ public class Book {
 
     private LocalDateTime ydlLastChecked;
 
+    /** Last YDL catalog-lookup error; max 255 characters. */
+    @Column(length = 255)
     private String ydlLookupError;
 
     private Boolean emuAudioAvailable;
@@ -92,6 +94,8 @@ public class Book {
 
     private LocalDateTime emuLastChecked;
 
+    /** Last EMU catalog-lookup error; max 255 characters. */
+    @Column(length = 255)
     private String emuLookupError;
 
     private Boolean aclaAudioAvailable;
@@ -100,6 +104,8 @@ public class Book {
 
     private LocalDateTime aclaLastChecked;
 
+    /** Last ACLA catalog-lookup error; max 255 characters. */
+    @Column(length = 255)
     private String aclaLookupError;
 
 

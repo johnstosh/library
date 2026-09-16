@@ -13,9 +13,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -166,6 +170,51 @@ class AclaLookupServiceTest {
         assertFalse(result.isSuccess());
         assertNotNull(result.getErrorMessage());
         assertTrue(book.getAclaLookupError().contains("connection timed out"));
+    }
+
+    @Test
+    void lookupAndUpdateBook_httpErrorWithHugeBody_storesShortStatusError() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+
+        String restTemplateMessage = "403 Forbidden from https://gateway.bibliocommons.com/v2/libraries/acl/bibs/search: ["
+                + "z".repeat(400) + "]";
+        byte[] body = ("<!DOCTYPE html>" + "z".repeat(5000)).getBytes(StandardCharsets.UTF_8);
+        HttpClientErrorException httpError = HttpClientErrorException.create(
+                restTemplateMessage, HttpStatus.FORBIDDEN, "Forbidden",
+                HttpHeaders.EMPTY, body, StandardCharsets.UTF_8);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class))).thenThrow(httpError);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Error: HTTP 403 Forbidden", result.getErrorMessage());
+        assertEquals("Error: HTTP 403 Forbidden", book.getAclaLookupError());
+        assertTrue(httpError.getMessage().length() > 255);
+    }
+
+    @Test
+    void lookupAndUpdateBook_longExceptionMessage_truncatesLookupErrorTo255() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenThrow(new RuntimeException("x".repeat(1000)));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals(255, result.getErrorMessage().length());
+        assertEquals(255, book.getAclaLookupError().length());
+        assertTrue(book.getAclaLookupError().startsWith("Error: "));
+        assertTrue(book.getAclaLookupError().endsWith("..."));
     }
 
     @Test

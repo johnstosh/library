@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -172,13 +173,14 @@ public class AclaLookupService {
 
         } catch (Exception e) {
             log.error("Error during ACLA lookup for book {}: {}", book.getId(), e.getMessage());
+            String lookupError = LookupErrorMessages.fromException(e);
             book.setAclaLastChecked(LocalDateTime.now());
-            book.setAclaLookupError("Error: " + e.getMessage());
+            book.setAclaLookupError(lookupError);
             bookRepository.save(book);
             return AclaLookupResultDto.builder()
                     .bookId(book.getId())
                     .success(false)
-                    .errorMessage("Error: " + e.getMessage())
+                    .errorMessage(lookupError)
                     .build();
         }
     }

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.EmuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -167,13 +168,14 @@ public class EmuLookupService {
 
         } catch (Exception e) {
             log.error("Error during EMU lookup for book {}: {}", book.getId(), e.getMessage());
+            String lookupError = LookupErrorMessages.fromException(e);
             book.setEmuLastChecked(LocalDateTime.now());
-            book.setEmuLookupError("Error: " + e.getMessage());
+            book.setEmuLookupError(lookupError);
             bookRepository.save(book);
             return EmuLookupResultDto.builder()
                     .bookId(book.getId())
                     .success(false)
-                    .errorMessage("Error: " + e.getMessage())
+                    .errorMessage(lookupError)
                     .build();
         }
     }

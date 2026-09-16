@@ -384,12 +384,12 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 - Temporary date-format titles are skipped (`Not Ready - Temporary title`)
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
+- HTTP and other lookup failures are stored on the book as `aclaLookupError` (max 255 characters) and returned as `success: false`. HTTP errors are recorded as `Error: HTTP {status}` without the response body, so a block/error page cannot overflow the column.
 - Same pattern as `/api/ydl-lookup/lookup/{bookId}` and `/api/emu-lookup/lookup/{bookId}`
-- User must have an xAI API key configured
 
 **Use Case:**
-- Books page bulk action "Fill Reading Difficulty"
-- Filter to Unset, select books, fill in batches of 10
+- Books page bulk-action carousel "Lookup ACLA Availability"
+- Book edit/view page "Lookup ACLA Availability"
 
 ---
 
