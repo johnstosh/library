@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/progress/Spinner'
@@ -58,7 +58,6 @@ import type { BookDto, AuthorDto } from '@/types/dtos'
 // ─── Main search page ─────────────────────────────────────────────────────────
 
 export function SearchPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') ?? ''
   const bookPage = pageFromSearchParams(searchParams, 'bookPage')
@@ -192,16 +191,14 @@ export function SearchPage() {
     writeUrl({ bookPage, authorPage: newPage, includeQ: hasSearched })
   }
 
-  const handleOpenInBooks = () => {
-    navigate(booksPathFromFilters({
-      chips: filters,
-      labels: selectedLabels,
-      readingDifficulties: selectedDifficulties,
-      statuses: selectedStatuses,
-      favoriteLists: selectedFavoriteLists,
-      q: inputValue.trim() || urlQuery,
-    }))
-  }
+  const openInBooksTo = booksPathFromFilters({
+    chips: filters,
+    labels: selectedLabels,
+    readingDifficulties: selectedDifficulties,
+    statuses: selectedStatuses,
+    favoriteLists: selectedFavoriteLists,
+    q: inputValue.trim() || urlQuery,
+  })
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
   const noResults = (hasSearched || hasFilters) && !isLoading && data && data.books.length === 0 && data.authors.length === 0
@@ -244,9 +241,8 @@ export function SearchPage() {
           </div>
           {isLibrarian && (
             <Button
-              type="button"
               variant="outline"
-              onClick={handleOpenInBooks}
+              to={openInBooksTo}
               leftIcon={<PiBooks />}
               data-test="open-in-books"
             >

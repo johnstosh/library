@@ -83,7 +83,7 @@ frontend/src/
 │   │   └── BranchNameDisplay.tsx # Nav brand; says DEV on library-dev hosts
 │   │
 │   ├── ui/                  # Basic UI components
-│   │   ├── Button.tsx       # Styled button variants
+│   │   ├── Button.tsx       # Styled button variants; optional `to` renders a React Router link
 │   │   ├── Input.tsx        # Form input
 │   │   ├── Select.tsx       # Select dropdown
 │   │   ├── Textarea.tsx     # Textarea input

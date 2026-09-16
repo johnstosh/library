@@ -110,15 +110,15 @@ describe('BooksPage Pricing filters', () => {
 })
 
 describe('BooksPage Open in Prices', () => {
-  it('hands current filters to /prices', () => {
+  it('hands current filters to /prices as a URL', () => {
     librarianState.current = true
     renderBooksPage('/books?q=Initial&status=in-library')
 
-    const button = screen.getByTestId('open-in-prices')
-    expect(button).toHaveTextContent('Open in Prices')
-    expect(button.closest('form')).toBeNull()
-    expect(button.getAttribute('href')).toBeNull()
-    fireEvent.click(button)
+    const link = screen.getByTestId('open-in-prices')
+    expect(link).toHaveTextContent('Open in Prices')
+    expect(link.closest('form')).toBeNull()
+    expect(link).toHaveAttribute('href', '/prices?q=Initial&status=in-library')
+    fireEvent.click(link)
     expect(screen.getByTestId('location')).toHaveTextContent('/prices?q=Initial&status=in-library')
   })
 })

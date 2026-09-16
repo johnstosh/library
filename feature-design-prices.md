@@ -52,7 +52,7 @@ Deleting a book cascades to its prices.
     - Has listing / Lookup failed, Looked up recently (last 30 days)
     - **Books with Pricing** and **Books without Pricing** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
     - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
-- Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Visiting `/prices` from the nav with no query shows every saved price.
+- Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). It is a React Router link (Button `to=`) so it can be opened in a new tab. Visiting `/prices` from the nav with no query shows every saved price.
 
 ## API
 See `endpoints/endpoints-prices.md`.

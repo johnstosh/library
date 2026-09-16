@@ -114,6 +114,8 @@ public class PricesUITest {
         page.fill("[data-test='books-title-filter']", "Initial");
         page.click("[data-test='books-search-button']");
         assertThat(page.locator("[data-test='open-in-prices']")).isVisible();
+        assertThat(page.locator("[data-test='open-in-prices']")).hasAttribute("href",
+                java.util.regex.Pattern.compile(".*/prices\\?q=Initial.*"));
         page.click("[data-test='open-in-prices']");
         page.waitForURL("**/prices**", new Page.WaitForURLOptions().setTimeout(10000L));
         assertThat(page).hasURL(java.util.regex.Pattern.compile(".*[?&]q=Initial.*"));

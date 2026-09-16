@@ -158,7 +158,7 @@ Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedi
 - `/search?readingDifficulty=children,unset` - Children or Unset (including books with a blank difficulty)
 - `/search?q=Augustine&bookPage=1&authorPage=0` - Independent list pages
 
-Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). That is a one-way handoff, not live sync.
+Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). It is a React Router link to `/books?...` (not a `navigate()` button) so it can be opened in a new tab. That is a one-way handoff, not live sync.
 
 **Benefits**:
 - Bookmarkable search URLs
@@ -180,7 +180,7 @@ Librarians can copy the current Search filters onto Books with **Open in Books**
 - Search button is **always enabled** — blank search is valid and returns all books
 - Search executes on form submit (Enter key or Search button click)
 - The query field is `type="search"` (`data-test="search-input"`), so the browser’s native (x) clears the typed text the same way the Books title filter does. There is no separate Clear button. The (x) only clears the field; apply it with Search or Enter. Filter chips stay until toggled off individually.
-- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`)
+- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`). It is an `<a href>` (Button `to=`) so right-click / Ctrl-click / middle-click can open Books in a new tab.
 
 #### 2. Filter Chips
 

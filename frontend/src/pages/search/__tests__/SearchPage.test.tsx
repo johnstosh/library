@@ -161,6 +161,23 @@ describe('SearchPage librarian controls', () => {
     expect(searchControls.parentElement).toBe(form)
   })
 
+  it('uses a Books URL so it can be opened in a new tab', () => {
+    librarianState.current = true
+    renderSearch('/search?q=Summa&status=in-library')
+
+    const link = screen.getByTestId('open-in-books')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', '/books?q=Summa&status=in-library')
+  })
+
+  it('includes the typed query in the Books URL before Search is submitted', () => {
+    librarianState.current = true
+    renderSearch('/search')
+
+    fireEvent.change(screen.getByTestId('search-input'), { target: { value: 'City of God' } })
+    expect(screen.getByTestId('open-in-books')).toHaveAttribute('href', '/books?q=City+of+God')
+  })
+
   it('uses default md sizes like Books instead of lg', () => {
     librarianState.current = true
     renderSearch('/search?q=Summa')

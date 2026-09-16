@@ -234,21 +234,16 @@ export function BooksPage() {
           </form>
           {isLibrarian && (
             <Button
-              type="button"
               variant="outline"
-              onClick={() =>
-                navigate(
-                  pricesPathFromFilters({
-                    chips,
-                    labels: selectedLabels,
-                    readingDifficulties: selectedDifficulties,
-                    statuses: selectedStatuses,
-                    favoriteLists: selectedFavoriteLists,
-                    q: inputValue.trim() || urlQuery,
-                    priceOlderDays,
-                  }),
-                )
-              }
+              to={pricesPathFromFilters({
+                chips,
+                labels: selectedLabels,
+                readingDifficulties: selectedDifficulties,
+                statuses: selectedStatuses,
+                favoriteLists: selectedFavoriteLists,
+                q: inputValue.trim() || urlQuery,
+                priceOlderDays,
+              })}
               leftIcon={<PiCurrencyDollar />}
               data-test="open-in-prices"
             >

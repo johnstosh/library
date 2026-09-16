@@ -826,6 +826,8 @@ public class SearchUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("[data-test='open-in-books']",
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='open-in-books']")).hasAttribute("href",
+                java.util.regex.Pattern.compile(".*/books\\?q=Summa.*"));
         page.click("[data-test='open-in-books']");
         page.waitForURL("**/books?*", new Page.WaitForURLOptions().setTimeout(10000L));
         String booksUrl = page.url();
