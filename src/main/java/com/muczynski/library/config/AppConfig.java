@@ -7,11 +7,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
@@ -105,19 +110,30 @@ public class AppConfig {
 
     /**
      * RestTemplate for the ACLA (Allegheny County Library Association) BiblioCommons
-     * availability lookup. Uses a moderate timeout since the lookup runs synchronously per book.
+     * availability lookup. Uses Java's HttpClient so Origin/User-Agent are actually
+     * sent (HttpURLConnection treats them as restricted) and so BiblioCommons session
+     * cookies persist across the several searches each book — and each bulk carousel
+     * batch — performs. Browser-like headers reduce 403s from the catalog CDN.
      */
     @Bean("aclaRestTemplate")
     public RestTemplate aclaRestTemplate() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(15))
+                .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(15));
+
         RestTemplate restTemplate = new RestTemplate();
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(15000); // 15 seconds
-        factory.setReadTimeout(15000); // 15 seconds
         restTemplate.setRequestFactory(factory);
 
         ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
-            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            request.getHeaders().set("User-Agent",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             request.getHeaders().set("Accept", "application/json");
+            request.getHeaders().set("Accept-Language", "en-US,en;q=0.9");
+            request.getHeaders().set("Origin", "https://acl.bibliocommons.com");
             request.getHeaders().set("Referer", "https://acl.bibliocommons.com/");
             return execution.execute(request, body);
         };

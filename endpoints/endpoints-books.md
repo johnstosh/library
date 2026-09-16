@@ -385,6 +385,8 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
 - HTTP and other lookup failures are stored on the book as `aclaLookupError` (max 255 characters) and returned as `success: false`. HTTP errors are recorded as `Error: HTTP {status}` without the response body, so a block/error page cannot overflow the column.
+- BiblioCommons 403/429/502/503/504 and I/O timeouts are retried with backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A short pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches so the Books-page bulk carousel does not trip the catalog CDN.
+- Follow-up format searches that still fail after retries are skipped: holdings already found on the unfiltered title search are kept instead of recording `Error: HTTP 403 Forbidden` for the whole book.
 - Same pattern as `/api/ydl-lookup/lookup/{bookId}` and `/api/emu-lookup/lookup/{bookId}`
 
 **Use Case:**

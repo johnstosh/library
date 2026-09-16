@@ -7,10 +7,10 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
@@ -38,8 +38,12 @@ class AclaLookupServiceTest {
     @Mock
     private RestTemplate aclaRestTemplate;
 
-    @InjectMocks
     private AclaLookupService aclaLookupService;
+
+    @BeforeEach
+    void setUp() {
+        aclaLookupService = new AclaLookupService(bookRepository, aclaRestTemplate, 0, 0, 0);
+    }
 
     private static final String RESPONSE_WITH_ALL_FORMATS = """
             {"entities":{"bibs":{
@@ -178,12 +182,7 @@ class AclaLookupServiceTest {
         book.setId(1L);
         book.setTitle("Test Book");
 
-        String restTemplateMessage = "403 Forbidden from https://gateway.bibliocommons.com/v2/libraries/acl/bibs/search: ["
-                + "z".repeat(400) + "]";
-        byte[] body = ("<!DOCTYPE html>" + "z".repeat(5000)).getBytes(StandardCharsets.UTF_8);
-        HttpClientErrorException httpError = HttpClientErrorException.create(
-                restTemplateMessage, HttpStatus.FORBIDDEN, "Forbidden",
-                HttpHeaders.EMPTY, body, StandardCharsets.UTF_8);
+        HttpClientErrorException httpError = forbiddenWithHugeBody();
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class))).thenThrow(httpError);
@@ -195,6 +194,65 @@ class AclaLookupServiceTest {
         assertEquals("Error: HTTP 403 Forbidden", result.getErrorMessage());
         assertEquals("Error: HTTP 403 Forbidden", book.getAclaLookupError());
         assertTrue(httpError.getMessage().length() > 255);
+    }
+
+    @Test
+    void lookupAndUpdateBook_retriesForbiddenThenSucceeds() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        AclaLookupService retryingService = new AclaLookupService(
+                bookRepository, aclaRestTemplate, 2, 0, 0);
+
+        HttpClientErrorException httpError = forbiddenWithHugeBody();
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenThrow(httpError)
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = retryingService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertNull(book.getAclaLookupError());
+        verify(aclaRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
+    }
+
+    @Test
+    void lookupAndUpdateBook_followUpForbidden_keepsFormatsFromFirstSearch() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_PAPER_ONLY)
+                .thenThrow(forbiddenWithHugeBody());
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertNull(book.getAclaLookupError());
+    }
+
+    @Test
+    void isRetryableStatus_coversCdnThrottleAndGatewayErrors() {
+        assertTrue(AclaLookupService.isRetryableStatus(403));
+        assertTrue(AclaLookupService.isRetryableStatus(429));
+        assertTrue(AclaLookupService.isRetryableStatus(503));
+        assertFalse(AclaLookupService.isRetryableStatus(404));
+        assertFalse(AclaLookupService.isRetryableStatus(400));
+    }
+
+    private static HttpClientErrorException forbiddenWithHugeBody() {
+        String restTemplateMessage = "403 Forbidden from https://gateway.bibliocommons.com/v2/libraries/acl/bibs/search: ["
+                + "z".repeat(400) + "]";
+        byte[] body = ("<!DOCTYPE html>" + "z".repeat(5000)).getBytes(StandardCharsets.UTF_8);
+        return HttpClientErrorException.create(
+                restTemplateMessage, HttpStatus.FORBIDDEN, "Forbidden",
+                HttpHeaders.EMPTY, body, StandardCharsets.UTF_8);
     }
 
     @Test

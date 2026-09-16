@@ -10,9 +10,13 @@ import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.UnsupportedEncodingException;
@@ -24,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 /**
@@ -35,6 +40,13 @@ import java.util.regex.Pattern;
  * the way YDL's FormatGroup material tabs do. After an unfiltered title search,
  * missing format categories are filled in with format-filtered follow-up searches
  * so popular titles whose first page is all print still record ebook/audio holdings.
+ *
+ * <p>BiblioCommons (and its CDN) may 403 a burst of searches — typical of the
+ * Books-page bulk carousel, which looks up many books back-to-back, each of which
+ * can make several HTTP calls. HTTP 403/429/502/503/504 and I/O timeouts are
+ * retried with backoff. A follow-up format search that still fails is skipped so
+ * holdings already found on the first page are kept rather than recording
+ * {@code Error: HTTP 403 Forbidden} for the whole book.
  */
 @Service
 @Slf4j
@@ -61,11 +73,27 @@ public class AclaLookupService {
     private final BookRepository bookRepository;
     private final RestTemplate aclaRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final int retries;
+    private final long backoffMs;
+    private final long requestDelayMs;
+    private final AtomicBoolean firstRequest = new AtomicBoolean(true);
 
     public AclaLookupService(BookRepository bookRepository,
                              @Qualifier("aclaRestTemplate") RestTemplate aclaRestTemplate) {
+        this(bookRepository, aclaRestTemplate, 0, 0, 0);
+    }
+
+    @Autowired
+    public AclaLookupService(BookRepository bookRepository,
+                             @Qualifier("aclaRestTemplate") RestTemplate aclaRestTemplate,
+                             @Value("${acla.lookup.retries:2}") int retries,
+                             @Value("${acla.lookup.backoff-ms:1000}") long backoffMs,
+                             @Value("${acla.lookup.request-delay-ms:250}") long requestDelayMs) {
         this.bookRepository = bookRepository;
         this.aclaRestTemplate = aclaRestTemplate;
+        this.retries = Math.max(0, retries);
+        this.backoffMs = Math.max(0, backoffMs);
+        this.requestDelayMs = Math.max(0, requestDelayMs);
     }
 
     /**
@@ -239,7 +267,7 @@ public class AclaLookupService {
             url.append("&f_FORMAT=").append(urlEncode(formatFilter));
         }
 
-        String response = aclaRestTemplate.getForObject(URI.create(url.toString()), String.class);
+        String response = getWithRetry(URI.create(url.toString()));
         try {
             JsonNode root = objectMapper.readTree(response == null ? "{}" : response);
             return root.path("entities").path("bibs");
@@ -248,12 +276,81 @@ public class AclaLookupService {
         }
     }
 
+    /**
+     * GET with polite delay and retries on CDN/bot-block statuses. Bulk carousel
+     * lookups issue many of these in a row; a single 403 must not fail the book
+     * if a later attempt (or a prior successful search) already has holdings.
+     */
+    String getWithRetry(URI uri) {
+        int attempts = retries + 1;
+        RuntimeException last = null;
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            maybeDelay();
+            try {
+                return aclaRestTemplate.getForObject(uri, String.class);
+            } catch (RestClientResponseException e) {
+                last = e;
+                if (!isRetryableStatus(e.getStatusCode().value()) || attempt == attempts) {
+                    throw e;
+                }
+                log.warn("ACLA HTTP {} for {} (attempt {}/{}); retrying",
+                        e.getStatusCode().value(), uri, attempt, attempts);
+                sleep(backoffMs * attempt);
+            } catch (ResourceAccessException e) {
+                last = e;
+                if (attempt == attempts) {
+                    throw e;
+                }
+                log.warn("ACLA I/O for {} (attempt {}/{}): {}; retrying",
+                        uri, attempt, attempts, e.getMessage());
+                sleep(backoffMs * attempt);
+            }
+        }
+        throw last != null ? last
+                : new com.muczynski.library.exception.LibraryException("ACLA lookup failed");
+    }
+
+    static boolean isRetryableStatus(int statusCode) {
+        return statusCode == 403 || statusCode == 429
+                || statusCode == 502 || statusCode == 503 || statusCode == 504;
+    }
+
+    private void maybeDelay() {
+        if (requestDelayMs <= 0) {
+            return;
+        }
+        if (firstRequest.getAndSet(false)) {
+            return;
+        }
+        sleep(requestDelayMs);
+    }
+
+    private void sleep(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new com.muczynski.library.exception.LibraryException("ACLA lookup interrupted", e);
+        }
+    }
+
     private JsonNode searchMissingFormats(String title, String authorLastName, String[] formatFilters) {
         com.fasterxml.jackson.databind.node.ArrayNode combined = objectMapper.createArrayNode();
         for (String formatFilter : formatFilters) {
-            JsonNode matches = filterMatches(search(title, formatFilter), title, authorLastName);
-            for (JsonNode match : matches) {
-                combined.add(match);
+            try {
+                JsonNode matches = filterMatches(search(title, formatFilter), title, authorLastName);
+                for (JsonNode match : matches) {
+                    combined.add(match);
+                }
+            } catch (Exception e) {
+                // Bulk lookups often 403 on follow-up format searches after the
+                // unfiltered title search already succeeded. Keep what we have.
+                log.warn("ACLA follow-up format {} failed for '{}': {}",
+                        formatFilter, title, e.getMessage());
+                break;
             }
             if (!combined.isEmpty()) {
                 break;
