@@ -100,6 +100,7 @@ vi.mock('@/api/books', () => ({
     isFetching: false,
     error: null,
   }),
+  useBookCount: () => ({ data: { count: 12 } }),
 }))
 
 vi.mock('@/api/favorites', () => ({
@@ -118,6 +119,18 @@ function renderPrices(path = '/prices') {
 }
 
 describe('PricesPage', () => {
+  it('uses Search on the title filter like Books and Search', () => {
+    renderPrices('/prices')
+    expect(screen.getByTestId('prices-search-button')).toHaveTextContent('Search')
+  })
+
+  it('reports books in the table, books in the database, and price rows', () => {
+    renderPrices('/prices')
+    expect(screen.getByTestId('table-count')).toHaveTextContent('3 books in this table')
+    expect(screen.getByTestId('database-count')).toHaveTextContent('12 books in the database')
+    expect(screen.getByTestId('price-row-count')).toHaveTextContent('4 prices in this table')
+  })
+
   it('renders listings and filters by max total', () => {
     renderPrices('/prices')
 
@@ -143,6 +156,8 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
     expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-total-14')).not.toBeInTheDocument()
+    expect(screen.getByTestId('table-count')).toHaveTextContent('2 books in this table')
+    expect(screen.getByTestId('price-row-count')).toHaveTextContent('2 prices in this table')
   })
 
   it('filters by Other/Unknown cover chip', () => {

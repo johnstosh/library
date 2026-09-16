@@ -104,7 +104,23 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='filter-price-hardcover']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-softcover']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-other-unknown']")).isVisible();
+        assertThat(page.locator("[data-test='prices-search-button']")).containsText("Search");
+        assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
+        assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='price-row-count']")).isVisible();
         assertThat(page.locator("text=No prices match the current filters.")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Direct load of /prices serves the SPA instead of a static-resource error")
+    void testDirectPricesUrlServesSpa() {
+        page.navigate(getBaseUrl() + "/prices");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        assertThat(page.locator("h1")).containsText("Prices");
+        assertThat(page.locator("body")).not().containsText("No static resource");
+        assertThat(page.locator("body")).not().containsText("INTERNAL_ERROR");
+        assertThat(page.locator("[data-test='prices-search-button']")).containsText("Search");
     }
 
     @Test

@@ -50,6 +50,24 @@ describe('TableCountPlaceholder', () => {
     expect(screen.getByTestId('table-count')).toHaveTextContent('1 author in this table')
     expect(screen.getByTestId('database-count')).toHaveTextContent('1 author in the database')
   })
+
+  it('appends extra table counts such as price rows', () => {
+    render(
+      <TableCountPlaceholder
+        tableCount={3}
+        totalCount={1847}
+        singular="book"
+        plural="books"
+        extraTableCounts={[
+          { count: 4, singular: 'price', plural: 'prices', dataTest: 'price-row-count' },
+        ]}
+      />
+    )
+
+    expect(screen.getByTestId('table-count')).toHaveTextContent('3 books in this table')
+    expect(screen.getByTestId('database-count')).toHaveTextContent('1,847 books in the database')
+    expect(screen.getByTestId('price-row-count')).toHaveTextContent('4 prices in this table')
+  })
 })
 
 describe('SelectionSummary', () => {

@@ -1,12 +1,14 @@
 // (c) Copyright 2025 by Muczynski
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
+import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
@@ -16,7 +18,7 @@ import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilter
 import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
-import { useBooks } from '@/api/books'
+import { useBookCount, useBooks } from '@/api/books'
 import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
@@ -103,6 +105,7 @@ export function PricesPage() {
 
   const { data: allPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices()
   const { data: allBooks = [], isLoading: booksLoading } = useBooks(selectedLabels, chips.mostRecent)
+  const { data: bookCount } = useBookCount()
 
   const matchingBookIds = useMemo(() => {
     const favoriteIds = favoriteItemIdsForLists(
@@ -144,6 +147,14 @@ export function PricesPage() {
     return applyPriceFilters(scoped, priceChips, maxTotal)
   }, [allPrices, bookFiltersActive, matchingBookIds, priceChips, maxTotal])
 
+  const displayedBookCount = useMemo(() => {
+    const ids = new Set<number>()
+    for (const price of prices) {
+      ids.add(price.bookId)
+    }
+    return ids.size
+  }, [prices])
+
   const isLoading = pricesLoading || booksLoading
 
   return (
@@ -177,8 +188,13 @@ export function PricesPage() {
                 data-test="prices-title-filter"
               />
             </div>
-            <Button type="submit" variant="primary" data-test="prices-search-button">
-              Apply
+            <Button
+              type="submit"
+              variant="primary"
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="prices-search-button"
+            >
+              Search
             </Button>
           </form>
           <BookFilters
@@ -250,6 +266,23 @@ export function PricesPage() {
         </div>
 
         <div className="p-4">
+          <SelectionToolbar dataTest="prices-stats" selected={false}>
+            <TableCountPlaceholder
+              tableCount={displayedBookCount}
+              totalCount={bookCount?.count}
+              singular="book"
+              plural="books"
+              isLoading={isLoading}
+              extraTableCounts={[
+                {
+                  count: prices.length,
+                  singular: 'price',
+                  plural: 'prices',
+                  dataTest: 'price-row-count',
+                },
+              ]}
+            />
+          </SelectionToolbar>
           <PriceTable prices={prices} isLoading={isLoading} />
         </div>
 

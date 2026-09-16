@@ -74,6 +74,13 @@ export function SelectionSummary({
   )
 }
 
+export interface ExtraTableCount {
+  count: number
+  singular: string
+  plural: string
+  dataTest: string
+}
+
 export function TableCountPlaceholder({
   tableCount,
   totalCount,
@@ -82,6 +89,7 @@ export function TableCountPlaceholder({
   isLoading = false,
   branchName,
   librarySystemName,
+  extraTableCounts = [],
 }: {
   tableCount: number
   totalCount?: number
@@ -90,6 +98,7 @@ export function TableCountPlaceholder({
   isLoading?: boolean
   branchName?: string
   librarySystemName?: string
+  extraTableCounts?: ExtraTableCount[]
 }) {
   const tableNoun = tableCount === 1 ? singular : plural
   const totalNoun = totalCount === 1 ? singular : plural
@@ -121,6 +130,15 @@ export function TableCountPlaceholder({
                 {' '}{totalNoun} in the database
               </span>
             )}
+            {extraTableCounts.map((item) => {
+              const noun = item.count === 1 ? item.singular : item.plural
+              return (
+                <span key={item.dataTest} data-test={item.dataTest}>
+                  <span className="font-semibold">{item.count.toLocaleString('en-US')}</span>
+                  {' '}{noun} in this table
+                </span>
+              )
+            })}
           </>
         )}
       </div>
