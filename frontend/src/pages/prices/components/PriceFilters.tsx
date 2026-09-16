@@ -27,10 +27,17 @@ export function PriceFilters({ chips, onToggle, recentHours, onRecentHoursChange
         dataTest="filter-price-softcover"
       />
       <FilterChip
+        label="Library Binding"
+        active={chips.libraryBinding}
+        onClick={() => onToggle('libraryBinding')}
+        tooltip="Only library-binding AbeBooks listings"
+        dataTest="filter-price-library-binding"
+      />
+      <FilterChip
         label="Other/Unknown"
         active={chips.otherUnknown}
         onClick={() => onToggle('otherUnknown')}
-        tooltip="Only listings whose binding is not hardcover or softcover"
+        tooltip="Only listings whose binding is not hardcover, softcover, or library binding"
         dataTest="filter-price-other-unknown"
       />
       <FilterChip

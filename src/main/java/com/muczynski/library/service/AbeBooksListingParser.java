@@ -156,8 +156,9 @@ public class AbeBooksListingParser {
     }
 
     /**
-     * Hardcover/softcover from the listing Attributes row. Null when the
-     * listing does not name a binding (AbeBooks "Unknown").
+     * Binding from the listing Attributes row. Null when the listing does not
+     * name a binding (AbeBooks "Unknown"). Library binding is preferred over
+     * hardcover when both words appear.
      */
     static BookCoverType parseBinding(Element listing) {
         Element attributes = listing.selectFirst("ul[aria-label=Attributes]");
@@ -178,6 +179,11 @@ public class AbeBooksListingParser {
             return null;
         }
         String normalized = label.toLowerCase(Locale.ROOT);
+        if (normalized.contains("library bind")
+                || normalized.contains("library-bind")
+                || normalized.contains("reinforced")) {
+            return BookCoverType.LIBRARY_BINDING;
+        }
         if (normalized.contains("hardcover")
                 || normalized.contains("hard cover")
                 || normalized.contains("hardback")
@@ -189,6 +195,13 @@ public class AbeBooksListingParser {
                 || normalized.contains("paperback")
                 || normalized.contains("mass market")) {
             return BookCoverType.SOFTCOVER;
+        }
+        if (normalized.contains("leather")
+                || normalized.contains("spiral")
+                || normalized.contains("board book")
+                || normalized.contains("comb bound")
+                || normalized.contains("ring bound")) {
+            return BookCoverType.OTHER;
         }
         return null;
     }

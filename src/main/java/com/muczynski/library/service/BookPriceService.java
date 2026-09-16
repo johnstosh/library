@@ -98,8 +98,9 @@ public class BookPriceService {
 
     /**
      * Looks up AbeBooks prices for a book and upserts one {@link BookPrice} row
-     * per cover. Listings with no hardcover/softcover binding are stored as
-     * {@link BookCoverType#UNKNOWN}.
+     * per cover. Listings with no hardcover/softcover/library-binding/other
+     * binding are stored as {@link BookCoverType#UNKNOWN}. Library binding and
+     * other named bindings are saved when parsed from the listing.
      *
      * <p>AbeBooks HTTP and throttling sleeps run <em>outside</em> a database
      * transaction so the Hikari pool (size 3) stays available for other tabs
@@ -120,9 +121,10 @@ public class BookPriceService {
         try {
             AbeBooksCoverListings found = findWithBackoff(prepared.title, prepared.authorName);
             long elapsedMs = elapsedMs(started);
-            log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} hardcover={} softcover={}",
+            log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} hardcover={} softcover={} libraryBinding={}",
                     bookId, elapsedMs,
-                    found.getHardcover() != null, found.getSoftcover() != null);
+                    found.getHardcover() != null, found.getSoftcover() != null,
+                    found.getLibraryBinding() != null);
             logPool("after-http", bookId);
             return inTransaction(() -> saveFoundResult(bookId, found));
         } catch (AbeBooksRateLimitedException ex) {
@@ -170,7 +172,10 @@ public class BookPriceService {
     private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
         Book book = requireBook(bookId);
         CoverSaveResult saved = saveFoundCovers(book, found, found.getSearchUrl());
-        boolean success = hasListing(saved.hardcover) || hasListing(saved.softcover);
+        boolean success = hasListing(saved.hardcover)
+                || hasListing(saved.softcover)
+                || hasListing(saved.libraryBinding)
+                || hasListing(saved.other);
         String error = success ? null : joinErrors(saved.hardcover, saved.softcover);
         return BookPriceLookupResultDto.builder()
                 .bookId(book.getId())
@@ -178,6 +183,7 @@ public class BookPriceService {
                 .success(success)
                 .hardcover(toDto(saved.hardcover))
                 .softcover(toDto(saved.softcover))
+                .libraryBinding(toDto(saved.libraryBinding))
                 .errorMessage(error)
                 .build();
     }
@@ -286,7 +292,25 @@ public class BookPriceService {
         } else {
             softcover = saveError(book, BookCoverType.SOFTCOVER, NO_MATCHING_LISTING, searchUrl);
         }
-        return new CoverSaveResult(hardcover, softcover);
+
+        AbeBooksListing lbListing = found.getLibraryBinding();
+        BookPrice libraryBinding;
+        if (lbListing != null) {
+            libraryBinding = saveListing(book, BookCoverType.LIBRARY_BINDING, lbListing);
+        } else {
+            deleteCover(book, BookCoverType.LIBRARY_BINDING);
+            libraryBinding = null;
+        }
+
+        AbeBooksListing otherListing = found.getOther();
+        BookPrice other;
+        if (otherListing != null) {
+            other = saveListing(book, BookCoverType.OTHER, otherListing);
+        } else {
+            deleteCover(book, BookCoverType.OTHER);
+            other = null;
+        }
+        return new CoverSaveResult(hardcover, softcover, libraryBinding, other);
     }
 
     private static boolean isUnknownBinding(AbeBooksListing listing) {
@@ -302,10 +326,15 @@ public class BookPriceService {
     private static final class CoverSaveResult {
         private final BookPrice hardcover;
         private final BookPrice softcover;
+        private final BookPrice libraryBinding;
+        private final BookPrice other;
 
-        private CoverSaveResult(BookPrice hardcover, BookPrice softcover) {
+        private CoverSaveResult(BookPrice hardcover, BookPrice softcover,
+                               BookPrice libraryBinding, BookPrice other) {
             this.hardcover = hardcover;
             this.softcover = softcover;
+            this.libraryBinding = libraryBinding;
+            this.other = other;
         }
     }
 

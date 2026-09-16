@@ -4,11 +4,15 @@
 package com.muczynski.library.domain;
 
 /**
- * Physical cover type used when looking up used-book prices on AbeBooks.
+ * Physical binding for catalog books and AbeBooks price listings.
+ * {@code OTHER} is a named binding that is not hardcover, softcover, or
+ * library binding (the issue's "etc"). {@code UNKNOWN} is unspecified.
  */
 public enum BookCoverType {
     HARDCOVER,
     SOFTCOVER,
+    LIBRARY_BINDING,
+    OTHER,
     UNKNOWN;
 
     /** AbeBooks SearchResults {@code bi} parameter: {@code h} or {@code s}. */
@@ -29,6 +33,25 @@ public enum BookCoverType {
         if (this == SOFTCOVER) {
             return "Softcover";
         }
-        return "Other/Unknown";
+        if (this == LIBRARY_BINDING) {
+            return "Library Binding";
+        }
+        if (this == OTHER) {
+            return "Other";
+        }
+        return "Unknown";
+    }
+
+    /** Hardcover, softcover, and library binding — the typed price covers. */
+    public boolean isTypedPriceCover() {
+        return this == HARDCOVER || this == SOFTCOVER || this == LIBRARY_BINDING;
+    }
+
+    public boolean isOtherOrUnknown() {
+        return this == OTHER || this == UNKNOWN;
+    }
+
+    public static BookCoverType orUnknown(BookCoverType value) {
+        return value == null ? UNKNOWN : value;
     }
 }

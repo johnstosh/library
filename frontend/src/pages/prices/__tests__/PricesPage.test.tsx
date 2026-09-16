@@ -178,6 +178,7 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-hardcover')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-softcover')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-price-library-binding')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-other-unknown')).toBeInTheDocument()
     expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
     expect(screen.getByTestId('filter-price-recent-hours')).toBeInTheDocument()

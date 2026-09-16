@@ -132,6 +132,12 @@ describe('BookFormPage add new book', () => {
     expect(screen.getByTestId('book-branch')).toHaveValue('5')
   })
 
+  it('defaults binding to Unknown', () => {
+    renderForm()
+
+    expect(screen.getByTestId('book-binding')).toHaveValue('UNKNOWN')
+  })
+
   it('keeps the book branch when editing', () => {
     renderForm({ book: editedBook })
 

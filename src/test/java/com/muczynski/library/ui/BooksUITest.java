@@ -227,6 +227,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-branch']"))
                 .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='book-year']")).isVisible();
+        assertThat(page.locator("[data-test='book-binding']")).isVisible();
         assertThat(page.locator("[data-test='book-publisher']")).isVisible();
         assertThat(page.locator("[data-test='book-loc']")).isVisible();
         assertThat(page.locator("[data-test='book-status']")).isVisible();
@@ -635,6 +636,7 @@ public class BooksUITest {
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
         assertThat(page.locator("[data-test='book-reading-difficulty-1']")).containsText("Children");
+        assertThat(page.locator("[data-test='book-binding-1']")).containsText("Unknown");
         // Active status badge is shown in the Status column (exact: not "Not Active Status")
         assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
     }

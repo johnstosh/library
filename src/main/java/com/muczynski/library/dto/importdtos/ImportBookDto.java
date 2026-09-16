@@ -4,6 +4,7 @@
 package com.muczynski.library.dto.importdtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
 import lombok.Data;
@@ -72,6 +73,11 @@ public class ImportBookDto {
      * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU/ACLA fields.
      */
     private ReadingDifficulty readingDifficulty;
+    /**
+     * Physical binding of this catalog copy. Omitted on legacy exports;
+     * import treats absence as {@link BookCoverType#UNKNOWN}.
+     */
+    private BookCoverType binding;
     /** Nullable for legacy books; when present, must be 0 through 10 inclusive. */
     private Integer desireToPurchase;
 }

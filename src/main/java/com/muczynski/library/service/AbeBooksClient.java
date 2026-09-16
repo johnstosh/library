@@ -31,8 +31,8 @@ import java.util.regex.Pattern;
 
 /**
  * Fetches AbeBooks SearchResults HTML for a title/author and returns the
- * cheapest good-or-better hardcover and softcover listings. Binding is read
- * from each result rather than requested via {@code bi}.
+ * cheapest good-or-better hardcover, softcover, and library-binding listings.
+ * Binding is read from each result rather than requested via {@code bi}.
  */
 @Component
 @Slf4j
@@ -91,10 +91,12 @@ public class AbeBooksClient {
 
     /**
      * Searches AbeBooks by title and author last name, pages until both
-     * covers have a typed listing (or pages run out), then fills any missing
-     * cover from the cheapest unknown-binding listing. Long titles retry
-     * title-only without the Good-or-better URL filter when the first search
-     * cannot fill both covers (ungraded "Used" listings are excluded by {@code cond}).
+     * hardcover and softcover have a typed listing (or pages run out), then
+     * fills any missing hardcover/softcover from the cheapest unknown-binding
+     * listing. Library-binding and other named bindings are kept when seen on
+     * those pages. Long titles retry title-only without the Good-or-better URL
+     * filter when the first search cannot fill both covers (ungraded "Used"
+     * listings are excluded by {@code cond}).
      */
     public AbeBooksCoverListings findCheapestGoodOrBetter(String title, String author) {
         String cleanedTitle = cleanTitle(title);
@@ -350,6 +352,8 @@ public class AbeBooksClient {
     private static final class CoverAccumulator {
         private AbeBooksListing hardcover;
         private AbeBooksListing softcover;
+        private AbeBooksListing libraryBinding;
+        private AbeBooksListing other;
         private AbeBooksListing unknown;
 
         void add(AbeBooksListing listing) {
@@ -361,6 +365,10 @@ public class AbeBooksClient {
                 hardcover = cheaper(hardcover, listing);
             } else if (binding == BookCoverType.SOFTCOVER) {
                 softcover = cheaper(softcover, listing);
+            } else if (binding == BookCoverType.LIBRARY_BINDING) {
+                libraryBinding = cheaper(libraryBinding, listing);
+            } else if (binding == BookCoverType.OTHER) {
+                other = cheaper(other, listing);
             } else {
                 unknown = cheaper(unknown, listing);
             }
@@ -379,6 +387,8 @@ public class AbeBooksClient {
             return AbeBooksCoverListings.builder()
                     .hardcover(hardcover != null ? hardcover : unknown)
                     .softcover(softcover != null ? softcover : unknown)
+                    .libraryBinding(libraryBinding)
+                    .other(other)
                     .searchUrl(searchUrl)
                     .build();
         }

@@ -399,6 +399,7 @@ public class ImportService {
                 }
                 // readingDifficulty: use provided value or default to UNSET (legacy books)
                 book.setReadingDifficulty(bDto.getReadingDifficulty() != null ? bDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+                book.setBinding(bDto.getBinding() != null ? bDto.getBinding() : BookCoverType.UNKNOWN);
                 book.setDesireToPurchase(bDto.getDesireToPurchase());
                 book.setAuthor(author);
                 book.setLibrary(branch);
@@ -811,6 +812,7 @@ public class ImportService {
             bDto.setAclaLastChecked(book.getAclaLastChecked());
             bDto.setAclaLookupError(emptyToNull(book.getAclaLookupError()));
             bDto.setReadingDifficulty(book.getReadingDifficulty());
+            bDto.setBinding(book.getBinding());
             bDto.setDesireToPurchase(book.getDesireToPurchase());
             bookDtos.add(bDto);
         }

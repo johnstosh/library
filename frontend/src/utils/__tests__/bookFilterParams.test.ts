@@ -88,6 +88,9 @@ describe('chipsFromSearchParams books mode', () => {
     expect(
       chipsFromSearchParams(new URLSearchParams('readingDifficulty=children'), 'books').mostRecent,
     ).toBe(false)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('binding=HARDCOVER'), 'books').mostRecent,
+    ).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('noPrices=true'), 'books').mostRecent).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('withPrices=true'), 'books').mostRecent).toBe(false)
@@ -163,6 +166,19 @@ describe('bookFilterParamsForUrl', () => {
         'books',
       ),
     ).toEqual({ mostRecent: 'false' })
+  })
+
+  it('writes binding chips', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips({ mostRecent: false }),
+        labels: [],
+        bindings: ['HARDCOVER', 'UNKNOWN'],
+        q: '',
+      },
+      'books',
+    )
+    expect(params.binding).toBe('HARDCOVER,UNKNOWN')
   })
 
   it('writes discovery chips, labels, and q for Search and omits cataloger chips', () => {

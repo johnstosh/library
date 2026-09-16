@@ -30,7 +30,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
-import { BookStatus, ReadingDifficulty } from '@/types/enums'
+import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
+import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 import { AclaIcon } from '@/components/ui/Icons'
@@ -52,6 +53,11 @@ const readingDifficultyOptions = [
   { value: ReadingDifficulty.ADVANCED, label: 'Advanced — steep; best with direction' },
   { value: ReadingDifficulty.UNSET, label: 'Unset — not yet reviewed' },
 ]
+
+const bindingOptions = BOOK_BINDING_FILTER_VALUES.map((value) => ({
+  value,
+  label: BOOK_BINDING_FILTER_LABELS[value],
+}))
 
 const desireLabels = DESIRE_TO_PURCHASE_LABELS
 
@@ -88,6 +94,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     aclaPaperAvailable: false,
     aclaEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
+    binding: BookCoverType.UNKNOWN as BookCoverType,
     desireToPurchase: null as number | null,
   })
   const [error, setError] = useState('')
@@ -157,6 +164,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: book.aclaPaperAvailable ?? false,
         aclaEbookAvailable: book.aclaEbookAvailable ?? false,
         readingDifficulty: book.readingDifficulty ?? ReadingDifficulty.UNSET,
+        binding: book.binding ?? BookCoverType.UNKNOWN,
         desireToPurchase: book.desireToPurchase ?? null,
       })
     } else {
@@ -190,6 +198,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: false,
         aclaEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
+    binding: BookCoverType.UNKNOWN as BookCoverType,
     desireToPurchase: null as number | null,
       }))
     }
@@ -508,6 +517,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
+        binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
@@ -554,6 +564,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
+        binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
@@ -634,6 +645,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
+        binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
       })
       setHasUnsavedChanges(true)
@@ -704,6 +716,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
+        binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
         authorId: parseInt(formData.authorId),
         libraryId: parseInt(formData.branchId),
@@ -1015,12 +1028,22 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
+            label="Binding"
+            value={formData.binding}
+            onChange={(e) => handleFieldChange('binding', e.target.value)}
+            options={bindingOptions}
+            data-test="book-binding"
+          />
+          <Select
             label="Reading Difficulty"
             value={formData.readingDifficulty}
             onChange={(e) => handleFieldChange('readingDifficulty', e.target.value)}
             options={readingDifficultyOptions}
             data-test="book-reading-difficulty"
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Desire to Purchase"
             type="number"

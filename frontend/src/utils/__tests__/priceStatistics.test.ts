@@ -35,6 +35,15 @@ describe('cheapestCoverTotal', () => {
     ).toBe(9)
   })
 
+  it('includes library binding in the cheapest typed total', () => {
+    expect(
+      cheapestCoverTotal([
+        price({ cover: 'HARDCOVER', totalDollars: 20, priceDollars: 20 }),
+        price({ id: 2, cover: 'LIBRARY_BINDING', totalDollars: 8, priceDollars: 8 }),
+      ]),
+    ).toBe(8)
+  })
+
   it('ignores failed lookups when a real listing exists', () => {
     const cheapest = cheapestCoverTotal([
       price({

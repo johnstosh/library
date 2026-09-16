@@ -55,6 +55,19 @@ describe('applyPriceFilters', () => {
     expect(filtered.map((row) => row.id)).toEqual([4])
   })
 
+  it('filters library binding covers', () => {
+    const withLibrary = [
+      ...rows,
+      price({ id: 5, cover: 'LIBRARY_BINDING', totalDollars: 12, priceDollars: 12 }),
+    ]
+    const filtered = applyPriceFilters(
+      withLibrary,
+      { ...defaultPriceChipFilters, libraryBinding: true },
+      '',
+    )
+    expect(filtered.map((row) => row.id)).toEqual([5])
+  })
+
   it('ORs hardcover with Other/Unknown', () => {
     const filtered = applyPriceFilters(
       rows,
@@ -95,10 +108,12 @@ describe('parseMaxTotal', () => {
 })
 
 describe('coverLabel', () => {
-  it('labels hardcover, softcover, and other/unknown', () => {
+  it('labels hardcover, softcover, library binding, other, and unknown', () => {
     expect(coverLabel('HARDCOVER')).toBe('Hardcover')
     expect(coverLabel('SOFTCOVER')).toBe('Softcover')
-    expect(coverLabel('UNKNOWN')).toBe('Other/Unknown')
+    expect(coverLabel('LIBRARY_BINDING')).toBe('Library Binding')
+    expect(coverLabel('OTHER')).toBe('Other')
+    expect(coverLabel('UNKNOWN')).toBe('Unknown')
   })
 })
 

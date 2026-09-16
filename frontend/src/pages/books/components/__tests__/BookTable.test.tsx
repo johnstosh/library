@@ -62,6 +62,8 @@ describe('BookTable title column', () => {
     expect(screen.getByTestId('book-author-link-1')).toHaveTextContent('Thomas Aquinas')
     expect(screen.getByTestId('book-reading-difficulty-1')).toHaveTextContent('Demanding')
     expect(screen.getByTestId('book-reading-difficulty-8')).toHaveTextContent('Unset')
+    expect(screen.getByTestId('book-binding-1')).toHaveTextContent('Unknown')
+    expect(screen.getByTestId('book-binding-8')).toHaveTextContent('Unknown')
   })
 
   it('shows a Grokipedia link next to the author when the author has a URL', () => {

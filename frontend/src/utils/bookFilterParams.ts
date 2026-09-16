@@ -7,6 +7,7 @@ import {
 } from '@/utils/bookChipFilters'
 import { bookStatusesFromSearchParams } from '@/utils/bookStatus'
 import type { DesireToPurchaseFilter } from '@/utils/desireToPurchase'
+import { bindingsFromSearchParams } from '@/utils/bookBinding'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 
 /** URL query keys for chip state. */
@@ -98,6 +99,7 @@ export function isBooksIntakeConstrained(
   readingDifficulties: string[] = [],
   favoriteLists: string[] = [],
   statuses: string[] = [],
+  bindings: string[] = [],
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
@@ -105,6 +107,7 @@ export function isBooksIntakeConstrained(
     readingDifficulties.length > 0 ||
     favoriteLists.length > 0 ||
     statuses.length > 0 ||
+    bindings.length > 0 ||
     q.trim().length > 0
   )
 }
@@ -128,6 +131,7 @@ export function chipsFromSearchParams(
     const statuses = bookStatusesFromSearchParams(params)
     const q = (params.get('q') ?? '').trim()
     const favoriteLists = favoriteListsFromSearchParams(params)
+    const bindings = bindingsFromSearchParams(params)
     const othersOn = isBooksIntakeConstrained(
       chips,
       labels,
@@ -135,6 +139,7 @@ export function chipsFromSearchParams(
       readingDifficulties,
       favoriteLists,
       statuses,
+      bindings,
     )
     if (othersOn) {
       chips.mostRecent = false
@@ -151,6 +156,7 @@ export interface BookFilterUrlState {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  bindings?: string[]
   statuses?: string[]
   favoriteLists?: string[]
   q: string
@@ -179,6 +185,10 @@ export function bookFilterParamsForUrl(
   const readingDifficulties = state.readingDifficulties ?? []
   if (readingDifficulties.length > 0) {
     params.readingDifficulty = readingDifficulties.join(',')
+  }
+  const bindings = state.bindings ?? []
+  if (bindings.length > 0) {
+    params.binding = bindings.join(',')
   }
   const statuses = state.statuses ?? []
   if (statuses.length > 0) {
@@ -209,6 +219,7 @@ export function bookFilterParamsForUrl(
       readingDifficulties,
       favoriteLists,
       statuses,
+      bindings,
     )
     if (!othersOn && !state.chips.mostRecent) {
       params[CHIP_URL_KEYS.mostRecent] = 'false'
@@ -235,6 +246,7 @@ export function booksPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  bindings?: string[]
   statuses?: string[]
   favoriteLists?: string[]
   q: string
@@ -250,6 +262,7 @@ export function booksPathFromFilters(state: {
       chips: discoveryChips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      bindings: state.bindings ?? [],
       statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
@@ -265,6 +278,7 @@ export function pricesPathFromFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  bindings?: string[]
   statuses?: string[]
   favoriteLists?: string[]
   q: string
@@ -276,6 +290,7 @@ export function pricesPathFromFilters(state: {
       chips: state.chips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      bindings: state.bindings ?? [],
       statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
@@ -293,6 +308,7 @@ export function booksPathFromPriceFilters(state: {
   chips: BookChipFilters
   labels: string[]
   readingDifficulties?: string[]
+  bindings?: string[]
   statuses?: string[]
   favoriteLists?: string[]
   q: string
@@ -303,6 +319,7 @@ export function booksPathFromPriceFilters(state: {
       chips: state.chips,
       labels: state.labels,
       readingDifficulties: state.readingDifficulties ?? [],
+      bindings: state.bindings ?? [],
       statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,

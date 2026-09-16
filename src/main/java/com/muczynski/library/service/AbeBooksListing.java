@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 
 /**
  * One AbeBooks search-result listing after HTML parsing.
- * {@code binding} is null when the listing does not name hardcover or softcover.
+ * {@code binding} is null when the listing does not name a binding.
  */
 @Value
 @Builder

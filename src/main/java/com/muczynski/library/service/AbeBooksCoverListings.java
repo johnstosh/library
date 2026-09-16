@@ -8,8 +8,8 @@ import lombok.Value;
 
 /**
  * Cheapest good-or-better AbeBooks listings found for each cover.
- * Either field may be null when that cover had no usable listing.
- * An unknown-binding listing may be used for both covers.
+ * Hardcover/softcover may be filled from an unknown-binding listing.
+ * Library binding and other named bindings are only set when parsed as such.
  * {@code searchUrl} is the last SearchResults URL fetched (used when no listing).
  */
 @Value
@@ -17,5 +17,7 @@ import lombok.Value;
 public class AbeBooksCoverListings {
     AbeBooksListing hardcover;
     AbeBooksListing softcover;
+    AbeBooksListing libraryBinding;
+    AbeBooksListing other;
     String searchUrl;
 }

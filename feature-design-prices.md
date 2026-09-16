@@ -1,11 +1,11 @@
 # Book Prices (AbeBooks)
 
 ## Overview
-Librarians can look up used-book prices on AbeBooks for hardcover and softcover copies in **good condition or better**, store the cheapest listing per cover, browse them on a Prices page, and round-trip them through JSON import/export.
+Librarians can look up used-book prices on AbeBooks for hardcover, softcover, and library-binding copies in **good condition or better**, store the cheapest listing per cover, browse them on a Prices page, and round-trip them through JSON import/export. Catalog books also store a binding (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`).
 
 ## Lookup
 - Trigger: **Lookup Prices** on the Books page bulk-action carousel (`data-test="bulk-lookup-prices"`).
-- For each selected book the backend searches AbeBooks **once per query** (not once per cover). Binding is read from each listing instead of the `bi` filter, so unknown-binding copies are not dropped.
+- For each selected book the backend searches AbeBooks **once per query** (not once per cover). Binding is read from each listing instead of the `bi` filter, so unknown-binding copies are not dropped. Library-binding and other named bindings (leather, spiral, board book) are kept when they appear on the same pages.
 - Search URL: `https://www.abebooks.com/servlet/SearchResults`
   - `tn` = title (copy-number and format suffixes stripped; slashes kept)
   - `an` = first author's last name (semicolons, `et al.`, honorifics, generational and religious-order suffixes stripped)
@@ -14,9 +14,9 @@ Librarians can look up used-book prices on AbeBooks for hardcover and softcover 
   - `cond=new an fine nf vg good` = good or better on the first search (excludes Fair, Poor, As Described). Title-only fallback omits `cond` so ungraded `Used` listings still appear.
   - `ds=30`; further pages use `p` / `spo` when the first page does not yet have both covers
 - Query strategy:
-  1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages).
+  1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages). Library binding is saved when seen on those pages; paging does not wait for it.
   2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`, no `cond`) with the same paging.
-- Each listing's Attributes row (`aria-label="Hardcover"` / `"Softcover"`) sets the cover. Listings with no binding attribute are **unknown**: they fill any cover that still lacks a typed listing during search, and are saved as `UNKNOWN` (shown as Other/Unknown).
+- Each listing's Attributes row sets the cover (`Hardcover`, `Softcover`, `Library Binding`, leather/spiral/board book → `OTHER`). Listings with no binding attribute are **unknown**: they fill hardcover/softcover that still lack a typed listing during search, and are saved as `UNKNOWN`.
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
 - HTTP 500 (and other non-rate-limit errors) are stored as `lookupError` `AbeBooks HTTP {code}` — not swallowed, and not shown as a listing.
 - Politeness / rate limits:
@@ -33,7 +33,7 @@ One row per book per cover (`uk_book_price_book_cover`). Latest lookup overwrite
 | Field | Meaning |
 | --- | --- |
 | book | Catalog book |
-| cover | `HARDCOVER`, `SOFTCOVER`, or `UNKNOWN` |
+| cover | `HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, or `UNKNOWN` |
 | priceDollars | Item price |
 | shippingDollars | Shipping; `0` for free shipping |
 | condition | AbeBooks condition text (e.g. `Used - Good`) |
@@ -56,7 +56,7 @@ Deleting a book cascades to its prices.
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
   - **Desire to Purchase** (`data-test="desire-to-purchase-filters"`) — OR chips for 0–10 plus Unset, same pattern as Reading Difficulty (`desireToPurchase=0,10,unset`)
   - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
-    - Cover chips (Prices only): Hardcover, Softcover, **Other/Unknown** (`data-test="filter-price-other-unknown"`)
+    - Cover chips (Prices only): Hardcover, Softcover, **Library Binding** (`data-test="filter-price-library-binding"`), **Other/Unknown** (`data-test="filter-price-other-unknown"`)
     - Has listing / Lookup failed, Looked up recently (last **N hours**, default 24; `data-test="filter-price-recent-hours"`)
     - **Books with Pricing** and **Books without Pricing** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
     - **Lookup Errors** (`data-test="filter-lookup-errors"`) on Books and Prices: rate limited, HTTP errors, and other failures — **not** `No matching listing`
@@ -64,7 +64,7 @@ Deleting a book cascades to its prices.
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
 - Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), total books in the database (`database-count`), plus price rows in the table (`price-row-count`).
 - Footer (`data-test="price-statistics"`) on Prices and on Books (librarians) reports:
-  - **Total cost** — sum of the cheaper hardcover/softcover total (item + shipping) per book in the current book filters. Other/Unknown listings are used only when neither typed cover has a usable price.
+  - **Total cost** — sum of the cheaper hardcover/softcover/library-binding total (item + shipping) per book in the current book filters. Other/Unknown listings are used only when none of those typed covers has a usable price.
   - **Over $20 / Over $40 / Over $80** — counts of books whose cheapest total is strictly greater than that amount (cumulative).
   - **Total books** — books in the current book filters.
   - **Without prices** — books with no usable listing (missing rows, `No matching listing`, rate-limited, or other lookup errors).
@@ -74,7 +74,7 @@ Deleting a book cascades to its prices.
 See `endpoints/endpoints-prices.md`.
 
 - `GET /api/prices` — all saved listings
-- `POST /api/prices/lookup/{bookId}` — lookup both covers for one book
+- `POST /api/prices/lookup/{bookId}` — lookup hardcover, softcover, and library binding for one book
 
 Librarian only.
 

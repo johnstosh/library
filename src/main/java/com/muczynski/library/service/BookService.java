@@ -7,6 +7,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
@@ -324,6 +325,7 @@ public class BookService {
         book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
         book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+        book.setBinding(bookDto.getBinding() != null ? bookDto.getBinding() : BookCoverType.UNKNOWN);
         book.setDesireToPurchase(bookDto.getDesireToPurchase());
         if (bookDto.getAuthorId() != null) {
             book.setAuthor(authorRepository.findById(bookDto.getAuthorId()).orElseThrow(() -> new LibraryException("Author not found: " + bookDto.getAuthorId())));
@@ -415,6 +417,7 @@ public class BookService {
         clone.setLocNumber(original.getLocNumber());
         clone.setStatusReason(original.getStatusReason());
         clone.setReadingDifficulty(original.getReadingDifficulty());
+        clone.setBinding(original.getBinding());
         clone.setDesireToPurchase(original.getDesireToPurchase());
         clone.setAuthor(original.getAuthor());
         clone.setLibrary(original.getLibrary());

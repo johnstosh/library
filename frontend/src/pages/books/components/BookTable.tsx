@@ -7,6 +7,7 @@ import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { useDeleteBook } from '@/api/books'
 import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
 import { formatBookLabel } from './BookLabelFilters'
+import { bookBindingLabel } from '@/utils/bookBinding'
 import { readingDifficultyLabel } from '@/utils/readingDifficulty'
 import type { BookDto } from '@/types/dtos'
 import { useToast } from '@/hooks/useToast'
@@ -108,6 +109,9 @@ export function BookTable({
           )}
           <div className="text-sm text-gray-500" data-test={`book-reading-difficulty-${book.id}`}>
             {readingDifficultyLabel(book.readingDifficulty)}
+          </div>
+          <div className="text-sm text-gray-500" data-test={`book-binding-${book.id}`}>
+            {bookBindingLabel(book.binding)}
           </div>
         </div>
       ),

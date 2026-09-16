@@ -170,6 +170,16 @@ class ImportExportRoundTripTest {
         hardcover.setLookedUpAt(java.time.LocalDateTime.of(2026, 9, 1, 12, 0));
         bookPriceRepository.save(hardcover);
 
+        BookPrice libraryBinding = new BookPrice();
+        libraryBinding.setBook(books.get(0));
+        libraryBinding.setCover(BookCoverType.LIBRARY_BINDING);
+        libraryBinding.setPriceDollars(java.math.BigDecimal.valueOf(12.00));
+        libraryBinding.setShippingDollars(java.math.BigDecimal.ZERO);
+        libraryBinding.setCondition("Used - Good");
+        libraryBinding.setDetailsUrl("https://www.abebooks.com/example-lb/bd");
+        libraryBinding.setLookedUpAt(java.time.LocalDateTime.of(2026, 9, 1, 12, 0));
+        bookPriceRepository.save(libraryBinding);
+
         BookPrice softcover = new BookPrice();
         softcover.setBook(books.get(0));
         softcover.setCover(BookCoverType.SOFTCOVER);
@@ -490,6 +500,7 @@ class ImportExportRoundTripTest {
         printBook.setStatus(BookStatus.ACTIVE);
         printBook.setPublicationYear(2025);
         printBook.setElectronicResource(false);
+        printBook.setBinding(BookCoverType.LIBRARY_BINDING);
         printBook.setTagsList(java.util.List.of("history"));
         printBook = bookRepository.save(printBook);
 
@@ -516,6 +527,8 @@ class ImportExportRoundTripTest {
                 .filter(b -> "PrintBook RoundTrip Test".equals(b.getTitle()))
                 .findFirst();
         assertTrue(exportedPrintBook.isPresent(), "Print book should be in export");
+        assertEquals(BookCoverType.LIBRARY_BINDING, exportedPrintBook.get().getBinding(),
+                "library binding should round-trip in JSON export");
         assertNull(exportedPrintBook.get().getElectronicResource(),
                 "electronicResource=false should be absent from JSON (null in DTO)");
         assertNotNull(exportedPrintBook.get().getTagsList(), "tags should be exported for print book");
@@ -535,6 +548,8 @@ class ImportExportRoundTripTest {
         Book reimportedPrintBook = bookRepository.findAllByTitleOrderByIdAsc("PrintBook RoundTrip Test").get(0);
         assertFalse(Boolean.TRUE.equals(reimportedPrintBook.getElectronicResource()),
                 "electronicResource should remain false after round-trip import");
+        assertEquals(BookCoverType.LIBRARY_BINDING, reimportedPrintBook.getBinding(),
+                "library binding should be preserved after round-trip import");
         assertTrue(reimportedPrintBook.getTagsList().contains("history"),
                 "tags should be preserved after round-trip import");
     }

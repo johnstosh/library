@@ -5,6 +5,7 @@ package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.BookDto;
@@ -60,6 +61,7 @@ public class BookMapper {
         bookDto.setAclaLastChecked(book.getAclaLastChecked());
         bookDto.setAclaLookupError(book.getAclaLookupError());
         bookDto.setReadingDifficulty(book.getReadingDifficulty());
+        bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
         bookDto.setDesireToPurchase(book.getDesireToPurchase());
         copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
@@ -123,6 +125,7 @@ public class BookMapper {
         bookDto.setAclaLastChecked(book.getAclaLastChecked());
         bookDto.setAclaLookupError(book.getAclaLookupError());
         bookDto.setReadingDifficulty(book.getReadingDifficulty());
+        bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
         bookDto.setDesireToPurchase(book.getDesireToPurchase());
         copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
@@ -175,6 +178,7 @@ public class BookMapper {
         book.setAclaLastChecked(bookDto.getAclaLastChecked());
         book.setAclaLookupError(bookDto.getAclaLookupError());
         book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
+        book.setBinding(BookCoverType.orUnknown(bookDto.getBinding()));
         book.setDesireToPurchase(bookDto.getDesireToPurchase());
 
         if (bookDto.getAuthorId() != null) {

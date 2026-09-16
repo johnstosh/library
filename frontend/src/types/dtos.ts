@@ -134,6 +134,7 @@ export interface BookDto {
   aclaLastChecked?: string
   aclaLookupError?: string
   readingDifficulty?: ReadingDifficulty
+  binding?: BookCoverType
   desireToPurchase?: number | null
 }
 
@@ -166,6 +167,7 @@ export interface BookPriceLookupResultDto {
   cancelled?: boolean
   hardcover?: BookPriceDto
   softcover?: BookPriceDto
+  libraryBinding?: BookPriceDto
   errorMessage?: string
 }
 
