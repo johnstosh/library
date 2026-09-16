@@ -200,6 +200,7 @@ frontend/src/
 ├── utils/                   # Utility functions
 │   ├── formatters.ts        # Date, number, text formatting
 │   ├── auth.ts              # Auth helpers (hash password)
+│   ├── injectedPerformanceMonitorError.ts # Swallow Chromium DevTools reportAllChanges TypeError
 │   └── constants.ts         # App constants
 │
 ├── types/                   # TypeScript types
@@ -890,6 +891,15 @@ Displays:
 - Error details (collapsible)
 - Refresh button
 - Go to Home button
+
+The boundary does not see errors thrown from browser-injected scripts or timers. Chromium's live performance monitor (DevTools Performance panel) injects a minified anonymous script whose `reportAllChanges` timer can throw:
+
+```
+Uncaught TypeError: Cannot read properties of undefined (reading 'startTime')
+    at et.reportAllChanges (<anonymous>:2:19429)
+```
+
+That is not library code. `installInjectedPerformanceMonitorErrorGuard()` in `main.tsx` listens for that specific anonymous-script TypeError and calls `preventDefault()` so it does not appear as an uncaught app error. Other `startTime` failures, including those from our own bundles, are left alone.
 
 ### API Errors
 

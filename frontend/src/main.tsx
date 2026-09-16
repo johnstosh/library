@@ -6,9 +6,12 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter } from 'react-router-dom'
 import { queryClient } from './config/queryClient'
 import { idbPersister, PERSISTED_CACHE_MAX_AGE, persistDehydrateOptions } from './config/idbPersister'
+import { installInjectedPerformanceMonitorErrorGuard } from './utils/injectedPerformanceMonitorError'
 import App from './App'
 import './index.css'
 import 'cropperjs/dist/cropper.css'
+
+installInjectedPerformanceMonitorErrorGuard()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
