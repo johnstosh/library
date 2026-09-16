@@ -21,4 +21,13 @@ public interface BookPriceRepository extends JpaRepository<BookPrice, Long> {
 
     @Query("SELECT p FROM BookPrice p JOIN FETCH p.book b LEFT JOIN FETCH b.author")
     List<BookPrice> findAllWithBookAndAuthor();
+
+    /**
+     * Unique books with at least one saved listing that has a price and no lookup error.
+     * Failed lookups (no matching listing, timeout, rate limit, HTTP errors) are excluded.
+     */
+    @Query("SELECT COUNT(DISTINCT p.book.id) FROM BookPrice p "
+            + "WHERE p.priceDollars IS NOT NULL "
+            + "AND (p.lookupError IS NULL OR p.lookupError = '')")
+    long countDistinctBooksWithValidPrices();
 }

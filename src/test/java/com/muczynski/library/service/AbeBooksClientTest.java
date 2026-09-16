@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -195,8 +196,26 @@ class AbeBooksClientTest {
                 .thenThrow(HttpClientErrorException.create(
                         HttpStatus.FORBIDDEN, "Forbidden", new HttpHeaders(), new byte[0], null));
 
-        assertThrows(AbeBooksRateLimitedException.class,
+        AbeBooksRateLimitedException ex = assertThrows(AbeBooksRateLimitedException.class,
                 () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+        assertNotNull(ex.getSearchUrl());
+        assertTrue(ex.getSearchUrl().contains("SearchResults"));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_http500_isHttpExceptionWithSearchUrl() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(HttpServerErrorException.create(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "Server Error",
+                        new HttpHeaders(), "<html>boom</html>".getBytes(), null));
+
+        AbeBooksHttpException ex = assertThrows(AbeBooksHttpException.class,
+                () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+        assertEquals(500, ex.getStatusCode());
+        assertEquals("AbeBooks HTTP 500", ex.getMessage());
+        assertNotNull(ex.getSearchUrl());
+        assertTrue(ex.getSearchUrl().contains("SearchResults"));
+        assertTrue(ex.getSearchUrl().contains("tn=Emma"));
     }
 
     @Test

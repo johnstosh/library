@@ -58,6 +58,11 @@ public class ImportController {
         return ResponseEntity.ok(exportData);
     }
 
+    /**
+     * Database statistics for the Data Management page.
+     * {@code favoriteCount} is the raw favorites row count.
+     * {@code priceCount} is unique books with a usable AbeBooks listing.
+     */
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<DatabaseStatsDto> getDatabaseStats() {

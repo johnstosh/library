@@ -4,6 +4,7 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.BookCoverType;
+import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,19 +103,22 @@ public class AbeBooksClient {
         }
         String lastName = authorLastName(author);
         CoverAccumulator acc = new CoverAccumulator();
-        searchPaged(cleanedTitle, lastName, acc, true);
+        String searchUrl = searchPaged(cleanedTitle, lastName, acc, true);
         if (!acc.canAssignBoth()
                 && lastName != null
                 && letterWordCount(cleanedTitle) >= TITLE_ONLY_MIN_WORDS) {
             log.info("AbeBooks title-only fallback for long title: {}", cleanedTitle);
-            searchPaged(cleanedTitle, null, acc, false);
+            searchUrl = searchPaged(cleanedTitle, null, acc, false);
         }
-        return acc.toResult();
+        return acc.toResult(searchUrl);
     }
 
-    private void searchPaged(String title, String author, CoverAccumulator acc, boolean restrictCondition) {
+    private String searchPaged(String title, String author, CoverAccumulator acc, boolean restrictCondition) {
+        String lastUrl = null;
         for (int page = 0; page < MAX_PAGES; page++) {
-            String html = fetch(buildSearchUri(title, author, page, restrictCondition));
+            URI uri = buildSearchUri(title, author, page, restrictCondition);
+            lastUrl = uri.toString();
+            String html = fetch(uri);
             if (html == null || html.isBlank()) {
                 break;
             }
@@ -129,6 +133,7 @@ public class AbeBooksClient {
                 break;
             }
         }
+        return lastUrl;
     }
 
     private String fetch(URI uri) {
@@ -140,7 +145,8 @@ public class AbeBooksClient {
                 Thread.sleep(delayMs);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
-                throw new AbeBooksRateLimitedException("AbeBooks lookup interrupted", ex);
+                throw new AbeBooksRateLimitedException(
+                        "AbeBooks lookup interrupted", uri.toString(), ex);
             }
         }
         log.info("AbeBooks search requestCount={} uri={}", n, uri);
@@ -149,6 +155,7 @@ public class AbeBooksClient {
         headers.set(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9");
         long started = System.nanoTime();
         ResponseEntity<String> response;
+        String searchUrl = uri.toString();
         try {
             response = restTemplate.exchange(
                     uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
@@ -157,13 +164,13 @@ public class AbeBooksClient {
             int code = status.value();
             if (code == 403 || code == 429 || code == 502 || code == 503 || code == 504) {
                 log.warn("AbeBooks HTTP {} for {} (treating as rate limited)", code, uri);
-                throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, ex);
+                throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, searchUrl, ex);
             }
             log.warn("AbeBooks HTTP {} for {}", code, uri);
-            throw ex;
+            throw new AbeBooksHttpException(code, searchUrl, ex);
         } catch (ResourceAccessException ex) {
             log.warn("AbeBooks I/O or timeout for {}: {}", uri, ex.getMessage());
-            throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, ex);
+            throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, searchUrl, ex);
         }
         long elapsedMs = (System.nanoTime() - started) / 1_000_000L;
         String body = response.getBody();
@@ -172,7 +179,7 @@ public class AbeBooksClient {
             boolean blocked = parser.isBlockedPage(body);
             log.warn("AbeBooks rate-limited response ({} ms, {} bytes, blockedPage={}) for {}",
                     elapsedMs, bytes, blocked, uri);
-            throw new AbeBooksRateLimitedException();
+            throw new AbeBooksRateLimitedException(AbeBooksRateLimitedException.MESSAGE, searchUrl, null);
         }
         log.info("AbeBooks response requestCount={} elapsedMs={} bytes={} uri={}",
                 n, elapsedMs, bytes, uri);
@@ -368,10 +375,11 @@ public class AbeBooksClient {
                     && (softcover != null || unknown != null);
         }
 
-        AbeBooksCoverListings toResult() {
+        AbeBooksCoverListings toResult(String searchUrl) {
             return AbeBooksCoverListings.builder()
                     .hardcover(hardcover != null ? hardcover : unknown)
                     .softcover(softcover != null ? softcover : unknown)
+                    .searchUrl(searchUrl)
                     .build();
         }
     }

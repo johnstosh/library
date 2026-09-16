@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { BookFilters } from '../BookFilters'
 import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFilters'
 
@@ -20,6 +20,15 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
     expect(screen.getByText('Recent Arrivals')).toBeInTheDocument()
     expect(screen.getByTestId('filter-with-grokipedia')).toBeInTheDocument()
+  })
+
+  it('explains that Without LOC excludes electronic resources', () => {
+    render(<BookFilters chips={chips} onToggle={() => {}} />)
+
+    fireEvent.click(screen.getByTestId('filter-without-loc-info'))
+    expect(screen.getByTestId('filter-without-loc-tooltip')).toHaveTextContent(
+      'Only books without a Library of Congress call number, excluding electronic resources',
+    )
   })
 
   it('hides cataloger chips when showCatalogerFilters is false', () => {

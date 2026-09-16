@@ -120,7 +120,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NOT NULL AND b.locNumber != '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z' ORDER BY b.dateAddedToLibrary DESC")
     List<Book> findBooksWith3LetterLocStart();
 
-    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NULL OR b.locNumber = ''")
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)")
     List<Book> findBooksWithoutLocNumber();
 
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-'")
@@ -144,8 +144,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Get summaries (id + lastModified) for books without LOC number.
+     * Electronic resources are excluded because they are not shelved.
      */
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.locNumber IS NULL OR b.locNumber = ''")
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)")
     List<BookSummaryProjection> findSummariesWithoutLocNumber();
 
     /**
@@ -237,7 +238,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterFreeText = false OR (b.freeTextUrl IS NOT NULL AND b.freeTextUrl <> '')) AND " +
         "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%')) AND " +
         "(:filterMostRecent = false OR b.dateAddedToLibrary >= :mostRecentCutoff OR b.id IN :mostRecentTempTitleIds) AND " +
-        "(:filterWithoutLoc = false OR b.locNumber IS NULL OR b.locNumber = '') AND " +
+        "(:filterWithoutLoc = false OR ((b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false))) AND " +
         "(:filterThreeLetterLoc = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z')) AND " +
         "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-') AND " +
         "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '' AND b.grokipediaUrl <> '-')) AND " +

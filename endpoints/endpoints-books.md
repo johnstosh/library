@@ -32,7 +32,7 @@ Returns book summaries for books from the most recent 2 days OR books with tempo
 ---
 
 ### GET /api/books/without-loc
-Returns book summaries for books without a Library of Congress call number.
+Returns book summaries for books without a Library of Congress call number, excluding electronic resources.
 
 **Authentication:** Public (permitAll)
 

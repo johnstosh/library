@@ -83,7 +83,7 @@ frontend/src/
 │   │   └── BranchNameDisplay.tsx # Nav brand; says DEV on library-dev hosts
 │   │
 │   ├── ui/                  # Basic UI components
-│   │   ├── Button.tsx       # Styled button variants
+│   │   ├── Button.tsx       # Styled button variants; optional `to` renders a React Router link
 │   │   ├── Input.tsx        # Form input
 │   │   ├── Select.tsx       # Select dropdown
 │   │   ├── Textarea.tsx     # Textarea input
@@ -97,8 +97,10 @@ frontend/src/
 │   │   └── DataTable.tsx    # Generic table component
 │   │
 │   ├── progress/
-│   │   ├── Spinner.tsx      # Loading spinner
-│   │   └── ProgressBar.tsx  # Progress bar
+│   │   ├── Spinner.tsx         # Loading spinner
+│   │   ├── LoadingOverlay.tsx  # Dims parent content; spinner is viewport-centered
+│   │   ├── PageLoading.tsx     # Full-page loading placeholder
+│   │   └── ProgressBar.tsx     # Progress bar
 │   │
 │   ├── photos/
 │   │   ├── PhotoGallery.tsx    # Photo grid display
@@ -200,6 +202,7 @@ frontend/src/
 ├── utils/                   # Utility functions
 │   ├── formatters.ts        # Date, number, text formatting
 │   ├── auth.ts              # Auth helpers (hash password)
+│   ├── injectedPerformanceMonitorError.ts # Swallow Chromium DevTools reportAllChanges TypeError
 │   └── constants.ts         # App constants
 │
 ├── types/                   # TypeScript types
@@ -696,6 +699,8 @@ Note: Books and Authors menu items are only visible to authenticated users. Unau
 3. Loading spinner displayed
 4. Data cached and displayed
 5. Background refetch (if stale)
+   - `LoadingOverlay` dims the list and shows an indefinite spinner
+     `position:fixed` at the center of the window so it stays visible while the user scrolls a tall table
 
 ### Write Operations
 1. User submits form
@@ -890,6 +895,15 @@ Displays:
 - Error details (collapsible)
 - Refresh button
 - Go to Home button
+
+The boundary does not see errors thrown from browser-injected scripts or timers. Chromium's live performance monitor (DevTools Performance panel) injects a minified anonymous script whose `reportAllChanges` timer can throw:
+
+```
+Uncaught TypeError: Cannot read properties of undefined (reading 'startTime')
+    at et.reportAllChanges (<anonymous>:2:19429)
+```
+
+That is not library code. `installInjectedPerformanceMonitorErrorGuard()` in `main.tsx` listens for that specific anonymous-script TypeError and calls `preventDefault()` so it does not appear as an uncaught app error. Other `startTime` failures, including those from our own bundles, are left alone.
 
 ### API Errors
 

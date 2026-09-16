@@ -93,16 +93,19 @@ public class DataManagementUITest {
         page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(20000L));
     }
 
-    @Test
-    @DisplayName("Phone availability chips stack in one column with full labels")
-    void testAvailabilityChipsOneColumnOnPhone() {
-        loginAsLibrarian();
-
+    private void openDataManagement() {
         Locator dataNav = page.locator("[data-test='nav-data']");
         dataNav.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
         dataNav.click();
         page.waitForURL("**/data-management", new Page.WaitForURLOptions().setTimeout(20000L));
         page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    @Test
+    @DisplayName("Phone availability chips stack in one column with full labels")
+    void testAvailabilityChipsOneColumnOnPhone() {
+        loginAsLibrarian();
+        openDataManagement();
 
         Locator grid = page.locator("[data-test='availability-stats-grid']");
         grid.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
@@ -127,5 +130,36 @@ public class DataManagementUITest {
         Assertions.assertTrue(Math.abs(second.x - first.x) < 20,
                 "Availability chips should share a column on phone, first.x="
                         + first.x + " second.x=" + second.x);
+    }
+
+    @Test
+    @Sql(value = "classpath:data-data-management-stats.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @DisplayName("Top stats show Favorites after Loans and unique books with valid prices")
+    void testDatabaseStatsFavoritesAndUniqueValidPrices() {
+        loginAsLibrarian();
+        openDataManagement();
+
+        Locator favorites = page.locator("[data-test='stat-favorites']");
+        Locator prices = page.locator("[data-test='stat-prices']");
+        Locator loans = page.locator("[data-test='stat-loans']");
+        favorites.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+
+        assertThat(favorites).containsText("Favorites");
+        assertThat(favorites).containsText("3");
+        assertThat(prices).containsText("Prices");
+        assertThat(prices).containsText("1");
+
+        BoundingBox loansBox = loans.boundingBox();
+        BoundingBox favoritesBox = favorites.boundingBox();
+        BoundingBox pricesBox = prices.boundingBox();
+        Assertions.assertNotNull(loansBox, "Loans stat should have a bounding box");
+        Assertions.assertNotNull(favoritesBox, "Favorites stat should have a bounding box");
+        Assertions.assertNotNull(pricesBox, "Prices stat should have a bounding box");
+        Assertions.assertTrue(favoritesBox.x > loansBox.x,
+                "Favorites should appear after Loans, loans.x=" + loansBox.x
+                        + " favorites.x=" + favoritesBox.x);
+        Assertions.assertTrue(pricesBox.x > favoritesBox.x,
+                "Prices should appear after Favorites, favorites.x=" + favoritesBox.x
+                        + " prices.x=" + pricesBox.x);
     }
 }

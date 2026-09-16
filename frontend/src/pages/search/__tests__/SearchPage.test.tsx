@@ -17,6 +17,10 @@ const { searchResult, librarianState } = vi.hoisted(() => {
       lastModified: '2026-01-01T00:00:00',
       firstPhotoId: 10,
       firstPhotoChecksum: 'cover-summa',
+      readingDifficulty: 'demanding',
+      publicationYear: 1485,
+      publisher: 'Catholic Press',
+      library: 'St. Martin de Porres',
     },
     {
       id: 8,
@@ -139,6 +143,25 @@ describe('SearchPage covers', () => {
     fireEvent.load(authorImg)
     expect(authorImg).toHaveAttribute('data-test', 'thumbnail-img')
   })
+
+  it('shows reading difficulty as a third line under title and author', () => {
+    renderSearch()
+
+    expect(screen.getByTestId('book-result-reading-difficulty-1')).toHaveTextContent('Demanding')
+    expect(screen.getByTestId('book-result-reading-difficulty-8')).toHaveTextContent('Unset')
+  })
+
+  it('hides year, publisher, and branch on phone widths', () => {
+    renderSearch()
+
+    const meta = screen.getByTestId('book-result-meta-1')
+    expect(meta).toHaveClass('hidden')
+    expect(meta).toHaveClass('sm:flex')
+    expect(meta).toHaveTextContent('1485')
+    expect(meta).toHaveTextContent('Catholic Press')
+    expect(meta).toHaveTextContent('St. Martin de Porres')
+    expect(screen.queryByTestId('book-result-meta-8')).not.toBeInTheDocument()
+  })
 })
 
 describe('SearchPage librarian controls', () => {
@@ -159,6 +182,23 @@ describe('SearchPage librarian controls', () => {
     expect(form).toContainElement(openInBooks)
     expect(openInBooks.parentElement).toBe(form)
     expect(searchControls.parentElement).toBe(form)
+  })
+
+  it('uses a Books URL so it can be opened in a new tab', () => {
+    librarianState.current = true
+    renderSearch('/search?q=Summa&status=in-library')
+
+    const link = screen.getByTestId('open-in-books')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', '/books?q=Summa&status=in-library')
+  })
+
+  it('includes the typed query in the Books URL before Search is submitted', () => {
+    librarianState.current = true
+    renderSearch('/search')
+
+    fireEvent.change(screen.getByTestId('search-input'), { target: { value: 'City of God' } })
+    expect(screen.getByTestId('open-in-books')).toHaveAttribute('href', '/books?q=City+of+God')
   })
 
   it('uses default md sizes like Books instead of lg', () => {

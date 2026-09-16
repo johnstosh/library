@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
-import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
+import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AskGrok;
@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -119,7 +120,20 @@ class BookControllerTest {
         dto.setTitle("Test Book");
         dto.setLocNumber(null);
         dto.setStatusReason(null);
-        when(bookService.getAllBooks()).thenReturn(Collections.singletonList(dto));
+        when(bookService.getAllBooks(false)).thenReturn(Collections.singletonList(dto));
+
+        mockMvc.perform(get("/api/books"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getAllBooks_librarian_includesRequested() throws Exception {
+        BookDto dto = new BookDto();
+        dto.setId(1L);
+        dto.setTitle("Requested Book");
+        dto.setStatus(BookStatus.REQUESTED);
+        when(bookService.getAllBooks(true)).thenReturn(Collections.singletonList(dto));
 
         mockMvc.perform(get("/api/books"))
                 .andExpect(status().isOk());
@@ -133,6 +147,32 @@ class BookControllerTest {
         bookDto.setTitle("Test Book");
         bookDto.setLocNumber(null);
         bookDto.setStatusReason(null);
+        when(bookService.getBookById(1L)).thenReturn(bookDto);
+
+        mockMvc.perform(get("/api/books/1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
+    void getBookById_requested_hiddenFromNonLibrarian() throws Exception {
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Requested Book");
+        bookDto.setStatus(BookStatus.REQUESTED);
+        when(bookService.getBookById(1L)).thenReturn(bookDto);
+
+        mockMvc.perform(get("/api/books/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getBookById_requested_visibleToLibrarian() throws Exception {
+        BookDto bookDto = new BookDto();
+        bookDto.setId(1L);
+        bookDto.setTitle("Requested Book");
+        bookDto.setStatus(BookStatus.REQUESTED);
         when(bookService.getBookById(1L)).thenReturn(bookDto);
 
         mockMvc.perform(get("/api/books/1"))
@@ -253,7 +293,17 @@ class BookControllerTest {
 
     @Test
     void getBookCount_unauthenticated_returnsOk() throws Exception {
-        when(bookService.countBooks()).thenReturn(1847L);
+        when(bookService.countBooks(false)).thenReturn(1847L);
+
+        mockMvc.perform(get("/api/books/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(1847));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getBookCount_librarian_includesRequested() throws Exception {
+        when(bookService.countBooks(true)).thenReturn(1847L);
 
         mockMvc.perform(get("/api/books/count"))
                 .andExpect(status().isOk())
@@ -271,7 +321,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getAllBookSummaries()).thenReturn(Arrays.asList(summary1, summary2));
+        when(bookService.getAllBookSummaries(false)).thenReturn(Arrays.asList(summary1, summary2));
 
         String response = mockMvc.perform(get("/api/books/summaries"))
                 .andExpect(status().isOk())
@@ -299,7 +349,7 @@ class BookControllerTest {
         book2.setTitle("Test Book 2");
 
         List<Long> ids = Arrays.asList(1L, 2L);
-        when(bookService.getBooksByIds(any(List.class))).thenReturn(Arrays.asList(book1, book2));
+        when(bookService.getBooksByIds(any(List.class), eq(false))).thenReturn(Arrays.asList(book1, book2));
 
         mockMvc.perform(post("/api/books/by-ids")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -310,7 +360,7 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksByIdsEmptyList() throws Exception {
-        when(bookService.getBooksByIds(any(List.class))).thenReturn(Collections.emptyList());
+        when(bookService.getBooksByIds(any(List.class), eq(false))).thenReturn(Collections.emptyList());
 
         mockMvc.perform(post("/api/books/by-ids")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -329,7 +379,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getSummariesWithoutLocNumber()).thenReturn(Arrays.asList(summary1, summary2));
+        when(bookService.getSummariesWithoutLocNumber(false)).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/without-loc"))
                 .andExpect(status().isOk())
@@ -351,7 +401,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 10, 15, 0));
 
-        when(bookService.getSummariesFromMostRecentDay()).thenReturn(Arrays.asList(summary1, summary2));
+        when(bookService.getSummariesFromMostRecentDay(false)).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/most-recent-day"))
                 .andExpect(status().isOk())
@@ -372,7 +422,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getSummariesWith3LetterLocStart()).thenReturn(Arrays.asList(summary2, summary1));
+        when(bookService.getSummariesWith3LetterLocStart(false)).thenReturn(Arrays.asList(summary2, summary1));
 
         mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk())
@@ -384,7 +434,7 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksWith3LetterLocStartEmpty() throws Exception {
-        when(bookService.getSummariesWith3LetterLocStart()).thenReturn(Collections.emptyList());
+        when(bookService.getSummariesWith3LetterLocStart(false)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/api/books/by-3letter-loc"))
                 .andExpect(status().isOk());
@@ -401,7 +451,7 @@ class BookControllerTest {
         summary2.setId(2L);
         summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
 
-        when(bookService.getSummariesWithoutGrokipediaUrl()).thenReturn(Arrays.asList(summary1, summary2));
+        when(bookService.getSummariesWithoutGrokipediaUrl(false)).thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
@@ -413,7 +463,7 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksWithoutGrokipediaUrlEmpty() throws Exception {
-        when(bookService.getSummariesWithoutGrokipediaUrl()).thenReturn(Collections.emptyList());
+        when(bookService.getSummariesWithoutGrokipediaUrl(false)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/api/books/without-grokipedia"))
                 .andExpect(status().isOk())
@@ -660,7 +710,7 @@ class BookControllerTest {
         BookSummaryDto summary = new BookSummaryDto();
         summary.setId(1L);
 
-        when(bookService.getSummariesByAllLabels(Arrays.asList("fiction", "fantasy")))
+        when(bookService.getSummariesByAllLabels(Arrays.asList("fiction", "fantasy"), false))
                 .thenReturn(Collections.singletonList(summary));
 
         mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction,fantasy"))
@@ -677,7 +727,7 @@ class BookControllerTest {
         BookSummaryDto summary2 = new BookSummaryDto();
         summary2.setId(2L);
 
-        when(bookService.getSummariesByAllLabels(List.of()))
+        when(bookService.getSummariesByAllLabels(List.of(), false))
                 .thenReturn(Arrays.asList(summary1, summary2));
 
         mockMvc.perform(get("/api/books/by-labels"))
@@ -688,7 +738,7 @@ class BookControllerTest {
     @Test
     @WithMockUser
     void getBooksByLabels_serviceThrowsException_returns500() throws Exception {
-        when(bookService.getSummariesByAllLabels(any()))
+        when(bookService.getSummariesByAllLabels(any(), anyBoolean()))
                 .thenThrow(new RuntimeException("DB error"));
 
         mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction"))

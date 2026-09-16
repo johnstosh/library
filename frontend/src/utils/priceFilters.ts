@@ -11,6 +11,9 @@ export interface PriceChipFilters {
   recent: boolean
 }
 
+/** Default window for the Prices "Looked up recently" chip. */
+export const DEFAULT_RECENT_HOURS = 24
+
 export const defaultPriceChipFilters: PriceChipFilters = {
   hardcover: false,
   softcover: false,
@@ -19,8 +22,6 @@ export const defaultPriceChipFilters: PriceChipFilters = {
   lookupFailed: false,
   recent: false,
 }
-
-const RECENT_DAYS = 30
 
 export function priceChipsFromSearchParams(params: URLSearchParams): PriceChipFilters {
   return {
@@ -37,9 +38,16 @@ export function maxTotalFromSearchParams(params: URLSearchParams): string {
   return params.get('maxTotal') ?? ''
 }
 
+export function recentHoursFromSearchParams(params: URLSearchParams): number {
+  const raw = params.get('recentHours')
+  const n = parseInt(raw ?? '', 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_RECENT_HOURS
+}
+
 export function priceFilterParamsForUrl(state: {
   chips: PriceChipFilters
   maxTotal: string
+  recentHours?: number
 }): Record<string, string> {
   const params: Record<string, string> = {}
   if (state.chips.hardcover) params.hardcover = 'true'
@@ -47,7 +55,13 @@ export function priceFilterParamsForUrl(state: {
   if (state.chips.otherUnknown) params.otherUnknown = 'true'
   if (state.chips.hasListing) params.hasListing = 'true'
   if (state.chips.lookupFailed) params.lookupFailed = 'true'
-  if (state.chips.recent) params.recent = 'true'
+  if (state.chips.recent) {
+    params.recent = 'true'
+    const hours = state.recentHours != null && state.recentHours >= 1
+      ? state.recentHours
+      : DEFAULT_RECENT_HOURS
+    params.recentHours = String(hours)
+  }
   const maxTotal = state.maxTotal.trim()
   if (maxTotal) params.maxTotal = maxTotal
   return params
@@ -65,11 +79,13 @@ export function applyPriceFilters(
   chips: PriceChipFilters,
   maxTotalRaw: string,
   now = Date.now(),
+  recentHours = DEFAULT_RECENT_HOURS,
 ): BookPriceDto[] {
   const maxTotal = parseMaxTotal(maxTotalRaw)
   const coverActive = chips.hardcover || chips.softcover || chips.otherUnknown
   const statusActive = chips.hasListing || chips.lookupFailed
-  const recentCutoff = now - RECENT_DAYS * 24 * 60 * 60 * 1000
+  const hours = recentHours > 0 ? recentHours : DEFAULT_RECENT_HOURS
+  const recentCutoff = now - hours * 60 * 60 * 1000
 
   return prices.filter((price) => {
     if (coverActive) {

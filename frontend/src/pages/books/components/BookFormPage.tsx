@@ -30,6 +30,7 @@ import { parseISODateSafe } from '@/utils/formatters'
 import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus, ReadingDifficulty } from '@/types/enums'
+import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 import { IconButton } from '@/components/ui/IconButton'
 import { AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
@@ -50,12 +51,8 @@ const readingDifficultyOptions = [
   { value: ReadingDifficulty.UNSET, label: 'Unset — not yet reviewed' },
 ]
 
-const desireLabels: Record<number, string> = {
-  0: 'Already own enough', 1: 'Too expensive', 2: 'Last resort',
-  3: 'Expensive; low priority', 4: 'Pricey; wait', 5: 'Fair; medium priority',
-  6: 'Good value', 7: 'Strong buy soon', 8: 'High priority',
-  9: 'Very high priority', 10: 'First priority',
-}
+const desireLabels = DESIRE_TO_PURCHASE_LABELS
+
 export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageProps) {
   const navigate = useNavigate()
   const isEditing = !!book

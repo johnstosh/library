@@ -24,6 +24,7 @@ import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 
 function holdingStatus(available: boolean | null | undefined) {
   if (available == null) {
@@ -44,7 +45,7 @@ function holdingStatus(available: boolean | null | undefined) {
 }
 
 const readingDifficultyLabels: Record<string, string> = { children: 'Children', accessible: 'Accessible', moderate: 'Moderate', demanding: 'Demanding', advanced: 'Advanced', unset: 'Unset' }
-const desirePurchaseLabels: Record<number, string> = { 0: 'Already own enough', 1: 'Too expensive', 2: 'Last resort', 3: 'Expensive; low priority', 4: 'Pricey; wait', 5: 'Fair; medium priority', 6: 'Good value', 7: 'Strong buy soon', 8: 'High priority', 9: 'Very high priority', 10: 'First priority' }
+const desirePurchaseLabels = DESIRE_TO_PURCHASE_LABELS
 
 export function BookViewPage() {
   const navigate = useNavigate()

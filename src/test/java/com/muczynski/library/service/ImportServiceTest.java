@@ -5,7 +5,14 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.dto.BookAvailabilityStatsDto;
+import com.muczynski.library.dto.DatabaseStatsDto;
+import com.muczynski.library.repository.AuthorRepository;
+import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.BranchRepository;
+import com.muczynski.library.repository.FavoriteRepository;
+import com.muczynski.library.repository.LoanRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,9 +29,45 @@ class ImportServiceTest {
 
     @Mock
     private BookRepository bookRepository;
+    @Mock
+    private BranchRepository branchRepository;
+    @Mock
+    private AuthorRepository authorRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private LoanRepository loanRepository;
+    @Mock
+    private FavoriteRepository favoriteRepository;
+    @Mock
+    private BookPriceRepository bookPriceRepository;
 
     @InjectMocks
     private ImportService importService;
+
+    @Test
+    void getDatabaseStats_CountsFavoriteRowsAndUniqueBooksWithValidPrices() {
+        when(branchRepository.count()).thenReturn(1L);
+        when(bookRepository.count()).thenReturn(10L);
+        when(authorRepository.count()).thenReturn(5L);
+        when(userRepository.count()).thenReturn(3L);
+        when(loanRepository.count()).thenReturn(2L);
+        when(favoriteRepository.count()).thenReturn(7L);
+        when(bookPriceRepository.countDistinctBooksWithValidPrices()).thenReturn(4L);
+
+        DatabaseStatsDto stats = importService.getDatabaseStats();
+
+        assertEquals(1L, stats.getBranchCount());
+        assertEquals(10L, stats.getBookCount());
+        assertEquals(5L, stats.getAuthorCount());
+        assertEquals(3L, stats.getUserCount());
+        assertEquals(2L, stats.getLoanCount());
+        assertEquals(7L, stats.getFavoriteCount());
+        assertEquals(4L, stats.getPriceCount());
+        verify(bookPriceRepository).countDistinctBooksWithValidPrices();
+        verify(bookPriceRepository, never()).count();
+        verify(favoriteRepository).count();
+    }
 
     @Test
     void getAvailabilityStats_MapsRepositoryCountsToNamedFields() {

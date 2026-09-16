@@ -43,6 +43,8 @@ export interface DatabaseStatsDto {
   authorCount: number
   userCount: number
   loanCount: number
+  favoriteCount: number
+  /** Unique books with at least one usable AbeBooks listing. */
   priceCount: number
 }
 

@@ -59,9 +59,9 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 - Endpoint: `GET /api/books/without-loc`
 - Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
-- Shows all books missing LOC call numbers
+- Shows books missing LOC call numbers, excluding electronic resources (they are not shelved)
 - Returns: Full `BookDto` objects
-- Query: `SELECT b WHERE b.locNumber IS NULL OR b.locNumber = ''`
+- Query: `SELECT b WHERE (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)`
 
 ### Most Recent Day (+ Temporary Titles)
 - Endpoint: `GET /api/books/most-recent-day`

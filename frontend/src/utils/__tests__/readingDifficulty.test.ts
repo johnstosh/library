@@ -6,6 +6,7 @@ import {
   matchesReadingDifficultyFilter,
   normalizeReadingDifficulty,
   readingDifficultiesFromSearchParams,
+  readingDifficultyLabel,
 } from '@/utils/readingDifficulty'
 
 describe('normalizeReadingDifficulty', () => {
@@ -20,6 +21,15 @@ describe('normalizeReadingDifficulty', () => {
   it('keeps known enum keys, case-insensitively', () => {
     expect(normalizeReadingDifficulty('children')).toBe(ReadingDifficulty.CHILDREN)
     expect(normalizeReadingDifficulty('DEMANDING')).toBe(ReadingDifficulty.DEMANDING)
+  })
+})
+
+describe('readingDifficultyLabel', () => {
+  it('returns the chip label, treating blank values as Unset', () => {
+    expect(readingDifficultyLabel('children')).toBe('Children')
+    expect(readingDifficultyLabel('demanding')).toBe('Demanding')
+    expect(readingDifficultyLabel(null)).toBe('Unset')
+    expect(readingDifficultyLabel('')).toBe('Unset')
   })
 })
 

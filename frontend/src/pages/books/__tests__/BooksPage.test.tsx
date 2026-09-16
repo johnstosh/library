@@ -103,22 +103,41 @@ describe('BooksPage Pricing filters', () => {
     expect(screen.getByTestId('book-price-filters')).toHaveTextContent('Pricing')
     expect(screen.getByTestId('filter-with-prices')).toBeInTheDocument()
     expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
+    expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-hardcover')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()
   })
+
+  it('reports price statistics at the bottom of the page for librarians', () => {
+    librarianState.current = true
+    renderBooksPage('/books?mostRecent=false')
+    expect(screen.getByTestId('price-statistics')).toBeInTheDocument()
+    expect(screen.getByTestId('price-stats-total-cost')).toHaveTextContent('$0.00')
+    expect(screen.getByTestId('price-stats-over-20')).toHaveTextContent('0')
+    expect(screen.getByTestId('price-stats-over-40')).toHaveTextContent('0')
+    expect(screen.getByTestId('price-stats-over-80')).toHaveTextContent('0')
+    expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('2')
+    expect(screen.getByTestId('price-stats-without-prices')).toHaveTextContent('2')
+  })
+
+  it('hides price statistics for non-librarians', () => {
+    librarianState.current = false
+    renderBooksPage('/books?mostRecent=false')
+    expect(screen.queryByTestId('price-statistics')).not.toBeInTheDocument()
+  })
 })
 
 describe('BooksPage Open in Prices', () => {
-  it('hands current filters to /prices', () => {
+  it('hands current filters to /prices as a URL', () => {
     librarianState.current = true
     renderBooksPage('/books?q=Initial&status=in-library')
 
-    const button = screen.getByTestId('open-in-prices')
-    expect(button).toHaveTextContent('Open in Prices')
-    expect(button.closest('form')).toBeNull()
-    expect(button.getAttribute('href')).toBeNull()
-    fireEvent.click(button)
+    const link = screen.getByTestId('open-in-prices')
+    expect(link).toHaveTextContent('Open in Prices')
+    expect(link.closest('form')).toBeNull()
+    expect(link).toHaveAttribute('href', '/prices?q=Initial&status=in-library')
+    fireEvent.click(link)
     expect(screen.getByTestId('location')).toHaveTextContent('/prices?q=Initial&status=in-library')
   })
 })

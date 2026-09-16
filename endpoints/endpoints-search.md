@@ -16,7 +16,7 @@ Returns search results for books and authors matching the query.
 - `filterFreeText` (boolean, optional, default `false`) - Books with a non-blank free text URL
 - `filterAudio` (boolean, optional, default `false`) - Books whose free text URL contains `librivox`
 - `filterMostRecent` (boolean, optional, default `false`) - Books added on the most recent day UTC, or with a temporary `YYYY-M-D` title
-- `filterWithoutLoc` (boolean, optional, default `false`) - Books with no LOC call number
+- `filterWithoutLoc` (boolean, optional, default `false`) - Books with no LOC call number, excluding electronic resources
 - `filterThreeLetterLoc` (boolean, optional, default `false`) - LOC call number starts with three uppercase letters
 - `filterWithoutGrokipedia` (boolean, optional, default `false`) - Books with no Grokipedia URL
 - `filterWithGrokipedia` (boolean, optional, default `false`) - Books with a Grokipedia URL

@@ -50,7 +50,8 @@ Returns database statistics with total counts for each entity type.
 - `authorCount` - Total number of authors
 - `userCount` - Total number of users
 - `loanCount` - Total number of loans
-- `priceCount` - Total number of saved AbeBooks price rows
+- `favoriteCount` - Total number of favorite-list membership rows
+- `priceCount` - Unique books with at least one usable AbeBooks listing (`priceDollars` present and no `lookupError`). Failed lookups (no matching listing, timeout, rate limit, other errors) are excluded. Multiple valid rows for the same book count as one.
 
 **Example Response:**
 ```json
@@ -60,6 +61,7 @@ Returns database statistics with total counts for each entity type.
   "authorCount": 150,
   "userCount": 25,
   "loanCount": 50,
+  "favoriteCount": 18,
   "priceCount": 12
 }
 ```

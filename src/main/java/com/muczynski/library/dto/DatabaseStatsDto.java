@@ -20,5 +20,11 @@ public class DatabaseStatsDto {
     private Long authorCount;
     private Long userCount;
     private Long loanCount;
+    /** Raw number of favorite-list membership rows. */
+    private Long favoriteCount;
+    /**
+     * Unique books that have at least one usable AbeBooks listing
+     * ({@code priceDollars} present and no {@code lookupError}).
+     */
     private Long priceCount;
 }

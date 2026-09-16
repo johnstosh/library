@@ -46,6 +46,13 @@ export function BookPriceFilters({
             dataTest="filter-no-prices"
           />
           <FilterChip
+            label="Lookup Errors"
+            active={chips.lookupErrors}
+            onClick={() => onToggle('lookupErrors')}
+            tooltip="Only items with a lookup error such as rate limited or HTTP 500 — not No matching listing"
+            dataTest="filter-lookup-errors"
+          />
+          <FilterChip
             label="Price older than"
             active={chips.priceOlder}
             onClick={() => onToggle('priceOlder')}

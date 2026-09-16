@@ -12,7 +12,7 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * Row 2: freeText, audio, mostRecent
  * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
  *   withoutGenres, withoutFreeTextUrls
- * Pricing (Books, librarians): withPrices, noPrices, priceOlder
+ * Pricing (Books, librarians): withPrices, noPrices, priceOlder, lookupErrors
  *
  * Status (in-library, electronic-resource, lost, withdrawn, on-order, requested)
  * is a separate OR group — see bookStatus.ts — not a boolean chip.
@@ -35,6 +35,7 @@ export interface BookChipFilters {
   withPrices: boolean
   noPrices: boolean
   priceOlder: boolean
+  lookupErrors: boolean
 }
 
 export const defaultBookChipFilters: BookChipFilters = {
@@ -57,6 +58,7 @@ export const defaultBookChipFilters: BookChipFilters = {
   withPrices: false,
   noPrices: false,
   priceOlder: false,
+  lookupErrors: false,
 }
 
 const TEMP_TITLE_RE = /^\d{4}-\d{1,2}-\d{1,2}/
@@ -91,6 +93,7 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
 export function applyChipFilters<T extends Pick<
   BookDto,
   | 'locNumber'
+  | 'electronicResource'
   | 'freeTextUrl'
   | 'title'
   | 'dateAddedToLibrary'
@@ -139,7 +142,11 @@ export function applyChipFilters<T extends Pick<
         if (!cutoff || bookDate < cutoff) return false
       }
     }
-    if (chips.withoutLoc && !isBlank(book.locNumber)) return false
+    if (chips.withoutLoc) {
+      if (!isBlank(book.locNumber)) return false
+      // Electronic resources are not shelved, so they do not need LOC numbers.
+      if (book.electronicResource === true) return false
+    }
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
@@ -149,9 +156,21 @@ export function applyChipFilters<T extends Pick<
   })
 }
 
+/** Stored when AbeBooks returned a real SearchResults page with no usable listing. */
+export const NO_MATCHING_LISTING = 'No matching listing'
+
 /** True when a row is an actual AbeBooks listing, not a failed/cancelled lookup. */
 export function isSavedPriceListing(price: BookPriceDto): boolean {
   return price.priceDollars != null && !price.lookupError
+}
+
+/**
+ * Lookup Errors filter: rate-limited, HTTP errors, cancelled, and other
+ * failures — not "No matching listing" (that is a successful empty search).
+ */
+export function isLookupError(price: BookPriceDto): boolean {
+  const err = price.lookupError?.trim()
+  return Boolean(err) && err !== NO_MATCHING_LISTING
 }
 
 export interface BookPriceFilterOptions {
@@ -159,13 +178,15 @@ export interface BookPriceFilterOptions {
   noPrices: boolean
   priceOlder: boolean
   priceOlderDays: number
+  lookupErrors?: boolean
 }
 
 /**
  * Books/Prices price chips. withPrices keeps books that have a usable listing.
  * noPrices and priceOlder OR when both are on: no usable listing (missing rows,
  * "No matching listing", rate-limited) or a successful lookup older than
- * {@code priceOlderDays}. withPrices ANDs with that pair.
+ * {@code priceOlderDays}. withPrices ANDs with that pair. lookupErrors ANDs
+ * books that have a rate-limited/HTTP/other error (not "No matching listing").
  */
 export function applyBookPriceFilters<T extends { id: number }>(
   books: T[],
@@ -174,11 +195,16 @@ export function applyBookPriceFilters<T extends { id: number }>(
   now = Date.now(),
 ): T[] {
   const withPrices = Boolean(options.withPrices)
-  if (!withPrices && !options.noPrices && !options.priceOlder) {
+  const lookupErrors = Boolean(options.lookupErrors)
+  if (!withPrices && !options.noPrices && !options.priceOlder && !lookupErrors) {
     return books
   }
   const latestSavedByBook = new Map<number, number>()
+  const lookupErrorBookIds = new Set<number>()
   for (const price of prices) {
+    if (isLookupError(price)) {
+      lookupErrorBookIds.add(price.bookId)
+    }
     if (!isSavedPriceListing(price)) {
       continue
     }
@@ -198,13 +224,14 @@ export function applyBookPriceFilters<T extends { id: number }>(
       return false
     }
     if (options.noPrices && options.priceOlder) {
-      return !hasPricing || latest < cutoff
+      if (hasPricing && latest >= cutoff) return false
+    } else if (options.noPrices) {
+      if (hasPricing) return false
+    } else if (options.priceOlder) {
+      if (!hasPricing || latest >= cutoff) return false
     }
-    if (options.noPrices) {
-      return !hasPricing
-    }
-    if (options.priceOlder) {
-      return hasPricing && latest < cutoff
+    if (lookupErrors && !lookupErrorBookIds.has(book.id)) {
+      return false
     }
     return true
   })

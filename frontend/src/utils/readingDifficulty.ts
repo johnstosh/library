@@ -36,6 +36,11 @@ export function normalizeReadingDifficulty(
   return isReadingDifficultyKey(key) ? key : ReadingDifficulty.UNSET
 }
 
+/** Display label for cover captions (title/author/difficulty). Null/blank maps to Unset. */
+export function readingDifficultyLabel(value: string | null | undefined): string {
+  return READING_DIFFICULTY_FILTER_LABELS[normalizeReadingDifficulty(value)]
+}
+
 export function readingDifficultiesFromSearchParams(params: URLSearchParams): ReadingDifficulty[] {
   const raw = params.get('readingDifficulty')
   if (!raw) return []

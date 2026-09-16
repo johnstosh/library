@@ -6,6 +6,7 @@ import {
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
 import { bookStatusesFromSearchParams } from '@/utils/bookStatus'
+import type { DesireToPurchaseFilter } from '@/utils/desireToPurchase'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 
 /** URL query keys for chip state. */
@@ -27,6 +28,7 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',
+  lookupErrors: 'lookupErrors',
 }
 
 /** Discovery chips shown on Search. Cataloger chips stay on Books only. */
@@ -151,6 +153,8 @@ export interface BookFilterUrlState {
   authorPage?: number
   /** Days for the Books "price older than" chip. Default 90 when the chip is on. */
   priceOlderDays?: number
+  /** Desire-to-purchase chips (Prices page). */
+  desireToPurchase?: DesireToPurchaseFilter[]
   /** When true, emit `q=` even if the query is blank (Search “has searched”). */
   includeBlankQuery?: boolean
 }
@@ -177,6 +181,10 @@ export function bookFilterParamsForUrl(
   }
   const favoriteLists = state.favoriteLists ?? []
   if (favoriteLists.length > 0) params.favoriteLists = favoriteLists.join(',')
+  const desireToPurchase = state.desireToPurchase ?? []
+  if (desireToPurchase.length > 0) {
+    params.desireToPurchase = desireToPurchase.join(',')
+  }
 
   const keys = mode === 'search' ? SEARCH_VISIBLE_CHIPS : ALL_CHIP_KEYS
   for (const chip of keys) {
@@ -256,6 +264,34 @@ export function pricesPathFromFilters(state: {
   favoriteLists?: string[]
   q: string
   priceOlderDays?: number
+  desireToPurchase?: DesireToPurchaseFilter[]
+}): string {
+  const params = bookFilterParamsForUrl(
+    {
+      chips: state.chips,
+      labels: state.labels,
+      readingDifficulties: state.readingDifficulties ?? [],
+      statuses: state.statuses ?? [],
+      favoriteLists: state.favoriteLists ?? [],
+      q: state.q,
+      priceOlderDays: state.priceOlderDays,
+      desireToPurchase: state.desireToPurchase,
+    },
+    'prices',
+  )
+  const qs = new URLSearchParams(params).toString()
+  return qs ? `/prices?${qs}` : '/prices'
+}
+
+/** One-way handoff: copy Prices inventory filters onto the Books page URL. */
+export function booksPathFromPriceFilters(state: {
+  chips: BookChipFilters
+  labels: string[]
+  readingDifficulties?: string[]
+  statuses?: string[]
+  favoriteLists?: string[]
+  q: string
+  priceOlderDays?: number
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -267,10 +303,10 @@ export function pricesPathFromFilters(state: {
       q: state.q,
       priceOlderDays: state.priceOlderDays,
     },
-    'prices',
+    'books',
   )
   const qs = new URLSearchParams(params).toString()
-  return qs ? `/prices?${qs}` : '/prices'
+  return qs ? `/books?${qs}` : '/books'
 }
 
 export function matchesBookQuery(

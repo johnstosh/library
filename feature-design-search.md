@@ -106,6 +106,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 | In-library (status) | `status = ACTIVE AND locNumber IS NOT NULL AND locNumber <> ''` |
 | Electronic resource (status) | `status = ACTIVE AND electronicResource = true` |
 | Lost / Withdrawn / On Order / Requested | matching `BookStatus` |
+| Without LOC | `(locNumber IS NULL OR locNumber = '') AND (electronicResource IS NULL OR electronicResource = false)` |
 | Has free online text | `freeTextUrl IS NOT NULL` |
 | Has free online audio | `freeTextUrl IS NOT NULL AND LOWER(freeTextUrl) LIKE '%librivox%'` |
 
@@ -157,7 +158,7 @@ Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedi
 - `/search?readingDifficulty=children,unset` - Children or Unset (including books with a blank difficulty)
 - `/search?q=Augustine&bookPage=1&authorPage=0` - Independent list pages
 
-Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). That is a one-way handoff, not live sync.
+Librarians can copy the current Search filters onto Books with **Open in Books** (`data-test="open-in-books"`). It is a React Router link to `/books?...` (not a `navigate()` button) so it can be opened in a new tab. That is a one-way handoff, not live sync.
 
 **Benefits**:
 - Bookmarkable search URLs
@@ -179,7 +180,7 @@ Librarians can copy the current Search filters onto Books with **Open in Books**
 - Search button is **always enabled** — blank search is valid and returns all books
 - Search executes on form submit (Enter key or Search button click)
 - The query field is `type="search"` (`data-test="search-input"`), so the browser’s native (x) clears the typed text the same way the Books title filter does. There is no separate Clear button. The (x) only clears the field; apply it with Search or Enter. Filter chips stay until toggled off individually.
-- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`)
+- **Open in Books** (librarians only) is on its own line below the search controls (`outline` variant, default `md` size, `data-test="open-in-books"`). It is an `<a href>` (Button `to=`) so right-click / Ctrl-click / middle-click can open Books in a new tab.
 
 #### 2. Filter Chips
 
@@ -198,7 +199,8 @@ Note: When any filter chip or label is active, the author list shows only author
 #### 3. Results Display
 
 **Books Section**:
-- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, Library name, Publication year, LOC number
+- Table showing matching books with a Cover thumbnail (same `CoverThumbnail` as the Books table: 70px, `firstPhotoId` / `firstPhotoChecksum`, placeholder dash when no photo) plus Title, Author name, and a third line for reading difficulty (`data-test="book-result-reading-difficulty-{id}"`; blank values show Unset)
+- Year, publisher, and branch sit under the difficulty line (`data-test="book-result-meta-{id}"`) and are hidden on phone widths (`hidden sm:flex`). LOC number stays visible on all sizes.
 - Cover links open `/photos/{id}` in a new tab (`data-test="book-result-cover-{id}"`)
 - Book count and pagination controls
 - "No books found" message when empty
@@ -284,7 +286,8 @@ Playwright UI test coverage:
 - `testClearSearch()` - Query field is `type="search"` (native (x)); no Clear button
 - `testSearchButtonAlwaysEnabled()` - Button enabled with empty, filled, or cleared input
 - `testBlankSearchReturnsResults()` - Clicking search with empty input returns all books
-- `testBookResultDetails()` - Book details displayed correctly
+- `testBookResultDetails()` - Book details displayed correctly, including reading difficulty and year/publisher/branch on desktop
+- `testBookResultHidesYearPublisherBranchOnPhone()` - Phone results keep title, author, and difficulty but hide year, publisher, and branch
 - `testBookResultsShowCoverThumbnails()` - Book results with photos show the same cover thumbnail as the Books table
 - `testBookResultsShowCoverPlaceholderWhenNoPhoto()` - Books without photos show a dash placeholder
 - `testAuthorResultsShowPhotoThumbnails()` - Author results with photos show a thumbnail
