@@ -104,6 +104,29 @@ public class AppConfig {
     }
 
     /**
+     * RestTemplate for the ACLA (Allegheny County Library Association) BiblioCommons
+     * availability lookup. Uses a moderate timeout since the lookup runs synchronously per book.
+     */
+    @Bean("aclaRestTemplate")
+    public RestTemplate aclaRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000); // 15 seconds
+        factory.setReadTimeout(15000); // 15 seconds
+        restTemplate.setRequestFactory(factory);
+
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            request.getHeaders().set("Accept", "application/json");
+            request.getHeaders().set("Referer", "https://acl.bibliocommons.com/");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+
+        return restTemplate;
+    }
+
+    /**
      * RestTemplate for AbeBooks used-book price lookup. Browser-like User-Agent
      * reduces empty/blocked SearchResults pages.
      */

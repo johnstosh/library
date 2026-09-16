@@ -124,12 +124,16 @@ public class AuthorsUITest {
 
         assertThat(page.locator("[data-test='author-filter-ydl']")).isVisible();
         assertThat(page.locator("[data-test='author-filter-emu']")).isVisible();
+        assertThat(page.locator("[data-test='author-filter-acla']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-ydl-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         // Recent Arrivals starts on (faster /authors/most-recent-day backend).

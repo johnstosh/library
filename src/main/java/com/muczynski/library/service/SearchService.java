@@ -77,6 +77,9 @@ public class SearchService {
      * @param filterEmuAudio limit to books with EMU audio
      * @param filterEmuBook limit to books with EMU paper
      * @param filterEmuEbook limit to books with EMU ebook
+     * @param filterAclaAudio limit to books with ACLA audio
+     * @param filterAclaBook limit to books with ACLA paper
+     * @param filterAclaEbook limit to books with ACLA ebook
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      * @param statusFilters   selected status-filter values; a book matches ANY of them (OR).
      *                        null/empty falls back to the legacy boolean flags, then the default hide.
@@ -93,6 +96,7 @@ public class SearchService {
             boolean filterWithoutFreeTextUrls,
             boolean filterYdlAudio, boolean filterYdlBook, boolean filterYdlEbook,
             boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
+            boolean filterAclaAudio, boolean filterAclaBook, boolean filterAclaEbook,
             boolean filterWithGrokipedia,
             List<String> labels,
             List<BookStatusFilter> statusFilters,
@@ -158,6 +162,7 @@ public class SearchService {
                     filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
+                    filterAclaAudio, filterAclaBook, filterAclaEbook,
                     filterWithGrokipedia,
                     labels, labelCount,
                     hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
@@ -172,6 +177,7 @@ public class SearchService {
                     filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
                     filterEmuAudio, filterEmuBook, filterEmuEbook,
+                    filterAclaAudio, filterAclaBook, filterAclaEbook,
                     filterWithGrokipedia,
                     hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
                     filterFavoriteBooks, favoriteBookIds,
@@ -187,6 +193,7 @@ public class SearchService {
                 || filterWithoutFreeTextUrls
                 || filterYdlAudio || filterYdlBook || filterYdlEbook
                 || filterEmuAudio || filterEmuBook || filterEmuEbook
+                || filterAclaAudio || filterAclaBook || filterAclaEbook
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {
@@ -199,6 +206,7 @@ public class SearchService {
                         filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
+                        filterAclaAudio, filterAclaBook, filterAclaEbook,
                         filterWithGrokipedia,
                         labels, labelCount,
                         hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
@@ -213,6 +221,7 @@ public class SearchService {
                         filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
                         filterEmuAudio, filterEmuBook, filterEmuEbook,
+                        filterAclaAudio, filterAclaBook, filterAclaEbook,
                         filterWithGrokipedia,
                         hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
                         filterFavoriteBooks, favoriteBookIds, filterFavoriteAuthors, favoriteAuthorIds,

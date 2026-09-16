@@ -357,6 +357,34 @@ Fills reading difficulty on selected books using Grok AI. The frontend sends up 
 - Grok is asked for a JSON array of candidate difficulty keys per book (most appropriate first); the first assignable key is stored
 - Valid keys: `children`, `accessible`, `moderate`, `demanding`, `advanced`
 - On success, `updatedBook` is returned so the frontend can seed its cache without a follow-up fetch
+
+---
+
+## POST /api/acla-lookup/lookup/{bookId}
+Looks up paper/ebook/audio holdings for one book at the Allegheny County Library Association catalog (`acl.bibliocommons.com`) and stores the result on the book.
+
+**Authentication:** Public (`permitAll`)
+
+**Path Parameters:**
+- `bookId` - Book ID to look up
+
+**Response:** `AclaLookupResultDto`
+```json
+{
+  "bookId": 1,
+  "success": true,
+  "audioAvailable": true,
+  "paperAvailable": true,
+  "ebookAvailable": false,
+  "matchedTitle": "Pride and Prejudice"
+}
+```
+
+**Behavior:**
+- Temporary date-format titles are skipped (`Not Ready - Temporary title`)
+- Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
+- A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
+- Same pattern as `/api/ydl-lookup/lookup/{bookId}` and `/api/emu-lookup/lookup/{bookId}`
 - User must have an xAI API key configured
 
 **Use Case:**

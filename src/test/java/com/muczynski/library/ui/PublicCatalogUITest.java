@@ -96,10 +96,13 @@ public class PublicCatalogUITest {
         assertThat(page.locator("[data-test='back-to-search']")).isVisible();
         assertThat(page.locator("[data-test='book-view-ydl-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-acla-lookup']")).isVisible();
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='acla-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Unknown");
         assertThat(page.locator("[data-test='emu-audio-status']")).containsText("Unknown");
+        assertThat(page.locator("[data-test='acla-audio-status']")).containsText("Unknown");
     }
 
     @Test

@@ -30,3 +30,8 @@ export function emuCatalogSearchUrl(title: string): string {
   const queryTitle = stripCopySuffix(title)
   return `https://emich.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${queryTitle}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01EMU_INST:EMU`
 }
+
+export function aclaCatalogSearchUrl(title: string): string {
+  const queryTitle = stripCopySuffix(title)
+  return `https://acl.bibliocommons.com/v2/search?query=${encodeURIComponent(`"${queryTitle}"`)}&searchType=smart`
+}

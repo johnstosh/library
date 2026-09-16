@@ -147,7 +147,7 @@ public class AuthorController {
     }
 
     /**
-     * Per-author YDL/EMU holdings (book/ebook/audio) rolled up from books.
+     * Per-author YDL/EMU/ACLA holdings (book/ebook/audio) rolled up from books.
      * Used by the Authors page filter chips. Separate from author lastModified caching
      * so lookups that change book flags show up without bumping the author row.
      */
@@ -158,7 +158,7 @@ public class AuthorController {
             List<AuthorAvailabilityDto> availability = authorService.getAuthorAvailability();
             return ResponseEntity.ok(availability);
         } catch (Exception e) {
-            logger.warn("Failed to retrieve author YDL/EMU availability: {}", e.getMessage(), e);
+            logger.warn("Failed to retrieve author YDL/EMU/ACLA availability: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }

@@ -57,6 +57,12 @@ public class BookDto {
     private LocalDateTime emuLastChecked;
     private String emuLookupError;
 
+    private Boolean aclaAudioAvailable;
+    private Boolean aclaPaperAvailable;
+    private Boolean aclaEbookAvailable;
+    private LocalDateTime aclaLastChecked;
+    private String aclaLookupError;
+
     /**
      * Reading difficulty level. Uses enum keys in JSON (children, accessible, etc.).
      * Frontend displays short patron-facing labels.

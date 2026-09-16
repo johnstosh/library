@@ -24,14 +24,16 @@ import { useLookupSingleBookGrokipedia, type GrokipediaLookupResultDto } from '@
 import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
+import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
-import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookStatus, ReadingDifficulty } from '@/types/enums'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
+import { AclaIcon } from '@/components/ui/Icons'
 import { IconButton } from '@/components/ui/IconButton'
 import { AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 
@@ -82,6 +84,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     emuAudioAvailable: false,
     emuPaperAvailable: false,
     emuEbookAvailable: false,
+    aclaAudioAvailable: false,
+    aclaPaperAvailable: false,
+    aclaEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
     desireToPurchase: null as number | null,
   })
@@ -120,6 +125,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupGenres = useLookupGenres()
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
+  const lookupAcla = useLookupSingleAcla()
 
   useEffect(() => {
     if (book) {
@@ -147,6 +153,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: book.emuAudioAvailable ?? false,
         emuPaperAvailable: book.emuPaperAvailable ?? false,
         emuEbookAvailable: book.emuEbookAvailable ?? false,
+        aclaAudioAvailable: book.aclaAudioAvailable ?? false,
+        aclaPaperAvailable: book.aclaPaperAvailable ?? false,
+        aclaEbookAvailable: book.aclaEbookAvailable ?? false,
         readingDifficulty: book.readingDifficulty ?? ReadingDifficulty.UNSET,
         desireToPurchase: book.desireToPurchase ?? null,
       })
@@ -177,6 +186,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: false,
         emuPaperAvailable: false,
         emuEbookAvailable: false,
+        aclaAudioAvailable: false,
+        aclaPaperAvailable: false,
+        aclaEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
     desireToPurchase: null as number | null,
       }))
@@ -303,6 +315,36 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up EMU availability')
+    }
+  }
+
+  const handleLookupAcla = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupAcla.mutateAsync(book.id)
+      // The backend returns definite true/false availability whenever it completed a search
+      // (whether or not a match was found) - only omits them on a hard error (network failure,
+      // temporary title) where availability is genuinely unknown and shouldn't be touched.
+      if (typeof result.audioAvailable === 'boolean') {
+        setFormData({
+          ...formData,
+          aclaAudioAvailable: result.audioAvailable,
+          aclaPaperAvailable: result.paperAvailable ?? false,
+          aclaEbookAvailable: result.ebookAvailable ?? false,
+        })
+        setHasUnsavedChanges(true)
+      }
+      if (result.success) {
+        setSuccessMessage(`ACLA availability updated for "${result.matchedTitle}"`)
+      } else {
+        setError(result.errorMessage || 'Not held by ACLA')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up ACLA availability')
     }
   }
 
@@ -462,6 +504,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        aclaAudioAvailable: formData.aclaAudioAvailable,
+        aclaPaperAvailable: formData.aclaPaperAvailable,
+        aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         desireToPurchase: formData.desireToPurchase,
       })
@@ -505,6 +550,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        aclaAudioAvailable: formData.aclaAudioAvailable,
+        aclaPaperAvailable: formData.aclaPaperAvailable,
+        aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         desireToPurchase: formData.desireToPurchase,
       })
@@ -582,6 +630,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        aclaAudioAvailable: formData.aclaAudioAvailable,
+        aclaPaperAvailable: formData.aclaPaperAvailable,
+        aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         desireToPurchase: formData.desireToPurchase,
       })
@@ -649,6 +700,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         emuAudioAvailable: formData.emuAudioAvailable,
         emuPaperAvailable: formData.emuPaperAvailable,
         emuEbookAvailable: formData.emuEbookAvailable,
+        aclaAudioAvailable: formData.aclaAudioAvailable,
+        aclaPaperAvailable: formData.aclaPaperAvailable,
+        aclaEbookAvailable: formData.aclaEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         desireToPurchase: formData.desireToPurchase,
         authorId: parseInt(formData.authorId),
@@ -702,7 +756,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
-    lookupYdl.isPending || lookupEmu.isPending || lookupLoc.isPending
+    lookupYdl.isPending || lookupEmu.isPending || lookupAcla.isPending || lookupLoc.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -868,6 +922,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-lookup-emu"
             >
               Lookup EMU Availability
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupAcla}
+              isLoading={lookupAcla.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<AclaIcon />}
+              data-test="book-operation-lookup-acla"
+            >
+              Lookup ACLA Availability
             </Button>
             <Button
               type="button"
@@ -1257,6 +1323,94 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           {book?.emuLookupError && (
             <p className="text-xs text-red-600 mt-1" data-test="book-emu-lookup-error">
               {book.emuLookupError}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">ACLA Availability</p>
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={aclaCatalogSearchUrl(formData.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-800 underline text-sm"
+                  data-test="book-form-acla-check-link"
+                >
+                  Go to ACLA
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupAcla}
+                  isLoading={lookupAcla.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<AclaIcon />}
+                  data-test="book-field-lookup-acla"
+                >
+                  {book?.aclaLastChecked ? 'Retry ACLA Lookup' : 'Lookup ACLA Availability'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="aclaAudioAvailable"
+                checked={formData.aclaAudioAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, aclaAudioAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-acla-audio-available"
+              />
+              <label htmlFor="aclaAudioAvailable" className="text-sm text-gray-700">
+                Audio Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="aclaPaperAvailable"
+                checked={formData.aclaPaperAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, aclaPaperAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-acla-paper-available"
+              />
+              <label htmlFor="aclaPaperAvailable" className="text-sm text-gray-700">
+                Paper Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="aclaEbookAvailable"
+                checked={formData.aclaEbookAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, aclaEbookAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-acla-ebook-available"
+              />
+              <label htmlFor="aclaEbookAvailable" className="text-sm text-gray-700">
+                Ebook
+              </label>
+            </div>
+          </div>
+          {book?.aclaLookupError && (
+            <p className="text-xs text-red-600 mt-1" data-test="book-acla-lookup-error">
+              {book.aclaLookupError}
             </p>
           )}
         </div>

@@ -6,9 +6,10 @@ import { useBook, useCloneBook, useDeleteBook } from '@/api/books'
 import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
+import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
 import { formatBookLabel } from './components/BookLabelFilters'
-import { emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle, PiBookOpen } from 'react-icons/pi'
@@ -57,6 +58,7 @@ export function BookViewPage() {
   const deleteBook = useDeleteBook()
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
+  const lookupAcla = useLookupSingleAcla()
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = useIsAuthenticated()
   const currentUser = useAuthStore((state) => state.user)
@@ -79,6 +81,14 @@ export function BookViewPage() {
       await lookupEmu.mutateAsync(bookId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up EMU availability')
+    }
+  }
+
+  const handleAclaLookup = async () => {
+    try {
+      await lookupAcla.mutateAsync(bookId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up ACLA availability')
     }
   }
 
@@ -483,6 +493,63 @@ export function BookViewPage() {
             {book.emuLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="emu-lookup-error">
                 {book.emuLookupError}
+              </p>
+            )}
+          </div>
+
+          {/* ACLA Availability */}
+          <div className="bg-gray-50 rounded-lg p-6" data-test="acla-availability-section">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">ACLA Availability</h2>
+              <div className="flex items-center gap-3">
+                <a
+                  href={aclaCatalogSearchUrl(book.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
+                  data-test="book-view-acla-check-link"
+                >
+                  Go to ACLA
+                </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAclaLookup}
+                  isLoading={lookupAcla.isPending}
+                  disabled={lookupAcla.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-acla-lookup"
+                >
+                  {book.aclaLastChecked ? 'Retry ACLA Lookup' : 'Lookup ACLA Availability'}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div data-test="acla-audio-status">
+                <p className="text-sm font-medium text-gray-500">Audio Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.aclaAudioAvailable)}
+                </p>
+              </div>
+              <div data-test="acla-paper-status">
+                <p className="text-sm font-medium text-gray-500">Paper Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.aclaPaperAvailable)}
+                </p>
+              </div>
+              <div data-test="acla-ebook-status">
+                <p className="text-sm font-medium text-gray-500">Ebook</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.aclaEbookAvailable)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3" data-test="acla-last-checked">
+              Last checked: {book.aclaLastChecked ? formatDateTime(book.aclaLastChecked) : 'never'}
+            </p>
+            {book.aclaLookupError && (
+              <p className="text-xs text-red-600 mt-1" data-test="acla-lookup-error">
+                {book.aclaLookupError}
               </p>
             )}
           </div>

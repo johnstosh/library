@@ -422,7 +422,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_Success() {
         BookAvailabilityStatsDto stats = new BookAvailabilityStatsDto(
-            3L, 8L, 7L, 2L, 1L, 9L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L
+            3L, 8L, 7L, 2L, 1L, 9L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L, 4L, 2L, 1L, 1L
         );
         when(importService.getAvailabilityStats()).thenReturn(stats);
 
@@ -446,7 +446,11 @@ class ImportControllerTest {
             .body("availableAtEmu", equalTo(6))
             .body("emuPaper", equalTo(3))
             .body("emuEbook", equalTo(2))
-            .body("emuAudio", equalTo(1));
+            .body("emuAudio", equalTo(1))
+            .body("availableAtAcla", equalTo(4))
+            .body("aclaPaper", equalTo(2))
+            .body("aclaEbook", equalTo(1))
+            .body("aclaAudio", equalTo(1));
     }
 
     @Test
@@ -462,7 +466,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_HasAllFields() {
         when(importService.getAvailabilityStats()).thenReturn(
-            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         );
 
         given()
@@ -485,6 +489,10 @@ class ImportControllerTest {
             .body("availableAtEmu", notNullValue())
             .body("emuPaper", notNullValue())
             .body("emuEbook", notNullValue())
-            .body("emuAudio", notNullValue());
+            .body("emuAudio", notNullValue())
+            .body("availableAtAcla", notNullValue())
+            .body("aclaPaper", notNullValue())
+            .body("aclaEbook", notNullValue())
+            .body("aclaAudio", notNullValue());
     }
 }

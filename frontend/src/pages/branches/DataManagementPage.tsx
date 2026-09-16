@@ -53,6 +53,10 @@ const AVAILABILITY_COUNT_ITEMS: {
   { key: 'emuPaper', label: 'EMU paper', test: 'availability-count-emu-paper' },
   { key: 'emuEbook', label: 'EMU ebook', test: 'availability-count-emu-ebook' },
   { key: 'emuAudio', label: 'EMU audio', test: 'availability-count-emu-audio' },
+  { key: 'availableAtAcla', label: 'Available at ACLA', test: 'availability-count-acla' },
+  { key: 'aclaPaper', label: 'ACLA paper', test: 'availability-count-acla-paper' },
+  { key: 'aclaEbook', label: 'ACLA ebook', test: 'availability-count-acla-ebook' },
+  { key: 'aclaAudio', label: 'ACLA audio', test: 'availability-count-acla-audio' },
 ]
 
 export function DataManagementPage() {

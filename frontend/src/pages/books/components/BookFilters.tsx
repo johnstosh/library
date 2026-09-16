@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import { FilterChip } from '@/components/ui/FilterChip'
-import { EmuIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, EmuIcon, YdlIcon } from '@/components/ui/Icons'
 
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ export function BookFilters({
   return (
     <div className="space-y-2">
       {showAvailabilityFilters && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           <AvailabilityGroup
             icon={<YdlIcon />}
             libraryAbbr="YDL"
@@ -125,6 +125,34 @@ export function BookFilters({
                 label: 'Ebook',
                 tooltip: 'Has EMU ebook — only books with an ebook held at EMU Halle Library',
                 dataTest: 'filter-has-emu-ebook',
+              },
+            ]}
+          />
+          <AvailabilityGroup
+            icon={<AclaIcon />}
+            libraryAbbr="ACLA"
+            libraryFull="Allegheny County Library Association"
+            dataTest="book-filter-acla"
+            chips={chips}
+            onToggle={onToggle}
+            items={[
+              {
+                chip: 'hasAclaAudio',
+                label: 'Audio',
+                tooltip: 'Has ACLA audio — only books with an audiobook held at Allegheny County Library Association',
+                dataTest: 'filter-has-acla-audio',
+              },
+              {
+                chip: 'hasAclaBook',
+                label: 'Book',
+                tooltip: 'Has ACLA book — only books with a physical copy held at Allegheny County Library Association',
+                dataTest: 'filter-has-acla-book',
+              },
+              {
+                chip: 'hasAclaEbook',
+                label: 'Ebook',
+                tooltip: 'Has ACLA ebook — only books with an ebook held at Allegheny County Library Association',
+                dataTest: 'filter-has-acla-ebook',
               },
             ]}
           />

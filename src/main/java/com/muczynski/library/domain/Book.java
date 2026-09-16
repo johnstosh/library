@@ -29,7 +29,7 @@ public class Book {
 
     /**
      * Trailing copy-number suffix our catalog appends to disambiguate duplicate
-     * titles, e.g. ", c. 2", ", c.2", ", c 3". External catalogs (YDL, EMU) do
+     * titles, e.g. ", c. 2", ", c.2", ", c 3". External catalogs (YDL, EMU, ACLA) do
      * not carry this suffix on their titles.
      */
     private static final Pattern COPY_SUFFIX_PATTERN =
@@ -93,6 +93,14 @@ public class Book {
     private LocalDateTime emuLastChecked;
 
     private String emuLookupError;
+
+    private Boolean aclaAudioAvailable;
+    private Boolean aclaPaperAvailable;
+    private Boolean aclaEbookAvailable;
+
+    private LocalDateTime aclaLastChecked;
+
+    private String aclaLookupError;
 
 
     @Convert(converter = ReadingDifficultyConverter.class)

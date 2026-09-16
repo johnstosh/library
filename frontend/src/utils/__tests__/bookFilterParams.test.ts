@@ -24,6 +24,7 @@ describe('isSearchVisibleChip', () => {
   it('keeps discovery chips and rejects cataloger chips', () => {
     expect(isSearchVisibleChip('freeText')).toBe(true)
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
+    expect(isSearchVisibleChip('hasAclaAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutLoc')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('withPrices')).toBe(false)

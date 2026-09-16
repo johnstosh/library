@@ -70,7 +70,7 @@ class SearchServiceTest {
             boolean inLib, boolean elec, boolean freeText, boolean audio, List<String> labels) {
         return searchService.search(query, page, page, size, inLib, elec, freeText, audio,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, labels, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, labels, null, null, null, null);
     }
 
     private void stubFindWithFilters(String query, boolean inLib, boolean elec, boolean freeText, boolean audio,
@@ -80,6 +80,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -94,6 +95,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -438,6 +440,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(labels), eq(2L),
                 eq(false), anyList(), eq(false),
@@ -449,6 +452,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(labels), eq(2L),
                 eq(false), anyList(), eq(false),
@@ -476,6 +480,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(labels), eq(1L),
                 eq(false), anyList(), eq(false),
@@ -487,6 +492,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(labels), eq(1L),
                 eq(false), anyList(), eq(false),
@@ -530,13 +536,14 @@ class SearchServiceTest {
 
         searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         verify(bookRepository).findWithFilters(
                 eq(query), eq(false), eq(false), eq(false), eq(false),
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -554,6 +561,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(true), eq(true), eq(true), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -564,6 +572,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(true), eq(true), eq(true), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -572,7 +581,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, true, false,
-                false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -580,6 +589,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(true), eq(true), eq(true), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -589,6 +599,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(true), eq(true), eq(true), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -611,6 +622,7 @@ class SearchServiceTest {
                 eq(true), eq(expectedCutoff), eq(tempIds),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -621,6 +633,7 @@ class SearchServiceTest {
                 eq(true), eq(expectedCutoff), eq(tempIds),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -629,7 +642,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 true, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -637,6 +650,7 @@ class SearchServiceTest {
                 eq(true), eq(expectedCutoff), eq(tempIds),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -654,6 +668,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -664,6 +679,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -672,7 +688,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, true, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -680,6 +696,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -698,6 +715,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
                 eq(false), anyList(),
@@ -708,6 +726,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
                 eq(false), anyList(), eq(false), anyList(),
@@ -716,7 +735,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, null, difficulties, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, null, difficulties, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -724,6 +743,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
                 eq(false), anyList(),
@@ -733,6 +753,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(true), eq(difficulties), eq(true),
                 eq(false), anyList(), eq(false), anyList(),
@@ -752,6 +773,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),
@@ -762,6 +784,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(), eq(false), anyList(),
@@ -770,7 +793,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, null, statuses, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, null, statuses, null, null, null);
 
         assertNotNull(result);
         verify(bookRepository).findWithFilters(
@@ -778,6 +801,7 @@ class SearchServiceTest {
                 eq(false), any(), anyList(),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),
+                eq(false), eq(false), eq(false),
                 eq(false),
                 eq(false), anyList(), eq(false),
                 eq(false), anyList(),

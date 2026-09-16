@@ -15,6 +15,7 @@ import { useLookupBulkBooksGrokipediaWithProgress, type GrokipediaLookupResultDt
 import { useLookupBulkFreeTextWithProgress, type FreeTextLookupResultDto } from '@/api/free-text-lookup'
 import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl-lookup'
 import { useLookupBulkEmuWithProgress, type EmuLookupResultDto } from '@/api/emu-lookup'
+import { useLookupBulkAclaWithProgress, type AclaLookupResultDto } from '@/api/acla-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useBranches } from '@/api/branches'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
@@ -25,13 +26,14 @@ import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { ReadingDifficultyLookupResultsModal } from './ReadingDifficultyLookupResultsModal'
 import { YdlLookupResultsModal } from './YdlLookupResultsModal'
 import { EmuLookupResultsModal } from './EmuLookupResultsModal'
+import { AclaLookupResultsModal } from './AclaLookupResultsModal'
 import { useLookupBulkPricesWithProgress } from '@/api/prices'
 import { PriceLookupResultsModal } from '@/pages/prices/components/PriceLookupResultsModal'
 import { PiFilePdf } from 'react-icons/pi'
 import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { PiCurrencyDollar } from 'react-icons/pi'
-import { AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
 import type { BookPriceLookupResultDto, BulkDeleteResultDto, GenreLookupResultDto, ReadingDifficultyLookupResultDto } from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
@@ -85,6 +87,9 @@ export function BulkActionsToolbar({
   const [showEmuResults, setShowEmuResults] = useState(false)
   const [emuResults, setEmuResults] = useState<EmuLookupResultDto[]>([])
   const [emuProgress, setEmuProgress] = useState(0)
+  const [showAclaResults, setShowAclaResults] = useState(false)
+  const [aclaResults, setAclaResults] = useState<AclaLookupResultDto[]>([])
+  const [aclaProgress, setAclaProgress] = useState(0)
   const [showReadingDifficultyResults, setShowReadingDifficultyResults] = useState(false)
   const [readingDifficultyResults, setReadingDifficultyResults] = useState<ReadingDifficultyLookupResultDto[]>([])
   const [readingDifficultyProgress, setReadingDifficultyProgress] = useState(0)
@@ -116,6 +121,9 @@ export function BulkActionsToolbar({
   })
   const lookupEmu = useLookupBulkEmuWithProgress((completed) => {
     setEmuProgress(completed)
+  })
+  const lookupAcla = useLookupBulkAclaWithProgress((completed) => {
+    setAclaProgress(completed)
   })
   const lookupReadingDifficulty = useLookupBulkReadingDifficultyWithProgress((completed) => {
     setReadingDifficultyProgress(completed)
@@ -253,6 +261,18 @@ export function BulkActionsToolbar({
     } catch (error) {
       console.error('Failed to lookup EMU availability:', error)
       toast.error('Failed to lookup EMU availability')
+    }
+  }
+
+  const handleAclaLookup = async () => {
+    setAclaProgress(0)
+    try {
+      const results = await lookupAcla.mutateAsync(Array.from(selectedIds))
+      setAclaResults(results)
+      setShowAclaResults(true)
+    } catch (error) {
+      console.error('Failed to lookup ACLA availability:', error)
+      toast.error('Failed to lookup ACLA availability')
     }
   }
 
@@ -477,6 +497,23 @@ export function BulkActionsToolbar({
               )}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAclaLookup}
+              isLoading={lookupAcla.isPending}
+              disabled={lookupAcla.isPending}
+              leftIcon={<AclaIcon />}
+              data-test="bulk-lookup-acla"
+            >
+              {progressLabel(
+                'Lookup ACLA Availability',
+                'Checking ACLA...',
+                lookupAcla.isPending,
+                aclaProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -548,6 +585,12 @@ export function BulkActionsToolbar({
         isOpen={showEmuResults}
         onClose={() => setShowEmuResults(false)}
         results={emuResults}
+      />
+
+      <AclaLookupResultsModal
+        isOpen={showAclaResults}
+        onClose={() => setShowAclaResults(false)}
+        results={aclaResults}
       />
 
       <PriceLookupResultsModal

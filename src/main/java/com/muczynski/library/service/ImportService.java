@@ -350,7 +350,7 @@ public class ImportService {
                 if (bDto.getTagsList() != null) {
                     book.setTagsList(bDto.getTagsList());
                 }
-                // YDL/EMU fields: only set when present in the import payload.
+                // YDL/EMU/ACLA fields: only set when present in the import payload.
                 // Absence (older dumps) preserves existing entity values (merge-friendly).
                 if (bDto.getYdlAudioAvailable() != null) {
                     book.setYdlAudioAvailable(bDto.getYdlAudioAvailable());
@@ -381,6 +381,21 @@ public class ImportService {
                 }
                 if (bDto.getEmuLookupError() != null) {
                     book.setEmuLookupError(bDto.getEmuLookupError());
+                }
+                if (bDto.getAclaAudioAvailable() != null) {
+                    book.setAclaAudioAvailable(bDto.getAclaAudioAvailable());
+                }
+                if (bDto.getAclaPaperAvailable() != null) {
+                    book.setAclaPaperAvailable(bDto.getAclaPaperAvailable());
+                }
+                if (bDto.getAclaEbookAvailable() != null) {
+                    book.setAclaEbookAvailable(bDto.getAclaEbookAvailable());
+                }
+                if (bDto.getAclaLastChecked() != null) {
+                    book.setAclaLastChecked(bDto.getAclaLastChecked());
+                }
+                if (bDto.getAclaLookupError() != null) {
+                    book.setAclaLookupError(bDto.getAclaLookupError());
                 }
                 // readingDifficulty: use provided value or default to UNSET (legacy books)
                 book.setReadingDifficulty(bDto.getReadingDifficulty() != null ? bDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
@@ -790,6 +805,11 @@ public class ImportService {
             bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
             bDto.setEmuLastChecked(book.getEmuLastChecked());
             bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
+            bDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
+            bDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
+            bDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
+            bDto.setAclaLastChecked(book.getAclaLastChecked());
+            bDto.setAclaLookupError(emptyToNull(book.getAclaLookupError()));
             bDto.setReadingDifficulty(book.getReadingDifficulty());
             bDto.setDesireToPurchase(book.getDesireToPurchase());
             bookDtos.add(bDto);
@@ -977,7 +997,11 @@ public class ImportService {
             bookRepository.countAvailableAtEmu(),
             bookRepository.countByEmuPaperAvailableTrue(),
             bookRepository.countByEmuEbookAvailableTrue(),
-            bookRepository.countByEmuAudioAvailableTrue()
+            bookRepository.countByEmuAudioAvailableTrue(),
+            bookRepository.countAvailableAtAcla(),
+            bookRepository.countByAclaPaperAvailableTrue(),
+            bookRepository.countByAclaEbookAvailableTrue(),
+            bookRepository.countByAclaAudioAvailableTrue()
         );
     }
 }

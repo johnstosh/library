@@ -29,6 +29,9 @@ Returns search results for books and authors matching the query.
 - `filterEmuAudio` (boolean, optional, default `false`) - Books with EMU audio
 - `filterEmuBook` (boolean, optional, default `false`) - Books with EMU paper
 - `filterEmuEbook` (boolean, optional, default `false`) - Books with EMU ebook
+- `filterAclaAudio` (boolean, optional, default `false`) - Books with ACLA audio
+- `filterAclaBook` (boolean, optional, default `false`) - Books with ACLA paper
+- `filterAclaEbook` (boolean, optional, default `false`) - Books with ACLA ebook
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values

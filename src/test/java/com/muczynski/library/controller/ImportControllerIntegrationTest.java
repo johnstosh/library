@@ -338,6 +338,11 @@ class ImportControllerIntegrationTest {
         testBook.setEmuEbookAvailable(true);
         testBook.setEmuLastChecked(LocalDateTime.of(2025, 6, 2, 9, 30));
         testBook.setEmuLookupError(null);
+        testBook.setAclaAudioAvailable(true);
+        testBook.setAclaPaperAvailable(false);
+        testBook.setAclaEbookAvailable(true);
+        testBook.setAclaLastChecked(LocalDateTime.of(2025, 6, 3, 8, 0));
+        testBook.setAclaLookupError("acla-timeout");
         bookRepository.save(testBook);
 
         mockMvc.perform(get("/api/import/json"))
@@ -352,7 +357,12 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLastChecked", hasItem("2025-06-02T09:30:00")))
                 // emuPaperAvailable null should be omitted (NON_NULL on DTO container); emuLookupError null omitted
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuPaperAvailable").doesNotExist())
-                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLookupError").doesNotExist());
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuLookupError").doesNotExist())
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].aclaAudioAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].aclaPaperAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].aclaEbookAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].aclaLastChecked", hasItem("2025-06-03T08:00:00")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].aclaLookupError", hasItem("acla-timeout")));
     }
 
     // ==================== GET /api/import/stats Integration Tests ====================
@@ -645,7 +655,11 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.availableAtEmu").exists())
                 .andExpect(jsonPath("$.emuPaper").exists())
                 .andExpect(jsonPath("$.emuEbook").exists())
-                .andExpect(jsonPath("$.emuAudio").exists());
+                .andExpect(jsonPath("$.emuAudio").exists())
+                .andExpect(jsonPath("$.availableAtAcla").exists())
+                .andExpect(jsonPath("$.aclaPaper").exists())
+                .andExpect(jsonPath("$.aclaEbook").exists())
+                .andExpect(jsonPath("$.aclaAudio").exists());
 
         String beforeJson = mockMvc.perform(get("/api/import/availability-stats"))
                 .andReturn().getResponse().getContentAsString();
@@ -672,6 +686,9 @@ class ImportControllerIntegrationTest {
         ydlEmu.setEmuAudioAvailable(true);
         ydlEmu.setEmuPaperAvailable(false);
         ydlEmu.setEmuEbookAvailable(null);
+        ydlEmu.setAclaPaperAvailable(true);
+        ydlEmu.setAclaEbookAvailable(false);
+        ydlEmu.setAclaAudioAvailable(true);
         ydlEmu.setFreeTextUrl("https://librivox.org/city-of-god");
         ydlEmu.setLibrary(testLibrary);
         bookRepository.save(ydlEmu);
@@ -719,7 +736,11 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.availableAtEmu", equalTo(before.get("availableAtEmu").asInt() + 1)))
                 .andExpect(jsonPath("$.emuPaper", equalTo(before.get("emuPaper").asInt())))
                 .andExpect(jsonPath("$.emuEbook", equalTo(before.get("emuEbook").asInt())))
-                .andExpect(jsonPath("$.emuAudio", equalTo(before.get("emuAudio").asInt() + 1)));
+                .andExpect(jsonPath("$.emuAudio", equalTo(before.get("emuAudio").asInt() + 1)))
+                .andExpect(jsonPath("$.availableAtAcla", equalTo(before.get("availableAtAcla").asInt() + 1)))
+                .andExpect(jsonPath("$.aclaPaper", equalTo(before.get("aclaPaper").asInt() + 1)))
+                .andExpect(jsonPath("$.aclaEbook", equalTo(before.get("aclaEbook").asInt())))
+                .andExpect(jsonPath("$.aclaAudio", equalTo(before.get("aclaAudio").asInt() + 1)));
     }
 
     @Test
@@ -744,6 +765,11 @@ class ImportControllerIntegrationTest {
         testBook.setEmuEbookAvailable(false);
         testBook.setEmuLastChecked(LocalDateTime.of(2025, 8, 2, 14, 45));
         testBook.setEmuLookupError("emu-404");
+        testBook.setAclaAudioAvailable(true);
+        testBook.setAclaPaperAvailable(true);
+        testBook.setAclaEbookAvailable(false);
+        testBook.setAclaLastChecked(LocalDateTime.of(2025, 8, 3, 11, 0));
+        testBook.setAclaLookupError("acla-slow");
         bookRepository.save(testBook);
 
         // Export the data
@@ -763,6 +789,11 @@ class ImportControllerIntegrationTest {
         reloaded.setEmuEbookAvailable(null);
         reloaded.setEmuLastChecked(null);
         reloaded.setEmuLookupError(null);
+        reloaded.setAclaAudioAvailable(null);
+        reloaded.setAclaPaperAvailable(null);
+        reloaded.setAclaEbookAvailable(null);
+        reloaded.setAclaLastChecked(null);
+        reloaded.setAclaLookupError(null);
         bookRepository.save(reloaded);
 
         // Import the previously exported JSON (round-trip)
@@ -783,6 +814,11 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(afterImport.getEmuEbookAvailable()), "emuEbookAvailable should be restored");
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 2, 14, 45), afterImport.getEmuLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("emu-404", afterImport.getEmuLookupError());
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getAclaAudioAvailable()), "aclaAudioAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getAclaPaperAvailable()), "aclaPaperAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(afterImport.getAclaEbookAvailable()), "aclaEbookAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 3, 11, 0), afterImport.getAclaLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("acla-slow", afterImport.getAclaLookupError());
     }
 
     @Test
@@ -799,6 +835,11 @@ class ImportControllerIntegrationTest {
         testBook.setEmuEbookAvailable(true);
         testBook.setEmuLastChecked(LocalDateTime.of(2025, 7, 11, 12, 30));
         testBook.setEmuLookupError("old-emu-err");
+        testBook.setAclaAudioAvailable(true);
+        testBook.setAclaPaperAvailable(false);
+        testBook.setAclaEbookAvailable(true);
+        testBook.setAclaLastChecked(LocalDateTime.of(2025, 7, 12, 8, 15));
+        testBook.setAclaLookupError("old-acla-err");
         bookRepository.save(testBook);
 
         // Import JSON that does NOT include YDL/EMU fields at all (simulates older dump)
@@ -836,5 +877,10 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getEmuEbookAvailable()));
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 11, 12, 30), after.getEmuLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("old-emu-err", after.getEmuLookupError());
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getAclaAudioAvailable()));
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getAclaPaperAvailable()));
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getAclaEbookAvailable()));
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 12, 8, 15), after.getAclaLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("old-acla-err", after.getAclaLookupError());
     }
 }

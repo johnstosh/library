@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
 import { FilterChip } from '@/components/ui/FilterChip'
-import { EmuIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, EmuIcon, YdlIcon } from '@/components/ui/Icons'
 
 interface AvailabilityGroupProps {
   icon: ReactNode
@@ -57,7 +57,7 @@ interface AuthorFiltersProps {
 export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: AuthorFiltersProps) {
   return (
     <div className="space-y-3" data-test="author-filter-chips">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         <AvailabilityGroup
           icon={<YdlIcon />}
           libraryAbbr="YDL"
@@ -111,6 +111,34 @@ export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: A
               label: 'Ebook',
               tooltip: 'Has EMU ebook — only authors with an ebook held at EMU Halle Library',
               dataTest: 'filter-has-emu-ebook',
+            },
+          ]}
+        />
+        <AvailabilityGroup
+          icon={<AclaIcon />}
+          libraryAbbr="ACLA"
+          libraryFull="Allegheny County Library Association"
+          dataTest="author-filter-acla"
+          chips={chips}
+          onToggle={onToggle}
+          items={[
+            {
+              chip: 'hasAclaAudio',
+              label: 'Audio',
+              tooltip: 'Has ACLA audio — only authors with an audiobook held at Allegheny County Library Association',
+              dataTest: 'filter-has-acla-audio',
+            },
+            {
+              chip: 'hasAclaBook',
+              label: 'Book',
+              tooltip: 'Has ACLA book — only authors with a physical book held at Allegheny County Library Association',
+              dataTest: 'filter-has-acla-book',
+            },
+            {
+              chip: 'hasAclaEbook',
+              label: 'Ebook',
+              tooltip: 'Has ACLA ebook — only authors with an ebook held at Allegheny County Library Association',
+              dataTest: 'filter-has-acla-ebook',
             },
           ]}
         />
