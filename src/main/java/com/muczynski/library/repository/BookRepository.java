@@ -225,10 +225,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * AND-combined chip predicates shared by book and author search queries.
      * Alias {@code b} is the Book. Status chips OR together: in-library and
      * electronic-resource are Active-only; when none are selected, WITHDRAWN
-     * and REQUESTED stay hidden.
+     * and REQUESTED stay hidden. When every status chip is selected, status is
+     * unconstrained so Active books with no call number (and not electronic)
+     * are not dropped.
      */
     String SEARCH_CHIP_PREDICATE =
-        "((:filterInLibrary = false AND :filterElectronic = false AND :filterStatusLost = false AND :filterStatusWithdrawn = false AND :filterStatusOnOrder = false AND :filterStatusRequested = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR " +
+        "((:filterInLibrary = true AND :filterElectronic = true AND :filterStatusLost = true AND :filterStatusWithdrawn = true AND :filterStatusOnOrder = true AND :filterStatusRequested = true) OR " +
+        "(:filterInLibrary = false AND :filterElectronic = false AND :filterStatusLost = false AND :filterStatusWithdrawn = false AND :filterStatusOnOrder = false AND :filterStatusRequested = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR " +
         "(:filterInLibrary = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.locNumber IS NOT NULL AND b.locNumber <> '') OR " +
         "(:filterElectronic = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.electronicResource = true) OR " +
         "(:filterStatusLost = true AND b.status = com.muczynski.library.domain.BookStatus.LOST) OR " +

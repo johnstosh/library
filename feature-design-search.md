@@ -63,7 +63,7 @@ Returns paginated search results for books and authors.
 - `filterFreeText` (boolean, optional, default `false`) - Limit books to those with a free online text URL (`freeTextUrl IS NOT NULL`)
 - `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
 - `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
-- `status` (string, optional, multi-value) - Limit books to those matching any listed status-filter key (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`). `in-library` and `electronic-resource` are Active-only. When omitted, WITHDRAWN and REQUESTED stay hidden.
+- `status` (string, optional, multi-value) - Limit books to those matching any listed status-filter key (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`). `in-library` and `electronic-resource` are Active-only. When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained (Active books with no call number and not electronic would otherwise match no chip).
 - `readingDifficulty` (string, optional, multi-value) - Limit books to those whose reading difficulty is any of the listed enum keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`). Null or blank stored values match `unset`.
 
 Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included. Selected status values and selected reading-difficulty values are each ORed with each other, then ANDed with the other filters.
@@ -142,7 +142,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
 - `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook` (boolean, optional) - Discovery chips
-- `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only). Legacy `inLib`/`elec`/`requestedStatus`/`notActiveStatus` still read.
+- `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only). Selecting every key leaves status unconstrained. Legacy `inLib`/`elec`/`requestedStatus`/`notActiveStatus` still read.
 - `labels` (string, optional) - Comma-separated genre tags (AND)
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.

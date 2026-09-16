@@ -35,7 +35,7 @@ Returns search results for books and authors matching the query.
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values
-- `status` (string, optional) - Comma-separated status-filter keys (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`); book must match ANY of them. `in-library` is Active with a LOC call number; `electronic-resource` is Active with `electronicResource = true`. When omitted, WITHDRAWN and REQUESTED stay hidden.
+- `status` (string, optional) - Comma-separated status-filter keys (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`); book must match ANY of them. `in-library` is Active with a LOC call number; `electronic-resource` is Active with `electronicResource = true`. When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained so Active books with no call number (and not electronic) are not dropped.
 
 All active boolean chips AND labels AND status (OR within that list) AND reading-difficulty (OR within that list) AND together. Conflicting chips may yield empty results.
 

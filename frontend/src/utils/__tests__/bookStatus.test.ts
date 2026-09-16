@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyBookStatusFilter,
+  areAllBookStatusFiltersSelected,
+  BOOK_STATUS_FILTER_VALUES,
   bookStatusesFromSearchParams,
   BookStatusFilter,
   matchesBookStatusFilter,
@@ -71,6 +73,17 @@ describe('matchesBookStatusFilter', () => {
     expect(matchesBookStatusFilter(requested, ['requested'])).toBe(true)
     expect(matchesBookStatusFilter(activeInLib, ['requested'])).toBe(false)
   })
+
+  it('when every status chip is selected, includes books that match no individual chip', () => {
+    const all = [...BOOK_STATUS_FILTER_VALUES]
+    expect(areAllBookStatusFiltersSelected(['in-library', 'lost'])).toBe(false)
+    expect(areAllBookStatusFiltersSelected(all)).toBe(true)
+    expect(areAllBookStatusFiltersSelected([...all, 'bogus'])).toBe(true)
+    expect(matchesBookStatusFilter(activeOther, all)).toBe(true)
+    expect(matchesBookStatusFilter(withdrawn, all)).toBe(true)
+    expect(matchesBookStatusFilter(requested, all)).toBe(true)
+    expect(matchesBookStatusFilter({ status: null }, all)).toBe(true)
+  })
 })
 
 describe('applyBookStatusFilter', () => {
@@ -86,5 +99,11 @@ describe('applyBookStatusFilter', () => {
     expect(
       applyBookStatusFilter(books, ['in-library', 'requested']).map((book) => book.id),
     ).toEqual([1, 4])
+    expect(
+      applyBookStatusFilter(
+        [...books, { id: 6, status: 'ACTIVE' }],
+        [...BOOK_STATUS_FILTER_VALUES],
+      ).map((book) => book.id),
+    ).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
