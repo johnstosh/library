@@ -61,10 +61,7 @@ public class BookMapper {
         bookDto.setAclaLookupError(book.getAclaLookupError());
         bookDto.setReadingDifficulty(book.getReadingDifficulty());
         bookDto.setDesireToPurchase(book.getDesireToPurchase());
-        if (book.getAuthor() != null) {
-            bookDto.setAuthorId(book.getAuthor().getId());
-            bookDto.setAuthor(book.getAuthor().getName()); // Set author name for display
-        }
+        copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
             bookDto.setLibrary(book.getLibrary().getBranchName()); // Set library branch name for display
@@ -127,10 +124,7 @@ public class BookMapper {
         bookDto.setAclaLookupError(book.getAclaLookupError());
         bookDto.setReadingDifficulty(book.getReadingDifficulty());
         bookDto.setDesireToPurchase(book.getDesireToPurchase());
-        if (book.getAuthor() != null) {
-            bookDto.setAuthorId(book.getAuthor().getId());
-            bookDto.setAuthor(book.getAuthor().getName());
-        }
+        copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
             bookDto.setLibrary(book.getLibrary().getBranchName());
@@ -217,5 +211,14 @@ public class BookMapper {
         summaryDto.setId(book.getId());
         summaryDto.setLastModified(book.getLastModified());
         return summaryDto;
+    }
+
+    private void copyAuthorDisplayFields(Book book, BookDto bookDto) {
+        if (book.getAuthor() == null) {
+            return;
+        }
+        bookDto.setAuthorId(book.getAuthor().getId());
+        bookDto.setAuthor(book.getAuthor().getName());
+        bookDto.setAuthorGrokipediaUrl(book.getAuthor().getGrokipediaUrl());
     }
 }

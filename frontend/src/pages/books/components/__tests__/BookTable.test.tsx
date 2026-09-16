@@ -23,6 +23,7 @@ const books: BookDto[] = [
     title: 'Summa Theologica',
     author: 'Thomas Aquinas',
     authorId: 1,
+    authorGrokipediaUrl: 'https://grokipedia.com/page/Thomas_Aquinas',
     status: 'ACTIVE',
     lastModified: '2026-01-01T00:00:00',
     readingDifficulty: 'demanding',
@@ -61,5 +62,13 @@ describe('BookTable title column', () => {
     expect(screen.getByTestId('book-author-link-1')).toHaveTextContent('Thomas Aquinas')
     expect(screen.getByTestId('book-reading-difficulty-1')).toHaveTextContent('Demanding')
     expect(screen.getByTestId('book-reading-difficulty-8')).toHaveTextContent('Unset')
+  })
+
+  it('shows a Grokipedia link next to the author when the author has a URL', () => {
+    renderTable()
+
+    const authorLink = screen.getByTestId('book-author-grokipedia-1')
+    expect(authorLink).toHaveAttribute('href', 'https://grokipedia.com/page/Thomas_Aquinas')
+    expect(screen.queryByTestId('book-author-grokipedia-8')).not.toBeInTheDocument()
   })
 })

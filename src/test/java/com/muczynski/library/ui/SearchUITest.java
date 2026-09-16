@@ -259,6 +259,9 @@ public class SearchUITest {
 
         // Verify the book title contains our search term
         assertThat(bookResults.first()).containsText("Summa");
+        Locator authorGrokipedia = page.locator("[data-test='book-result-author-grokipedia-1']");
+        assertThat(authorGrokipedia).isVisible();
+        assertThat(authorGrokipedia).hasAttribute("href", "https://grokipedia.com/page/Thomas_Aquinas");
     }
 
     @Test

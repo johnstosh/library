@@ -75,6 +75,7 @@ class BookCacheIntegrationTest {
         // Create test author
         testAuthor = new Author();
         testAuthor.setName("Test Author");
+        testAuthor.setGrokipediaUrl("https://grokipedia.com/page/Test_Author");
         testAuthor = authorRepository.save(testAuthor);
 
         // Create test books with different lastModified timestamps
@@ -136,6 +137,7 @@ class BookCacheIntegrationTest {
                 )))
                 .andExpect(jsonPath("$[*].title", containsInAnyOrder("Test Book 1", "Test Book 2")))
                 .andExpect(jsonPath("$[0].author", is("Test Author")))
+                .andExpect(jsonPath("$[0].authorGrokipediaUrl", is("https://grokipedia.com/page/Test_Author")))
                 .andExpect(jsonPath("$[0].library", is("Test Library")))
                 .andExpect(jsonPath("$[0].lastModified", notNullValue()));
     }

@@ -241,6 +241,36 @@ public class AuthorsUITest {
     }
 
     @Test
+    @DisplayName("Should show Grokipedia lookup buttons on the author edit page")
+    void shouldShowGrokipediaLookupButtonsOnAuthorEdit() {
+        page.click("tr[data-entity-id]");
+        page.waitForSelector("[data-test='author-view-edit']",
+            new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='author-view-edit']");
+        page.waitForURL("**/edit");
+
+        assertThat(page.locator("[data-test='author-grokipedia-url']")).isVisible();
+        assertThat(page.locator("[data-test='author-field-lookup-grokipedia-quick']")).isVisible();
+        assertThat(page.locator("[data-test='author-field-lookup-grokipedia-slow']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should show Grokipedia link on author view and authors table")
+    void shouldShowGrokipediaLinkOnAuthorViewAndTable() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        Locator tableLink = page.locator("[data-test='grokipedia-author-1']");
+        assertThat(tableLink).isVisible();
+        assertThat(tableLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
+
+        page.click("tr[data-entity-id]");
+        page.waitForSelector("[data-test='author-name']",
+            new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+        Locator viewLink = page.locator("[data-test='author-grokipedia-link']");
+        assertThat(viewLink).isVisible();
+        assertThat(viewLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
+    }
+
+    @Test
     @DisplayName("Should show bulk action buttons when an author is selected")
     void shouldShowBulkActionButtonsWhenAuthorSelected() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

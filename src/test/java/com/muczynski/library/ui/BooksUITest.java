@@ -185,6 +185,23 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should show the author's Grokipedia link on the books table and book view")
+    void shouldShowAuthorGrokipediaLinkOnBooksTableAndView() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        Locator tableLink = page.locator("[data-test='book-author-grokipedia-1']");
+        assertThat(tableLink).isVisible();
+        assertThat(tableLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
+
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+        Locator viewLink = page.locator("[data-test='book-author-grokipedia-link']");
+        assertThat(viewLink).isVisible();
+        assertThat(viewLink).hasAttribute("href", "https://grokipedia.com/page/Initial_Author");
+    }
+
+    @Test
     @DisplayName("Should navigate to add book page when clicking Add Book button")
     void testOpenAddBookForm() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

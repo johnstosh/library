@@ -112,6 +112,7 @@ export interface BookDto {
   library?: string
   authorId?: number
   author?: string
+  authorGrokipediaUrl?: string
   firstPhotoId?: number
   firstPhotoChecksum?: string
   loanCount?: number

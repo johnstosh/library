@@ -214,13 +214,26 @@ export function BookViewPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Author</p>
-                {book.authorId ? (
-                  <EntityLink to={`/authors/${book.authorId}`} data-test="book-author-link">
-                    {book.author}
-                  </EntityLink>
-                ) : (
-                  <p className="text-gray-900">{book.author}</p>
-                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {book.authorId ? (
+                    <EntityLink to={`/authors/${book.authorId}`} data-test="book-author-link">
+                      {book.author}
+                    </EntityLink>
+                  ) : (
+                    <p className="text-gray-900">{book.author}</p>
+                  )}
+                  {isValidUrl(book.authorGrokipediaUrl) && (
+                    <a
+                      href={book.authorGrokipediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={TEXT_LINK_UNDERLINE_CLASS}
+                      data-test="book-author-grokipedia-link"
+                    >
+                      Grokipedia
+                    </a>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Branch</p>

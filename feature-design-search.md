@@ -345,6 +345,8 @@ Actions are arranged in up to three rows (rows omitted when empty):
 - **Free text links** (open-book icon, green) — one per URL in `freeTextUrl`; opens in new tab; `data-test="book-result-free-text-{id}-{index}"`
 - **Grokipedia** (🅶, orange) — links to `grokipediaUrl`; `data-test="book-result-grokipedia-{id}"`
 
+Author line — Grokipedia (🅶, orange) next to the author name when `authorGrokipediaUrl` is a valid URL; `data-test="book-result-author-grokipedia-{id}"`
+
 **Row 2 — Navigation** (all users)
 - **View** (eye icon, gray) — navigates to `/books/{id}`; `data-test="book-result-view-{id}"`
 - **Author** (👤, teal) — shown when `authorId` present; links to author edit page for librarians, view page for regular users; `data-test="book-result-author-{id}"`

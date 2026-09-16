@@ -190,6 +190,15 @@ The application can automatically discover Grokipedia article URLs for books and
 - Shows results in `GrokipediaLookupResultsModal`
 - Results show success/failure count and individual results with URLs
 
+### Author Edit Page
+- "Quick lookup" and "Slow lookup" buttons next to the Grokipedia URL field (librarian, when editing)
+- Uses `POST /api/authors/grokipedia-lookup-bulk` with a single author ID
+- Fills the form field from the result and shows `GrokipediaLookupResultsModal`
+
+### Book pages
+- Book DTOs include `authorGrokipediaUrl` copied from the related author
+- Books table, book view, and search book results show a Grokipedia link next to the author name when that URL is a valid http(s) link
+
 ## Implementation Files
 - `src/main/java/com/muczynski/library/service/GrokipediaLookupService.java` - Core lookup logic
 - `src/main/java/com/muczynski/library/service/AskGrok.java` - Grok prompt for candidate URLs

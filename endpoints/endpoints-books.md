@@ -149,7 +149,7 @@ Fetches full book data for a list of book IDs.
 [1, 2, 3]
 ```
 
-**Response:** Array of BookDto (full book objects)
+**Response:** Array of BookDto (full book objects). Includes `authorGrokipediaUrl` copied from the related author so book tables and search can show the author's Grokipedia link.
 
 **Use Case:**
 - Frontend fetches summaries to check what's changed
