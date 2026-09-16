@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Active books with no call number and not electronic match no individual
- * status chip. Selecting every chip must still include them.
+ * Active books with no call number and not electronic match the without-loc
+ * status chip, and still appear when every status chip is selected.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,19 +47,22 @@ class BookStatusAllChipsIntegrationTest {
         book.setElectronicResource(false);
         Long bookId = bookRepository.saveAndFlush(book).getId();
 
-        Page<Book> inLibraryOnly = search(title, true, false, false, false, false, false);
+        Page<Book> inLibraryOnly = search(title, true, false, false, false, false, false, false);
         assertFalse(inLibraryOnly.getContent().stream().anyMatch(b -> b.getId().equals(bookId)));
 
-        Page<Book> allChips = search(title, true, true, true, true, true, true);
+        Page<Book> withoutLocOnly = search(title, false, false, true, false, false, false, false);
+        assertTrue(withoutLocOnly.getContent().stream().anyMatch(b -> b.getId().equals(bookId)));
+
+        Page<Book> allChips = search(title, true, true, true, true, true, true, true);
         assertTrue(allChips.getContent().stream().anyMatch(b -> b.getId().equals(bookId)));
     }
 
-    private Page<Book> search(String query, boolean inLibrary, boolean electronic,
+    private Page<Book> search(String query, boolean inLibrary, boolean electronic, boolean withoutLoc,
                               boolean lost, boolean withdrawn, boolean onOrder, boolean requested) {
         return bookRepository.findWithFilters(
                 query, inLibrary, electronic, false, false,
                 false, LocalDateTime.of(1970, 1, 1, 0, 0), NO_IDS,
-                false, false, false, false,
+                withoutLoc, false, false, false,
                 lost, withdrawn, onOrder, requested,
                 false,
                 false, false, false, false, false, false,

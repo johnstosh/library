@@ -12,6 +12,7 @@ describe('StatusFilters', () => {
     expect(screen.getByTestId('status-filter-electronic-resource')).toHaveTextContent(
       'Electronic resource',
     )
+    expect(screen.getByTestId('status-filter-without-loc')).toHaveTextContent('Without LOC')
     expect(screen.getByTestId('status-filter-lost')).toHaveTextContent('Lost')
     expect(screen.getByTestId('status-filter-withdrawn')).toHaveTextContent('Withdrawn')
     expect(screen.getByTestId('status-filter-on-order')).toHaveTextContent('On Order')

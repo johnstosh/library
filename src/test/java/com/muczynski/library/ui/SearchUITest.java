@@ -131,6 +131,7 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='status-filters']")).isVisible();
         assertThat(page.locator("[data-test='status-filter-in-library']")).isVisible();
         assertThat(page.locator("[data-test='status-filter-electronic-resource']")).isVisible();
+        assertThat(page.locator("[data-test='status-filter-without-loc']")).isVisible();
         assertThat(page.locator("[data-test='filter-free-text']")).isVisible();
         assertThat(page.locator("[data-test='filter-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
@@ -159,6 +160,7 @@ public class SearchUITest {
             mobilePage.waitForLoadState(LoadState.NETWORKIDLE);
 
             assertThat(mobilePage.locator("[data-test='filter-without-loc']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='status-filter-without-loc']")).isVisible();
             assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-without-genres']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);

@@ -47,8 +47,8 @@ Returns book summaries for books without a Library of Congress call number, excl
 ```
 
 **Use Case:**
-- Books page "Without LOC" filter
 - Identify books that need LOC number assignment
+- Status chip "Without LOC" filters the in-memory book list; this endpoint is the summary query for the same set
 
 ---
 

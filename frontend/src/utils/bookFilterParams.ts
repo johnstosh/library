@@ -23,7 +23,6 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   freeText: 'freeText',
   audio: 'audio',
   mostRecent: 'mostRecent',
-  withoutLoc: 'withoutLoc',
   withoutGrokipedia: 'withoutGrokipedia',
   withGrokipedia: 'withGrokipedia',
   withoutGenres: 'withoutGenres',

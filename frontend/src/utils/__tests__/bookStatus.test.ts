@@ -29,6 +29,9 @@ describe('bookStatusesFromSearchParams', () => {
     expect(bookStatusesFromSearchParams(new URLSearchParams('elec=true'))).toEqual([
       BookStatusFilter.ELECTRONIC_RESOURCE,
     ])
+    expect(bookStatusesFromSearchParams(new URLSearchParams('withoutLoc=true'))).toEqual([
+      BookStatusFilter.WITHOUT_LOC,
+    ])
     expect(bookStatusesFromSearchParams(new URLSearchParams('requestedStatus=true'))).toEqual([
       BookStatusFilter.REQUESTED,
     ])
@@ -51,6 +54,7 @@ describe('matchesBookStatusFilter', () => {
   const activeInLib = { status: 'ACTIVE', locNumber: 'PS3511' }
   const activeElectronic = { status: 'ACTIVE', electronicResource: true }
   const activeOther = { status: 'ACTIVE' }
+  const withoutLoc = { status: 'ACTIVE', locNumber: null, electronicResource: false }
   const lost = { status: 'LOST', locNumber: 'PS3511' }
   const withdrawn = { status: 'WITHDRAWN', locNumber: 'PS3511' }
   const requested = { status: 'REQUESTED' }
@@ -69,6 +73,9 @@ describe('matchesBookStatusFilter', () => {
     expect(matchesBookStatusFilter(activeInLib, selected)).toBe(true)
     expect(matchesBookStatusFilter(activeElectronic, selected)).toBe(true)
     expect(matchesBookStatusFilter(activeOther, selected)).toBe(false)
+    expect(matchesBookStatusFilter(withoutLoc, ['without-loc'])).toBe(true)
+    expect(matchesBookStatusFilter(activeElectronic, ['without-loc'])).toBe(false)
+    expect(matchesBookStatusFilter(activeInLib, ['without-loc'])).toBe(false)
     expect(matchesBookStatusFilter(lost, selected)).toBe(false)
     expect(matchesBookStatusFilter(requested, ['requested'])).toBe(true)
     expect(matchesBookStatusFilter(activeInLib, ['requested'])).toBe(false)

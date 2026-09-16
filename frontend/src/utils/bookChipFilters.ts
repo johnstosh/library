@@ -11,12 +11,11 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
  *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: freeText, audio, mostRecent
- * Row 3: withoutLoc, withoutGrokipedia, withGrokipedia,
- *   withoutGenres, withoutFreeTextUrls
+ * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls
  * Pricing (Books, librarians): withPrices, noPrices, priceOlder, lookupErrors
  *
- * Status (in-library, electronic-resource, lost, withdrawn, on-order, requested)
- * is a separate OR group — see bookStatus.ts — not a boolean chip.
+ * Status (in-library, electronic-resource, without-loc, lost, withdrawn,
+ * on-order, requested) is a separate OR group — see bookStatus.ts — not a boolean chip.
  */
 export interface BookChipFilters {
   hasYdlAudio: boolean
@@ -31,7 +30,6 @@ export interface BookChipFilters {
   freeText: boolean
   audio: boolean
   mostRecent: boolean
-  withoutLoc: boolean
   withoutGrokipedia: boolean
   withGrokipedia: boolean
   withoutGenres: boolean
@@ -57,7 +55,6 @@ export const defaultBookChipFilters: BookChipFilters = {
   // Shared default is off (Search). The Books page turns mostRecent on when
   // the /books URL has no other filters (see bookFilterParams.ts).
   mostRecent: false,
-  withoutLoc: false,
   withoutGrokipedia: false,
   withGrokipedia: false,
   withoutGenres: false,
@@ -99,8 +96,6 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
  */
 export function applyChipFilters<T extends Pick<
   BookDto,
-  | 'locNumber'
-  | 'electronicResource'
   | 'freeTextUrl'
   | 'title'
   | 'dateAddedToLibrary'
@@ -154,11 +149,6 @@ export function applyChipFilters<T extends Pick<
         const bookDate = new Date(book.dateAddedToLibrary)
         if (!cutoff || bookDate < cutoff) return false
       }
-    }
-    if (chips.withoutLoc) {
-      if (!isBlank(book.locNumber)) return false
-      // Electronic resources are not shelved, so they do not need LOC numbers.
-      if (book.electronicResource === true) return false
     }
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false

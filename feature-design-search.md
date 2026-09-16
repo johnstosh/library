@@ -63,7 +63,7 @@ Returns paginated search results for books and authors.
 - `filterFreeText` (boolean, optional, default `false`) - Limit books to those with a free online text URL (`freeTextUrl IS NOT NULL`)
 - `filterAudio` (boolean, optional, default `false`) - Limit books to those with a LibriVox audio recording (`freeTextUrl LIKE '%librivox%'`)
 - `labels` (string, optional, multi-value) - Limit books to those tagged with all specified labels
-- `status` (string, optional, multi-value) - Limit books to those matching any listed status-filter key (`in-library`, `electronic-resource`, `lost`, `withdrawn`, `on-order`, `requested`). `in-library` and `electronic-resource` are Active-only. When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained (Active books with no call number and not electronic would otherwise match no chip).
+- `status` (string, optional, multi-value) - Limit books to those matching any listed status-filter key (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). `in-library` and `electronic-resource` are Active-only. `without-loc` is no call number, excluding electronic resources. When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained.
 - `readingDifficulty` (string, optional, multi-value) - Limit books to those whose reading difficulty is any of the listed enum keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`). Null or blank stored values match `unset`.
 
 Multiple boolean filters use AND logic: a book must satisfy **all** active filters to be included. Selected status values and selected reading-difficulty values are each ORed with each other, then ANDed with the other filters.
@@ -106,7 +106,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 | In-library (status) | `status = ACTIVE AND locNumber IS NOT NULL AND locNumber <> ''` |
 | Electronic resource (status) | `status = ACTIVE AND electronicResource = true` |
 | Lost / Withdrawn / On Order / Requested | matching `BookStatus` |
-| Without LOC | `(locNumber IS NULL OR locNumber = '') AND (electronicResource IS NULL OR electronicResource = false)` |
+| Without LOC (status) | `(locNumber IS NULL OR locNumber = '') AND (electronicResource IS NULL OR electronicResource = false)` |
 | Has free online text | `freeTextUrl IS NOT NULL` |
 | Has free online audio | `freeTextUrl IS NOT NULL AND LOWER(freeTextUrl) LIKE '%librivox%'` |
 
@@ -142,12 +142,12 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
 - `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook` (boolean, optional) - Discovery chips
-- `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only). Selecting every key leaves status unconstrained. Legacy `inLib`/`elec`/`requestedStatus`/`notActiveStatus` still read.
+- `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library and electronic-resource are Active-only; without-loc is no call number excluding electronic). Selecting every key leaves status unconstrained. Legacy `inLib`/`elec`/`withoutLoc`/`requestedStatus`/`notActiveStatus` still read.
 - `labels` (string, optional) - Comma-separated genre tags (AND)
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
-Cataloger chips (`mostRecent`, `withoutLoc`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`. Status chips are shown on Search, Books, and Prices.
+Cataloger chips (`mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`. Status chips (including Without LOC) are shown on Search, Books, and Prices.
 
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)
@@ -189,7 +189,7 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 | Chip | `data-test` |
 |------|-------------|
 | YDL / EMU / ACLA Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*`, `filter-has-acla-*` |
-| Status (In-library, Electronic resource, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
+| Status (In-library, Electronic resource, Without LOC, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |
 | Genres | `label-filter-<genre>` |
@@ -319,7 +319,7 @@ Playwright UI test coverage:
 - **No Fuzzy Matching**: Exact substring matching only (no typo tolerance)
 - **No Full-Text Search**: Not using PostgreSQL full-text search capabilities
 - **Single Query**: Books and authors searched with same query (can't search different terms)
-- **Contradictory Filters**: Combining mutually exclusive filters (e.g., in-library + without-LOC) yields zero results (AND logic means all conditions must hold simultaneously)
+- **Contradictory Filters**: Combining mutually exclusive AND chips (e.g., With Grokipedia + Without Grokipedia) yields zero results. Status chips OR together, so In-library + Without LOC is the union of those sets.
 
 ## Future Enhancements (Not Implemented)
 

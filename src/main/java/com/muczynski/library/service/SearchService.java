@@ -64,7 +64,7 @@ public class SearchService {
      * @param filterFreeText  limit to books with a free online text URL
      * @param filterAudio     limit to books whose free text URL contains "librivox"
      * @param filterMostRecent limit to books added on the most recent day UTC, or temp-title regex
-     * @param filterWithoutLoc limit to books with no LOC call number, excluding electronic resources
+     * @param filterWithoutLoc legacy: without-loc status when {@code statusFilters} is empty
      * @param filterThreeLetterLoc limit to locNumbers starting with three uppercase letters
      * @param filterWithoutGrokipedia limit to books with no grokipedia URL
      * @param filterWithGrokipedia limit to books with a grokipedia URL
@@ -149,15 +149,17 @@ public class SearchService {
                 ? statusFilters.contains(BookStatusFilter.ON_ORDER) : filterNotActiveStatus;
         boolean statusRequested = hasStatusFilters
                 ? statusFilters.contains(BookStatusFilter.REQUESTED) : filterNotActiveStatus;
-        boolean hasStatusConstraint = statusInLibrary || statusElectronic || statusLost
-                || statusWithdrawn || statusOnOrder || statusRequested;
+        boolean statusWithoutLoc = hasStatusFilters
+                ? statusFilters.contains(BookStatusFilter.WITHOUT_LOC) : filterWithoutLoc;
+        boolean hasStatusConstraint = statusInLibrary || statusElectronic || statusWithoutLoc
+                || statusLost || statusWithdrawn || statusOnOrder || statusRequested;
 
         Page<Book> bookPage;
         if (hasLabels) {
             bookPage = bookRepository.findWithFiltersAndLabels(
                     trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                    filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
+                    statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                     filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
                     filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
@@ -172,7 +174,7 @@ public class SearchService {
             bookPage = bookRepository.findWithFilters(
                     trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                     filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                    filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
+                    statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                     filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
                     filterWithoutFreeTextUrls,
                     filterYdlAudio, filterYdlBook, filterYdlEbook,
@@ -188,7 +190,7 @@ public class SearchService {
         // Default withdrawn/requested hide always applies to the book WHERE, including
         // those author-of-books queries, but does not by itself switch away from name search.
         boolean hasBookFilters = hasStatusConstraint || filterFreeText || filterAudio
-                || filterMostRecent || filterWithoutLoc || filterThreeLetterLoc
+                || filterMostRecent || filterThreeLetterLoc
                 || filterWithoutGrokipedia || filterWithGrokipedia || filterWithoutGenres
                 || filterWithoutFreeTextUrls
                 || filterYdlAudio || filterYdlBook || filterYdlEbook
@@ -201,7 +203,7 @@ public class SearchService {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
                         trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                        filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
+                        statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                         filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
                         filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,
@@ -216,7 +218,7 @@ public class SearchService {
                 authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
                         trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
                         filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                        filterWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
+                        statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
                         filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
                         filterWithoutFreeTextUrls,
                         filterYdlAudio, filterYdlBook, filterYdlEbook,

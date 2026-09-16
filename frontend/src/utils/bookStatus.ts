@@ -5,6 +5,7 @@ import { BookStatus } from '@/types/enums'
 export const BookStatusFilter = {
   IN_LIBRARY: 'in-library',
   ELECTRONIC_RESOURCE: 'electronic-resource',
+  WITHOUT_LOC: 'without-loc',
   LOST: 'lost',
   WITHDRAWN: 'withdrawn',
   ON_ORDER: 'on-order',
@@ -17,6 +18,7 @@ export type BookStatusFilter = (typeof BookStatusFilter)[keyof typeof BookStatus
 export const BOOK_STATUS_FILTER_VALUES: BookStatusFilter[] = [
   BookStatusFilter.IN_LIBRARY,
   BookStatusFilter.ELECTRONIC_RESOURCE,
+  BookStatusFilter.WITHOUT_LOC,
   BookStatusFilter.LOST,
   BookStatusFilter.WITHDRAWN,
   BookStatusFilter.ON_ORDER,
@@ -26,6 +28,7 @@ export const BOOK_STATUS_FILTER_VALUES: BookStatusFilter[] = [
 export const BOOK_STATUS_FILTER_LABELS: Record<BookStatusFilter, string> = {
   [BookStatusFilter.IN_LIBRARY]: 'In-library',
   [BookStatusFilter.ELECTRONIC_RESOURCE]: 'Electronic resource',
+  [BookStatusFilter.WITHOUT_LOC]: 'Without LOC',
   [BookStatusFilter.LOST]: 'Lost',
   [BookStatusFilter.WITHDRAWN]: 'Withdrawn',
   [BookStatusFilter.ON_ORDER]: 'On Order',
@@ -71,6 +74,8 @@ function matchesOne(
       return status === BookStatus.ACTIVE && hasLocNumber(book.locNumber)
     case BookStatusFilter.ELECTRONIC_RESOURCE:
       return status === BookStatus.ACTIVE && book.electronicResource === true
+    case BookStatusFilter.WITHOUT_LOC:
+      return !hasLocNumber(book.locNumber) && book.electronicResource !== true
     case BookStatusFilter.LOST:
       return status === BookStatus.LOST
     case BookStatusFilter.WITHDRAWN:
@@ -108,6 +113,7 @@ export function bookStatusesFromSearchParams(params: URLSearchParams): BookStatu
   }
   if (params.get('inLib') === 'true') add(BookStatusFilter.IN_LIBRARY)
   if (params.get('elec') === 'true') add(BookStatusFilter.ELECTRONIC_RESOURCE)
+  if (params.get('withoutLoc') === 'true') add(BookStatusFilter.WITHOUT_LOC)
   if (params.get('requestedStatus') === 'true') add(BookStatusFilter.REQUESTED)
   if (params.get('notActiveStatus') === 'true') {
     add(BookStatusFilter.LOST)

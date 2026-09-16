@@ -224,16 +224,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     /**
      * AND-combined chip predicates shared by book and author search queries.
      * Alias {@code b} is the Book. Status chips OR together: in-library and
-     * electronic-resource are Active-only; when none are selected, WITHDRAWN
-     * and REQUESTED stay hidden. When every status chip is selected, status is
-     * unconstrained so Active books with no call number (and not electronic)
-     * are not dropped.
+     * electronic-resource are Active-only; without-loc is no call number,
+     * excluding electronic resources. When none are selected, WITHDRAWN and
+     * REQUESTED stay hidden. When every status chip is selected, status is
+     * unconstrained.
      */
     String SEARCH_CHIP_PREDICATE =
-        "((:filterInLibrary = true AND :filterElectronic = true AND :filterStatusLost = true AND :filterStatusWithdrawn = true AND :filterStatusOnOrder = true AND :filterStatusRequested = true) OR " +
-        "(:filterInLibrary = false AND :filterElectronic = false AND :filterStatusLost = false AND :filterStatusWithdrawn = false AND :filterStatusOnOrder = false AND :filterStatusRequested = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR " +
+        "((:filterInLibrary = true AND :filterElectronic = true AND :filterWithoutLoc = true AND :filterStatusLost = true AND :filterStatusWithdrawn = true AND :filterStatusOnOrder = true AND :filterStatusRequested = true) OR " +
+        "(:filterInLibrary = false AND :filterElectronic = false AND :filterWithoutLoc = false AND :filterStatusLost = false AND :filterStatusWithdrawn = false AND :filterStatusOnOrder = false AND :filterStatusRequested = false AND b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN AND b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) OR " +
         "(:filterInLibrary = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.locNumber IS NOT NULL AND b.locNumber <> '') OR " +
         "(:filterElectronic = true AND b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND b.electronicResource = true) OR " +
+        "(:filterWithoutLoc = true AND (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)) OR " +
         "(:filterStatusLost = true AND b.status = com.muczynski.library.domain.BookStatus.LOST) OR " +
         "(:filterStatusWithdrawn = true AND b.status = com.muczynski.library.domain.BookStatus.WITHDRAWN) OR " +
         "(:filterStatusOnOrder = true AND b.status = com.muczynski.library.domain.BookStatus.ON_ORDER) OR " +
@@ -241,7 +242,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterFreeText = false OR (b.freeTextUrl IS NOT NULL AND b.freeTextUrl <> '')) AND " +
         "(:filterAudio = false OR (b.freeTextUrl IS NOT NULL AND LOWER(b.freeTextUrl) LIKE '%librivox%')) AND " +
         "(:filterMostRecent = false OR b.dateAddedToLibrary >= :mostRecentCutoff OR b.id IN :mostRecentTempTitleIds) AND " +
-        "(:filterWithoutLoc = false OR ((b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false))) AND " +
         "(:filterThreeLetterLoc = false OR (b.locNumber IS NOT NULL AND b.locNumber <> '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z')) AND " +
         "(:filterWithoutGrokipedia = false OR b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-') AND " +
         "(:filterWithGrokipedia = false OR (b.grokipediaUrl IS NOT NULL AND b.grokipediaUrl <> '' AND b.grokipediaUrl <> '-')) AND " +

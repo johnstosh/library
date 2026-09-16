@@ -195,13 +195,6 @@ export function BookFilters({
       {showCatalogerFilters && (
       <div className="flex flex-wrap gap-2" data-test="book-source-filter-chips">
         <FilterChip
-          label="Without LOC"
-          active={chips.withoutLoc}
-          onClick={() => toggle('withoutLoc')}
-          tooltip="Only books without a Library of Congress call number, excluding electronic resources"
-          dataTest="filter-without-loc"
-        />
-        <FilterChip
           label="Without Grokipedia"
           active={chips.withoutGrokipedia}
           onClick={() => toggle('withoutGrokipedia')}
