@@ -63,7 +63,7 @@ Deleting a book cascades to its prices.
     - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
 - Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), total books in the database (`database-count`), plus price rows in the table (`price-row-count`).
-- Footer (`data-test="price-statistics"`) on Prices and on Books (librarians) reports:
+- Footer (`data-test="price-statistics"`) on Prices reports:
   - **Total cost** — sum of the cheaper hardcover/softcover/library-binding total (item + shipping) per book in the current book filters. Other/Unknown listings are used only when none of those typed covers has a usable price.
   - **Over $20 / Over $40 / Over $80** — counts of books whose cheapest total is strictly greater than that amount (cumulative).
   - **Total books** — books in the current book filters.

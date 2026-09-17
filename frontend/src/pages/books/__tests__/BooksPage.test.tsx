@@ -111,20 +111,8 @@ describe('BooksPage Pricing filters', () => {
     expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()
   })
 
-  it('reports price statistics at the bottom of the page for librarians', () => {
+  it('does not show price statistics on the books page', () => {
     librarianState.current = true
-    renderBooksPage('/books?mostRecent=false')
-    expect(screen.getByTestId('price-statistics')).toBeInTheDocument()
-    expect(screen.getByTestId('price-stats-total-cost')).toHaveTextContent('$0.00')
-    expect(screen.getByTestId('price-stats-over-20')).toHaveTextContent('0')
-    expect(screen.getByTestId('price-stats-over-40')).toHaveTextContent('0')
-    expect(screen.getByTestId('price-stats-over-80')).toHaveTextContent('0')
-    expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('2')
-    expect(screen.getByTestId('price-stats-without-prices')).toHaveTextContent('2')
-  })
-
-  it('hides price statistics for non-librarians', () => {
-    librarianState.current = false
     renderBooksPage('/books?mostRecent=false')
     expect(screen.queryByTestId('price-statistics')).not.toBeInTheDocument()
   })
