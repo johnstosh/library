@@ -29,7 +29,7 @@ import java.time.ZoneOffset;
 
 /**
  * Latest AbeBooks listing found for a catalog book and cover type
- * (hardcover, softcover, or unknown binding, good condition or better).
+ * (hardcover, softcover, library binding, other, or unknown, good condition or better).
  */
 @Entity
 @Table(

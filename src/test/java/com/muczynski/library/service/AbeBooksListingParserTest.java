@@ -113,6 +113,11 @@ class AbeBooksListingParserTest {
         assertEquals(BookCoverType.HARDCOVER, AbeBooksListingParser.bindingFromLabel("Hardback"));
         assertEquals(BookCoverType.SOFTCOVER, AbeBooksListingParser.bindingFromLabel("Softcover"));
         assertEquals(BookCoverType.SOFTCOVER, AbeBooksListingParser.bindingFromLabel("Paperback"));
+        assertEquals(BookCoverType.LIBRARY_BINDING, AbeBooksListingParser.bindingFromLabel("Library Binding"));
+        assertEquals(BookCoverType.LIBRARY_BINDING,
+                AbeBooksListingParser.bindingFromLabel("Hardcover, Library Binding"));
+        assertEquals(BookCoverType.OTHER, AbeBooksListingParser.bindingFromLabel("Leather Bound"));
+        assertEquals(BookCoverType.OTHER, AbeBooksListingParser.bindingFromLabel("Spiral Bound"));
         assertNull(AbeBooksListingParser.bindingFromLabel("First Edition"));
         assertNull(AbeBooksListingParser.bindingFromLabel(""));
     }

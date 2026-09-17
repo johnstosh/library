@@ -113,6 +113,14 @@ public class Book {
     @Column(length = 20)
     private ReadingDifficulty readingDifficulty = ReadingDifficulty.UNSET;
 
+    /**
+     * Physical binding of this catalog copy. Legacy rows with a null column
+     * are treated as {@link BookCoverType#UNKNOWN}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private BookCoverType binding = BookCoverType.UNKNOWN;
+
     /** Purchase priority, from 0 (already own enough) through 10 (first priority). */
     @Min(0)
     @Max(10)

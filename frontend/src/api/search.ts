@@ -33,7 +33,6 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.freeText ? '&filterFreeText=true' : '',
     filters.audio ? '&filterAudio=true' : '',
     filters.mostRecent ? '&filterMostRecent=true' : '',
-    filters.withoutLoc ? '&filterWithoutLoc=true' : '',
     filters.withoutGrokipedia ? '&filterWithoutGrokipedia=true' : '',
     filters.withGrokipedia ? '&filterWithGrokipedia=true' : '',
     filters.withoutGenres ? '&filterWithoutGenres=true' : '',

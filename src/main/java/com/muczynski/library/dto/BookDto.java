@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.dto;
 
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
 import jakarta.validation.constraints.NotBlank;
@@ -71,6 +72,12 @@ public class BookDto {
      * Frontend displays short patron-facing labels.
      */
     private ReadingDifficulty readingDifficulty;
+
+    /**
+     * Physical binding of this catalog copy ({@code HARDCOVER}, {@code SOFTCOVER},
+     * {@code LIBRARY_BINDING}, {@code OTHER}, {@code UNKNOWN}).
+     */
+    private BookCoverType binding;
     /** Nullable for legacy books; when present, must be 0 through 10 inclusive. */
     @Min(0)
     @Max(10)

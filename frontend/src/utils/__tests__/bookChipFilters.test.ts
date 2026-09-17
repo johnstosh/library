@@ -41,7 +41,7 @@ describe('defaultBookChipFilters', () => {
 describe('isOtherBookChipActive', () => {
   it('ignores mostRecent and detects any other chip', () => {
     expect(isOtherBookChipActive(chips({ mostRecent: true }))).toBe(false)
-    expect(isOtherBookChipActive(chips({ withoutLoc: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ withoutGrokipedia: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ hasYdlAudio: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ mostRecent: true, freeText: true }))).toBe(true)
   })
@@ -59,21 +59,6 @@ describe('applyChipFilters', () => {
     const audio = book({ id: 1, freeTextUrl: 'https://LibriVox.org/city-of-god' })
     const gutenberg = book({ id: 2, freeTextUrl: 'https://gutenberg.org/1' })
     const result = applyChipFilters([audio, gutenberg], chips({ audio: true }))
-    expect(result.map((b) => b.id)).toEqual([1])
-  })
-
-  it('withoutLoc keeps books that have no locNumber', () => {
-    const withLoc = book({ id: 1, locNumber: 'PS3511' })
-    const without = book({ id: 2, locNumber: '' })
-    const result = applyChipFilters([withLoc, without], chips({ withoutLoc: true }))
-    expect(result.map((b) => b.id)).toEqual([2])
-  })
-
-  it('withoutLoc excludes electronic resources even when locNumber is blank', () => {
-    const print = book({ id: 1, locNumber: '' })
-    const electronic = book({ id: 2, locNumber: '', electronicResource: true })
-    const withLoc = book({ id: 3, locNumber: 'PS3511' })
-    const result = applyChipFilters([print, electronic, withLoc], chips({ withoutLoc: true }))
     expect(result.map((b) => b.id)).toEqual([1])
   })
 

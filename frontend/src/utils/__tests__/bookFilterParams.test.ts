@@ -25,7 +25,7 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('freeText')).toBe(true)
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
     expect(isSearchVisibleChip('hasAclaAudio')).toBe(true)
-    expect(isSearchVisibleChip('withoutLoc')).toBe(false)
+    expect(isSearchVisibleChip('withoutGrokipedia')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)
@@ -59,10 +59,10 @@ describe('pageFromSearchParams', () => {
 
 describe('chipsFromSearchParams search mode', () => {
   it('reads discovery chips and ignores cataloger params', () => {
-    const params = new URLSearchParams('freeText=true&withoutLoc=true&mostRecent=true')
+    const params = new URLSearchParams('freeText=true&withoutGrokipedia=true&mostRecent=true')
     const result = chipsFromSearchParams(params, 'search')
     expect(result.freeText).toBe(true)
-    expect(result.withoutLoc).toBe(false)
+    expect(result.withoutGrokipedia).toBe(false)
     expect(result.mostRecent).toBe(true)
   })
 })
@@ -79,7 +79,7 @@ describe('chipsFromSearchParams books mode', () => {
   })
 
   it('turns Recent Arrivals off when another chip, labels, or q is present', () => {
-    expect(chipsFromSearchParams(new URLSearchParams('withoutLoc=true'), 'books').mostRecent).toBe(
+    expect(chipsFromSearchParams(new URLSearchParams('status=without-loc'), 'books').mostRecent).toBe(
       false,
     )
     expect(chipsFromSearchParams(new URLSearchParams('labels=fiction'), 'books').mostRecent).toBe(
@@ -87,6 +87,9 @@ describe('chipsFromSearchParams books mode', () => {
     )
     expect(
       chipsFromSearchParams(new URLSearchParams('readingDifficulty=children'), 'books').mostRecent,
+    ).toBe(false)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('binding=HARDCOVER'), 'books').mostRecent,
     ).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
     expect(chipsFromSearchParams(new URLSearchParams('noPrices=true'), 'books').mostRecent).toBe(false)
@@ -165,10 +168,23 @@ describe('bookFilterParamsForUrl', () => {
     ).toEqual({ mostRecent: 'false' })
   })
 
+  it('writes binding chips', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips({ mostRecent: false }),
+        labels: [],
+        bindings: ['HARDCOVER', 'UNKNOWN'],
+        q: '',
+      },
+      'books',
+    )
+    expect(params.binding).toBe('HARDCOVER,UNKNOWN')
+  })
+
   it('writes discovery chips, labels, and q for Search and omits cataloger chips', () => {
     const params = bookFilterParamsForUrl(
       {
-        chips: chips({ freeText: true, withoutLoc: true, mostRecent: true }),
+        chips: chips({ freeText: true, withoutGrokipedia: true, mostRecent: true }),
         labels: ['fiction'],
         readingDifficulties: ['children', 'unset'],
         statuses: ['in-library'],
@@ -208,7 +224,7 @@ describe('booksPathFromFilters', () => {
   it('copies discovery filters and query onto /books', () => {
     expect(
       booksPathFromFilters({
-        chips: chips({ withoutLoc: true }),
+        chips: chips({ withoutGrokipedia: true }),
         labels: ['classic'],
         readingDifficulties: ['demanding'],
         statuses: ['in-library'],
@@ -312,7 +328,7 @@ describe('matchesBookQuery', () => {
 describe('isBooksIntakeConstrained', () => {
   it('is true when any non-intake filter is on', () => {
     expect(isBooksIntakeConstrained(chips({ mostRecent: true }), [], '')).toBe(false)
-    expect(isBooksIntakeConstrained(chips({ withoutLoc: true }), [], '')).toBe(true)
+    expect(isBooksIntakeConstrained(chips({ withoutGrokipedia: true }), [], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), ['fiction'], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', ['children'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)

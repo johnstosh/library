@@ -819,7 +819,7 @@ Headless UI Dialog with consistent structure:
 ## Key Features
 
 ### 1. Books Management
-- Filter by All, Most Recent Day, Without LOC, and a bottom Pricing section (Books with Pricing, Books without Pricing; price older than N days, default 90)
+- Filter by All, Most Recent Day, Status (including Without LOC), and a bottom Pricing section (Books with Pricing, Books without Pricing; price older than N days, default 90)
 - CRUD operations
 - Bulk delete
 - LOC lookup (single & bulk)

@@ -138,7 +138,26 @@ class AbeBooksClientTest {
 
         assertEquals(hard, found.getHardcover());
         assertEquals(soft, found.getSoftcover());
+        assertNull(found.getLibraryBinding());
         verify(restTemplate, times(2))
+                .exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+    }
+
+    @Test
+    void findCheapestGoodOrBetter_keepsLibraryBindingFromSamePages() {
+        AbeBooksListing soft = listing("s", "3.00", BookCoverType.SOFTCOVER);
+        AbeBooksListing lib = listing("l", "12.00", BookCoverType.LIBRARY_BINDING);
+        AbeBooksListing hard = listing("h", "4.86", BookCoverType.HARDCOVER);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("page1"));
+        when(parser.parseGoodOrBetter("page1")).thenReturn(List.of(soft, lib, hard));
+
+        AbeBooksCoverListings found = client.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen");
+
+        assertEquals(hard, found.getHardcover());
+        assertEquals(soft, found.getSoftcover());
+        assertEquals(lib, found.getLibraryBinding());
+        verify(restTemplate, times(1))
                 .exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
     }
 

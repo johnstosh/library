@@ -138,7 +138,8 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-loc']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
+        assertThat(page.locator("[data-test='status-filter-without-loc']")).containsText("Without LOC");
         assertThat(page.locator("[data-test='book-price-filters']")).isVisible();
         assertThat(page.locator("[data-test='book-price-filters']")).containsText("Pricing");
         assertThat(page.locator("[data-test='filter-with-prices']")).isVisible();
@@ -226,6 +227,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-branch']"))
                 .hasValue("1", new LocatorAssertions.HasValueOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='book-year']")).isVisible();
+        assertThat(page.locator("[data-test='book-binding']")).isVisible();
         assertThat(page.locator("[data-test='book-publisher']")).isVisible();
         assertThat(page.locator("[data-test='book-loc']")).isVisible();
         assertThat(page.locator("[data-test='book-status']")).isVisible();
@@ -399,8 +401,8 @@ public class BooksUITest {
         assertThat(page.locator("text=Electronic Resource Without LOC"))
                 .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
 
-        // Click "Without LOC" filter chip
-        page.click("[data-test='filter-without-loc']");
+        // Click "Without LOC" status chip
+        page.click("[data-test='status-filter-without-loc']");
 
         // Initial book has no LOC (loc_number is NULL in test data), so it should be visible
         // under the "Without LOC" chip. Electronic resources are not shelved and must be excluded.
@@ -409,8 +411,8 @@ public class BooksUITest {
                 .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         // Recent Arrivals cannot be combined with other filters
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
-        Assertions.assertTrue(page.url().contains("withoutLoc=true"),
-                "URL should contain withoutLoc=true, got: " + page.url());
+        Assertions.assertTrue(page.url().contains("status=without-loc"),
+                "URL should contain status=without-loc, got: " + page.url());
     }
 
     @Test
@@ -466,6 +468,7 @@ public class BooksUITest {
                 new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
+        assertThat(page.locator("[data-test='status-filter-without-loc']")).hasAttribute("aria-pressed", "true");
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
     }
@@ -633,6 +636,7 @@ public class BooksUITest {
         assertThat(page.locator("text=Initial Book")).isVisible();
         assertThat(page.locator("text=Initial Author")).isVisible();
         assertThat(page.locator("[data-test='book-reading-difficulty-1']")).containsText("Children");
+        assertThat(page.locator("[data-test='book-binding-1']")).containsText("Unknown");
         // Active status badge is shown in the Status column (exact: not "Not Active Status")
         assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
     }

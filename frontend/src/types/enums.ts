@@ -30,6 +30,8 @@ export type UserAuthority = (typeof UserAuthority)[keyof typeof UserAuthority]
 export const BookCoverType = {
   HARDCOVER: 'HARDCOVER',
   SOFTCOVER: 'SOFTCOVER',
+  LIBRARY_BINDING: 'LIBRARY_BINDING',
+  OTHER: 'OTHER',
   UNKNOWN: 'UNKNOWN',
 } as const
 

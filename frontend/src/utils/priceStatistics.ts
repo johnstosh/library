@@ -3,7 +3,7 @@ import type { BookPriceDto } from '@/types/dtos'
 import { isSavedPriceListing } from '@/utils/bookChipFilters'
 
 export interface BookPriceStatistics {
-  /** Sum of the cheaper hardcover/softcover total for each book that has a usable listing. */
+  /** Sum of the cheaper hardcover/softcover/library-binding total for each book that has a usable listing. */
   totalCost: number
   booksOver20: number
   booksOver40: number
@@ -39,35 +39,32 @@ function minAmount(current: number | null, candidate: number): number {
 }
 
 /**
- * Cheapest usable total for a book: min(hardcover, softcover).
- * Other/Unknown listings fill in only when neither typed cover has a price.
+ * Cheapest usable total for a book: min of hardcover, softcover, and
+ * library binding. Other/Unknown listings fill in only when none of those
+ * typed covers has a price.
  */
 export function cheapestCoverTotal(prices: BookPriceDto[]): number | null {
-  let hardcover: number | null = null
-  let softcover: number | null = null
+  let typed: number | null = null
   let other: number | null = null
   for (const price of prices) {
     const total = listingTotal(price)
     if (total == null) continue
-    if (price.cover === 'HARDCOVER') {
-      hardcover = minAmount(hardcover, total)
-    } else if (price.cover === 'SOFTCOVER') {
-      softcover = minAmount(softcover, total)
+    if (
+      price.cover === 'HARDCOVER' ||
+      price.cover === 'SOFTCOVER' ||
+      price.cover === 'LIBRARY_BINDING'
+    ) {
+      typed = minAmount(typed, total)
     } else {
       other = minAmount(other, total)
     }
   }
-  if (hardcover != null && softcover != null) {
-    return hardcover < softcover ? hardcover : softcover
-  }
-  if (hardcover != null) return hardcover
-  if (softcover != null) return softcover
-  return other
+  return typed != null ? typed : other
 }
 
 /**
  * Catalog price summary for the given books. Each book contributes its cheaper
- * hardcover/softcover total (item + shipping). Threshold counts are strictly
+ * hardcover/softcover/library-binding total (item + shipping). Threshold counts are strictly
  * greater than $20 / $40 / $80 and are cumulative. Books with no usable listing
  * are omitted from the total and counted in {@code booksWithoutPrices}.
  */

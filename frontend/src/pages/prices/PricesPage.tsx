@@ -13,6 +13,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { DesireToPurchaseFilters } from '@/pages/books/components/DesireToPurchaseFilters'
+import { BindingFilters } from '@/pages/books/components/BindingFilters'
 import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
 import { StatusFilters } from '@/pages/books/components/StatusFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
@@ -37,6 +38,10 @@ import {
   type DesireToPurchaseFilter,
 } from '@/utils/desireToPurchase'
 import {
+  applyBookBindingFilter,
+  bindingsFromSearchParams,
+} from '@/utils/bookBinding'
+import {
   applyReadingDifficultyFilter,
   readingDifficultiesFromSearchParams,
 } from '@/utils/readingDifficulty'
@@ -45,7 +50,7 @@ import {
   bookStatusesFromSearchParams,
   type BookStatusFilter,
 } from '@/utils/bookStatus'
-import type { ReadingDifficulty } from '@/types/enums'
+import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import {
   applyPriceFilters,
@@ -63,6 +68,7 @@ export function PricesPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedBindings = bindingsFromSearchParams(searchParams)
   const selectedDesireToPurchase = desireToPurchaseFromSearchParams(searchParams)
   const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
@@ -87,6 +93,7 @@ export function PricesPage() {
     chips?: BookChipFilters
     labels?: string[]
     readingDifficulties?: string[]
+    bindings?: string[]
     desireToPurchase?: DesireToPurchaseFilter[]
     statuses?: string[]
     favoriteLists?: string[]
@@ -101,6 +108,7 @@ export function PricesPage() {
         chips: next.chips ?? chips,
         labels: next.labels ?? selectedLabels,
         readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+        bindings: next.bindings ?? selectedBindings,
         desireToPurchase: next.desireToPurchase ?? selectedDesireToPurchase,
         statuses: next.statuses ?? selectedStatuses,
         favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
@@ -129,9 +137,12 @@ export function PricesPage() {
     )
     return applyBookPriceFilters(
       applyDesireToPurchaseFilter(
-        applyReadingDifficultyFilter(
-          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-          selectedDifficulties,
+        applyBookBindingFilter(
+          applyReadingDifficultyFilter(
+            applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+            selectedDifficulties,
+          ),
+          selectedBindings,
         ),
         selectedDesireToPurchase,
       )
@@ -146,7 +157,7 @@ export function PricesPage() {
         lookupErrors: chips.lookupErrors,
       },
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedDesireToPurchase, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
+  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedBindings, selectedDesireToPurchase, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
 
   const matchingBookIds = useMemo(
     () => new Set(matchingBooks.map((book) => book.id)),
@@ -189,7 +200,7 @@ export function PricesPage() {
     <div>
       <PageHeader
         title="Prices"
-        description="AbeBooks used-book prices for hardcover and softcover copies in good condition or better."
+        description="AbeBooks used-book prices for hardcover, softcover, and library-binding copies in good condition or better."
       />
 
       {error && (
@@ -231,6 +242,7 @@ export function PricesPage() {
               chips,
               labels: selectedLabels,
               readingDifficulties: selectedDifficulties,
+              bindings: selectedBindings,
               statuses: selectedStatuses,
               favoriteLists: selectedFavoriteLists,
               q: inputValue.trim() || urlQuery,
@@ -266,6 +278,16 @@ export function PricesPage() {
               writeUrl({ statuses: next })
             }}
             onClear={() => writeUrl({ statuses: [] })}
+          />
+          <BindingFilters
+            selected={selectedBindings}
+            onToggle={(value: BookCoverType) => {
+              const next = selectedBindings.includes(value)
+                ? selectedBindings.filter((item) => item !== value)
+                : [...selectedBindings, value]
+              writeUrl({ bindings: next })
+            }}
+            onClear={() => writeUrl({ bindings: [] })}
           />
           <ReadingDifficultyFilters
             selected={selectedDifficulties}

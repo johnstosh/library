@@ -32,7 +32,7 @@ Returns every saved price row, including book title and author.
 
 ## POST /api/prices/lookup/{bookId}
 
-Looks up the cheapest AbeBooks hardcover and softcover listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only without the condition filter for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill a cover that has no typed match during search and are saved as `UNKNOWN`. Ungraded `Used` listings are kept; Fair/Poor/As Described are not.
+Looks up the cheapest AbeBooks hardcover, softcover, and library-binding listings in good condition or better and upserts `book_price` rows for that book. Search uses title + author last name (then title-only without the condition filter for long titles), without a hardcover/softcover URL filter; binding is parsed from each result. Unknown-binding listings fill hardcover/softcover that have no typed match during search and are saved as `UNKNOWN`. Library-binding and other named bindings are saved when parsed from a listing. Ungraded `Used` listings are kept; Fair/Poor/As Described are not.
 
 Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/502/503/504, I/O timeout, or a captcha/block page, retries with capped exponential backoff then returns `rateLimited: true` so the bulk carousel can cancel remaining books. A real SearchResults page with zero listings is not treated as rate-limited. HTTP 500 and other non-rate-limit errors are stored as `lookupError` `AbeBooks HTTP {code}` with the last SearchResults URL in `detailsUrl`. When no listing is found, `lookupError` is `No matching listing` and `detailsUrl` is that search URL. AbeBooks HTTP runs outside a DB transaction so other librarian tabs stay usable. `book_price.book_id` is indexed.
 
@@ -49,6 +49,7 @@ Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/
   "cancelled": false,
   "hardcover": { "cover": "HARDCOVER", "priceDollars": 4.86, "shippingDollars": 0, "totalDollars": 4.86 },
   "softcover": { "cover": "SOFTCOVER", "priceDollars": 3.00, "shippingDollars": 4.00, "totalDollars": 7.00 },
+  "libraryBinding": { "cover": "LIBRARY_BINDING", "priceDollars": 12.00, "shippingDollars": 0, "totalDollars": 12.00 },
   "errorMessage": null
 }
 ```

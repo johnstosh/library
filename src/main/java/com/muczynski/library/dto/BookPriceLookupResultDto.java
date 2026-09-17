@@ -20,5 +20,6 @@ public class BookPriceLookupResultDto {
     private boolean cancelled;
     private BookPriceDto hardcover;
     private BookPriceDto softcover;
+    private BookPriceDto libraryBinding;
     private String errorMessage;
 }

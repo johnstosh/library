@@ -15,6 +15,7 @@ const { catalog, librarianState } = vi.hoisted(() => {
       lastModified: '2026-01-01T00:00:00',
       dateAddedToLibrary: '2026-08-30T00:00:00',
       readingDifficulty: 'children',
+      binding: 'HARDCOVER',
     },
     {
       id: 2,
@@ -81,6 +82,7 @@ function UrlQuery() {
     <>
       <div data-test="url-q">{params.get('q') ?? ''}</div>
       <div data-test="url-reading-difficulty">{params.get('readingDifficulty') ?? ''}</div>
+      <div data-test="url-binding">{params.get('binding') ?? ''}</div>
       <div data-test="url-status">{params.get('status') ?? ''}</div>
       <div data-test="location">{`${location.pathname}${location.search}`}</div>
     </>
@@ -188,6 +190,26 @@ describe('BooksPage reading difficulty filter', () => {
     renderBooksPage('/books?mostRecent=false')
     fireEvent.click(screen.getByTestId('reading-difficulty-filter-children'))
     expect(screen.getByTestId('url-reading-difficulty')).toHaveTextContent('children')
+  })
+})
+
+describe('BooksPage binding filter', () => {
+  it('ORs selected bindings and treats a missing value as Unknown', () => {
+    renderBooksPage('/books?binding=HARDCOVER')
+    expect(screen.getByTestId('book-row-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('book-row-2')).not.toBeInTheDocument()
+  })
+
+  it('keeps Unknown books when Unknown is selected', () => {
+    renderBooksPage('/books?binding=UNKNOWN')
+    expect(screen.queryByTestId('book-row-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('book-row-2')).toBeInTheDocument()
+  })
+
+  it('writes the selected chip into the URL', () => {
+    renderBooksPage('/books?mostRecent=false')
+    fireEvent.click(screen.getByTestId('binding-filter-library-binding'))
+    expect(screen.getByTestId('url-binding')).toHaveTextContent('LIBRARY_BINDING')
   })
 })
 

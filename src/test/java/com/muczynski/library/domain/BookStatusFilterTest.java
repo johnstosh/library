@@ -19,5 +19,8 @@ class BookStatusFilterTest {
         assertEquals(
                 List.of(BookStatusFilter.IN_LIBRARY, BookStatusFilter.REQUESTED),
                 BookStatusFilter.parseFilterValues("in-library,bogus,REQUESTED,in-library"));
+        assertEquals(
+                List.of(BookStatusFilter.WITHOUT_LOC),
+                BookStatusFilter.parseFilterValues("without-loc"));
     }
 }

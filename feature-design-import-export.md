@@ -19,7 +19,8 @@ The JSON export includes:
 - Books
 - Loans
 - **Favorites** (per-user list names, referenced by book title+author or author name)
-- **Prices** (AbeBooks listings: book title+author, cover, price, shipping, condition, date, URL)
+- **Prices** (AbeBooks listings: book title+author, cover including library binding, price, shipping, condition, date, URL)
+- Book `binding` (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`; missing on legacy JSON imports as `UNKNOWN`)
 - **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included

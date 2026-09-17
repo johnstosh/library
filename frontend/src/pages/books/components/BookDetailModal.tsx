@@ -5,6 +5,7 @@ import { PhotoSection } from '@/components/photos/PhotoSection'
 import { useBook, useCloneBook } from '@/api/books'
 import { formatBookStatus, formatDateTime, isValidUrl } from '@/utils/formatters'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
+import { bookBindingLabel } from '@/utils/bookBinding'
 import { Spinner } from '@/components/progress/Spinner'
 import { PiCopy, PiPencil } from 'react-icons/pi'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -106,6 +107,10 @@ export function BookDetailModal({ isOpen, onClose, bookId, onEdit }: BookDetailM
               <div>
                 <p className="text-sm font-medium text-gray-500">Branch</p>
                 <p className="text-gray-900">{book.library}</p>
+              </div>
+              <div data-test="book-binding">
+                <p className="text-sm font-medium text-gray-500">Binding</p>
+                <p className="text-gray-900">{bookBindingLabel(book.binding)}</p>
               </div>
               {book.readingDifficulty && (
                 <div data-test="book-reading-difficulty">

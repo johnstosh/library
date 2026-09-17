@@ -75,14 +75,17 @@ export function PriceLookupResultsModal({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '8%' }}>
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '28%' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '22%' }}>
                   Book
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '27%' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '21%' }}>
                   Hardcover
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '37%' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '21%' }}>
                   Softcover
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '22%' }}>
+                  Library Binding
                 </th>
               </tr>
             </thead>
@@ -104,6 +107,7 @@ export function PriceLookupResultsModal({
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800">{listingCell(result.hardcover)}</td>
                   <td className="px-4 py-3 text-sm text-gray-800">{listingCell(result.softcover)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{listingCell(result.libraryBinding)}</td>
                 </tr>
               ))}
             </tbody>

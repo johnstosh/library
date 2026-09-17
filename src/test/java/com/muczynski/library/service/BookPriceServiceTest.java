@@ -83,6 +83,45 @@ class BookPriceServiceTest {
     }
 
     @Test
+    void lookupAndUpdateBook_savesLibraryBindingWhenFound() {
+        Book book = book("Pride and Prejudice", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("4.86"))
+                                .shippingDollars(BigDecimal.ZERO)
+                                .condition("Used - Good")
+                                .detailsUrl("https://www.abebooks.com/h")
+                                .binding(BookCoverType.HARDCOVER)
+                                .build())
+                        .softcover(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("3.00"))
+                                .shippingDollars(new BigDecimal("4.00"))
+                                .condition("Used - Very good")
+                                .detailsUrl("https://www.abebooks.com/s")
+                                .binding(BookCoverType.SOFTCOVER)
+                                .build())
+                        .libraryBinding(AbeBooksListing.builder()
+                                .priceDollars(new BigDecimal("12.00"))
+                                .shippingDollars(BigDecimal.ZERO)
+                                .condition("Used - Good")
+                                .detailsUrl("https://www.abebooks.com/l")
+                                .binding(BookCoverType.LIBRARY_BINDING)
+                                .build())
+                        .build());
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(BookCoverType.LIBRARY_BINDING, result.getLibraryBinding().getCover());
+        assertEquals(new BigDecimal("12.00"), result.getLibraryBinding().getPriceDollars());
+        verify(bookPriceRepository, times(3)).save(any(BookPrice.class));
+    }
+
+    @Test
     void lookupAndUpdateBook_noListing_savesError() {
         Book book = book("Unknown Book", "Nobody");
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
