@@ -173,10 +173,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
-        assertThat(page.locator("[data-test='price-statistics']")).isVisible();
-        assertThat(page.locator("[data-test='price-stats-total-cost']")).containsText("$0.00");
-        assertThat(page.locator("[data-test='price-stats-without-prices']")).containsText("1");
-        assertThat(page.locator("[data-test='price-stats-total-books']")).containsText("1");
+        assertThat(page.locator("[data-test='price-statistics']")).hasCount(0);
         Locator tableBranch = page.locator("[data-test='table-branch-name']");
         assertThat(tableBranch).isVisible();
         assertThat(tableBranch).containsText("The St. Martin de Porres Branch");
