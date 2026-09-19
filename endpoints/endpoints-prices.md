@@ -1,10 +1,37 @@
 # Book Price Endpoints
 
-Librarian-only AbeBooks used-book price lookup and listing.
+Librarian-only AbeBooks used-book price lookup and listing. Uses the same caching pattern as books: `GET /summaries` (id + lastModified) for cache validation + `POST /by-ids` for only changed rows. Details are persisted in IndexedDB.
+
+## GET /api/prices/summaries
+
+Returns lightweight summaries for frontend lastModified cache validation.
+
+**Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
+
+**Response:** array of `BookSummaryDto` (id + lastModified)
+
+```json
+[
+  {
+    "id": 1,
+    "lastModified": "2026-09-10T12:00:00"
+  }
+]
+```
+
+## POST /api/prices/by-ids
+
+Batch fetch full price rows for given IDs (with book/author JOINs). Used by caching hook after summaries diff.
+
+**Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
+
+**Request body:** array of price IDs, e.g. `[1, 2]`
+
+**Response:** array of `BookPriceDto`
 
 ## GET /api/prices
 
-Returns every saved price row, including book title and author.
+Returns every saved price row, including book title and author (legacy; caching path preferred).
 
 **Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
 
@@ -55,3 +82,5 @@ Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/
 ```
 
 `success` is true when at least one cover found a listing. Temporary photo-intake titles are skipped with `Not Ready - Temporary title`.
+
+See also `feature-design-prices.md` and the caching design in `design-caching.md`. The new endpoints keep the existing `listAll` behavior intact.

@@ -8,6 +8,7 @@ import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
@@ -92,6 +93,21 @@ public class BookPriceService {
     @Transactional(readOnly = true)
     public List<BookPriceDto> listAll() {
         return bookPriceRepository.findAllWithBookAndAuthor().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookSummaryDto> getAllPriceSummaries() {
+        return bookPriceRepository.findAllPriceSummaries();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookPriceDto> getPricesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return bookPriceRepository.findByIdsWithBookAndAuthor(ids).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }

@@ -86,6 +86,9 @@ export const queryKeys = {
   },
   prices: {
     all: ['prices'] as const,
+    summaries: () => [...queryKeys.prices.all, 'summaries'] as const,
+    byIds: (ids: number[]) => [...queryKeys.prices.all, 'byIds', ids.join(',')] as const,
+    detail: (id: number) => [...queryKeys.prices.all, 'detail', id] as const,
     list: () => [...queryKeys.prices.all, 'list'] as const,
   },
 }
