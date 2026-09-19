@@ -41,9 +41,9 @@ export function isBookStatusFilterKey(value: string): value is BookStatusFilter 
   return KNOWN_KEYS.has(value)
 }
 
-/** True when every status chip is on. In-library requires a call number, so Active
- * books without LOC that are not electronic match no individual chip; selecting
- * all chips still means "do not exclude by status". */
+/** True when every status chip is on. In-library and without-loc require ACTIVE
+ * status (with/without LOC respectively, not electronic); selecting all chips
+ * still means "do not exclude by status". */
 export function areAllBookStatusFiltersSelected(selected: string[]): boolean {
   if (selected.length < BOOK_STATUS_FILTER_VALUES.length) {
     return false
@@ -75,7 +75,7 @@ function matchesOne(
     case BookStatusFilter.ELECTRONIC_RESOURCE:
       return status === BookStatus.ACTIVE && book.electronicResource === true
     case BookStatusFilter.WITHOUT_LOC:
-      return !hasLocNumber(book.locNumber) && book.electronicResource !== true
+      return status === BookStatus.ACTIVE && !hasLocNumber(book.locNumber) && book.electronicResource !== true
     case BookStatusFilter.LOST:
       return status === BookStatus.LOST
     case BookStatusFilter.WITHDRAWN:
@@ -127,8 +127,7 @@ export function bookStatusesFromSearchParams(params: URLSearchParams): BookStatu
 /**
  * Empty selection keeps the catalog default: hide WITHDRAWN and REQUESTED.
  * Any selected values OR together. Selecting every chip shows the full set,
- * including Active books that match no individual chip (no call number and
- * not an electronic resource).
+ * including books that match no individual chip.
  */
 export function matchesBookStatusFilter(
   book: {

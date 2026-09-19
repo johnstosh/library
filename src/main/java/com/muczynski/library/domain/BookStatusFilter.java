@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * Book status filter chips. Selected values OR together, then AND with other filters.
- * Active is split into in-library (physical collection), electronic-resource,
- * and without-loc (no call number, excluding electronic resources).
+ * Active is split into in-library (physical collection with LOC), electronic-resource,
+ * and without-loc (ACTIVE + no call number + not electronic resource).
  */
 public enum BookStatusFilter {
     IN_LIBRARY("in-library"),

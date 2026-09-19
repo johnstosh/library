@@ -199,7 +199,7 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
-    /** Print books missing a LOC call number. Electronic resources are excluded. */
+    /** Print ACTIVE books missing a LOC call number. Excludes electronic resources and non-ACTIVE statuses (lost, withdrawn, on-order, requested). See #337. */
     public List<BookDto> getBooksWithoutLocNumber() {
         return bookRepository.findBooksWithoutLocNumber().stream()
                 .map(bookMapper::toDto)
@@ -1267,8 +1267,9 @@ public class BookService {
     }
 
     /**
-     * Get summaries (id + lastModified) for books without LOC number,
-     * excluding electronic resources. Used for cache validation in frontend.
+     * Get summaries (id + lastModified) for ACTIVE books without LOC number,
+     * excluding electronic resources and non-ACTIVE statuses. Used for cache
+     * validation in frontend. See issue #337.
      */
     public List<BookSummaryDto> getSummariesWithoutLocNumber(boolean includeRequested) {
         return includeRequested ? getSummariesWithoutLocNumber() : hideRequestedSummaries(getSummariesWithoutLocNumber());

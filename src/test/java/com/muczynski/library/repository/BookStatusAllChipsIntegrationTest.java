@@ -22,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Active books with no call number and not electronic match the without-loc
- * status chip, and still appear when every status chip is selected.
+ * ACTIVE books with no call number and not electronic match the without-loc
+ * status chip (non-ACTIVE without LOC are excluded per #337), and still appear
+ * when every status chip is selected.
  */
 @SpringBootTest
 @ActiveProfiles("test")
