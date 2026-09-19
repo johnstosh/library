@@ -205,7 +205,6 @@ public class BookController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<?> deleteBook(@PathVariable Long id) {
         try {
             bookService.deleteBook(id);

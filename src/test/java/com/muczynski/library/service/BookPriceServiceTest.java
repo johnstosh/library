@@ -324,8 +324,7 @@ class BookPriceServiceTest {
     void lookupAndUpdateBook_skipsExcerptTitle() {
         Book book = book("Excerpt from Summa Theologica", "Thomas Aquinas");
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), eq(BookCoverType.SOFTCOVER)))
-                .thenReturn(Optional.empty());
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
         when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
@@ -345,8 +344,7 @@ class BookPriceServiceTest {
     void lookupAndUpdateBook_skipsExcerptsTitleWithLeadingSpace() {
         Book book = book("  excerpts from the fathers  ", "Various");
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), eq(BookCoverType.SOFTCOVER)))
-                .thenReturn(Optional.empty());
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
         when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
