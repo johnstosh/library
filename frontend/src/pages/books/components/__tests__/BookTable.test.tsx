@@ -36,6 +36,15 @@ const books: BookDto[] = [
     status: 'ACTIVE',
     lastModified: '2026-01-01T00:00:00',
   },
+  {
+    id: 9,
+    title: 'Electronic Book Example',
+    author: 'Test Author',
+    status: 'ACTIVE',
+    lastModified: '2026-01-01T00:00:00',
+    electronicResource: true,
+    binding: 'UNKNOWN',
+  },
 ]
 
 function renderTable() {
@@ -64,6 +73,8 @@ describe('BookTable title column', () => {
     expect(screen.getByTestId('book-reading-difficulty-8')).toHaveTextContent('Unset')
     expect(screen.getByTestId('book-binding-1')).toHaveTextContent('Unknown')
     expect(screen.getByTestId('book-binding-8')).toHaveTextContent('Unknown')
+    // electronic resource book shows special label (updated in BookTable via bookBindingDisplay)
+    expect(screen.getByTestId('book-binding-9')).toHaveTextContent('Electronic resource')
   })
 
   it('shows a Grokipedia link next to the author when the author has a URL', () => {

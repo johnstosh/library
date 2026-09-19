@@ -19,7 +19,7 @@ import {
   labelsFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
-import { bookBindingLabel } from '@/utils/bookBinding'
+import { bookBindingDisplay } from '@/utils/bookBinding'
 import { readingDifficultiesFromSearchParams, readingDifficultyLabel } from '@/utils/readingDifficulty'
 import {
   bookStatusesFromSearchParams,
@@ -494,7 +494,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                 {readingDifficultyLabel(book.readingDifficulty)}
               </div>
               <div className="text-sm text-gray-500" data-test={`book-result-binding-${book.id}`}>
-                {bookBindingLabel(book.binding)}
+                {bookBindingDisplay(book)}
               </div>
               {(book.publicationYear || book.publisher || book.library) && (
                 <div

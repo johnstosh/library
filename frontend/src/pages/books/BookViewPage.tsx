@@ -26,7 +26,7 @@ import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authS
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
-import { bookBindingLabel } from '@/utils/bookBinding'
+import { bookBindingDisplay } from '@/utils/bookBinding'
 
 function holdingStatus(available: boolean | null | undefined) {
   if (available == null) {
@@ -242,7 +242,7 @@ export function BookViewPage() {
               </div>
               <div data-test="book-binding">
                 <p className="text-sm font-medium text-gray-500">Binding</p>
-                <p className="text-gray-900">{bookBindingLabel(book.binding)}</p>
+                <p className="text-gray-900">{bookBindingDisplay(book)}</p>
               </div>
               {book.readingDifficulty && (
                 <div data-test="book-reading-difficulty">
