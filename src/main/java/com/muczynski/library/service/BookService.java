@@ -121,6 +121,7 @@ public class BookService {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Transactional
     public BookDto createBook(BookDto bookDto) {
         Book book = bookMapper.toEntity(bookDto);
 
@@ -179,12 +180,14 @@ public class BookService {
         return bookRepository.save(book);
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getAllBooks(boolean includeRequested) {
         return includeRequested ? getAllBooks() : getAllBooks().stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getAllBooks() {
         return bookRepository.findAll().stream()
                 .map(bookMapper::toDto)
@@ -193,6 +196,7 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWithoutLocNumber(boolean includeRequested) {
         return includeRequested ? getBooksWithoutLocNumber() : getBooksWithoutLocNumber().stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
@@ -200,6 +204,7 @@ public class BookService {
     }
 
     /** Print ACTIVE books missing a LOC call number. Excludes electronic resources and non-ACTIVE statuses (lost, withdrawn, on-order, requested). See #337. */
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWithoutLocNumber() {
         return bookRepository.findBooksWithoutLocNumber().stream()
                 .map(bookMapper::toDto)
@@ -258,12 +263,14 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWith3LetterLocStart(boolean includeRequested) {
         return includeRequested ? getBooksWith3LetterLocStart() : getBooksWith3LetterLocStart().stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWith3LetterLocStart() {
         return bookRepository.findBooksWith3LetterLocStart().stream()
                 .map(bookMapper::toDto)
@@ -272,12 +279,14 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWithoutGrokipediaUrl(boolean includeRequested) {
         return includeRequested ? getBooksWithoutGrokipediaUrl() : getBooksWithoutGrokipediaUrl().stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksWithoutGrokipediaUrl() {
         return bookRepository.findBooksWithoutGrokipediaUrl().stream()
                 .map(bookMapper::toDto)
@@ -286,24 +295,28 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public BookDto getBookById(Long id) {
         return bookRepository.findById(id)
                 .map(bookMapper::toDto)
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksByAuthorId(Long authorId, boolean includeRequested) {
         return includeRequested ? getBooksByAuthorId(authorId) : getBooksByAuthorId(authorId).stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksByAuthorId(Long authorId) {
         return bookRepository.findByAuthorIdOrderByTitleAsc(authorId).stream()
                 .map(bookMapper::toDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public BookDto updateBook(Long id, BookDto bookDto) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
         book.setTitle(ensureUniqueTitle(bookDto.getTitle(), id));
@@ -350,6 +363,7 @@ public class BookService {
         return bookMapper.toDto(savedBook);
     }
 
+    @Transactional
     public void deleteBook(Long id) {
         if (!bookRepository.existsById(id)) {
             throw new LibraryException("Book not found: " + id);
@@ -396,6 +410,7 @@ public class BookService {
                 .build();
     }
 
+    @Transactional
     public BookDto cloneBook(Long id) {
         Book original = bookRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Book not found: " + id));
@@ -569,6 +584,7 @@ public class BookService {
         return null;
     }
 
+    @Transactional
     public BookDto generateTempBook(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -788,6 +804,7 @@ public class BookService {
         return updateBook(id, dto);
     }
 
+    @Transactional
     public BookDto generateBookFromFirstPhoto(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -1016,6 +1033,7 @@ public class BookService {
      * save via the normal update path. A new Author may be created if the extracted
      * name is not already in the catalog.
      */
+    @Transactional
     public BookDto getTitleAuthorFromPhoto(Long id) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -1065,6 +1083,7 @@ public class BookService {
         return dto;
     }
 
+    @Transactional
     public BookDto getBookFromTitleAuthor(Long id, String title, String authorName) {
         BookDto dto = getBookById(id);
         if (dto == null) {
@@ -1248,20 +1267,24 @@ public class BookService {
         return updateBook(id, dto);
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getAllBookSummaries(boolean includeRequested) {
         return includeRequested ? getAllBookSummaries() : hideRequestedSummaries(getAllBookSummaries());
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getAllBookSummaries() {
         return bookRepository.findAllSummaries().stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public long countBooks(boolean includeRequested) {
         return includeRequested ? countBooks() : countBooks() - bookRepository.countByStatus(BookStatus.REQUESTED);
     }
 
+    @Transactional(readOnly = true)
     public long countBooks() {
         return bookRepository.count();
     }
@@ -1271,10 +1294,12 @@ public class BookService {
      * excluding electronic resources and non-ACTIVE statuses. Used for cache
      * validation in frontend. See issue #337.
      */
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWithoutLocNumber(boolean includeRequested) {
         return includeRequested ? getSummariesWithoutLocNumber() : hideRequestedSummaries(getSummariesWithoutLocNumber());
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWithoutLocNumber() {
         return bookRepository.findSummariesWithoutLocNumber().stream()
                 .map(this::projectionToSummaryDto)
@@ -1285,10 +1310,12 @@ public class BookService {
      * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
      * Used for cache validation in frontend.
      */
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesFromMostRecentDay(boolean includeRequested) {
         return includeRequested ? getSummariesFromMostRecentDay() : hideRequestedSummaries(getSummariesFromMostRecentDay());
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesFromMostRecentDay() {
         return bookRepository.findSummariesFromMostRecentDay().stream()
                 .map(this::projectionToSummaryDto)
@@ -1299,10 +1326,12 @@ public class BookService {
      * Get summaries (id + lastModified) for books with 3-letter LOC start.
      * Used for cache validation in frontend.
      */
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWith3LetterLocStart(boolean includeRequested) {
         return includeRequested ? getSummariesWith3LetterLocStart() : hideRequestedSummaries(getSummariesWith3LetterLocStart());
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWith3LetterLocStart() {
         return bookRepository.findSummariesWith3LetterLocStart().stream()
                 .map(this::projectionToSummaryDto)
@@ -1313,10 +1342,12 @@ public class BookService {
      * Get summaries (id + lastModified) for books without Grokipedia URL.
      * Used for cache validation in frontend.
      */
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl(boolean includeRequested) {
         return includeRequested ? getSummariesWithoutGrokipediaUrl() : hideRequestedSummaries(getSummariesWithoutGrokipediaUrl());
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl() {
         return bookRepository.findSummariesWithoutGrokipediaUrl().stream()
                 .map(this::projectionToSummaryDto)
@@ -1330,10 +1361,12 @@ public class BookService {
      * @param labels List of labels to filter by (book matches if it has at least one)
      * @return List of BookSummaryDto for matching books
      */
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels, boolean includeRequested) {
         return includeRequested ? getSummariesByAllLabels(labels) : hideRequestedSummaries(getSummariesByAllLabels(labels));
     }
 
+    @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels) {
         if (labels == null || labels.isEmpty()) {
             return getAllBookSummaries();
@@ -1357,12 +1390,14 @@ public class BookService {
         return summaries;
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksByIds(List<Long> ids, boolean includeRequested) {
         return includeRequested ? getBooksByIds(ids) : getBooksByIds(ids).stream()
                 .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BookDto> getBooksByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -1402,6 +1437,7 @@ public class BookService {
      * @param bookId The book ID to look up genres for
      * @return GenreLookupResultDto with suggested genres
      */
+    @Transactional
     public GenreLookupResultDto lookupGenresForBook(Long bookId) {
         Book book = bookRepository.findById(bookId).orElse(null);
         if (book == null) {
@@ -1483,6 +1519,7 @@ public class BookService {
      * @param bookIds List of book IDs to look up genres for
      * @return List of GenreLookupResultDto with suggested genres
      */
+    @Transactional(readOnly = true)
     public List<GenreLookupResultDto> lookupGenresForBooks(List<Long> bookIds) {
         List<GenreLookupResultDto> results = new ArrayList<>();
         for (Long bookId : bookIds) {
@@ -1513,6 +1550,7 @@ public class BookService {
      * Processes up to {@link AskGrok#READING_DIFFICULTY_BATCH_SIZE} unset books per prompt.
      * Books that already have a difficulty are skipped.
      */
+    @Transactional
     public List<ReadingDifficultyLookupResultDto> lookupReadingDifficultyForBooks(List<Long> bookIds) {
         if (bookIds == null || bookIds.isEmpty()) {
             return List.of();

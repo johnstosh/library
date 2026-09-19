@@ -16,12 +16,14 @@ import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.Normalizer;
 import java.util.*;
 
 @Service
+@Transactional(readOnly = true)
 public class AskGrok {
 
     private static final Logger log = LoggerFactory.getLogger(AskGrok.class);
