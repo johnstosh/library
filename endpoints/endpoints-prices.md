@@ -21,13 +21,23 @@ Returns lightweight summaries for frontend lastModified cache validation.
 
 ## POST /api/prices/by-ids
 
-Batch fetch full price rows for given IDs (with book/author JOINs). Used by caching hook after summaries diff.
+Batch fetch full price rows for given price IDs (with book/author JOINs). Used by caching hook after summaries diff.
 
 **Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
 
 **Request body:** array of price IDs, e.g. `[1, 2]`
 
 **Response:** array of `BookPriceDto`
+
+## POST /api/prices/by-book-ids
+
+Batch fetch full price rows for all prices belonging to the given *book* IDs (with book/author JOINs). Used by PricesPage and BooksPage after non-price filters narrow the candidate books. Empty list returns `[]`.
+
+**Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
+
+**Request body:** array of book IDs, e.g. `[42]`
+
+**Response:** array of `BookPriceDto` (may contain 0-3+ rows per book)
 
 ## GET /api/prices
 

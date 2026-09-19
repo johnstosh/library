@@ -113,6 +113,21 @@ public class BookPriceService {
     }
 
     /**
+     * Fetch prices scoped to a list of book IDs (for filtered Books/Prices pages).
+     * Uses the new repository query that joins on book.id. Empty list returns empty.
+     * Reuses existing toDto() and JOIN FETCH for book/author data.
+     */
+    @Transactional(readOnly = true)
+    public List<BookPriceDto> getPricesByBookIds(List<Long> bookIds) {
+        if (bookIds == null || bookIds.isEmpty()) {
+            return List.of();
+        }
+        return bookPriceRepository.findByBookIdsWithBookAndAuthor(bookIds).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Looks up AbeBooks prices for a book and upserts one {@link BookPrice} row
      * per cover. Listings with no hardcover/softcover/library-binding/other
      * binding are stored as {@link BookCoverType#UNKNOWN}. Library binding and

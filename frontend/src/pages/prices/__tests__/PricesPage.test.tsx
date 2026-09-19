@@ -109,7 +109,7 @@ const { prices, books } = vi.hoisted(() => {
 })
 
 vi.mock('@/api/prices', () => ({
-  usePrices: () => ({
+  usePrices: (options?: any) => ({
     data: prices,
     isLoading: false,
     isFetching: false,

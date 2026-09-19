@@ -163,11 +163,48 @@ class BookPriceControllerTest {
     }
 
     @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getPricesByBookIds_librarian_returnsPricesForBooks() throws Exception {
+        BookPriceDto price1 = BookPriceDto.builder()
+                .id(1L)
+                .bookId(10L)
+                .bookTitle("Test Book")
+                .cover(BookCoverType.HARDCOVER)
+                .priceDollars(new BigDecimal("5.00"))
+                .build();
+
+        List<Long> bookIds = Arrays.asList(10L);
+        when(bookPriceService.getPricesByBookIds(bookIds)).thenReturn(Arrays.asList(price1));
+
+        mockMvc.perform(post("/api/prices/by-book-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].bookTitle").value("Test Book"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getPricesByBookIdsEmptyList_returnsEmpty() throws Exception {
+        when(bookPriceService.getPricesByBookIds(Collections.emptyList())).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(post("/api/prices/by-book-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Collections.emptyList())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     @WithMockUser(username = "1", authorities = "USER")
     void summariesAndByIds_regularUser_forbidden() throws Exception {
         mockMvc.perform(get("/api/prices/summaries"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/prices/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/prices/by-book-ids")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]"))
                 .andExpect(status().isForbidden());

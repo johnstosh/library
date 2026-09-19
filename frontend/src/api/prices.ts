@@ -21,56 +21,68 @@ export const PRICE_LOOKUP_BACKOFF_MS = [4000, 8000]
 export const PRICE_LOOKUP_CANCELLED_MESSAGE = 'Cancelled: AbeBooks rate limited'
 
 // Hook to get prices with optimized lastModified caching (mirrors useBooks).
-// Uses GET /api/prices/summaries + POST /api/prices/by-ids for only changed rows.
-// Persists detail queries in IndexedDB via shouldPersistQuery. Existing list endpoint
-// is kept for compatibility with tests/mutations.
-export function usePrices(options?: { enabled?: boolean }) {
+// Uses GET /api/prices/summaries + POST /api/prices/by-ids for only changed rows when no bookIds provided.
+// When bookIds provided, uses POST /api/prices/by-book-ids (scoped to candidate books after non-price filters).
+// Populates detail caches in both paths. Existing list/summaries path kept for full-catalog cases.
+export function usePrices(options?: { enabled?: boolean; bookIds?: number[] | undefined }) {
   const queryClient = useQueryClient()
 
-  // Step 1: Fetch summaries (ID + lastModified).
+  const isScoped = options?.bookIds !== undefined
+  const bookIds = options?.bookIds ?? []
+
+  // Step 1: summaries only for full-catalog (unscoped) path; scoped skips summaries+cache logic.
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
     queryKey: queryKeys.prices.summaries(),
     queryFn: () => api.get<BookSummaryDto[]>('/prices/summaries'),
     staleTime: 30 * 1000,
     refetchOnMount: true,
     placeholderData: keepPreviousData,
-    enabled: options?.enabled ?? true,
+    enabled: (options?.enabled ?? true) && !isScoped,
   })
 
-  // Step 2: Determine which prices need fetching based on cache
+  // Scoped path uses direct /by-book-ids (no summaries/cache for simplicity; still seeds detail cache).
+  // Unscoped uses full caching path.
   const pricesToFetch = useMemo(() => {
-    if (!summaries) return []
-
+    if (isScoped || !summaries) return []
     return summaries
       .filter((summary) => {
         const cached = queryClient.getQueryData<BookPriceDto>(queryKeys.prices.detail(summary.id))
         return !cached || cached.lastModified !== summary.lastModified
       })
       .map((s) => s.id)
-  }, [summaries, queryClient])
+  }, [summaries, queryClient, isScoped])
 
-  // Step 3: Batch fetch changed prices using /prices/by-ids
   const { data: fetchedPrices, isLoading: fetchingPrices, isFetching: byIdsFetching, error: byIdsError } = useQuery({
-    queryKey: queryKeys.prices.byIds(pricesToFetch),
+    queryKey: isScoped
+      ? [...queryKeys.prices.all, 'byBookIds', bookIds.join(',')]
+      : queryKeys.prices.byIds(pricesToFetch),
     queryFn: async () => {
+      if (isScoped) {
+        if (bookIds.length === 0) return []
+        return api.post<BookPriceDto[]>('/prices/by-book-ids', bookIds)
+      }
       if (pricesToFetch.length > 0) {
         return api.post<BookPriceDto[]>('/prices/by-ids', pricesToFetch)
       }
       return []
     },
-    enabled: summaries !== undefined && pricesToFetch.length > 0,
+    enabled: (options?.enabled ?? true) && (isScoped ? true : summaries !== undefined && pricesToFetch.length > 0),
     placeholderData: keepPreviousData,
   })
 
-  // Populate individual price detail caches
+  // Populate individual price detail caches (works for both scoped and full-catalog paths)
   React.useEffect(() => {
     fetchedPrices?.forEach((price) => {
       queryClient.setQueryData(queryKeys.prices.detail(price.id), price)
     })
   }, [fetchedPrices, queryClient])
 
-  // Build final list: prefer freshly fetched, fall back to cache
+  // Build final list: for scoped use fetchedPrices directly; for full-catalog prefer fetched + cache.
   const allPrices = useMemo(() => {
+    if (isScoped) {
+      return (fetchedPrices ?? []).sort((a, b) => a.id - b.id)
+    }
+
     if (!summaries) return []
 
     const fetchedPricesMap = new Map<number, BookPriceDto>()
@@ -88,7 +100,7 @@ export function usePrices(options?: { enabled?: boolean }) {
 
     // Stable sort by id (prices have no natural date ordering like books)
     return prices.sort((a, b) => a.id - b.id)
-  }, [summaries, queryClient, fetchedPrices])
+  }, [summaries, queryClient, fetchedPrices, isScoped])
 
   // Stabilize to prevent transient empty states / flicker during refetches
   const previousPricesRef = useRef<BookPriceDto[]>([])
@@ -101,10 +113,11 @@ export function usePrices(options?: { enabled?: boolean }) {
   const stablePrices = allPrices.length > 0 ? allPrices : previousPricesRef.current
 
   const isFetching = summariesFetching || byIdsFetching
+  const isLoading = stablePrices.length === 0 && (summariesLoading || fetchingPrices)
 
   return {
     data: stablePrices,
-    isLoading: stablePrices.length === 0 && (summariesLoading || fetchingPrices),
+    isLoading,
     isFetching,
     error: summariesError || byIdsError,
   }

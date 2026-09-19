@@ -102,24 +102,33 @@ export function BooksPage() {
 
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
-  const { data: allPrices = [] } = usePrices({ enabled: isLibrarian })
 
-  const books = useMemo(() => {
+  // Compute non-price filtered books for scoping price fetch (when librarian).
+  const nonPriceFilteredBooks = useMemo(() => {
     const favoriteIds = favoriteItemIdsForLists(
       favoriteSummary?.lists,
       selectedFavoriteLists,
       'bookIds',
     )
+    return applyBookBindingFilter(
+      applyReadingDifficultyFilter(
+        applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+        selectedDifficulties,
+      ),
+      selectedBindings,
+    )
+      .filter((book) => matchesBookQuery(book, urlQuery))
+      .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id))
+  }, [allBooks, chips, selectedStatuses, selectedDifficulties, selectedBindings, selectedFavoriteLists, favoriteSummary?.lists, urlQuery])
+
+  // Use scoped prices (via /by-book-ids) for price chips when librarian (avoids full catalog on filtered views).
+  // Non-librarian and full-catalog still use default usePrices().
+  const priceBookIds = isLibrarian ? nonPriceFilteredBooks.map((b) => b.id) : undefined
+  const { data: allPrices = [] } = usePrices({ enabled: isLibrarian, bookIds: priceBookIds })
+
+  const books = useMemo(() => {
     return applyBookPriceFilters(
-      applyBookBindingFilter(
-        applyReadingDifficultyFilter(
-          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-          selectedDifficulties,
-        ),
-        selectedBindings,
-      )
-        .filter((book) => matchesBookQuery(book, urlQuery))
-        .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
+      nonPriceFilteredBooks,
       allPrices,
       {
         withPrices: chips.withPrices,
@@ -129,7 +138,7 @@ export function BooksPage() {
         lookupErrors: chips.lookupErrors,
       },
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedBindings, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
+  }, [nonPriceFilteredBooks, allPrices, chips, priceOlderDays])
 
   const intakeConstrained = isBooksIntakeConstrained(
     chips,

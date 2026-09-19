@@ -21,6 +21,14 @@ public interface BookPriceRepository extends JpaRepository<BookPrice, Long> {
 
     List<BookPrice> findByBook_Id(Long bookId);
 
+    /**
+     * Fetch prices for specific books with JOIN FETCH for full DTOs (used by /by-book-ids).
+     * Returns all price rows for the given books (multiple covers per book possible).
+     * Empty list returns empty result (Spring Data JPA behavior).
+     */
+    @Query("SELECT p FROM BookPrice p JOIN FETCH p.book b LEFT JOIN FETCH b.author WHERE p.book.id IN :bookIds")
+    List<BookPrice> findByBookIdsWithBookAndAuthor(@Param("bookIds") List<Long> bookIds);
+
     @Query("SELECT p FROM BookPrice p JOIN FETCH p.book b LEFT JOIN FETCH b.author")
     List<BookPrice> findAllWithBookAndAuthor();
 

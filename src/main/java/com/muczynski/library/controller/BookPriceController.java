@@ -54,6 +54,20 @@ public class BookPriceController {
     }
 
     /**
+     * Librarian-only endpoint to fetch BookPriceDtos scoped to specific book IDs.
+     * Used by PricesPage and BooksPage to avoid loading the full catalog when
+     * non-price filters (search, status, labels, etc.) have narrowed the set.
+     * Empty body or empty list returns empty list. Reuses the same DTOs and
+     * JOIN FETCH as /by-ids.
+     */
+    @PostMapping("/by-book-ids")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<BookPriceDto>> getPricesByBookIds(@RequestBody List<Long> bookIds) {
+        return ResponseEntity.ok(bookPriceService.getPricesByBookIds(bookIds));
+    }
+
+    /**
      * Not {@code @Transactional}: AbeBooks HTTP must not hold a pool connection.
      */
     @PostMapping("/lookup/{bookId}")
