@@ -180,11 +180,15 @@ export function PricesPage() {
   )
 
   const prices = useMemo(() => {
-    // With scopedPrices already limited to candidate books, no need for further matchingBookIds filter.
-    // Price-dependent chips (lookupErrors etc.) and row filters still apply on this subset.
-    const rows = chips.lookupErrors ? scopedPrices.filter(isLookupError) : scopedPrices
+    const matchingBookIds = new Set(matchingBooks.map((b) => b.id))
+    // Scope price rows to matchingBooks (restores pre-#342 noPrices/withPrices/etc behavior).
+    // lookupErrors row filter applies on top (shows only error rows, not real listings for those books).
+    let rows = scopedPrices.filter((price) => matchingBookIds.has(price.bookId))
+    if (chips.lookupErrors) {
+      rows = rows.filter(isLookupError)
+    }
     return applyPriceFilters(rows, priceChips, maxTotal, Date.now(), recentHours)
-  }, [scopedPrices, chips.lookupErrors, priceChips, maxTotal, recentHours])
+  }, [scopedPrices, matchingBooks, chips.lookupErrors, priceChips, maxTotal, recentHours])
 
   const displayedBookCount = useMemo(() => {
     const ids = new Set<number>()
