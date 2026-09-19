@@ -45,43 +45,6 @@ describe('applyPriceFilters', () => {
     expect(filtered.map((row) => row.id)).toEqual([1])
   })
 
-  it('filters by cover chip', () => {
-    const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, softcover: true }, '')
-    expect(filtered.map((row) => row.id)).toEqual([2])
-  })
-
-  it('filters Other/Unknown covers', () => {
-    const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, otherUnknown: true }, '')
-    expect(filtered.map((row) => row.id)).toEqual([4])
-  })
-
-  it('filters library binding covers', () => {
-    const withLibrary = [
-      ...rows,
-      price({ id: 5, cover: 'LIBRARY_BINDING', totalDollars: 12, priceDollars: 12 }),
-    ]
-    const filtered = applyPriceFilters(
-      withLibrary,
-      { ...defaultPriceChipFilters, libraryBinding: true },
-      '',
-    )
-    expect(filtered.map((row) => row.id)).toEqual([5])
-  })
-
-  it('ORs hardcover with Other/Unknown', () => {
-    const filtered = applyPriceFilters(
-      rows,
-      { ...defaultPriceChipFilters, hardcover: true, otherUnknown: true },
-      '',
-    )
-    expect(filtered.map((row) => row.id)).toEqual([1, 3, 4])
-  })
-
-  it('filters lookup failures', () => {
-    const filtered = applyPriceFilters(rows, { ...defaultPriceChipFilters, lookupFailed: true }, '')
-    expect(filtered.map((row) => row.id)).toEqual([3])
-  })
-
   it('filters looked up recently by hours', () => {
     const now = Date.parse('2026-09-10T12:00:00Z')
     const recentRows = [
@@ -108,7 +71,7 @@ describe('parseMaxTotal', () => {
 })
 
 describe('coverLabel', () => {
-  it('labels hardcover, softcover, library binding, other, and unknown', () => {
+  it('labels covers for PriceTable', () => {
     expect(coverLabel('HARDCOVER')).toBe('Hardcover')
     expect(coverLabel('SOFTCOVER')).toBe('Softcover')
     expect(coverLabel('LIBRARY_BINDING')).toBe('Library Binding')

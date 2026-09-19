@@ -13,48 +13,6 @@ export function PriceFilters({ chips, onToggle, recentHours, onRecentHoursChange
   return (
     <div className="flex flex-wrap items-center gap-2" data-test="price-filter-chips">
       <FilterChip
-        label="Hardcover"
-        active={chips.hardcover}
-        onClick={() => onToggle('hardcover')}
-        tooltip="Only hardcover AbeBooks listings"
-        dataTest="filter-price-hardcover"
-      />
-      <FilterChip
-        label="Softcover"
-        active={chips.softcover}
-        onClick={() => onToggle('softcover')}
-        tooltip="Only softcover AbeBooks listings"
-        dataTest="filter-price-softcover"
-      />
-      <FilterChip
-        label="Library Binding"
-        active={chips.libraryBinding}
-        onClick={() => onToggle('libraryBinding')}
-        tooltip="Only library-binding AbeBooks listings"
-        dataTest="filter-price-library-binding"
-      />
-      <FilterChip
-        label="Other/Unknown"
-        active={chips.otherUnknown}
-        onClick={() => onToggle('otherUnknown')}
-        tooltip="Only listings whose binding is not hardcover, softcover, or library binding"
-        dataTest="filter-price-other-unknown"
-      />
-      <FilterChip
-        label="Has listing"
-        active={chips.hasListing}
-        onClick={() => onToggle('hasListing')}
-        tooltip="Only rows that have a price from AbeBooks"
-        dataTest="filter-price-has-listing"
-      />
-      <FilterChip
-        label="Lookup failed"
-        active={chips.lookupFailed}
-        onClick={() => onToggle('lookupFailed')}
-        tooltip="Only rows with no matching listing or a lookup error"
-        dataTest="filter-price-lookup-failed"
-      />
-      <FilterChip
         label="Looked up recently"
         active={chips.recent}
         onClick={() => onToggle('recent')}

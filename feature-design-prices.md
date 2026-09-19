@@ -56,11 +56,9 @@ Deleting a book cascades to its prices.
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
   - **Desire to Purchase** (`data-test="desire-to-purchase-filters"`) — OR chips for 0–10 plus Unset, same pattern as Reading Difficulty (`desireToPurchase=0,10,unset`)
   - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
-    - Cover chips (Prices only): Hardcover, Softcover, **Library Binding** (`data-test="filter-price-library-binding"`), **Other/Unknown** (`data-test="filter-price-other-unknown"`)
-    - Has listing / Lookup failed, Looked up recently (last **N hours**, default 24; `data-test="filter-price-recent-hours"`)
-    - **Books with Pricing** and **Books without Pricing** (no usable listing: missing rows, No matching listing, or rate-limited/cancelled) and **Price older than N days** (default 90), matching Books
-    - **Lookup Errors** (`data-test="filter-lookup-errors"`) on Books and Prices: rate limited, HTTP errors, and other failures — **not** `No matching listing`
-    - **Total less than $X** (`data-test="prices-max-total"`) — keeps rows whose `price + shipping` is strictly less than X
+    - **Looked up recently** chip (last **N hours**, default 24; `data-test="filter-price-recent"`) + hours input (FilterChip pattern)
+    - **Books with Pricing** / **Books without Pricing** / **Lookup Errors** / **Price older than N days** (default 90) / **Total less than $X** (`data-test="prices-max-total"`) from BookPriceFilters
+    - Binding filters (Hardcover/Softcover/Library Binding/Other/Unknown) are in the separate BindingFilters section (not in Pricing)
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
 - Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), total books in the database (`database-count`), plus price rows in the table (`price-row-count`).
 - Footer (`data-test="price-statistics"`) on Prices reports:

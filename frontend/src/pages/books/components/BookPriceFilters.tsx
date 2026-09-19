@@ -8,7 +8,7 @@ interface BookPriceFiltersProps {
   onToggle: (chip: keyof BookChipFilters) => void
   priceOlderDays: number
   onPriceOlderDaysChange: (days: number) => void
-  /** Listing-level chips (hardcover, has listing, …) shown on the Prices page. */
+  /** Listing-level chip (Looked up recently) shown on the Prices page. */
   listingFilters?: ReactNode
   maxTotal?: string
   onMaxTotalChange?: (value: string) => void

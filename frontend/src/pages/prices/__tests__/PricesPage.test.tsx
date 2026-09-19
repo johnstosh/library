@@ -176,11 +176,8 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('filter-with-prices')).toHaveTextContent('Books with Pricing')
     expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
-    expect(screen.getByTestId('filter-price-hardcover')).toBeInTheDocument()
-    expect(screen.getByTestId('filter-price-softcover')).toBeInTheDocument()
-    expect(screen.getByTestId('filter-price-library-binding')).toBeInTheDocument()
-    expect(screen.getByTestId('filter-price-other-unknown')).toBeInTheDocument()
     expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
+    expect(screen.getByTestId('filter-price-recent')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-recent-hours')).toBeInTheDocument()
     expect(screen.getByTestId('desire-to-purchase-filters')).toHaveTextContent('Desire to Purchase')
     expect(screen.getByTestId('open-in-books')).toHaveTextContent('Open in Books')
@@ -194,22 +191,12 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('price-stats-total-books')).toHaveTextContent('4')
   })
 
-  it('filters by hardcover chip', () => {
-    renderPrices('/prices?hardcover=true')
-    expect(screen.getByTestId('price-total-11')).toBeInTheDocument()
-    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('price-total-14')).not.toBeInTheDocument()
-    expect(screen.getByTestId('price-status-13')).toBeInTheDocument()
-    expect(screen.getByTestId('price-status-15')).toBeInTheDocument()
-    expect(screen.getByTestId('table-count')).toHaveTextContent('3 books in this table')
-    expect(screen.getByTestId('price-row-count')).toHaveTextContent('3 prices in this table')
-  })
-
-  it('filters by Other/Unknown cover chip', () => {
-    renderPrices('/prices?otherUnknown=true')
-    expect(screen.getByTestId('price-total-14')).toBeInTheDocument()
-    expect(screen.queryByTestId('price-total-11')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('price-total-12')).not.toBeInTheDocument()
+  it('filters by looked up recently (old query params ignored)', () => {
+    renderPrices('/prices?recent=true&recentHours=6&hardcover=true')
+    const chip = screen.getByTestId('filter-price-recent')
+    expect(chip).toHaveTextContent('Looked up recently')
+    // active state uses bg-primary-50 + border-primary-500 (per FilterChip); old params ignored
+    expect(chip.closest('div')).toHaveClass('border-primary-500')
   })
 
   it('withPrices keeps books that have a usable listing', () => {
