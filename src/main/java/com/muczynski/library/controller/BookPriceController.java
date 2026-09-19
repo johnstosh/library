@@ -5,6 +5,7 @@ package com.muczynski.library.controller;
 
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
+import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.service.BookPriceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,6 +37,34 @@ public class BookPriceController {
     @Transactional(readOnly = true)
     public ResponseEntity<List<BookPriceDto>> listPrices() {
         return ResponseEntity.ok(bookPriceService.listAll());
+    }
+
+    @GetMapping("/summaries")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<BookSummaryDto>> getAllPriceSummaries() {
+        return ResponseEntity.ok(bookPriceService.getAllPriceSummaries());
+    }
+
+    @PostMapping("/by-ids")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<BookPriceDto>> getPricesByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(bookPriceService.getPricesByIds(ids));
+    }
+
+    /**
+     * Librarian-only endpoint to fetch BookPriceDtos scoped to specific book IDs.
+     * Used by PricesPage and BooksPage to avoid loading the full catalog when
+     * non-price filters (search, status, labels, etc.) have narrowed the set.
+     * Empty body or empty list returns empty list. Reuses the same DTOs and
+     * JOIN FETCH as /by-ids.
+     */
+    @PostMapping("/by-book-ids")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<BookPriceDto>> getPricesByBookIds(@RequestBody List<Long> bookIds) {
+        return ResponseEntity.ok(bookPriceService.getPricesByBookIds(bookIds));
     }
 
     /**

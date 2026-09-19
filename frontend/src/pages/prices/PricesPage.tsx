@@ -125,30 +125,45 @@ export function PricesPage() {
     setSearchParams({ ...bookParams, ...priceParams })
   }
 
-  const { data: allPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices()
   const { data: allBooks = [], isLoading: booksLoading } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
 
-  const matchingBooks = useMemo(() => {
+  // Non-price filters first (search, chips, labels, status, favorites, reading difficulty, bindings, desire-to-purchase).
+  // This produces candidateBooks that price chips and row filters can then narrow further.
+  // Only fetch prices for those books (scoped /by-book-ids) -- avoids full catalog load on narrow searches.
+  const nonPriceFilteredBooks = useMemo(() => {
     const favoriteIds = favoriteItemIdsForLists(
       favoriteSummary?.lists,
       selectedFavoriteLists,
       'bookIds',
     )
-    return applyBookPriceFilters(
-      applyDesireToPurchaseFilter(
-        applyBookBindingFilter(
-          applyReadingDifficultyFilter(
-            applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-            selectedDifficulties,
-          ),
-          selectedBindings,
+    return applyDesireToPurchaseFilter(
+      applyBookBindingFilter(
+        applyReadingDifficultyFilter(
+          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
+          selectedDifficulties,
         ),
-        selectedDesireToPurchase,
+        selectedBindings,
       )
         .filter((book) => matchesBookQuery(book, urlQuery))
         .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
-      allPrices,
+      selectedDesireToPurchase,
+    )
+  }, [allBooks, chips, selectedStatuses, selectedDifficulties, selectedBindings, selectedFavoriteLists, favoriteSummary?.lists, urlQuery, selectedDesireToPurchase])
+
+  const candidateBookIds = useMemo(
+    () => nonPriceFilteredBooks.map((b) => b.id),
+    [nonPriceFilteredBooks],
+  )
+
+  const { data: scopedPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices({
+    bookIds: candidateBookIds,
+  })
+
+  const matchingBooks = useMemo(() => {
+    return applyBookPriceFilters(
+      nonPriceFilteredBooks,
+      scopedPrices,
       {
         withPrices: chips.withPrices,
         noPrices: chips.noPrices,
@@ -157,34 +172,23 @@ export function PricesPage() {
         lookupErrors: chips.lookupErrors,
       },
     )
-  }, [allBooks, allPrices, chips, favoriteSummary?.lists, priceOlderDays, selectedBindings, selectedDesireToPurchase, selectedDifficulties, selectedFavoriteLists, selectedStatuses, urlQuery])
-
-  const matchingBookIds = useMemo(
-    () => new Set(matchingBooks.map((book) => book.id)),
-    [matchingBooks],
-  )
+  }, [nonPriceFilteredBooks, scopedPrices, chips, priceOlderDays])
 
   const priceStatistics = useMemo(
-    () => summarizeBookPrices(matchingBooks, allPrices),
-    [matchingBooks, allPrices],
+    () => summarizeBookPrices(matchingBooks, scopedPrices),
+    [matchingBooks, scopedPrices],
   )
 
-  const bookFiltersActive =
-    urlQuery.trim().length > 0 ||
-    selectedLabels.length > 0 ||
-    selectedDifficulties.length > 0 ||
-    selectedDesireToPurchase.length > 0 ||
-    selectedStatuses.length > 0 ||
-    selectedFavoriteLists.length > 0 ||
-    Object.entries(chips).some(([, on]) => on)
-
   const prices = useMemo(() => {
-    const scoped = bookFiltersActive
-      ? allPrices.filter((price) => matchingBookIds.has(price.bookId))
-      : allPrices
-    const rows = chips.lookupErrors ? scoped.filter(isLookupError) : scoped
+    const matchingBookIds = new Set(matchingBooks.map((b) => b.id))
+    // Scope price rows to matchingBooks (restores pre-#342 noPrices/withPrices/etc behavior).
+    // lookupErrors row filter applies on top (shows only error rows, not real listings for those books).
+    let rows = scopedPrices.filter((price) => matchingBookIds.has(price.bookId))
+    if (chips.lookupErrors) {
+      rows = rows.filter(isLookupError)
+    }
     return applyPriceFilters(rows, priceChips, maxTotal, Date.now(), recentHours)
-  }, [allPrices, bookFiltersActive, chips.lookupErrors, matchingBookIds, maxTotal, priceChips, recentHours])
+  }, [scopedPrices, matchingBooks, chips.lookupErrors, priceChips, maxTotal, recentHours])
 
   const displayedBookCount = useMemo(() => {
     const ids = new Set<number>()

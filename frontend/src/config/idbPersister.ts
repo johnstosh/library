@@ -66,7 +66,8 @@ export function shouldPersistQuery(query: Query): boolean {
   return (
     (key[0] === 'books' && key[1] === 'detail') ||
     (key[0] === 'authors' && key[1] === 'detail') ||
-    (key[0] === 'photos' && key[1] === 'detail')
+    (key[0] === 'photos' && key[1] === 'detail') ||
+    (key[0] === 'prices' && key[1] === 'detail')
   )
 }
 
