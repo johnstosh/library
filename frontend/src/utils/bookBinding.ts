@@ -28,7 +28,9 @@ export function isBookCoverType(value: string): value is BookCoverType {
 export function normalizeBookBinding(
   value: string | null | undefined,
 ): BookCoverType {
-  if (!value || value.trim() === '') return BookCoverType.UNKNOWN
+  if (!value || typeof value !== 'string' || value.trim() === '') {
+    return BookCoverType.UNKNOWN
+  }
   const key = value.trim().toUpperCase()
   return isBookCoverType(key) ? key : BookCoverType.UNKNOWN
 }
@@ -36,6 +38,37 @@ export function normalizeBookBinding(
 export function bookBindingLabel(value: string | null | undefined): string {
   return BOOK_BINDING_FILTER_LABELS[normalizeBookBinding(value)]
 }
+
+/**
+ * For display in tables, view pages, modals, and search results.
+ * Electronic resources show "Electronic resource" (matching status chip) instead
+ * of any binding (including Unknown). Binding filters remain unchanged.
+ * Accepts either binding value or full book object.
+ */
+export function bookBindingDisplay(
+  bindingOrBook: string | null | undefined | { binding?: string | null; electronicResource?: boolean | null },
+  electronicResource: boolean | null | undefined = false,
+): string {
+  if (
+    typeof bindingOrBook === 'object' &&
+    bindingOrBook !== null &&
+    'electronicResource' in bindingOrBook
+  ) {
+    const book = bindingOrBook as { binding?: string | null; electronicResource?: boolean | null }
+    if (book.electronicResource === true) {
+      return 'Electronic resource'
+    }
+    return bookBindingLabel(book.binding)
+  }
+
+  if (electronicResource === true) {
+    return 'Electronic resource'
+  }
+  return bookBindingLabel(bindingOrBook as string | null | undefined)
+}
+
+
+
 
 export function bindingsFromSearchParams(params: URLSearchParams): BookCoverType[] {
   const raw = params.get('binding')

@@ -65,20 +65,21 @@ class BookIntegrationTest {
     @WithMockUser
     @Sql(scripts = "/data-integration-without-loc.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void getBooksWithoutLocNumber_excludesElectronicResources() throws Exception {
+    void getBooksWithoutLocNumber_excludesElectronicAndNonActive() throws Exception {
         mockMvc.perform(get("/api/books/without-loc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[?(@.id == 999)]").exists())
                 .andExpect(jsonPath("$[?(@.id == 998)]").exists())
-                .andExpect(jsonPath("$[?(@.id == 997)]").doesNotExist());
+                .andExpect(jsonPath("$[?(@.id == 997)]").doesNotExist())
+                .andExpect(jsonPath("$[?(@.id == 996)]").doesNotExist());
     }
 
     @Test
     @WithMockUser
     @Sql(scripts = "/data-integration-without-loc.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void searchWithoutLocFilter_excludesElectronicResources() throws Exception {
+    void searchWithoutLocFilter_excludesElectronicAndNonActive() throws Exception {
         mockMvc.perform(get("/api/search")
                         .param("query", "")
                         .param("size", "20")
@@ -87,7 +88,8 @@ class BookIntegrationTest {
                 .andExpect(jsonPath("$.books.length()").value(2))
                 .andExpect(jsonPath("$.books[?(@.id == 999)]").exists())
                 .andExpect(jsonPath("$.books[?(@.id == 998)]").exists())
-                .andExpect(jsonPath("$.books[?(@.id == 997)]").doesNotExist());
+                .andExpect(jsonPath("$.books[?(@.id == 997)]").doesNotExist())
+                .andExpect(jsonPath("$.books[?(@.id == 996)]").doesNotExist());
     }
 
     @Test

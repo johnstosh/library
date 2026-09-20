@@ -14,6 +14,7 @@ import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.service.BooksFromFeedService;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import lombok.extern.slf4j.Slf4j;
@@ -193,11 +194,15 @@ public class BookPriceService {
     private PreparedLookup prepareLookup(Long bookId) {
         Book book = requireBook(bookId);
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
-        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+        String title = book.getTitle();
+        if (BooksFromFeedService.isTemporaryTitle(title)) {
             return new PreparedLookup(null, null,
                     saveErrorResult(book, "Not Ready - Temporary title", false, null));
         }
-        return new PreparedLookup(book.getTitle(), authorName, null);
+        if (isExcerptTitle(title)) {
+            return new PreparedLookup(null, null, createExcerptResult(book));
+        }
+        return new PreparedLookup(title, authorName, null);
     }
 
     private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
@@ -237,6 +242,33 @@ public class BookPriceService {
                 .hardcover(toDto(hardcover))
                 .softcover(toDto(softcover))
                 .errorMessage(message)
+                .build();
+    }
+
+    private BookPriceLookupResultDto createExcerptResult(Book book) {
+        // Delete all other covers (keep only softcover per spec)
+        deleteCover(book, BookCoverType.HARDCOVER);
+        deleteCover(book, BookCoverType.LIBRARY_BINDING);
+        deleteCover(book, BookCoverType.OTHER);
+        deleteCover(book, BookCoverType.UNKNOWN);
+
+        BookPrice softcover = bookPriceRepository.findByBook_IdAndCover(book.getId(), BookCoverType.SOFTCOVER)
+                .orElseGet(BookPrice::new);
+        softcover.setBook(book);
+        softcover.setCover(BookCoverType.SOFTCOVER);
+        softcover.setPriceDollars(new BigDecimal("0.01"));
+        softcover.setShippingDollars(BigDecimal.ZERO);
+        softcover.setCondition(null);
+        softcover.setDetailsUrl(null);
+        softcover.setLookupError(null);
+        softcover.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
+        bookPriceRepository.save(softcover);
+
+        return BookPriceLookupResultDto.builder()
+                .bookId(book.getId())
+                .bookTitle(book.getTitle())
+                .success(true)
+                .softcover(toDto(softcover))
                 .build();
     }
 
@@ -347,6 +379,18 @@ public class BookPriceService {
     private static boolean isUnknownBinding(AbeBooksListing listing) {
         return listing != null
                 && (listing.getBinding() == null || listing.getBinding() == BookCoverType.UNKNOWN);
+    }
+
+    /**
+     * Case-insensitive check for titles starting with "Excerpt from " or "Excerpts from "
+     * (with space after "from"). Matches the temporary-title early-exit pattern.
+     */
+    private static boolean isExcerptTitle(String title) {
+        if (title == null) {
+            return false;
+        }
+        String trimmed = title.trim().toLowerCase();
+        return trimmed.startsWith("excerpt from ") || trimmed.startsWith("excerpts from ");
     }
 
     private void deleteCover(Book book, BookCoverType cover) {

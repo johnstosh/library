@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
+import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
 import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,7 +47,8 @@ class BookPriceServiceTest {
 
     @BeforeEach
     void setUp() {
-        bookPriceService = new BookPriceService(bookRepository, bookPriceRepository, abeBooksClient);
+        // Use constructor that accepts repository so createExcerptResult works
+        bookPriceService = new BookPriceService(bookRepository, bookPriceRepository, abeBooksClient, 0, 0);
     }
 
     @Test
@@ -315,6 +318,54 @@ class BookPriceServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not Ready - Temporary title", result.getErrorMessage());
         verify(abeBooksClient, times(0)).findCheapestGoodOrBetter(any(), any());
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsExcerptTitle() {
+        Book book = book("Excerpt from Summa Theologica", "Thomas Aquinas");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("Excerpt from Summa Theologica", result.getBookTitle());
+        assertNotNull(result.getSoftcover());
+        assertEquals(new BigDecimal("0.01"), result.getSoftcover().getPriceDollars());
+        assertEquals(BigDecimal.ZERO, result.getSoftcover().getShippingDollars());
+        assertEquals(BookCoverType.SOFTCOVER, result.getSoftcover().getCover());
+        assertNull(result.getSoftcover().getLookupError());
+        verify(abeBooksClient, times(0)).findCheapestGoodOrBetter(any(), any());
+        verify(bookPriceRepository, times(1)).save(any(BookPrice.class));
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsExcerptsTitleWithLeadingSpace() {
+        Book book = book("  excerpts from the fathers  ", "Various");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookPriceLookupResultDto result = bookPriceService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(new BigDecimal("0.01"), result.getSoftcover().getPriceDollars());
+        verify(abeBooksClient, times(0)).findCheapestGoodOrBetter(any(), any());
+    }
+
+    @Test
+    void lookupAndUpdateBook_normalTitleStillCallsAbeBooks() {
+        Book book = book("Normal Title", "Jane Austen");
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(abeBooksClient.findCheapestGoodOrBetter("Normal Title", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder().build());
+
+        bookPriceService.lookupAndUpdateBook(1L);
+
+        verify(abeBooksClient, times(1)).findCheapestGoodOrBetter(any(), any());
     }
 
     private static Book book(String title, String authorName) {

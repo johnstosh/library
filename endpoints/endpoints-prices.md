@@ -91,6 +91,6 @@ Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/
 }
 ```
 
-`success` is true when at least one cover found a listing. Temporary photo-intake titles are skipped with `Not Ready - Temporary title`.
+`success` is true when at least one cover found a listing. Temporary photo-intake titles are skipped with `Not Ready - Temporary title`. Titles starting with "Excerpt from " or "Excerpts from " (case-insensitive, trimmed) skip AbeBooks and save $0.01 softcover (success=true).
 
 See also `feature-design-prices.md` and the caching design in `design-caching.md`. The new endpoints keep the existing `listAll` behavior intact.

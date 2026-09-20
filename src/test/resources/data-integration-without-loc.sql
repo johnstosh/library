@@ -16,3 +16,7 @@ VALUES (998, 'Print Book With Empty LOC', '', false, CURRENT_TIMESTAMP - INTERVA
 -- Electronic resource without LOC (should be excluded)
 INSERT INTO book (id, title, loc_number, electronic_resource, date_added_to_library, last_modified, author_id, library_id, status)
 VALUES (997, 'Electronic Resource Without LOC', NULL, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 999, 'ACTIVE');
+
+-- Non-ACTIVE without LOC (should now be excluded per #337)
+INSERT INTO book (id, title, loc_number, electronic_resource, date_added_to_library, last_modified, author_id, library_id, status)
+VALUES (996, 'Lost Book Without LOC', NULL, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 999, 'LOST');

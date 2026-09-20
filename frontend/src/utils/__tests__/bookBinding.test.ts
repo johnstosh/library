@@ -4,6 +4,7 @@ import {
   applyBookBindingFilter,
   bindingsFromSearchParams,
   bookBindingLabel,
+  bookBindingDisplay,
   normalizeBookBinding,
 } from '@/utils/bookBinding'
 
@@ -14,6 +15,21 @@ describe('bookBindingLabel', () => {
     expect(bookBindingLabel('OTHER')).toBe('Other')
     expect(bookBindingLabel(null)).toBe('Unknown')
     expect(bookBindingLabel('')).toBe('Unknown')
+  })
+})
+
+describe('bookBindingDisplay', () => {
+  it('shows "Electronic resource" for electronic books regardless of binding', () => {
+    expect(bookBindingDisplay(null, true)).toBe('Electronic resource')
+    expect(bookBindingDisplay('HARDCOVER', true)).toBe('Electronic resource')
+    expect(bookBindingDisplay('UNKNOWN', true)).toBe('Electronic resource')
+  })
+
+  it('falls back to binding label for non-electronic books (object form not supported in this impl)', () => {
+    expect(bookBindingDisplay('HARDCOVER', false)).toBe('Hardcover')
+    expect(bookBindingDisplay(null, false)).toBe('Unknown')
+    expect(bookBindingDisplay('LIBRARY_BINDING', false)).toBe('Library Binding')
+    expect(bookBindingDisplay(null)).toBe('Unknown') // electronicResource defaults to false
   })
 })
 

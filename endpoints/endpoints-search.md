@@ -16,7 +16,7 @@ Returns search results for books and authors matching the query.
 - `filterFreeText` (boolean, optional, default `false`) - Books with a non-blank free text URL
 - `filterAudio` (boolean, optional, default `false`) - Books whose free text URL contains `librivox`
 - `filterMostRecent` (boolean, optional, default `false`) - Books added on the most recent day UTC, or with a temporary `YYYY-M-D` title
-- `filterWithoutLoc` (boolean, optional, default `false`) - Legacy: same as `status=without-loc` when `status` is omitted
+- `filterWithoutLoc` (boolean, optional, default `false`) - Legacy: same as `status=without-loc` (ACTIVE, no LOC, not electronic) when `status` is omitted. See issue #337.
 - `filterThreeLetterLoc` (boolean, optional, default `false`) - LOC call number starts with three uppercase letters
 - `filterWithoutGrokipedia` (boolean, optional, default `false`) - Books with no Grokipedia URL
 - `filterWithGrokipedia` (boolean, optional, default `false`) - Books with a Grokipedia URL
@@ -35,7 +35,7 @@ Returns search results for books and authors matching the query.
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values
-- `status` (string, optional) - Comma-separated status-filter keys (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`); book must match ANY of them. `in-library` is Active with a LOC call number; `electronic-resource` is Active with `electronicResource = true`; `without-loc` is no call number excluding electronic resources. When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained.
+- `status` (string, optional) - Comma-separated status-filter keys (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`); book must match ANY of them. `in-library`/`electronic-resource`/`without-loc` are Active-only (`without-loc` also requires no LOC and not electronicResource). When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained. See issue #337.
 
 All active boolean chips AND labels AND status (OR within that list) AND reading-difficulty (OR within that list) AND together. Conflicting chips may yield empty results.
 

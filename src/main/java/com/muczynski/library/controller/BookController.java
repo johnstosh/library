@@ -32,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -68,6 +69,7 @@ public class BookController {
 
     @GetMapping
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getAllBooks() {
         try {
             List<BookDto> books = bookService.getAllBooks(isLibrarian());
@@ -80,6 +82,7 @@ public class BookController {
 
     @GetMapping("/without-loc")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksWithoutLocNumber() {
         try {
             List<BookSummaryDto> summaries = bookService.getSummariesWithoutLocNumber(isLibrarian());
@@ -96,6 +99,7 @@ public class BookController {
      */
     @GetMapping("/most-recent-day")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksFromMostRecentDay() {
         try {
             List<BookSummaryDto> summaries = bookService.getSummariesFromMostRecentDay(isLibrarian());
@@ -108,6 +112,7 @@ public class BookController {
 
     @GetMapping("/by-3letter-loc")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksWith3LetterLocStart() {
         try {
             List<BookSummaryDto> summaries = bookService.getSummariesWith3LetterLocStart(isLibrarian());
@@ -124,6 +129,7 @@ public class BookController {
      */
     @GetMapping("/by-labels")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksByLabels(@RequestParam(required = false) String labels) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
@@ -142,6 +148,7 @@ public class BookController {
 
     @GetMapping("/without-grokipedia")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksWithoutGrokipediaUrl() {
         try {
             List<BookSummaryDto> summaries = bookService.getSummariesWithoutGrokipediaUrl(isLibrarian());
@@ -154,6 +161,7 @@ public class BookController {
 
     @GetMapping("/{id}")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBookById(@PathVariable Long id) {
         try {
             BookDto book = bookService.getBookById(id);
@@ -171,6 +179,7 @@ public class BookController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<?> createBook(@Valid @RequestBody BookDto bookDto) {
         try {
             BookDto created = bookService.createBook(bookDto);
@@ -183,6 +192,7 @@ public class BookController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<?> updateBook(@PathVariable Long id, @Valid @RequestBody BookDto bookDto) {
         try {
             BookDto updated = bookService.updateBook(id, bookDto);
@@ -211,6 +221,7 @@ public class BookController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<BulkDeleteResultDto> deleteBulkBooks(@RequestBody List<Long> bookIds) {
         BulkDeleteResultDto result = bookService.deleteBulkBooks(bookIds);
         if (result.getFailedCount() > 0) {
@@ -232,6 +243,7 @@ public class BookController {
 
     @PostMapping("/{id}/clone")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<?> cloneBook(@PathVariable Long id) {
         try {
             BookDto cloned = bookService.cloneBook(id);
@@ -388,6 +400,7 @@ public class BookController {
 
     @PutMapping("/{id}/book-by-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<?> generateBookByPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateTempBook(id);
@@ -400,6 +413,7 @@ public class BookController {
 
     @PutMapping("/{id}/book-from-first-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<?> generateBookFromFirstPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateBookFromFirstPhoto(id);
@@ -416,6 +430,7 @@ public class BookController {
      */
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.getTitleAuthorFromPhoto(id);
@@ -428,6 +443,7 @@ public class BookController {
 
     @PutMapping("/{id}/book-from-title-author")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<BookDto> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
         try {
             String title = request.get("title");
@@ -466,6 +482,7 @@ public class BookController {
 
     @GetMapping("/count")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<CountDto> getBookCount() {
         try {
             return ResponseEntity.ok(new CountDto(bookService.countBooks(isLibrarian())));
@@ -477,6 +494,7 @@ public class BookController {
 
     @GetMapping("/summaries")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getAllBookSummaries() {
         try {
             List<BookSummaryDto> summaries = bookService.getAllBookSummaries(isLibrarian());
@@ -489,6 +507,7 @@ public class BookController {
 
     @PostMapping("/by-ids")
     @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksByIds(@RequestBody List<Long> ids) {
         try {
             List<BookDto> books = bookService.getBooksByIds(ids, isLibrarian());
@@ -501,6 +520,7 @@ public class BookController {
 
     @PostMapping("/suggest-loc")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> suggestLocNumber(@RequestBody Map<String, String> request) {
         try {
             String title = request.get("title");
@@ -522,6 +542,7 @@ public class BookController {
 
     @PostMapping("/{id}/lookup-genres")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<GenreLookupResultDto> lookupGenresForBook(@PathVariable Long id) {
         logger.info("Looking up genres for book ID {}", id);
         GenreLookupResultDto result = bookService.lookupGenresForBook(id);
@@ -530,6 +551,7 @@ public class BookController {
 
     @PostMapping("/lookup-genres-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<List<GenreLookupResultDto>> lookupGenresBulk(@RequestBody List<Long> bookIds) {
         logger.info("Looking up genres for {} books", bookIds.size());
         List<GenreLookupResultDto> results = bookService.lookupGenresForBooks(bookIds);
@@ -538,6 +560,7 @@ public class BookController {
 
     @PostMapping("/lookup-reading-difficulty-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
+    @Transactional
     public ResponseEntity<List<ReadingDifficultyLookupResultDto>> lookupReadingDifficultyBulk(
             @RequestBody List<Long> bookIds) {
         logger.info("Filling reading difficulty for {} books", bookIds.size());

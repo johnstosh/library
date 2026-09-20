@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -68,6 +68,7 @@ export function BooksPage() {
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
+  const [, startTransition] = useTransition()
 
   useEffect(() => {
     setInputValue(urlQuery)
@@ -83,25 +84,29 @@ export function BooksPage() {
     q?: string
     priceOlderDays?: number
   }) => {
-    setSearchParams(
-      bookFilterParamsForUrl(
-        {
-          chips: next.chips ?? chips,
-          labels: next.labels ?? selectedLabels,
-          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
-          bindings: next.bindings ?? selectedBindings,
-          statuses: next.statuses ?? selectedStatuses,
-          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
-          q: next.q !== undefined ? next.q : urlQuery,
-          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
-        },
-        'books',
-      ),
-    )
+    startTransition(() => {
+      setSearchParams(
+        bookFilterParamsForUrl(
+          {
+            chips: next.chips ?? chips,
+            labels: next.labels ?? selectedLabels,
+            readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+            bindings: next.bindings ?? selectedBindings,
+            statuses: next.statuses ?? selectedStatuses,
+            favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
+            q: next.q !== undefined ? next.q : urlQuery,
+            priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+          },
+          'books',
+        ),
+      )
+    })
   }
 
   const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
   const { data: bookCount } = useBookCount()
+
+  const isFilterPending = isFetching && !isLoading
 
   // Compute non-price filtered books for scoping price fetch (when librarian).
   const nonPriceFilteredBooks = useMemo(() => {
@@ -350,7 +355,7 @@ export function BooksPage() {
           />
         </div>
 
-        <LoadingOverlay show={isFetching && !isLoading} />
+        <LoadingOverlay show={isFilterPending} />
         <TableSummary count={books.length} singular="book" plural="books" isLoading={isLoading} />
       </PageCard>
 

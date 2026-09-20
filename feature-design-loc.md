@@ -56,7 +56,7 @@ Each strategy updates the book's `locNumber` and `lastModified` fields on succes
 ## Book Filtering
 
 ### Books Without LOC
-- Endpoint: `GET /api/books/without-loc`
+- Endpoint: `GET /api/books/without-loc` (ACTIVE books only, excludes electronic and non-ACTIVE statuses per #337)
 - Authorization: Public (permitAll)
 - Filter button in Books page bulk actions toolbar
 - Shows books missing LOC call numbers, excluding electronic resources (they are not shelved)

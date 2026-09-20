@@ -35,6 +35,7 @@ public class UserSettingsService {
     @Autowired
     private UserMapper userMapper;
 
+    @Transactional(readOnly = true)
     public UserDto getUserSettings(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new LibraryException("User not found"));

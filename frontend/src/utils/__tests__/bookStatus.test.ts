@@ -55,10 +55,15 @@ describe('matchesBookStatusFilter', () => {
   const activeElectronic = { status: 'ACTIVE', electronicResource: true }
   const activeOther = { status: 'ACTIVE' }
   const withoutLoc = { status: 'ACTIVE', locNumber: null, electronicResource: false }
+  const withoutLocLost = { status: 'LOST', locNumber: null, electronicResource: false }
+  const withoutLocWithdrawn = { status: 'WITHDRAWN', locNumber: null }
+  const withoutLocOnOrder = { status: 'ON_ORDER', locNumber: null }
+  const withoutLocRequested = { status: 'REQUESTED', locNumber: null }
   const lost = { status: 'LOST', locNumber: 'PS3511' }
   const withdrawn = { status: 'WITHDRAWN', locNumber: 'PS3511' }
   const requested = { status: 'REQUESTED' }
   const onOrder = { status: 'ON_ORDER' }
+  const electronicWithoutLoc = { status: 'ACTIVE', locNumber: null, electronicResource: true }
 
   it('when empty, hides WITHDRAWN and REQUESTED and keeps the rest', () => {
     expect(matchesBookStatusFilter(activeInLib, [])).toBe(true)
@@ -68,12 +73,17 @@ describe('matchesBookStatusFilter', () => {
     expect(matchesBookStatusFilter(requested, [])).toBe(false)
   })
 
-  it('ORs selected values; in-library and electronic-resource are Active-only', () => {
+  it('ORs selected values; in-library, electronic-resource, and without-loc are Active-only', () => {
     const selected = ['in-library', 'electronic-resource']
     expect(matchesBookStatusFilter(activeInLib, selected)).toBe(true)
     expect(matchesBookStatusFilter(activeElectronic, selected)).toBe(true)
     expect(matchesBookStatusFilter(activeOther, selected)).toBe(false)
     expect(matchesBookStatusFilter(withoutLoc, ['without-loc'])).toBe(true)
+    expect(matchesBookStatusFilter(withoutLocLost, ['without-loc'])).toBe(false)
+    expect(matchesBookStatusFilter(withoutLocWithdrawn, ['without-loc'])).toBe(false)
+    expect(matchesBookStatusFilter(withoutLocOnOrder, ['without-loc'])).toBe(false)
+    expect(matchesBookStatusFilter(withoutLocRequested, ['without-loc'])).toBe(false)
+    expect(matchesBookStatusFilter(electronicWithoutLoc, ['without-loc'])).toBe(false)
     expect(matchesBookStatusFilter(activeElectronic, ['without-loc'])).toBe(false)
     expect(matchesBookStatusFilter(activeInLib, ['without-loc'])).toBe(false)
     expect(matchesBookStatusFilter(lost, selected)).toBe(false)
@@ -106,9 +116,16 @@ describe('applyBookStatusFilter', () => {
     expect(
       applyBookStatusFilter(books, ['in-library', 'requested']).map((book) => book.id),
     ).toEqual([1, 4])
+    // without-loc now requires ACTIVE (excludes non-active without LOC)
     expect(
       applyBookStatusFilter(
-        [...books, { id: 6, status: 'ACTIVE' }],
+        [...books, { id: 6, status: 'ACTIVE', locNumber: null }],
+        ['without-loc'],
+      ).map((book) => book.id),
+    ).toEqual([6])
+    expect(
+      applyBookStatusFilter(
+        [...books, { id: 6, status: 'ACTIVE', locNumber: null }],
         [...BOOK_STATUS_FILTER_VALUES],
       ).map((book) => book.id),
     ).toEqual([1, 2, 3, 4, 5, 6])

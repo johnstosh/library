@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PiBooks, PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
@@ -79,6 +79,7 @@ export function PricesPage() {
   const [maxTotalInput, setMaxTotalInput] = useState(maxTotal)
   const recentHours = recentHoursFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
+  const [, startTransition] = useTransition()
 
   useEffect(() => {
     setInputValue(urlQuery)
@@ -103,26 +104,28 @@ export function PricesPage() {
     priceOlderDays?: number
     recentHours?: number
   }) => {
-    const bookParams = bookFilterParamsForUrl(
-      {
-        chips: next.chips ?? chips,
-        labels: next.labels ?? selectedLabels,
-        readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
-        bindings: next.bindings ?? selectedBindings,
-        desireToPurchase: next.desireToPurchase ?? selectedDesireToPurchase,
-        statuses: next.statuses ?? selectedStatuses,
-        favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
-        q: next.q !== undefined ? next.q : urlQuery,
-        priceOlderDays: next.priceOlderDays ?? priceOlderDays,
-      },
-      'prices',
-    )
-    const priceParams = priceFilterParamsForUrl({
-      chips: next.priceChips ?? priceChips,
-      maxTotal: next.maxTotal !== undefined ? next.maxTotal : maxTotal,
-      recentHours: next.recentHours ?? recentHours,
+    startTransition(() => {
+      const bookParams = bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? chips,
+          labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          bindings: next.bindings ?? selectedBindings,
+          desireToPurchase: next.desireToPurchase ?? selectedDesireToPurchase,
+          statuses: next.statuses ?? selectedStatuses,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
+          q: next.q !== undefined ? next.q : urlQuery,
+          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+        },
+        'prices',
+      )
+      const priceParams = priceFilterParamsForUrl({
+        chips: next.priceChips ?? priceChips,
+        maxTotal: next.maxTotal !== undefined ? next.maxTotal : maxTotal,
+        recentHours: next.recentHours ?? recentHours,
+      })
+      setSearchParams({ ...bookParams, ...priceParams })
     })
-    setSearchParams({ ...bookParams, ...priceParams })
   }
 
   const { data: allBooks = [], isLoading: booksLoading } = useBooks(selectedLabels, chips.mostRecent)
@@ -199,6 +202,7 @@ export function PricesPage() {
   }, [prices])
 
   const isLoading = pricesLoading || booksLoading
+  const isFilterPending = (isFetching && !isLoading) || (booksLoading && !pricesLoading)
 
   return (
     <div>
@@ -370,7 +374,7 @@ export function PricesPage() {
           <PriceTable prices={prices} isLoading={isLoading} />
         </div>
 
-        <LoadingOverlay show={isFetching && !isLoading} />
+        <LoadingOverlay show={isFilterPending} />
         <PriceStatisticsSummary stats={priceStatistics} isLoading={isLoading} />
       </PageCard>
     </div>
