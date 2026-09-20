@@ -19,10 +19,17 @@ describe('TransientFetchErrorBanner', () => {
     )
   }
 
+  let mockReload: ReturnType<typeof vi.fn>
+
   beforeEach(() => {
     vi.clearAllMocks()
-    // Mock reload
-    vi.spyOn(window.location, 'reload').mockImplementation(() => {})
+    // Mock reload to avoid "Cannot redefine property: reload" error in jsdom.
+    mockReload = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, reload: mockReload },
+      writable: true,
+      configurable: true,
+    })
   })
 
   it('returns null when no error', () => {
@@ -34,13 +41,13 @@ describe('TransientFetchErrorBanner', () => {
     const error = new ApiError('Service unavailable', 503, 'Service Unavailable')
     renderWithQueryClient(<TransientFetchErrorBanner error={error} data-test="test-banner" />)
 
-    expect(screen.getByTestId('transient-error-banner')).toBeInTheDocument()
+    expect(screen.getByTestId('test-banner')).toBeInTheDocument()
     expect(screen.getByText(/Server temporarily unavailable/)).toBeInTheDocument()
     expect(screen.getByTestId('transient-refresh-button')).toBeInTheDocument()
     expect(screen.queryByTestId('transient-retry-button')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('transient-refresh-button'))
-    expect(window.location.reload).toHaveBeenCalled()
+    expect(mockReload).toHaveBeenCalled()
   })
 
   it('shows optional Retry button when onRetry provided and calls it', () => {

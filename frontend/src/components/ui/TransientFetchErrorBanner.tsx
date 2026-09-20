@@ -30,10 +30,7 @@ export function TransientFetchErrorBanner({
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    // Small delay to show loading state
-    setTimeout(() => {
-      window.location.reload()
-    }, 300)
+    window.location.reload()
   }
 
   if (!error) return null
