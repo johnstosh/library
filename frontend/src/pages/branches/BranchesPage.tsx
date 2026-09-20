@@ -18,10 +18,13 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/useToast'
 
 export function BranchesPage() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [deleteBranchId, setDeleteBranchId] = useState<number | null>(null)
 
@@ -108,7 +111,13 @@ export function BranchesPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading branches: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.branches.all })
+          }}
+          className="mb-4"
+        />
       )}
 
       <PageCard padding={false} className="relative">

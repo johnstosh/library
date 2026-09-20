@@ -11,9 +11,10 @@ export interface ModalProps {
   children: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   footer?: ReactNode
+  'data-test'?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'md', footer, 'data-test': dataTest }: ModalProps) {
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -49,7 +50,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-white rounded-lg shadow-xl flex flex-col mb-20`}>
+              <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-white rounded-lg shadow-xl flex flex-col mb-20`} data-test={dataTest}>
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
                 <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>

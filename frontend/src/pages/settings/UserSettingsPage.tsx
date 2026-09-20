@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -23,6 +25,10 @@ export function UserSettingsPage() {
   const { user } = useAuthStore()
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [retryHandler, setRetryHandler] = useState<(() => Promise<void>) | null>(null)
   const [xaiApiKey, setXaiApiKey] = useState('')
   const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
   const [email, setEmail] = useState('')
@@ -63,7 +69,13 @@ export function UserSettingsPage() {
       setSuccessMessage('Password changed successfully')
       reset()
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to change password')
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSubmit(onSubmit)() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to change password')
+      }
     }
   }
 
@@ -105,7 +117,13 @@ export function UserSettingsPage() {
       })
       setSuccessMessage('XAI API Key updated successfully')
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to update XAI API Key')
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSaveXaiApiKey() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update XAI API Key')
+      }
     }
   }
 
@@ -119,7 +137,13 @@ export function UserSettingsPage() {
       })
       setSuccessMessage('Google Photos Album ID updated successfully')
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to update Album ID')
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSaveGooglePhotosAlbumId() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update Album ID')
+      }
     }
   }
 
@@ -143,7 +167,13 @@ export function UserSettingsPage() {
       })
       setSuccessMessage('Contact information updated successfully')
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to update contact information')
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSaveContactInfo() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update contact information')
+      }
     }
   }
 
@@ -415,6 +445,31 @@ export function UserSettingsPage() {
           </div>
         )}
       </PageCard>
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+          setRetryHandler(null)
+        }}
+        onTryAgain={async () => {
+          if (!retryHandler) return
+          setIsRetrying(true)
+          try {
+            await retryHandler()
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+            setRetryHandler(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
+
   )
 }

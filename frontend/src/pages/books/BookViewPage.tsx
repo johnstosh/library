@@ -25,6 +25,9 @@ import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { useAuthStore, useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
 import { useState } from 'react'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/config/queryClient'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { bookBindingDisplay } from '@/utils/bookBinding'
 
@@ -53,7 +56,8 @@ export function BookViewPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const bookId = id ? parseInt(id, 10) : 0
-  const { data: book, isLoading } = useBook(bookId)
+  const queryClient = useQueryClient()
+  const { data: book, isLoading, error: bookError } = useBook(bookId)
   const { data: titleLoaned, isError: titleLoanedError } = useTitleLoaned(bookId)
   const cloneBook = useCloneBook()
   const deleteBook = useDeleteBook()
@@ -208,6 +212,15 @@ export function BookViewPage() {
 
         {/* Body */}
         <div className="px-6 py-6 space-y-6">
+          {bookError && (
+            <TransientFetchErrorBanner
+              error={bookError}
+              onRetry={() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.books.detail(bookId) })
+              }}
+              className="mb-4"
+            />
+          )}
           {error && <ErrorMessage message={error} />}
 
           {/* Book Info */}

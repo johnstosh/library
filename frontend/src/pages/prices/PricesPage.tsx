@@ -9,7 +9,9 @@ import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { PriceStatisticsSummary } from '@/components/table/PriceStatisticsSummary'
 import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { DesireToPurchaseFilters } from '@/pages/books/components/DesireToPurchaseFilters'
@@ -63,6 +65,7 @@ import {
 import { summarizeBookPrices } from '@/utils/priceStatistics'
 
 export function PricesPage() {
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const chips = chipsFromSearchParams(searchParams, 'prices')
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
@@ -212,7 +215,13 @@ export function PricesPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading prices: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.prices.all })
+          }}
+          className="mb-4"
+        />
       )}
 
       <PageCard padding={false} className="relative">

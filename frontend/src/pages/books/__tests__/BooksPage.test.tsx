@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
 import { BooksPage } from '../BooksPage'
 import type { BookDto } from '@/types/dtos'
@@ -90,11 +91,16 @@ function UrlQuery() {
 }
 
 function renderBooksPage(path = '/books') {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <BooksPage />
-      <UrlQuery />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <BooksPage />
+        <UrlQuery />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

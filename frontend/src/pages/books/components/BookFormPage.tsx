@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { FreeTextLookupResultsModal } from '@/components/FreeTextLookupResultsModal'
 import { GenreLookupResultsModal } from './GenreLookupResultsModal'
@@ -100,6 +102,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   // Operations state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -686,54 +691,63 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     e.preventDefault()
     setError('')
     setSuccessMessage('')
+    setPendingError(null)
 
     if (!formData.title || !formData.authorId || !formData.branchId) {
       setError('Title, Author, and Library are required')
       return
     }
 
-    try {
-      const bookData = {
-        title: formData.title,
-        publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
-        publisher: formData.publisher || undefined,
-        plotSummary: formData.plotSummary || undefined,
-        relatedWorks: formData.relatedWorks || undefined,
-        detailedDescription: formData.detailedDescription || undefined,
-        grokipediaUrl: formData.grokipediaUrl || undefined,
-        freeTextUrl: formData.freeTextUrl || undefined,
-        status: formData.status as BookDto['status'],
-        statusReason: formData.statusReason || undefined,
-        locNumber: formData.locNumber || undefined,
-        electronicResource: formData.electronicResource,
-        ydlAudioAvailable: formData.ydlAudioAvailable,
-        ydlPaperAvailable: formData.ydlPaperAvailable,
-        ydlEbookAvailable: formData.ydlEbookAvailable,
-        emuAudioAvailable: formData.emuAudioAvailable,
-        emuPaperAvailable: formData.emuPaperAvailable,
-        emuEbookAvailable: formData.emuEbookAvailable,
-        aclaAudioAvailable: formData.aclaAudioAvailable,
-        aclaPaperAvailable: formData.aclaPaperAvailable,
-        aclaEbookAvailable: formData.aclaEbookAvailable,
-        readingDifficulty: formData.readingDifficulty,
-        binding: formData.binding,
-        desireToPurchase: formData.desireToPurchase,
-        authorId: parseInt(formData.authorId),
-        libraryId: parseInt(formData.branchId),
-        tagsList: standardGenresFrom(formData.tagsList),
-        dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
-      }
+    const bookData = {
+      title: formData.title,
+      publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
+      publisher: formData.publisher || undefined,
+      plotSummary: formData.plotSummary || undefined,
+      relatedWorks: formData.relatedWorks || undefined,
+      detailedDescription: formData.detailedDescription || undefined,
+      grokipediaUrl: formData.grokipediaUrl || undefined,
+      freeTextUrl: formData.freeTextUrl || undefined,
+      status: formData.status as BookDto['status'],
+      statusReason: formData.statusReason || undefined,
+      locNumber: formData.locNumber || undefined,
+      electronicResource: formData.electronicResource,
+      ydlAudioAvailable: formData.ydlAudioAvailable,
+      ydlPaperAvailable: formData.ydlPaperAvailable,
+      ydlEbookAvailable: formData.ydlEbookAvailable,
+      emuAudioAvailable: formData.emuAudioAvailable,
+      emuPaperAvailable: formData.emuPaperAvailable,
+      emuEbookAvailable: formData.emuEbookAvailable,
+      aclaAudioAvailable: formData.aclaAudioAvailable,
+      aclaPaperAvailable: formData.aclaPaperAvailable,
+      aclaEbookAvailable: formData.aclaEbookAvailable,
+      readingDifficulty: formData.readingDifficulty,
+      binding: formData.binding,
+      desireToPurchase: formData.desireToPurchase,
+      authorId: parseInt(formData.authorId),
+      libraryId: parseInt(formData.branchId),
+      tagsList: standardGenresFrom(formData.tagsList),
+      dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
+    }
 
+    const saveFn = async () => {
       if (isEditing) {
         await updateBook.mutateAsync({ id: book.id, book: bookData })
       } else {
         await createBook.mutateAsync(bookData)
       }
+    }
 
+    try {
+      await saveFn()
       setHasUnsavedChanges(false)
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setPendingError(err)
+      if (isTransientApiError(err)) {
+        setShowTryAgainDialog(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     }
   }
 
@@ -1579,6 +1593,67 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         confirmText="Delete"
         variant="danger"
         isLoading={deleteBook.isPending}
+      />
+
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+        }}
+        onTryAgain={async () => {
+          setIsRetrying(true)
+          try {
+            if (pendingError) {
+              // Re-execute the save with current form data
+              const bookData = {
+                title: formData.title,
+                publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
+                publisher: formData.publisher || undefined,
+                plotSummary: formData.plotSummary || undefined,
+                relatedWorks: formData.relatedWorks || undefined,
+                detailedDescription: formData.detailedDescription || undefined,
+                grokipediaUrl: formData.grokipediaUrl || undefined,
+                freeTextUrl: formData.freeTextUrl || undefined,
+                status: formData.status as BookDto['status'],
+                statusReason: formData.statusReason || undefined,
+                locNumber: formData.locNumber || undefined,
+                electronicResource: formData.electronicResource,
+                ydlAudioAvailable: formData.ydlAudioAvailable,
+                ydlPaperAvailable: formData.ydlPaperAvailable,
+                ydlEbookAvailable: formData.ydlEbookAvailable,
+                emuAudioAvailable: formData.emuAudioAvailable,
+                emuPaperAvailable: formData.emuPaperAvailable,
+                emuEbookAvailable: formData.emuEbookAvailable,
+                aclaAudioAvailable: formData.aclaAudioAvailable,
+                aclaPaperAvailable: formData.aclaPaperAvailable,
+                aclaEbookAvailable: formData.aclaEbookAvailable,
+                readingDifficulty: formData.readingDifficulty,
+                binding: formData.binding,
+                desireToPurchase: formData.desireToPurchase,
+                authorId: parseInt(formData.authorId),
+                libraryId: parseInt(formData.branchId),
+                tagsList: standardGenresFrom(formData.tagsList),
+                dateAddedToLibrary: formData.dateAddedToLibrary || undefined,
+              }
+
+              if (isEditing) {
+                await updateBook.mutateAsync({ id: book.id, book: bookData })
+              } else {
+                await createBook.mutateAsync(bookData)
+              }
+            }
+            setHasUnsavedChanges(false)
+            onSuccess()
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        title={isEditing ? 'Update failed' : 'Create failed'}
+        isRetrying={isRetrying}
+        data-test="book-try-again-dialog"
       />
 
       <GrokipediaLookupResultsModal

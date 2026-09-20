@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { useCreateBranch, useUpdateBranch } from '@/api/branches'
 import type { BranchDto } from '@/types/dtos'
 
@@ -21,6 +23,9 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
     librarySystemName: '',
   })
   const [error, setError] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const createBranch = useCreateBranch()
@@ -72,7 +77,12 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
       setHasUnsavedChanges(false)
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setPendingError(err)
+      if (isTransientApiError(err)) {
+        setShowTryAgainDialog(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     }
   }
 
@@ -138,6 +148,27 @@ export function BranchFormPage({ title, branch, onSuccess, onCancel }: BranchFor
           </Button>
         </div>
       </div>
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+        }}
+        onTryAgain={async () => {
+          setIsRetrying(true)
+          try {
+            await handleSubmit({ preventDefault() {} } as React.FormEvent)
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
   )
 }

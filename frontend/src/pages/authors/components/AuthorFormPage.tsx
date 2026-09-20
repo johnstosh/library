@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { AuthorBooksTable } from './AuthorBooksTable'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { useAuthorBooks, useCreateAuthor, useUpdateAuthor } from '@/api/authors'
@@ -34,6 +36,9 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
     grokipediaUrl: '',
   })
   const [error, setError] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showGrokipediaResults, setShowGrokipediaResults] = useState(false)
   const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
@@ -126,7 +131,12 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
       setHasUnsavedChanges(false)
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setPendingError(err)
+      if (isTransientApiError(err)) {
+        setShowTryAgainDialog(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     }
   }
 
@@ -296,6 +306,27 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
         results={grokipediaResults}
         entityType="author"
       />
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+        }}
+        onTryAgain={async () => {
+          setIsRetrying(true)
+          try {
+            await handleSubmit({ preventDefault() {} } as React.FormEvent)
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
   )
 }

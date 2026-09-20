@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { useCreateUser, useUpdateUser } from '@/api/users'
 import type { UserDto } from '@/types/dtos'
 import { UserAuthority } from '@/types/enums'
@@ -28,6 +30,9 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
     phone: '',
   })
   const [error, setError] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const createUser = useCreateUser()
@@ -122,7 +127,12 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
       setHasUnsavedChanges(false)
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setPendingError(err)
+      if (isTransientApiError(err)) {
+        setShowTryAgainDialog(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     }
   }
 
@@ -243,6 +253,27 @@ export function UserFormPage({ title, user, onSuccess, onCancel }: UserFormPageP
           </Button>
         </div>
       </div>
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+        }}
+        onTryAgain={async () => {
+          setIsRetrying(true)
+          try {
+            await handleSubmit({ preventDefault() {} } as React.FormEvent)
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
   )
 }

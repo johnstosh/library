@@ -20,6 +20,9 @@ import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/hooks/useToast'
 import { ApplicationFilters } from './components/ApplicationFilters'
@@ -48,6 +51,7 @@ type PendingAction =
   | { kind: 'delete'; application: AppliedDto }
 
 export function ApplicationsPage() {
+  const queryClient = useQueryClient()
   const toast = useToast()
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [actionError, setActionError] = useState('')
@@ -214,7 +218,13 @@ export function ApplicationsPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading applications: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.libraryCards.applications() })
+          }}
+          className="mb-4"
+        />
       )}
 
       {actionError && (
