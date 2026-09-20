@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from './Button'
 import { ErrorMessage } from './ErrorMessage'
 import { isTransientApiError, getTransientErrorMessage } from '@/utils/api'
-import { PiArrowClockwise, PiArrowPath } from 'react-icons/pi'
+import { PiArrowClockwise, PiArrowsClockwise } from 'react-icons/pi'
 
 export interface TransientFetchErrorBannerProps {
   error: unknown
@@ -52,7 +52,7 @@ export function TransientFetchErrorBanner({
         <div className="flex-1">
           <div className="flex items-center">
             <div className="w-5 h-5 mr-2 text-amber-600">
-              <PiArrowPath className="w-full h-full" />
+              <PiArrowsClockwise className="w-full h-full" />
             </div>
             <p className="text-amber-800 font-medium">{message}</p>
           </div>
@@ -78,7 +78,7 @@ export function TransientFetchErrorBanner({
             size="sm"
             onClick={handleRefresh}
             isLoading={isRefreshing}
-            leftIcon={<PiArrowPath />}
+            leftIcon={<PiArrowsClockwise />}
             data-test="transient-refresh-button"
           >
             Refresh Page

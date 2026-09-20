@@ -52,6 +52,7 @@ export function TryAgainDialog({
       onClose={handleClose}
       title={title}
       size="sm"
+      data-test={dataTest}
       footer={
         <div className="flex justify-end gap-3">
           <Button
