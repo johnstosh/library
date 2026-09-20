@@ -6,7 +6,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { TableSummary } from '@/components/table/TableSummary'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { AuthorFilters } from './components/AuthorFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { AuthorTable } from './components/AuthorTable'
@@ -19,6 +21,7 @@ import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/
 import type { AuthorDto } from '@/types/dtos'
 
 export function AuthorsPage() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
@@ -99,8 +102,11 @@ export function AuthorsPage() {
       />
 
       {(error || availabilityError) && (
-        <ErrorMessage
-          message={`Error loading authors: ${(error ?? availabilityError)?.message}`}
+        <TransientFetchErrorBanner
+          error={error ?? availabilityError}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+          }}
           className="mb-4"
         />
       )}

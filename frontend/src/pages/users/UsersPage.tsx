@@ -7,7 +7,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { UserTable } from './components/UserTable'
@@ -22,6 +24,7 @@ import { useUiStore, useUsersChips, useUsersSearchQuery } from '@/stores/uiStore
 import type { UserDto } from '@/types/dtos'
 
 export function UsersPage() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [deletingUser, setDeletingUser] = useState<UserDto | null>(null)
   const [showBulkDelete, setShowBulkDelete] = useState(false)
@@ -117,7 +120,13 @@ export function UsersPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading users: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+          }}
+          className="mb-4"
+        />
       )}
 
       <PageCard padding={false} className="relative">

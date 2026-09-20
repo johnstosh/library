@@ -17,7 +17,9 @@ import { loanStatusTone } from '@/utils/status'
 import { IconButton } from '@/components/ui/IconButton'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { DeleteIcon, ReturnIcon, ViewIcon } from '@/components/ui/Icons'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { queryKeys } from '@/config/queryClient'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
@@ -25,6 +27,7 @@ import { TableSummary } from '@/components/table/TableSummary'
 import { useToast } from '@/hooks/useToast'
 
 export function LoansPage() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [returnLoanId, setReturnLoanId] = useState<number | null>(null)
   const [deleteLoanId, setDeleteLoanId] = useState<number | null>(null)
@@ -160,7 +163,13 @@ export function LoansPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading loans: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.loans.all })
+          }}
+          className="mb-4"
+        />
       )}
 
       <PageCard padding={false} className="relative">

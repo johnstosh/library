@@ -49,7 +49,8 @@ import { useToast } from '@/hooks/useToast'
 import { PageCard } from '@/components/ui/PageCard'
 import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { FavoriteStar } from '@/components/favorites/FavoriteStar'
-import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
+import { useQueryClient } from '@tanstack/react-query'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useIsLibrarian } from '@/stores/authStore'
 import { useDeleteBook } from '@/api/books'
@@ -59,6 +60,7 @@ import type { BookDto, AuthorDto } from '@/types/dtos'
 // ─── Main search page ─────────────────────────────────────────────────────────
 
 export function SearchPage() {
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') ?? ''
   const bookPage = pageFromSearchParams(searchParams, 'bookPage')
@@ -294,9 +296,12 @@ export function SearchPage() {
 
       {/* Error State */}
       {error && (
-        <ErrorMessage
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: ['search'] })
+          }}
           className="mb-4"
-          message={`Error performing search: ${error instanceof Error ? error.message : 'An error occurred'}`}
         />
       )}
 

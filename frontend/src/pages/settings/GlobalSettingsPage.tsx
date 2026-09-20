@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/Select'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Textarea } from '@/components/ui/Textarea'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -50,6 +52,10 @@ const EMAIL_METHOD_OPTIONS = [
 export function GlobalSettingsPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [retryHandler, setRetryHandler] = useState<(() => Promise<void>) | null>(null)
 
   const { data: settings, isLoading } = useGlobalSettings()
   const updateSettings = useUpdateGlobalSettings()
@@ -155,7 +161,13 @@ export function GlobalSettingsPage() {
         webhookBearerToken: '',
       })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to update settings')
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSubmit(onSubmit)() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update settings')
+      }
     }
   }
 
@@ -593,6 +605,31 @@ export function GlobalSettingsPage() {
           </div>
         )}
       </PageCard>
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+          setRetryHandler(null)
+        }}
+        onTryAgain={async () => {
+          if (!retryHandler) return
+          setIsRetrying(true)
+          try {
+            await retryHandler()
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+            setRetryHandler(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
+
   )
 }

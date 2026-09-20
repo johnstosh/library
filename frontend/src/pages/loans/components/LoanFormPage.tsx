@@ -4,6 +4,8 @@ import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
+import { isTransientApiError } from '@/utils/api'
 import { Spinner } from '@/components/progress/Spinner'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { useCheckoutBook, useCheckoutBookWithPhoto, useTranscribeCheckoutCard } from '@/api/loans'
@@ -112,6 +114,9 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   })
   const [userFilter, setUserFilter] = useState(initialFilters?.borrower || '')
   const [error, setError] = useState('')
+  const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
+  const [pendingError, setPendingError] = useState<unknown>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const { data: books = [], isFetching: booksFetching, isLoading: booksLoading } = useBooks()
@@ -353,7 +358,12 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       setHasUnsavedChanges(false)
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setPendingError(err)
+      if (isTransientApiError(err)) {
+        setShowTryAgainDialog(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     }
   }
 
@@ -761,6 +771,27 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
           </div>
         </div>
       )}
+      <TryAgainDialog
+        isOpen={showTryAgainDialog}
+        onClose={() => {
+          setShowTryAgainDialog(false)
+          setPendingError(null)
+          setIsRetrying(false)
+        }}
+        onTryAgain={async () => {
+          setIsRetrying(true)
+          try {
+            await handleSubmit({ preventDefault() {} } as React.FormEvent)
+            setShowTryAgainDialog(false)
+            setPendingError(null)
+          } finally {
+            setIsRetrying(false)
+          }
+        }}
+        error={pendingError}
+        isRetrying={isRetrying}
+      />
+
     </div>
   )
 }
