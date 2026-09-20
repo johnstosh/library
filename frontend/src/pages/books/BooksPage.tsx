@@ -9,6 +9,7 @@ import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TableSummary } from '@/components/table/TableSummary'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
 import { BookFilters } from './components/BookFilters'
 import { BookPriceFilters } from './components/BookPriceFilters'
 import { BookLabelFilters } from './components/BookLabelFilters'
@@ -20,6 +21,8 @@ import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
 import { useBookCount, useBooks } from '@/api/books'
 import { useUiStore, useBooksTableSelection } from '@/stores/uiStore'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/config/queryClient'
 import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
@@ -68,6 +71,7 @@ export function BooksPage() {
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
+  const queryClient = useQueryClient()
   const [, startTransition] = useTransition()
 
   useEffect(() => {
@@ -240,7 +244,16 @@ export function BooksPage() {
       />
 
       {error && (
-        <ErrorMessage message={`Error loading books: ${error.message}`} className="mb-4" />
+        <TransientFetchErrorBanner
+          error={error}
+          onRetry={() => {
+            // Refetch both queries used by useBooks
+            queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+            queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+          }}
+          className="mb-4"
+          data-test="books-error-banner"
+        />
       )}
 
       <PageCard padding={false} className="relative">
