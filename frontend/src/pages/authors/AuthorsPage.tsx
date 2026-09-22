@@ -33,10 +33,13 @@ export function AuthorsPage() {
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleAuthorsChip } = useUiStore()
 
   // mostRecent defaults on in uiStore so this uses GET /authors/most-recent-day
-  // (faster than GET /authors/summaries). Remaining chips still apply client-side.
+  // when it is the only filter (fast path). When combined with other filters,
+  // we load summaries (or most-recent-day) then apply intersection client-side.
   const favoriteFilterOn = selectedFavoriteLists.length > 0
   const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors(
-    chips.mostRecent && !favoriteFilterOn ? 'most-recent' : undefined
+    chips.mostRecent && !isOtherAuthorChipActive(chips) && !favoriteFilterOn
+      ? 'most-recent'
+      : undefined
   )
   const { data: authorCount } = useAuthorCount()
   const {
@@ -54,14 +57,24 @@ export function AuthorsPage() {
 
   const authors = useMemo(() => {
     if (isAvailabilityChipActive(chips) && availabilityLoading) return []
-    // mostRecent is applied by the summaries endpoint, same as BooksPage + GET /books/most-recent-day
+    // mostRecent now participates in intersection (AND) with other chips.
+    // When mostRecent-only, backend /most-recent-day already filtered it.
+    // Otherwise, pass full chips so applyAuthorChipFilters applies mostRecentIds
+    // (computed from allAuthors) on top of other filters.
     const favoriteIds = favoriteItemIdsForLists(
       favoriteSummary?.lists,
       selectedFavoriteLists,
       'authorIds',
     )
-    return applyAuthorChipFilters(allAuthors, { ...chips, mostRecent: false }, undefined, availabilityByAuthorId)
-      .filter((author) => favoriteIds.size === 0 || favoriteIds.has(author.id))
+    const mostRecentIds = chips.mostRecent
+      ? new Set(allAuthors.map((a) => a.id))
+      : undefined
+    return applyAuthorChipFilters(
+      allAuthors,
+      chips,
+      mostRecentIds,
+      availabilityByAuthorId,
+    ).filter((author) => favoriteIds.size === 0 || favoriteIds.has(author.id))
   }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips, favoriteSummary?.lists, selectedFavoriteLists])
 
   const handleSelectToggle = (id: number) => {
@@ -116,7 +129,7 @@ export function AuthorsPage() {
           <AuthorFilters
             chips={chips}
             onToggle={toggleAuthorsChip}
-            mostRecentDisabled={isOtherAuthorChipActive(chips) || favoriteFilterOn}
+            mostRecentDisabled={false}
           />
           <FavoriteListFilters
             lists={favoriteChips}

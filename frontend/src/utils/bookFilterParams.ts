@@ -132,7 +132,12 @@ export function chipsFromSearchParams(
     const q = (params.get('q') ?? '').trim()
     const favoriteLists = favoriteListsFromSearchParams(params)
     const bindings = bindingsFromSearchParams(params)
-    const othersOn = isBooksIntakeConstrained(
+    const explicitMostRecent = params.get(CHIP_URL_KEYS.mostRecent)
+    if (explicitMostRecent === 'true') {
+      chips.mostRecent = true
+    } else if (explicitMostRecent === 'false') {
+      chips.mostRecent = false
+    } else if (!isBooksIntakeConstrained(
       chips,
       labels,
       q,
@@ -140,13 +145,10 @@ export function chipsFromSearchParams(
       favoriteLists,
       statuses,
       bindings,
-    )
-    if (othersOn) {
-      chips.mostRecent = false
-    } else if (params.get(CHIP_URL_KEYS.mostRecent) === 'false') {
-      chips.mostRecent = false
-    } else {
+    )) {
       chips.mostRecent = true
+    } else {
+      chips.mostRecent = false
     }
   }
   return chips
@@ -221,8 +223,10 @@ export function bookFilterParamsForUrl(
       statuses,
       bindings,
     )
-    if (!othersOn && !state.chips.mostRecent) {
-      params[CHIP_URL_KEYS.mostRecent] = 'false'
+    // Always emit mostRecent state honestly (true or false) so it stays toggleable
+    // and combinable. Omit only the default intake-on when nothing else is active.
+    if (othersOn || !state.chips.mostRecent) {
+      params[CHIP_URL_KEYS.mostRecent] = state.chips.mostRecent ? 'true' : 'false'
     }
   }
 
@@ -253,7 +257,6 @@ export function booksPathFromFilters(state: {
 }): string {
   const discoveryChips: BookChipFilters = { ...defaultBookChipFilters, mostRecent: true }
   for (const key of SEARCH_VISIBLE_CHIPS) {
-    // Books keeps its own intake default; don't copy Search's mostRecent off-state.
     if (key === 'mostRecent') continue
     discoveryChips[key] = state.chips[key]
   }

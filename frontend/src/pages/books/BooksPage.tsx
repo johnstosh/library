@@ -185,7 +185,6 @@ export function BooksPage() {
   }
 
   const handleToggleChip = (key: keyof BookChipFilters) => {
-    if (key === 'mostRecent' && intakeConstrained) return
     writeUrl({ chips: { ...chips, [key]: !chips[key] } })
   }
 
@@ -301,7 +300,7 @@ export function BooksPage() {
             chips={chips}
             onToggle={handleToggleChip}
             showAvailabilityFilters
-            mostRecentDisabled={intakeConstrained}
+            mostRecentDisabled={false}
             showCatalogerFilters
           />
           <BookLabelFilters

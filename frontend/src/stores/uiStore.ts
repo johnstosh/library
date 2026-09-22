@@ -110,15 +110,9 @@ export const useUiStore = create<UiState>((set) => ({
   clearLoansChips: () => set({ loansChips: { ...defaultLoansChips } }),
 
   toggleAuthorsChip: (chip) =>
-    set((state) => {
-      if (chip === 'mostRecent' && isOtherAuthorChipActive(state.authorsChips)) {
-        return { authorsChips: { ...state.authorsChips, mostRecent: false } }
-      }
-      const next = { ...state.authorsChips, [chip]: !state.authorsChips[chip] }
-      const othersOn = isOtherAuthorChipActive(next)
-      next.mostRecent = othersOn ? false : chip === 'mostRecent' ? next.mostRecent : true
-      return { authorsChips: next }
-    }),
+    set((state) => ({
+      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
+    })),
 
   clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),
 
