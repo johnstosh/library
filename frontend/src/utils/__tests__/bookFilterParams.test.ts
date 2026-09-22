@@ -78,7 +78,36 @@ describe('chipsFromSearchParams books mode', () => {
     ).toBe(false)
   })
 
-  it('turns Recent Arrivals off when another chip, labels, or q is present', () => {
+  it('respects explicit mostRecent=true even with other chips, labels, or q (combinable)', () => {
+    expect(
+      chipsFromSearchParams(
+        new URLSearchParams('status=without-loc&mostRecent=true'),
+        'books',
+      ).mostRecent,
+    ).toBe(true)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('labels=fiction&mostRecent=true'), 'books').mostRecent,
+    ).toBe(true)
+    expect(
+      chipsFromSearchParams(
+        new URLSearchParams('readingDifficulty=children&mostRecent=true'),
+        'books',
+      ).mostRecent,
+    ).toBe(true)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('binding=HARDCOVER&mostRecent=true'), 'books')
+        .mostRecent,
+    ).toBe(true)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('q=narnia&mostRecent=true'), 'books').mostRecent,
+    ).toBe(true)
+    expect(
+      chipsFromSearchParams(new URLSearchParams('noPrices=true&mostRecent=true'), 'books')
+        .mostRecent,
+    ).toBe(true)
+  })
+
+  it('defaults mostRecent off only when other filters present and no explicit param', () => {
     expect(chipsFromSearchParams(new URLSearchParams('status=without-loc'), 'books').mostRecent).toBe(
       false,
     )
@@ -86,14 +115,8 @@ describe('chipsFromSearchParams books mode', () => {
       false,
     )
     expect(
-      chipsFromSearchParams(new URLSearchParams('readingDifficulty=children'), 'books').mostRecent,
+      chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent,
     ).toBe(false)
-    expect(
-      chipsFromSearchParams(new URLSearchParams('binding=HARDCOVER'), 'books').mostRecent,
-    ).toBe(false)
-    expect(chipsFromSearchParams(new URLSearchParams('q=narnia'), 'books').mostRecent).toBe(false)
-    expect(chipsFromSearchParams(new URLSearchParams('noPrices=true'), 'books').mostRecent).toBe(false)
-    expect(chipsFromSearchParams(new URLSearchParams('withPrices=true'), 'books').mostRecent).toBe(false)
   })
 })
 
@@ -150,7 +173,7 @@ describe('bookFilterParamsForUrl price chips', () => {
 })
 
 describe('bookFilterParamsForUrl', () => {
-  it('omits default Books intake from the URL', () => {
+  it('omits default Books intake (mostRecent=true with no others) from the URL', () => {
     expect(
       bookFilterParamsForUrl(
         { chips: chips({ mostRecent: true }), labels: [], q: '' },
@@ -159,13 +182,20 @@ describe('bookFilterParamsForUrl', () => {
     ).toEqual({})
   })
 
-  it('writes mostRecent=false for an explicit full catalog', () => {
+  it('writes mostRecent param honestly when combined with other filters or explicitly off', () => {
     expect(
       bookFilterParamsForUrl(
         { chips: chips({ mostRecent: false }), labels: [], q: '' },
         'books',
       ),
     ).toEqual({ mostRecent: 'false' })
+
+    expect(
+      bookFilterParamsForUrl(
+        { chips: chips({ mostRecent: true, withoutGrokipedia: true }), labels: [], q: '' },
+        'books',
+      ),
+    ).toEqual({ mostRecent: 'true', withoutGrokipedia: 'true' })
   })
 
   it('writes binding chips', () => {
@@ -221,7 +251,7 @@ describe('booksPathFromFilters', () => {
     expect(booksPathFromFilters({ chips: chips(), labels: [], q: '' })).toBe('/books')
   })
 
-  it('copies discovery filters and query onto /books', () => {
+  it('copies discovery filters and query onto /books (mostRecent omitted for default intake)', () => {
     expect(
       booksPathFromFilters({
         chips: chips({ withoutGrokipedia: true }),
@@ -231,17 +261,17 @@ describe('booksPathFromFilters', () => {
         favoriteLists: ['Have Read'],
         q: 'Summa',
       }),
-    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&favoriteLists=Have+Read')
+    ).toBe('/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&favoriteLists=Have+Read&mostRecent=true')
   })
 
-  it('does not copy Search Recent Arrivals off-state onto Books intake', () => {
+  it('copies mostRecent=true from Search even if other filters present (now combinable)', () => {
     expect(
       booksPathFromFilters({
-        chips: chips({ mostRecent: false }),
+        chips: chips({ mostRecent: true, freeText: true }),
         labels: [],
         q: '',
       }),
-    ).toBe('/books')
+    ).toBe('/books?freeText=true&mostRecent=true')
   })
 })
 
@@ -294,7 +324,7 @@ describe('pricesPathFromFilters', () => {
 })
 
 describe('booksPathFromPriceFilters', () => {
-  it('opens /books with mostRecent=false when Prices has no filters', () => {
+  it('opens /books with mostRecent=false when Prices has no filters (default behavior)', () => {
     expect(
       booksPathFromPriceFilters({ chips: chips({ mostRecent: false }), labels: [], q: '' }),
     ).toBe('/books?mostRecent=false')
@@ -310,7 +340,7 @@ describe('booksPathFromPriceFilters', () => {
         q: 'Summa',
       }),
     ).toBe(
-      '/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&noPrices=true&lookupErrors=true',
+      '/books?q=Summa&labels=classic&readingDifficulty=demanding&status=in-library&noPrices=true&lookupErrors=true&mostRecent=false',
     )
   })
 })

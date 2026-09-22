@@ -60,13 +60,13 @@ public class BookByPhotoWorkflowTest {
     private Browser browser;
     private Page page;
 
-    // Proper nested JSON format expected by BookService.getBookFromTitleAuthor()
+    // Proper nested JSON format expected by BookService.getBookFromTitleAuthor() (no locNumber)
     private static final String MOCK_AI_RESPONSE =
         "{\"author\": {\"name\": \"Mock AI Author\", \"dateOfBirth\": null, \"dateOfDeath\": null, " +
         "\"religiousAffiliation\": \"Unknown\", \"birthCountry\": \"USA\", \"nationality\": \"American\", " +
         "\"biographicalEssay\": \"A test author for automated testing.\"}, " +
         "\"book\": {\"title\": \"Mock AI Book Title\", \"publicationYear\": 2024, \"publisher\": \"Test Press\", " +
-        "\"locNumber\": null, \"plotEssay\": \"A test summary.\", \"relatedWorks\": \"None\", " +
+        "\"plotEssay\": \"A test summary.\", \"relatedWorks\": \"None\", " +
         "\"detailedDescription\": \"A detailed test description.\"}}";
 
     @BeforeAll

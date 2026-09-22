@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import {
   useDeleteBooks,
   useBulkBookFromImage,
+  useBulkBookFromTitleAuthor,
   useLookupBulkGenresWithProgress,
   useLookupBulkReadingDifficultyWithProgress,
 } from '@/api/books'
@@ -34,7 +35,13 @@ import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { PiCurrencyDollar } from 'react-icons/pi'
 import { AclaIcon, AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
-import type { BookPriceLookupResultDto, BulkDeleteResultDto, GenreLookupResultDto, ReadingDifficultyLookupResultDto } from '@/types/dtos'
+import type {
+  BookDto,
+  BookPriceLookupResultDto,
+  BulkDeleteResultDto,
+  GenreLookupResultDto,
+  ReadingDifficultyLookupResultDto,
+} from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 
 interface BulkActionsToolbarProps {
@@ -45,7 +52,7 @@ interface BulkActionsToolbarProps {
   isLoading?: boolean
 }
 
-export type BookFromImageResult = { id: number; success: boolean; book?: { title: string }; error?: string }
+export type BookFromImageResult = { id: number; success: boolean; book?: BookDto; error?: string }
 
 function progressLabel(idle: string, running: string, isPending: boolean, completed: number, total: number) {
   return isPending ? `${running} (${completed}/${total})` : idle
@@ -70,6 +77,8 @@ export function BulkActionsToolbar({
   const [grokipediaResults, setGrokipediaResults] = useState<GrokipediaLookupResultDto[]>([])
   const [showBookFromImageResults, setShowBookFromImageResults] = useState(false)
   const [bookFromImageResults, setBookFromImageResults] = useState<BookFromImageResult[]>([])
+  const [showBookFromTitleAuthorResults, setShowBookFromTitleAuthorResults] = useState(false)
+  const [bookFromTitleAuthorResults, setBookFromTitleAuthorResults] = useState<BookFromImageResult[]>([])
   const [isGeneratingLabels, setIsGeneratingLabels] = useState(false)
   const [showFreeTextResults, setShowFreeTextResults] = useState(false)
   const [freeTextResults, setFreeTextResults] = useState<FreeTextLookupResultDto[]>([])
@@ -77,6 +86,7 @@ export function BulkActionsToolbar({
   const [grokipediaQuickProgress, setGrokipediaQuickProgress] = useState(0)
   const [grokipediaSlowProgress, setGrokipediaSlowProgress] = useState(0)
   const [bookFromImageProgress, setBookFromImageProgress] = useState(0)
+  const [bookFromTitleAuthorProgress, setBookFromTitleAuthorProgress] = useState(0)
   const [freeTextProgress, setFreeTextProgress] = useState(0)
   const [showGenreResults, setShowGenreResults] = useState(false)
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
@@ -112,6 +122,9 @@ export function BulkActionsToolbar({
   })
   const bulkBookFromImage = useBulkBookFromImage((completed) => {
     setBookFromImageProgress(completed)
+  })
+  const bulkBookFromTitleAuthor = useBulkBookFromTitleAuthor((completed) => {
+    setBookFromTitleAuthorProgress(completed)
   })
   const lookupGenres = useLookupBulkGenresWithProgress((completed) => {
     setGenreProgress(completed)
@@ -213,6 +226,18 @@ export function BulkActionsToolbar({
     } catch (error) {
       console.error('Failed to process books from images:', error)
       toast.error('Failed to process books from images')
+    }
+  }
+
+  const handleBookFromTitleAuthor = async () => {
+    setBookFromTitleAuthorProgress(0)
+    try {
+      const results = await bulkBookFromTitleAuthor.mutateAsync(Array.from(selectedIds))
+      setBookFromTitleAuthorResults(results)
+      setShowBookFromTitleAuthorResults(true)
+    } catch (error) {
+      console.error('Failed to process books from title & author:', error)
+      toast.error('Failed to catalog books from title & author')
     }
   }
 
@@ -420,6 +445,23 @@ export function BulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
+              onClick={handleBookFromTitleAuthor}
+              isLoading={bulkBookFromTitleAuthor.isPending}
+              disabled={bulkBookFromTitleAuthor.isPending}
+              leftIcon={<AiIcon />}
+              data-test="bulk-book-from-title-author"
+            >
+              {progressLabel(
+                'Book from Title & Author',
+                'Catalog...',
+                bulkBookFromTitleAuthor.isPending,
+                bookFromTitleAuthorProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleGenreLookup}
               isLoading={lookupGenres.isPending}
               disabled={lookupGenres.isPending}
@@ -555,6 +597,13 @@ export function BulkActionsToolbar({
         isOpen={showBookFromImageResults}
         onClose={() => setShowBookFromImageResults(false)}
         results={bookFromImageResults}
+      />
+
+      <BookFromImageResultsModal
+        isOpen={showBookFromTitleAuthorResults}
+        onClose={() => setShowBookFromTitleAuthorResults(false)}
+        results={bookFromTitleAuthorResults}
+        title="Book from Title & Author Results"
       />
 
       <FreeTextLookupResultsModal

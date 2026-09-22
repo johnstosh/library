@@ -202,7 +202,7 @@ describe('SearchPage librarian controls', () => {
 
     const link = screen.getByTestId('open-in-books')
     expect(link.tagName).toBe('A')
-    expect(link).toHaveAttribute('href', '/books?q=Summa&status=in-library')
+    expect(link).toHaveAttribute('href', '/books?q=Summa&status=in-library&mostRecent=true')
   })
 
   it('includes the typed query in the Books URL before Search is submitted', () => {
@@ -210,7 +210,7 @@ describe('SearchPage librarian controls', () => {
     renderSearch('/search')
 
     fireEvent.change(screen.getByTestId('search-input'), { target: { value: 'City of God' } })
-    expect(screen.getByTestId('open-in-books')).toHaveAttribute('href', '/books?q=City+of+God')
+    expect(screen.getByTestId('open-in-books')).toHaveAttribute('href', '/books?q=City+of+God&mostRecent=true')
   })
 
   it('uses default md sizes like Books instead of lg', () => {

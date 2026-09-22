@@ -406,8 +406,8 @@ public class BooksUITest {
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
         assertThat(page.locator("text=Electronic Resource Without LOC"))
                 .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-        // Recent Arrivals cannot be combined with other filters
-        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+        // Recent Arrivals is now combinable; chip must stay enabled
+        assertThat(page.locator("[data-test='filter-most-recent']")).isEnabled();
         Assertions.assertTrue(page.url().contains("status=without-loc"),
                 "URL should contain status=without-loc, got: " + page.url());
     }

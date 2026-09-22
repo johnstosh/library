@@ -232,8 +232,8 @@ public class AuthorsUITest {
 
         Locator filterChip = page.locator("[data-test='filter-without-grokipedia']");
         assertThat(filterChip).hasAttribute("aria-pressed", "true");
-        // Recent Arrivals cannot be combined with other filters
-        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+        // Recent Arrivals is now combinable; chip must stay enabled
+        assertThat(page.locator("[data-test='filter-most-recent']")).isEnabled();
 
         // The authors table should be visible (may have rows or be empty)
         Locator authorsTable = page.locator("table");

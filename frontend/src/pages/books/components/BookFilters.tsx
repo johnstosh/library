@@ -52,8 +52,6 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 interface BookFiltersProps {
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
-  /** Books page: Recent Arrivals cannot be combined with other filters. */
-  mostRecentDisabled?: boolean
   showAvailabilityFilters?: boolean
   /** Search page: hide cataloger-only chips (Without *). */
   showCatalogerFilters?: boolean
@@ -62,7 +60,6 @@ interface BookFiltersProps {
 export function BookFilters({
   chips,
   onToggle,
-  mostRecentDisabled = false,
   showAvailabilityFilters = false,
   showCatalogerFilters = true,
 }: BookFiltersProps) {
@@ -175,20 +172,14 @@ export function BookFilters({
           tooltip="Only books with a free LibriVox audio recording"
           dataTest="filter-audio"
         />
-        {/* Shown to patrons on Search as well as on Books. Defaults on so BooksPage
-            can call GET /books/most-recent-day. Forced off and disabled on Books when
-            any other filter is on — those need the full catalog. */}
+        {/* Recent Arrivals is now always toggleable and combinable with other filters
+            (intersection semantics via applyChipFilters). Defaults on for empty Books URL. */}
         <FilterChip
           label="Recent Arrivals"
-          active={chips.mostRecent && !mostRecentDisabled}
+          active={chips.mostRecent}
           onClick={() => toggle('mostRecent')}
-          tooltip={
-            mostRecentDisabled
-              ? 'Recent Arrivals cannot be combined with other filters. Turn the others off to use it.'
-              : 'Only books added on the most recent day (or with a temporary date-format title)'
-          }
+          tooltip="Only books added on the most recent day (or with a temporary date-format title)"
           dataTest="filter-most-recent"
-          disabled={mostRecentDisabled}
         />
       </div>
 
