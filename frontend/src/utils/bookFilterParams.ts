@@ -230,6 +230,10 @@ export function bookFilterParamsForUrl(
     }
   }
 
+  if (mode === 'search' && state.chips.mostRecent) {
+    params[CHIP_URL_KEYS.mostRecent] = 'true'
+  }
+
   if (mode === 'search') {
     if ((state.bookPage ?? 0) > 0) params.bookPage = String(state.bookPage)
     if ((state.authorPage ?? 0) > 0) params.authorPage = String(state.authorPage)

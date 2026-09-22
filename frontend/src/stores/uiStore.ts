@@ -3,7 +3,6 @@ import { create } from 'zustand'
 import { type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   defaultAuthorChipFilters,
-  isOtherAuthorChipActive,
   type AuthorChipFilters,
 } from '@/utils/authorChipFilters'
 import {

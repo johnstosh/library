@@ -264,7 +264,7 @@ describe('PricesPage', () => {
     expect(link.tagName).toBe('A')
     expect(link).toHaveAttribute(
       'href',
-      '/books?q=Pride&status=in-library&lookupErrors=true',
+      '/books?q=Pride&status=in-library&lookupErrors=true&mostRecent=false',
     )
   })
 })

@@ -52,8 +52,6 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 interface BookFiltersProps {
   chips: BookChipFilters
   onToggle: (chip: keyof BookChipFilters) => void
-  /** Whether to disable the Recent Arrivals chip (no longer used; kept for compatibility). */
-  mostRecentDisabled?: boolean
   showAvailabilityFilters?: boolean
   /** Search page: hide cataloger-only chips (Without *). */
   showCatalogerFilters?: boolean
@@ -62,7 +60,6 @@ interface BookFiltersProps {
 export function BookFilters({
   chips,
   onToggle,
-  mostRecentDisabled = false,
   showAvailabilityFilters = false,
   showCatalogerFilters = true,
 }: BookFiltersProps) {

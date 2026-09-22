@@ -27,7 +27,6 @@ import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
-  isBooksIntakeConstrained,
   labelsFromSearchParams,
   matchesBookQuery,
   priceOlderDaysFromSearchParams,
@@ -148,15 +147,6 @@ export function BooksPage() {
     )
   }, [nonPriceFilteredBooks, allPrices, chips, priceOlderDays])
 
-  const intakeConstrained = isBooksIntakeConstrained(
-    chips,
-    selectedLabels,
-    urlQuery,
-    selectedDifficulties,
-    selectedFavoriteLists,
-    selectedStatuses,
-    selectedBindings,
-  )
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('booksTable', id)
@@ -300,7 +290,6 @@ export function BooksPage() {
             chips={chips}
             onToggle={handleToggleChip}
             showAvailabilityFilters
-            mostRecentDisabled={false}
             showCatalogerFilters
           />
           <BookLabelFilters

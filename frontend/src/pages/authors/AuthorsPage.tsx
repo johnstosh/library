@@ -129,7 +129,6 @@ export function AuthorsPage() {
           <AuthorFilters
             chips={chips}
             onToggle={toggleAuthorsChip}
-            mostRecentDisabled={false}
           />
           <FavoriteListFilters
             lists={favoriteChips}

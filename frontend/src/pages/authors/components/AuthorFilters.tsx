@@ -50,11 +50,9 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 interface AuthorFiltersProps {
   chips: AuthorChipFilters
   onToggle: (chip: keyof AuthorChipFilters) => void
-  /** Whether to disable the Recent Arrivals chip (no longer used; kept for compatibility). */
-  mostRecentDisabled?: boolean
 }
 
-export function AuthorFilters({ chips, onToggle, mostRecentDisabled = false }: AuthorFiltersProps) {
+export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
   return (
     <div className="space-y-3" data-test="author-filter-chips">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
