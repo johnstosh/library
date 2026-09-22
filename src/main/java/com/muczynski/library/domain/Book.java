@@ -17,7 +17,8 @@ import java.util.regex.Pattern;
 @Entity
 @Table(
     indexes = {
-        @Index(name = "idx_book_title", columnList = "title")
+        @Index(name = "idx_book_title", columnList = "title"),
+        @Index(name = "idx_book_alternate_title", columnList = "alternate_title")
     },
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_book_title", columnNames = "title")
@@ -40,6 +41,8 @@ public class Book {
     private Long id;
 
     private String title;
+
+    private String alternateTitle;
 
     private Integer publicationYear;
 

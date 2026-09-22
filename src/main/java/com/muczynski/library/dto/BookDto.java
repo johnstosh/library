@@ -22,6 +22,8 @@ public class BookDto {
     @NotBlank(message = "Book title is required")
     private String title;
 
+    private String alternateTitle;
+
     private Integer publicationYear;
     private String publisher;
     private String plotSummary;

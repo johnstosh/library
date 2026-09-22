@@ -324,6 +324,7 @@ public class ImportService {
                 }
 
                 // Update fields (merge)
+                book.setAlternateTitle(bDto.getAlternateTitle());
                 book.setPublicationYear(bDto.getPublicationYear());
                 book.setPublisher(bDto.getPublisher());
                 book.setPlotEssay(bDto.getPlotSummary());
@@ -769,6 +770,7 @@ public class ImportService {
         for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
             ImportBookDto bDto = new ImportBookDto();
             bDto.setTitle(book.getTitle());
+            bDto.setAlternateTitle(emptyToNull(book.getAlternateTitle()));
             bDto.setPublicationYear(book.getPublicationYear());
             bDto.setPublisher(emptyToNull(book.getPublisher()));
             bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));

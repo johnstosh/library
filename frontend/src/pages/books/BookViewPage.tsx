@@ -164,6 +164,11 @@ export function BookViewPage() {
               <span>{book.title}</span>
               <FavoriteStar itemType="BOOK" itemId={book.id} />
             </h1>
+            {book.alternateTitle && (
+              <p className="text-gray-600 text-lg -mt-1 pl-0.5" data-test="book-alternate-title">
+                {book.alternateTitle}
+              </p>
+            )}
             {(canCheckout || isLibrarian) && (
               <div className="flex flex-wrap gap-3 justify-end">
                 {canCheckout && (

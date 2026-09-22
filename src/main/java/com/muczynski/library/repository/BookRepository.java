@@ -189,19 +189,19 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * Find books that have ALL of the given labels, filtered by title query.
      * Returns books whose tagsList contains every label in the provided list.
      */
-    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    @Query("SELECT b FROM Book b WHERE (LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
     Page<Book> findByTitleContainingIgnoreCaseAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
      * Find books with locNumber, matching title query and ALL of the given labels.
      */
-    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.locNumber IS NOT NULL AND b.locNumber <> '' AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    @Query("SELECT b FROM Book b WHERE (LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND b.locNumber IS NOT NULL AND b.locNumber <> '' AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
     Page<Book> findByTitleContainingIgnoreCaseAndLocNumberIsNotNullAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
      * Find books with electronicResource=true, matching title query and ALL of the given labels.
      */
-    @Query("SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) AND b.electronicResource = true AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
+    @Query("SELECT b FROM Book b WHERE (LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND b.electronicResource = true AND (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
     Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrueAndAllLabels(@Param("query") String query, @Param("labels") List<String> labels, @Param("labelCount") long labelCount, Pageable pageable);
 
     /**
@@ -271,7 +271,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * Audio filter matches books whose freeTextUrl contains "librivox".
      */
     @Query("SELECT b FROM Book b WHERE " +
-        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        " LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         SEARCH_CHIP_PREDICATE)
     Page<Book> findWithFilters(
         @Param("query") String query,
@@ -314,7 +315,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * Type filters use AND logic (book must satisfy ALL active type filters).
      */
     @Query("SELECT b FROM Book b WHERE " +
-        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        " LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
         SEARCH_CHIP_PREDICATE)
     Page<Book> findWithFiltersAndLabels(
