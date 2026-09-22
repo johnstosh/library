@@ -41,6 +41,7 @@ vi.mock('@/api/books', () => ({
   useBookFromFirstPhoto: () => idleMutation(),
   useTitleAuthorFromPhoto: () => ({ isPending: false, mutateAsync: mocks.titleAuthorFromPhoto }),
   useBookFromTitleAuthor: () => idleMutation(),
+  useBulkBookFromTitleAuthor: () => idleMutation(),
   useLookupGenres: () => idleMutation(),
 }))
 

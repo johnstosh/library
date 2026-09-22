@@ -317,6 +317,59 @@ export function useBulkBookFromImage(
   })
 }
 
+/**
+ * Generate full book metadata (plot, description, author bio, etc.) from title and author
+ * for multiple selected books. Follows pattern of useBulkBookFromImage but first fetches
+ * current title/author from detail (to supply to backend endpoint), then calls PUT.
+ * Updates cache per book. Progress reported sequentially.
+ */
+export function useBulkBookFromTitleAuthor(
+  onProgress?: (completed: number, total: number) => void
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const results: { id: number; success: boolean; book?: BookDto; error?: string }[] = []
+      const total = ids.length
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        try {
+          // GET current book detail to read title and author (per spec; could use cache but GET ensures fresh)
+          const bookDetail = await api.get<BookDto>(`/books/${id}`)
+          const title = bookDetail.title?.trim() || ''
+          const authorName = (bookDetail.author || '').trim()
+
+          if (!title) {
+            throw new Error('Book has no title')
+          }
+
+          const updatedBook = await api.put<BookDto>(
+            `/books/${id}/book-from-title-author`,
+            { title, authorName }
+          )
+          results.push({ id, success: true, book: updatedBook })
+          // Update cache immediately for UI reactivity
+          queryClient.setQueryData(queryKeys.books.detail(id), updatedBook)
+        } catch (error) {
+          results.push({
+            id,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+        onProgress?.(i + 1, total)
+      }
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
 // Hook to lookup genres for a single book using Grok AI.
 // On success, seeds the individual book cache with the returned BookDto so no follow-up
 // by-ids fetch is needed. Callers are responsible for invalidating the summaries list once

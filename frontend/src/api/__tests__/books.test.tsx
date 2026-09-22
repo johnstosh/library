@@ -5,7 +5,7 @@ import { type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto } from '@/types/dtos'
-import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress } from '../books'
+import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor } from '../books'
 import { api } from '../client'
 
 afterEach(() => {
@@ -92,5 +92,36 @@ describe('useLookupBulkReadingDifficultyWithProgress', () => {
       id: 11,
       readingDifficulty: 'children',
     })
+  })
+})
+
+describe('useBulkBookFromTitleAuthor', () => {
+  it('fetches book detail then calls PUT endpoint with title and authorName, updates cache on success', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    const bookDetail = { ...originalBook, title: 'Test Book', author: 'Test Author' }
+    const updatedBook = { ...bookDetail, plotSummary: 'AI generated summary from title/author' }
+
+    vi.mocked(api.get).mockResolvedValue(bookDetail)
+    vi.mocked(api.put).mockResolvedValue(updatedBook)
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useBulkBookFromTitleAuthor(), { wrapper })
+
+    await result.current.mutateAsync([1])
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(api.get).toHaveBeenCalledWith('/books/1')
+    expect(api.put).toHaveBeenCalledWith('/books/1/book-from-title-author', {
+      title: 'Test Book',
+      authorName: 'Test Author',
+    })
+    expect(queryClient.getQueryData(queryKeys.books.detail(1))).toMatchObject(updatedBook)
   })
 })

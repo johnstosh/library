@@ -1119,7 +1119,6 @@ public class BookService {
             - title: title of the book
             - publicationYear: publication year, if known
             - publisher: Name of the book's publisher, if known
-            - locNumber: Library of Congress call number, if known
             - plotEssay: a frank Catholic summary and critique of the plot. Write 2-3 paragraphs. Not a jacket blurb.
             - relatedWorks: other works by the same author
             - detailedDescription: a detailed Catholic catalog essay. Write multiple paragraphs, about 400-800 words. Not a blurb.
@@ -1129,7 +1128,7 @@ public class BookService {
             "religiousAffiliation": string, "birthCountry": string, "nationality": string,
             "biographicalEssay": string},
             "book": {"title": string, "publicationYear": number or null, "publisher": string or null,
-            "locNumber": string or null, "plotEssay": string, "relatedWorks": string,
+            "plotEssay": string, "relatedWorks": string,
             "detailedDescription": string}}""", title.trim(), authorPart);
 
         String response = askGrok.askQuestion(question, CATALOG_SYSTEM_PROMPT);
@@ -1234,21 +1233,23 @@ public class BookService {
                 dto.setTitle(bookTitle.trim());
             }
 
-            Object yearObj = bookMap.get("publicationYear");
-            if (yearObj != null) {
-                if (yearObj instanceof Number) {
-                    dto.setPublicationYear(((Number) yearObj).intValue());
+            // publicationYear: only set from Grok when current is null (preserve existing)
+            if (dto.getPublicationYear() == null) {
+                Object yearObj = bookMap.get("publicationYear");
+                if (yearObj != null) {
+                    if (yearObj instanceof Number) {
+                        dto.setPublicationYear(((Number) yearObj).intValue());
+                    }
                 }
             }
 
-            String publisher = (String) bookMap.get("publisher");
-            if (publisher != null && !publisher.trim().isEmpty() && !publisher.equals("null")) {
-                dto.setPublisher(publisher.trim());
-            }
-
-            String locNumber = (String) bookMap.get("locNumber");
-            if (locNumber != null && !locNumber.trim().isEmpty() && !locNumber.equals("null")) {
-                dto.setLocNumber(locNumber.trim());
+            // publisher: only set from Grok when current is null or blank (preserve existing)
+            String currentPublisher = dto.getPublisher();
+            if (currentPublisher == null || currentPublisher.trim().isEmpty()) {
+                String publisher = (String) bookMap.get("publisher");
+                if (publisher != null && !publisher.trim().isEmpty() && !publisher.equals("null")) {
+                    dto.setPublisher(publisher.trim());
+                }
             }
 
             String plotSummary = firstNonBlankString(bookMap, "plotEssay", "plotSummary");

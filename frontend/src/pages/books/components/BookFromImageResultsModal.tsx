@@ -9,12 +9,14 @@ interface BookFromImageResultsModalProps {
   isOpen: boolean
   onClose: () => void
   results: BookFromImageResult[]
+  title?: string
 }
 
 export function BookFromImageResultsModal({
   isOpen,
   onClose,
   results,
+  title = 'Book from Images Results',
 }: BookFromImageResultsModalProps) {
   const successCount = results.filter((r) => r.success).length
   const failureCount = results.length - successCount
@@ -23,7 +25,7 @@ export function BookFromImageResultsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Book from Images Results"
+      title={title}
       size="lg"
       footer={
         <div className="flex justify-end">
