@@ -96,6 +96,7 @@ export interface AuthorEnrichmentResultDto {
 export interface BookDto {
   id: number
   title: string
+  alternateTitle?: string
   publicationYear?: number
   publisher?: string
   plotSummary?: string

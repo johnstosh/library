@@ -349,4 +349,59 @@ class FreeTextLookupServiceTest {
 
         return book;
     }
+
+    @Test
+    void lookupBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
+        Book book = createBook(1L, "Uncached Title", "Jane Austen");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(eq("Uncached Title"), eq("Jane Austen")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/book"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://example.com/book", result.getFreeTextUrl());
+        verify(mockProvider1).search(eq("Uncached Title"), any());
+        verify(mockProvider2, never()).search(anyString(), anyString());
+    }
+
+    @Test
+    void lookupBook_withAlternateTitle_searchesBothAndMergesUrls() {
+        Book book = createBook(1L, "Primary Title", "Some Author");
+        book.setAlternateTitle("Alternate Title");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // primary fails, alternate succeeds
+        when(mockProvider1.search(eq("Primary Title"), eq("Some Author")))
+                .thenReturn(FreeTextLookupResult.error("Provider1", "Not found"));
+        when(mockProvider1.search(eq("Alternate Title"), eq("Some Author")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/alt-book"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://example.com/alt-book", result.getFreeTextUrl());
+        assertEquals("Primary Title", result.getBookTitle());
+        verify(mockProvider1, times(2)).search(anyString(), anyString());
+    }
+
+    @Test
+    void lookupBook_withAlternateTitle_successIfAnyTitleYieldsUrl() {
+        Book book = createBook(1L, "Primary Title", "Some Author");
+        book.setAlternateTitle("Alt Title");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(eq("Primary Title"), any()))
+                .thenReturn(FreeTextLookupResult.error("Provider1", "Not found"));
+        when(mockProvider1.search(eq("Alt Title"), any()))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/from-alt"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+    }
 }

@@ -81,9 +81,9 @@ class AclaLookupServiceTest {
         AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
 
         assertTrue(result.isSuccess());
-        assertTrue(result.getAudioAvailable());
-        assertTrue(result.getPaperAvailable());
-        assertTrue(result.getEbookAvailable());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
         assertTrue(book.getAclaAudioAvailable());
         assertTrue(book.getAclaPaperAvailable());
         assertTrue(book.getAclaEbookAvailable());
@@ -417,5 +417,43 @@ class AclaLookupServiceTest {
         author.setName(authorName);
         book.setAuthor(author);
         return book;
+    }
+
+    @Test
+    void lookupAndUpdateBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
+
+    @Test
+    void lookupAndUpdateBook_withAlternateTitle_searchesBothAndMergesFlags() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        book.setAlternateTitle("Test Book Alt");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // primary no match, alternate succeeds with all formats
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_NO_MATCH)
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+        verify(aclaRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
     }
 }

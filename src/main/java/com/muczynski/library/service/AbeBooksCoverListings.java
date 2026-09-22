@@ -20,4 +20,5 @@ public class AbeBooksCoverListings {
     AbeBooksListing libraryBinding;
     AbeBooksListing other;
     String searchUrl;
+    boolean rateLimited;
 }

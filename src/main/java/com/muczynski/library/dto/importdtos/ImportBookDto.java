@@ -16,6 +16,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ImportBookDto {
     private String title;
+    private String alternateTitle;
     private Integer publicationYear;
     private String publisher;
     private String plotSummary;

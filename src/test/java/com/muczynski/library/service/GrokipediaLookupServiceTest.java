@@ -494,4 +494,79 @@ class GrokipediaLookupServiceTest {
         book.setAuthor(author);
         return book;
     }
+
+    @Test
+    void lookupBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Little Women");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Little_Women"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Little_Women", result.getGrokipediaUrl());
+        verify(bookRepository).save(argThat(b ->
+            "https://grokipedia.com/page/Little_Women".equals(b.getGrokipediaUrl())));
+        // only primary checked
+    }
+
+    @Test
+    void lookupBook_withAlternateTitle_triesPrimaryThenAlternate() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Primary Title");
+        book.setAlternateTitle("Alternate Title");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // primary usual fails
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Primary_Title"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        // alternate usual succeeds
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Alternate_Title"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Alternate_Title", result.getGrokipediaUrl());
+        assertEquals("Primary Title", result.getName());
+    }
+
+    @Test
+    void lookupBook_withAlternateTitle_savesNAOnlyIfBothFail() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Primary Title");
+        book.setAlternateTitle("Alternate Title");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(askGrok.suggestGrokipediaUrlsForBook(anyString(), any()))
+                .thenReturn(List.of());
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertFalse(result.isSuccess());
+        assertEquals("-", result.getGrokipediaUrl());
+    }
 }

@@ -57,7 +57,18 @@ public class FreeTextLookupService {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new LibraryException("Book not found: " + bookId));
 
-        // Skip temporary titles
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(book.getTitle())
+                    .success(false)
+                    .errorMessage("Book has no title")
+                    .providersSearched(List.of())
+                    .build();
+        }
+
+        // Temporary-title skip still based on primary only
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
             return FreeTextBulkLookupResultDto.builder()
                     .bookId(bookId)
@@ -69,102 +80,106 @@ public class FreeTextLookupService {
         }
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+        String primaryTitle = book.getTitle();
 
-        // Check global cache first (may return multiple space-separated URLs)
-        // Empty string "" means "searched but not found" - don't search again
-        String cachedUrls = FreeTextLookupCache.lookup(authorName, book.getTitle());
-        if (cachedUrls != null) {
-            if (!cachedUrls.isBlank()) {
-                // Merge so a cache hit that knows 1 URL cannot drop a 2nd already on the book
-                String merged = applyFoundUrls(book, cachedUrls);
-
-                log.info("Found free text for book {} in cache: {}", bookId, merged);
-
-                return FreeTextBulkLookupResultDto.builder()
-                        .bookId(bookId)
-                        .bookTitle(book.getTitle())
-                        .authorName(authorName)
-                        .success(true)
-                        .freeTextUrl(merged)
-                        .providerName("Cache")
-                        .providersSearched(List.of("Cache"))
-                        .build();
-            } else {
-                // Cached as "not found" - don't search again
-                log.info("Book {} was previously searched and not found (cached)", bookId);
-
-                return FreeTextBulkLookupResultDto.builder()
-                        .bookId(bookId)
-                        .bookTitle(book.getTitle())
-                        .authorName(authorName)
-                        .success(false)
-                        .errorMessage("Previously searched - not found (cached)")
-                        .providerName("Cache")
-                        .providersSearched(List.of("Cache"))
-                        .build();
+        // Check cache for primary (and alternate if present)
+        List<String> allCached = new ArrayList<>();
+        for (String t : titles) {
+            String cached = FreeTextLookupCache.lookup(authorName, t);
+            if (cached != null) {
+                allCached.add(cached);
             }
+        }
+        String combinedCache = String.join(" ", allCached).trim();
+        if (!combinedCache.isBlank()) {
+            String merged = applyFoundUrls(book, combinedCache);
+            log.info("Found free text for book {} in cache: {}", bookId, merged);
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(primaryTitle)
+                    .authorName(authorName)
+                    .success(true)
+                    .freeTextUrl(merged)
+                    .providerName("Cache")
+                    .providersSearched(List.of("Cache"))
+                    .build();
+        }
+        if (allCached.contains("")) {
+            log.info("Book {} was previously searched and not found (cached)", bookId);
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(primaryTitle)
+                    .authorName(authorName)
+                    .success(false)
+                    .errorMessage("Previously searched - not found (cached)")
+                    .providerName("Cache")
+                    .providersSearched(List.of("Cache"))
+                    .build();
         }
 
         List<String> searchedProviders = new ArrayList<>();
 
+        boolean anySuccess = false;
         for (FreeTextProvider provider : providers) {
             searchedProviders.add(provider.getProviderName());
 
-            try {
-                log.debug("Searching {} for book '{}' by '{}'",
-                        provider.getProviderName(), book.getTitle(), authorName);
+            for (String searchTitle : titles) {
+                try {
+                    log.debug("Searching {} for title '{}' (primary '{}') by '{}'",
+                            provider.getProviderName(), searchTitle, primaryTitle, authorName);
 
-                FreeTextLookupResult result = provider.search(book.getTitle(), authorName);
+                    FreeTextLookupResult result = provider.search(searchTitle, authorName);
 
-                if (result.isFound()) {
-                    // Validate domain if provider specifies expected domains
-                    List<String> expectedDomains = provider.getExpectedDomains();
-                    if (!expectedDomains.isEmpty()) {
-                        String urlDomain = extractDomain(result.getUrl());
-                        boolean domainMatches = expectedDomains.stream()
-                                .anyMatch(expected -> urlDomain != null && urlDomain.contains(expected));
-                        if (!domainMatches) {
-                            log.error("Provider {} returned URL with unexpected domain: {} (expected one of: {})",
-                                    provider.getProviderName(), result.getUrl(), expectedDomains);
-                            // Skip this result and continue to next provider
-                            continue;
+                    if (result.isFound()) {
+                        // Validate domain if provider specifies expected domains
+                        List<String> expectedDomains = provider.getExpectedDomains();
+                        if (!expectedDomains.isEmpty()) {
+                            String urlDomain = extractDomain(result.getUrl());
+                            boolean domainMatches = expectedDomains.stream()
+                                    .anyMatch(expected -> urlDomain != null && urlDomain.contains(expected));
+                            if (!domainMatches) {
+                                log.error("Provider {} returned URL with unexpected domain: {} (expected one of: {})",
+                                        provider.getProviderName(), result.getUrl(), expectedDomains);
+                                continue;
+                            }
                         }
+
+                        // Merge the found URL(s) into any URLs already stored on the book
+                        String merged = applyFoundUrls(book, result.getUrl());
+                        anySuccess = true;
+
+                        log.info("Found free text for book {}: {} via {} using title '{}'",
+                                bookId, merged, provider.getProviderName(), searchTitle);
+
+                        return FreeTextBulkLookupResultDto.builder()
+                                .bookId(bookId)
+                                .bookTitle(primaryTitle)
+                                .authorName(authorName)
+                                .success(true)
+                                .freeTextUrl(merged)
+                                .providerName(provider.getProviderName())
+                                .providersSearched(searchedProviders)
+                                .build();
+                    } else {
+                        log.debug("Provider {} did not find '{}': {}",
+                                provider.getProviderName(), searchTitle, result.getErrorMessage());
                     }
-
-                    // Merge the found URL into any URLs already stored on the book
-                    String merged = applyFoundUrls(book, result.getUrl());
-
-                    log.info("Found free text for book {}: {} via {}",
-                            bookId, merged, provider.getProviderName());
-
-                    return FreeTextBulkLookupResultDto.builder()
-                            .bookId(bookId)
-                            .bookTitle(book.getTitle())
-                            .authorName(authorName)
-                            .success(true)
-                            .freeTextUrl(merged)
-                            .providerName(provider.getProviderName())
-                            .providersSearched(searchedProviders)
-                            .build();
-                } else {
-                    log.debug("Provider {} did not find book: {}",
-                            provider.getProviderName(), result.getErrorMessage());
+                } catch (Exception e) {
+                    log.warn("Provider {} failed for book {} title '{}': {}",
+                            provider.getProviderName(), bookId, searchTitle, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Provider {} failed for book {}: {}",
-                        provider.getProviderName(), bookId, e.getMessage());
             }
         }
 
-        // No provider found a match
-        log.info("No free text found for book {} '{}' after searching {} providers",
-                bookId, book.getTitle(), searchedProviders.size());
+        // No provider found a match for either title
+        log.info("No free text found for book {} '{}' after searching {} providers with {} titles",
+                bookId, primaryTitle, searchedProviders.size(), titles.size());
 
         return FreeTextBulkLookupResultDto.builder()
                 .bookId(bookId)
-                .bookTitle(book.getTitle())
+                .bookTitle(primaryTitle)
                 .authorName(authorName)
-                .success(false)
+                .success(anySuccess)  // true if any URL was merged from either title
                 .errorMessage("Not found in any provider")
                 .providersSearched(searchedProviders)
                 .build();

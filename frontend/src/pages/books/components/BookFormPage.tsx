@@ -71,6 +71,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const [formData, setFormData] = useState({
     title: '',
+    alternateTitle: '',
     publicationYear: '',
     publisher: '',
     plotSummary: '',
@@ -144,6 +145,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       setFormData({
         ...formData,
         title: book.title,
+        alternateTitle: book.alternateTitle || '',
         publicationYear: book.publicationYear?.toString() || '',
         publisher: book.publisher || '',
         plotSummary: book.plotSummary || '',
@@ -178,6 +180,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       // arrive after this reset.
       setFormData((prev) => ({
         title: '',
+        alternateTitle: '',
         publicationYear: '',
         publisher: '',
         plotSummary: '',
@@ -700,6 +703,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     const bookData = {
       title: formData.title,
+      alternateTitle: formData.alternateTitle || undefined,
       publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
       publisher: formData.publisher || undefined,
       plotSummary: formData.plotSummary || undefined,
@@ -988,6 +992,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           onChange={(e) => handleFieldChange('title', e.target.value)}
           required
           data-test="book-title"
+        />
+
+        <Input
+          label="Alternate Title"
+          value={formData.alternateTitle}
+          onChange={(e) => handleFieldChange('alternateTitle', e.target.value)}
+          placeholder="Optional alternate or former title"
+          data-test="book-alternate-title"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

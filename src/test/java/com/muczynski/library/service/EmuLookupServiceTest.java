@@ -404,4 +404,51 @@ class EmuLookupServiceTest {
 
         assertTrue(result.isSuccess());
     }
+
+    @Test
+    void lookupAndUpdateBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
+
+    @Test
+    void lookupAndUpdateBook_withAlternateTitle_searchesBothAndMergesFlags() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        book.setAlternateTitle("Test Book Alternate");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // primary no match, alternate succeeds
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_NO_MATCH)
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
 }

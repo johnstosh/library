@@ -32,6 +32,7 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -146,30 +147,39 @@ public class BookPriceService {
             return prepared.completed;
         }
 
-        log.info("AbeBooks lookup starting bookId={} title='{}' author='{}'",
-                bookId, prepared.title, prepared.authorName);
+        log.info("AbeBooks lookup starting bookId={} title='{}' author='{}' titles={}",
+                bookId, prepared.primaryTitle, prepared.authorName, prepared.titlesToSearch);
         logPool("before-http", bookId);
         long started = System.nanoTime();
+        final AbeBooksCoverListings[] mergedHolder = {null};
         try {
-            AbeBooksCoverListings found = findWithBackoff(prepared.title, prepared.authorName);
+            for (String searchTitle : prepared.titlesToSearch) {
+                AbeBooksCoverListings found = findWithBackoff(searchTitle, prepared.authorName);
+                if (mergedHolder[0] == null) {
+                    mergedHolder[0] = found;
+                } else {
+                    mergedHolder[0] = mergeListings(mergedHolder[0], found);
+                }
+                if (found.isRateLimited()) {
+                    break; // per spec: if primary rate-limits, skip alternate
+                }
+            }
             long elapsedMs = elapsedMs(started);
-            log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} hardcover={} softcover={} libraryBinding={}",
-                    bookId, elapsedMs,
-                    found.getHardcover() != null, found.getSoftcover() != null,
-                    found.getLibraryBinding() != null);
+            log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} merged listings", bookId, elapsedMs);
             logPool("after-http", bookId);
-            return inTransaction(() -> saveFoundResult(bookId, found));
+            AbeBooksCoverListings finalMerged = mergedHolder[0] != null ? mergedHolder[0] : AbeBooksCoverListings.builder().build();
+            return inTransaction(() -> saveFoundResult(bookId, finalMerged));
         } catch (AbeBooksRateLimitedException ex) {
             long elapsedMs = elapsedMs(started);
             log.warn("AbeBooks lookup rate-limited bookId={} title='{}' elapsedMs={}",
-                    bookId, prepared.title, elapsedMs);
+                    bookId, prepared.primaryTitle, elapsedMs);
             logPool("rate-limited", bookId);
             return inTransaction(() -> saveErrorResult(
                     bookId, AbeBooksRateLimitedException.MESSAGE, true, ex.getSearchUrl()));
         } catch (AbeBooksHttpException ex) {
             long elapsedMs = elapsedMs(started);
             log.warn("AbeBooks lookup HTTP {} bookId={} title='{}' elapsedMs={}",
-                    ex.getStatusCode(), bookId, prepared.title, elapsedMs);
+                    ex.getStatusCode(), bookId, prepared.primaryTitle, elapsedMs);
             logPool("http-error", bookId);
             return inTransaction(() -> saveErrorResult(
                     bookId, ex.getMessage(), false, ex.getSearchUrl()));
@@ -177,32 +187,60 @@ public class BookPriceService {
             long elapsedMs = elapsedMs(started);
             int code = ex.getStatusCode().value();
             log.warn("AbeBooks lookup HTTP {} bookId={} title='{}' elapsedMs={}",
-                    code, bookId, prepared.title, elapsedMs);
+                    code, bookId, prepared.primaryTitle, elapsedMs);
             logPool("http-error", bookId);
             return inTransaction(() -> saveErrorResult(
                     bookId, AbeBooksHttpException.messageFor(code), false, null));
         } catch (Exception ex) {
             long elapsedMs = elapsedMs(started);
             log.warn("AbeBooks lookup failed bookId={} title='{}' elapsedMs={}: {}",
-                    bookId, prepared.title, elapsedMs, ex.getMessage(), ex);
+                    bookId, prepared.primaryTitle, elapsedMs, ex.getMessage(), ex);
             logPool("failed", bookId);
             String message = ex.getMessage() == null ? "AbeBooks lookup failed" : ex.getMessage();
             return inTransaction(() -> saveErrorResult(bookId, truncate(message, 500), false, null));
         }
     }
 
+    /**
+     * Merge two AbeBooksCoverListings by keeping the cheaper good-or-better listing per cover type.
+     * If primary is empty, use alternate. Persist one merged result.
+     */
+    private AbeBooksCoverListings mergeListings(AbeBooksCoverListings primary, AbeBooksCoverListings alternate) {
+        AbeBooksCoverListings.AbeBooksCoverListingsBuilder builder = AbeBooksCoverListings.builder();
+        builder.hardcover(cheaperOrFirst(primary.getHardcover(), alternate.getHardcover()));
+        builder.softcover(cheaperOrFirst(primary.getSoftcover(), alternate.getSoftcover()));
+        builder.libraryBinding(primary.getLibraryBinding() != null ? primary.getLibraryBinding() : alternate.getLibraryBinding());
+        builder.other(primary.getOther() != null ? primary.getOther() : alternate.getOther());
+        builder.searchUrl(primary.getSearchUrl() != null ? primary.getSearchUrl() : alternate.getSearchUrl());
+        builder.rateLimited(primary.isRateLimited() || alternate.isRateLimited());
+        return builder.build();
+    }
+
+    private AbeBooksListing cheaperOrFirst(AbeBooksListing a, AbeBooksListing b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        if (a.getPriceDollars() == null) return b;
+        if (b.getPriceDollars() == null) return a;
+        return a.getPriceDollars().compareTo(b.getPriceDollars()) <= 0 ? a : b;
+    }
+
     private PreparedLookup prepareLookup(Long bookId) {
         Book book = requireBook(bookId);
-        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
-        String title = book.getTitle();
-        if (BooksFromFeedService.isTemporaryTitle(title)) {
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
+            return new PreparedLookup(null, null,
+                    saveErrorResult(book, "Book has no title", false, null));
+        }
+        String primaryTitle = book.getTitle();
+        if (BooksFromFeedService.isTemporaryTitle(primaryTitle)) {
             return new PreparedLookup(null, null,
                     saveErrorResult(book, "Not Ready - Temporary title", false, null));
         }
-        if (isExcerptTitle(title)) {
+        if (isExcerptTitle(primaryTitle)) {
             return new PreparedLookup(null, null, createExcerptResult(book));
         }
-        return new PreparedLookup(title, authorName, null);
+        String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+        return new PreparedLookup(primaryTitle, titles, authorName, null);
     }
 
     private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
@@ -288,7 +326,9 @@ public class BookPriceService {
                 sleepQuietly(waitMs);
             }
             try {
-                return abeBooksClient.findCheapestGoodOrBetter(title, author);
+                AbeBooksCoverListings result = abeBooksClient.findCheapestGoodOrBetter(title, author);
+                // propagate rate limit flag from client if added later
+                return result;
             } catch (AbeBooksRateLimitedException ex) {
                 last = ex;
             }
@@ -414,12 +454,22 @@ public class BookPriceService {
     }
 
     private static final class PreparedLookup {
-        private final String title;
+        private final String primaryTitle;
+        private final List<String> titlesToSearch;
         private final String authorName;
         private final BookPriceLookupResultDto completed;
 
+        private PreparedLookup(String primaryTitle, List<String> titlesToSearch, String authorName,
+                               BookPriceLookupResultDto completed) {
+            this.primaryTitle = primaryTitle;
+            this.titlesToSearch = titlesToSearch;
+            this.authorName = authorName;
+            this.completed = completed;
+        }
+
         private PreparedLookup(String title, String authorName, BookPriceLookupResultDto completed) {
-            this.title = title;
+            this.primaryTitle = title;
+            this.titlesToSearch = title != null ? List.of(title) : List.of();
             this.authorName = authorName;
             this.completed = completed;
         }
