@@ -390,6 +390,7 @@ public class AbeBooksClient {
                     .libraryBinding(libraryBinding)
                     .other(other)
                     .searchUrl(searchUrl)
+                    .rateLimited(false)
                     .build();
         }
     }

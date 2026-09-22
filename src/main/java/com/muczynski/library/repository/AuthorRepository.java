@@ -37,8 +37,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a FROM Author a WHERE " +
         "(:filterFavoriteAuthors = false OR a.id IN :favoriteAuthorIds) AND EXISTS (" +
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
-        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))
-  OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+        "OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         BookRepository.SEARCH_CHIP_PREDICATE + ") " +
         "ORDER BY LOWER(a.name)")
     Page<Author> findAuthorsOfBooksMatchingFilters(
@@ -87,8 +87,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a FROM Author a WHERE " +
         "(:filterFavoriteAuthors = false OR a.id IN :favoriteAuthorIds) AND EXISTS (" +
         "SELECT 1 FROM Book b WHERE b.author = a AND " +
-        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%'))
-  OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+        "OR LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount AND " +
         BookRepository.SEARCH_CHIP_PREDICATE + ") " +
         "ORDER BY LOWER(a.name)")

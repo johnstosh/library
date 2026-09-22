@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.service.BooksFromFeedService;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,6 +108,8 @@ public class AclaLookupService {
     }
 
     private AclaLookupResultDto performAclaLookup(Book book) {
+        List<String> titles = Book.titlesToSearch(book);
+        // Temporary-title skip on primary only
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
             log.info("Skipping ACLA lookup for temporary title: {}", book.getTitle());
             book.setAclaLastChecked(LocalDateTime.now());
@@ -119,7 +122,7 @@ public class AclaLookupService {
                     .build();
         }
 
-        String cleanedTitle = cleanTitle(book.getTitle());
+        String primaryTitle = book.getTitle();
         String authorLastName = null;
         if (book.getAuthor() != null && book.getAuthor().getName() != null) {
             String[] parts = book.getAuthor().getName().trim().split("\\s+");
@@ -130,18 +133,23 @@ public class AclaLookupService {
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
-            String matchedCandidate = cleanedTitle;
-            for (String candidateTitle : buildTitleCandidates(cleanedTitle)) {
-                matches = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
+            String matchedCandidate = primaryTitle != null ? cleanTitle(primaryTitle) : "";
+            for (String searchTitle : titles) {
+                String cleaned = cleanTitle(searchTitle);
+                for (String candidateTitle : buildTitleCandidates(cleaned)) {
+                    matches = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
+                    if (!matches.isEmpty()) {
+                        matchedCandidate = candidateTitle;
+                        break;
+                    }
+                }
                 if (!matches.isEmpty()) {
-                    matchedCandidate = candidateTitle;
                     break;
                 }
             }
 
             if (matches.isEmpty()) {
-                // A completed search that found nothing is a definitive answer - clear any
-                // stale availability from a previous lookup rather than leaving it untouched.
+                // "Not held" only if both titles empty. On primary exception still try alternate; write merged flags once (do not clear mid-merge).
                 book.setAclaAudioAvailable(false);
                 book.setAclaPaperAvailable(false);
                 book.setAclaEbookAvailable(false);

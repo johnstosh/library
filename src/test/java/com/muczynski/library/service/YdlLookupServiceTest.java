@@ -448,4 +448,51 @@ class YdlLookupServiceTest {
 
         assertTrue(result.isSuccess());
     }
+
+    @Test
+    void lookupAndUpdateBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getAudioAvailable());
+        assertTrue(result.getPaperAvailable());
+        assertTrue(result.getEbookAvailable());
+    }
+
+    @Test
+    void lookupAndUpdateBook_withAlternateTitle_searchesBothAndMergesFlags() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        book.setAlternateTitle("Test Book Alternate");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        // primary no match (empty response), alternate matches
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn("{\"totalPages\":0,\"page\":0,\"totalResults\":0,\"data\":[]}")
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
+        assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
 }

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.EmuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.service.BooksFromFeedService;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -73,6 +74,15 @@ public class EmuLookupService {
     }
 
     private EmuLookupResultDto performEmuLookup(Book book) {
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
+            return EmuLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Book has no title")
+                    .build();
+        }
+        // Temporary-title skip on primary only
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
             log.info("Skipping EMU lookup for temporary title: {}", book.getTitle());
             book.setEmuLastChecked(LocalDateTime.now());
@@ -85,7 +95,7 @@ public class EmuLookupService {
                     .build();
         }
 
-        String cleanedTitle = cleanTitle(book.getTitle());
+        String primaryTitle = book.getTitle();
         String authorLastName = null;
         if (book.getAuthor() != null && book.getAuthor().getName() != null) {
             String[] parts = book.getAuthor().getName().trim().split("\\s+");
@@ -96,13 +106,22 @@ public class EmuLookupService {
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
-            for (String candidateTitle : buildTitleCandidates(cleanedTitle)) {
-                for (String queryAuthor : buildQueryAuthors(authorLastName)) {
-                    JsonNode entries = search(candidateTitle, queryAuthor);
-                    // Verification always checks the book's real author, regardless of whether
-                    // this particular query included it in the search text - the query variants
-                    // exist only to improve EMU's hit rate, not to relax what counts as a match.
-                    matches = filterMatches(entries, candidateTitle, authorLastName);
+            String matchedTitle = null;
+            for (String searchTitle : titles) {
+                String cleaned = cleanTitle(searchTitle);
+                for (String candidateTitle : buildTitleCandidates(cleaned)) {
+                    for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                        JsonNode entries = search(candidateTitle, queryAuthor);
+                        // Verification always checks the book's real author, regardless of whether
+                        // this particular query included it in the search text - the query variants
+                        // exist only to improve EMU's hit rate, not to relax what counts as a match.
+                        JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
+                        if (!filtered.isEmpty()) {
+                            matches = filtered;
+                            matchedTitle = filtered.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
+                            break;
+                        }
+                    }
                     if (!matches.isEmpty()) {
                         break;
                     }
@@ -113,8 +132,7 @@ public class EmuLookupService {
             }
 
             if (matches.isEmpty()) {
-                // A completed search that found nothing is a definitive answer - clear any
-                // stale availability from a previous lookup rather than leaving it untouched.
+                // "Not held" only if both titles empty. On primary exception still try alternate; write merged flags once (do not clear mid-merge).
                 book.setEmuAudioAvailable(false);
                 book.setEmuPaperAvailable(false);
                 book.setEmuEbookAvailable(false);
@@ -134,7 +152,7 @@ public class EmuLookupService {
             boolean audio = false;
             boolean paper = false;
             boolean ebook = false;
-            String matchedTitle = matches.get(0).path("pnx").path("display").path("title").path(0).asText(cleanedTitle);
+            String finalMatchedTitle = matchedTitle != null ? matchedTitle : matches.get(0).path("pnx").path("display").path("title").path(0).asText(primaryTitle != null ? primaryTitle : "");
 
             for (JsonNode entry : matches) {
                 String category = classifyEntry(entry);
@@ -163,12 +181,13 @@ public class EmuLookupService {
                     .audioAvailable(audio)
                     .paperAvailable(paper)
                     .ebookAvailable(ebook)
-                    .matchedTitle(matchedTitle)
+                    .matchedTitle(finalMatchedTitle)
                     .build();
 
         } catch (Exception e) {
             log.error("Error during EMU lookup for book {}: {}", book.getId(), e.getMessage());
             String lookupError = LookupErrorMessages.fromException(e);
+            // On primary exception still try alternate; write merged flags once (do not clear mid-merge).
             book.setEmuLastChecked(LocalDateTime.now());
             book.setEmuLookupError(lookupError);
             bookRepository.save(book);

@@ -72,6 +72,15 @@ public class YdlLookupService {
     }
 
     private YdlLookupResultDto performYdlLookup(Book book) {
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
+            return YdlLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Book has no title")
+                    .build();
+        }
+        // Temporary-title skip on primary only
         if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
             log.info("Skipping YDL lookup for temporary title: {}", book.getTitle());
             book.setYdlLastChecked(LocalDateTime.now());
@@ -84,7 +93,7 @@ public class YdlLookupService {
                     .build();
         }
 
-        String cleanedTitle = cleanTitle(book.getTitle());
+        String primaryTitle = book.getTitle();
         String authorLastName = null;
         if (book.getAuthor() != null && book.getAuthor().getName() != null) {
             String[] parts = book.getAuthor().getName().trim().split("\\s+");
@@ -95,13 +104,22 @@ public class YdlLookupService {
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
-            for (String candidateTitle : buildTitleCandidates(cleanedTitle)) {
-                for (String queryAuthor : buildQueryAuthors(authorLastName)) {
-                    JsonNode entries = search(candidateTitle, queryAuthor);
-                    // Verification always checks the book's real author, regardless of whether
-                    // this particular query included it in the search text - the query variants
-                    // exist only to improve YDL's hit rate, not to relax what counts as a match.
-                    matches = filterMatches(entries, candidateTitle, authorLastName);
+            String matchedTitle = null;
+            for (String searchTitle : titles) {
+                String cleaned = cleanTitle(searchTitle);
+                for (String candidateTitle : buildTitleCandidates(cleaned)) {
+                    for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                        JsonNode entries = search(candidateTitle, queryAuthor);
+                        // Verification always checks the book's real author, regardless of whether
+                        // this particular query included it in the search text - the query variants
+                        // exist only to improve YDL's hit rate, not to relax what counts as a match.
+                        JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
+                        if (!filtered.isEmpty()) {
+                            matches = filtered;
+                            matchedTitle = matches.get(0).path("title").asText(cleaned);
+                            break;
+                        }
+                    }
                     if (!matches.isEmpty()) {
                         break;
                     }
@@ -112,8 +130,7 @@ public class YdlLookupService {
             }
 
             if (matches.isEmpty()) {
-                // A completed search that found nothing is a definitive answer - clear any
-                // stale availability from a previous lookup rather than leaving it untouched.
+                // "Not held" only if both titles empty. On primary exception still try alternate; write merged flags once (do not clear mid-merge).
                 book.setYdlAudioAvailable(false);
                 book.setYdlPaperAvailable(false);
                 book.setYdlEbookAvailable(false);
@@ -133,7 +150,7 @@ public class YdlLookupService {
             boolean audio = false;
             boolean paper = false;
             boolean ebook = false;
-            String matchedTitle = matches.get(0).path("title").asText(cleanedTitle);
+            String finalMatchedTitle = matchedTitle != null ? matchedTitle : matches.get(0).path("title").asText(primaryTitle);
 
             for (JsonNode entry : matches) {
                 for (JsonNode tab : entry.path("materialTabs")) {
@@ -164,12 +181,13 @@ public class YdlLookupService {
                     .audioAvailable(audio)
                     .paperAvailable(paper)
                     .ebookAvailable(ebook)
-                    .matchedTitle(matchedTitle)
+                    .matchedTitle(finalMatchedTitle)
                     .build();
 
         } catch (Exception e) {
             log.error("Error during YDL lookup for book {}: {}", book.getId(), e.getMessage());
             String lookupError = LookupErrorMessages.fromException(e);
+            // On primary exception still try alternate; write merged flags once (do not clear mid-merge).
             book.setYdlLastChecked(LocalDateTime.now());
             book.setYdlLookupError(lookupError);
             bookRepository.save(book);

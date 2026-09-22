@@ -11,6 +11,8 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 
@@ -166,6 +168,28 @@ public class Book {
      */
     public String titleWithoutCopySuffix() {
         return stripCopySuffix(title);
+    }
+
+    /**
+     * Returns list of titles to search: primary (stripped) first, then distinct
+     * non-blank alternateTitle (also stripped). Used for dual-title lookups.
+     * Never includes author-only lookups.
+     */
+    public static List<String> titlesToSearch(Book book) {
+        List<String> titles = new ArrayList<>();
+        if (book.getTitle() != null) {
+            String primary = stripCopySuffix(book.getTitle());
+            if (!primary.isBlank()) {
+                titles.add(primary);
+            }
+        }
+        if (book.getAlternateTitle() != null) {
+            String alt = stripCopySuffix(book.getAlternateTitle());
+            if (!alt.isBlank() && !titles.contains(alt)) {
+                titles.add(alt);
+            }
+        }
+        return titles;
     }
 
     @PrePersist

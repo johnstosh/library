@@ -147,41 +147,53 @@ public class GrokipediaLookupService {
      * Perform Grokipedia URL lookup for a book.
      */
     private GrokipediaLookupResultDto performBookLookup(Book book, boolean slow) {
-        String title = book.getTitle();
-        if (title == null || title.trim().isEmpty()) {
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
             return GrokipediaLookupResultDto.builder()
                     .bookId(book.getId())
-                    .name(title)
+                    .name(book.getTitle())
                     .success(false)
                     .errorMessage("Book has no title")
                     .build();
         }
 
-        String lookupTitle = Book.stripCopySuffix(title);
-        String usualUrl = generateGrokipediaUrl(lookupTitle);
-        if (checkUrlExists(usualUrl)) {
-            return saveBookUrl(book, title, usualUrl);
+        String primaryTitle = book.getTitle();
+        String foundUrl = null;
+        String usedTitle = primaryTitle;
+
+        for (String lookupTitle : titles) {
+            String usualUrl = generateGrokipediaUrl(lookupTitle);
+            if (checkUrlExists(usualUrl)) {
+                foundUrl = usualUrl;
+                usedTitle = lookupTitle; // but save uses original primary
+                break;
+            }
+        }
+
+        if (foundUrl != null) {
+            return saveBookUrl(book, primaryTitle, foundUrl);
         }
 
         if (!slow) {
-            log.info("No Grokipedia page found for book '{}' at URL: {}", title, usualUrl);
+            log.info("No Grokipedia page found for book '{}' at usual URLs", primaryTitle);
             return GrokipediaLookupResultDto.builder()
                     .bookId(book.getId())
-                    .name(title)
+                    .name(primaryTitle)
                     .success(false)
-                    .errorMessage("No Grokipedia page found at " + usualUrl)
+                    .errorMessage("No Grokipedia page found")
                     .build();
         }
 
+        // slow path: try Grok suggest on primary (per spec: primary first)
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
         List<String> grokUrls;
         try {
-            grokUrls = askGrok.suggestGrokipediaUrlsForBook(lookupTitle, authorName);
+            grokUrls = askGrok.suggestGrokipediaUrlsForBook(Book.stripCopySuffix(primaryTitle), authorName);
         } catch (Exception e) {
             log.error("Grok Grokipedia lookup failed for book {}: {}", book.getId(), e.getMessage());
             return GrokipediaLookupResultDto.builder()
                     .bookId(book.getId())
-                    .name(title)
+                    .name(primaryTitle)
                     .success(false)
                     .errorMessage("Grok lookup failed: " + e.getMessage())
                     .build();
@@ -189,10 +201,24 @@ public class GrokipediaLookupService {
 
         String workingUrl = firstWorkingUrl(grokUrls);
         if (workingUrl != null) {
-            return saveBookUrl(book, title, workingUrl);
+            return saveBookUrl(book, primaryTitle, workingUrl);
         }
 
-        return saveBookNotAvailable(book, title);
+        // If primary failed and there is alternate, retry slow with alternate
+        if (titles.size() > 1) {
+            String altTitle = titles.get(1);
+            try {
+                grokUrls = askGrok.suggestGrokipediaUrlsForBook(altTitle, authorName);
+                workingUrl = firstWorkingUrl(grokUrls);
+                if (workingUrl != null) {
+                    return saveBookUrl(book, primaryTitle, workingUrl);
+                }
+            } catch (Exception e) {
+                log.warn("Grok lookup with alternateTitle failed for book {}: {}", book.getId(), e.getMessage());
+            }
+        }
+
+        return saveBookNotAvailable(book, primaryTitle);
     }
 
     /**
