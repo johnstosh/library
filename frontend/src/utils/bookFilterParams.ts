@@ -28,6 +28,7 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   withGrokipedia: 'withGrokipedia',
   withoutGenres: 'withoutGenres',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
+  withoutProperPlotOrDescription: 'withoutProperPlotOrDescription',
   withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',
@@ -264,6 +265,8 @@ export function booksPathFromFilters(state: {
     if (key === 'mostRecent') continue
     discoveryChips[key] = state.chips[key]
   }
+  // Cataloger chips (including withoutProperPlotOrDescription) are intentionally omitted from discovery handoff
+  // so Books page defaults to mostRecent intake when only cataloger filters are active.
   const params = bookFilterParamsForUrl(
     {
       chips: discoveryChips,

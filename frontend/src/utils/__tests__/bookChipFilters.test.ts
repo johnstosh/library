@@ -98,6 +98,52 @@ describe('applyChipFilters', () => {
     expect(result.map((b) => b.id)).toEqual([2])
   })
 
+  describe('withoutProperPlotOrDescription', () => {
+    const properPlot = 'x'.repeat(400)
+    const properDesc = 'y'.repeat(450)
+    const short = 'z'.repeat(399)
+    const blank = '   '
+    const nullVal = null as any
+
+    it('keeps books where plotSummary OR detailedDescription is improper (length < 400 after trim)', () => {
+      const bothProper = book({ id: 1, plotSummary: properPlot, detailedDescription: properDesc })
+      const plotShort = book({ id: 2, plotSummary: short, detailedDescription: properDesc })
+      const descShort = book({ id: 3, plotSummary: properPlot, detailedDescription: short })
+      const bothShort = book({ id: 4, plotSummary: short, detailedDescription: short })
+      const plotNull = book({ id: 5, plotSummary: nullVal, detailedDescription: properDesc })
+      const descBlank = book({ id: 6, plotSummary: properPlot, detailedDescription: blank })
+
+      const sample = [bothProper, plotShort, descShort, bothShort, plotNull, descBlank]
+      const result = applyChipFilters(sample, chips({ withoutProperPlotOrDescription: true }))
+      expect(result.map((b) => b.id)).toEqual([2, 3, 4, 5, 6])
+    })
+
+    it('excludes books where both fields are proper (>= 400 trimmed chars)', () => {
+      const bothProper = book({ id: 1, plotSummary: properPlot, detailedDescription: properDesc })
+      const result = applyChipFilters([bothProper], chips({ withoutProperPlotOrDescription: true }))
+      expect(result).toEqual([])
+    })
+
+    it('treats null, undefined, blank, and whitespace-only as improper', () => {
+      const cases = [
+        book({ id: 1, plotSummary: nullVal, detailedDescription: nullVal }),
+        book({ id: 2, plotSummary: '', detailedDescription: properDesc }),
+        book({ id: 3, plotSummary: properPlot, detailedDescription: '   ' }),
+        book({ id: 4, plotSummary: 'short', detailedDescription: undefined }),
+      ]
+      const result = applyChipFilters(cases, chips({ withoutProperPlotOrDescription: true }))
+      expect(result.map((b) => b.id)).toEqual([1, 2, 3, 4])
+    })
+
+    it('distinguishes exact boundary 399 vs 400', () => {
+      const exact399 = book({ id: 1, plotSummary: 'x'.repeat(399), detailedDescription: properDesc })
+      const exact400 = book({ id: 2, plotSummary: properPlot, detailedDescription: 'y'.repeat(400) })
+      const sample = [exact399, exact400]
+      const result = applyChipFilters(sample, chips({ withoutProperPlotOrDescription: true }))
+      expect(result.map((b) => b.id)).toEqual([1])
+    })
+  })
+
   it('YDL, EMU, and ACLA chips keep books with that holding', () => {
     const ydlAudio = book({ id: 1, ydlAudioAvailable: true })
     const ydlPaper = book({ id: 2, ydlPaperAvailable: true })
