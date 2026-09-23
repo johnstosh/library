@@ -26,12 +26,14 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
     expect(isSearchVisibleChip('hasAclaAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutGrokipedia')).toBe(false)
+    expect(isSearchVisibleChip('withoutProperPlotOrDescription')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)
     expect(isSearchVisibleChip('priceOlder')).toBe(false)
     expect(isSearchVisibleChip('lookupErrors')).toBe(false)
     expect(SEARCH_VISIBLE_CHIPS).not.toContain('withGrokipedia')
+    expect(SEARCH_VISIBLE_CHIPS).not.toContain('withoutProperPlotOrDescription')
   })
 })
 
@@ -192,10 +194,10 @@ describe('bookFilterParamsForUrl', () => {
 
     expect(
       bookFilterParamsForUrl(
-        { chips: chips({ mostRecent: true, withoutGrokipedia: true }), labels: [], q: '' },
+        { chips: chips({ mostRecent: true, withoutGrokipedia: true, withoutProperPlotOrDescription: true }), labels: [], q: '' },
         'books',
       ),
-    ).toEqual({ mostRecent: 'true', withoutGrokipedia: 'true' })
+    ).toEqual({ mostRecent: 'true', withoutGrokipedia: 'true', withoutProperPlotOrDescription: 'true' })
   })
 
   it('writes binding chips', () => {
@@ -359,6 +361,7 @@ describe('isBooksIntakeConstrained', () => {
   it('is true when any non-intake filter is on', () => {
     expect(isBooksIntakeConstrained(chips({ mostRecent: true }), [], '')).toBe(false)
     expect(isBooksIntakeConstrained(chips({ withoutGrokipedia: true }), [], '')).toBe(true)
+    expect(isBooksIntakeConstrained(chips({ withoutProperPlotOrDescription: true }), [], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), ['fiction'], '')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', ['children'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)

@@ -4,6 +4,9 @@ import type { BookDto, BookPriceDto } from '@/types/dtos'
 /** Default "price older than N days" window on the Books page. */
 export const DEFAULT_PRICE_OLDER_DAYS = 90
 
+/** Minimum trimmed character length for a field to count as "proper" text (plotSummary or detailedDescription). */
+export const PROPER_TEXT_MIN_CHARS = 400
+
 /**
  * Independent boolean chip filters shared by the Books and Search pages.
  * All active chips AND together with genre labels — more buttons on = fewer results.
@@ -11,7 +14,7 @@ export const DEFAULT_PRICE_OLDER_DAYS = 90
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
  *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: freeText, audio, mostRecent
- * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls
+ * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls, withoutProperPlotOrDescription
  * Pricing (Books, librarians): withPrices, noPrices, priceOlder, lookupErrors
  *
  * Status (in-library, electronic-resource, without-loc, lost, withdrawn,
@@ -34,6 +37,7 @@ export interface BookChipFilters {
   withGrokipedia: boolean
   withoutGenres: boolean
   withoutFreeTextUrls: boolean
+  withoutProperPlotOrDescription: boolean
   withPrices: boolean
   noPrices: boolean
   priceOlder: boolean
@@ -59,6 +63,7 @@ export const defaultBookChipFilters: BookChipFilters = {
   withGrokipedia: false,
   withoutGenres: false,
   withoutFreeTextUrls: false,
+  withoutProperPlotOrDescription: false,
   withPrices: false,
   noPrices: false,
   priceOlder: false,
@@ -87,6 +92,12 @@ function isMissingGrokipediaUrl(value: string | null | undefined): boolean {
   return !trimmed || trimmed === '-'
 }
 
+/** True if trimmed length meets or exceeds PROPER_TEXT_MIN_CHARS. Null/blank/whitespace-only = false. */
+export function isProperText(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  return Boolean(trimmed) && trimmed!.length >= PROPER_TEXT_MIN_CHARS
+}
+
 /**
  * Apply all chip filters to a book list (AND logic).
  * A book must satisfy every active chip. Status is applied separately
@@ -110,6 +121,8 @@ export function applyChipFilters<T extends Pick<
   | 'aclaAudioAvailable'
   | 'aclaPaperAvailable'
   | 'aclaEbookAvailable'
+  | 'plotSummary'
+  | 'detailedDescription'
 >>(books: T[], chips: BookChipFilters): T[] {
   let maxDate: Date | null = null
   if (chips.mostRecent) {
@@ -154,6 +167,14 @@ export function applyChipFilters<T extends Pick<
     if (chips.withGrokipedia && isMissingGrokipediaUrl(book.grokipediaUrl)) return false
     if (chips.withoutGenres && book.tagsList && book.tagsList.length > 0) return false
     if (chips.withoutFreeTextUrls && !isBlank(book.freeTextUrl)) return false
+
+    if (
+      chips.withoutProperPlotOrDescription &&
+      isProperText(book.plotSummary) &&
+      isProperText(book.detailedDescription)
+    ) {
+      return false
+    }
 
     return true
   })

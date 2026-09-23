@@ -213,6 +213,13 @@ export function BookFilters({
           tooltip="Only books that have no free online text URL"
           dataTest="filter-without-free-text-urls"
         />
+        <FilterChip
+          label="Without proper plot/description"
+          active={chips.withoutProperPlotOrDescription}
+          onClick={() => toggle('withoutProperPlotOrDescription')}
+          tooltip="Cataloger filter: books missing a proper plot summary OR detailed description (proper = trimmed length ≥ 400 characters in both fields)"
+          dataTest="filter-without-proper-plot-or-description"
+        />
       </div>
       )}
     </div>
