@@ -211,7 +211,7 @@ public class AskGrokTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
         assertEquals(AskGrok.MODEL_GROK_FLAGSHIP, request.get("model"));
-        assertEquals("grok-4.6", request.get("model"));
+        assertEquals("grok-4.7", request.get("model"));
         assertEquals(8000, request.get("max_completion_tokens"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
