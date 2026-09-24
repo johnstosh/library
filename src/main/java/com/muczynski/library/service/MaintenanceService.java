@@ -7,12 +7,15 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookLabels;
 import com.muczynski.library.dto.IllegalGenresMaintenanceDto;
 import com.muczynski.library.repository.BookRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -26,17 +29,24 @@ public class MaintenanceService {
 
     private final BookRepository bookRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private static final int DEFAULT_BATCH_SIZE = 50;
+
     /**
      * Counts books that have at least one illegal or plural-mismatched genre tag.
+     * Uses lightweight projection to avoid loading @Lob fields or full entities.
      * Does NOT mutate data. Used for the "Recalc" button on Data Management page.
      */
     @Transactional(readOnly = true)
     public IllegalGenresMaintenanceDto countIllegalGenres() {
-        List<Book> allBooks = bookRepository.findAll();
-        long booksAffected = 0;
+        List<BookRepository.IllegalGenreTagsProjection> projections =
+                bookRepository.findAllForGenreMaintenance();
 
-        for (Book book : allBooks) {
-            if (hasIllegalOrMismatchedGenres(book.getTagsList())) {
+        long booksAffected = 0;
+        for (var proj : projections) {
+            if (hasIllegalOrMismatchedGenres(proj.getTagsList())) {
                 booksAffected++;
             }
         }
@@ -47,48 +57,61 @@ public class MaintenanceService {
 
         return IllegalGenresMaintenanceDto.builder()
                 .booksAffected(booksAffected)
-                .booksScanned(allBooks.size())
+                .booksScanned(projections.size())
                 .message(message)
                 .build();
     }
 
     /**
-     * Cleans illegal genres from all books:
-     * 1. Normalizes tags using BookLabels (plurals, variants, case, separators).
-     * 2. Removes any tags that don't map to canonical labels.
-     * 3. Deduplicates preserving first-occurrence order.
-     * 4. Only persists if tags actually changed.
+     * Cleans illegal genres from all books in batches of ~50:
+     * 1. Uses lightweight projection (id + tagsList only, no LOBs).
+     * 2. Normalizes tags using BookLabels.cleanupTags.
+     * 3. Updates only changed books via findById + set + flush.
+     * 4. Clears persistence context after each batch to prevent memory growth.
      *
-     * Returns summary with counts for UI Results column.
+     * Preserves exact semantics of prior implementation for reporting.
      */
     @Transactional
     public IllegalGenresMaintenanceDto cleanupIllegalGenres() {
-        List<Book> allBooks = bookRepository.findAll();
+        List<BookRepository.IllegalGenreTagsProjection> projections =
+                bookRepository.findAllForGenreMaintenance();
+
         AtomicLong booksUpdated = new AtomicLong(0);
         AtomicLong pluralCorrections = new AtomicLong(0);
         AtomicLong illegalRemoved = new AtomicLong(0);
 
-        for (Book book : allBooks) {
-            List<String> originalTags = book.getTagsList();
-            List<String> cleanedTags = BookLabels.cleanupTags(originalTags);
+        int batchSize = DEFAULT_BATCH_SIZE;
+        for (int i = 0; i < projections.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, projections.size());
+            List<BookRepository.IllegalGenreTagsProjection> batch = projections.subList(i, end);
 
-            // Count corrections for reporting (approximate by comparing sizes and content)
-            long correctionsForBook = countCorrections(originalTags, cleanedTags);
-            pluralCorrections.addAndGet(correctionsForBook);
+            for (var proj : batch) {
+                List<String> originalTags = proj.getTagsList() != null ? proj.getTagsList() : List.of();
+                List<String> cleanedTags = BookLabels.cleanupTags(originalTags);
 
-            long removedForBook = originalTags.size() - cleanedTags.size();
-            illegalRemoved.addAndGet(Math.max(0, removedForBook));
+                long correctionsForBook = countCorrections(originalTags, cleanedTags);
+                pluralCorrections.addAndGet(correctionsForBook);
 
-            if (!originalTags.equals(cleanedTags)) {
-                book.setTagsList(cleanedTags);
-                booksUpdated.incrementAndGet();
-                // Repository save is handled by transactional flush at end
+                long removedForBook = originalTags.size() - cleanedTags.size();
+                illegalRemoved.addAndGet(Math.max(0, removedForBook));
+
+                if (!originalTags.equals(cleanedTags)) {
+                    // Load managed entity only for the books that need update (rare)
+                    Book book = bookRepository.findById(proj.getId()).orElse(null);
+                    if (book != null) {
+                        book.setTagsList(cleanedTags);
+                        booksUpdated.incrementAndGet();
+                    }
+                }
             }
+
+            // Persistence hygiene: flush changes and clear context to release memory
+            entityManager.flush();
+            entityManager.clear();
+            log.debug("Processed batch {}-{} of {} books", i, end - 1, projections.size());
         }
 
-        long booksScanned = allBooks.size();
-        long affected = booksUpdated.get() + (pluralCorrections.get() > 0 || illegalRemoved.get() > 0 ? 1 : 0); // conservative
-
+        long booksScanned = projections.size();
         String message = String.format(
                 "Looked at %d books. Updated %d. Corrected %d plural or spelling variants. Removed %d tags that were not on the standard list.",
                 booksScanned, booksUpdated.get(), pluralCorrections.get(), illegalRemoved.get());
@@ -120,6 +143,7 @@ public class MaintenanceService {
     /**
      * Counts how many tags were changed (for reporting purposes).
      * Simple heuristic: size difference + any that mapped differently.
+     * Matches behavior from #347.
      */
     private long countCorrections(List<String> original, List<String> cleaned) {
         if (original == null || cleaned == null) return 0;

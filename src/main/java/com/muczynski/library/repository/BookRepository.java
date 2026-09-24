@@ -443,4 +443,22 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     // Lightweight projection for photo ZIP import — skips @Lob fields (plotEssay, etc.)
     List<BookZipImportProjection> findBy();
+
+    /**
+     * Lightweight projection for maintenance genre cleanup.
+     * Loads only id and tagsList (ElementCollection). Avoids all @Lob columns
+     * (plotEssay, detailedDescription, freeTextUrl, etc.) and associations.
+     * Critical for memory safety with ~2k book catalog.
+     */
+    interface IllegalGenreTagsProjection {
+        Long getId();
+        List<String> getTagsList();
+    }
+
+    /**
+     * Returns all books' id + tagsList only. Used by MaintenanceService to avoid
+     * loading LOBs or full entities. See comment on BookZipImportProjection.
+     */
+    @Query("SELECT b.id as id, b.tagsList as tagsList FROM Book b")
+    List<IllegalGenreTagsProjection> findAllForGenreMaintenance();
 }

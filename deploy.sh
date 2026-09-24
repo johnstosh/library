@@ -13,7 +13,7 @@ usage() {
 Usage: ./deploy.sh <mode>
 
 Modes:
-  standard    Build and deploy using standard JVM (Dockerfile, 512Mi memory)
+  standard    Build and deploy using standard JVM (Dockerfile, 1Gi memory with MaxRAMPercentage)
   graalvm     Build and deploy using GraalVM native image (Dockerfile-graalvm, 512Mi memory)
   redeploy    Redeploy the existing image without rebuilding (skip build and push)
 
@@ -108,13 +108,13 @@ else
 fi
 
 # ── Mode-specific settings ────────────────────────────────────────
-MEMORY="512Mi"
+MEMORY="1Gi"
 DOCKERFILE="Dockerfile"
 
 if [ "$MODE" = "graalvm" ]; then
   IMAGE_NAME="${IMAGE_NAME}-graalvm"
   SERVICE_VERSION="${SERVICE_VERSION}-graalvm"
-  MEMORY="512Mi"
+  MEMORY="512Mi"  # GraalVM native uses less overhead
   DOCKERFILE="Dockerfile-graalvm"
 fi
 
