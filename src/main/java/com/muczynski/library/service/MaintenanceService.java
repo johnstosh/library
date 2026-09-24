@@ -90,7 +90,7 @@ public class MaintenanceService {
         long affected = booksUpdated.get() + (pluralCorrections.get() > 0 || illegalRemoved.get() > 0 ? 1 : 0); // conservative
 
         String message = String.format(
-                "Scanned %d books. Updated %d. Corrected %d plural/spelling variants. Removed %d illegal tags.",
+                "Looked at %d books. Updated %d. Corrected %d plural or spelling variants. Removed %d tags that were not on the standard list.",
                 booksScanned, booksUpdated.get(), pluralCorrections.get(), illegalRemoved.get());
 
         log.info("Genre maintenance completed: {}", message);

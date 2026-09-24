@@ -708,7 +708,7 @@ export function DataManagementPage() {
             <div>
               <h2 className="text-xl font-bold">Maintenance</h2>
               <p className="text-sm text-indigo-100">
-                Database cleanup tasks. Count shows "-" until Recalc is clicked.
+                Cleanup tasks for the catalog. The count stays blank as a dash until you click Recalc.
               </p>
             </div>
           </div>
@@ -770,9 +770,10 @@ export function DataManagementPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    Normalizes mismatched plural endings (e.g. histories→history, biographies→biography)
-                    and other variants to canonical slugs from BookLabels.ALL_LABELS. Removes any remaining
-                    non-canonical tags. Books updated in place. Count = books with at least one bad tag.
+                    Fixes genre names that use the wrong plural (for example, histories becomes history,
+                    or biographies becomes biography) and other near-miss spellings so they match the
+                    standard list. Drops any genre that is not on that list. Updates books in place.
+                    The count is how many books still have at least one bad genre tag.
                   </td>
                   <td className="px-6 py-4 text-sm">
                     {illegalGenresResult ? (
@@ -780,17 +781,19 @@ export function DataManagementPage() {
                         <ErrorMessage message={illegalGenresResult.error} />
                       ) : (
                         <div className="space-y-1">
-                          <SuccessMessage message={illegalGenresResult.message || 'Cleanup completed'} />
+                          <SuccessMessage message={illegalGenresResult.message || 'Cleanup finished'} />
                           {illegalGenresResult.booksUpdated !== undefined && (
                             <div className="text-xs text-gray-500">
-                              Scanned: {illegalGenresResult.booksScanned}, Updated: {illegalGenresResult.booksUpdated},
-                              Plurals: {illegalGenresResult.pluralCorrections}, Removed: {illegalGenresResult.illegalRemoved}
+                              Looked at {illegalGenresResult.booksScanned} books.
+                              Updated {illegalGenresResult.booksUpdated}.
+                              Corrected {illegalGenresResult.pluralCorrections} plural or spelling variants.
+                              Removed {illegalGenresResult.illegalRemoved} illegal tags.
                             </div>
                           )}
                         </div>
                       )
                     ) : (
-                      <span className="text-gray-400 text-sm">Click Recalc or Clean to run</span>
+                      <span className="text-gray-400 text-sm">Click Recalc or Clean Genres to see results here.</span>
                     )}
                   </td>
                 </tr>
@@ -798,7 +801,7 @@ export function DataManagementPage() {
             </table>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            This is the first maintenance task. The table is designed to be extensible for future cleanup operations.
+            More cleanup tasks can be added to this list later.
           </p>
         </div>
       </div>
