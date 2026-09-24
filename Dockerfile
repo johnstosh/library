@@ -12,6 +12,7 @@ COPY build/libs/*.jar /app/application.jar
 # Expose the port (Cloud Run uses PORT env variable, default 8080)
 EXPOSE ${PORT:-8080}
 
-# Run the JAR. Use MaxRAMPercentage for Cloud Run 1Gi limit (75% heap leaves headroom for metaspace, native, direct buffers).
-# Matches updated deploy.sh MEMORY=1Gi for standard JVM path. Avoids OOM on startup with catalog growth.
-CMD ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/application.jar"]
+# Run the JAR with MaxRAMPercentage tuned for the 512Mi free-tier Cloud Run container limit.
+# 65% yields ~332Mi heap; leaves headroom for metaspace, direct buffers, and native memory.
+# Avoids OOM on startup with catalog growth.
+CMD ["java", "-XX:MaxRAMPercentage=65.0", "-jar", "/app/application.jar"]
