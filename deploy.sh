@@ -13,7 +13,7 @@ usage() {
 Usage: ./deploy.sh <mode>
 
 Modes:
-  standard    Build and deploy using standard JVM (Dockerfile, 512Mi memory with MaxRAMPercentage)
+  standard    Build and deploy using standard JVM (Dockerfile, 512Mi memory)
   graalvm     Build and deploy using GraalVM native image (Dockerfile-graalvm, 512Mi memory)
   redeploy    Redeploy the existing image without rebuilding (skip build and push)
 
