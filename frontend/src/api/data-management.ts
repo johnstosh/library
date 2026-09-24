@@ -457,3 +457,35 @@ export function useUploadPhotoImage() {
     },
   })
 }
+
+// Maintenance types for Illegal Genres cleanup (Issue #347)
+export interface IllegalGenresMaintenanceDto {
+  booksAffected: number
+  booksScanned?: number
+  booksUpdated?: number
+  pluralCorrections?: number
+  illegalRemoved?: number
+  message?: string
+  error?: string
+}
+
+// Maintenance hooks for DataManagementPage
+export function useRecalcIllegalGenres() {
+  return useMutation({
+    mutationFn: () =>
+      api.get<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/count'),
+  })
+}
+
+export function useCleanupIllegalGenres() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/cleanup'),
+    onSuccess: () => {
+      // Refresh related stats after cleanup
+      queryClient.invalidateQueries({ queryKey: ['label-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['database-stats'] })
+    },
+  })
+}

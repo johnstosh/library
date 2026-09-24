@@ -54,6 +54,25 @@ vi.mock('@/api/data-management', () => ({
     isLoading: false,
     isError: false,
   }),
+  // Maintenance mocks for Issue #347 - full shape to prevent render errors in useMutation
+  useRecalcIllegalGenres: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      booksAffected: 3,
+      message: '3 book(s) have illegal or mismatched genre tags.',
+    }),
+    isPending: false,
+  }),
+  useCleanupIllegalGenres: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      booksAffected: 0,
+      booksScanned: 42,
+      booksUpdated: 5,
+      pluralCorrections: 7,
+      illegalRemoved: 12,
+      message: 'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.',
+    }),
+    isPending: false,
+  }),
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -132,5 +151,20 @@ describe('DataManagementPage database statistics', () => {
 
     expect(loans.compareDocumentPosition(favorites) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(favorites.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+describe('DataManagementPage Maintenance Section (Issue #347)', () => {
+  it('renders the maintenance table at the bottom with Illegal genres cleanup row, Count as "-", and Recalc/Clean buttons', () => {
+    render(<DataManagementPage />)
+
+    expect(screen.getByTestId('maintenance-section')).toHaveTextContent('Maintenance')
+    expect(screen.getByTestId('maintenance-row-illegal-genres')).toBeInTheDocument()
+    expect(screen.getByText('Clean Genres')).toBeInTheDocument()
+    expect(screen.getByText('Recalc')).toBeInTheDocument()
+    expect(screen.getByText(/Normalizes mismatched plural endings/)).toBeInTheDocument()
+    // Count shows "-" before any Recalc (per spec)
+    expect(screen.getByText('-')).toBeInTheDocument()
+    expect(screen.getByText(/Click Recalc or Clean to run/)).toBeInTheDocument()
   })
 })
