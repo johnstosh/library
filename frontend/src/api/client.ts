@@ -52,9 +52,11 @@ export async function apiClient<T>(
     ? endpoint
     : `${import.meta.env.VITE_API_BASE_URL || ''}/api${endpoint}`
 
-  // Build headers, but don't set Content-Type if body is FormData
+  // Build headers: skip default Content-Type for Blob/File (raw JSON body for streaming import) or FormData
   const headers: HeadersInit = {
-    ...(fetchOptions.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(fetchOptions.body instanceof FormData || fetchOptions.body instanceof Blob || fetchOptions.body instanceof File
+      ? {}
+      : { 'Content-Type': 'application/json' }),
     ...fetchOptions.headers,
   }
 
@@ -138,7 +140,8 @@ export const api = {
     apiClient<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      // Support raw File/Blob bodies for streaming JSON import (no JSON.stringify)
+      body: data instanceof Blob || data instanceof File ? data : (data ? JSON.stringify(data) : undefined),
     }),
 
   put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>

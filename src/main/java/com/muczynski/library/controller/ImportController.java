@@ -7,10 +7,10 @@ import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.FavoriteListCountDto;
 import com.muczynski.library.dto.LabelCountDto;
-import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.FavoriteService;
 import com.muczynski.library.service.ImportService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +20,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -38,12 +38,12 @@ public class ImportController {
     private final ImportService importService;
     private final FavoriteService favoriteService;
 
-    @PostMapping("/json")
+    @PostMapping(value = "/json", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<ImportResponseDto> importJson(@RequestBody ImportRequestDto dto) {
-        logger.info("Import request received");
-        try {
-            ImportResponseDto.ImportResult result = importService.importData(dto);
+    public ResponseEntity<ImportResponseDto> importJson(HttpServletRequest request) {
+        logger.info("Streaming JSON import request received");
+        try (InputStream inputStream = request.getInputStream()) {
+            ImportResponseDto.ImportResult result = importService.streamImportJson(inputStream);
             String message = result.hasErrors()
                     ? "Import completed with " + result.getErrors().size() + " error(s)"
                     : "Import completed successfully";
