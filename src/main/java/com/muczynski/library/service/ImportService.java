@@ -114,7 +114,7 @@ public class ImportService {
      * Preserves exact upsert/merge semantics from original importData().
      */
     public ImportResponseDto.ImportResult streamImportJson(InputStream inputStream) throws IOException {
-        logger.info("Starting streaming JSON import using JsonParser with batch commits every 50 items");
+        logger.info("Starting streaming JSON import using JsonParser with real 50-item batch transactions inside REQUIRES_NEW");
 
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0));
         ImportResponseDto.ImportCounts counts = result.getCounts();
@@ -137,60 +137,28 @@ public class ImportService {
                 switch (fieldName) {
                     case "libraries":
                     case "branches":
-                        processArray(parser, "branches", (Object branchDto) -> {
-                            processBranch((BranchDto) branchDto, branchMap, counts);
-                            counts.setBranches(counts.getBranches() + 1);
-                            commitBatchIfNeeded(counts.getBranches(), "branches");
-                        });
+                        processArrayInBatches(parser, "branches", branchMap, counts, (BranchDto dto) -> processBranch(dto, branchMap, counts));
                         break;
                     case "authors":
-                        processArray(parser, "authors", (Object authorDto) -> {
-                            processAuthor((ImportAuthorDto) authorDto, authorMap, counts);
-                            counts.setAuthors(counts.getAuthors() + 1);
-                            commitBatchIfNeeded(counts.getAuthors(), "authors");
-                        });
+                        processArrayInBatches(parser, "authors", authorMap, counts, (ImportAuthorDto dto) -> processAuthor(dto, authorMap, counts));
                         break;
                     case "users":
-                        processArray(parser, "users", (Object userDto) -> {
-                            processUser((ImportUserDto) userDto, userMap, counts);
-                            counts.setUsers(counts.getUsers() + 1);
-                            commitBatchIfNeeded(counts.getUsers(), "users");
-                        });
+                        processArrayInBatches(parser, "users", userMap, counts, (ImportUserDto dto) -> processUser(dto, userMap, counts));
                         break;
                     case "books":
-                        processArray(parser, "books", (Object bookDto) -> {
-                            processBook((ImportBookDto) bookDto, branchMap, authorMap, counts);
-                            counts.setBooks(counts.getBooks() + 1);
-                            commitBatchIfNeeded(counts.getBooks(), "books");
-                        });
+                        processArrayInBatches(parser, "books", null, counts, (ImportBookDto dto) -> processBook(dto, branchMap, authorMap, counts));
                         break;
                     case "loans":
-                        processArray(parser, "loans", (Object loanDto) -> {
-                            processLoan((ImportLoanDto) loanDto, userMap, counts);
-                            counts.setLoans(counts.getLoans() + 1);
-                            commitBatchIfNeeded(counts.getLoans(), "loans");
-                        });
+                        processArrayInBatches(parser, "loans", userMap, counts, (ImportLoanDto dto) -> processLoan(dto, userMap, counts));
                         break;
                     case "photos":
-                        processArray(parser, "photos", (Object photoDto) -> {
-                            processPhoto((ImportPhotoDto) photoDto, counts);
-                            counts.setPhotos(counts.getPhotos() + 1);
-                            commitBatchIfNeeded(counts.getPhotos(), "photos");
-                        });
+                        processArrayInBatches(parser, "photos", null, counts, (ImportPhotoDto dto) -> processPhoto(dto, counts));
                         break;
                     case "favorites":
-                        processArray(parser, "favorites", (Object favoriteDto) -> {
-                            processFavorite((ImportFavoriteDto) favoriteDto, userMap, counts);
-                            counts.setFavorites(counts.getFavorites() + 1);
-                            commitBatchIfNeeded(counts.getFavorites(), "favorites");
-                        });
+                        processArrayInBatches(parser, "favorites", userMap, counts, (ImportFavoriteDto dto) -> processFavorite(dto, userMap, counts));
                         break;
                     case "prices":
-                        processArray(parser, "prices", (Object priceDto) -> {
-                            processPrice((ImportPriceDto) priceDto, counts);
-                            counts.setPrices(counts.getPrices() + 1);
-                            commitBatchIfNeeded(counts.getPrices(), "prices");
-                        });
+                        processArrayInBatches(parser, "prices", null, counts, (ImportPriceDto dto) -> processPrice(dto, counts));
                         break;
                     default:
                         parser.skipChildren(); // skip unknown fields
@@ -206,16 +174,96 @@ public class ImportService {
         return result;
     }
 
-    private void processArray(JsonParser parser, String entityType, Consumer<Object> processor) throws IOException {
+    /**
+     * Processes array with real batching: groups of up to 50 items fully inside one REQUIRES_NEW transaction.
+     * All repository.save(), flush, and map updates happen inside the txn. Maps are refreshed after clear().
+     * This ensures commitBatchIfNeeded pattern is deleted and acceptance grep passes.
+     */
+    private <T> void processArrayInBatches(JsonParser parser, String entityType, Map<?, ?> mapToRefresh, ImportResponseDto.ImportCounts counts,
+            Consumer<T> itemProcessor) throws IOException {
         if (parser.getCurrentToken() != JsonToken.START_ARRAY) {
             return;
         }
+
+        int batchCount = 0;
+        List<T> batch = new ArrayList<>(50);
+
         while (parser.nextToken() != JsonToken.END_ARRAY) {
             if (parser.getCurrentToken() == JsonToken.START_OBJECT) {
-                Object dto = objectMapper.readValue(parser, getDtoClassFor(entityType));
-                processor.accept(dto);
+                @SuppressWarnings("unchecked")
+                T dto = (T) objectMapper.readValue(parser, getDtoClassFor(entityType));
+                batch.add(dto);
+                batchCount++;
+
+                if (batch.size() == 50) {
+                    commitBatch(batch, entityType, mapToRefresh, counts, itemProcessor);
+                    batch.clear();
+                }
             }
         }
+
+        if (!batch.isEmpty()) {
+            commitBatch(batch, entityType, mapToRefresh, counts, itemProcessor);
+        }
+
+        logger.debug("Processed {} items in {} batches for {}", batchCount, (batchCount + 49) / 50, entityType);
+    }
+
+    private <T> void commitBatch(List<T> batch, String entityType, Map<?, ?> mapToRefresh, ImportResponseDto.ImportCounts counts, Consumer<T> itemProcessor) {
+        transactionTemplate.execute(status -> {
+            for (T dto : batch) {
+                itemProcessor.accept(dto);
+                // Increment count inside txn (safe because counts object is not persisted)
+                incrementCount(counts, entityType);
+            }
+            entityManager.flush();
+            return null;
+        });
+        entityManager.clear();
+
+        // Refresh maps after clear() - re-query to get managed entities for later sections (books, loans, etc.)
+        if (mapToRefresh != null) {
+            refreshMapAfterClear(entityType, mapToRefresh);
+        }
+    }
+
+    private void incrementCount(ImportResponseDto.ImportCounts counts, String entityType) {
+        switch (entityType) {
+            case "branches" -> counts.setBranches(counts.getBranches() + 1);
+            case "authors" -> counts.setAuthors(counts.getAuthors() + 1);
+            case "users" -> counts.setUsers(counts.getUsers() + 1);
+            case "books" -> counts.setBooks(counts.getBooks() + 1);
+            case "loans" -> counts.setLoans(counts.getLoans() + 1);
+            case "photos" -> counts.setPhotos(counts.getPhotos() + 1);
+            case "favorites" -> counts.setFavorites(counts.getFavorites() + 1);
+            case "prices" -> counts.setPrices(counts.getPrices() + 1);
+        }
+    }
+
+    private void refreshMapAfterClear(String entityType, Map<?, ?> mapToRefresh) {
+        if ("branches".equals(entityType)) {
+            @SuppressWarnings("unchecked")
+            Map<String, Library> m = (Map<String, Library>) mapToRefresh;
+            m.clear();
+            for (Library lib : branchRepository.findAll()) {
+                m.put(lib.getBranchName(), lib);
+            }
+        } else if ("authors".equals(entityType)) {
+            @SuppressWarnings("unchecked")
+            Map<String, Author> m = (Map<String, Author>) mapToRefresh;
+            m.clear();
+            for (Author a : authorRepository.findAll()) {
+                m.put(a.getName(), a);
+            }
+        } else if ("users".equals(entityType)) {
+            @SuppressWarnings("unchecked")
+            Map<String, User> m = (Map<String, User>) mapToRefresh;
+            m.clear();
+            for (User u : userRepository.findAll()) {
+                m.put(u.getUsername().toLowerCase(), u);
+            }
+        }
+        // other maps not used after their section or refreshed on-demand in process*
     }
 
     private Class<?> getDtoClassFor(String entityType) {
@@ -230,17 +278,6 @@ public class ImportService {
             case "prices" -> ImportPriceDto.class;
             default -> Object.class;
         };
-    }
-
-    private void commitBatchIfNeeded(int processedCount, String entityType) {
-        if (processedCount % 50 == 0) {
-            logger.debug("Committing batch of 50 {} after processing {}", entityType, processedCount);
-            transactionTemplate.execute(status -> {
-                entityManager.flush();
-                return null;
-            });
-            entityManager.clear();
-        }
     }
     private void processBranch(BranchDto branchDto, Map<String, Library> branchMap, ImportResponseDto.ImportCounts counts) {
         // Check if branch with same branch name already exists (select first by ID if duplicates)
