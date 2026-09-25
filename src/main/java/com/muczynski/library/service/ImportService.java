@@ -14,7 +14,6 @@ import com.muczynski.library.mapper.BranchMapper;
 import com.muczynski.library.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,7 +40,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ImportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportService.class);
@@ -77,8 +75,7 @@ public class ImportService {
                          BranchMapper branchMapper,
                          PasswordEncoder passwordEncoder,
                          ObjectMapper objectMapper,
-                         PlatformTransactionManager transactionManager,
-                         TransactionTemplate transactionTemplate) {
+                         PlatformTransactionManager transactionManager) {
         this.branchRepository = branchRepository;
         this.authorRepository = authorRepository;
         this.userRepository = userRepository;
@@ -91,7 +88,10 @@ public class ImportService {
         this.branchMapper = branchMapper;
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
-        this.transactionTemplate = transactionTemplate;
+
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.transactionTemplate = template;
     }
 
     /**
@@ -235,11 +235,11 @@ public class ImportService {
     private void commitBatchIfNeeded(int processedCount, String entityType) {
         if (processedCount % 50 == 0) {
             logger.debug("Committing batch of 50 {} after processing {}", entityType, processedCount);
-            entityManager.flush();
+            transactionTemplate.execute(status -> {
+                entityManager.flush();
+                return null;
+            });
             entityManager.clear();
-            // The REQUIRES_NEW transactionTemplate ensures commit here
-            // (the outer streamImportJson has no @Transactional so each batch is independent)
-            transactionTemplate.execute(status -> null);
         }
     }
     private void processBranch(BranchDto branchDto, Map<String, Library> branchMap, ImportResponseDto.ImportCounts counts) {
