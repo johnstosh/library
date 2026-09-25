@@ -1,5 +1,4 @@
 // (c) Copyright 2025 by Muczynski
-import { FilterChip } from '@/components/ui/FilterChip'
 import type { PriceChipFilters } from '@/utils/priceFilters'
 
 interface PriceFiltersProps {
@@ -9,16 +8,26 @@ interface PriceFiltersProps {
   onRecentHoursChange: (hours: number) => void
 }
 
+const chipClass = (active: boolean) =>
+  [
+    'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap',
+    active
+      ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:border-gray-400',
+  ].join(' ')
+
 export function PriceFilters({ chips, onToggle, recentHours, onRecentHoursChange }: PriceFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2" data-test="price-filter-chips">
-      <FilterChip
-        label="Looked up recently"
-        active={chips.recent}
+      <button
+        type="button"
         onClick={() => onToggle('recent')}
-        tooltip="Only listings looked up in the last N hours"
-        dataTest="filter-price-recent"
-      />
+        data-test="filter-price-recent"
+        className={chipClass(chips.recent)}
+        aria-pressed={chips.recent}
+      >
+        Looked up recently
+      </button>
       <label className="inline-flex items-center gap-1 text-sm text-gray-600">
         last
         <input

@@ -37,4 +37,24 @@ describe('BookPriceFilters', () => {
     fireEvent.change(screen.getByTestId('filter-price-older-days'), { target: { value: '30' } })
     expect(onDays).toHaveBeenCalledWith(30)
   })
+
+  it('renders plain chips without FilterChip info/funnel chrome', () => {
+    render(
+      <BookPriceFilters
+        chips={{ ...defaultBookChipFilters, withPrices: true }}
+        onToggle={() => {}}
+        priceOlderDays={90}
+        onPriceOlderDaysChange={() => {}}
+      />,
+    )
+
+    expect(screen.queryByTestId('filter-with-prices-info')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-no-prices-info')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-lookup-errors-info')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-price-older-info')).not.toBeInTheDocument()
+    const withPrices = screen.getByTestId('filter-with-prices')
+    expect(withPrices).toHaveClass('bg-primary-600')
+    expect(withPrices).toHaveClass('border-primary-600')
+    expect(withPrices.querySelector('svg')).toBeNull()
+  })
 })

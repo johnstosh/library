@@ -1,7 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
-import { FilterChip } from '@/components/ui/FilterChip'
 
 interface BookPriceFiltersProps {
   chips: BookChipFilters
@@ -13,6 +12,14 @@ interface BookPriceFiltersProps {
   maxTotal?: string
   onMaxTotalChange?: (value: string) => void
 }
+
+const chipClass = (active: boolean) =>
+  [
+    'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap',
+    active
+      ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:border-gray-400',
+  ].join(' ')
 
 export function BookPriceFilters({
   chips,
@@ -31,34 +38,42 @@ export function BookPriceFilters({
       <div className="space-y-2">
         {listingFilters}
         <div className="flex flex-wrap items-center gap-2" data-test="book-price-filter-chips">
-          <FilterChip
-            label="Books with Pricing"
-            active={chips.withPrices}
+          <button
+            type="button"
             onClick={() => onToggle('withPrices')}
-            tooltip="Only books with at least one usable AbeBooks listing"
-            dataTest="filter-with-prices"
-          />
-          <FilterChip
-            label="Books without Pricing"
-            active={chips.noPrices}
+            data-test="filter-with-prices"
+            className={chipClass(chips.withPrices)}
+            aria-pressed={chips.withPrices}
+          >
+            Books with Pricing
+          </button>
+          <button
+            type="button"
             onClick={() => onToggle('noPrices')}
-            tooltip="Only books with no usable AbeBooks listing — no rows, No matching listing, or a cancelled/rate-limited lookup"
-            dataTest="filter-no-prices"
-          />
-          <FilterChip
-            label="Lookup Errors"
-            active={chips.lookupErrors}
+            data-test="filter-no-prices"
+            className={chipClass(chips.noPrices)}
+            aria-pressed={chips.noPrices}
+          >
+            Books without Pricing
+          </button>
+          <button
+            type="button"
             onClick={() => onToggle('lookupErrors')}
-            tooltip="Only items with a lookup error such as rate limited or HTTP 500 — not No matching listing"
-            dataTest="filter-lookup-errors"
-          />
-          <FilterChip
-            label="Price older than"
-            active={chips.priceOlder}
+            data-test="filter-lookup-errors"
+            className={chipClass(chips.lookupErrors)}
+            aria-pressed={chips.lookupErrors}
+          >
+            Lookup Errors
+          </button>
+          <button
+            type="button"
             onClick={() => onToggle('priceOlder')}
-            tooltip="Only books whose latest AbeBooks lookup is older than N days. Combine with Books without Pricing to find books that need a lookup."
-            dataTest="filter-price-older"
-          />
+            data-test="filter-price-older"
+            className={chipClass(chips.priceOlder)}
+            aria-pressed={chips.priceOlder}
+          >
+            Price older than
+          </button>
           <label className="inline-flex items-center gap-1 text-sm text-gray-600">
             <input
               type="number"

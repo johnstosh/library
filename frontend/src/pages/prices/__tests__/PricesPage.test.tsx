@@ -198,8 +198,9 @@ describe('PricesPage', () => {
     renderPrices('/prices?recent=true&recentHours=6&hardcover=true')
     const chip = screen.getByTestId('filter-price-recent')
     expect(chip).toHaveTextContent('Looked up recently')
-    // active state uses bg-primary-50 + border-primary-500 (per FilterChip); old params ignored
-    expect(chip.closest('div')).toHaveClass('border-primary-500')
+    // active state is on the plain chip button itself (no FilterChip chrome)
+    expect(chip).toHaveClass('bg-primary-600')
+    expect(chip).toHaveClass('border-primary-600')
   })
 
   it('withPrices keeps books that have a usable listing', () => {
