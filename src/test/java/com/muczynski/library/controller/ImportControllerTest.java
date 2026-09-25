@@ -22,6 +22,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
@@ -57,7 +59,7 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_Success() {
+    void testImportJson_Success() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
@@ -66,7 +68,7 @@ class ImportControllerTest {
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
+        when(importService.streamImportJson(any())).thenReturn(result);
 
         // Act & Assert
         given()
@@ -101,11 +103,11 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_InvalidData() {
+    void testImportJson_InvalidData() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
 
-        when(importService.importData(any(ImportRequestDto.class)))
+        when(importService.streamImportJson(any()))
                 .thenThrow(new RuntimeException("Invalid import data"));
 
         // Act & Assert - Controller catches exception and returns 400 with error response
@@ -123,7 +125,7 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_EmptyRequest() {
+    void testImportJson_EmptyRequest() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
@@ -132,7 +134,7 @@ class ImportControllerTest {
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
+        when(importService.streamImportJson(any())).thenReturn(result);
 
         // Act & Assert - Should still succeed with empty data
         given()
@@ -148,11 +150,20 @@ class ImportControllerTest {
 
     // ==================== GET /api/import/json Tests ====================
 
+    private void stubEmptyExportJson() throws Exception {
+        doAnswer(invocation -> {
+            OutputStream os = invocation.getArgument(0);
+            os.write(("{\"authors\":[],\"books\":[],\"libraries\":[],\"photos\":[],"
+                    + "\"users\":[],\"loans\":[],\"favorites\":[],\"prices\":[]}").getBytes());
+            os.flush();
+            return null;
+        }).when(importService).streamExportJson(any(OutputStream.class));
+    }
+
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_Success() {
-        // Streaming export no longer uses exportData() for the main path; test focuses on HTTP response
-        // Arrange - mock is no longer called for streaming path
+    void testExportJson_Success() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
@@ -164,6 +175,7 @@ class ImportControllerTest {
             .body("books", notNullValue())
             .body("libraries", notNullValue())
             .body("photos", notNullValue());
+        verify(importService).streamExportJson(any(OutputStream.class));
     }
 
     @Test
@@ -181,8 +193,8 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_WithData() {
-        // Streaming path; test verifies structure without mocking legacy exportData()
+    void testExportJson_WithData() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
@@ -197,8 +209,8 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_WithPhotoMetadata() {
-        // Streaming export includes photo metadata; test verifies without legacy mock
+    void testExportJson_WithPhotoMetadata() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
@@ -210,8 +222,8 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_ServiceException() {
-        // Streaming path throws wrapped exception -> 500
+    void testExportJson_ServiceException() throws Exception {
+        doThrow(new IOException("export failed")).when(importService).streamExportJson(any(OutputStream.class));
         given()
             .auth().none()
         .when()

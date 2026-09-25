@@ -14,7 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,25 +56,19 @@ public class ImportController {
 
     @GetMapping("/json")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<StreamingResponseBody> exportJson() {
-        StreamingResponseBody stream = outputStream -> {
-            try {
-                logger.info("Starting streaming JSON export");
-                importService.streamExportJson(outputStream);
-                logger.info("Streaming JSON export completed");
-            } catch (Exception e) {
-                logger.error("Streaming JSON export failed", e);
-                throw new RuntimeException("Export failed", e);
-            }
-        };
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        // No Content-Disposition or filename - frontend handles download from Blob
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(stream);
+    public void exportJson(HttpServletResponse response) throws IOException {
+        try {
+            logger.info("Starting streaming JSON export");
+            // APPLICATION_JSON_VALUE has no charset so MockMvc matches application/json exactly
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            importService.streamExportJson(response.getOutputStream());
+            response.flushBuffer();
+            logger.info("Streaming JSON export completed");
+        } catch (Exception e) {
+            logger.error("Streaming JSON export failed", e);
+            throw new RuntimeException("Export failed", e);
+        }
     }
 
     /**

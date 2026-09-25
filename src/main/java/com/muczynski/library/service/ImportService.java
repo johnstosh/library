@@ -801,6 +801,11 @@ public class ImportService {
     public void streamExportJson(OutputStream outputStream) throws IOException {
         logger.info("Starting batched streaming JSON export");
 
+        // Ensure any pending persistence work is flushed before long streaming read
+        if (entityManager.isJoinedToTransaction()) {
+            entityManager.flush();
+        }
+
         // Use the configured ObjectMapper (with ISO dates, etc.) but disable pretty-print for streaming
         ObjectMapper mapper = objectMapper.copy();
         mapper.disable(SerializationFeature.INDENT_OUTPUT);
@@ -820,6 +825,7 @@ public class ImportService {
                         }
                     });
             generator.writeEndArray();
+            generator.flush();
 
             // authors - small
             generator.writeArrayFieldStart("authors");
@@ -836,6 +842,7 @@ public class ImportService {
                 mapper.writeValue(generator, aDto);
             }
             generator.writeEndArray();
+            generator.flush();
             entityManager.clear(); // release after small batch
 
             // users - small
@@ -866,6 +873,7 @@ public class ImportService {
                 mapper.writeValue(generator, uDto);
             }
             generator.writeEndArray();
+            generator.flush();
             entityManager.clear();
 
             // books - the large one with LOBs; batch by ID with clear()
@@ -887,10 +895,11 @@ public class ImportService {
                 }
                 batchCount++;
                 logger.debug("Exported book batch {} ({} books so far)", batchCount, lastId);
-                entityManager.flush();
+                generator.flush();
                 entityManager.clear(); // critical for LOB memory release
             }
             generator.writeEndArray();
+            generator.flush();
             logger.info("Completed {} book batches", batchCount);
 
             // loans - batch if large
@@ -906,9 +915,11 @@ public class ImportService {
                     mapper.writeValue(generator, lDto);
                     lastId = loan.getId();
                 }
+                generator.flush();
                 entityManager.clear();
             }
             generator.writeEndArray();
+            generator.flush();
 
             // photos - projection, usually small
             generator.writeArrayFieldStart("photos");
@@ -918,6 +929,7 @@ public class ImportService {
                 mapper.writeValue(generator, pDto);
             }
             generator.writeEndArray();
+            generator.flush();
             entityManager.clear();
 
             // favorites
@@ -930,6 +942,7 @@ public class ImportService {
                 mapper.writeValue(generator, fDto);
             }
             generator.writeEndArray();
+            generator.flush();
             entityManager.clear();
 
             // prices
@@ -940,6 +953,7 @@ public class ImportService {
                 mapper.writeValue(generator, pDto);
             }
             generator.writeEndArray();
+            generator.flush();
 
             generator.writeEndObject();
             generator.flush();
