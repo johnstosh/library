@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -17,9 +18,11 @@ import {
   usePhotoZipParts,
   useRecalcIllegalGenres,
   useCleanupIllegalGenres,
+  useFindDuplicateTitles,
   type BookAvailabilityStatsDto,
   type PhotoZipPartDto,
   type IllegalGenresMaintenanceDto,
+  type DuplicateTitlesResultDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
@@ -38,6 +41,8 @@ import {
   PiWrench,
   PiArrowClockwise,
   PiTrash,
+  PiMagnifyingGlass,
+  PiCopy,
 } from 'react-icons/pi'
 
 const AVAILABILITY_COUNT_ITEMS: {
@@ -77,6 +82,10 @@ export function DataManagementPage() {
   const [isRecalcing, setIsRecalcing] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
 
+  // Duplicate titles (Issue #351)
+  const [duplicateTitlesResult, setDuplicateTitlesResult] = useState<DuplicateTitlesResultDto | null>(null)
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
@@ -97,6 +106,7 @@ export function DataManagementPage() {
 
   const recalcIllegalGenres = useRecalcIllegalGenres()
   const cleanupIllegalGenres = useCleanupIllegalGenres()
+  const findDuplicateTitles = useFindDuplicateTitles()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -251,6 +261,34 @@ export function DataManagementPage() {
       setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
     } finally {
       setIsCleaning(false)
+    }
+  }
+
+
+  const handleFindDuplicateTitles = async () => {
+    setIsFindingDuplicates(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      const result = await findDuplicateTitles.mutateAsync()
+      setDuplicateTitlesResult(result)
+      if (result.error) {
+        setErrorMessage(result.error)
+      } else if (result.message) {
+        setSuccessMessage(result.message)
+      }
+    } catch (error) {
+      console.error('Failed to find duplicate titles:', error)
+      const msg = error instanceof Error ? error.message : 'Find duplicates failed'
+      setErrorMessage(msg)
+      setDuplicateTitlesResult({
+        pairs: [],
+        booksScanned: 0,
+        representativesCompared: 0,
+        error: msg,
+      })
+    } finally {
+      setIsFindingDuplicates(false)
     }
   }
 
@@ -696,6 +734,124 @@ export function DataManagementPage() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </div>
+
+
+      {/* Duplicate catalog entries (Issue #351) */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="duplicate-titles-section">
+        <div className="bg-amber-700 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiCopy className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Duplicate catalog entries</h2>
+              <p className="text-sm text-amber-100">
+                Find near-duplicate titles and alternate titles using keyword overlap and
+                Jaro–Winkler closeness. Copy suffixes like &quot;, c. 2&quot; are collapsed so
+                only one copy is considered. Shows the top 100 closest pairs. Does not change data.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Button
+              variant="primary"
+              onClick={handleFindDuplicateTitles}
+              isLoading={isFindingDuplicates}
+              leftIcon={<PiMagnifyingGlass className="w-4 h-4" />}
+              data-test="find-duplicate-titles"
+            >
+              Find
+            </Button>
+            {duplicateTitlesResult && !duplicateTitlesResult.error && (
+              <span className="text-sm text-gray-600">
+                Scanned {duplicateTitlesResult.booksScanned} books
+                ({duplicateTitlesResult.representativesCompared} representatives).{' '}
+                {duplicateTitlesResult.message}
+              </span>
+            )}
+          </div>
+
+          {duplicateTitlesResult?.error && (
+            <ErrorMessage message={duplicateTitlesResult.error} />
+          )}
+
+          {duplicateTitlesResult && !duplicateTitlesResult.error && (
+            <div className="overflow-x-auto" data-test="duplicate-titles-results">
+              {duplicateTitlesResult.pairs.length === 0 ? (
+                <p className="text-sm text-gray-500">No near-duplicate pairs found.</p>
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                        Score
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Book A
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Book B
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {duplicateTitlesResult.pairs.map((pair) => (
+                      <tr key={`${pair.bookAId}-${pair.bookBId}`}>
+                        <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-amber-800">
+                          {pair.score.toFixed(3)}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Link
+                            to={`/books?q=${encodeURIComponent(pair.bookATitle || String(pair.bookAId))}&mostRecent=false`}
+                            className="text-indigo-700 hover:underline font-medium"
+                          >
+                            #{pair.bookAId} {pair.bookATitle || '(no title)'}
+                          </Link>
+                          {pair.bookAAlternateTitle && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Alt: {pair.bookAAlternateTitle}
+                            </div>
+                          )}
+                          {pair.bookAAuthorName && (
+                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookAAuthorName}</div>
+                          )}
+                          {pair.matchedTitleA && (
+                            <div className="text-xs text-gray-400 mt-0.5">Matched: {pair.matchedTitleA}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Link
+                            to={`/books?q=${encodeURIComponent(pair.bookBTitle || String(pair.bookBId))}&mostRecent=false`}
+                            className="text-indigo-700 hover:underline font-medium"
+                          >
+                            #{pair.bookBId} {pair.bookBTitle || '(no title)'}
+                          </Link>
+                          {pair.bookBAlternateTitle && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Alt: {pair.bookBAlternateTitle}
+                            </div>
+                          )}
+                          {pair.bookBAuthorName && (
+                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookBAuthorName}</div>
+                          )}
+                          {pair.matchedTitleB && (
+                            <div className="text-xs text-gray-400 mt-0.5">Matched: {pair.matchedTitleB}</div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {!duplicateTitlesResult && (
+            <p className="text-sm text-gray-400">Click Find to scan the catalog for near-duplicate titles.</p>
           )}
         </div>
       </div>

@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
 
 vi.mock('@/api/data-management', () => ({
@@ -73,6 +74,30 @@ vi.mock('@/api/data-management', () => ({
     }),
     isPending: false,
   }),
+  // Duplicate titles mocks for Issue #351
+  useFindDuplicateTitles: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      pairs: [
+        {
+          score: 0.95,
+          bookAId: 1,
+          bookATitle: 'Confessions',
+          bookAAlternateTitle: null,
+          bookAAuthorName: 'Augustine',
+          bookBId: 2,
+          bookBTitle: 'Confession',
+          bookBAlternateTitle: null,
+          bookBAuthorName: 'Augustine',
+          matchedTitleA: 'Confessions',
+          matchedTitleB: 'Confession',
+        },
+      ],
+      booksScanned: 10,
+      representativesCompared: 9,
+      message: 'Found 1 near-duplicate pair(s).',
+    }),
+    isPending: false,
+  }),
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -108,9 +133,17 @@ vi.mock('@/api/photos', () => ({
   }),
 }))
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <DataManagementPage />
+    </MemoryRouter>
+  )
+}
+
 describe('DataManagementPage Books Availability', () => {
   it('uses a single column on phone and does not truncate in-library labels', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     const grid = screen.getByTestId('availability-stats-grid')
     expect(grid).toHaveClass('grid-cols-1')
@@ -127,7 +160,7 @@ describe('DataManagementPage Books Availability', () => {
 
 describe('DataManagementPage Favorites Statistics', () => {
   it('lists favorite counts split by books and authors', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     expect(screen.getByTestId('favorite-stats-section')).toHaveTextContent('Favorites Statistics')
     expect(screen.getByTestId('favorite-stat-Have Read')).toHaveTextContent('Have Read')
@@ -138,7 +171,7 @@ describe('DataManagementPage Favorites Statistics', () => {
 
 describe('DataManagementPage database statistics', () => {
   it('shows Favorites after Loans and before Prices', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     const loans = screen.getByTestId('stat-loans')
     const favorites = screen.getByTestId('stat-favorites')
@@ -156,7 +189,7 @@ describe('DataManagementPage database statistics', () => {
 
 describe('DataManagementPage Maintenance Section (Issue #347)', () => {
   it('renders the maintenance table at the bottom with Illegal genres cleanup row, Count as "-", and Recalc/Clean buttons', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     expect(screen.getByTestId('maintenance-section')).toHaveTextContent('Maintenance')
     expect(screen.getByTestId('maintenance-row-illegal-genres')).toBeInTheDocument()
@@ -166,5 +199,15 @@ describe('DataManagementPage Maintenance Section (Issue #347)', () => {
     // Count shows "-" before any Recalc (per spec)
     expect(screen.getByText('-')).toBeInTheDocument()
     expect(screen.getByText(/Click Recalc or Clean Genres to see results here/)).toBeInTheDocument()
+  })
+})
+
+describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
+  it('renders the duplicate titles section with a Find button', () => {
+    renderPage()
+
+    expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate catalog entries')
+    expect(screen.getByTestId('find-duplicate-titles')).toHaveTextContent('Find')
+    expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
   })
 })

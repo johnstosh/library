@@ -478,3 +478,33 @@ export function useCleanupIllegalGenres() {
     },
   })
 }
+
+// Duplicate catalog titles (Issue #351) — find-only
+export interface DuplicateTitlePairDto {
+  score: number
+  bookAId: number
+  bookATitle?: string
+  bookAAlternateTitle?: string
+  bookAAuthorName?: string
+  bookBId: number
+  bookBTitle?: string
+  bookBAlternateTitle?: string
+  bookBAuthorName?: string
+  matchedTitleA?: string
+  matchedTitleB?: string
+}
+
+export interface DuplicateTitlesResultDto {
+  pairs: DuplicateTitlePairDto[]
+  booksScanned: number
+  representativesCompared: number
+  message?: string
+  error?: string
+}
+
+export function useFindDuplicateTitles() {
+  return useMutation({
+    mutationFn: () =>
+      api.post<DuplicateTitlesResultDto>('/maintenance/duplicate-titles/find'),
+  })
+}
