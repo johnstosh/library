@@ -478,18 +478,19 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Lightweight projection for duplicate-title scan (Issue #351).
-     * Loads only id, title, alternateTitle, and author name — never @Lob fields.
+     * Loads only id, title, alternateTitle, author name, and status — never @Lob fields.
      */
     interface DuplicateTitleProjection {
         Long getId();
         String getTitle();
         String getAlternateTitle();
         String getAuthorName();
+        BookStatus getStatus();
     }
 
     /**
      * All books for duplicate-title matching. Avoids LOBs and full entities.
      */
-    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName FROM Book b LEFT JOIN b.author a")
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status FROM Book b LEFT JOIN b.author a")
     List<DuplicateTitleProjection> findAllForDuplicateTitleScan();
 }

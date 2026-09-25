@@ -57,6 +57,48 @@ class TitleNormalizerTest {
     }
 
     @Test
+    void foldsTrailingVolumeArabicForms() {
+        assertEquals("Suma domestica", TitleNormalizer.stripVolumeSuffix("Suma domestica Volume 1"));
+        assertEquals("Suma domestica", TitleNormalizer.stripVolumeSuffix("Suma domestica Volume 2"));
+        assertEquals("Suma domestica", TitleNormalizer.stripVolumeSuffix("Suma domestica volume 3"));
+        assertEquals("Suma domestica", TitleNormalizer.foldPrimaryTitle("Suma domestica Volume 7"));
+        assertEquals("Spy x Family", TitleNormalizer.stripVolumeSuffix("Spy x Family, v. 4"));
+        assertEquals("Spy x Family", TitleNormalizer.stripVolumeSuffix("Spy x Family, v.4"));
+        assertEquals("Spy x Family", TitleNormalizer.stripVolumeSuffix("Spy x Family, v 4"));
+        assertEquals("Spy x Family", TitleNormalizer.stripVolumeSuffix("Spy x Family v.4"));
+    }
+
+    @Test
+    void foldsTrailingBookAndPartRomanAndArabic() {
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title, Book 1"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title, Book 2"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title, book III"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title Book IV"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title, pt. 2"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title part xxx"));
+        assertEquals("Title", TitleNormalizer.stripVolumeSuffix("Title, Vol. 12"));
+    }
+
+    @Test
+    void doesNotStripMidTitleBookWithoutTrailingNumber() {
+        assertEquals("A well-known book", TitleNormalizer.stripVolumeSuffix("A well-known book"));
+        assertEquals("The Book of Mormon", TitleNormalizer.stripVolumeSuffix("The Book of Mormon"));
+        assertEquals("Cookbook", TitleNormalizer.stripVolumeSuffix("Cookbook"));
+    }
+
+    @Test
+    void volumeFoldMakesVariantsNormalizeEqual() {
+        NormalizedTitle a = TitleNormalizer.normalize("Suma domestica Volume 1");
+        NormalizedTitle b = TitleNormalizer.normalize("Suma domestica Volume 2");
+        NormalizedTitle c = TitleNormalizer.normalize("Suma domestica Volume 3");
+        assertEquals(a.normalizedString(), b.normalizedString());
+        assertEquals(a.normalizedString(), c.normalizedString());
+        assertEquals(
+                TitleNormalizer.normalize("Spy x Family, v. 4").normalizedString(),
+                TitleNormalizer.normalize("Spy x Family, v 4").normalizedString());
+    }
+
+    @Test
     void lightStemRemovesTrailingSAndIng() {
         assertEquals("confession", TitleNormalizer.lightStem("confessions"));
         assertEquals("read", TitleNormalizer.lightStem("reading"));

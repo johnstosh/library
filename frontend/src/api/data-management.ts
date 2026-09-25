@@ -486,10 +486,12 @@ export interface DuplicateTitlePairDto {
   bookATitle?: string
   bookAAlternateTitle?: string
   bookAAuthorName?: string
+  bookAStatus?: string
   bookBId: number
   bookBTitle?: string
   bookBAlternateTitle?: string
   bookBAuthorName?: string
+  bookBStatus?: string
   matchedTitleA?: string
   matchedTitleB?: string
 }

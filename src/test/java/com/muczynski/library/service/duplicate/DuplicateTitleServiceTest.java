@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service.duplicate;
 
+import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
 import com.muczynski.library.repository.BookRepository;
@@ -30,8 +31,8 @@ class DuplicateTitleServiceTest {
     @Test
     void copySuffixDuplicatesAreNotReportedAsPairs() {
         List<BookRepository.DuplicateTitleProjection> books = List.of(
-                proj(1L, "Gather Comprehensive", null, "Author A"),
-                proj(2L, "Gather Comprehensive, c. 2", null, "Author A")
+                proj(1L, "Gather Comprehensive", null, "Author A", BookStatus.ACTIVE),
+                proj(2L, "Gather Comprehensive, c. 2", null, "Author A", BookStatus.ACTIVE)
         );
         when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
 
@@ -44,11 +45,72 @@ class DuplicateTitleServiceTest {
     }
 
     @Test
+    void copySuffixVariantsWithCDotNDoNotPair() {
+        // "101 Things…" and "101 Things…, c. 1" must NOT pair — collapse only
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(5L, "101 Things to Do with a Baby", null, "Author", BookStatus.ACTIVE),
+                proj(6L, "101 Things to Do with a Baby, c. 1", null, "Author", BookStatus.WITHDRAWN)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getRepresentativesCompared());
+        assertTrue(result.getPairs().isEmpty());
+    }
+
+    @Test
+    void volumeTwinsSameAuthorCollapseToOneRepresentative() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(1L, "Suma domestica Volume 1", null, "Author", BookStatus.ACTIVE),
+                proj(2L, "Suma domestica Volume 2", null, "Author", BookStatus.ACTIVE),
+                proj(3L, "Suma domestica Volume 3", null, "Author", BookStatus.WITHDRAWN)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getRepresentativesCompared());
+        assertTrue(result.getPairs().isEmpty());
+    }
+
+    @Test
+    void spyXFamilyVolumeFormsCollapse() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(10L, "Spy x Family, v. 4", null, "Endo", BookStatus.ACTIVE),
+                proj(11L, "Spy x Family, v.4", null, "Endo", BookStatus.ACTIVE),
+                proj(12L, "Spy x Family, v 4", null, "Endo", BookStatus.ACTIVE)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getRepresentativesCompared());
+        assertTrue(result.getPairs().isEmpty());
+    }
+
+    @Test
+    void differentAuthorsSameTitleDoNotPairHigh() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(1L, "The Confessions", null, "Augustine", BookStatus.ACTIVE),
+                proj(2L, "The Confessions", null, "Rousseau", BookStatus.ACTIVE)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        // Different authors → separate representatives, but author gate blocks the pair
+        assertEquals(2, result.getRepresentativesCompared());
+        assertTrue(result.getPairs().isEmpty(),
+                "same title with different authors must not produce a high pair");
+    }
+
+    @Test
     void nearDuplicateTitlesWithMisspellingAreReported() {
         List<BookRepository.DuplicateTitleProjection> books = List.of(
-                proj(10L, "The Confessions of Augustine", null, "Augustine"),
-                proj(20L, "Confession of Augustine", null, "Augustine"),
-                proj(30L, "Moby Dick", null, "Melville")
+                proj(10L, "The Confessions of Augustine", null, "Augustine", BookStatus.ACTIVE),
+                proj(20L, "Confession of Augustine", null, "Augustine", BookStatus.ACTIVE),
+                proj(30L, "Moby Dick", null, "Melville", BookStatus.ACTIVE)
         );
         when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
 
@@ -60,6 +122,8 @@ class DuplicateTitleServiceTest {
                 (pair.getBookAId() == 10L && pair.getBookBId() == 20L)
                         || (pair.getBookAId() == 20L && pair.getBookBId() == 10L));
         assertTrue(pair.getScore() >= DuplicateTitleService.SIMILARITY_THRESHOLD);
+        assertEquals("ACTIVE", pair.getBookAStatus());
+        assertEquals("ACTIVE", pair.getBookBStatus());
         // Unrelated Moby Dick should not pair with confessions
         assertTrue(result.getPairs().stream()
                 .noneMatch(p -> p.getBookAId() == 30L || p.getBookBId() == 30L));
@@ -68,25 +132,25 @@ class DuplicateTitleServiceTest {
     @Test
     void usesAlternateTitlesForMatching() {
         List<BookRepository.DuplicateTitleProjection> books = List.of(
-                proj(1L, "Primary Unique Name XYZ", "City of God", "Augustine"),
-                proj(2L, "Completely Different Primary", "City of God Treatise", "Augustine")
+                proj(1L, "Primary Unique Name XYZ", "City of God", "Augustine", BookStatus.ACTIVE),
+                proj(2L, "Completely Different Primary", "City of God Treatise", "Augustine", BookStatus.LOST)
         );
-        // After subtitle truncate: "City of God" vs "City of God" — should match via alt titles
         when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
 
         DuplicateTitlesResultDto result = service.findDuplicates();
 
         assertEquals(1, result.getPairs().size());
         assertTrue(result.getPairs().get(0).getScore() >= DuplicateTitleService.SIMILARITY_THRESHOLD);
+        assertEquals("ACTIVE", result.getPairs().get(0).getBookAStatus());
+        assertEquals("LOST", result.getPairs().get(0).getBookBStatus());
     }
 
     @Test
     void resultsSortedByScoreDescendingAndCappedAt100() {
         List<BookRepository.DuplicateTitleProjection> books = new ArrayList<>();
-        // Create 120 near-identical pairs via numbered titles that share keyword "novella"
         for (int i = 1; i <= 120; i++) {
-            books.add(proj((long) i, "Novella Number " + i, null, "Author"));
-            books.add(proj(1000L + i, "Novella Numbr " + i, null, "Author")); // misspelling
+            books.add(proj((long) i, "Novella Number " + i, null, "Author", BookStatus.ACTIVE));
+            books.add(proj(1000L + i, "Novella Numbr " + i, null, "Author", BookStatus.ACTIVE));
         }
         when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
 
@@ -101,7 +165,7 @@ class DuplicateTitleServiceTest {
     }
 
     private static BookRepository.DuplicateTitleProjection proj(
-            Long id, String title, String alt, String author) {
+            Long id, String title, String alt, String author, BookStatus status) {
         return new BookRepository.DuplicateTitleProjection() {
             @Override
             public Long getId() {
@@ -121,6 +185,11 @@ class DuplicateTitleServiceTest {
             @Override
             public String getAuthorName() {
                 return author;
+            }
+
+            @Override
+            public BookStatus getStatus() {
+                return status;
             }
         };
     }

@@ -819,8 +819,10 @@ export function DataManagementPage() {
                           {pair.bookAAuthorName && (
                             <div className="text-xs text-gray-600 mt-0.5">{pair.bookAAuthorName}</div>
                           )}
-                          {pair.matchedTitleA && (
-                            <div className="text-xs text-gray-400 mt-0.5">Matched: {pair.matchedTitleA}</div>
+                          {pair.bookAStatus && (
+                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-a-status">
+                              Status: {pair.bookAStatus}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 align-top">
@@ -838,8 +840,10 @@ export function DataManagementPage() {
                           {pair.bookBAuthorName && (
                             <div className="text-xs text-gray-600 mt-0.5">{pair.bookBAuthorName}</div>
                           )}
-                          {pair.matchedTitleB && (
-                            <div className="text-xs text-gray-400 mt-0.5">Matched: {pair.matchedTitleB}</div>
+                          {pair.bookBStatus && (
+                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-b-status">
+                              Status: {pair.bookBStatus}
+                            </div>
                           )}
                         </td>
                       </tr>

@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
@@ -84,12 +84,12 @@ vi.mock('@/api/data-management', () => ({
           bookATitle: 'Confessions',
           bookAAlternateTitle: null,
           bookAAuthorName: 'Augustine',
+          bookAStatus: 'ACTIVE',
           bookBId: 2,
           bookBTitle: 'Confession',
           bookBAlternateTitle: null,
           bookBAuthorName: 'Augustine',
-          matchedTitleA: 'Confessions',
-          matchedTitleB: 'Confession',
+          bookBStatus: 'WITHDRAWN',
         },
       ],
       booksScanned: 10,
@@ -209,5 +209,18 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate catalog entries')
     expect(screen.getByTestId('find-duplicate-titles')).toHaveTextContent('Find')
     expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
+  })
+
+  it('shows book status in results and does not show Matched lines', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('duplicate-titles-results')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
+    expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: WITHDRAWN')
+    expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
   })
 })

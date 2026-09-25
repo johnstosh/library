@@ -13,9 +13,9 @@ import java.util.regex.Pattern;
 
 /**
  * Normalizes book titles for duplicate detection (Issue #351).
- * Strips copy suffixes and subtitles, drops stop words / light morphological
- * suffixes, and produces a keyword set plus a joined normalized string for
- * Jaro–Winkler comparison.
+ * Strips copy suffixes and trailing volume/part/book suffixes, truncates
+ * subtitles, drops stop words / light morphological suffixes, and produces a
+ * keyword set plus a joined normalized string for Jaro–Winkler comparison.
  */
 public final class TitleNormalizer {
 
@@ -27,6 +27,16 @@ public final class TitleNormalizer {
 
     private static final Pattern WHITESPACE =
             Pattern.compile("\\s+");
+
+    /**
+     * Trailing volume / part / book / v suffixes (arabic or Roman numerals).
+     * Optional leading comma. Longest keyword alternatives first so
+     * {@code vol} is preferred over {@code v}. Only TRAILING — mid-title
+     * "book" is untouched.
+     */
+    private static final Pattern VOLUME_SUFFIX = Pattern.compile(
+            "(?i)(?:,\\s*|\\s+)(?:volume|vol\\.?|book|part|pt\\.?|v\\.?)\\s*"
+                    + "([0-9]+|[ivxlcdm]+)\\s*$");
 
     private static final Set<String> STOP_WORDS = Set.of(
             "a", "an", "the", "of", "and", "or", "if", "in", "on", "to", "for",
@@ -60,6 +70,11 @@ public final class TitleNormalizer {
             return new NormalizedTitle("", Collections.emptySet());
         }
 
+        stripped = stripVolumeSuffix(stripped);
+        if (stripped == null || stripped.isBlank()) {
+            return new NormalizedTitle("", Collections.emptySet());
+        }
+
         String truncated = truncateSubtitle(stripped);
         String lower = truncated.toLowerCase(Locale.ROOT);
         String spaced = NON_LETTER_DIGIT.matcher(lower).replaceAll(" ").trim();
@@ -81,6 +96,36 @@ public final class TitleNormalizer {
 
         String joined = String.join(" ", keywords);
         return new NormalizedTitle(joined, Collections.unmodifiableSet(keywords));
+    }
+
+    /**
+     * Strips a trailing volume/part/book/v suffix ({@code Volume 1}, {@code v. 4},
+     * {@code Book III}, etc.). Returns the original when there is no match, or
+     * when stripping would leave the title empty. Does not touch mid-title
+     * words such as "book" in "The Book of Mormon".
+     */
+    public static String stripVolumeSuffix(String title) {
+        if (title == null || title.isBlank()) {
+            return title;
+        }
+        String trimmed = title.trim();
+        String stripped = VOLUME_SUFFIX.matcher(trimmed).replaceFirst("").trim();
+        return stripped.isEmpty() ? trimmed : stripped;
+    }
+
+    /**
+     * Fold for representative collapse / compare: copy suffix then volume suffix.
+     */
+    public static String foldPrimaryTitle(String rawTitle) {
+        if (rawTitle == null || rawTitle.isBlank()) {
+            return "";
+        }
+        String stripped = Book.stripCopySuffix(rawTitle);
+        if (stripped == null || stripped.isBlank()) {
+            return "";
+        }
+        stripped = stripVolumeSuffix(stripped);
+        return stripped == null ? "" : stripped.trim();
     }
 
     /**
