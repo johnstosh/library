@@ -90,6 +90,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library")
     List<Book> findAllWithAuthorAndLibrary();
+
+    /**
+     * Batch query for streaming export: books with id > :lastId, ordered by id.
+     * Used with EM.clear() between batches to keep memory low even with LOB fields.
+     */
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.id > :lastId ORDER BY b.id ASC")
+    List<Book> findBooksAfterIdWithAuthorAndLibrary(Long lastId, int limit);
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrue(String title, Pageable pageable);

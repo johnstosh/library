@@ -14,6 +14,8 @@ import com.muczynski.library.service.ImportService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +23,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -53,9 +57,25 @@ public class ImportController {
 
     @GetMapping("/json")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<ImportRequestDto> exportJson() {
-        ImportRequestDto exportData = importService.exportData();
-        return ResponseEntity.ok(exportData);
+    public ResponseEntity<StreamingResponseBody> exportJson() {
+        StreamingResponseBody stream = outputStream -> {
+            try {
+                logger.info("Starting streaming JSON export");
+                importService.streamExportJson(outputStream);
+                logger.info("Streaming JSON export completed");
+            } catch (Exception e) {
+                logger.error("Streaming JSON export failed", e);
+                throw new RuntimeException("Export failed", e);
+            }
+        };
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        // No Content-Disposition or filename - frontend handles download from Blob
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(stream);
     }
 
     /**

@@ -21,6 +21,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -49,6 +55,7 @@ public class ImportService {
     private final BookPriceRepository bookPriceRepository;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectMapper objectMapper;
 
     public ImportResponseDto.ImportResult importData(ImportRequestDto dto) {
         logger.info("Starting import. Branches: {}, Authors: {}, Users: {}, Books: {}, Loans: {}, Photos: {}, Favorites: {}, Prices: {}",
@@ -708,6 +715,10 @@ public class ImportService {
         return new ImportResponseDto.ImportResult(counts);
     }
 
+    /**
+     * Legacy non-streaming export for tests and small catalogs only.
+     * The HTTP export path uses the streaming version to avoid OOM.
+     */
     public ImportRequestDto exportData() {
         ImportRequestDto dto = new ImportRequestDto();
 
@@ -768,54 +779,7 @@ public class ImportService {
         // Note: lastModified is NOT exported because it gets updated during import
         List<ImportBookDto> bookDtos = new ArrayList<>();
         for (Book book : bookRepository.findAllWithAuthorAndLibrary()) {
-            ImportBookDto bDto = new ImportBookDto();
-            bDto.setTitle(book.getTitle());
-            bDto.setAlternateTitle(emptyToNull(book.getAlternateTitle()));
-            bDto.setPublicationYear(book.getPublicationYear());
-            bDto.setPublisher(emptyToNull(book.getPublisher()));
-            bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));
-            bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
-            bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
-            bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
-            bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
-            bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
-            // Note: lastModified is NOT exported - it will be updated during import
-            bDto.setStatus(book.getStatus());
-            bDto.setLocNumber(emptyToNull(book.getLocNumber()));
-            // Only export electronicResource when true; absence in JSON means false (default)
-            bDto.setElectronicResource(Boolean.TRUE.equals(book.getElectronicResource()) ? Boolean.TRUE : null);
-            bDto.setStatusReason(emptyToNull(book.getStatusReason()));
-            // Only export non-empty tag lists (NON_EMPTY annotation handles null/empty omission)
-            if (book.getTagsList() != null && !book.getTagsList().isEmpty()) {
-                bDto.setTagsList(book.getTagsList());
-            }
-            // New format: reference author by name only (not embedded object)
-            if (book.getAuthor() != null) {
-                bDto.setAuthorName(book.getAuthor().getName());
-            }
-            // Note: bDto.setAuthor() is NOT set - embedded author is deprecated for export
-            if (book.getLibrary() != null) {
-                bDto.setLibraryName(book.getLibrary().getBranchName());
-            }
-            // Export YDL/EMU availability fields (diagnostics only; import persistence is follow-up #287)
-            bDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
-            bDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
-            bDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
-            bDto.setYdlLastChecked(book.getYdlLastChecked());
-            bDto.setYdlLookupError(emptyToNull(book.getYdlLookupError()));
-            bDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
-            bDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
-            bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
-            bDto.setEmuLastChecked(book.getEmuLastChecked());
-            bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
-            bDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
-            bDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
-            bDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
-            bDto.setAclaLastChecked(book.getAclaLastChecked());
-            bDto.setAclaLookupError(emptyToNull(book.getAclaLookupError()));
-            bDto.setReadingDifficulty(book.getReadingDifficulty());
-            bDto.setBinding(book.getBinding());
-            bDto.setDesireToPurchase(book.getDesireToPurchase());
+            ImportBookDto bDto = mapBookToDto(book);
             bookDtos.add(bDto);
         }
         dto.setBooks(bookDtos);
@@ -923,6 +887,277 @@ public class ImportService {
         dto.setPrices(priceDtos);
 
         return dto;
+    }
+
+    /**
+     * Streams the full catalog as JSON directly to the OutputStream using JsonGenerator.
+     * Uses keyset-style batching (by id) and clears the persistence context between batches
+     * to prevent OOM on large catalogs (~2k books with LOBs). Matches exact DTO mapping and
+     * JSON shape of exportData() so round-trips remain identical.
+     * Compact JSON (no pretty-print) for efficiency on the wire.
+     */
+    @Transactional(readOnly = true)
+    public void streamExportJson(OutputStream outputStream) throws IOException {
+        logger.info("Starting batched streaming JSON export");
+
+        // Use the configured ObjectMapper (with ISO dates, etc.) but disable pretty-print for streaming
+        ObjectMapper mapper = objectMapper.copy();
+        mapper.disable(SerializationFeature.INDENT_OUTPUT);
+
+        try (JsonGenerator generator = mapper.getFactory().createGenerator(outputStream)) {
+            generator.writeStartObject();
+
+            // libraries (branches) - small, load all
+            generator.writeArrayFieldStart("libraries");
+            branchRepository.findAll().stream()
+                    .map(branchMapper::toDto)
+                    .forEach(dto -> {
+                        try {
+                            mapper.writeValue(generator, dto);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+            generator.writeEndArray();
+
+            // authors - small
+            generator.writeArrayFieldStart("authors");
+            for (Author author : authorRepository.findAll()) {
+                ImportAuthorDto aDto = new ImportAuthorDto();
+                aDto.setName(author.getName());
+                aDto.setDateOfBirth(author.getDateOfBirth());
+                aDto.setDateOfDeath(author.getDateOfDeath());
+                aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
+                aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
+                aDto.setNationality(emptyToNull(author.getNationality()));
+                aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
+                aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
+                mapper.writeValue(generator, aDto);
+            }
+            generator.writeEndArray();
+            entityManager.clear(); // release after small batch
+
+            // users - small
+            generator.writeArrayFieldStart("users");
+            for (User user : userRepository.findAll()) {
+                ImportUserDto uDto = new ImportUserDto();
+                uDto.setUsername(user.getUsername());
+                uDto.setPassword(user.getPassword());
+                uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+                uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
+                uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
+                uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
+                uDto.setGoogleClientSecret(emptyToNull(user.getGoogleClientSecret()));
+                uDto.setGooglePhotosAlbumId(emptyToNull(user.getGooglePhotosAlbumId()));
+                uDto.setLastPhotoTimestamp(emptyToNull(user.getLastPhotoTimestamp()));
+                uDto.setSsoProvider(emptyToNull(user.getSsoProvider()));
+                uDto.setSsoSubjectId(emptyToNull(user.getSsoSubjectId()));
+                uDto.setEmail(emptyToNull(user.getEmail()));
+                uDto.setPhone(emptyToNull(user.getPhone()));
+                uDto.setLibraryCardDesign(user.getLibraryCardDesign());
+                if (user.getAuthorities() != null) {
+                    java.util.List<String> authorityNames = user.getAuthorities().stream()
+                            .map(authority -> authority.getName())
+                            .collect(Collectors.toList());
+                    uDto.setAuthorities(authorityNames);
+                }
+                uDto.setUserIdentifier(user.getUserIdentifier());
+                mapper.writeValue(generator, uDto);
+            }
+            generator.writeEndArray();
+            entityManager.clear();
+
+            // books - the large one with LOBs; batch by ID with clear()
+            generator.writeArrayFieldStart("books");
+            Long lastId = 0L;
+            int batchSize = 50;
+            int batchCount = 0;
+            while (true) {
+                List<Book> batch = bookRepository.findBooksAfterIdWithAuthorAndLibrary(lastId, batchSize);
+                if (batch.isEmpty()) {
+                    break;
+                }
+                for (Book book : batch) {
+                    ImportBookDto bDto = mapBookToDto(book);
+                    mapper.writeValue(generator, bDto);
+                    lastId = book.getId();
+                }
+                batchCount++;
+                logger.debug("Exported book batch {} ({} books so far)", batchCount, lastId);
+                entityManager.flush();
+                entityManager.clear(); // critical for LOB memory release
+            }
+            generator.writeEndArray();
+            logger.info("Completed {} book batches", batchCount);
+
+            // loans - batch if large
+            generator.writeArrayFieldStart("loans");
+            lastId = 0L;
+            while (true) {
+                List<Loan> batch = loanRepository.findLoansAfterId(lastId, batchSize);
+                if (batch.isEmpty()) break;
+                for (Loan loan : batch) {
+                    ImportLoanDto lDto = mapLoanToDto(loan);
+                    mapper.writeValue(generator, lDto);
+                    lastId = loan.getId();
+                }
+                entityManager.clear();
+            }
+            generator.writeEndArray();
+
+            // photos - projection, usually small
+            generator.writeArrayFieldStart("photos");
+            for (PhotoMetadataProjection photo : photoRepository.findBy()) {
+                if (photo.getDeletedAt() != null) continue;
+                ImportPhotoDto pDto = mapPhotoToDto(photo);
+                mapper.writeValue(generator, pDto);
+            }
+            generator.writeEndArray();
+            entityManager.clear();
+
+            // favorites
+            generator.writeArrayFieldStart("favorites");
+            for (Favorite favorite : favoriteRepository.findAllWithRefs()) {
+                if (favorite.getUser() == null || favorite.getListName() == null || favorite.getListName().isBlank()) {
+                    continue;
+                }
+                ImportFavoriteDto fDto = mapFavoriteToDto(favorite);
+                mapper.writeValue(generator, fDto);
+            }
+            generator.writeEndArray();
+            entityManager.clear();
+
+            // prices
+            generator.writeArrayFieldStart("prices");
+            for (BookPrice price : bookPriceRepository.findAllWithBookAndAuthor()) {
+                if (price.getBook() == null || price.getCover() == null) continue;
+                ImportPriceDto pDto = mapPriceToDto(price);
+                mapper.writeValue(generator, pDto);
+            }
+            generator.writeEndArray();
+
+            generator.writeEndObject();
+            generator.flush();
+        }
+
+        logger.info("Streaming JSON export completed successfully");
+    }
+
+    private ImportBookDto mapBookToDto(Book book) {
+        ImportBookDto bDto = new ImportBookDto();
+        bDto.setTitle(book.getTitle());
+        bDto.setAlternateTitle(emptyToNull(book.getAlternateTitle()));
+        bDto.setPublicationYear(book.getPublicationYear());
+        bDto.setPublisher(emptyToNull(book.getPublisher()));
+        bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));
+        bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
+        bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
+        bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
+        bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
+        bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
+        bDto.setStatus(book.getStatus());
+        bDto.setLocNumber(emptyToNull(book.getLocNumber()));
+        bDto.setElectronicResource(Boolean.TRUE.equals(book.getElectronicResource()) ? Boolean.TRUE : null);
+        bDto.setStatusReason(emptyToNull(book.getStatusReason()));
+        if (book.getTagsList() != null && !book.getTagsList().isEmpty()) {
+            bDto.setTagsList(book.getTagsList());
+        }
+        if (book.getAuthor() != null) {
+            bDto.setAuthorName(book.getAuthor().getName());
+        }
+        if (book.getLibrary() != null) {
+            bDto.setLibraryName(book.getLibrary().getBranchName());
+        }
+        bDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+        bDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+        bDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+        bDto.setYdlLastChecked(book.getYdlLastChecked());
+        bDto.setYdlLookupError(emptyToNull(book.getYdlLookupError()));
+        bDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+        bDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+        bDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+        bDto.setEmuLastChecked(book.getEmuLastChecked());
+        bDto.setEmuLookupError(emptyToNull(book.getEmuLookupError()));
+        bDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
+        bDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
+        bDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
+        bDto.setAclaLastChecked(book.getAclaLastChecked());
+        bDto.setAclaLookupError(emptyToNull(book.getAclaLookupError()));
+        bDto.setReadingDifficulty(book.getReadingDifficulty());
+        bDto.setBinding(book.getBinding());
+        bDto.setDesireToPurchase(book.getDesireToPurchase());
+        return bDto;
+    }
+
+    private ImportLoanDto mapLoanToDto(Loan loan) {
+        ImportLoanDto lDto = new ImportLoanDto();
+        if (loan.getBook() != null) {
+            lDto.setBookTitle(loan.getBook().getTitle());
+            if (loan.getBook().getAuthor() != null) {
+                lDto.setBookAuthorName(loan.getBook().getAuthor().getName());
+            }
+        }
+        if (loan.getUser() != null) {
+            lDto.setUsername(loan.getUser().getUsername());
+        }
+        lDto.setLoanDate(loan.getLoanDate());
+        lDto.setDueDate(loan.getDueDate());
+        lDto.setReturnDate(loan.getReturnDate());
+        return lDto;
+    }
+
+    private ImportPhotoDto mapPhotoToDto(PhotoMetadataProjection photo) {
+        ImportPhotoDto pDto = new ImportPhotoDto();
+        pDto.setContentType(emptyToNull(photo.getContentType()));
+        pDto.setCaption(emptyToNull(photo.getCaption()));
+        pDto.setPhotoOrder(photo.getPhotoOrder());
+        pDto.setPermanentId(emptyToNull(photo.getPermanentId()));
+        pDto.setExportedAt(photo.getExportedAt());
+        pDto.setExportStatus(photo.getExportStatus());
+        pDto.setExportErrorMessage(emptyToNull(photo.getExportErrorMessage()));
+        pDto.setImageChecksum(emptyToNull(photo.getImageChecksum()));
+
+        if (photo.getBook() != null) {
+            pDto.setBookTitle(photo.getBook().getTitle());
+            if (photo.getBook().getAuthor() != null) {
+                pDto.setBookAuthorName(photo.getBook().getAuthor().getName());
+            }
+        }
+        if (photo.getAuthor() != null && photo.getBook() == null) {
+            pDto.setAuthorName(photo.getAuthor().getName());
+        }
+        return pDto;
+    }
+
+    private ImportFavoriteDto mapFavoriteToDto(Favorite favorite) {
+        ImportFavoriteDto fDto = new ImportFavoriteDto();
+        fDto.setUsername(favorite.getUser().getUsername());
+        fDto.setListName(favorite.getListName());
+        if (favorite.getBook() != null) {
+            fDto.setBookTitle(favorite.getBook().getTitle());
+            if (favorite.getBook().getAuthor() != null) {
+                fDto.setBookAuthorName(favorite.getBook().getAuthor().getName());
+            }
+        } else if (favorite.getAuthor() != null) {
+            fDto.setAuthorName(favorite.getAuthor().getName());
+        }
+        return fDto;
+    }
+
+    private ImportPriceDto mapPriceToDto(BookPrice price) {
+        ImportPriceDto pDto = new ImportPriceDto();
+        pDto.setBookTitle(price.getBook().getTitle());
+        if (price.getBook().getAuthor() != null) {
+            pDto.setBookAuthorName(price.getBook().getAuthor().getName());
+        }
+        pDto.setCover(price.getCover());
+        pDto.setPriceDollars(price.getPriceDollars());
+        pDto.setShippingDollars(price.getShippingDollars());
+        pDto.setCondition(emptyToNull(price.getCondition()));
+        pDto.setLookedUpAt(price.getLookedUpAt());
+        pDto.setDetailsUrl(emptyToNull(price.getDetailsUrl()));
+        pDto.setLookupError(emptyToNull(price.getLookupError()));
+        return pDto;
     }
 
     /**

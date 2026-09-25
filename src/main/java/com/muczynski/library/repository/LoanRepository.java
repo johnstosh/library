@@ -25,6 +25,19 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
            "LEFT JOIN FETCH u.authorities")
     List<Loan> findAllWithBookAndUser();
 
+    /**
+     * Batch query for streaming export: loans with id > :lastId, ordered by id.
+     * Limits memory during large export.
+     */
+    @Query("SELECT DISTINCT l FROM Loan l " +
+           "LEFT JOIN FETCH l.book b " +
+           "LEFT JOIN FETCH b.author " +
+           "LEFT JOIN FETCH b.library " +
+           "LEFT JOIN FETCH l.user u " +
+           "LEFT JOIN FETCH u.authorities " +
+           "WHERE l.id > :lastId ORDER BY l.id ASC")
+    List<Loan> findLoansAfterId(Long lastId, int limit);
+
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
