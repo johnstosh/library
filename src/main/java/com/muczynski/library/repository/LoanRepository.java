@@ -5,6 +5,7 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,7 +28,14 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 
     /**
      * Batch query for streaming export: loans with id > :lastId, ordered by id.
-     * Limits memory during large export.
+     * Two-step to safely combine keyset pagination with JOIN FETCH.
+     * First finds IDs (Pageable limit applied), then fetches full entities.
+     */
+    @Query("SELECT l.id FROM Loan l WHERE l.id > :lastId ORDER BY l.id ASC")
+    List<Long> findLoanIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    /**
+     * Fetch full loans (with JOIN FETCH) for given IDs. Used in streaming export batching.
      */
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
@@ -35,8 +43,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
            "LEFT JOIN FETCH b.library " +
            "LEFT JOIN FETCH l.user u " +
            "LEFT JOIN FETCH u.authorities " +
-           "WHERE l.id > :lastId ORDER BY l.id ASC")
-    List<Loan> findLoansAfterId(Long lastId, int limit);
+           "WHERE l.id IN :ids ORDER BY l.id ASC")
+    List<Loan> findLoansByIds(@Param("ids") List<Long> ids);
 
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +

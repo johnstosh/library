@@ -16,6 +16,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -872,10 +874,12 @@ public class ImportService {
             int batchSize = 50;
             int batchCount = 0;
             while (true) {
-                List<Book> batch = bookRepository.findBooksAfterIdWithAuthorAndLibrary(lastId, batchSize);
-                if (batch.isEmpty()) {
+                Pageable pageable = PageRequest.of(0, batchSize);
+                List<Long> ids = bookRepository.findBookIdsAfterId(lastId, pageable);
+                if (ids.isEmpty()) {
                     break;
                 }
+                List<Book> batch = bookRepository.findBooksByIdsWithAuthorAndLibrary(ids);
                 for (Book book : batch) {
                     ImportBookDto bDto = mapBookToDto(book);
                     mapper.writeValue(generator, bDto);
@@ -893,8 +897,10 @@ public class ImportService {
             generator.writeArrayFieldStart("loans");
             lastId = 0L;
             while (true) {
-                List<Loan> batch = loanRepository.findLoansAfterId(lastId, batchSize);
-                if (batch.isEmpty()) break;
+                Pageable pageable = PageRequest.of(0, batchSize);
+                List<Long> ids = loanRepository.findLoanIdsAfterId(lastId, pageable);
+                if (ids.isEmpty()) break;
+                List<Loan> batch = loanRepository.findLoansByIds(ids);
                 for (Loan loan : batch) {
                     ImportLoanDto lDto = mapLoanToDto(loan);
                     mapper.writeValue(generator, lDto);

@@ -93,10 +93,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Batch query for streaming export: books with id > :lastId, ordered by id.
-     * Used with EM.clear() between batches to keep memory low even with LOB fields.
+     * Two-step to safely combine keyset pagination with JOIN FETCH (avoids Hibernate limit issues).
+     * First finds IDs (Pageable limit applied), then fetches full entities.
      */
-    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.id > :lastId ORDER BY b.id ASC")
-    List<Book> findBooksAfterIdWithAuthorAndLibrary(Long lastId, int limit);
+    @Query("SELECT b.id FROM Book b WHERE b.id > :lastId ORDER BY b.id ASC")
+    List<Long> findBookIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    /**
+     * Fetch full books (with JOIN FETCH) for given IDs. Used in streaming export batching.
+     */
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.id IN :ids ORDER BY b.id ASC")
+    List<Book> findBooksByIdsWithAuthorAndLibrary(@Param("ids") List<Long> ids);
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrue(String title, Pageable pageable);
