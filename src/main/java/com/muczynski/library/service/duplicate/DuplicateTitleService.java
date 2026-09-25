@@ -28,14 +28,33 @@ import java.util.regex.Pattern;
 /**
  * Finds near-duplicate catalog titles using keyword indexing + Jaro–Winkler
  * (Issue #351). Memory-safe: uses lightweight projections only.
+ *
+ * <h2>Score formula</h2>
+ * <p>Primary signal: Jaro–Winkler on folded/normalized titles (and on
+ * {@code title | author} when both authors are present), with an author JW
+ * gate at {@link #AUTHOR_SIMILARITY_THRESHOLD}. A pair is included only when
+ * primary JW ≥ {@link #SIMILARITY_THRESHOLD} (keeps junk out).
+ *
+ * <p>Secondary (tie-break / finer ranking): character-level Levenshtein
+ * similarity {@code 1 - distance/maxLen} on the same strings used for the
+ * winning primary comparison — folded title alone when no author, or
+ * {@code title | author} when both authors are present — so identical folded
+ * titles with author prefix differences (e.g. "Joseph Ratzinger" vs
+ * "Joseph Aloisius Ratzinger") score slightly below 1.0.
+ *
+ * <p>Reported score (display + sort):
+ * {@code 0.85 * primaryJw + 0.15 * levSim}, clamped to [0, 1], rounded to
+ * 6 decimal places. Exact identical folded title+author yields 1.0.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DuplicateTitleService {
 
-    /** Minimum Jaro–Winkler score to report a pair. Tuned so slight misspellings
-     *  match (e.g. Confessions/Confession) while unrelated titles do not flood. */
+    /** Minimum primary Jaro–Winkler score to report a pair. Tuned so slight
+     *  misspellings match (e.g. Confessions/Confession) while unrelated titles
+     *  do not flood. Gate uses primary JW only; the blended score is for
+     *  ranking/display. */
     public static final double SIMILARITY_THRESHOLD = 0.85;
 
     /**
@@ -43,6 +62,12 @@ public class DuplicateTitleService {
      * gate or the pair is rejected (same-title different-author must not score high).
      */
     public static final double AUTHOR_SIMILARITY_THRESHOLD = 0.85;
+
+    /** Weight of primary Jaro–Winkler in the reported blend. */
+    public static final double JW_WEIGHT = 0.85;
+
+    /** Weight of secondary Levenshtein similarity in the reported blend. */
+    public static final double LEV_WEIGHT = 0.15;
 
     public static final int MAX_RESULTS = 100;
 
@@ -146,9 +171,9 @@ public class DuplicateTitleService {
                     }
 
                     BestMatch best = bestSimilarity(left, right);
-                    if (best.score >= SIMILARITY_THRESHOLD) {
+                    if (best.primaryJw >= SIMILARITY_THRESHOLD) {
                         pairs.add(DuplicateTitlePairDto.builder()
-                                .score(round4(best.score))
+                                .score(round6(best.score))
                                 .bookAId(left.id)
                                 .bookATitle(left.title)
                                 .bookAAlternateTitle(left.alternateTitle)
@@ -176,38 +201,115 @@ public class DuplicateTitleService {
         if (bothAuthorsPresent) {
             double authorJw = JaroWinklerSimilarity.similarity(authorA, authorB);
             if (authorJw < AUTHOR_SIMILARITY_THRESHOLD) {
-                return new BestMatch(0.0, null, null);
+                return new BestMatch(0.0, 0.0, null, null);
             }
         }
 
-        BestMatch best = new BestMatch(0.0, null, null);
+        BestMatch best = new BestMatch(0.0, 0.0, null, null);
         for (TitleVariant va : a.variants) {
             for (TitleVariant vb : b.variants) {
                 if (va.normalized.isEmpty() || vb.normalized.isEmpty()) {
                     continue;
                 }
-                double score = JaroWinklerSimilarity.similarity(
-                        va.normalized.normalizedString(),
-                        vb.normalized.normalizedString());
-                double rawScore = JaroWinklerSimilarity.similarity(
+                String normA = va.normalized.normalizedString();
+                String normB = vb.normalized.normalizedString();
+
+                double titleJw = JaroWinklerSimilarity.similarity(normA, normB);
+                double rawJw = JaroWinklerSimilarity.similarity(
                         va.strippedForCompare,
                         vb.strippedForCompare);
-                double max = Math.max(score, rawScore);
+                double jw = Math.max(titleJw, rawJw);
 
-                // Also compare "title | author" when authors are present
+                String levLeft;
+                String levRight;
                 if (bothAuthorsPresent) {
-                    double combined = JaroWinklerSimilarity.similarity(
-                            va.normalized.normalizedString() + " | " + authorA,
-                            vb.normalized.normalizedString() + " | " + authorB);
-                    max = Math.max(max, combined);
+                    String combinedA = normA + " | " + authorA;
+                    String combinedB = normB + " | " + authorB;
+                    double combined = JaroWinklerSimilarity.similarity(combinedA, combinedB);
+                    jw = Math.max(jw, combined);
+                    // Secondary always uses title|author when authors present so
+                    // author prefix differences break flat JW=1.0 ties.
+                    levLeft = combinedA;
+                    levRight = combinedB;
+                } else if (rawJw >= titleJw) {
+                    levLeft = va.strippedForCompare;
+                    levRight = vb.strippedForCompare;
+                } else {
+                    levLeft = normA;
+                    levRight = normB;
                 }
 
-                if (max > best.score) {
-                    best = new BestMatch(max, va.originalDisplay, vb.originalDisplay);
+                if (jw < SIMILARITY_THRESHOLD) {
+                    continue;
+                }
+
+                double lev = levenshteinSimilarity(levLeft, levRight);
+                double blended = blendScore(jw, lev);
+
+                if (blended > best.score
+                        || (blended == best.score && jw > best.primaryJw)) {
+                    best = new BestMatch(blended, jw, va.originalDisplay, vb.originalDisplay);
                 }
             }
         }
         return best;
+    }
+
+    /**
+     * Reported score: {@code JW_WEIGHT * primaryJw + LEV_WEIGHT * levSim} in [0, 1].
+     */
+    static double blendScore(double primaryJw, double levSim) {
+        double blended = JW_WEIGHT * primaryJw + LEV_WEIGHT * levSim;
+        if (blended < 0.0) {
+            return 0.0;
+        }
+        if (blended > 1.0) {
+            return 1.0;
+        }
+        return blended;
+    }
+
+    /**
+     * Character-level Levenshtein similarity: {@code 1 - distance / maxLen}.
+     */
+    static double levenshteinSimilarity(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
+        }
+        if (s1.equals(s2)) {
+            return 1.0;
+        }
+        if (s1.isEmpty() || s2.isEmpty()) {
+            return 0.0;
+        }
+        int dist = levenshteinDistance(s1, s2);
+        int maxLen = Math.max(s1.length(), s2.length());
+        return 1.0 - ((double) dist / (double) maxLen);
+    }
+
+    static int levenshteinDistance(String s1, String s2) {
+        int len1 = s1.length();
+        int len2 = s2.length();
+        // Two-row DP to keep memory small for long titles
+        int[] prev = new int[len2 + 1];
+        int[] curr = new int[len2 + 1];
+        for (int j = 0; j <= len2; j++) {
+            prev[j] = j;
+        }
+        for (int i = 1; i <= len1; i++) {
+            curr[0] = i;
+            char c1 = s1.charAt(i - 1);
+            for (int j = 1; j <= len2; j++) {
+                int cost = c1 == s2.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(
+                        Math.min(curr[j - 1] + 1, prev[j] + 1),
+                        prev[j - 1] + cost);
+            }
+            int[] swap = prev;
+            prev = curr;
+            curr = swap;
+        }
+        return prev[len2];
     }
 
     static String normalizeAuthor(String authorName) {
@@ -225,11 +327,11 @@ public class DuplicateTitleService {
         return min + ":" + max;
     }
 
-    private static double round4(double v) {
-        return Math.round(v * 10000.0) / 10000.0;
+    static double round6(double v) {
+        return Math.round(v * 1_000_000.0) / 1_000_000.0;
     }
 
-    private record BestMatch(double score, String matchedA, String matchedB) {
+    private record BestMatch(double score, double primaryJw, String matchedA, String matchedB) {
     }
 
     static final class BookEntry {

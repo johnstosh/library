@@ -802,7 +802,7 @@ export function DataManagementPage() {
                     {duplicateTitlesResult.pairs.map((pair) => (
                       <tr key={`${pair.bookAId}-${pair.bookBId}`}>
                         <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-amber-800">
-                          {pair.score.toFixed(3)}
+                          {pair.score.toFixed(6)}
                         </td>
                         <td className="px-4 py-3 align-top">
                           <Link

@@ -79,7 +79,7 @@ vi.mock('@/api/data-management', () => ({
     mutateAsync: vi.fn().mockResolvedValue({
       pairs: [
         {
-          score: 0.95,
+          score: 0.950123,
           bookAId: 1,
           bookATitle: 'Confessions',
           bookAAlternateTitle: null,
@@ -222,5 +222,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
     expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: WITHDRAWN')
     expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
+    // Score display uses 6 decimal places (not toFixed(3))
+    expect(screen.getByText('0.950123')).toBeInTheDocument()
   })
 })

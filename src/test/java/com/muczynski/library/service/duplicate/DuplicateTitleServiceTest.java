@@ -164,6 +164,67 @@ class DuplicateTitleServiceTest {
         }
     }
 
+    @Test
+    void exactSameFoldedTitleAndAuthorScoreIsOne() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(1L, "Jesus of Nazareth", null, "Joseph Ratzinger", BookStatus.ACTIVE),
+                // Different primary but shared alternate that matches exactly after fold
+                proj(2L, "Completely Unrelated Primary Alpha", "Jesus of Nazareth",
+                        "Joseph Ratzinger", BookStatus.ACTIVE)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getPairs().size());
+        double score = result.getPairs().get(0).getScore();
+        assertEquals(1.0, score, 1e-9,
+                "exact identical folded title+author must score 1.0, got " + score);
+    }
+
+    @Test
+    void authorPrefixDifferenceScoresBelowOneButAboveThreshold() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(1L, "Jesus of Nazareth", null, "Joseph Ratzinger", BookStatus.ACTIVE),
+                proj(2L, "Jesus of Nazareth", null,
+                        "Joseph Aloisius Ratzinger", BookStatus.ACTIVE)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getPairs().size(),
+                "near-identical title with author middle-name difference should still match");
+        double score = result.getPairs().get(0).getScore();
+        assertTrue(score < 1.0,
+                "author prefix difference must pull blended score below 1.0, got " + score);
+        assertTrue(score >= DuplicateTitleService.SIMILARITY_THRESHOLD,
+                "should remain above threshold, got " + score);
+        // Must expose finer-than-4dp usefulness (not a flat 1.0000)
+        String formatted = String.format(java.util.Locale.US, "%.6f", score);
+        assertNotEquals("1.000000", formatted);
+        assertTrue(formatted.length() >= 8, "formatted 6dp score should be useful: " + formatted);
+    }
+
+    @Test
+    void round6PreservesFinerThanFourDecimalPlaces() {
+        // 0.85*0.999999 + 0.15*0.999990 ≈ value that round4 would crush
+        double blended = DuplicateTitleService.blendScore(0.999999, 0.999990);
+        double r6 = DuplicateTitleService.round6(blended);
+        double r4 = Math.round(blended * 10000.0) / 10000.0;
+        assertNotEquals(r4, r6, 0.0);
+        // 6dp string must not collapse to 4 meaningful digits only
+        String s = String.format(java.util.Locale.US, "%.6f", r6);
+        assertTrue(s.matches("0\\.\\d{6}"), "expected 6 fractional digits, got " + s);
+    }
+
+    @Test
+    void levenshteinSimilarityIdenticalIsOne() {
+        assertEquals(1.0, DuplicateTitleService.levenshteinSimilarity("abc", "abc"));
+        assertEquals(0.0, DuplicateTitleService.levenshteinSimilarity("", "abc"));
+        assertTrue(DuplicateTitleService.levenshteinSimilarity("kitten", "sitting") < 1.0);
+    }
+
     private static BookRepository.DuplicateTitleProjection proj(
             Long id, String title, String alt, String author, BookStatus status) {
         return new BookRepository.DuplicateTitleProjection() {
