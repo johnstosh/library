@@ -521,19 +521,9 @@ public class ImportService {
             throw new LibraryException("Branch not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
         }
 
-        // Check if book with same title and author already exists
-        Book book;
-        if (author != null) {
-            List<Book> existingBooks = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bDto.getTitle(), author.getName());
-            book = existingBooks.isEmpty() ? null : existingBooks.get(0);
-        } else {
-            List<Book> existingBooks = bookRepository.findAllByTitleOrderByIdAsc(bDto.getTitle());
-            book = existingBooks.isEmpty() ? null : existingBooks.get(0);
-        }
-
-        if (book == null) {
-            book = new Book();
-        }
+        // Match by title only (uk_book_title uniquely constrains title). Take lowest id if any.
+        List<Book> existingBooks = bookRepository.findAllByTitleOrderByIdAsc(bDto.getTitle());
+        Book book = existingBooks.isEmpty() ? new Book() : existingBooks.get(0);
 
         // Update/merge fields from DTO (preserve exact semantics)
         book.setTitle(bDto.getTitle());

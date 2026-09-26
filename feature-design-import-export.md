@@ -161,7 +161,7 @@ The export format changed to use lightweight references instead of embedded obje
 - Matches entities by natural keys:
   - Branches: by name
   - Authors: by name
-  - Books: by title + author name
+  - Books: by title (not title+author; aligns with uk_book_title)
   - Users: by username
   - Loans: by book ID + user ID + loan date
   - Photos: by imageChecksum, permanentId, or book/author + photoOrder

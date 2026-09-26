@@ -954,4 +954,78 @@ class ImportControllerIntegrationTest {
     }
 
 
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_SameTitleDifferentAuthor_UpdatesExistingNoUniqueViolation() throws Exception {
+        // Seed book under Original Author (REQUIRES_NEW so follow-up import can see it).
+        String seedJson = """
+            {
+                "libraries": [{"branchName": "Title Merge Library", "librarySystemName": "Title Merge System"}],
+                "authors": [
+                    {"name": "Title Merge Original Author"},
+                    {"name": "Title Merge Different Author"}
+                ],
+                "users": [],
+                "books": [{
+                    "title": "Title Merge Shared Book",
+                    "libraryName": "Title Merge Library",
+                    "authorName": "Title Merge Original Author",
+                    "publicationYear": 1999,
+                    "publisher": "Original Publisher",
+                    "status": "ACTIVE"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(seedJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Book before = bookRepository.findAllByTitleOrderByIdAsc("Title Merge Shared Book").get(0);
+        Long existingId = before.getId();
+        long countBefore = bookRepository.findAllByTitleOrderByIdAsc("Title Merge Shared Book").size();
+        org.junit.jupiter.api.Assertions.assertEquals(1L, countBefore);
+
+        // Re-import same title with a different author — must update, not insert (uk_book_title / 23505).
+        String differentAuthorJson = """
+            {
+                "libraries": [{"branchName": "Title Merge Library", "librarySystemName": "Title Merge System"}],
+                "authors": [
+                    {"name": "Title Merge Original Author"},
+                    {"name": "Title Merge Different Author"}
+                ],
+                "users": [],
+                "books": [{
+                    "title": "Title Merge Shared Book",
+                    "libraryName": "Title Merge Library",
+                    "authorName": "Title Merge Different Author",
+                    "publicationYear": 2001,
+                    "publisher": "Updated Publisher",
+                    "status": "ACTIVE"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(differentAuthorJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        java.util.List<Book> afterList = bookRepository.findAllByTitleOrderByIdAsc("Title Merge Shared Book");
+        org.junit.jupiter.api.Assertions.assertEquals(1, afterList.size(),
+                "Same title must merge into one row (no uk_book_title / 23505 duplicate insert)");
+        Book after = afterList.get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(existingId, after.getId(), "Must update existing lowest-id row");
+        org.junit.jupiter.api.Assertions.assertEquals("Title Merge Different Author", after.getAuthor().getName(),
+                "Author should be overwritten when DTO provides one");
+        org.junit.jupiter.api.Assertions.assertEquals(2001, after.getPublicationYear());
+        org.junit.jupiter.api.Assertions.assertEquals("Updated Publisher", after.getPublisher());
+    }
+
 }
