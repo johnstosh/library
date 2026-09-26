@@ -163,4 +163,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE a.id IN :ids")
     List<AuthorSummaryProjection> findSummariesByIds(@Param("ids") List<Long> ids);
+
+    /** Keyset id page for chunked JSON export. */
+    @Query("SELECT a.id FROM Author a WHERE a.id > :lastId ORDER BY a.id ASC")
+    List<Long> findAuthorIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 }

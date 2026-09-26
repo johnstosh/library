@@ -5,6 +5,7 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -31,4 +32,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u.email FROM User u JOIN u.authorities a "
             + "WHERE a.name = 'LIBRARIAN' AND u.email IS NOT NULL AND u.email <> ''")
     List<String> findLibrarianEmails();
+
+    /** Keyset id page for chunked JSON export. */
+    @Query("SELECT u.id FROM User u WHERE u.id > :lastId ORDER BY u.id ASC")
+    List<Long> findUserIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 }

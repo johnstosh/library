@@ -4,6 +4,13 @@ import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tansta
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import { streamJsonImportChunks } from './jsonImportChunker'
+import {
+  runChunkedJsonExport,
+  type ExportChunk,
+  type ExportChunkPlan,
+  type JsonExportProgress,
+} from './jsonExportAssembler'
+import { fetchComplete, readCompleteJson } from './fetchWithCompleteBody'
 
 export interface ImportExportStats {
   branches: number
@@ -140,17 +147,54 @@ export interface PhotoZipPartDto {
   endKey: string
 }
 
-// Export JSON data
-export async function exportJsonData(): Promise<Blob> {
-  const response = await fetch('/api/import/json', {
+export type { JsonExportProgress, ExportChunkPlan, ExportChunk } from './jsonExportAssembler'
+
+async function fetchExportChunkPlan(): Promise<ExportChunkPlan> {
+  const response = await fetchComplete('/api/import/json/chunk-plan', {
     credentials: 'include',
   })
-
   if (!response.ok) {
-    throw new Error('Failed to export data')
+    throw new Error(`Failed to load export plan (HTTP ${response.status})`)
   }
+  return readCompleteJson<ExportChunkPlan>(response)
+}
 
-  return response.blob()
+async function fetchExportChunk(
+  section: string,
+  afterId: number,
+  limit: number,
+): Promise<ExportChunk> {
+  const params = new URLSearchParams({
+    section,
+    afterId: String(afterId),
+    limit: String(limit),
+  })
+  const response = await fetchComplete(`/api/import/json/chunk?${params}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    throw new Error(
+      `Failed to export "${section}" chunk afterId=${afterId} (HTTP ${response.status})`,
+    )
+  }
+  return readCompleteJson<ExportChunk>(response)
+}
+
+/**
+ * Chunked JSON export: ~33 sequential GETs with progress, assembled into one Blob.
+ * Fails loudly if any chunk fails or assembled section counts mismatch the plan.
+ * Full streaming GET /api/import/json remains available for tests/tools.
+ */
+export async function exportJsonData(
+  onProgress?: (progress: Omit<JsonExportProgress, 'isExporting'>) => void,
+): Promise<Blob> {
+  return runChunkedJsonExport(
+    {
+      fetchPlan: fetchExportChunkPlan,
+      fetchChunk: fetchExportChunk,
+    },
+    onProgress,
+  )
 }
 
 export interface JsonImportProgress {
@@ -190,7 +234,7 @@ function addCounts(
 
 /**
  * Chunked JSON import: streams the file client-side into ~33 sequential POSTs.
- * No auto-retry / resume. Progress is bytesRead/file.size.
+ * Retries each POST a few times (upsert-safe). Progress is bytesRead/file.size.
  */
 export async function importJsonDataChunked(
   file: File,
@@ -204,7 +248,7 @@ export async function importJsonDataChunked(
   for await (const chunk of streamJsonImportChunks(file)) {
     onProgress?.(chunk.bytesRead, file.size)
 
-    const response = await fetch('/api/import/json', {
+    const response = await fetchComplete('/api/import/json', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -213,7 +257,7 @@ export async function importJsonDataChunked(
 
     let payload: ImportResponseDto | null = null
     try {
-      payload = (await response.json()) as ImportResponseDto
+      payload = await readCompleteJson<ImportResponseDto>(response)
     } catch {
       payload = null
     }
@@ -235,13 +279,18 @@ export async function importJsonDataChunked(
 
   if (!anySuccess) {
     // Empty file / no sections — still hit the endpoint once with {}
-    const response = await fetch('/api/import/json', {
+    const response = await fetchComplete('/api/import/json', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     })
-    const payload = (await response.json()) as ImportResponseDto
+    let payload: ImportResponseDto
+    try {
+      payload = await readCompleteJson<ImportResponseDto>(response)
+    } catch {
+      throw new Error(`Import failed with HTTP ${response.status}`)
+    }
     if (!response.ok || !payload.success) {
       throw new Error(payload.message || 'Import failed')
     }

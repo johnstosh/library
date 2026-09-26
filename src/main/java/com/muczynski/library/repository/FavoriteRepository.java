@@ -5,6 +5,7 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Favorite;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -47,4 +48,22 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
     @Query("SELECT DISTINCT f FROM Favorite f JOIN FETCH f.user LEFT JOIN FETCH f.book LEFT JOIN FETCH f.book.author LEFT JOIN FETCH f.author")
     List<Favorite> findAllWithRefs();
+
+    /** Exportable favorites count (matches streamExportJson filters). */
+    @Query("SELECT COUNT(f) FROM Favorite f WHERE f.user IS NOT NULL "
+            + "AND f.listName IS NOT NULL AND TRIM(f.listName) <> '' "
+            + "AND (f.book IS NOT NULL OR f.author IS NOT NULL)")
+    long countExportable();
+
+    /** Keyset id page for chunked JSON export (exportable rows only). */
+    @Query("SELECT f.id FROM Favorite f WHERE f.id > :lastId "
+            + "AND f.user IS NOT NULL AND f.listName IS NOT NULL AND TRIM(f.listName) <> '' "
+            + "AND (f.book IS NOT NULL OR f.author IS NOT NULL) "
+            + "ORDER BY f.id ASC")
+    List<Long> findFavoriteIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    @Query("SELECT DISTINCT f FROM Favorite f JOIN FETCH f.user "
+            + "LEFT JOIN FETCH f.book LEFT JOIN FETCH f.book.author LEFT JOIN FETCH f.author "
+            + "WHERE f.id IN :ids ORDER BY f.id ASC")
+    List<Favorite> findFavoritesByIdsWithRefs(@Param("ids") List<Long> ids);
 }

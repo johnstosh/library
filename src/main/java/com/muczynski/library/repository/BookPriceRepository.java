@@ -7,6 +7,7 @@ import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookSummaryDto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -53,4 +54,12 @@ public interface BookPriceRepository extends JpaRepository<BookPrice, Long> {
             + "WHERE p.priceDollars IS NOT NULL "
             + "AND (p.lookupError IS NULL OR p.lookupError = '')")
     long countDistinctBooksWithValidPrices();
+
+    /** Prices with a book and cover (matches streamExportJson filters). */
+    @Query("SELECT COUNT(p) FROM BookPrice p WHERE p.book IS NOT NULL AND p.cover IS NOT NULL")
+    long countExportable();
+
+    @Query("SELECT p.id FROM BookPrice p WHERE p.id > :lastId "
+            + "AND p.book IS NOT NULL AND p.cover IS NOT NULL ORDER BY p.id ASC")
+    List<Long> findPriceIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 }

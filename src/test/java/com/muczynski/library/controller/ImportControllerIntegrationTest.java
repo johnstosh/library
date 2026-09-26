@@ -634,6 +634,77 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(books.size() > 0, "Book should exist");
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_LoanUpsertOnBookUserLoanDate() throws Exception {
+        // uk_loan_book_user_date: re-importing the same (book, user, loan_date) must update, not INSERT-fail.
+        String firstImport = """
+            {
+                "libraries": [{"branchName": "Upsert Loan Library", "librarySystemName": "Upsert Loan System"}],
+                "authors": [{"name": "Upsert Loan Author"}],
+                "users": [{"username": "upsertloanuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "Upsert Loan Book",
+                    "libraryName": "Upsert Loan Library",
+                    "authorName": "Upsert Loan Author"
+                }],
+                "loans": [{
+                    "loanDate": "2025-11-26",
+                    "dueDate": "2025-12-10",
+                    "bookTitle": "Upsert Loan Book",
+                    "bookAuthorName": "Upsert Loan Author",
+                    "username": "upsertloanuser"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Book book = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Upsert Loan Book", "Upsert Loan Author").get(0);
+        User user = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("upsertloanuser").get(0);
+        java.util.Optional<Loan> first = loanRepository.findByBookIdAndUserIdAndLoanDate(
+                book.getId(), user.getId(), LocalDate.of(2025, 11, 26));
+        org.junit.jupiter.api.Assertions.assertTrue(first.isPresent(), "Loan should exist after first import");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(2025, 12, 10), first.get().getDueDate());
+        org.junit.jupiter.api.Assertions.assertNull(first.get().getReturnDate());
+        long loanId = first.get().getId();
+        long loanCountAfterFirst = loanRepository.count();
+
+        String secondImport = """
+            {
+                "loans": [{
+                    "loanDate": "2025-11-26",
+                    "dueDate": "2025-12-24",
+                    "returnDate": "2025-12-01",
+                    "bookTitle": "Upsert Loan Book",
+                    "bookAuthorName": "Upsert Loan Author",
+                    "username": "upsertloanuser"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        java.util.Optional<Loan> second = loanRepository.findByBookIdAndUserIdAndLoanDate(
+                book.getId(), user.getId(), LocalDate.of(2025, 11, 26));
+        org.junit.jupiter.api.Assertions.assertTrue(second.isPresent(), "Loan should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertEquals(loanId, second.get().getId(), "Same loan row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(2025, 12, 24), second.get().getDueDate());
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(2025, 12, 1), second.get().getReturnDate());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                loanCountAfterFirst,
+                loanRepository.count(),
+                "Re-import must not create a duplicate loan row");
+    }
+
     // ==================== GET /api/import/availability-stats Integration Tests ====================
 
     @Test

@@ -7,6 +7,8 @@ import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.FavoriteListCountDto;
 import com.muczynski.library.dto.LabelCountDto;
+import com.muczynski.library.dto.importdtos.ExportChunkDto;
+import com.muczynski.library.dto.importdtos.ExportChunkPlanDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.FavoriteService;
 import com.muczynski.library.service.ImportService;
@@ -21,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -70,6 +73,32 @@ public class ImportController {
             throw new RuntimeException("Export failed", e);
         }
     }
+
+
+    /**
+     * Plan for chunked JSON export used by Data Management (~33 sequential GETs).
+     * Full streaming export remains at GET /api/import/json.
+     */
+    @GetMapping("/json/chunk-plan")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<ExportChunkPlanDto> exportChunkPlan() {
+        return ResponseEntity.ok(importService.exportChunkPlan());
+    }
+
+    /**
+     * One keyset page of a catalog section for chunked JSON export.
+     * Query params: section (libraries|authors|users|books|loans|photos|favorites|prices),
+     * afterId (exclusive, default 0), limit (page size).
+     */
+    @GetMapping("/json/chunk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<ExportChunkDto> exportChunk(
+            @RequestParam("section") String section,
+            @RequestParam(value = "afterId", defaultValue = "0") long afterId,
+            @RequestParam(value = "limit", defaultValue = "50") int limit) {
+        return ResponseEntity.ok(importService.exportChunk(section, afterId, limit));
+    }
+
 
     /**
      * Database statistics for the Data Management page.
