@@ -2,7 +2,7 @@
 /**
  * Streaming JSON import chunker for large catalog POSTs.
  * Reads via file.stream() and never JSON.parse()s the whole file.
- * Emits sequential request bodies (~fileSize/11) so Cloud Run stays under 600s.
+ * Emits sequential request bodies (~fileSize/33) so Cloud Run stays under 600s.
  * Every top-level array (libraries, authors, users, books, loans, photos,
  * favorites, prices) is split by the same byte budget — authors alone may
  * span multiple POSTs.
@@ -37,7 +37,7 @@ export interface JsonImportChunk {
 }
 
 export function computeTargetBytes(fileSize: number): number {
-  return Math.max(64 * 1024, Math.floor(fileSize / 11))
+  return Math.max(64 * 1024, Math.floor(fileSize / 33))
 }
 
 function concatBytes(parts: Uint8Array[]): Uint8Array {
@@ -312,7 +312,7 @@ export async function* iterateTopLevelArrayElements(
 
 /**
  * Stream a catalog export File into POST-sized JSON bodies.
- * Every known top-level array is chunked by the same byte budget (~fileSize/11,
+ * Every known top-level array is chunked by the same byte budget (~fileSize/33,
  * min 64KiB). A single POST may contain one or more consecutive sections;
  * a large section (e.g. authors) may span multiple POSTs. Section order is
  * preserved across requests: libraries → authors → users → books → …

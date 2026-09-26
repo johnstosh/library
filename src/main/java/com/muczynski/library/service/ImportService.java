@@ -216,6 +216,7 @@ public class ImportService {
     }
 
     private <T> void commitBatch(List<T> batch, String entityType, Map<?, ?> mapToRefresh, ImportResponseDto.ImportCounts counts, Consumer<T> itemProcessor) {
+        long started = System.currentTimeMillis();
         transactionTemplate.execute(status -> {
             for (T dto : batch) {
                 itemProcessor.accept(dto);
@@ -231,6 +232,8 @@ public class ImportService {
         if (mapToRefresh != null) {
             refreshMapAfterClear(entityType, mapToRefresh);
         }
+        logger.info("Import batch committed: entityType={}, size={}, elapsedMs={}",
+                entityType, batch.size(), System.currentTimeMillis() - started);
     }
 
     private void incrementCount(ImportResponseDto.ImportCounts counts, String entityType) {
@@ -249,7 +252,8 @@ public class ImportService {
     /**
      * Prefill lookup maps from existing DB rows so partial JSON bodies (e.g. books-only
      * chunks after a prelude POST) can resolve libraries/authors/users.
-     * Same keying as {@link #refreshMapAfterClear}.
+     * Same keying as {@link #refreshMapAfterClear} (authors are id+name stubs only —
+     * no OID LOB essay loads).
      * Runs in REQUIRES_NEW so we do not join/auto-flush an ambient test (or request)
      * transaction — that would lock rows and deadlock subsequent batch inserts.
      */
@@ -265,6 +269,12 @@ public class ImportService {
         entityManager.clear();
     }
 
+    /**
+     * Rebuild lookup maps after {@link EntityManager#clear()}.
+     * Authors use id+name projections only — never {@code findAll()} on Author,
+     * which would load PostgreSQL OID LOB essays and stall Cloud Run (~600s).
+     * Stubs with id set are enough for {@code book.setAuthor(...)} FK writes.
+     */
     private void refreshMapAfterClear(String entityType, Map<?, ?> mapToRefresh) {
         if ("branches".equals(entityType)) {
             @SuppressWarnings("unchecked")
@@ -277,8 +287,9 @@ public class ImportService {
             @SuppressWarnings("unchecked")
             Map<String, Author> m = (Map<String, Author>) mapToRefresh;
             m.clear();
-            for (Author a : authorRepository.findAll()) {
-                m.put(a.getName(), a);
+            // AuthorZipImportProjection skips @Lob biographicalEssay / affiliation fields
+            for (AuthorZipImportProjection p : authorRepository.findBy()) {
+                m.put(p.getName(), authorStub(p.getId(), p.getName()));
             }
         } else if ("users".equals(entityType)) {
             @SuppressWarnings("unchecked")
@@ -289,6 +300,14 @@ public class ImportService {
             }
         }
         // other maps not used after their section or refreshed on-demand in process*
+    }
+
+    /** Detached id+name stub for FK resolution without retaining OID LOB payloads in the map. */
+    private static Author authorStub(Long id, String name) {
+        Author stub = new Author();
+        stub.setId(id);
+        stub.setName(name);
+        return stub;
     }
 
     private Class<?> getDtoClassFor(String entityType) {
@@ -363,7 +382,8 @@ public class ImportService {
         auth.setBiographicalEssay(aDto.getBriefBiography());
         auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
         auth = authorRepository.save(auth);
-        authorMap.put(aDto.getName(), auth);
+        // Keep map LOB-free so post-clear refresh / heap do not retain essay text
+        authorMap.put(aDto.getName(), authorStub(auth.getId(), auth.getName()));
     }
 
     private void processUser(ImportUserDto uDto, Map<String, User> userMap, ImportResponseDto.ImportCounts counts) {

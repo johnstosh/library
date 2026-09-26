@@ -41,15 +41,15 @@ describe('computeTargetBytes', () => {
     expect(computeTargetBytes(1000)).toBe(64 * 1024)
   })
 
-  it('uses floor(fileSize/11) when larger than 64KiB', () => {
-    const size = 11 * 100_000
+  it('uses floor(fileSize/33) when larger than 64KiB', () => {
+    const size = 33 * 100_000
     expect(computeTargetBytes(size)).toBe(100_000)
   })
 
-  it('targets about 11 pieces for a multi-megabyte catalog', () => {
-    const size = 11 * 200_000 // ~2.2 MiB
+  it('targets about 33 pieces for a multi-megabyte catalog', () => {
+    const size = 33 * 200_000 // ~6.6 MiB
     expect(computeTargetBytes(size)).toBe(200_000)
-    expect(Math.ceil(size / computeTargetBytes(size))).toBe(11)
+    expect(Math.ceil(size / computeTargetBytes(size))).toBe(33)
   })
 })
 
@@ -204,17 +204,17 @@ describe('collectJsonImportChunks', () => {
     })
   })
 
-  it('aims for roughly 11 chunks on a large synthetic catalog', async () => {
-    // Need fileSize/11 > 64KiB => fileSize > 720KiB so the /11 budget (not the floor) applies
+  it('aims for roughly 33 chunks on a large synthetic catalog', async () => {
+    // Need fileSize/33 > 64KiB => fileSize > 2112KiB so the /33 budget (not the floor) applies
     const pad = 'x'.repeat(2000)
-    const books = Array.from({ length: 500 }, (_, i) => ({
+    const books = Array.from({ length: 1500 }, (_, i) => ({
       title: `Book ${i} ${pad}`,
       libraryName: 'Lib',
       authorName: 'Auth',
     }))
     const json = JSON.stringify({
       libraries: [{ branchName: 'Lib', librarySystemName: 'Sys' }],
-      authors: Array.from({ length: 80 }, (_, i) => ({ name: `Auth ${i} ${pad}` })),
+      authors: Array.from({ length: 200 }, (_, i) => ({ name: `Auth ${i} ${pad}` })),
       users: [{ username: 'alice' }],
       books,
       loans: [],
@@ -223,14 +223,14 @@ describe('collectJsonImportChunks', () => {
       prices: [],
     })
     const file = fileFrom(json)
-    expect(file.size).toBeGreaterThan(11 * 64 * 1024)
+    expect(file.size).toBeGreaterThan(33 * 64 * 1024)
     const target = computeTargetBytes(file.size)
-    expect(target).toBe(Math.floor(file.size / 11))
+    expect(target).toBe(Math.floor(file.size / 33))
     expect(target).toBeGreaterThan(64 * 1024)
 
     const chunks = await collectJsonImportChunks(file)
-    // Allow some slack: remainder / section boundaries can nudge off exact 11
-    expect(chunks.length).toBeGreaterThanOrEqual(8)
-    expect(chunks.length).toBeLessThanOrEqual(14)
+    // Allow some slack: remainder / section boundaries can nudge off exact 33
+    expect(chunks.length).toBeGreaterThanOrEqual(25)
+    expect(chunks.length).toBeLessThanOrEqual(40)
   })
 })
