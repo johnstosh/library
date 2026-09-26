@@ -189,7 +189,7 @@ function addCounts(
 }
 
 /**
- * Chunked JSON import: streams the file client-side into ~33 sequential POSTs.
+ * Chunked JSON import: streams the file client-side into ~11 sequential POSTs.
  * No auto-retry / resume. Progress is bytesRead/file.size.
  */
 export async function importJsonDataChunked(

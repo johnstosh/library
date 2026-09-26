@@ -2,28 +2,42 @@
 /**
  * Streaming JSON import chunker for large catalog POSTs.
  * Reads via file.stream() and never JSON.parse()s the whole file.
- * Emits sequential request bodies (~fileSize/33) so Cloud Run stays under 600s.
+ * Emits sequential request bodies (~fileSize/11) so Cloud Run stays under 600s.
+ * Every top-level array (libraries, authors, users, books, loans, photos,
+ * favorites, prices) is split by the same byte budget — authors alone may
+ * span multiple POSTs.
  */
 
 const TEXT_ENCODER = new TextEncoder()
 const TEXT_DECODER = new TextDecoder()
 
-const PRELUDE_KEYS = new Set(['libraries', 'authors', 'users', 'branches'])
-const BOOK_KEY = 'books'
-const TRAILING_KEYS = new Set(['loans', 'photos', 'favorites', 'prices'])
+/** Canonical section order for catalog export/import JSON. */
+const SECTION_KEYS = [
+  'libraries',
+  'authors',
+  'users',
+  'books',
+  'loans',
+  'photos',
+  'favorites',
+  'prices',
+] as const
 
-export type JsonImportChunkKind = 'prelude' | 'books' | 'trailing'
+const KNOWN_KEYS = new Set<string>([...SECTION_KEYS, 'branches'])
+
+export type JsonImportChunkKind = string
 
 export interface JsonImportChunk {
   /** Compact JSON object body for one POST /api/import/json */
   body: Uint8Array
   /** Bytes of the source file consumed when this chunk became ready */
   bytesRead: number
+  /** Section key(s) in this body, joined with '+' (e.g. "authors" or "libraries+authors") */
   kind: JsonImportChunkKind
 }
 
 export function computeTargetBytes(fileSize: number): number {
-  return Math.max(64 * 1024, Math.floor(fileSize / 33))
+  return Math.max(64 * 1024, Math.floor(fileSize / 11))
 }
 
 function concatBytes(parts: Uint8Array[]): Uint8Array {
@@ -41,6 +55,7 @@ function buildObjectBody(sections: Map<string, Uint8Array[]>): Uint8Array {
   const parts: Uint8Array[] = [TEXT_ENCODER.encode('{')]
   let firstKey = true
   for (const [key, elements] of sections) {
+    if (elements.length === 0) continue
     if (!firstKey) parts.push(TEXT_ENCODER.encode(','))
     firstKey = false
     parts.push(TEXT_ENCODER.encode(JSON.stringify(key)))
@@ -53,6 +68,14 @@ function buildObjectBody(sections: Map<string, Uint8Array[]>): Uint8Array {
   }
   parts.push(TEXT_ENCODER.encode('}'))
   return concatBytes(parts)
+}
+
+function normalizeKey(key: string): string {
+  return key === 'branches' ? 'libraries' : key
+}
+
+function chunkKind(sections: Map<string, Uint8Array[]>): string {
+  return [...sections.keys()].filter((k) => (sections.get(k)?.length ?? 0) > 0).join('+')
 }
 
 export interface TopLevelArrayEvent {
@@ -288,10 +311,11 @@ export async function* iterateTopLevelArrayElements(
 }
 
 /**
- * Stream a catalog export File into POST-sized JSON bodies:
- * 1) one prelude with libraries/authors/users (whichever present)
- * 2) sequential {"books":[...]} chunks targeting ~fileSize/33 bytes (min 64KiB)
- * 3) one trailing body with loans/photos/favorites/prices
+ * Stream a catalog export File into POST-sized JSON bodies.
+ * Every known top-level array is chunked by the same byte budget (~fileSize/11,
+ * min 64KiB). A single POST may contain one or more consecutive sections;
+ * a large section (e.g. authors) may span multiple POSTs. Section order is
+ * preserved across requests: libraries → authors → users → books → …
  */
 export async function* streamJsonImportChunks(
   file: File,
@@ -299,109 +323,49 @@ export async function* streamJsonImportChunks(
 ): AsyncGenerator<JsonImportChunk> {
   const targetBytes = options?.targetBytes ?? computeTargetBytes(file.size)
 
-  const prelude = new Map<string, Uint8Array[]>()
-  const trailing = new Map<string, Uint8Array[]>()
-  let bookBatch: Uint8Array[] = []
-  let bookBatchBytes = 0
-  let preludeEmitted = false
+  let batch = new Map<string, Uint8Array[]>()
+  let batchBytes = 0
   let lastBytesRead = 0
 
-  const emitPrelude = (bytesRead: number): JsonImportChunk | null => {
-    if (preludeEmitted) return null
-    preludeEmitted = true
-    if (prelude.size === 0) return null
-    return { body: buildObjectBody(prelude), bytesRead, kind: 'prelude' }
-  }
-
-  const flushBooks = (bytesRead: number): JsonImportChunk | null => {
-    if (bookBatch.length === 0) return null
-    const sections = new Map<string, Uint8Array[]>()
-    sections.set(BOOK_KEY, bookBatch)
-    const chunk: JsonImportChunk = {
-      body: buildObjectBody(sections),
-      bytesRead,
-      kind: 'books',
+  const flush = (bytesRead: number): JsonImportChunk | null => {
+    const nonEmpty = new Map<string, Uint8Array[]>()
+    for (const [key, elements] of batch) {
+      if (elements.length > 0) nonEmpty.set(key, elements)
     }
-    bookBatch = []
-    bookBatchBytes = 0
+    if (nonEmpty.size === 0) {
+      batch = new Map()
+      batchBytes = 0
+      return null
+    }
+    const chunk: JsonImportChunk = {
+      body: buildObjectBody(nonEmpty),
+      bytesRead,
+      kind: chunkKind(nonEmpty),
+    }
+    batch = new Map()
+    batchBytes = 0
     return chunk
-  }
-
-  const ensureSection = (map: Map<string, Uint8Array[]>, key: string) => {
-    if (!map.has(key)) map.set(key, [])
   }
 
   for await (const { key, element, bytesRead, arrayEnded } of iterateTopLevelArrayElements(file)) {
     lastBytesRead = bytesRead
-    const normalizedKey = key === 'branches' ? 'libraries' : key
+    if (arrayEnded) continue
+    if (!KNOWN_KEYS.has(key)) continue
 
-    if (arrayEnded) {
-      if (PRELUDE_KEYS.has(key) || PRELUDE_KEYS.has(normalizedKey)) {
-        ensureSection(prelude, normalizedKey)
-        continue
-      }
-      if (key === BOOK_KEY) {
-        const pre = emitPrelude(bytesRead)
-        if (pre) yield pre
-        const books = flushBooks(bytesRead)
-        if (books) yield books
-        continue
-      }
-      if (TRAILING_KEYS.has(key)) {
-        const pre = emitPrelude(bytesRead)
-        if (pre) yield pre
-        const books = flushBooks(bytesRead)
-        if (books) yield books
-        ensureSection(trailing, key)
-        continue
-      }
-      continue
-    }
+    const normalizedKey = normalizeKey(key)
 
-    if (PRELUDE_KEYS.has(key) || PRELUDE_KEYS.has(normalizedKey)) {
-      const list = prelude.get(normalizedKey) ?? []
-      list.push(element)
-      prelude.set(normalizedKey, list)
-      continue
-    }
+    if (!batch.has(normalizedKey)) batch.set(normalizedKey, [])
+    batch.get(normalizedKey)!.push(element)
+    batchBytes += element.length
 
-    if (key === BOOK_KEY) {
-      const pre = emitPrelude(bytesRead)
-      if (pre) yield pre
-
-      bookBatch.push(element)
-      bookBatchBytes += element.length
-      if (bookBatchBytes >= targetBytes) {
-        const books = flushBooks(bytesRead)
-        if (books) yield books
-      }
-      continue
-    }
-
-    if (TRAILING_KEYS.has(key)) {
-      const pre = emitPrelude(bytesRead)
-      if (pre) yield pre
-      const books = flushBooks(bytesRead)
-      if (books) yield books
-
-      const list = trailing.get(key) ?? []
-      list.push(element)
-      trailing.set(key, list)
-      continue
+    if (batchBytes >= targetBytes) {
+      const chunk = flush(bytesRead)
+      if (chunk) yield chunk
     }
   }
 
-  const pre = emitPrelude(lastBytesRead || file.size)
-  if (pre) yield pre
-  const books = flushBooks(lastBytesRead || file.size)
-  if (books) yield books
-  if (trailing.size > 0) {
-    yield {
-      body: buildObjectBody(trailing),
-      bytesRead: lastBytesRead || file.size,
-      kind: 'trailing',
-    }
-  }
+  const remaining = flush(lastBytesRead || file.size)
+  if (remaining) yield remaining
 }
 
 /** Collect all chunks (for tests / callers that prefer an array). */
