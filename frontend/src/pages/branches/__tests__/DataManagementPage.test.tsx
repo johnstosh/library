@@ -9,6 +9,7 @@ vi.mock('@/api/data-management', () => ({
   useImportJsonData: () => ({
     mutateAsync: vi.fn(),
     isPending: false,
+    progress: { percentage: 0, bytesRead: 0, totalBytes: 0, isImporting: false },
   }),
   useDatabaseStats: () => ({
     data: {

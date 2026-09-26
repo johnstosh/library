@@ -125,6 +125,10 @@ public class ImportService {
         Map<String, Author> authorMap = new HashMap<>();
         Map<String, User> userMap = new HashMap<>();
 
+        // Seed maps from DB so book-only (and other partial) chunks resolve FKs without
+        // re-sending libraries/authors/users in every POST.
+        seedMapsFromDatabase(branchMap, authorMap, userMap);
+
         JsonFactory jsonFactory = new JsonFactory();
         try (JsonParser parser = jsonFactory.createParser(inputStream)) {
             // Advance to START_OBJECT
@@ -240,6 +244,25 @@ public class ImportService {
             case "favorites" -> counts.setFavorites(counts.getFavorites() + 1);
             case "prices" -> counts.setPrices(counts.getPrices() + 1);
         }
+    }
+
+    /**
+     * Prefill lookup maps from existing DB rows so partial JSON bodies (e.g. books-only
+     * chunks after a prelude POST) can resolve libraries/authors/users.
+     * Same keying as {@link #refreshMapAfterClear}.
+     * Runs in REQUIRES_NEW so we do not join/auto-flush an ambient test (or request)
+     * transaction — that would lock rows and deadlock subsequent batch inserts.
+     */
+    private void seedMapsFromDatabase(Map<String, Library> branchMap,
+                                      Map<String, Author> authorMap,
+                                      Map<String, User> userMap) {
+        transactionTemplate.execute(status -> {
+            refreshMapAfterClear("branches", branchMap);
+            refreshMapAfterClear("authors", authorMap);
+            refreshMapAfterClear("users", userMap);
+            return null;
+        });
+        entityManager.clear();
     }
 
     private void refreshMapAfterClear(String entityType, Map<?, ?> mapToRefresh) {

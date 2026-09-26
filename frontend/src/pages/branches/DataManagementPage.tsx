@@ -88,7 +88,7 @@ export function DataManagementPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
-  const importJsonData = useImportJsonData()
+  const { progress: jsonImportProgress, ...importJsonData } = useImportJsonData()
   const { progress: zipUploadProgress, ...importPhotosFromZip } = useImportPhotosFromZipChunked()
 
   // Fetch database statistics (total counts from backend)
@@ -418,7 +418,9 @@ export function DataManagementPage() {
                   leftIcon={<PiUpload />}
                   data-test="import-json"
                 >
-                  Import JSON
+                  {importJsonData.isPending
+                    ? `Import JSON (${Math.round(jsonImportProgress.percentage)}%)`
+                    : 'Import JSON'}
                 </Button>
               </div>
             </div>
