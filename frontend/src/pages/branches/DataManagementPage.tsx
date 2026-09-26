@@ -274,9 +274,8 @@ export function DataManagementPage() {
       setDuplicateTitlesResult(result)
       if (result.error) {
         setErrorMessage(result.error)
-      } else if (result.message) {
-        setSuccessMessage(result.message)
       }
+      // Do not surface result.message as a success banner (no score/threshold language).
     } catch (error) {
       console.error('Failed to find duplicate titles:', error)
       const msg = error instanceof Error ? error.message : 'Find duplicates failed'
@@ -767,10 +766,12 @@ export function DataManagementPage() {
               Find
             </Button>
             {duplicateTitlesResult && !duplicateTitlesResult.error && (
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600" data-test="duplicate-titles-scan-summary">
                 Scanned {duplicateTitlesResult.booksScanned} books
-                ({duplicateTitlesResult.representativesCompared} representatives).{' '}
-                {duplicateTitlesResult.message}
+                ({duplicateTitlesResult.representativesCompared} representatives).
+                {duplicateTitlesResult.pairs.length > 0
+                  ? ` ${duplicateTitlesResult.pairs.length} pairs found.`
+                  : ''}
               </span>
             )}
           </div>
@@ -787,9 +788,6 @@ export function DataManagementPage() {
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                        Score
-                      </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Book A
                       </th>
@@ -801,13 +799,11 @@ export function DataManagementPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {duplicateTitlesResult.pairs.map((pair) => (
                       <tr key={`${pair.bookAId}-${pair.bookBId}`}>
-                        <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-amber-800">
-                          {pair.score.toFixed(6)}
-                        </td>
                         <td className="px-4 py-3 align-top">
                           <Link
-                            to={`/books?q=${encodeURIComponent(pair.bookATitle || String(pair.bookAId))}&mostRecent=false`}
+                            to={`/books/${pair.bookAId}`}
                             className="text-indigo-700 hover:underline font-medium"
+                            data-test={`dup-book-a-link-${pair.bookAId}`}
                           >
                             #{pair.bookAId} {pair.bookATitle || '(no title)'}
                           </Link>
@@ -827,8 +823,9 @@ export function DataManagementPage() {
                         </td>
                         <td className="px-4 py-3 align-top">
                           <Link
-                            to={`/books?q=${encodeURIComponent(pair.bookBTitle || String(pair.bookBId))}&mostRecent=false`}
+                            to={`/books/${pair.bookBId}`}
                             className="text-indigo-700 hover:underline font-medium"
+                            data-test={`dup-book-b-link-${pair.bookBId}`}
                           >
                             #{pair.bookBId} {pair.bookBTitle || '(no title)'}
                           </Link>

@@ -94,7 +94,7 @@ vi.mock('@/api/data-management', () => ({
       ],
       booksScanned: 10,
       representativesCompared: 9,
-      message: 'Found 1 near-duplicate pair(s).',
+      message: '1 pairs found.',
     }),
     isPending: false,
   }),
@@ -211,7 +211,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
   })
 
-  it('shows book status in results and does not show Matched lines', async () => {
+  it('shows book status in results, links to book pages, and hides scores', async () => {
     renderPage()
 
     fireEvent.click(screen.getByTestId('find-duplicate-titles'))
@@ -222,7 +222,17 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
     expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: WITHDRAWN')
     expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
-    // Score display uses 6 decimal places (not toFixed(3))
-    expect(screen.getByText('0.950123')).toBeInTheDocument()
+    // No Score column or numeric score display
+    expect(screen.queryByText('Score')).not.toBeInTheDocument()
+    expect(screen.queryByText('0.950123')).not.toBeInTheDocument()
+    // No score/threshold language in banner or summary
+    expect(screen.queryByText(/score/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/threshold/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('duplicate-titles-scan-summary')).toHaveTextContent('1 pairs found.')
+    // Book links go to detail pages
+    const linkA = screen.getByTestId('dup-book-a-link-1')
+    const linkB = screen.getByTestId('dup-book-b-link-2')
+    expect(linkA).toHaveAttribute('href', '/books/1')
+    expect(linkB).toHaveAttribute('href', '/books/2')
   })
 })

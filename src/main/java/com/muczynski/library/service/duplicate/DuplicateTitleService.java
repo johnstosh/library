@@ -93,10 +93,10 @@ public class DuplicateTitleService {
             pairs = new ArrayList<>(pairs.subList(0, MAX_RESULTS));
         }
 
+        // Neutral count only — no score/threshold language for the UI.
         String message = pairs.isEmpty()
-                ? "No near-duplicate titles found (threshold " + SIMILARITY_THRESHOLD + ")."
-                : "Found " + pairs.size() + " near-duplicate pair(s) (top "
-                        + MAX_RESULTS + ", score ≥ " + SIMILARITY_THRESHOLD + ").";
+                ? "No pairs found."
+                : pairs.size() + " pairs found.";
 
         log.info("Duplicate title scan: scanned={}, representatives={}, pairs={}",
                 booksScanned, representatives.size(), pairs.size());
