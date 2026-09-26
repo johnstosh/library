@@ -34,7 +34,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
@@ -46,6 +50,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -120,6 +125,26 @@ public class BookService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate requiresNewTemplate() {
+        if (transactionManager == null) {
+            return null;
+        }
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template;
+    }
+
+    private <T> T inNewTransaction(Supplier<T> work) {
+        TransactionTemplate template = requiresNewTemplate();
+        if (template == null) {
+            return work.get();
+        }
+        return template.execute(status -> work.get());
+    }
 
     @Transactional
     public BookDto createBook(BookDto bookDto) {
@@ -1086,12 +1111,21 @@ public class BookService {
         return dto;
     }
 
-    @Transactional
+    /**
+     * Research catalog metadata from title and author via Grok, then persist.
+     * Uses {@link Propagation#NOT_SUPPORTED} so the xAI HTTP call does not hold a
+     * Hikari connection (pool size 3). DB work runs in short REQUIRES_NEW txns.
+     * Catching failures is safe because there is no ambient transaction to poison.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BookDto getBookFromTitleAuthor(Long id, String title, String authorName) {
-        BookDto dto = getBookById(id);
-        if (dto == null) {
-            throw new LibraryException("Book not found: " + id);
-        }
+        BookDto dto = inNewTransaction(() -> {
+            BookDto existing = getBookById(id);
+            if (existing == null) {
+                throw new LibraryException("Book not found: " + id);
+            }
+            return existing;
+        });
 
         if (title == null || title.trim().isEmpty()) {
             throw new LibraryException("Title is required");
@@ -1131,9 +1165,14 @@ public class BookService {
             "plotEssay": string, "relatedWorks": string,
             "detailedDescription": string}}""", title.trim(), authorPart);
 
+        // HTTP outside any DB transaction — must not hold a pool connection.
         String response = askGrok.askQuestion(question, CATALOG_SYSTEM_PROMPT);
         Map<String, Object> jsonData = extractJsonFromResponse(response);
 
+        return inNewTransaction(() -> applyTitleAuthorResearch(id, dto, jsonData));
+    }
+
+    private BookDto applyTitleAuthorResearch(Long id, BookDto dto, Map<String, Object> jsonData) {
         @SuppressWarnings("unchecked")
         Map<String, Object> authorMap = (Map<String, Object>) jsonData.get("author");
         if (authorMap != null) {
@@ -1438,37 +1477,70 @@ public class BookService {
      * Lookup genres for a single book using Grok AI.
      * Skips books with blank descriptions.
      *
+     * <p>Uses {@link Propagation#NOT_SUPPORTED} so Grok HTTP does not hold a Hikari
+     * connection, and so catch-and-return of AI/data failures cannot leave an outer
+     * transaction rollback-only (UnexpectedRollbackException / issues #361, #362).
+     * Load and save run in short REQUIRES_NEW transactions.
+     *
      * @param bookId The book ID to look up genres for
      * @return GenreLookupResultDto with suggested genres
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public GenreLookupResultDto lookupGenresForBook(Long bookId) {
-        Book book = bookRepository.findById(bookId).orElse(null);
-        if (book == null) {
+        GenrePrep prep;
+        try {
+            prep = inNewTransaction(() -> prepareGenreLookup(bookId));
+        } catch (Exception e) {
+            logger.error("Failed to prepare genre lookup for book ID {}: {}", bookId, e.getMessage(), e);
             return GenreLookupResultDto.builder()
                     .bookId(bookId)
                     .success(false)
-                    .errorMessage("Book not found")
+                    .errorMessage(e.getMessage())
                     .build();
         }
+        if (prep.earlyResult != null) {
+            return prep.earlyResult;
+        }
 
-        // Skip books with blank descriptions
+        try {
+            String response = askGrok.suggestGenres(prep.bookJson, prep.authorJson);
+            List<String> genres = parseGenreResponse(response);
+            return inNewTransaction(() -> applyGenreLookup(bookId, prep.title, genres));
+        } catch (Exception e) {
+            logger.error("Failed to lookup genres for book ID {}: {}", bookId, e.getMessage(), e);
+            return GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .title(prep.title)
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .build();
+        }
+    }
+
+    private GenrePrep prepareGenreLookup(Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null) {
+            return GenrePrep.early(GenreLookupResultDto.builder()
+                    .bookId(bookId)
+                    .success(false)
+                    .errorMessage("Book not found")
+                    .build());
+        }
+
         String description = book.getDetailedDescription();
         if (description == null || description.isBlank()) {
-            return GenreLookupResultDto.builder()
+            return GenrePrep.early(GenreLookupResultDto.builder()
                     .bookId(bookId)
                     .title(book.getTitle())
                     .success(false)
                     .errorMessage("Book has no description - cannot suggest genres")
-                    .build();
+                    .build());
         }
 
         try {
-            // Serialize book to JSON
             BookDto bookDto = bookMapper.toDto(book);
             String bookJson = objectMapper.writeValueAsString(bookDto);
 
-            // Serialize author to JSON if present
             String authorJson = null;
             if (book.getAuthor() != null) {
                 Map<String, Object> authorMap = new HashMap<>();
@@ -1479,51 +1551,71 @@ public class BookService {
                 authorMap.put("biographicalEssay", book.getAuthor().getBiographicalEssay());
                 authorJson = objectMapper.writeValueAsString(authorMap);
             }
-
-            // Call Grok AI for genre suggestions
-            String response = askGrok.suggestGenres(bookJson, authorJson);
-
-            // Parse the comma-separated response into a list
-            List<String> genres = parseGenreResponse(response);
-
-            // Replace book's existing tags with the suggested genres and save
-            if (!genres.isEmpty()) {
-                book.setTagsList(new ArrayList<>(genres));
-                bookRepository.save(book);
-                logger.info("Replaced genre tags on book '{}' (ID: {}) with {} tags", book.getTitle(), bookId, genres.size());
-            }
-
-            // Map the saved book to a DTO so the frontend can update its cache immediately,
-            // eliminating the need for a follow-up by-ids fetch.
-            BookDto updatedBookDto = bookMapper.toDto(book);
-
-            return GenreLookupResultDto.builder()
-                    .bookId(bookId)
-                    .title(book.getTitle())
-                    .success(true)
-                    .suggestedGenres(genres)
-                    .updatedBook(updatedBookDto)
-                    .build();
-
+            return GenrePrep.ready(book.getTitle(), bookJson, authorJson);
         } catch (Exception e) {
-            logger.error("Failed to lookup genres for book ID {}: {}", bookId, e.getMessage(), e);
+            throw new LibraryException("Failed to serialize book for genre lookup: " + e.getMessage(), e);
+        }
+    }
+
+    private GenreLookupResultDto applyGenreLookup(Long bookId, String title, List<String> genres) {
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null) {
             return GenreLookupResultDto.builder()
                     .bookId(bookId)
-                    .title(book.getTitle())
+                    .title(title)
                     .success(false)
-                    .errorMessage(e.getMessage())
+                    .errorMessage("Book not found")
                     .build();
+        }
+
+        if (!genres.isEmpty()) {
+            book.setTagsList(new ArrayList<>(genres));
+            bookRepository.save(book);
+            logger.info("Replaced genre tags on book '{}' (ID: {}) with {} tags", book.getTitle(), bookId, genres.size());
+        }
+
+        BookDto updatedBookDto = bookMapper.toDto(book);
+        return GenreLookupResultDto.builder()
+                .bookId(bookId)
+                .title(book.getTitle())
+                .success(true)
+                .suggestedGenres(genres)
+                .updatedBook(updatedBookDto)
+                .build();
+    }
+
+    private static final class GenrePrep {
+        final GenreLookupResultDto earlyResult;
+        final String title;
+        final String bookJson;
+        final String authorJson;
+
+        private GenrePrep(GenreLookupResultDto earlyResult, String title, String bookJson, String authorJson) {
+            this.earlyResult = earlyResult;
+            this.title = title;
+            this.bookJson = bookJson;
+            this.authorJson = authorJson;
+        }
+
+        static GenrePrep early(GenreLookupResultDto result) {
+            return new GenrePrep(result, result.getTitle(), null, null);
+        }
+
+        static GenrePrep ready(String title, String bookJson, String authorJson) {
+            return new GenrePrep(null, title, bookJson, authorJson);
         }
     }
 
     /**
      * Lookup genres for multiple books using Grok AI.
      * Skips books with blank descriptions.
+     * Each book runs in isolation (NOT_SUPPORTED + per-book REQUIRES_NEW) so one
+     * failure cannot mark a shared transaction rollback-only.
      *
      * @param bookIds List of book IDs to look up genres for
      * @return List of GenreLookupResultDto with suggested genres
      */
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<GenreLookupResultDto> lookupGenresForBooks(List<Long> bookIds) {
         List<GenreLookupResultDto> results = new ArrayList<>();
         for (Long bookId : bookIds) {

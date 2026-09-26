@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.4.22'
+version = '2.4.23'
 
 ext['tomcat.version'] = '10.+'
 

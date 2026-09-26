@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -140,5 +141,26 @@ class BookServiceTitleAuthorFromPhotoTest {
 
         assertThrows(LibraryException.class, () -> bookService.getTitleAuthorFromPhoto(1L));
         verify(bookRepository, never()).save(any());
+    }
+
+    @Test
+    void getBookFromTitleAuthor_whenAskGrokFails_propagatesWithoutPoisoningCaller() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Original");
+
+        BookDto dto = new BookDto();
+        dto.setId(1L);
+        dto.setTitle("Original");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookMapper.toDto(book)).thenReturn(dto);
+        when(askGrok.askQuestion(anyString(), anyString()))
+                .thenThrow(new LibraryException("xAI API call failed: 500"));
+
+        LibraryException ex = assertThrows(LibraryException.class,
+                () -> bookService.getBookFromTitleAuthor(1L, "Confessions", "Augustine"));
+        assertTrue(ex.getMessage().contains("xAI API call failed"));
+        verify(authorRepository, never()).save(any());
     }
 }
