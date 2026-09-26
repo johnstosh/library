@@ -130,11 +130,12 @@ export function DataManagementPage() {
       const authorCount = dbStats?.authorCount ?? 0
       const userCount = dbStats?.userCount ?? 0
       const loanCount = dbStats?.loanCount ?? 0
+      const favoriteCount = dbStats?.favoriteCount ?? 0
       const priceCount = dbStats?.priceCount ?? 0
       const photoCount = photoStats?.total ?? 0
       const date = new Date().toISOString().split('T')[0]
 
-      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${priceCount}-prices-${photoCount}-photos.json`
+      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${favoriteCount}-favorites-${priceCount}-prices-${photoCount}-photos.json`
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
