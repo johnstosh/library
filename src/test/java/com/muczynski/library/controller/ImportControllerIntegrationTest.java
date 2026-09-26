@@ -782,6 +782,94 @@ class ImportControllerIntegrationTest {
                 "Re-import must not create a duplicate price row");
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_FavoriteUpsertOnUserListBookOrAuthor() throws Exception {
+        // Re-importing the same (user, listName, book) or (user, listName, author) must not duplicate.
+        String firstImport = """
+            {
+                "libraries": [{"branchName": "Upsert Fav Library", "librarySystemName": "Upsert Fav System"}],
+                "authors": [{"name": "Upsert Fav Author"}, {"name": "Upsert Fav Author Only"}],
+                "users": [{"username": "upsertfavuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "Upsert Fav Book",
+                    "libraryName": "Upsert Fav Library",
+                    "authorName": "Upsert Fav Author"
+                }],
+                "favorites": [
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Have Read",
+                        "bookTitle": "Upsert Fav Book",
+                        "bookAuthorName": "Upsert Fav Author"
+                    },
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Want to Read",
+                        "authorName": "Upsert Fav Author Only"
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Book book = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Upsert Fav Book", "Upsert Fav Author").get(0);
+        Author authorOnly = authorRepository.findAllByNameOrderByIdAsc("Upsert Fav Author Only").get(0);
+        User user = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("upsertfavuser").get(0);
+
+        java.util.Optional<Favorite> firstBookFav = favoriteRepository.findByUser_IdAndListNameAndBook_Id(
+                user.getId(), "Have Read", book.getId());
+        java.util.Optional<Favorite> firstAuthorFav = favoriteRepository.findByUser_IdAndListNameAndAuthor_Id(
+                user.getId(), "Want to Read", authorOnly.getId());
+        org.junit.jupiter.api.Assertions.assertTrue(firstBookFav.isPresent(), "Book favorite should exist after first import");
+        org.junit.jupiter.api.Assertions.assertTrue(firstAuthorFav.isPresent(), "Author favorite should exist after first import");
+        long bookFavId = firstBookFav.get().getId();
+        long authorFavId = firstAuthorFav.get().getId();
+        long favoriteCountAfterFirst = favoriteRepository.count();
+
+        String secondImport = """
+            {
+                "favorites": [
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Have Read",
+                        "bookTitle": "Upsert Fav Book",
+                        "bookAuthorName": "Upsert Fav Author"
+                    },
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Want to Read",
+                        "authorName": "Upsert Fav Author Only"
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        java.util.Optional<Favorite> secondBookFav = favoriteRepository.findByUser_IdAndListNameAndBook_Id(
+                user.getId(), "Have Read", book.getId());
+        java.util.Optional<Favorite> secondAuthorFav = favoriteRepository.findByUser_IdAndListNameAndAuthor_Id(
+                user.getId(), "Want to Read", authorOnly.getId());
+        org.junit.jupiter.api.Assertions.assertTrue(secondBookFav.isPresent(), "Book favorite should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertTrue(secondAuthorFav.isPresent(), "Author favorite should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertEquals(bookFavId, secondBookFav.get().getId(), "Same book favorite row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(authorFavId, secondAuthorFav.get().getId(), "Same author favorite row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(
+                favoriteCountAfterFirst,
+                favoriteRepository.count(),
+                "Re-import must not create duplicate favorite rows");
+    }
+
     // ==================== GET /api/import/availability-stats Integration Tests ====================
 
     @Test
