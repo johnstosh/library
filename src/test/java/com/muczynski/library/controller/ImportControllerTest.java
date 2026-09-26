@@ -6,6 +6,8 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.LabelCountDto;
+import com.muczynski.library.dto.importdtos.ExportChunkDto;
+import com.muczynski.library.dto.importdtos.ExportChunkPlanDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.FavoriteService;
@@ -25,10 +27,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -230,6 +234,82 @@ class ImportControllerTest {
             .get("/api/import/json")
         .then()
             .statusCode(500);
+    }
+
+
+    // ==================== Chunked export Tests ====================
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testExportChunkPlan_Success() {
+        ExportChunkPlanDto plan = new ExportChunkPlanDto();
+        plan.setTargetChunks(33);
+        plan.setPageSize(50);
+        plan.setTotalItems(100);
+        plan.setSections(List.of(
+                new ExportChunkPlanDto.SectionPlan("libraries", 1L),
+                new ExportChunkPlanDto.SectionPlan("books", 99L)
+        ));
+        when(importService.exportChunkPlan()).thenReturn(plan);
+
+        given()
+            .auth().none()
+        .when()
+            .get("/api/import/json/chunk-plan")
+        .then()
+            .statusCode(200)
+            .body("targetChunks", equalTo(33))
+            .body("pageSize", equalTo(50))
+            .body("totalItems", equalTo(100))
+            .body("sections", hasSize(2));
+    }
+
+    @Test
+    void testExportChunkPlan_Unauthorized() {
+        given()
+        .when()
+            .get("/api/import/json/chunk-plan")
+        .then()
+            .statusCode(401);
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testExportChunk_Success() {
+        ExportChunkDto chunk = new ExportChunkDto();
+        chunk.setSection("books");
+        chunk.setAfterId(0L);
+        chunk.setLimit(2);
+        chunk.setNextAfterId(10L);
+        chunk.setTotal(5L);
+        chunk.setCount(2);
+        chunk.setHasMore(true);
+        chunk.setItems(List.of(Map.of("title", "A"), Map.of("title", "B")));
+        when(importService.exportChunk(eq("books"), eq(0L), eq(2))).thenReturn(chunk);
+
+        given()
+            .auth().none()
+            .queryParam("section", "books")
+            .queryParam("afterId", 0)
+            .queryParam("limit", 2)
+        .when()
+            .get("/api/import/json/chunk")
+        .then()
+            .statusCode(200)
+            .body("section", equalTo("books"))
+            .body("count", equalTo(2))
+            .body("hasMore", equalTo(true))
+            .body("items", hasSize(2));
+    }
+
+    @Test
+    void testExportChunk_Unauthorized() {
+        given()
+            .queryParam("section", "books")
+        .when()
+            .get("/api/import/json/chunk")
+        .then()
+            .statusCode(401);
     }
 
     // ==================== GET /api/import/stats Tests ====================

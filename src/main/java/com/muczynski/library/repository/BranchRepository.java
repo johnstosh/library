@@ -5,6 +5,9 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Library;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,4 +19,8 @@ public interface BranchRepository extends JpaRepository<Library, Long> {
     @Deprecated
     Optional<Library> findByBranchName(String branchName);
     List<Library> findAllByBranchNameOrderByIdAsc(String branchName);
+
+    /** Keyset id page for chunked JSON export. */
+    @Query("SELECT b.id FROM Library b WHERE b.id > :lastId ORDER BY b.id ASC")
+    List<Long> findBranchIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 }

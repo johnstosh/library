@@ -38,6 +38,7 @@ import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,12 @@ public class ImportService {
     private EntityManager entityManager;
 
     public static final String DEFAULT_PASSWORD = "divinemercy";
+
+    /** Target number of sequential chunk GETs for Data Management export (~Cloud Run 600s). */
+    public static final int TARGET_EXPORT_CHUNKS = ExportChunkPlanDto.TARGET_CHUNKS;
+    public static final int MAX_EXPORT_CHUNK_LIMIT = 500;
+    public static final int DEFAULT_EXPORT_CHUNK_LIMIT = 50;
+
 
     private final BranchRepository branchRepository;
     private final AuthorRepository authorRepository;
@@ -124,6 +131,10 @@ public class ImportService {
         Map<String, Library> branchMap = new HashMap<>();
         Map<String, Author> authorMap = new HashMap<>();
         Map<String, User> userMap = new HashMap<>();
+
+        // Seed maps from DB so book-only (and other partial) chunks resolve FKs without
+        // re-sending libraries/authors/users in every POST.
+        seedMapsFromDatabase(branchMap, authorMap, userMap);
 
         JsonFactory jsonFactory = new JsonFactory();
         try (JsonParser parser = jsonFactory.createParser(inputStream)) {
@@ -212,6 +223,7 @@ public class ImportService {
     }
 
     private <T> void commitBatch(List<T> batch, String entityType, Map<?, ?> mapToRefresh, ImportResponseDto.ImportCounts counts, Consumer<T> itemProcessor) {
+        long started = System.currentTimeMillis();
         transactionTemplate.execute(status -> {
             for (T dto : batch) {
                 itemProcessor.accept(dto);
@@ -227,6 +239,8 @@ public class ImportService {
         if (mapToRefresh != null) {
             refreshMapAfterClear(entityType, mapToRefresh);
         }
+        logger.info("Import batch committed: entityType={}, size={}, elapsedMs={}",
+                entityType, batch.size(), System.currentTimeMillis() - started);
     }
 
     private void incrementCount(ImportResponseDto.ImportCounts counts, String entityType) {
@@ -242,6 +256,32 @@ public class ImportService {
         }
     }
 
+    /**
+     * Prefill lookup maps from existing DB rows so partial JSON bodies (e.g. books-only
+     * chunks after a prelude POST) can resolve libraries/authors/users.
+     * Same keying as {@link #refreshMapAfterClear} (authors are id+name stubs only —
+     * no OID LOB essay loads).
+     * Runs in REQUIRES_NEW so we do not join/auto-flush an ambient test (or request)
+     * transaction — that would lock rows and deadlock subsequent batch inserts.
+     */
+    private void seedMapsFromDatabase(Map<String, Library> branchMap,
+                                      Map<String, Author> authorMap,
+                                      Map<String, User> userMap) {
+        transactionTemplate.execute(status -> {
+            refreshMapAfterClear("branches", branchMap);
+            refreshMapAfterClear("authors", authorMap);
+            refreshMapAfterClear("users", userMap);
+            return null;
+        });
+        entityManager.clear();
+    }
+
+    /**
+     * Rebuild lookup maps after {@link EntityManager#clear()}.
+     * Authors use id+name projections only — never {@code findAll()} on Author,
+     * which would load PostgreSQL OID LOB essays and stall Cloud Run (~600s).
+     * Stubs with id set are enough for {@code book.setAuthor(...)} FK writes.
+     */
     private void refreshMapAfterClear(String entityType, Map<?, ?> mapToRefresh) {
         if ("branches".equals(entityType)) {
             @SuppressWarnings("unchecked")
@@ -254,8 +294,9 @@ public class ImportService {
             @SuppressWarnings("unchecked")
             Map<String, Author> m = (Map<String, Author>) mapToRefresh;
             m.clear();
-            for (Author a : authorRepository.findAll()) {
-                m.put(a.getName(), a);
+            // AuthorZipImportProjection skips @Lob biographicalEssay / affiliation fields
+            for (AuthorZipImportProjection p : authorRepository.findBy()) {
+                m.put(p.getName(), authorStub(p.getId(), p.getName()));
             }
         } else if ("users".equals(entityType)) {
             @SuppressWarnings("unchecked")
@@ -266,6 +307,14 @@ public class ImportService {
             }
         }
         // other maps not used after their section or refreshed on-demand in process*
+    }
+
+    /** Detached id+name stub for FK resolution without retaining OID LOB payloads in the map. */
+    private static Author authorStub(Long id, String name) {
+        Author stub = new Author();
+        stub.setId(id);
+        stub.setName(name);
+        return stub;
     }
 
     private Class<?> getDtoClassFor(String entityType) {
@@ -340,7 +389,8 @@ public class ImportService {
         auth.setBiographicalEssay(aDto.getBriefBiography());
         auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
         auth = authorRepository.save(auth);
-        authorMap.put(aDto.getName(), auth);
+        // Keep map LOB-free so post-clear refresh / heap do not retain essay text
+        authorMap.put(aDto.getName(), authorStub(auth.getId(), auth.getName()));
     }
 
     private void processUser(ImportUserDto uDto, Map<String, User> userMap, ImportResponseDto.ImportCounts counts) {
@@ -478,19 +528,9 @@ public class ImportService {
             throw new LibraryException("Branch not found for book: " + bDto.getTitle() + " - " + bDto.getLibraryName());
         }
 
-        // Check if book with same title and author already exists
-        Book book;
-        if (author != null) {
-            List<Book> existingBooks = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bDto.getTitle(), author.getName());
-            book = existingBooks.isEmpty() ? null : existingBooks.get(0);
-        } else {
-            List<Book> existingBooks = bookRepository.findAllByTitleOrderByIdAsc(bDto.getTitle());
-            book = existingBooks.isEmpty() ? null : existingBooks.get(0);
-        }
-
-        if (book == null) {
-            book = new Book();
-        }
+        // Match by title only (uk_book_title uniquely constrains title). Take lowest id if any.
+        List<Book> existingBooks = bookRepository.findAllByTitleOrderByIdAsc(bDto.getTitle());
+        Book book = existingBooks.isEmpty() ? new Book() : existingBooks.get(0);
 
         // Update/merge fields from DTO (preserve exact semantics)
         book.setTitle(bDto.getTitle());
@@ -533,13 +573,16 @@ public class ImportService {
     }
 
     private void processLoan(ImportLoanDto lDto, Map<String, User> userMap, ImportResponseDto.ImportCounts counts) {
-        // Find or create book by title/author (simplified for streaming; full matching would require more maps)
-        // For full fidelity, we'd need bookMap but to avoid memory bloat on very large catalogs, we lookup by natural keys
+        // Resolve book/user by natural keys, then upsert on uk_loan_book_user_date
+        // (book_id, user_id, loan_date) so re-imports update instead of duplicate-key INSERT.
         String bookTitle = lDto.getBookTitle() != null ? lDto.getBookTitle() : (lDto.getBook() != null ? lDto.getBook().getTitle() : null);
+        String bookAuthorName = lDto.getBookAuthorName() != null ? lDto.getBookAuthorName()
+                : (lDto.getBook() != null && lDto.getBook().getAuthor() != null ? lDto.getBook().getAuthor().getName() : null);
         String username = lDto.getUsername() != null ? lDto.getUsername() : (lDto.getUser() != null ? lDto.getUser().getUsername() : null);
 
-        if (bookTitle == null || username == null) {
-            logger.warn("Skipping loan with missing reference: bookTitle={}, username={}", bookTitle, username);
+        if (bookTitle == null || username == null || lDto.getLoanDate() == null) {
+            logger.warn("Skipping loan with missing reference: bookTitle={}, username={}, loanDate={}",
+                    bookTitle, username, lDto.getLoanDate());
             return;
         }
 
@@ -554,14 +597,24 @@ public class ImportService {
             }
         }
 
-        List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(bookTitle);
-        if (books.isEmpty()) {
-            logger.warn("Book not found for loan: {}", bookTitle);
-            return;
+        Book book = null;
+        if (bookAuthorName != null && !bookAuthorName.isBlank()) {
+            List<Book> byTitleAuthor = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bookTitle, bookAuthorName);
+            if (!byTitleAuthor.isEmpty()) {
+                book = byTitleAuthor.get(0);
+            }
         }
-        Book book = books.get(0);
+        if (book == null) {
+            List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(bookTitle);
+            if (books.isEmpty()) {
+                logger.warn("Book not found for loan: {}", bookTitle);
+                return;
+            }
+            book = books.get(0);
+        }
 
-        Loan loan = new Loan();
+        Loan loan = loanRepository.findByBookIdAndUserIdAndLoanDate(book.getId(), user.getId(), lDto.getLoanDate())
+                .orElseGet(Loan::new);
         loan.setBook(book);
         loan.setUser(user);
         loan.setLoanDate(lDto.getLoanDate());
@@ -1092,6 +1145,286 @@ public class ImportService {
      */
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+
+    /**
+     * Build a chunked-export plan: section totals and a shared pageSize so the client
+     * issues roughly {@link #TARGET_EXPORT_CHUNKS} sequential GETs.
+     */
+    @Transactional(readOnly = true)
+    public ExportChunkPlanDto exportChunkPlan() {
+        List<ExportChunkPlanDto.SectionPlan> sections = List.of(
+                new ExportChunkPlanDto.SectionPlan("libraries", branchRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("authors", authorRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("users", userRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("books", bookRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("loans", loanRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("photos", photoRepository.countActivePhotos()),
+                new ExportChunkPlanDto.SectionPlan("favorites", favoriteRepository.countExportable()),
+                new ExportChunkPlanDto.SectionPlan("prices", bookPriceRepository.countExportable())
+        );
+        long totalItems = sections.stream().mapToLong(ExportChunkPlanDto.SectionPlan::getTotal).sum();
+        int pageSize;
+        if (totalItems <= 0) {
+            pageSize = DEFAULT_EXPORT_CHUNK_LIMIT;
+        } else {
+            pageSize = (int) Math.max(1L, (totalItems + TARGET_EXPORT_CHUNKS - 1) / TARGET_EXPORT_CHUNKS);
+            pageSize = Math.min(pageSize, MAX_EXPORT_CHUNK_LIMIT);
+        }
+        ExportChunkPlanDto plan = new ExportChunkPlanDto();
+        plan.setTargetChunks(TARGET_EXPORT_CHUNKS);
+        plan.setPageSize(pageSize);
+        plan.setTotalItems(totalItems);
+        plan.setSections(new ArrayList<>(sections));
+        return plan;
+    }
+
+    /**
+     * Export one keyset page of a catalog section for chunked JSON download.
+     * Books use id-batch then LOB-safe fetch (no full findAllWithAuthorAndLibrary).
+     */
+    @Transactional(readOnly = true)
+    public ExportChunkDto exportChunk(String section, long afterId, int limit) {
+        if (section == null || section.isBlank()) {
+            throw new LibraryException("Export chunk section is required");
+        }
+        String key = section.trim().toLowerCase(Locale.ROOT);
+        if ("branches".equals(key)) {
+            key = "libraries";
+        }
+        int pageLimit = limit > 0 ? Math.min(limit, MAX_EXPORT_CHUNK_LIMIT) : DEFAULT_EXPORT_CHUNK_LIMIT;
+        long cursor = Math.max(0L, afterId);
+        Pageable pageable = PageRequest.of(0, pageLimit);
+
+        return switch (key) {
+            case "libraries" -> exportLibrariesChunk(cursor, pageable, pageLimit);
+            case "authors" -> exportAuthorsChunk(cursor, pageable, pageLimit);
+            case "users" -> exportUsersChunk(cursor, pageable, pageLimit);
+            case "books" -> exportBooksChunk(cursor, pageable, pageLimit);
+            case "loans" -> exportLoansChunk(cursor, pageable, pageLimit);
+            case "photos" -> exportPhotosChunk(cursor, pageable, pageLimit);
+            case "favorites" -> exportFavoritesChunk(cursor, pageable, pageLimit);
+            case "prices" -> exportPricesChunk(cursor, pageable, pageLimit);
+            default -> throw new LibraryException("Unknown export section: " + section);
+        };
+    }
+
+    private ExportChunkDto exportLibrariesChunk(long afterId, Pageable pageable, int limit) {
+        long total = branchRepository.count();
+        List<Long> ids = branchRepository.findBranchIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<Library> branches = branchRepository.findAllById(ids);
+            Map<Long, Library> byId = branches.stream().collect(Collectors.toMap(Library::getId, b -> b, (a, b) -> a));
+            for (Long id : ids) {
+                Library branch = byId.get(id);
+                if (branch != null) {
+                    items.add(branchMapper.toDto(branch));
+                    nextAfterId = id;
+                }
+            }
+        }
+        entityManager.clear();
+        return buildChunk("libraries", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportAuthorsChunk(long afterId, Pageable pageable, int limit) {
+        long total = authorRepository.count();
+        List<Long> ids = authorRepository.findAuthorIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<Author> authors = authorRepository.findAllById(ids);
+            Map<Long, Author> byId = authors.stream().collect(Collectors.toMap(Author::getId, a -> a, (a, b) -> a));
+            for (Long id : ids) {
+                Author author = byId.get(id);
+                if (author == null) continue;
+                ImportAuthorDto aDto = new ImportAuthorDto();
+                aDto.setName(author.getName());
+                aDto.setDateOfBirth(author.getDateOfBirth());
+                aDto.setDateOfDeath(author.getDateOfDeath());
+                aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
+                aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
+                aDto.setNationality(emptyToNull(author.getNationality()));
+                aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
+                aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
+                items.add(aDto);
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("authors", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportUsersChunk(long afterId, Pageable pageable, int limit) {
+        long total = userRepository.count();
+        List<Long> ids = userRepository.findUserIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<User> users = userRepository.findAllById(ids);
+            Map<Long, User> byId = users.stream().collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+            for (Long id : ids) {
+                User user = byId.get(id);
+                if (user == null) continue;
+                ImportUserDto uDto = new ImportUserDto();
+                uDto.setUsername(user.getUsername());
+                uDto.setPassword(user.getPassword());
+                uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+                uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
+                uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
+                uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
+                uDto.setGoogleClientSecret(emptyToNull(user.getGoogleClientSecret()));
+                uDto.setGooglePhotosAlbumId(emptyToNull(user.getGooglePhotosAlbumId()));
+                uDto.setLastPhotoTimestamp(emptyToNull(user.getLastPhotoTimestamp()));
+                uDto.setSsoProvider(emptyToNull(user.getSsoProvider()));
+                uDto.setSsoSubjectId(emptyToNull(user.getSsoSubjectId()));
+                uDto.setEmail(emptyToNull(user.getEmail()));
+                uDto.setPhone(emptyToNull(user.getPhone()));
+                uDto.setLibraryCardDesign(user.getLibraryCardDesign());
+                if (user.getAuthorities() != null) {
+                    uDto.setAuthorities(user.getAuthorities().stream()
+                            .map(authority -> authority.getName())
+                            .collect(Collectors.toList()));
+                }
+                uDto.setUserIdentifier(user.getUserIdentifier());
+                items.add(uDto);
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("users", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportBooksChunk(long afterId, Pageable pageable, int limit) {
+        long total = bookRepository.count();
+        List<Long> ids = bookRepository.findBookIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            // LOB-safe: id batch then fetch with author/library (never full findAll LOBs)
+            List<Book> batch = bookRepository.findBooksByIdsWithAuthorAndLibrary(ids);
+            Map<Long, Book> byId = batch.stream().collect(Collectors.toMap(Book::getId, b -> b, (a, b) -> a));
+            for (Long id : ids) {
+                Book book = byId.get(id);
+                if (book == null) continue;
+                items.add(mapBookToDto(book));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("books", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportLoansChunk(long afterId, Pageable pageable, int limit) {
+        long total = loanRepository.count();
+        List<Long> ids = loanRepository.findLoanIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<Loan> batch = loanRepository.findLoansByIds(ids);
+            Map<Long, Loan> byId = batch.stream().collect(Collectors.toMap(Loan::getId, l -> l, (a, b) -> a));
+            for (Long id : ids) {
+                Loan loan = byId.get(id);
+                if (loan == null) continue;
+                items.add(mapLoanToDto(loan));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("loans", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportPhotosChunk(long afterId, Pageable pageable, int limit) {
+        long total = photoRepository.countActivePhotos();
+        List<Long> ids = photoRepository.findActivePhotoIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<PhotoMetadataProjection> photos =
+                    photoRepository.findByIdInAndDeletedAtIsNullOrderByIdAsc(ids);
+            Map<Long, PhotoMetadataProjection> byId = new LinkedHashMap<>();
+            for (PhotoMetadataProjection photo : photos) {
+                byId.put(photo.getId(), photo);
+            }
+            for (Long id : ids) {
+                PhotoMetadataProjection photo = byId.get(id);
+                if (photo == null || photo.getDeletedAt() != null) continue;
+                items.add(mapPhotoToDto(photo));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("photos", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportFavoritesChunk(long afterId, Pageable pageable, int limit) {
+        long total = favoriteRepository.countExportable();
+        List<Long> ids = favoriteRepository.findFavoriteIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<Favorite> batch = favoriteRepository.findFavoritesByIdsWithRefs(ids);
+            Map<Long, Favorite> byId = batch.stream().collect(Collectors.toMap(Favorite::getId, f -> f, (a, b) -> a));
+            for (Long id : ids) {
+                Favorite favorite = byId.get(id);
+                if (favorite == null) continue;
+                if (favorite.getUser() == null || favorite.getListName() == null || favorite.getListName().isBlank()) {
+                    continue;
+                }
+                if (favorite.getBook() == null && favorite.getAuthor() == null) {
+                    continue;
+                }
+                items.add(mapFavoriteToDto(favorite));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("favorites", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportPricesChunk(long afterId, Pageable pageable, int limit) {
+        long total = bookPriceRepository.countExportable();
+        List<Long> ids = bookPriceRepository.findPriceIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            List<BookPrice> batch = bookPriceRepository.findByIdsWithBookAndAuthor(ids);
+            Map<Long, BookPrice> byId = batch.stream().collect(Collectors.toMap(BookPrice::getId, p -> p, (a, b) -> a));
+            for (Long id : ids) {
+                BookPrice price = byId.get(id);
+                if (price == null || price.getBook() == null || price.getCover() == null) continue;
+                items.add(mapPriceToDto(price));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("prices", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto buildChunk(String section, long afterId, int limit, Long nextAfterId,
+                                      long total, List<Object> items, int idPageSize) {
+        ExportChunkDto dto = new ExportChunkDto();
+        dto.setSection(section);
+        dto.setAfterId(afterId);
+        dto.setLimit(limit);
+        dto.setNextAfterId(nextAfterId);
+        dto.setTotal(total);
+        dto.setCount(items.size());
+        // Full id page ⇒ more rows may exist; short page ⇒ end of section.
+        dto.setHasMore(idPageSize >= limit);
+        dto.setItems(items);
+        return dto;
     }
 
     /**

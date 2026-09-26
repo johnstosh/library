@@ -7,6 +7,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { jobStatusTone } from '@/utils/status'
 import { formatBookLabel } from '@/pages/books/components/BookLabelFilters'
+import { buildExportFilename } from '@/utils/exportFilename'
 import { PageHeader } from '@/components/ui/PageHeader'
 import {
   exportJsonData,
@@ -72,6 +73,7 @@ const AVAILABILITY_COUNT_ITEMS: {
 
 export function DataManagementPage() {
   const [isExportingJson, setIsExportingJson] = useState(false)
+  const [jsonExportProgress, setJsonExportProgress] = useState(0)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [zipImportResult, setZipImportResult] = useState<PhotoZipImportResultDto | null>(null)
@@ -88,7 +90,7 @@ export function DataManagementPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
-  const importJsonData = useImportJsonData()
+  const { progress: jsonImportProgress, ...importJsonData } = useImportJsonData()
   const { progress: zipUploadProgress, ...importPhotosFromZip } = useImportPhotosFromZipChunked()
 
   // Fetch database statistics (total counts from backend)
@@ -110,31 +112,25 @@ export function DataManagementPage() {
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
+    setJsonExportProgress(0)
     setSuccessMessage('')
     setErrorMessage('')
 
     try {
-      const blob = await exportJsonData()
+      const blob = await exportJsonData((progress) => {
+        setJsonExportProgress(progress.percentage)
+      })
 
-      // Generate filename with statistics from database
-      let exportBranchName = 'branch'
-      if (branches.length > 0) {
-        // Sanitize branch name for use as filename
-        exportBranchName = branches[0].branchName
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-      }
-
-      const bookCount = dbStats?.bookCount ?? 0
-      const authorCount = dbStats?.authorCount ?? 0
-      const userCount = dbStats?.userCount ?? 0
-      const loanCount = dbStats?.loanCount ?? 0
-      const priceCount = dbStats?.priceCount ?? 0
-      const photoCount = photoStats?.total ?? 0
-      const date = new Date().toISOString().split('T')[0]
-
-      const filename = `${date}-${exportBranchName}-${bookCount}-books-${authorCount}-authors-${userCount}-users-${loanCount}-loans-${priceCount}-prices-${photoCount}-photos.json`
+      const filename = buildExportFilename({
+        branchName: branches[0]?.branchName ?? 'branch',
+        bookCount: dbStats?.bookCount ?? 0,
+        authorCount: dbStats?.authorCount ?? 0,
+        userCount: dbStats?.userCount ?? 0,
+        loanCount: dbStats?.loanCount ?? 0,
+        favoriteCount: dbStats?.favoriteCount ?? 0,
+        priceCount: dbStats?.priceCount ?? 0,
+        photoCount: photoStats?.total ?? 0,
+      })
 
       // Create download link
       const url = window.URL.createObjectURL(blob)
@@ -149,9 +145,11 @@ export function DataManagementPage() {
       setSuccessMessage('JSON export downloaded successfully')
     } catch (error) {
       console.error('Failed to export JSON:', error)
-      setErrorMessage('Failed to export JSON data. Please try again.')
+      const msg = error instanceof Error ? error.message : 'Failed to export JSON data. Please try again.'
+      setErrorMessage(msg)
     } finally {
       setIsExportingJson(false)
+      setJsonExportProgress(0)
     }
   }
 
@@ -385,7 +383,9 @@ export function DataManagementPage() {
                   leftIcon={<PiDownload />}
                   data-test="export-json"
                 >
-                  Export JSON
+                  {isExportingJson
+                    ? `Export JSON (${Math.round(jsonExportProgress)}%)`
+                    : 'Export JSON'}
                 </Button>
               </div>
             </div>
@@ -418,7 +418,9 @@ export function DataManagementPage() {
                   leftIcon={<PiUpload />}
                   data-test="import-json"
                 >
-                  Import JSON
+                  {importJsonData.isPending
+                    ? `Import JSON (${Math.round(jsonImportProgress.percentage)}%)`
+                    : 'Import JSON'}
                 </Button>
               </div>
             </div>

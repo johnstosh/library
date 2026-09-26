@@ -5,6 +5,7 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Photo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -262,4 +263,10 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
             """,
             nativeQuery = true)
     List<PhotoZipSortProjection> findAllSortKeysForZip();
+
+    /** Keyset id page of non-deleted photos for chunked JSON export. */
+    @Query("SELECT p.id FROM Photo p WHERE p.deletedAt IS NULL AND p.id > :lastId ORDER BY p.id ASC")
+    List<Long> findActivePhotoIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    List<PhotoMetadataProjection> findByIdInAndDeletedAtIsNullOrderByIdAsc(List<Long> ids);
 }

@@ -1,8 +1,16 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
+import { streamJsonImportChunks } from './jsonImportChunker'
+import {
+  runChunkedJsonExport,
+  type ExportChunk,
+  type ExportChunkPlan,
+  type JsonExportProgress,
+} from './jsonExportAssembler'
+import { fetchComplete, readCompleteJson } from './fetchWithCompleteBody'
 
 export interface ImportExportStats {
   branches: number
@@ -139,43 +147,202 @@ export interface PhotoZipPartDto {
   endKey: string
 }
 
-// Export JSON data
-export async function exportJsonData(): Promise<Blob> {
-  const response = await fetch('/api/import/json', {
+export type { JsonExportProgress, ExportChunkPlan, ExportChunk } from './jsonExportAssembler'
+
+async function fetchExportChunkPlan(): Promise<ExportChunkPlan> {
+  const response = await fetchComplete('/api/import/json/chunk-plan', {
     credentials: 'include',
   })
-
   if (!response.ok) {
-    throw new Error('Failed to export data')
+    throw new Error(`Failed to load export plan (HTTP ${response.status})`)
   }
-
-  return response.blob()
+  return readCompleteJson<ExportChunkPlan>(response)
 }
 
-// Import JSON data
+async function fetchExportChunk(
+  section: string,
+  afterId: number,
+  limit: number,
+): Promise<ExportChunk> {
+  const params = new URLSearchParams({
+    section,
+    afterId: String(afterId),
+    limit: String(limit),
+  })
+  const response = await fetchComplete(`/api/import/json/chunk?${params}`, {
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    throw new Error(
+      `Failed to export "${section}" chunk afterId=${afterId} (HTTP ${response.status})`,
+    )
+  }
+  return readCompleteJson<ExportChunk>(response)
+}
+
+/**
+ * Chunked JSON export: ~33 sequential GETs with progress, assembled into one Blob.
+ * Fails loudly if any chunk fails or assembled section counts mismatch the plan.
+ * Full streaming GET /api/import/json remains available for tests/tools.
+ */
+export async function exportJsonData(
+  onProgress?: (progress: Omit<JsonExportProgress, 'isExporting'>) => void,
+): Promise<Blob> {
+  return runChunkedJsonExport(
+    {
+      fetchPlan: fetchExportChunkPlan,
+      fetchChunk: fetchExportChunk,
+    },
+    onProgress,
+  )
+}
+
+export interface JsonImportProgress {
+  percentage: number
+  bytesRead: number
+  totalBytes: number
+  isImporting: boolean
+}
+
+function emptyCounts(): NonNullable<ImportResponseDto['counts']> {
+  return {
+    branches: 0,
+    authors: 0,
+    users: 0,
+    books: 0,
+    loans: 0,
+    photos: 0,
+    favorites: 0,
+    prices: 0,
+  }
+}
+
+function addCounts(
+  dest: NonNullable<ImportResponseDto['counts']>,
+  src?: ImportResponseDto['counts'],
+) {
+  if (!src) return
+  dest.branches += src.branches || 0
+  dest.authors += src.authors || 0
+  dest.users += src.users || 0
+  dest.books += src.books || 0
+  dest.loans += src.loans || 0
+  dest.photos += src.photos || 0
+  dest.favorites = (dest.favorites || 0) + (src.favorites || 0)
+  dest.prices = (dest.prices || 0) + (src.prices || 0)
+}
+
+/**
+ * Chunked JSON import: streams the file client-side into ~33 sequential POSTs.
+ * Retries each POST a few times (upsert-safe). Progress is bytesRead/file.size.
+ */
+export async function importJsonDataChunked(
+  file: File,
+  onProgress?: (bytesRead: number, totalBytes: number) => void,
+): Promise<ImportResponseDto> {
+  const totals = emptyCounts()
+  const errors: ImportErrorDto[] = []
+  let lastMessage = 'Import completed successfully'
+  let anySuccess = false
+
+  for await (const chunk of streamJsonImportChunks(file)) {
+    onProgress?.(chunk.bytesRead, file.size)
+
+    const response = await fetchComplete('/api/import/json', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: new Blob([Uint8Array.from(chunk.body)], { type: 'application/json' }),
+    })
+
+    let payload: ImportResponseDto | null = null
+    try {
+      payload = await readCompleteJson<ImportResponseDto>(response)
+    } catch {
+      payload = null
+    }
+
+    if (!response.ok || !payload?.success) {
+      const msg =
+        payload?.message ||
+        `Import chunk failed with HTTP ${response.status}`
+      throw new Error(msg)
+    }
+
+    anySuccess = true
+    addCounts(totals, payload.counts)
+    if (payload.errors?.length) errors.push(...payload.errors)
+    if (payload.message) lastMessage = payload.message
+  }
+
+  onProgress?.(file.size, file.size)
+
+  if (!anySuccess) {
+    // Empty file / no sections — still hit the endpoint once with {}
+    const response = await fetchComplete('/api/import/json', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    let payload: ImportResponseDto
+    try {
+      payload = await readCompleteJson<ImportResponseDto>(response)
+    } catch {
+      throw new Error(`Import failed with HTTP ${response.status}`)
+    }
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.message || 'Import failed')
+    }
+    return payload
+  }
+
+  return {
+    success: true,
+    message:
+      errors.length > 0
+        ? `Import completed with ${errors.length} error(s)`
+        : lastMessage,
+    counts: totals,
+    errors,
+  }
+}
+
+// Import JSON data (chunked streaming POSTs with determinate progress)
 export function useImportJsonData() {
   const queryClient = useQueryClient()
-  return useMutation({
+  const [progress, setProgress] = useState<JsonImportProgress>({
+    percentage: 0,
+    bytesRead: 0,
+    totalBytes: 0,
+    isImporting: false,
+  })
+
+  const mutation = useMutation({
     mutationFn: async (file: File) => {
-      console.log('Importing JSON file as raw body (streaming backend):', {
-        name: file.name,
-        size: file.size,
-        type: file.type,
+      setProgress({
+        percentage: 0,
+        bytesRead: 0,
+        totalBytes: file.size,
+        isImporting: true,
       })
-      // Send raw File/Blob as JSON body for streaming parse (no .text() or full JSON.parse in memory)
-      const response = await api.post<ImportResponseDto>('/import/json', file, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      console.log('Import response:', response)
-      if (!response.success) {
-        throw new Error(response.message || 'Import failed')
+      try {
+        const response = await importJsonDataChunked(file, (bytesRead, totalBytes) => {
+          const percentage =
+            totalBytes > 0 ? Math.min(100, (bytesRead / totalBytes) * 100) : 100
+          setProgress({
+            percentage,
+            bytesRead,
+            totalBytes,
+            isImporting: true,
+          })
+        })
+        return response
+      } finally {
+        setProgress((prev) => ({ ...prev, isImporting: false, percentage: 100 }))
       }
-      return response
     },
     onSuccess: () => {
-      // Invalidate all queries to refresh data after import
       queryClient.invalidateQueries({ queryKey: ['database-stats'] })
       queryClient.invalidateQueries({ queryKey: ['availability-stats'] })
       queryClient.invalidateQueries({ queryKey: ['books'] })
@@ -185,6 +352,8 @@ export function useImportJsonData() {
       queryClient.invalidateQueries({ queryKey: ['branches'] })
     },
   })
+
+  return { ...mutation, progress }
 }
 
 // Get database statistics (total counts from database)
