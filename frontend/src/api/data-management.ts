@@ -149,12 +149,7 @@ export async function exportJsonData(): Promise<Blob> {
     throw new Error('Failed to export data')
   }
 
-  const data = await response.json()
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json',
-  })
-
-  return blob
+  return response.blob()
 }
 
 // Import JSON data
@@ -162,23 +157,17 @@ export function useImportJsonData() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (file: File) => {
-      const text = await file.text()
-      let data
-      try {
-        data = JSON.parse(text)
-      } catch (parseError) {
-        console.error('Failed to parse import file as JSON:', parseError)
-        throw new Error('Invalid JSON file format. Please check the file and try again.')
-      }
-      console.log('Importing data:', {
-        branches: data.libraries?.length || 0,
-        authors: data.authors?.length || 0,
-        users: data.users?.length || 0,
-        books: data.books?.length || 0,
-        loans: data.loans?.length || 0,
-        photos: data.photos?.length || 0,
+      console.log('Importing JSON file as raw body (streaming backend):', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
       })
-      const response = await api.post<ImportResponseDto>('/import/json', data)
+      // Send raw File/Blob as JSON body for streaming parse (no .text() or full JSON.parse in memory)
+      const response = await api.post<ImportResponseDto>('/import/json', file, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
       console.log('Import response:', response)
       if (!response.success) {
         throw new Error(response.message || 'Import failed')
@@ -455,5 +444,69 @@ export function useUploadPhotoImage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.photos.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.photos.exportStats() })
     },
+  })
+}
+
+// Maintenance types for Illegal Genres cleanup (Issue #347)
+export interface IllegalGenresMaintenanceDto {
+  booksAffected: number
+  booksScanned?: number
+  booksUpdated?: number
+  pluralCorrections?: number
+  illegalRemoved?: number
+  message?: string
+  error?: string
+}
+
+// Maintenance hooks for DataManagementPage
+export function useRecalcIllegalGenres() {
+  return useMutation({
+    mutationFn: () =>
+      api.get<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/count'),
+  })
+}
+
+export function useCleanupIllegalGenres() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/cleanup'),
+    onSuccess: () => {
+      // Refresh related stats after cleanup
+      queryClient.invalidateQueries({ queryKey: ['label-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['database-stats'] })
+    },
+  })
+}
+
+// Duplicate catalog titles (Issue #351) — find-only
+export interface DuplicateTitlePairDto {
+  score: number
+  bookAId: number
+  bookATitle?: string
+  bookAAlternateTitle?: string
+  bookAAuthorName?: string
+  bookAStatus?: string
+  bookBId: number
+  bookBTitle?: string
+  bookBAlternateTitle?: string
+  bookBAuthorName?: string
+  bookBStatus?: string
+  matchedTitleA?: string
+  matchedTitleB?: string
+}
+
+export interface DuplicateTitlesResultDto {
+  pairs: DuplicateTitlePairDto[]
+  booksScanned: number
+  representativesCompared: number
+  message?: string
+  error?: string
+}
+
+export function useFindDuplicateTitles() {
+  return useMutation({
+    mutationFn: () =>
+      api.post<DuplicateTitlesResultDto>('/maintenance/duplicate-titles/find'),
   })
 }

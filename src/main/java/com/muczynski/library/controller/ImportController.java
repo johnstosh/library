@@ -7,21 +7,24 @@ import com.muczynski.library.dto.BookAvailabilityStatsDto;
 import com.muczynski.library.dto.DatabaseStatsDto;
 import com.muczynski.library.dto.FavoriteListCountDto;
 import com.muczynski.library.dto.LabelCountDto;
-import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.dto.importdtos.ImportResponseDto;
 import com.muczynski.library.service.FavoriteService;
 import com.muczynski.library.service.ImportService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -34,12 +37,12 @@ public class ImportController {
     private final ImportService importService;
     private final FavoriteService favoriteService;
 
-    @PostMapping("/json")
+    @PostMapping(value = "/json", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<ImportResponseDto> importJson(@RequestBody ImportRequestDto dto) {
-        logger.info("Import request received");
-        try {
-            ImportResponseDto.ImportResult result = importService.importData(dto);
+    public ResponseEntity<ImportResponseDto> importJson(HttpServletRequest request) {
+        logger.info("Streaming JSON import request received");
+        try (InputStream inputStream = request.getInputStream()) {
+            ImportResponseDto.ImportResult result = importService.streamImportJson(inputStream);
             String message = result.hasErrors()
                     ? "Import completed with " + result.getErrors().size() + " error(s)"
                     : "Import completed successfully";
@@ -53,9 +56,19 @@ public class ImportController {
 
     @GetMapping("/json")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<ImportRequestDto> exportJson() {
-        ImportRequestDto exportData = importService.exportData();
-        return ResponseEntity.ok(exportData);
+    public void exportJson(HttpServletResponse response) throws IOException {
+        try {
+            logger.info("Starting streaming JSON export");
+            // APPLICATION_JSON_VALUE has no charset so MockMvc matches application/json exactly
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            importService.streamExportJson(response.getOutputStream());
+            response.flushBuffer();
+            logger.info("Streaming JSON export completed");
+        } catch (Exception e) {
+            logger.error("Streaming JSON export failed", e);
+            throw new RuntimeException("Export failed", e);
+        }
     }
 
     /**

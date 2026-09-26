@@ -1,5 +1,8 @@
 -- Spring Session JDBC Schema for PostgreSQL
 -- This schema is automatically applied when the application starts
+-- Fail fast if a previous Cloud Run revision still holds ACCESS EXCLUSIVE locks.
+SET lock_timeout = '5s';
+SET statement_timeout = '30s';
 
 -- Drop the auto-generated Hibernate check constraint on library_card_design so new enum values are accepted.
 ALTER TABLE IF EXISTS users DROP CONSTRAINT IF EXISTS users_library_card_design_check;
@@ -34,3 +37,6 @@ CREATE TABLE IF NOT EXISTS SPRING_SESSION_ATTRIBUTES (
     CONSTRAINT SPRING_SESSION_ATTRIBUTES_PK PRIMARY KEY (SESSION_PRIMARY_ID, ATTRIBUTE_NAME),
     CONSTRAINT SPRING_SESSION_ATTRIBUTES_FK FOREIGN KEY (SESSION_PRIMARY_ID) REFERENCES SPRING_SESSION(PRIMARY_ID) ON DELETE CASCADE
 );
+
+SET lock_timeout = DEFAULT;
+SET statement_timeout = DEFAULT;

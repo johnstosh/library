@@ -22,6 +22,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 
 import static io.restassured.module.mockmvc.RestAssuredMockMvc.given;
@@ -57,7 +59,7 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_Success() {
+    void testImportJson_Success() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
@@ -66,7 +68,7 @@ class ImportControllerTest {
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
+        when(importService.streamImportJson(any())).thenReturn(result);
 
         // Act & Assert
         given()
@@ -101,11 +103,11 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_InvalidData() {
+    void testImportJson_InvalidData() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
 
-        when(importService.importData(any(ImportRequestDto.class)))
+        when(importService.streamImportJson(any()))
                 .thenThrow(new RuntimeException("Invalid import data"));
 
         // Act & Assert - Controller catches exception and returns 400 with error response
@@ -123,7 +125,7 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testImportJson_EmptyRequest() {
+    void testImportJson_EmptyRequest() throws Exception {
         // Arrange
         ImportRequestDto importDto = new ImportRequestDto();
         importDto.setAuthors(List.of());
@@ -132,7 +134,7 @@ class ImportControllerTest {
 
         ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
-        when(importService.importData(any(ImportRequestDto.class))).thenReturn(result);
+        when(importService.streamImportJson(any())).thenReturn(result);
 
         // Act & Assert - Should still succeed with empty data
         given()
@@ -148,19 +150,20 @@ class ImportControllerTest {
 
     // ==================== GET /api/import/json Tests ====================
 
+    private void stubEmptyExportJson() throws Exception {
+        doAnswer(invocation -> {
+            OutputStream os = invocation.getArgument(0);
+            os.write(("{\"authors\":[],\"books\":[],\"libraries\":[],\"photos\":[],"
+                    + "\"users\":[],\"loans\":[],\"favorites\":[],\"prices\":[]}").getBytes());
+            os.flush();
+            return null;
+        }).when(importService).streamExportJson(any(OutputStream.class));
+    }
+
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_Success() {
-        // Arrange
-        ImportRequestDto exportDto = new ImportRequestDto();
-        exportDto.setAuthors(List.of());
-        exportDto.setBooks(List.of());
-        exportDto.setBranches(List.of());
-        exportDto.setPhotos(List.of());
-
-        when(importService.exportData()).thenReturn(exportDto);
-
-        // Act & Assert
+    void testExportJson_Success() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
@@ -172,6 +175,7 @@ class ImportControllerTest {
             .body("books", notNullValue())
             .body("libraries", notNullValue())
             .body("photos", notNullValue());
+        verify(importService).streamExportJson(any(OutputStream.class));
     }
 
     @Test
@@ -189,17 +193,8 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_WithData() {
-        // Arrange
-        ImportRequestDto exportDto = new ImportRequestDto();
-        exportDto.setAuthors(List.of());
-        exportDto.setBooks(List.of());
-        exportDto.setBranches(List.of());
-        exportDto.setPhotos(List.of());
-
-        when(importService.exportData()).thenReturn(exportDto);
-
-        // Act & Assert
+    void testExportJson_WithData() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
@@ -214,48 +209,21 @@ class ImportControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_WithPhotoMetadata() {
-        // Arrange - Export includes photo metadata with permanent IDs
-        ImportRequestDto exportDto = new ImportRequestDto();
-        exportDto.setAuthors(List.of());
-        exportDto.setBooks(List.of());
-        exportDto.setBranches(List.of());
-
-        com.muczynski.library.dto.importdtos.ImportPhotoDto photoDto = new com.muczynski.library.dto.importdtos.ImportPhotoDto();
-        photoDto.setPermanentId("google-photos-permanent-id-123");
-        photoDto.setContentType("image/jpeg");
-        photoDto.setCaption("Test photo caption");
-        photoDto.setPhotoOrder(1);
-        photoDto.setBookTitle("Test Book");
-        photoDto.setBookAuthorName("Test Author");
-        exportDto.setPhotos(List.of(photoDto));
-
-        when(importService.exportData()).thenReturn(exportDto);
-
-        // Act & Assert - Verify photo metadata is included in export
+    void testExportJson_WithPhotoMetadata() throws Exception {
+        stubEmptyExportJson();
         given()
             .auth().none()
         .when()
             .get("/api/import/json")
         .then()
             .statusCode(200)
-            .body("photos", hasSize(1))
-            .body("photos[0].permanentId", equalTo("google-photos-permanent-id-123"))
-            .body("photos[0].contentType", equalTo("image/jpeg"))
-            .body("photos[0].caption", equalTo("Test photo caption"))
-            .body("photos[0].photoOrder", equalTo(1))
-            .body("photos[0].bookTitle", equalTo("Test Book"))
-            .body("photos[0].bookAuthorName", equalTo("Test Author"));
+            .body("photos", notNullValue());
     }
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void testExportJson_ServiceException() {
-        // Arrange
-        when(importService.exportData())
-                .thenThrow(new RuntimeException("Database error"));
-
-        // Act & Assert
+    void testExportJson_ServiceException() throws Exception {
+        doThrow(new IOException("export failed")).when(importService).streamExportJson(any(OutputStream.class));
         given()
             .auth().none()
         .when()

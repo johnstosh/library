@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
 
 vi.mock('@/api/data-management', () => ({
@@ -54,6 +55,49 @@ vi.mock('@/api/data-management', () => ({
     isLoading: false,
     isError: false,
   }),
+  // Maintenance mocks for Issue #347 - full shape to prevent render errors in useMutation
+  useRecalcIllegalGenres: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      booksAffected: 3,
+      message: '3 book(s) have illegal or mismatched genre tags.',
+    }),
+    isPending: false,
+  }),
+  useCleanupIllegalGenres: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      booksAffected: 0,
+      booksScanned: 42,
+      booksUpdated: 5,
+      pluralCorrections: 7,
+      illegalRemoved: 12,
+      message: 'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.',
+    }),
+    isPending: false,
+  }),
+  // Duplicate titles mocks for Issue #351
+  useFindDuplicateTitles: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({
+      pairs: [
+        {
+          score: 0.950123,
+          bookAId: 1,
+          bookATitle: 'Confessions',
+          bookAAlternateTitle: null,
+          bookAAuthorName: 'Augustine',
+          bookAStatus: 'ACTIVE',
+          bookBId: 2,
+          bookBTitle: 'Confession',
+          bookBAlternateTitle: null,
+          bookBAuthorName: 'Augustine',
+          bookBStatus: 'WITHDRAWN',
+        },
+      ],
+      booksScanned: 10,
+      representativesCompared: 9,
+      message: '1 pairs found.',
+    }),
+    isPending: false,
+  }),
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -89,9 +133,17 @@ vi.mock('@/api/photos', () => ({
   }),
 }))
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <DataManagementPage />
+    </MemoryRouter>
+  )
+}
+
 describe('DataManagementPage Books Availability', () => {
   it('uses a single column on phone and does not truncate in-library labels', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     const grid = screen.getByTestId('availability-stats-grid')
     expect(grid).toHaveClass('grid-cols-1')
@@ -108,7 +160,7 @@ describe('DataManagementPage Books Availability', () => {
 
 describe('DataManagementPage Favorites Statistics', () => {
   it('lists favorite counts split by books and authors', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     expect(screen.getByTestId('favorite-stats-section')).toHaveTextContent('Favorites Statistics')
     expect(screen.getByTestId('favorite-stat-Have Read')).toHaveTextContent('Have Read')
@@ -119,7 +171,7 @@ describe('DataManagementPage Favorites Statistics', () => {
 
 describe('DataManagementPage database statistics', () => {
   it('shows Favorites after Loans and before Prices', () => {
-    render(<DataManagementPage />)
+    renderPage()
 
     const loans = screen.getByTestId('stat-loans')
     const favorites = screen.getByTestId('stat-favorites')
@@ -132,5 +184,55 @@ describe('DataManagementPage database statistics', () => {
 
     expect(loans.compareDocumentPosition(favorites) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(favorites.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+describe('DataManagementPage Maintenance Section (Issue #347)', () => {
+  it('renders the maintenance table at the bottom with Illegal genres cleanup row, Count as "-", and Recalc/Clean buttons', () => {
+    renderPage()
+
+    expect(screen.getByTestId('maintenance-section')).toHaveTextContent('Maintenance')
+    expect(screen.getByTestId('maintenance-row-illegal-genres')).toBeInTheDocument()
+    expect(screen.getByText('Clean Genres')).toBeInTheDocument()
+    expect(screen.getByText('Recalc')).toBeInTheDocument()
+    expect(screen.getByText(/Fixes genre names that use the wrong plural/)).toBeInTheDocument()
+    // Count shows "-" before any Recalc (per spec)
+    expect(screen.getByText('-')).toBeInTheDocument()
+    expect(screen.getByText(/Click Recalc or Clean Genres to see results here/)).toBeInTheDocument()
+  })
+})
+
+describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
+  it('renders the duplicate titles section with a Find button', () => {
+    renderPage()
+
+    expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate catalog entries')
+    expect(screen.getByTestId('find-duplicate-titles')).toHaveTextContent('Find')
+    expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
+  })
+
+  it('shows book status in results, links to book pages, and hides scores', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('duplicate-titles-results')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
+    expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: WITHDRAWN')
+    expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
+    // No Score column or numeric score display
+    expect(screen.queryByText('Score')).not.toBeInTheDocument()
+    expect(screen.queryByText('0.950123')).not.toBeInTheDocument()
+    // No score/threshold language in banner or summary
+    expect(screen.queryByText(/score/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/threshold/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('duplicate-titles-scan-summary')).toHaveTextContent('1 pairs found.')
+    // Book links go to detail pages
+    const linkA = screen.getByTestId('dup-book-a-link-1')
+    const linkB = screen.getByTestId('dup-book-b-link-2')
+    expect(linkA).toHaveAttribute('href', '/books/1')
+    expect(linkB).toHaveAttribute('href', '/books/2')
   })
 })

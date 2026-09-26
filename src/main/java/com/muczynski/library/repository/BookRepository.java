@@ -90,6 +90,20 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library")
     List<Book> findAllWithAuthorAndLibrary();
+
+    /**
+     * Batch query for streaming export: books with id > :lastId, ordered by id.
+     * Two-step to safely combine keyset pagination with JOIN FETCH (avoids Hibernate limit issues).
+     * First finds IDs (Pageable limit applied), then fetches full entities.
+     */
+    @Query("SELECT b.id FROM Book b WHERE b.id > :lastId ORDER BY b.id ASC")
+    List<Long> findBookIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    /**
+     * Fetch full books (with JOIN FETCH) for given IDs. Used in streaming export batching.
+     */
+    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.id IN :ids ORDER BY b.id ASC")
+    List<Book> findBooksByIdsWithAuthorAndLibrary(@Param("ids") List<Long> ids);
     Page<Book> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndFreeTextUrlIsNotNull(String title, Pageable pageable);
     Page<Book> findByTitleContainingIgnoreCaseAndElectronicResourceTrue(String title, Pageable pageable);
@@ -443,4 +457,40 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     // Lightweight projection for photo ZIP import — skips @Lob fields (plotEssay, etc.)
     List<BookZipImportProjection> findBy();
+
+    /**
+     * Lightweight projection for maintenance genre cleanup.
+     * Loads only id and tagsList (ElementCollection). Avoids all @Lob columns
+     * (plotEssay, detailedDescription, freeTextUrl, etc.) and associations.
+     * Critical for memory safety with ~2k book catalog.
+     */
+    interface IllegalGenreTagsProjection {
+        Long getId();
+        List<String> getTagsList();
+    }
+
+    /**
+     * Returns all books' id + tagsList only. Used by MaintenanceService to avoid
+     * loading LOBs or full entities. See comment on BookZipImportProjection.
+     */
+    @Query("SELECT b.id as id, b.tagsList as tagsList FROM Book b")
+    List<IllegalGenreTagsProjection> findAllForGenreMaintenance();
+
+    /**
+     * Lightweight projection for duplicate-title scan (Issue #351).
+     * Loads only id, title, alternateTitle, author name, and status — never @Lob fields.
+     */
+    interface DuplicateTitleProjection {
+        Long getId();
+        String getTitle();
+        String getAlternateTitle();
+        String getAuthorName();
+        BookStatus getStatus();
+    }
+
+    /**
+     * All books for duplicate-title matching. Avoids LOBs and full entities.
+     */
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status FROM Book b LEFT JOIN b.author a")
+    List<DuplicateTitleProjection> findAllForDuplicateTitleScan();
 }

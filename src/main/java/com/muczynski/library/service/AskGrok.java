@@ -46,9 +46,9 @@ public class AskGrok {
     // Model constants.
     // xAI does not currently offer a rolling flagship alias (grok-latest / grok-default 404).
     // grok-4 and grok-4-latest resolve to grok-4.3. Pin the current flagship explicitly.
-    public static final String MODEL_GROK_FLAGSHIP = "grok-4.6";
+    public static final String MODEL_GROK_FLAGSHIP = "grok-4.7";
     public static final String MODEL_GROK_4 = MODEL_GROK_FLAGSHIP;
-    public static final String MODEL_GROK_4_FAST = "grok-4-1-fast-reasoning";
+    public static final String MODEL_GROK_4_FAST = "grok-4.3";
     public static final String IMAGE_DETAIL_HIGH = "high";
     /** Max books per reading-difficulty Grok prompt. */
     public static final int READING_DIFFICULTY_BATCH_SIZE = 10;
@@ -57,7 +57,7 @@ public class AskGrok {
     private static final int FAST_MAX_COMPLETION_TOKENS = 500;
 
     /**
-     * Analyze a single photo using Grok AI vision model with grok-4-fast.
+     * Analyze a single photo using Grok AI vision model with grok-4.3 (the less expensive model).
      * @param imageBytes Photo bytes
      * @param contentType Image content type (e.g., "image/jpeg")
      * @param prompt The analysis prompt/question for the AI
@@ -114,7 +114,7 @@ public class AskGrok {
     }
 
     /**
-     * Analyze multiple photos using Grok AI vision model with grok-4-fast.
+     * Analyze multiple photos using Grok AI vision model with grok-4.3 (the less expensive model).
      * @param photoDataList List of maps containing "imageBytes" (byte[]) and "contentType" (String)
      * @param prompt The analysis prompt/question for the AI
      * @return AI response as String
@@ -244,7 +244,7 @@ public class AskGrok {
                 Return a JSON array of URL strings, most relevant first.
                 Example: ["https://grokipedia.com/page/The_Song_of_Bernadette_(novel)"]
                 """.formatted(goalSubject, asciiTitle);
-        String response = askQuestion(prompt);
+        String response = askQuestionFast(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
             log.warn("Could not parse Grokipedia URL array for book {}: {}", goalSubject, response);
@@ -284,7 +284,7 @@ public class AskGrok {
                 Return a JSON array of URL strings, most relevant first.
                 Example: ["https://grokipedia.com/page/C._S._Lewis"]
                 """.formatted(goalSubject, asciiAuthor);
-        String response = askQuestion(prompt);
+        String response = askQuestionFast(prompt);
         List<String> urls = parseJsonStringArray(response);
         if (urls.isEmpty()) {
             log.warn("Could not parse Grokipedia URL array for author {}: {}", authorName, response);
@@ -464,7 +464,7 @@ public class AskGrok {
 
     /**
      * Suggest genres/tags for a book based on its catalog card information.
-     * Uses grok-4-fast model for faster responses.
+     * Uses grok-4.3 (the less expensive model) for faster responses.
      *
      * @param bookJson JSON string containing book information
      * @param authorJson JSON string containing author information (can be null)
@@ -491,7 +491,7 @@ public class AskGrok {
     }
 
     /**
-     * Ask a text-only question to Grok AI using grok-4-fast model.
+     * Ask a text-only question to Grok AI using grok-4.3 (the less expensive model).
      * @param question The question to ask
      * @return AI response as String
      */

@@ -114,7 +114,7 @@ DOCKERFILE="Dockerfile"
 if [ "$MODE" = "graalvm" ]; then
   IMAGE_NAME="${IMAGE_NAME}-graalvm"
   SERVICE_VERSION="${SERVICE_VERSION}-graalvm"
-  MEMORY="512Mi"
+  MEMORY="512Mi"  # GraalVM native uses less overhead
   DOCKERFILE="Dockerfile-graalvm"
 fi
 
@@ -216,6 +216,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory "$MEMORY" \
   --cpu 1 \
+  --timeout 600 \
   --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
   $SERVICE_ACCOUNT_ARG \

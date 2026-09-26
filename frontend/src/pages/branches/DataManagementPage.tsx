@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -15,8 +16,13 @@ import {
   useLabelCounts,
   useAvailabilityStats,
   usePhotoZipParts,
+  useRecalcIllegalGenres,
+  useCleanupIllegalGenres,
+  useFindDuplicateTitles,
   type BookAvailabilityStatsDto,
   type PhotoZipPartDto,
+  type IllegalGenresMaintenanceDto,
+  type DuplicateTitlesResultDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
@@ -32,6 +38,11 @@ import {
   PiTag,
   PiBooks,
   PiStar,
+  PiWrench,
+  PiArrowClockwise,
+  PiTrash,
+  PiMagnifyingGlass,
+  PiCopy,
 } from 'react-icons/pi'
 
 const AVAILABILITY_COUNT_ITEMS: {
@@ -65,6 +76,16 @@ export function DataManagementPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [zipImportResult, setZipImportResult] = useState<PhotoZipImportResultDto | null>(null)
 
+  // Maintenance state (Issue #347 - Illegal genre names)
+  const [illegalGenresCount, setIllegalGenresCount] = useState<number | null>(null)
+  const [illegalGenresResult, setIllegalGenresResult] = useState<IllegalGenresMaintenanceDto | null>(null)
+  const [isRecalcing, setIsRecalcing] = useState(false)
+  const [isCleaning, setIsCleaning] = useState(false)
+
+  // Duplicate titles (Issue #351)
+  const [duplicateTitlesResult, setDuplicateTitlesResult] = useState<DuplicateTitlesResultDto | null>(null)
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
   const importJsonData = useImportJsonData()
@@ -82,6 +103,10 @@ export function DataManagementPage() {
   // Photo stats for filename generation
   const { data: photoStats } = usePhotoExportStats()
   const { data: zipParts, isLoading: isLoadingZipParts, isError: isZipPartsError } = usePhotoZipParts()
+
+  const recalcIllegalGenres = useRecalcIllegalGenres()
+  const cleanupIllegalGenres = useCleanupIllegalGenres()
+  const findDuplicateTitles = useFindDuplicateTitles()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -192,6 +217,77 @@ export function DataManagementPage() {
       console.error('Failed to import photos from ZIP:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setErrorMessage(errorMessage)
+    }
+  }
+
+  // Maintenance handlers for Illegal Genres (Issue #347)
+  const handleRecalcIllegalGenres = async () => {
+    setIsRecalcing(true)
+    setErrorMessage('')
+    try {
+      const result = await recalcIllegalGenres.mutateAsync()
+      setIllegalGenresCount(result.booksAffected)
+      setIllegalGenresResult(result)
+      if (result.error) {
+        setErrorMessage(result.error)
+      }
+    } catch (error) {
+      console.error('Failed to recalc illegal genres:', error)
+      const msg = error instanceof Error ? error.message : 'Failed to recalculate'
+      setErrorMessage(msg)
+      setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
+    } finally {
+      setIsRecalcing(false)
+    }
+  }
+
+  const handleCleanupIllegalGenres = async () => {
+    setIsCleaning(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      const result = await cleanupIllegalGenres.mutateAsync()
+      setIllegalGenresCount(result.booksAffected ?? 0)
+      setIllegalGenresResult(result)
+      if (result.error) {
+        setErrorMessage(result.error || result.message || 'Cleanup encountered an error')
+      } else if (result.message) {
+        setSuccessMessage(result.message)
+      }
+    } catch (error) {
+      console.error('Failed to cleanup illegal genres:', error)
+      const msg = error instanceof Error ? error.message : 'Cleanup failed'
+      setErrorMessage(msg)
+      setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
+    } finally {
+      setIsCleaning(false)
+    }
+  }
+
+
+  const handleFindDuplicateTitles = async () => {
+    setIsFindingDuplicates(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      const result = await findDuplicateTitles.mutateAsync()
+      setDuplicateTitlesResult(result)
+      if (result.error) {
+        setErrorMessage(result.error)
+      }
+      // Do not surface result.message as a success banner (no score/threshold language).
+    } catch (error) {
+      console.error('Failed to find duplicate titles:', error)
+      const msg = error instanceof Error ? error.message : 'Find duplicates failed'
+      setErrorMessage(msg)
+      setDuplicateTitlesResult({
+        pairs: [],
+        booksScanned: 0,
+        representativesCompared: 0,
+        error: msg,
+      })
+    } finally {
+      setIsFindingDuplicates(false)
     }
   }
 
@@ -638,6 +734,232 @@ export function DataManagementPage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+
+      {/* Duplicate catalog entries (Issue #351) */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="duplicate-titles-section">
+        <div className="bg-amber-700 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiCopy className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Duplicate catalog entries</h2>
+              <p className="text-sm text-amber-100">
+                Find near-duplicate titles and alternate titles using keyword overlap and
+                Jaro–Winkler closeness. Copy suffixes like &quot;, c. 2&quot; are collapsed so
+                only one copy is considered. Shows the top 100 closest pairs. Does not change data.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Button
+              variant="primary"
+              onClick={handleFindDuplicateTitles}
+              isLoading={isFindingDuplicates}
+              leftIcon={<PiMagnifyingGlass className="w-4 h-4" />}
+              data-test="find-duplicate-titles"
+            >
+              Find
+            </Button>
+            {duplicateTitlesResult && !duplicateTitlesResult.error && (
+              <span className="text-sm text-gray-600" data-test="duplicate-titles-scan-summary">
+                Scanned {duplicateTitlesResult.booksScanned} books
+                ({duplicateTitlesResult.representativesCompared} representatives).
+                {duplicateTitlesResult.pairs.length > 0
+                  ? ` ${duplicateTitlesResult.pairs.length} pairs found.`
+                  : ''}
+              </span>
+            )}
+          </div>
+
+          {duplicateTitlesResult?.error && (
+            <ErrorMessage message={duplicateTitlesResult.error} />
+          )}
+
+          {duplicateTitlesResult && !duplicateTitlesResult.error && (
+            <div className="overflow-x-auto" data-test="duplicate-titles-results">
+              {duplicateTitlesResult.pairs.length === 0 ? (
+                <p className="text-sm text-gray-500">No near-duplicate pairs found.</p>
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Book A
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Book B
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {duplicateTitlesResult.pairs.map((pair) => (
+                      <tr key={`${pair.bookAId}-${pair.bookBId}`}>
+                        <td className="px-4 py-3 align-top">
+                          <Link
+                            to={`/books/${pair.bookAId}`}
+                            className="text-indigo-700 hover:underline font-medium"
+                            data-test={`dup-book-a-link-${pair.bookAId}`}
+                          >
+                            #{pair.bookAId} {pair.bookATitle || '(no title)'}
+                          </Link>
+                          {pair.bookAAlternateTitle && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Alt: {pair.bookAAlternateTitle}
+                            </div>
+                          )}
+                          {pair.bookAAuthorName && (
+                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookAAuthorName}</div>
+                          )}
+                          {pair.bookAStatus && (
+                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-a-status">
+                              Status: {pair.bookAStatus}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Link
+                            to={`/books/${pair.bookBId}`}
+                            className="text-indigo-700 hover:underline font-medium"
+                            data-test={`dup-book-b-link-${pair.bookBId}`}
+                          >
+                            #{pair.bookBId} {pair.bookBTitle || '(no title)'}
+                          </Link>
+                          {pair.bookBAlternateTitle && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Alt: {pair.bookBAlternateTitle}
+                            </div>
+                          )}
+                          {pair.bookBAuthorName && (
+                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookBAuthorName}</div>
+                          )}
+                          {pair.bookBStatus && (
+                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-b-status">
+                              Status: {pair.bookBStatus}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {!duplicateTitlesResult && (
+            <p className="text-sm text-gray-400">Click Find to scan the catalog for near-duplicate titles.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Maintenance Section - Illegal Genres Cleanup (Issue #347) */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="maintenance-section">
+        <div className="bg-indigo-600 px-6 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <PiWrench className="w-8 h-8" />
+            <div>
+              <h2 className="text-xl font-bold">Maintenance</h2>
+              <p className="text-sm text-indigo-100">
+                Cleanup tasks for the catalog. The count stays blank as a dash until you click Recalc.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    Count
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                    Results
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {/* Illegal Genres Cleanup Row */}
+                <tr data-test="maintenance-row-illegal-genres">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {illegalGenresCount === null ? (
+                      <span className="text-gray-400 text-xl font-light">-</span>
+                    ) : (
+                      <span className="text-lg font-bold tabular-nums text-indigo-700">
+                        {illegalGenresCount}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleRecalcIllegalGenres}
+                        isLoading={isRecalcing}
+                        leftIcon={<PiArrowClockwise className="w-4 h-4" />}
+                        data-test="recalc-illegal-genres"
+                      >
+                        Recalc
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleCleanupIllegalGenres}
+                        isLoading={isCleaning}
+                        leftIcon={<PiTrash className="w-4 h-4" />}
+                        data-test="cleanup-illegal-genres"
+                      >
+                        Clean Genres
+                      </Button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    Fixes genre names that use the wrong plural (for example, histories becomes history,
+                    or biographies becomes biography) and other near-miss spellings so they match the
+                    standard list. Drops any genre that is not on that list. Updates books in place.
+                    The count is how many books still have at least one bad genre tag.
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    {illegalGenresResult ? (
+                      illegalGenresResult.error ? (
+                        <ErrorMessage message={illegalGenresResult.error} />
+                      ) : (
+                        <div className="space-y-1">
+                          <SuccessMessage message={illegalGenresResult.message || 'Cleanup finished'} />
+                          {illegalGenresResult.booksUpdated !== undefined && (
+                            <div className="text-xs text-gray-500">
+                              Looked at {illegalGenresResult.booksScanned} books.
+                              Updated {illegalGenresResult.booksUpdated}.
+                              Corrected {illegalGenresResult.pluralCorrections} plural or spelling variants.
+                              Removed {illegalGenresResult.illegalRemoved} illegal tags.
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-gray-400 text-sm">Click Recalc or Clean Genres to see results here.</span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-xs text-gray-500">
+            More cleanup tasks can be added to this list later.
+          </p>
         </div>
       </div>
     </div>
