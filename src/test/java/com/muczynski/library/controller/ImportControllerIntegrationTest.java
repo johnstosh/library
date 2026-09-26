@@ -705,6 +705,83 @@ class ImportControllerIntegrationTest {
                 "Re-import must not create a duplicate loan row");
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_PriceUpsertOnBookCover() throws Exception {
+        // uk_book_price_book_cover: re-importing the same (book, cover) must update, not INSERT-fail.
+        String firstImport = """
+            {
+                "libraries": [{"branchName": "Upsert Price Library", "librarySystemName": "Upsert Price System"}],
+                "authors": [{"name": "Upsert Price Author"}],
+                "books": [{
+                    "title": "Upsert Price Book",
+                    "libraryName": "Upsert Price Library",
+                    "authorName": "Upsert Price Author"
+                }],
+                "prices": [{
+                    "bookTitle": "Upsert Price Book",
+                    "bookAuthorName": "Upsert Price Author",
+                    "cover": "HARDCOVER",
+                    "priceDollars": 12.50,
+                    "shippingDollars": 3.99,
+                    "condition": "Good",
+                    "lookedUpAt": "2025-09-01T12:00:00",
+                    "detailsUrl": "https://example.com/first"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Book book = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Upsert Price Book", "Upsert Price Author").get(0);
+        java.util.Optional<BookPrice> first = bookPriceRepository.findByBook_IdAndCover(book.getId(), BookCoverType.HARDCOVER);
+        org.junit.jupiter.api.Assertions.assertTrue(first.isPresent(), "Price should exist after first import");
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("12.50").compareTo(first.get().getPriceDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("3.99").compareTo(first.get().getShippingDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals("Good", first.get().getCondition());
+        org.junit.jupiter.api.Assertions.assertEquals("https://example.com/first", first.get().getDetailsUrl());
+        long priceId = first.get().getId();
+        long priceCountAfterFirst = bookPriceRepository.count();
+
+        String secondImport = """
+            {
+                "prices": [{
+                    "bookTitle": "Upsert Price Book",
+                    "bookAuthorName": "Upsert Price Author",
+                    "cover": "HARDCOVER",
+                    "priceDollars": 9.25,
+                    "shippingDollars": 4.50,
+                    "condition": "Very Good",
+                    "lookedUpAt": "2025-09-26T16:01:00",
+                    "detailsUrl": "https://example.com/second",
+                    "lookupError": null
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        java.util.Optional<BookPrice> second = bookPriceRepository.findByBook_IdAndCover(book.getId(), BookCoverType.HARDCOVER);
+        org.junit.jupiter.api.Assertions.assertTrue(second.isPresent(), "Price should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertEquals(priceId, second.get().getId(), "Same price row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("9.25").compareTo(second.get().getPriceDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("4.50").compareTo(second.get().getShippingDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals("Very Good", second.get().getCondition());
+        org.junit.jupiter.api.Assertions.assertEquals("https://example.com/second", second.get().getDetailsUrl());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                priceCountAfterFirst,
+                bookPriceRepository.count(),
+                "Re-import must not create a duplicate price row");
+    }
+
     // ==================== GET /api/import/availability-stats Integration Tests ====================
 
     @Test

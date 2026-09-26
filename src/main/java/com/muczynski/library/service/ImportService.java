@@ -653,11 +653,23 @@ public class ImportService {
     }
 
     private void processPrice(ImportPriceDto pDto, ImportResponseDto.ImportCounts counts) {
+        // Resolve book by title, then upsert on uk_book_price_book_cover (book_id, cover)
+        // so re-imports update instead of duplicate-key INSERT.
+        if (pDto.getBookTitle() == null || pDto.getCover() == null) {
+            logger.warn("Skipping price with missing reference: bookTitle={}, cover={}",
+                    pDto.getBookTitle(), pDto.getCover());
+            return;
+        }
+
         List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(pDto.getBookTitle());
-        if (books.isEmpty()) return;
+        if (books.isEmpty()) {
+            logger.warn("Book not found for price: {}", pDto.getBookTitle());
+            return;
+        }
 
         Book book = books.get(0);
-        BookPrice price = new BookPrice();
+        BookPrice price = bookPriceRepository.findByBook_IdAndCover(book.getId(), pDto.getCover())
+                .orElseGet(BookPrice::new);
         price.setBook(book);
         price.setCover(pDto.getCover());
         price.setPriceDollars(pDto.getPriceDollars());
