@@ -100,8 +100,14 @@ docker run --rm -it \
     fi
 
     # ── Drop & Recreate ──────────────────────────────────────────────────────────
-    echo "→ Dropping & recreating database \"$TARGET_DB\"..."
-    PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres <<EOF
+    # ON_ERROR_STOP so a failed DROP (e.g. other open connections) aborts loudly
+    # instead of looking successful while favorites/prices survive.
+    echo "→ Terminating other connections, then dropping & recreating \"$TARGET_DB\"..."
+    PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres <<EOF
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = '$TARGET_DB'
+  AND pid <> pg_backend_pid();
 DROP DATABASE IF EXISTS "$TARGET_DB";
 CREATE DATABASE "$TARGET_DB";
 EOF

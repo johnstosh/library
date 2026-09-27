@@ -28,11 +28,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -197,24 +198,38 @@ class TestDataServiceTest {
     }
 
     @Test
-    void testDeleteTestData_DeletesLoansAndBooks() {
-        // Arrange
+    void testDeleteTestData_DeletesLoansAndPrefixMatchedBooks() {
+        // Arrange — generators use "test-data - …", not exact "test-data"
+        Book testBook = new Book();
+        testBook.setId(10L);
+        testBook.setPublisher("test-data - Penguin Random House");
+        Book normalBook = new Book();
+        normalBook.setId(11L);
+        normalBook.setPublisher("Real Publisher");
+
+        when(bookRepository.findAll()).thenReturn(List.of(testBook, normalBook));
         when(authorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(userRepository.findAll()).thenReturn(Collections.emptyList());
+        when(photoRepository.findByBookIdOrderByPhotoOrder(10L)).thenReturn(Collections.emptyList());
 
         // Act
         testDataService.deleteTestData();
 
         // Assert
         verify(loanRepository, times(1)).deleteByLoanDate(LocalDate.of(2099, 1, 1));
-        verify(bookRepository, times(1)).deleteByPublisher("test-data");
+        verify(jdbcTemplate).update(eq("DELETE FROM favorites WHERE book_id IN (?)"), eq(10L));
+        verify(jdbcTemplate).update(eq("DELETE FROM book_price WHERE book_id IN (?)"), eq(10L));
+        verify(jdbcTemplate).update(eq("DELETE FROM book_tags WHERE book_id IN (?)"), eq(10L));
+        verify(bookRepository, times(1)).deleteAll(List.of(testBook));
+        verify(bookRepository, never()).deleteByPublisher(anyString());
     }
 
     @Test
-    void testDeleteTestData_DeletesAuthorsAndPhotos() {
+    void testDeleteTestData_DeletesAuthorsAndPhotos_WithPrefix() {
         // Arrange
         Author testAuthor = new Author();
         testAuthor.setId(1L);
-        testAuthor.setReligiousAffiliation("test-data");
+        testAuthor.setReligiousAffiliation("test-data - Catholic");
 
         Author normalAuthor = new Author();
         normalAuthor.setId(2L);
@@ -222,6 +237,8 @@ class TestDataServiceTest {
 
         List<Author> allAuthors = List.of(testAuthor, normalAuthor);
         when(authorRepository.findAll()).thenReturn(allAuthors);
+        when(bookRepository.findAll()).thenReturn(Collections.emptyList());
+        when(userRepository.findAll()).thenReturn(Collections.emptyList());
 
         Photo photo1 = new Photo();
         Photo photo2 = new Photo();
@@ -231,6 +248,7 @@ class TestDataServiceTest {
         testDataService.deleteTestData();
 
         // Assert
+        verify(jdbcTemplate).update(eq("DELETE FROM favorites WHERE author_id IN (?)"), eq(1L));
         verify(photoRepository, times(1)).findByAuthorId(1L);
         verify(photoRepository, times(1)).deleteAll(List.of(photo1, photo2));
         verify(authorRepository, times(1)).deleteAll(Collections.singletonList(testAuthor));
@@ -244,6 +262,7 @@ class TestDataServiceTest {
         normalAuthor.setReligiousAffiliation("Catholic");
 
         when(authorRepository.findAll()).thenReturn(Collections.singletonList(normalAuthor));
+        when(bookRepository.findAll()).thenReturn(Collections.emptyList());
         when(userRepository.findAll()).thenReturn(Collections.emptyList());
 
         // Act
@@ -256,7 +275,7 @@ class TestDataServiceTest {
     }
 
     @Test
-    void testDeleteTestData_DeletesTestUsers() {
+    void testDeleteTestData_DeletesTestUsers_AndTheirFavorites() {
         // Arrange
         User testUser1 = new User();
         testUser1.setId(1L);
@@ -273,11 +292,13 @@ class TestDataServiceTest {
         List<User> allUsers = List.of(testUser1, testUser2, normalUser);
         when(userRepository.findAll()).thenReturn(allUsers);
         when(authorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(bookRepository.findAll()).thenReturn(Collections.emptyList());
 
         // Act
         testDataService.deleteTestData();
 
         // Assert
+        verify(jdbcTemplate).update(eq("DELETE FROM favorites WHERE user_id IN (?,?)"), eq(1L), eq(2L));
         verify(userRepository, times(1)).deleteAll(List.of(testUser1, testUser2));
     }
 
@@ -290,6 +311,7 @@ class TestDataServiceTest {
 
         when(userRepository.findAll()).thenReturn(Collections.singletonList(normalUser));
         when(authorRepository.findAll()).thenReturn(Collections.emptyList());
+        when(bookRepository.findAll()).thenReturn(Collections.emptyList());
 
         // Act
         testDataService.deleteTestData();
@@ -299,11 +321,15 @@ class TestDataServiceTest {
     }
 
     @Test
-    void testTotalPurge() {
+    void testTotalPurge_DropsFavoritesPricesAndTags() {
         // Act
         testDataService.totalPurge();
 
-        // Assert
+        // Assert — must drop favorites/book_price/book_tags (CASCADE on book alone is insufficient)
+        verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS favorites CASCADE");
+        verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS book_price CASCADE");
+        verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS book_tags CASCADE");
+        verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS photo_upload_session CASCADE");
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS users_roles CASCADE");
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS loan CASCADE");
         verify(jdbcTemplate, times(1)).execute("DROP TABLE IF EXISTS photo CASCADE");

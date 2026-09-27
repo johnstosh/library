@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,9 @@ import java.util.stream.Collectors;
 public class TestDataService {
 
     private static final Logger logger = LoggerFactory.getLogger(TestDataService.class);
+
+    /** Prefix used by RandomBook / RandomAuthor generators (e.g. "test-data - Penguin..."). */
+    static final String TEST_DATA_PREFIX = "test-data";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -107,18 +111,40 @@ public class TestDataService {
     }
 
     public void deleteTestData() {
-        // Delete test loans
+        // Delete test loans (generators use a fixed far-future loan date)
         loanRepository.deleteByLoanDate(java.time.LocalDate.of(2099, 1, 1));
 
-        // Delete test books
-        bookRepository.deleteByPublisher("test-data");
-
-        // Delete test authors and their photos
-        List<Author> allAuthors = authorRepository.findAll();
-        List<Author> testAuthors = allAuthors.stream()
-                .filter(author -> "test-data".equals(author.getReligiousAffiliation()))
+        // Match generators: publisher / religiousAffiliation are "test-data - …", users "test-data-…"
+        List<Book> testBooks = bookRepository.findAll().stream()
+                .filter(book -> startsWithTestDataPrefix(book.getPublisher()))
                 .collect(Collectors.toList());
+        List<Long> testBookIds = testBooks.stream().map(Book::getId).collect(Collectors.toList());
 
+        List<Author> testAuthors = authorRepository.findAll().stream()
+                .filter(author -> startsWithTestDataPrefix(author.getReligiousAffiliation()))
+                .collect(Collectors.toList());
+        List<Long> testAuthorIds = testAuthors.stream().map(Author::getId).collect(Collectors.toList());
+
+        List<User> testUsers = userRepository.findAll().stream()
+                .filter(user -> user.getUsername() != null && user.getUsername().startsWith("test-data-"))
+                .collect(Collectors.toList());
+        List<Long> testUserIds = testUsers.stream().map(User::getId).collect(Collectors.toList());
+
+        // Explicit child deletes in FK-safe order (do not rely on cascades alone).
+        // favorites may reference book, author, and/or user; book_price and book_tags reference book.
+        deleteWhereIdIn("favorites", "book_id", testBookIds);
+        deleteWhereIdIn("favorites", "author_id", testAuthorIds);
+        deleteWhereIdIn("favorites", "user_id", testUserIds);
+        deleteWhereIdIn("book_price", "book_id", testBookIds);
+        deleteWhereIdIn("book_tags", "book_id", testBookIds);
+
+        // Photos for test books and authors (book delete may cascade, but be explicit)
+        for (Long bookId : testBookIds) {
+            List<Photo> bookPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
+            if (!bookPhotos.isEmpty()) {
+                photoRepository.deleteAll(bookPhotos);
+            }
+        }
         for (Author testAuthor : testAuthors) {
             List<Photo> authorPhotos = photoRepository.findByAuthorId(testAuthor.getId());
             if (!authorPhotos.isEmpty()) {
@@ -126,15 +152,13 @@ public class TestDataService {
             }
         }
 
+        if (!testBooks.isEmpty()) {
+            bookRepository.deleteAll(testBooks);
+        }
+
         if (!testAuthors.isEmpty()) {
             authorRepository.deleteAll(testAuthors);
         }
-
-        // Delete test users (username starts with "test-data-")
-        List<User> allUsers = userRepository.findAll();
-        List<User> testUsers = allUsers.stream()
-                .filter(user -> user.getUsername() != null && user.getUsername().startsWith("test-data-"))
-                .collect(Collectors.toList());
 
         if (!testUsers.isEmpty()) {
             userRepository.deleteAll(testUsers);
@@ -143,6 +167,12 @@ public class TestDataService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void totalPurge() {
+        // Child / join tables first — DROP TABLE book CASCADE does NOT drop sibling tables
+        // that merely hold FKs to book (favorites, book_price, book_tags).
+        jdbcTemplate.execute("DROP TABLE IF EXISTS favorites CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS book_price CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS book_tags CASCADE");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS photo_upload_session CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS users_roles CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS loan CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS photo CASCADE");
@@ -152,5 +182,19 @@ public class TestDataService {
         jdbcTemplate.execute("DROP TABLE IF EXISTS author CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS library CASCADE");
         jdbcTemplate.execute("DROP TABLE IF EXISTS applied CASCADE");
+    }
+
+    private static boolean startsWithTestDataPrefix(String value) {
+        return value != null && value.startsWith(TEST_DATA_PREFIX);
+    }
+
+    private void deleteWhereIdIn(String table, String column, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "DELETE FROM " + table + " WHERE " + column + " IN (" + placeholders + ")";
+        jdbcTemplate.update(sql, ids.toArray());
+        logger.debug("Deleted from {} where {} in {} id(s)", table, column, ids.size());
     }
 }
