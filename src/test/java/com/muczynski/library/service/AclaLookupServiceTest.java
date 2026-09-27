@@ -53,6 +53,17 @@ class AclaLookupServiceTest {
             }}}
             """;
 
+    /** Same bibs as {@link #RESPONSE_WITH_ALL_FORMATS}, but under the alternate title the
+     *  second search actually looks up - AclaLookupService only accepts a bib whose normalized
+     *  title equals the searched title. */
+    private static final String RESPONSE_WITH_ALL_FORMATS_ALT_TITLE = """
+            {"entities":{"bibs":{
+              "S1":{"briefInfo":{"title":"Test Book Alt","authors":["Author, Test"],"format":"BK","superFormats":["BOOKS"],"consumptionFormat":"READ"}},
+              "S2":{"briefInfo":{"title":"Test Book Alt","authors":["Author, Test"],"format":"EBOOK","superFormats":["BOOKS","ELECTRONIC_FORMATS"],"consumptionFormat":"READ"}},
+              "S3":{"briefInfo":{"title":"Test Book Alt","authors":["Author, Test"],"format":"EAUDIOBOOK","superFormats":["AUDIOBOOKS_SPOKEN_WORD"],"consumptionFormat":"LISTEN"}}
+            }}}
+            """;
+
     private static final String RESPONSE_EBOOK_ONLY = """
             {"entities":{"bibs":{
               "S1":{"briefInfo":{"title":"Test Book","authors":["Author, Test"],"format":"EBOOK","superFormats":["BOOKS","ELECTRONIC_FORMATS"],"consumptionFormat":"READ"}}
@@ -442,10 +453,10 @@ class AclaLookupServiceTest {
         book.setAlternateTitle("Test Book Alt");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
-        // primary no match, alternate succeeds with all formats
+        // primary no match, alternate title succeeds with all formats
         when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
                 .thenReturn(RESPONSE_NO_MATCH)
-                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS_ALT_TITLE);
         when(bookRepository.save(any(Book.class))).thenReturn(book);
 
         AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
