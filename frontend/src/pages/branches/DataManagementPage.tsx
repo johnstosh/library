@@ -943,7 +943,7 @@ export function DataManagementPage() {
                           <SuccessMessage message={illegalGenresResult.message || 'Cleanup finished'} />
                           {illegalGenresResult.booksUpdated !== undefined && (
                             <div className="text-xs text-gray-500">
-                              Looked at {illegalGenresResult.booksScanned} books.
+                              Looked at {illegalGenresResult.booksScanned} genres.
                               Updated {illegalGenresResult.booksUpdated}.
                               Corrected {illegalGenresResult.pluralCorrections} plural or spelling variants.
                               Removed {illegalGenresResult.illegalRemoved} illegal tags.

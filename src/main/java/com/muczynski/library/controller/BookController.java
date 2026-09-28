@@ -441,9 +441,12 @@ public class BookController {
         }
     }
 
+    /**
+     * Not {@code @Transactional}: Grok HTTP must not hold a pool connection, and
+     * catch-and-return must not leave a controller txn rollback-only (#362).
+     */
     @PutMapping("/{id}/book-from-title-author")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<BookDto> getBookFromTitleAuthor(@PathVariable Long id, @RequestBody Map<String, String> request) {
         try {
             String title = request.get("title");
@@ -540,18 +543,21 @@ public class BookController {
         }
     }
 
+    /**
+     * Not {@code @Transactional}: Grok HTTP must not hold a pool connection, and
+     * service catch-and-return must not leave a controller txn rollback-only (#361).
+     */
     @PostMapping("/{id}/lookup-genres")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<GenreLookupResultDto> lookupGenresForBook(@PathVariable Long id) {
         logger.info("Looking up genres for book ID {}", id);
         GenreLookupResultDto result = bookService.lookupGenresForBook(id);
         return ResponseEntity.ok(result);
     }
 
+    /** Not {@code @Transactional}: same isolation as {@link #lookupGenresForBook}. */
     @PostMapping("/lookup-genres-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<List<GenreLookupResultDto>> lookupGenresBulk(@RequestBody List<Long> bookIds) {
         logger.info("Looking up genres for {} books", bookIds.size());
         List<GenreLookupResultDto> results = bookService.lookupGenresForBooks(bookIds);

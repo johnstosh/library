@@ -705,6 +705,171 @@ class ImportControllerIntegrationTest {
                 "Re-import must not create a duplicate loan row");
     }
 
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_PriceUpsertOnBookCover() throws Exception {
+        // uk_book_price_book_cover: re-importing the same (book, cover) must update, not INSERT-fail.
+        String firstImport = """
+            {
+                "libraries": [{"branchName": "Upsert Price Library", "librarySystemName": "Upsert Price System"}],
+                "authors": [{"name": "Upsert Price Author"}],
+                "books": [{
+                    "title": "Upsert Price Book",
+                    "libraryName": "Upsert Price Library",
+                    "authorName": "Upsert Price Author"
+                }],
+                "prices": [{
+                    "bookTitle": "Upsert Price Book",
+                    "bookAuthorName": "Upsert Price Author",
+                    "cover": "HARDCOVER",
+                    "priceDollars": 12.50,
+                    "shippingDollars": 3.99,
+                    "condition": "Good",
+                    "lookedUpAt": "2025-09-01T12:00:00",
+                    "detailsUrl": "https://example.com/first"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Book book = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Upsert Price Book", "Upsert Price Author").get(0);
+        java.util.Optional<BookPrice> first = bookPriceRepository.findByBook_IdAndCover(book.getId(), BookCoverType.HARDCOVER);
+        org.junit.jupiter.api.Assertions.assertTrue(first.isPresent(), "Price should exist after first import");
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("12.50").compareTo(first.get().getPriceDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("3.99").compareTo(first.get().getShippingDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals("Good", first.get().getCondition());
+        org.junit.jupiter.api.Assertions.assertEquals("https://example.com/first", first.get().getDetailsUrl());
+        long priceId = first.get().getId();
+        long priceCountAfterFirst = bookPriceRepository.count();
+
+        String secondImport = """
+            {
+                "prices": [{
+                    "bookTitle": "Upsert Price Book",
+                    "bookAuthorName": "Upsert Price Author",
+                    "cover": "HARDCOVER",
+                    "priceDollars": 9.25,
+                    "shippingDollars": 4.50,
+                    "condition": "Very Good",
+                    "lookedUpAt": "2025-09-26T16:01:00",
+                    "detailsUrl": "https://example.com/second",
+                    "lookupError": null
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        java.util.Optional<BookPrice> second = bookPriceRepository.findByBook_IdAndCover(book.getId(), BookCoverType.HARDCOVER);
+        org.junit.jupiter.api.Assertions.assertTrue(second.isPresent(), "Price should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertEquals(priceId, second.get().getId(), "Same price row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("9.25").compareTo(second.get().getPriceDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("4.50").compareTo(second.get().getShippingDollars()));
+        org.junit.jupiter.api.Assertions.assertEquals("Very Good", second.get().getCondition());
+        org.junit.jupiter.api.Assertions.assertEquals("https://example.com/second", second.get().getDetailsUrl());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                priceCountAfterFirst,
+                bookPriceRepository.count(),
+                "Re-import must not create a duplicate price row");
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_FavoriteUpsertOnUserListBookOrAuthor() throws Exception {
+        // Re-importing the same (user, listName, book) or (user, listName, author) must not duplicate.
+        String firstImport = """
+            {
+                "libraries": [{"branchName": "Upsert Fav Library", "librarySystemName": "Upsert Fav System"}],
+                "authors": [{"name": "Upsert Fav Author"}, {"name": "Upsert Fav Author Only"}],
+                "users": [{"username": "upsertfavuser", "authorities": ["USER"]}],
+                "books": [{
+                    "title": "Upsert Fav Book",
+                    "libraryName": "Upsert Fav Library",
+                    "authorName": "Upsert Fav Author"
+                }],
+                "favorites": [
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Have Read",
+                        "bookTitle": "Upsert Fav Book",
+                        "bookAuthorName": "Upsert Fav Author"
+                    },
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Want to Read",
+                        "authorName": "Upsert Fav Author Only"
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Book book = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Upsert Fav Book", "Upsert Fav Author").get(0);
+        Author authorOnly = authorRepository.findAllByNameOrderByIdAsc("Upsert Fav Author Only").get(0);
+        User user = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc("upsertfavuser").get(0);
+
+        java.util.Optional<Favorite> firstBookFav = favoriteRepository.findByUser_IdAndListNameAndBook_Id(
+                user.getId(), "Have Read", book.getId());
+        java.util.Optional<Favorite> firstAuthorFav = favoriteRepository.findByUser_IdAndListNameAndAuthor_Id(
+                user.getId(), "Want to Read", authorOnly.getId());
+        org.junit.jupiter.api.Assertions.assertTrue(firstBookFav.isPresent(), "Book favorite should exist after first import");
+        org.junit.jupiter.api.Assertions.assertTrue(firstAuthorFav.isPresent(), "Author favorite should exist after first import");
+        long bookFavId = firstBookFav.get().getId();
+        long authorFavId = firstAuthorFav.get().getId();
+        long favoriteCountAfterFirst = favoriteRepository.count();
+
+        String secondImport = """
+            {
+                "favorites": [
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Have Read",
+                        "bookTitle": "Upsert Fav Book",
+                        "bookAuthorName": "Upsert Fav Author"
+                    },
+                    {
+                        "username": "upsertfavuser",
+                        "listName": "Want to Read",
+                        "authorName": "Upsert Fav Author Only"
+                    }
+                ]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondImport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        java.util.Optional<Favorite> secondBookFav = favoriteRepository.findByUser_IdAndListNameAndBook_Id(
+                user.getId(), "Have Read", book.getId());
+        java.util.Optional<Favorite> secondAuthorFav = favoriteRepository.findByUser_IdAndListNameAndAuthor_Id(
+                user.getId(), "Want to Read", authorOnly.getId());
+        org.junit.jupiter.api.Assertions.assertTrue(secondBookFav.isPresent(), "Book favorite should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertTrue(secondAuthorFav.isPresent(), "Author favorite should still exist after re-import");
+        org.junit.jupiter.api.Assertions.assertEquals(bookFavId, secondBookFav.get().getId(), "Same book favorite row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(authorFavId, secondAuthorFav.get().getId(), "Same author favorite row should be updated");
+        org.junit.jupiter.api.Assertions.assertEquals(
+                favoriteCountAfterFirst,
+                favoriteRepository.count(),
+                "Re-import must not create duplicate favorite rows");
+    }
+
     // ==================== GET /api/import/availability-stats Integration Tests ====================
 
     @Test

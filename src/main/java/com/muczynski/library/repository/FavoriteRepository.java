@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
@@ -19,6 +20,10 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     List<Favorite> findByUser_IdAndBook_Id(Long userId, Long bookId);
 
     List<Favorite> findByUser_IdAndAuthor_Id(Long userId, Long authorId);
+
+    Optional<Favorite> findByUser_IdAndListNameAndBook_Id(Long userId, String listName, Long bookId);
+
+    Optional<Favorite> findByUser_IdAndListNameAndAuthor_Id(Long userId, String listName, Long authorId);
 
     void deleteByUser_IdAndBook_Id(Long userId, Long bookId);
 

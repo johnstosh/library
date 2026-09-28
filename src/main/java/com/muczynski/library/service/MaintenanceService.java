@@ -113,7 +113,7 @@ public class MaintenanceService {
 
         long booksScanned = projections.size();
         String message = String.format(
-                "Looked at %d books. Updated %d. Corrected %d plural or spelling variants. Removed %d tags that were not on the standard list.",
+                "Looked at %d genres. Updated %d. Corrected %d plural or spelling variants. Removed %d tags that were not on the standard list.",
                 booksScanned, booksUpdated.get(), pluralCorrections.get(), illegalRemoved.get());
 
         log.info("Genre maintenance completed: {}", message);

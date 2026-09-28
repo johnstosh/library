@@ -631,33 +631,96 @@ public class ImportService {
     }
 
     private void processFavorite(ImportFavoriteDto fDto, Map<String, User> userMap, ImportResponseDto.ImportCounts counts) {
+        // Resolve user/book/author by natural keys, then upsert on (user, listName, book)
+        // or (user, listName, author) so re-imports update instead of duplicate INSERT.
+        if (fDto.getUsername() == null || fDto.getListName() == null || fDto.getListName().isBlank()) {
+            logger.warn("Skipping favorite with missing username or listName: username={}, listName={}",
+                    fDto.getUsername(), fDto.getListName());
+            return;
+        }
+
         User user = userMap.get(fDto.getUsername().toLowerCase());
         if (user == null) {
             List<User> existing = userRepository.findAllByUsernameIgnoreCaseOrderByIdAsc(fDto.getUsername());
-            if (!existing.isEmpty()) user = existing.get(0);
-            else return;
+            if (!existing.isEmpty()) {
+                user = existing.get(0);
+            } else {
+                logger.warn("User not found for favorite: {}", fDto.getUsername());
+                return;
+            }
         }
 
-        Favorite favorite = new Favorite();
-        favorite.setUser(user);
-        favorite.setListName(fDto.getListName());
-        // Lookup book or author by reference
-        if (fDto.getBookTitle() != null) {
-            List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(fDto.getBookTitle());
-            if (!books.isEmpty()) favorite.setBook(books.get(0));
-        } else if (fDto.getAuthorName() != null) {
+        String listName = fDto.getListName().trim();
+        Book book = null;
+        Author author = null;
+
+        if (fDto.getBookTitle() != null && !fDto.getBookTitle().isBlank()) {
+            String bookTitle = fDto.getBookTitle();
+            String bookAuthorName = fDto.getBookAuthorName();
+            if (bookAuthorName != null && !bookAuthorName.isBlank()) {
+                List<Book> byTitleAuthor = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(bookTitle, bookAuthorName);
+                if (!byTitleAuthor.isEmpty()) {
+                    book = byTitleAuthor.get(0);
+                }
+            }
+            if (book == null) {
+                List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(bookTitle);
+                if (!books.isEmpty()) {
+                    book = books.get(0);
+                }
+            }
+            if (book == null) {
+                logger.warn("Book not found for favorite: title={}, author={}", bookTitle, bookAuthorName);
+                return;
+            }
+        } else if (fDto.getAuthorName() != null && !fDto.getAuthorName().isBlank()) {
             List<Author> authors = authorRepository.findAllByNameOrderByIdAsc(fDto.getAuthorName());
-            if (!authors.isEmpty()) favorite.setAuthor(authors.get(0));
+            if (authors.isEmpty()) {
+                logger.warn("Author not found for favorite: {}", fDto.getAuthorName());
+                return;
+            }
+            author = authors.get(0);
+        } else {
+            logger.warn("Skipping favorite with neither bookTitle nor authorName: username={}, listName={}",
+                    fDto.getUsername(), listName);
+            return;
         }
+
+        Favorite favorite;
+        if (book != null) {
+            favorite = favoriteRepository.findByUser_IdAndListNameAndBook_Id(user.getId(), listName, book.getId())
+                    .orElseGet(Favorite::new);
+            favorite.setBook(book);
+            favorite.setAuthor(null);
+        } else {
+            favorite = favoriteRepository.findByUser_IdAndListNameAndAuthor_Id(user.getId(), listName, author.getId())
+                    .orElseGet(Favorite::new);
+            favorite.setAuthor(author);
+            favorite.setBook(null);
+        }
+        favorite.setUser(user);
+        favorite.setListName(listName);
         favoriteRepository.save(favorite);
     }
 
     private void processPrice(ImportPriceDto pDto, ImportResponseDto.ImportCounts counts) {
+        // Resolve book by title, then upsert on uk_book_price_book_cover (book_id, cover)
+        // so re-imports update instead of duplicate-key INSERT.
+        if (pDto.getBookTitle() == null || pDto.getCover() == null) {
+            logger.warn("Skipping price with missing reference: bookTitle={}, cover={}",
+                    pDto.getBookTitle(), pDto.getCover());
+            return;
+        }
+
         List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(pDto.getBookTitle());
-        if (books.isEmpty()) return;
+        if (books.isEmpty()) {
+            logger.warn("Book not found for price: {}", pDto.getBookTitle());
+            return;
+        }
 
         Book book = books.get(0);
-        BookPrice price = new BookPrice();
+        BookPrice price = bookPriceRepository.findByBook_IdAndCover(book.getId(), pDto.getCover())
+                .orElseGet(BookPrice::new);
         price.setBook(book);
         price.setCover(pDto.getCover());
         price.setPriceDollars(pDto.getPriceDollars());
