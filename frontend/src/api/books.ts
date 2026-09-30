@@ -2,6 +2,7 @@
 import React, { useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
+import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import { DEFAULT_PRICE_OLDER_DAYS, type BookChipFilters } from '@/utils/bookChipFilters'
 import type {
@@ -81,7 +82,8 @@ export function bookListFilterQuery(filters: BookListFilters): string {
 
 // Hook to get books with optimized lastModified caching.
 // Pass filters for the Books and Prices pages (GET /books/filtered-summaries).
-// Call with no argument for the unfiltered loan-form catalog (GET /books/summaries).
+// Call with no argument for the unfiltered summary list (GET /books/summaries).
+// Full rows are loaded from /books/by-ids at most 100 ids at a time.
 export function useBooks(filters?: BookListFilters) {
   const queryClient = useQueryClient()
   const filterQuery = filters ? bookListFilterQuery(filters) : ''
@@ -116,13 +118,7 @@ export function useBooks(filters?: BookListFilters) {
   // Step 3: Batch fetch changed books using /books/by-ids
   const { data: fetchedBooks, isLoading: fetchingBooks, isFetching: byIdsFetching, error: byIdsError } = useQuery({
     queryKey: queryKeys.books.byIds(booksToFetch),
-    queryFn: async () => {
-      if (booksToFetch.length > 0) {
-        // Only fetch books that changed
-        return api.post<BookDto[]>('/books/by-ids', booksToFetch)
-      }
-      return []
-    },
+    queryFn: () => postByIdsInBatches<BookDto>('/books/by-ids', booksToFetch),
     enabled: summaries !== undefined && booksToFetch.length > 0,
     placeholderData: keepPreviousData,
   })

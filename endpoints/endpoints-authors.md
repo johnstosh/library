@@ -1,7 +1,7 @@
 # Author Endpoints
 
 ## GET /api/authors/filtered-summaries
-Returns author summaries (id and lastModified) after every Authors page filter. The browser then loads full rows with `/by-ids` for these ids only. The older single-chip endpoints below remain.
+Returns author summaries (id and lastModified) after every Authors page filter. The browser then loads full rows with `/by-ids` for these ids only, at most 100 ids per request. A larger `/by-ids` body is rejected with 400. The older single-chip endpoints below remain.
 
 **Authentication:** Public (`permitAll()`)
 

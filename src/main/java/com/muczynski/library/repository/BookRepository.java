@@ -178,6 +178,54 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<BookSummaryProjection> findSummariesWithoutGrokipediaUrl();
 
     /**
+     * Active books for the checkout form. Each searched field adds 10 when the
+     * text contains the term and 20 more when it is an exact match. Terms are
+     * already trimmed and lowercased; the call-number term has no whitespace.
+     * A zero flag ignores that field. At most {@code matchLimit} rows, best score first.
+     */
+    interface CheckoutMatchProjection {
+        Long getId();
+        String getTitle();
+        String getAuthor();
+        String getLocNumber();
+        String getStatus();
+    }
+
+    @Query(value = """
+        SELECT
+            b.id AS "id",
+            b.title AS "title",
+            a.name AS "author",
+            b.loc_number AS "locNumber",
+            b.status AS "status"
+        FROM book b
+        LEFT JOIN author a ON a.id = b.author_id
+        WHERE b.status = 'ACTIVE'
+          AND (
+            (:useTitle = 1 AND strpos(lower(b.title), :title) > 0)
+            OR (:useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
+            OR (:useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0)
+          )
+        ORDER BY (
+            (CASE WHEN :useTitle = 1 AND strpos(lower(b.title), :title) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useTitle = 1 AND lower(b.title) = :title THEN 20 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND lower(a.name) = :author THEN 20 ELSE 0 END)
+            + (CASE WHEN :useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useLoc = 1 AND regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g') = :loc THEN 20 ELSE 0 END)
+        ) DESC, b.title ASC, b.id ASC
+        LIMIT :matchLimit
+        """, nativeQuery = true)
+    List<CheckoutMatchProjection> findCheckoutMatches(
+            @Param("useTitle") int useTitle,
+            @Param("title") String title,
+            @Param("useAuthor") int useAuthor,
+            @Param("author") String author,
+            @Param("useLoc") int useLoc,
+            @Param("loc") String loc,
+            @Param("matchLimit") int matchLimit);
+
+    /**
      * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
      * Uses native query for regex support and PostgreSQL compatibility.
      */

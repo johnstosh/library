@@ -17,6 +17,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
@@ -161,6 +162,10 @@ public class AuthorController {
     @PostMapping("/by-ids")
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<AuthorDto>> getAuthorsByIds(@RequestBody List<Long> ids) {
+        if (ByIds.exceedsBatch(ids)) {
+            logger.warn("Rejected /authors/by-ids batch of {} ids; limit is {}", ids.size(), ByIds.MAX_BATCH);
+            return ResponseEntity.badRequest().build();
+        }
         try {
             List<AuthorDto> authors = authorService.getAuthorsByIds(ids);
             return ResponseEntity.ok(authors);

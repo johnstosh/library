@@ -87,6 +87,16 @@ public class LoansUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
+    /** The checkout list stays empty until a title search returns that book. */
+    private void chooseCheckoutBook(String title, String bookId) {
+        page.fill("[data-test='loan-title-filter']", title);
+        page.waitForSelector("[data-test='loan-book-select'] option[value='" + bookId + "']",
+                new Page.WaitForSelectorOptions()
+                        .setState(WaitForSelectorState.ATTACHED)
+                        .setTimeout(15000L));
+        page.selectOption("[data-test='loan-book-select']", bookId);
+    }
+
     // ==================== USER AUTHORITY TESTS ====================
 
     @Test
@@ -190,11 +200,9 @@ public class LoansUITest {
         // Wait for navigation to /loans/new
         page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Wait for form to load
+        // Wait for form to load, then search. The catalog is not loaded up front.
         page.waitForSelector("[data-test='loan-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
-
-        // Select a book (Available Book 1 - book ID 1)
-        page.selectOption("[data-test='loan-book-select']", "1");
+        chooseCheckoutBook("Available Book 1", "1");
 
         // Submit checkout
         page.click("[data-test='loan-form-submit']");
@@ -610,11 +618,9 @@ public class LoansUITest {
         // Wait for navigation to /loans/new
         page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Wait for form to load
+        // Wait for form to load, then search. The catalog is not loaded up front.
         page.waitForSelector("[data-test='loan-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
-
-        // Select a book (Available Book 1 - book ID 1)
-        page.selectOption("[data-test='loan-book-select']", "1");
+        chooseCheckoutBook("Available Book 1", "1");
 
         // Borrower defaults to the logged-in librarian (user ID 2)
         page.waitForSelector("[data-test='loan-user-select'] option[value='2']",

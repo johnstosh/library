@@ -204,6 +204,84 @@ class BookCacheIntegrationTest {
     }
 
     @Test
+    @WithMockUser
+    void checkoutMatchesRanksActiveBooksAndStopsAtTen() throws Exception {
+        Author melville = new Author();
+        melville.setName("Herman Melville");
+        melville = authorRepository.save(melville);
+
+        Book exact = saveBook("Moby", melville, BookStatus.ACTIVE, "PS 2384 .M6");
+        Book contains = saveBook("Moby Dick", melville, BookStatus.ACTIVE, "");
+        saveBook("Withdrawn Moby", melville, BookStatus.WITHDRAWN, "PS 1");
+        Book other = saveBook("Oliver Twist", testAuthor, BookStatus.ACTIVE, "PR 4568");
+
+        mockMvc.perform(get("/api/books/checkout-matches").param("title", "moby"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id", is(exact.getId().intValue())))
+                .andExpect(jsonPath("$[0].author", is("Herman Melville")))
+                .andExpect(jsonPath("$[0].locNumber", is("PS 2384 .M6")))
+                .andExpect(jsonPath("$[0].status", is("ACTIVE")))
+                .andExpect(jsonPath("$[1].id", is(contains.getId().intValue())));
+
+        mockMvc.perform(get("/api/books/checkout-matches").param("locNumber", "PS2384"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(exact.getId().intValue())));
+
+        mockMvc.perform(get("/api/books/checkout-matches")
+                        .param("title", "moby")
+                        .param("author", "nomatch"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(exact.getId().intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(other.getId().intValue()))));
+
+        mockMvc.perform(get("/api/books/checkout-matches").param("title", "mo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        for (int i = 1; i <= 11; i++) {
+            saveBook(String.format("Limit Title %02d", i), testAuthor, BookStatus.ACTIVE, "");
+        }
+        mockMvc.perform(get("/api/books/checkout-matches").param("title", "limit title"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(10)))
+                .andExpect(jsonPath("$[0].title", is("Limit Title 01")))
+                .andExpect(jsonPath("$[9].title", is("Limit Title 10")));
+    }
+
+    @Test
+    @WithMockUser
+    void byIdsRejectsMoreThan100ForBooksAndAuthors() throws Exception {
+        List<Long> ids = new java.util.ArrayList<>();
+        for (int i = 0; i < 101; i++) {
+            ids.add((long) i + 1);
+        }
+        String body = objectMapper.writeValueAsString(ids);
+
+        mockMvc.perform(post("/api/books/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/authors/by-ids")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    private Book saveBook(String title, Author author, BookStatus status, String locNumber) {
+        Book book = new Book();
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setLibrary(testLibrary);
+        book.setStatus(status);
+        book.setLocNumber(locNumber);
+        book.setDateAddedToLibrary(LocalDateTime.of(2025, 1, 4, 10, 0));
+        book.setLastModified(LocalDateTime.of(2025, 1, 4, 10, 0));
+        return bookRepository.save(book);
+    }
+
+    @Test
     void testGetBooksByIdsUnauthenticated() throws Exception {
         List<Long> ids = Arrays.asList(testBook1.getId());
 

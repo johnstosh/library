@@ -19,9 +19,12 @@ import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.dto.CheckoutMatchDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
+import com.muczynski.library.service.CheckoutMatchService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
@@ -59,6 +62,9 @@ public class BookController {
 
     @Autowired
     private CatalogFilterService catalogFilterService;
+
+    @Autowired
+    private CheckoutMatchService checkoutMatchService;
 
     @Autowired
     private PhotoService photoService;
@@ -653,6 +659,10 @@ public class BookController {
     @PreAuthorize("permitAll()")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksByIds(@RequestBody List<Long> ids) {
+        if (ByIds.exceedsBatch(ids)) {
+            logger.warn("Rejected /books/by-ids batch of {} ids; limit is {}", ids.size(), ByIds.MAX_BATCH);
+            return ResponseEntity.badRequest().body("At most " + ByIds.MAX_BATCH + " book ids");
+        }
         try {
             List<BookDto> books = bookService.getBooksByIds(ids, isLibrarian());
             return ResponseEntity.ok(books);
@@ -660,6 +670,21 @@ public class BookController {
             logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    /**
+     * Active books for the checkout form. At most ten matches. A title, author,
+     * or call number shorter than three characters is ignored, and the response
+     * is empty when every field is shorter than that.
+     */
+    @GetMapping("/checkout-matches")
+    @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<CheckoutMatchDto>> checkoutMatches(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String locNumber) {
+        return ResponseEntity.ok(checkoutMatchService.matches(title, author, locNumber));
     }
 
     @PostMapping("/suggest-loc")

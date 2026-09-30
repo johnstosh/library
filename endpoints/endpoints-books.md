@@ -144,7 +144,7 @@ Fetches full book data for a list of book IDs.
 
 **Authentication:** Public (permitAll)
 
-**Request Body:** Array of Long (book IDs)
+**Request Body:** Array of Long (book IDs), at most 100. A larger array is rejected with 400. The browser loads a longer id list as one batch after another.
 ```json
 [1, 2, 3]
 ```
@@ -180,6 +180,16 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
+- Full rows are loaded with `/by-ids`, at most 100 ids per request.
+
+### GET /api/books/checkout-matches
+Active books for the checkout form. Returns at most 10 rows, best match first. A title, author, or call number shorter than 3 characters is ignored. The response is empty when every field is shorter than that. A book matches when any searched field contains the text. A containing match scores 10 and an exact match scores 20 more. Call numbers are compared with whitespace removed. Plot and description are not included.
+
+**Authentication:** Public (permitAll)
+
+**Query Parameters:** `title`, `author`, `locNumber`. All optional.
+
+**Response:** Array of `{ id, title, author, locNumber, status }`
 
 ---
 

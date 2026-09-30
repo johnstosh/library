@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
+import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
 import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
@@ -76,13 +77,7 @@ function useAuthorCatalog(
   // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedAuthors, isLoading: fetchingAuthors, isFetching: detailsFetching, error: detailsError } = useQuery({
     queryKey: queryKeys.authors.byIds(authorsToFetch, cacheScope),
-    queryFn: async () => {
-      if (authorsToFetch.length > 0) {
-        // Only fetch authors that changed
-        return api.post<AuthorDto[]>('/authors/by-ids', authorsToFetch)
-      }
-      return []
-    },
+    queryFn: () => postByIdsInBatches<AuthorDto>('/authors/by-ids', authorsToFetch),
     enabled: summaries !== undefined && authorsToFetch.length > 0,
   })
 
