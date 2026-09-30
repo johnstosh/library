@@ -120,7 +120,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const { data: books = [], isFetching: booksFetching, isLoading: booksLoading } = useBooks()
-  const { data: users = [] } = useUsers()
+  const { data: users = [] } = useUsers({ enabled: isLibrarian })
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
 
@@ -428,17 +428,29 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
       .map(item => item.book)
   }, [books, bookFilters.title, bookFilters.author, bookFilters.locNumber])
 
+  // Patrons cannot call GET /users. Keep the logged-in patron as the only
+  // borrower so the disabled select still shows who the loan is for.
+  const borrowers = useMemo(() => {
+    if (users.length > 0) {
+      return users.map((user) => ({ id: user.id, username: user.username }))
+    }
+    if (!isLibrarian && currentUser?.id != null && currentUser.username) {
+      return [{ id: currentUser.id, username: currentUser.username }]
+    }
+    return []
+  }, [users, isLibrarian, currentUser])
+
   // Filter users based on username
   const filteredUsers = useMemo(() => {
     if (!userFilter) {
-      return users
+      return borrowers
     }
 
     const filterLower = userFilter.toLowerCase()
-    return users.filter((user) =>
+    return borrowers.filter((user) =>
       user.username.toLowerCase().includes(filterLower)
     )
-  }, [users, userFilter])
+  }, [borrowers, userFilter])
 
 
   // Update book filters when a book is selected

@@ -4,12 +4,14 @@ import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
 import type { UserDto } from '@/types/dtos'
 
-// Hook to get all users
-export function useUsers() {
+// Hook to get all users. The list endpoint is librarian-only, so callers
+// that render for patrons pass enabled: false.
+export function useUsers(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.users.all,
     queryFn: () => api.get<UserDto[]>('/users'),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: options?.enabled ?? true,
   })
 }
 

@@ -467,7 +467,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='books-title-filter']")).hasValue("Initial");
         assertThat(page.locator("[data-test='status-filter-without-loc']")).hasAttribute("aria-pressed", "true");
         assertThat(page.locator("text=Initial Book")).isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(10000));
-        assertThat(page.locator("[data-test='filter-most-recent']")).isDisabled();
+        assertThat(page.locator("[data-test='filter-most-recent']")).isEnabled();
     }
 
     @Test
@@ -873,7 +873,7 @@ public class BooksUITest {
 
         // Hold the summaries fetch until assertions finish so the overlay stays visible.
         CompletableFuture<Void> releaseFetch = new CompletableFuture<>();
-        page.route(Pattern.compile(".*/api/books/summaries.*"), route -> {
+        page.route(Pattern.compile(".*/api/books/(?:filtered-summaries|summaries).*"), route -> {
             try {
                 releaseFetch.get(20, TimeUnit.SECONDS);
             } catch (Exception ignored) {

@@ -6,13 +6,20 @@ import { describe, expect, it, vi } from 'vitest'
 import { LoanFormPage } from '../LoanFormPage'
 import type { CurrentUser } from '@/stores/authStore'
 
-const { authState } = vi.hoisted(() => ({
+const { authState, usersState } = vi.hoisted(() => ({
   authState: {
     user: {
       id: 2,
       username: 'librarian',
       authority: 'LIBRARIAN',
     } as CurrentUser,
+  },
+  usersState: {
+    data: [
+      { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+      { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
+      { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+    ] as Array<{ id: number; username: string; authorities: string[]; lastModified: string }>,
   },
 }))
 
@@ -45,13 +52,7 @@ vi.mock('@/api/books', () => ({
 }))
 
 vi.mock('@/api/users', () => ({
-  useUsers: () => ({
-    data: [
-      { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
-      { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
-      { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
-    ],
-  }),
+  useUsers: () => ({ data: usersState.data }),
 }))
 
 function renderCheckoutForm() {
@@ -67,9 +68,16 @@ function renderCheckoutForm() {
   )
 }
 
+const directory = [
+  { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+  { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
+  { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+]
+
 describe('LoanFormPage checkout', () => {
   it('defaults the borrower to the logged in librarian', () => {
     authState.user = { id: 2, username: 'librarian', authority: 'LIBRARIAN' }
+    usersState.data = directory
     renderCheckoutForm()
 
     expect(screen.getByTestId('loan-user-select')).toHaveValue('2')
@@ -77,8 +85,18 @@ describe('LoanFormPage checkout', () => {
 
   it('defaults the borrower to the logged in patron', () => {
     authState.user = { id: 1, username: 'testuser', authority: 'USER' }
+    usersState.data = directory
     renderCheckoutForm()
 
     expect(screen.getByTestId('loan-user-select')).toHaveValue('1')
+  })
+
+  it('shows the logged in patron when the user list is unavailable', () => {
+    authState.user = { id: 1, username: 'testuser', authority: 'USER' }
+    usersState.data = []
+    renderCheckoutForm()
+
+    expect(screen.getByTestId('loan-user-select')).toHaveValue('1')
+    expect(screen.getByRole('option', { name: 'testuser' })).toBeTruthy()
   })
 })

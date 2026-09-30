@@ -235,9 +235,9 @@ public class AuthorsUITest {
         // Recent Arrivals is now combinable; chip must stay enabled
         assertThat(page.locator("[data-test='filter-most-recent']")).isEnabled();
 
-        // The authors table should be visible (may have rows or be empty)
-        Locator authorsTable = page.locator("table");
-        assertThat(authorsTable).isVisible();
+        // The seeded author has a Grokipedia URL, so the filter leaves an empty list.
+        assertThat(page.locator("text=Initial Author")).not().isVisible();
+        assertThat(page.locator("text=No authors found")).isVisible();
     }
 
     @Test

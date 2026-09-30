@@ -108,8 +108,10 @@ public class ThumbnailPersistenceUITest {
     void testThumbnailsPersistAfterLoading() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
-        // Click "All Books" filter to see all 5 test books
-        page.click("[data-test='filter-all']");
+        // Recent Arrivals is on by default. These five books were inserted with
+        // CURRENT_TIMESTAMP, so they are already inside that window.
+        page.waitForSelector("[data-test='filter-most-recent']",
+                new Page.WaitForSelectorOptions().setTimeout(20000L));
 
         // Wait for books to load - verify book titles appear
         assertThat(page.locator("text=Thumbnail Book One")).isVisible(
