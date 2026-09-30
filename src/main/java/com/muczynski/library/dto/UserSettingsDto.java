@@ -23,4 +23,6 @@ public class UserSettingsDto {
     private LibraryCardDesign libraryCardDesign;
     private String email;
     private String phone;
+    /** Null leaves the saved choice unchanged. */
+    private Boolean receiveEmails;
 }

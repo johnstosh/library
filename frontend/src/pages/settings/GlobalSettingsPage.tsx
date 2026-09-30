@@ -16,7 +16,18 @@ import { PageCard } from '@/components/ui/PageCard'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { useGlobalSettings, useUpdateGlobalSettings, useSendTestEmail } from '@/api/settings'
 import { formatRelativeTime } from '@/utils/formatters'
-import type { EmailMethod } from '@/types/dtos'
+import type { EmailMethod, SettingsSource } from '@/types/dtos'
+
+function sourceLabel(src: SettingsSource | undefined): string {
+  switch (src) {
+    case 'env':
+      return 'environment variable'
+    case 'database':
+      return 'database'
+    default:
+      return 'not configured'
+  }
+}
 
 interface GlobalSettingsForm {
   googleSsoClientId: string
@@ -30,6 +41,8 @@ interface GlobalSettingsForm {
   emailNotifyApplicantOnPending: boolean
   emailLibrarianRecipients: string
   emailIncludeLibrarianUserEmails: boolean
+  emailNotifyLibrariansOnLoanChange: boolean
+  emailNotifyBorrowerOnLoanChange: boolean
   smtpHost: string
   smtpPort: number
   smtpUsername: string
@@ -89,6 +102,8 @@ export function GlobalSettingsPage() {
         emailNotifyApplicantOnPending: settings.emailNotifyApplicantOnPending ?? false,
         emailLibrarianRecipients: settings.emailLibrarianRecipients || '',
         emailIncludeLibrarianUserEmails: settings.emailIncludeLibrarianUserEmails ?? true,
+        emailNotifyLibrariansOnLoanChange: settings.emailNotifyLibrariansOnLoanChange ?? true,
+        emailNotifyBorrowerOnLoanChange: settings.emailNotifyBorrowerOnLoanChange ?? true,
         smtpHost: settings.smtpHost || '',
         smtpPort: settings.smtpPort || 587,
         smtpUsername: settings.smtpUsername || '',
@@ -118,9 +133,10 @@ export function GlobalSettingsPage() {
         emailNotifyApplicantOnPending: data.emailNotifyApplicantOnPending,
         emailLibrarianRecipients: data.emailLibrarianRecipients,
         emailIncludeLibrarianUserEmails: data.emailIncludeLibrarianUserEmails,
+        emailNotifyLibrariansOnLoanChange: data.emailNotifyLibrariansOnLoanChange,
+        emailNotifyBorrowerOnLoanChange: data.emailNotifyBorrowerOnLoanChange,
         smtpHost: data.smtpHost,
         smtpPort: Number(data.smtpPort) || 587,
-        smtpUsername: data.smtpUsername,
         smtpStartTls: data.smtpStartTls,
         smtpSsl: data.smtpSsl,
         webhookUrl: data.webhookUrl,
@@ -132,6 +148,13 @@ export function GlobalSettingsPage() {
 
       if (data.googleClientSecret) {
         payload.googleClientSecret = data.googleClientSecret
+      }
+
+      const usernameUnchangedFromEnv =
+        settings?.smtpUsernameSource === 'env' &&
+        (data.smtpUsername || '') === (settings.smtpUsername || '')
+      if (!usernameUnchangedFromEnv) {
+        payload.smtpUsername = data.smtpUsername
       }
 
       if (data.smtpPassword) {
@@ -344,10 +367,24 @@ export function GlobalSettingsPage() {
           <div className="border-b border-gray-200 pb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Email Notifications</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Sent when a library card application is pending. Pick a method that fits this
-              deployment: log-only for Cloud Run verification, SMTP for Gmail, SendGrid for HTTPS
-              on Cloud Run, or a webhook for Zapier / n8n / a Cloud Function.
+              Sent for library card applications and for loan changes. Each notice waits 5
+              minutes after the last change so edits can be combined, then goes out as one
+              email with every recipient in To. Undoing the change during that wait sends
+              nothing. Pick a method that fits this deployment: log-only for Cloud Run
+              verification, SMTP for Gmail, SendGrid for HTTPS on Cloud Run, or a webhook
+              for Zapier / n8n / a Cloud Function.
             </p>
+
+            {(settings?.smtpUsernameSource === 'env' || settings?.smtpPasswordSource === 'env') && (
+              <div
+                role="alert"
+                data-test="smtp-env-banner"
+                className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4"
+              >
+                SMTP username and password are being read from environment variables. Saving writes to the
+                database, but env values win until they are unset and the app restarts.
+              </div>
+            )}
 
             <div className="flex items-center gap-2 mb-4">
               {settings?.emailMethodConfigured ? (
@@ -401,6 +438,16 @@ export function GlobalSettingsPage() {
                 {...register('emailIncludeLibrarianUserEmails')}
                 data-test="email-include-librarian-users"
               />
+              <Checkbox
+                label="Email librarians when a loan is created, changed, or removed"
+                {...register('emailNotifyLibrariansOnLoanChange')}
+                data-test="email-notify-librarians-on-loan"
+              />
+              <Checkbox
+                label="Email the borrower when their loan is created, changed, or removed"
+                {...register('emailNotifyBorrowerOnLoanChange')}
+                data-test="email-notify-borrower-on-loan"
+              />
 
               <Textarea
                 label="Additional librarian recipients"
@@ -435,6 +482,7 @@ export function GlobalSettingsPage() {
                       label="SMTP username"
                       {...register('smtpUsername')}
                       data-test="smtp-username"
+                      helpText={`Currently: ${settings?.smtpUsername || '(not configured)'} — source: ${sourceLabel(settings?.smtpUsernameSource)}`}
                     />
                     <Input
                       label="SMTP password"
@@ -442,11 +490,7 @@ export function GlobalSettingsPage() {
                       {...register('smtpPassword')}
                       data-test="smtp-password"
                       placeholder="Leave blank to keep existing value"
-                      helpText={
-                        settings?.smtpPasswordConfigured
-                          ? `Current: ${settings.smtpPasswordPartial}`
-                          : 'Leave blank to keep existing value'
-                      }
+                      helpText={`Currently: ${settings?.smtpPasswordPartial || '(not configured)'} — source: ${sourceLabel(settings?.smtpPasswordSource)}`}
                     />
                   </div>
                   <div className="flex flex-col gap-2">

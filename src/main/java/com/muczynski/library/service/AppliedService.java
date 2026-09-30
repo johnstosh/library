@@ -5,8 +5,9 @@ package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
+import com.muczynski.library.email.ApplicationMailSnapshot;
 import com.muczynski.library.email.EmailAddresses;
-import com.muczynski.library.email.PendingApplicationNotice;
+import com.muczynski.library.email.EmailChangeKinds;
 import com.muczynski.library.repository.AppliedRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
 import com.muczynski.library.util.PhoneNumbers;
@@ -35,7 +36,7 @@ public class AppliedService {
     private UserService userService;
 
     @Autowired
-    private ApplicationEmailService applicationEmailService;
+    private EmailChangeQueue emailChangeQueue;
 
     public List<Applied> getAllApplied() {
         return appliedRepository.findAll();
@@ -64,15 +65,7 @@ public class AppliedService {
             applied.setStatus(Applied.ApplicationStatus.PENDING);
         }
         Applied saved = appliedRepository.save(applied);
-        if (saved.getStatus() == Applied.ApplicationStatus.PENDING) {
-            try {
-                applicationEmailService.notifyPendingApplication(
-                        new PendingApplicationNotice(saved.getId(), saved.getName(), saved.getEmail()));
-            } catch (Exception e) {
-                logger.warn("Failed to dispatch pending-application email for '{}': {}",
-                        saved.getName(), e.getMessage());
-            }
-        }
+        stageApplication(null, ApplicationMailSnapshot.from(saved));
         return saved;
     }
 
@@ -100,26 +93,47 @@ public class AppliedService {
 
     public Applied updateApplied(Long id, Applied applied) {
         Applied existingApplied = appliedRepository.findById(id).orElseThrow(() -> new LibraryException("Applied not found: " + id));
+        ApplicationMailSnapshot before = ApplicationMailSnapshot.from(existingApplied);
         if (applied.getStatus() != null) {
             existingApplied.setStatus(applied.getStatus());
         }
-        return appliedRepository.save(existingApplied);
+        Applied saved = appliedRepository.save(existingApplied);
+        stageApplication(before, ApplicationMailSnapshot.from(saved));
+        return saved;
     }
 
     public void deleteApplied(Long id) {
-        if (!appliedRepository.existsById(id)) {
-            throw new LibraryException("Applied not found: " + id);
-        }
-        appliedRepository.deleteById(id);
+        Applied existing = appliedRepository.findById(id)
+                .orElseThrow(() -> new LibraryException("Applied not found: " + id));
+        ApplicationMailSnapshot before = ApplicationMailSnapshot.from(existing);
+        appliedRepository.delete(existing);
+        stageApplication(before, null);
     }
 
     public void approveApplication(Long id) {
         Applied applied = appliedRepository.findById(id)
                 .orElseThrow(() -> new LibraryException("Application not found: " + id));
+        ApplicationMailSnapshot before = ApplicationMailSnapshot.from(applied);
 
         userService.createUserFromApplied(applied);
 
         applied.setStatus(Applied.ApplicationStatus.APPROVED);
-        appliedRepository.save(applied);
+        Applied saved = appliedRepository.save(applied);
+        stageApplication(before, ApplicationMailSnapshot.from(saved));
+    }
+
+    private void stageApplication(ApplicationMailSnapshot before, ApplicationMailSnapshot after) {
+        try {
+            if (emailChangeQueue == null) {
+                return;
+            }
+            Long id = after != null ? after.id() : before != null ? before.id() : null;
+            if (id == null) {
+                return;
+            }
+            emailChangeQueue.stage("application:" + id, EmailChangeKinds.APPLICATION, before, after);
+        } catch (RuntimeException e) {
+            logger.warn("Failed to queue application email: {}", e.getMessage());
+        }
     }
 }

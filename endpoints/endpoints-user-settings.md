@@ -20,6 +20,7 @@ Returns the current user's settings and profile information.
   "libraryCardDesign": "CLASSICAL_DEVOTION",
   "email": "john@example.com",
   "phone": "555-123-4567",
+  "receiveEmails": true,
   "activeLoansCount": 2,
   "ssoProvider": "google",
   "ssoSubjectId": "123456789",
@@ -47,7 +48,8 @@ Updates the current user's settings.
   "lastPhotoTimestamp": "2025-01-02T12:00:00",
   "libraryCardDesign": "COUNTRYSIDE_YOUTH",
   "email": "john@example.com",
-  "phone": "555-123-4567"
+  "phone": "555-123-4567",
+  "receiveEmails": true
 }
 ```
 
@@ -61,6 +63,7 @@ Updates the current user's settings.
 - Username changes check for uniqueness
 - API keys can be set to empty string to clear them
 - Email and phone are optional contact fields. Empty string clears them. Invalid values return 400.
+- `receiveEmails` defaults to true. Set it to false to leave this user's email off loan and application notices. Omitting the field leaves the saved choice unchanged.
 - Authenticated patrons (USER and LIBRARIAN) can change their own email and phone. SSO login fills email only when it is currently blank, so a Settings change is kept.
 
 **Error Responses:**

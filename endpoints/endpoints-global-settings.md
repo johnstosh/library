@@ -28,11 +28,15 @@ Returns application-wide global settings including OAuth credentials configurati
   "emailNotifyApplicantOnPending": false,
   "emailLibrarianRecipients": "librarian@example.com",
   "emailIncludeLibrarianUserEmails": true,
+  "emailNotifyLibrariansOnLoanChange": true,
+  "emailNotifyBorrowerOnLoanChange": true,
   "smtpHost": "smtp.gmail.com",
   "smtpPort": 587,
   "smtpUsername": "library@example.com",
+  "smtpUsernameSource": "database",
   "smtpPasswordPartial": "...word",
   "smtpPasswordConfigured": true,
+  "smtpPasswordSource": "database",
   "smtpStartTls": true,
   "smtpSsl": false,
   "sendGridApiKeyPartial": "(not configured)",
@@ -48,6 +52,7 @@ Returns application-wide global settings including OAuth credentials configurati
 **Security Notes:**
 - Full Client Secrets are NEVER returned in responses - only partial display (last 4 characters)
 - `googleClientSecret` and `googleSsoClientSecret` fields will always be null in responses
+- `smtpUsernameSource` and `smtpPasswordSource` are `env`, `database`, or `none`. `env` means `MAIL_SMTP_USERNAME` or `GMAIL_TOKEN_FOR_SEND` is set and that value is the one used to send mail, even when a different value is saved. `smtpPassword` is always null in responses.
 - Regular users (USER authority) will receive 403 Forbidden
 
 ---
@@ -73,6 +78,8 @@ Updates application-wide global settings.
   "emailNotifyApplicantOnPending": false,
   "emailLibrarianRecipients": "librarian@example.com",
   "emailIncludeLibrarianUserEmails": true,
+  "emailNotifyLibrariansOnLoanChange": true,
+  "emailNotifyBorrowerOnLoanChange": true,
   "smtpHost": "smtp.gmail.com",
   "smtpPort": 587,
   "smtpUsername": "library@example.com",

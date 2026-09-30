@@ -17,6 +17,7 @@ export interface UserSettingsDto {
   libraryCardDesign?: LibraryCardDesign
   email?: string
   phone?: string
+  receiveEmails?: boolean
 }
 
 // Global Settings API

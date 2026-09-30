@@ -4,7 +4,8 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Applied;
-import com.muczynski.library.email.PendingApplicationNotice;
+import com.muczynski.library.email.ApplicationMailSnapshot;
+import com.muczynski.library.email.EmailChangeKinds;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.AppliedRepository;
 import com.muczynski.library.util.PasswordHashingUtil;
@@ -21,6 +22,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +41,7 @@ class AppliedServiceTest {
     private UserService userService;
 
     @Mock
-    private ApplicationEmailService applicationEmailService;
+    private EmailChangeQueue emailChangeQueue;
 
     @InjectMocks
     private AppliedService appliedService;
@@ -66,11 +69,13 @@ class AppliedServiceTest {
         assertEquals("555-0100", result.getPhone());
         assertEquals(Applied.ApplicationStatus.PENDING, result.getStatus());
 
-        ArgumentCaptor<PendingApplicationNotice> captor = ArgumentCaptor.forClass(PendingApplicationNotice.class);
-        verify(applicationEmailService).notifyPendingApplication(captor.capture());
-        assertEquals(42L, captor.getValue().getApplicationId());
-        assertEquals("Jane Doe", captor.getValue().getApplicantName());
-        assertEquals("jane@example.com", captor.getValue().getApplicantEmail());
+        ArgumentCaptor<Object> after = ArgumentCaptor.forClass(Object.class);
+        verify(emailChangeQueue).stage(eq("application:42"), eq(EmailChangeKinds.APPLICATION), isNull(), after.capture());
+        ApplicationMailSnapshot snapshot = (ApplicationMailSnapshot) after.getValue();
+        assertEquals(42L, snapshot.id());
+        assertEquals("Jane Doe", snapshot.name());
+        assertEquals("jane@example.com", snapshot.email());
+        assertEquals("PENDING", snapshot.status());
     }
 
     @Test
@@ -113,7 +118,7 @@ class AppliedServiceTest {
 
         assertThrows(LibraryException.class, () -> appliedService.createApplied(incoming));
         verify(appliedRepository, never()).save(any());
-        verify(applicationEmailService, never()).notifyPendingApplication(any());
+        verify(emailChangeQueue, never()).stage(any(), any(), any(), any());
     }
 
     @Test
@@ -129,7 +134,7 @@ class AppliedServiceTest {
             saved.setId(1L);
             return saved;
         });
-        doThrow(new RuntimeException("mail down")).when(applicationEmailService).notifyPendingApplication(any());
+        doThrow(new RuntimeException("mail down")).when(emailChangeQueue).stage(any(), any(), any(), any());
 
         Applied result = appliedService.createApplied(incoming);
         assertEquals(1L, result.getId());
@@ -144,7 +149,7 @@ class AppliedServiceTest {
         when(appliedRepository.findAllByNameOrderByIdAsc("Jane Doe")).thenReturn(List.of(new Applied()));
 
         assertThrows(LibraryException.class, () -> appliedService.createApplied(incoming));
-        verify(applicationEmailService, never()).notifyPendingApplication(any());
+        verify(emailChangeQueue, never()).stage(any(), any(), any(), any());
     }
 
     @Test

@@ -10,6 +10,7 @@ import { SuccessMessage } from '@/components/ui/SuccessMessage'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { isValidOptionalEmail, isValidOptionalPhone } from '@/utils/contact'
@@ -33,6 +34,7 @@ export function UserSettingsPage() {
   const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [receiveEmails, setReceiveEmails] = useState(true)
 
   const { data: userSettings, refetch } = useUserSettings()
   const updateUserSettings = useUpdateUserSettings()
@@ -164,6 +166,7 @@ export function UserSettingsPage() {
       await updateUserSettings.mutateAsync({
         email: email.trim(),
         phone: phone.trim(),
+        receiveEmails,
       })
       setSuccessMessage('Contact information updated successfully')
     } catch (error) {
@@ -184,6 +187,7 @@ export function UserSettingsPage() {
       setGooglePhotosAlbumId(userSettings.googlePhotosAlbumId || '')
       setEmail(userSettings.email || '')
       setPhone(userSettings.phone || '')
+      setReceiveEmails(userSettings.receiveEmails ?? true)
     }
   }, [userSettings])
 
@@ -256,6 +260,15 @@ export function UserSettingsPage() {
               data-test="settings-phone"
               autoComplete="tel"
             />
+            <Checkbox
+              label="Receive email notifications"
+              checked={receiveEmails}
+              onChange={(e) => setReceiveEmails(e.target.checked)}
+              data-test="receive-emails"
+            />
+            <p className="text-sm text-gray-600">
+              Loan and library card notices go to the email address above.
+            </p>
             <div className="flex justify-end">
               <Button
                 type="button"

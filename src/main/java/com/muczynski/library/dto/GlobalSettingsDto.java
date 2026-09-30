@@ -103,14 +103,26 @@ public class GlobalSettingsDto {
     private Boolean emailNotifyApplicantOnPending;
     private String emailLibrarianRecipients;
     private Boolean emailIncludeLibrarianUserEmails;
+    private Boolean emailNotifyLibrariansOnLoanChange;
+    private Boolean emailNotifyBorrowerOnLoanChange;
 
     private String smtpHost;
     private Integer smtpPort;
     private String smtpUsername;
+    /**
+     * Where the effective SMTP username came from: env, database, or none.
+     * An environment variable wins over the saved value.
+     */
+    private String smtpUsernameSource;
     /** Write-only. Empty/null keeps the stored password. */
     private String smtpPassword;
     private String smtpPasswordPartial;
     private boolean smtpPasswordConfigured;
+    /**
+     * Where the effective SMTP password came from: env, database, or none.
+     * GMAIL_TOKEN_FOR_SEND wins over the saved value.
+     */
+    private String smtpPasswordSource;
     private Boolean smtpStartTls;
     private Boolean smtpSsl;
 

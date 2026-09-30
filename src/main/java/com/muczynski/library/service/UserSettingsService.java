@@ -114,6 +114,10 @@ public class UserSettingsService {
             user.setPhone(normalizeOptionalPhone(userSettingsDto.getPhone()));
         }
 
+        if (userSettingsDto.getReceiveEmails() != null) {
+            user.setReceiveEmails(userSettingsDto.getReceiveEmails());
+        }
+
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }

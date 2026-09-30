@@ -109,6 +109,18 @@ public class GlobalSettings {
     @Column(columnDefinition = "boolean default true")
     private boolean emailIncludeLibrarianUserEmails = true;
 
+    /**
+     * Email librarians when a loan is created, changed, or removed.
+     */
+    @Column(columnDefinition = "boolean default true")
+    private boolean emailNotifyLibrariansOnLoanChange = true;
+
+    /**
+     * Email the borrower (and the previous borrower, if the loan moved) when it changes.
+     */
+    @Column(columnDefinition = "boolean default true")
+    private boolean emailNotifyBorrowerOnLoanChange = true;
+
     @Column(length = 255)
     private String smtpHost = "";
 

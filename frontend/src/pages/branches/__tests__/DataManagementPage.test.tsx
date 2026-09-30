@@ -188,7 +188,7 @@ describe('DataManagementPage database statistics', () => {
   })
 })
 
-describe('DataManagementPage Maintenance Section (Issue #347)', () => {
+describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
   it('renders the maintenance table at the bottom with Illegal genres cleanup row, Count as "-", and Recalc/Clean buttons', () => {
     renderPage()
 
@@ -200,6 +200,38 @@ describe('DataManagementPage Maintenance Section (Issue #347)', () => {
     // Count shows "-" before any Recalc (per spec)
     expect(screen.getByText('-')).toBeInTheDocument()
     expect(screen.getByText(/Click Recalc or Clean Genres to see results here/)).toBeInTheDocument()
+  })
+
+  it('shows Clean Genres success once in the green box without bullet or duplicate secondary text (#366)', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('cleanup-illegal-genres'))
+
+    const success = await screen.findByTestId('maintenance-illegal-genres-success')
+    expect(success).toHaveTextContent(
+      'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.',
+    )
+    // No SuccessMessage checkmark SVG inside the Results success box
+    expect(success.querySelector('svg')).toBeNull()
+    // No duplicate reconstructed secondary field below the green box
+    const results = screen.getByTestId('maintenance-illegal-genres-results')
+    const lookedAtMatches = results.textContent?.match(/Looked at/g) ?? []
+    expect(lookedAtMatches.length).toBe(0)
+    // Message appears exactly once in Results
+    const msg = 'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.'
+    expect(results.textContent?.split(msg).length - 1).toBe(1)
+  })
+
+  it('shows Recalc success once without a duplicate secondary field (#366)', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-illegal-genres'))
+
+    const success = await screen.findByTestId('maintenance-illegal-genres-success')
+    expect(success).toHaveTextContent('3 book(s) have illegal or mismatched genre tags.')
+    expect(success.querySelector('svg')).toBeNull()
+    const results = screen.getByTestId('maintenance-illegal-genres-results')
+    expect(results.textContent?.match(/Looked at/g) ?? []).toHaveLength(0)
   })
 })
 

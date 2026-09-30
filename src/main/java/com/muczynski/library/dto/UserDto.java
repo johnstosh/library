@@ -25,6 +25,7 @@ public class UserDto {
     private String ssoSubjectId;
     private String email;
     private String phone;
+    private boolean receiveEmails = true;
     private LibraryCardDesign libraryCardDesign;
     private int activeLoansCount;
     private LocalDateTime createdAt;

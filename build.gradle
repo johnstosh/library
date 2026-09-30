@@ -6,9 +6,11 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.4.24'
+version = '2.4.27'
 
 ext['tomcat.version'] = '10.+'
+// 2.21.4 is CVE-2026-68497 (HIGH). Trivy fails the deploy on HIGH.
+ext['jackson-bom.version'] = '2.21.6'
 
 java {
     sourceCompatibility = '17'

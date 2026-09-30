@@ -9,6 +9,8 @@ import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Loan;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.User;
+import com.muczynski.library.email.EmailChangeKinds;
+import com.muczynski.library.email.LoanMailSnapshot;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.dto.TitleLoanedDto;
@@ -52,6 +54,9 @@ public class LoanService {
     @Autowired
     private PhotoService photoService;
 
+    @Autowired
+    private EmailChangeQueue emailChangeQueue;
+
     /**
      * Whether this catalog title (this book record) currently has an open loan.
      * Does not reveal the borrower.
@@ -91,6 +96,7 @@ public class LoanService {
         loan.setDueDate(loanDto.getDueDate() != null ? loanDto.getDueDate() : loan.getLoanDate().plusWeeks(2));
         loan.setReturnDate(loanDto.getReturnDate());
         Loan savedLoan = loanRepository.save(loan);
+        stageLoan(null, savedLoan);
         return loanMapper.toDto(savedLoan);
     }
 
@@ -169,6 +175,7 @@ public class LoanService {
             logger.info("Created checkout card photo for loan ID {} with checksum {}", savedLoan.getId(), photo.getImageChecksum());
         }
 
+        stageLoan(null, savedLoan);
         return loanMapper.toDto(savedLoan);
     }
 
@@ -200,8 +207,10 @@ public class LoanService {
     public LoanDto returnBook(Long loanId) {
         Loan loan = loanRepository.findById(loanId).orElse(null);
         if (loan != null) {
+            LoanMailSnapshot before = LoanMailSnapshot.from(loan);
             loan.setReturnDate(LocalDate.now());
             Loan savedLoan = loanRepository.save(loan);
+            stageLoan(before, savedLoan);
             return loanMapper.toDto(savedLoan);
         }
         return null;
@@ -285,6 +294,7 @@ public class LoanService {
 
     public LoanDto updateLoan(Long id, LoanDto loanDto) {
         Loan loan = loanRepository.findById(id).orElseThrow(() -> new LibraryException("Loan not found: " + id));
+        LoanMailSnapshot before = LoanMailSnapshot.from(loan);
         if (loanDto.getLoanDate() != null) {
             loan.setLoanDate(loanDto.getLoanDate());
         }
@@ -301,6 +311,7 @@ public class LoanService {
             loan.setUser(userRepository.findById(loanDto.getUserId()).orElseThrow(() -> new LibraryException("User not found: " + loanDto.getUserId())));
         }
         Loan savedLoan = loanRepository.save(loan);
+        stageLoan(before, savedLoan);
         return loanMapper.toDto(savedLoan);
     }
 
@@ -338,14 +349,34 @@ public class LoanService {
     }
 
     public void deleteLoan(Long id) {
-        if (!loanRepository.existsById(id)) {
-            throw new LibraryException("Loan not found: " + id);
-        }
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new LibraryException("Loan not found: " + id));
+        LoanMailSnapshot before = LoanMailSnapshot.from(loan);
         // Delete any associated checkout card photos first to avoid FK constraint violation
         photoRepository.findByLoanId(id).ifPresent(photo -> {
             logger.info("Deleting checkout card photo {} for loan {}", photo.getId(), id);
             photoRepository.delete(photo);
         });
-        loanRepository.deleteById(id);
+        loanRepository.delete(loan);
+        stageLoan(before, null);
+    }
+
+    private void stageLoan(LoanMailSnapshot before, Loan after) {
+        try {
+            if (emailChangeQueue == null) {
+                return;
+            }
+            Long id = after != null ? after.getId() : before != null ? before.id() : null;
+            if (id == null) {
+                return;
+            }
+            emailChangeQueue.stage(
+                    "loan:" + id,
+                    EmailChangeKinds.LOAN,
+                    before,
+                    after == null ? null : LoanMailSnapshot.from(after));
+        } catch (RuntimeException e) {
+            logger.warn("Failed to queue loan email: {}", e.getMessage());
+        }
     }
 }

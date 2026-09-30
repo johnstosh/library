@@ -55,6 +55,12 @@ public class User implements Serializable {
     @Column(length = 32)
     private String phone; // Optional contact phone number
 
+    /**
+     * When false, this user's email is left off loan and application notices.
+     */
+    @Column(columnDefinition = "boolean default true")
+    private boolean receiveEmails = true;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")
     private LibraryCardDesign libraryCardDesign = LibraryCardDesign.CLASSICAL_DEVOTION;

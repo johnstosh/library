@@ -29,9 +29,11 @@ public interface GlobalSettingsMapper {
     @Mapping(target = "googleSsoClientSecretConfigured", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientIdConfigured", ignore = true) // Set by service
     @Mapping(target = "googleSsoClientSecretValidation", ignore = true) // Set by service
+    @Mapping(target = "smtpUsernameSource", ignore = true)
     @Mapping(target = "smtpPassword", ignore = true)
     @Mapping(target = "smtpPasswordPartial", ignore = true)
     @Mapping(target = "smtpPasswordConfigured", ignore = true)
+    @Mapping(target = "smtpPasswordSource", ignore = true)
     @Mapping(target = "sendGridApiKey", ignore = true)
     @Mapping(target = "sendGridApiKeyPartial", ignore = true)
     @Mapping(target = "sendGridApiKeyConfigured", ignore = true)

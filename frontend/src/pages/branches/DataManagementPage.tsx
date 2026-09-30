@@ -934,21 +934,19 @@ export function DataManagementPage() {
                     standard list. Drops any genre that is not on that list. Updates books in place.
                     The count is how many books still have at least one bad genre tag.
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-6 py-4 text-sm" data-test="maintenance-illegal-genres-results">
                     {illegalGenresResult ? (
                       illegalGenresResult.error ? (
                         <ErrorMessage message={illegalGenresResult.error} />
                       ) : (
-                        <div className="space-y-1">
-                          <SuccessMessage message={illegalGenresResult.message || 'Cleanup finished'} />
-                          {illegalGenresResult.booksUpdated !== undefined && (
-                            <div className="text-xs text-gray-500">
-                              Looked at {illegalGenresResult.booksScanned} genres.
-                              Updated {illegalGenresResult.booksUpdated}.
-                              Corrected {illegalGenresResult.pluralCorrections} plural or spelling variants.
-                              Removed {illegalGenresResult.illegalRemoved} illegal tags.
-                            </div>
-                          )}
+                        // Issue #366: one green success box only — no SuccessMessage checkmark/bullet,
+                        // no duplicate plain-text summary below the box.
+                        <div
+                          className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"
+                          role="alert"
+                          data-test="maintenance-illegal-genres-success"
+                        >
+                          {illegalGenresResult.message || 'Cleanup finished'}
                         </div>
                       )
                     ) : (

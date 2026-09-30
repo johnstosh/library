@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.TestEmailResultDto;
@@ -43,7 +45,9 @@ class ApplicationEmailServiceTest {
     @BeforeEach
     void setUp() {
         when(logSender.getMethod()).thenReturn(EmailMethod.LOG);
-        service = new ApplicationEmailService(globalSettingsService, userRepository, List.of(logSender));
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        service = new ApplicationEmailService(
+                globalSettingsService, userRepository, objectMapper, List.of(logSender));
         ReflectionTestUtils.setField(service, "externalBaseUrl", "https://library.example.com");
         settings = new GlobalSettings();
         settings.setEmailMethod(EmailMethod.LOG);
@@ -52,7 +56,7 @@ class ApplicationEmailServiceTest {
         settings.setEmailNotifyApplicantOnPending(false);
         settings.setEmailIncludeLibrarianUserEmails(false);
         settings.setEmailLibrarianRecipients("librarian@example.com");
-        lenient().when(globalSettingsService.getGlobalSettings()).thenReturn(settings);
+        lenient().when(globalSettingsService.settingsForEmail()).thenReturn(settings);
         lenient().when(logSender.isConfigured(settings)).thenReturn(true);
     }
 
@@ -91,17 +95,31 @@ class ApplicationEmailServiceTest {
     }
 
     @Test
+    void pending_omitsUsersWhoDeclinedEmail() {
+        settings.setEmailNotifyApplicantOnPending(true);
+        settings.setEmailIncludeLibrarianUserEmails(true);
+        when(userRepository.findLibrarianEmails()).thenReturn(List.of("staff@example.com"));
+        when(userRepository.findEmailsDecliningNotifications()).thenReturn(List.of("Jane@Example.com", "staff@example.com"));
+
+        service.sendPendingNotifications(notice());
+
+        ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(logSender).send(captor.capture(), eq(settings));
+        assertEquals(List.of("librarian@example.com"), captor.getValue().getTo());
+    }
+
+    @Test
     void pending_notifiesApplicantWhenEnabled() {
         settings.setEmailNotifyApplicantOnPending(true);
         service.sendPendingNotifications(notice());
 
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
-        verify(logSender, times(2)).send(captor.capture(), eq(settings));
-        List<EmailMessage> sent = captor.getAllValues();
-        assertEquals("library.application.pending", sent.get(0).getEvent());
-        assertEquals("library.application.pending.applicant", sent.get(1).getEvent());
-        assertEquals(List.of("jane@example.com"), sent.get(1).getTo());
-        assertTrue(sent.get(1).getSubject().contains("received"));
+        verify(logSender, times(1)).send(captor.capture(), eq(settings));
+        EmailMessage message = captor.getValue();
+        assertEquals("library.application.pending", message.getEvent());
+        assertEquals(List.of("librarian@example.com", "jane@example.com"), message.getTo());
+        assertTrue(message.getSubject().contains("Jane Doe"));
+        assertTrue(message.getTextBody().contains("librarian will review"));
     }
 
     @Test
