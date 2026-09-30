@@ -56,13 +56,18 @@ public class GlobalSettingsService {
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
     private String externalBaseUrl;
 
+    static final String SOURCE_ENV = "env";
+    static final String SOURCE_DATABASE = "database";
+    static final String SOURCE_NONE = "none";
+
     @Value("${GMAIL_TOKEN_FOR_SEND:}")
     private String gmailTokenForSend;
 
     @Value("${MAIL_FROM_ADDRESS:johnstosh@gmail.com}")
     private String mailFromAddress;
 
-    @Value("${MAIL_SMTP_USERNAME:johnstosh@gmail.com}")
+    /** Empty unless the deploy actually set MAIL_SMTP_USERNAME. A default would look like an override. */
+    @Value("${MAIL_SMTP_USERNAME:}")
     private String mailSmtpUsername;
 
     private final Map<EmailMethod, EmailSender> emailSenders = new EnumMap<>(EmailMethod.class);
@@ -375,25 +380,87 @@ public class GlobalSettingsService {
         return clientId != null && !clientId.isEmpty() && clientSecret != null && !clientSecret.isEmpty();
     }
 
+    /**
+     * Settings used to send mail. Username and password come from the
+     * environment when those variables are set, and this copy is not saved.
+     */
+    public GlobalSettings settingsForEmail() {
+        return copyForEmail(getGlobalSettings());
+    }
+
+    private GlobalSettings copyForEmail(GlobalSettings stored) {
+        GlobalSettings copy = new GlobalSettings();
+        copy.setEmailMethod(stored.getEmailMethod());
+        copy.setEmailFromAddress(stored.getEmailFromAddress());
+        copy.setEmailFromName(stored.getEmailFromName());
+        copy.setEmailNotifyLibrariansOnPending(stored.isEmailNotifyLibrariansOnPending());
+        copy.setEmailNotifyApplicantOnPending(stored.isEmailNotifyApplicantOnPending());
+        copy.setEmailLibrarianRecipients(stored.getEmailLibrarianRecipients());
+        copy.setEmailIncludeLibrarianUserEmails(stored.isEmailIncludeLibrarianUserEmails());
+        copy.setEmailNotifyLibrariansOnLoanChange(stored.isEmailNotifyLibrariansOnLoanChange());
+        copy.setEmailNotifyBorrowerOnLoanChange(stored.isEmailNotifyBorrowerOnLoanChange());
+        copy.setSmtpHost(stored.getSmtpHost());
+        copy.setSmtpPort(stored.getSmtpPort());
+        copy.setSmtpUsername(effectiveSmtpUsername(stored));
+        copy.setSmtpPassword(effectiveSmtpPassword(stored));
+        copy.setSmtpStartTls(stored.isSmtpStartTls());
+        copy.setSmtpSsl(stored.isSmtpSsl());
+        copy.setSendGridApiKey(stored.getSendGridApiKey());
+        copy.setWebhookUrl(stored.getWebhookUrl());
+        copy.setWebhookBearerToken(stored.getWebhookBearerToken());
+        return copy;
+    }
+
+    private String effectiveSmtpUsername(GlobalSettings stored) {
+        if (hasText(mailSmtpUsername)) {
+            return mailSmtpUsername.trim();
+        }
+        return stored.getSmtpUsername() != null ? stored.getSmtpUsername().trim() : "";
+    }
+
+    private String effectiveSmtpPassword(GlobalSettings stored) {
+        if (hasText(gmailTokenForSend)) {
+            return gmailTokenForSend.trim();
+        }
+        return stored.getSmtpPassword() != null ? stored.getSmtpPassword() : "";
+    }
+
+    private String smtpUsernameSource(GlobalSettings stored) {
+        if (hasText(mailSmtpUsername)) {
+            return SOURCE_ENV;
+        }
+        return hasText(stored.getSmtpUsername()) ? SOURCE_DATABASE : SOURCE_NONE;
+    }
+
+    private String smtpPasswordSource(GlobalSettings stored) {
+        if (hasText(gmailTokenForSend)) {
+            return SOURCE_ENV;
+        }
+        return hasText(stored.getSmtpPassword()) ? SOURCE_DATABASE : SOURCE_NONE;
+    }
+
     private void applyEmailSettingsToDto(GlobalSettingsDto dto, GlobalSettings settings) {
-        EmailMethod method = settings.getEmailMethod() != null ? settings.getEmailMethod() : EmailMethod.DISABLED;
+        GlobalSettings effective = copyForEmail(settings);
+        EmailMethod method = effective.getEmailMethod() != null ? effective.getEmailMethod() : EmailMethod.DISABLED;
         dto.setEmailMethod(method);
-        dto.setEmailFromAddress(nullToEmpty(settings.getEmailFromAddress()));
-        dto.setEmailFromName(nullToEmpty(settings.getEmailFromName()));
-        dto.setEmailNotifyLibrariansOnPending(settings.isEmailNotifyLibrariansOnPending());
-        dto.setEmailNotifyApplicantOnPending(settings.isEmailNotifyApplicantOnPending());
-        dto.setEmailLibrarianRecipients(nullToEmpty(settings.getEmailLibrarianRecipients()));
-        dto.setEmailIncludeLibrarianUserEmails(settings.isEmailIncludeLibrarianUserEmails());
-        dto.setEmailNotifyLibrariansOnLoanChange(settings.isEmailNotifyLibrariansOnLoanChange());
-        dto.setEmailNotifyBorrowerOnLoanChange(settings.isEmailNotifyBorrowerOnLoanChange());
-        dto.setSmtpHost(nullToEmpty(settings.getSmtpHost()));
-        dto.setSmtpPort(settings.getSmtpPort() != null ? settings.getSmtpPort() : 587);
-        dto.setSmtpUsername(nullToEmpty(settings.getSmtpUsername()));
+        dto.setEmailFromAddress(nullToEmpty(effective.getEmailFromAddress()));
+        dto.setEmailFromName(nullToEmpty(effective.getEmailFromName()));
+        dto.setEmailNotifyLibrariansOnPending(effective.isEmailNotifyLibrariansOnPending());
+        dto.setEmailNotifyApplicantOnPending(effective.isEmailNotifyApplicantOnPending());
+        dto.setEmailLibrarianRecipients(nullToEmpty(effective.getEmailLibrarianRecipients()));
+        dto.setEmailIncludeLibrarianUserEmails(effective.isEmailIncludeLibrarianUserEmails());
+        dto.setEmailNotifyLibrariansOnLoanChange(effective.isEmailNotifyLibrariansOnLoanChange());
+        dto.setEmailNotifyBorrowerOnLoanChange(effective.isEmailNotifyBorrowerOnLoanChange());
+        dto.setSmtpHost(nullToEmpty(effective.getSmtpHost()));
+        dto.setSmtpPort(effective.getSmtpPort() != null ? effective.getSmtpPort() : 587);
+        dto.setSmtpUsername(nullToEmpty(effective.getSmtpUsername()));
+        dto.setSmtpUsernameSource(smtpUsernameSource(settings));
         dto.setSmtpPassword(null);
-        dto.setSmtpPasswordConfigured(SecretDisplay.isConfigured(settings.getSmtpPassword()));
-        dto.setSmtpPasswordPartial(SecretDisplay.partial(settings.getSmtpPassword()));
-        dto.setSmtpStartTls(settings.isSmtpStartTls());
-        dto.setSmtpSsl(settings.isSmtpSsl());
+        dto.setSmtpPasswordConfigured(SecretDisplay.isConfigured(effective.getSmtpPassword()));
+        dto.setSmtpPasswordPartial(SecretDisplay.partial(effective.getSmtpPassword()));
+        dto.setSmtpPasswordSource(smtpPasswordSource(settings));
+        dto.setSmtpStartTls(effective.isSmtpStartTls());
+        dto.setSmtpSsl(effective.isSmtpSsl());
         dto.setSendGridApiKey(null);
         dto.setSendGridApiKeyConfigured(SecretDisplay.isConfigured(settings.getSendGridApiKey()));
         dto.setSendGridApiKeyPartial(SecretDisplay.partial(settings.getSendGridApiKey()));
@@ -413,8 +480,8 @@ public class GlobalSettingsService {
             dto.setEmailMethodStatus("Unknown email method: " + method);
             return;
         }
-        dto.setEmailMethodConfigured(sender.isConfigured(settings));
-        dto.setEmailMethodStatus(sender.describeStatus(settings));
+        dto.setEmailMethodConfigured(sender.isConfigured(effective));
+        dto.setEmailMethodStatus(sender.describeStatus(effective));
     }
 
     private boolean updateEmailSettings(GlobalSettings settings, GlobalSettingsDto dto) {
@@ -497,8 +564,9 @@ public class GlobalSettingsService {
     }
 
     /**
-     * Fill SMTP from the deploy environment when no password has been saved.
-     * A password already stored in settings is left alone.
+     * Fill SMTP host, method, and a database fallback the first time a token
+     * is present and nothing has been saved. Sending still prefers
+     * MAIL_SMTP_USERNAME and GMAIL_TOKEN_FOR_SEND over those saved values.
      */
     public void seedSmtpFromEnvironmentIfUnset() {
         if (!hasText(gmailTokenForSend)) {
@@ -506,7 +574,7 @@ public class GlobalSettingsService {
         }
         GlobalSettings settings = getGlobalSettings();
         if (hasText(settings.getSmtpPassword())) {
-            logger.info("SMTP password already saved; leaving email settings unchanged");
+            logger.info("SMTP username and token from the environment override the saved global settings");
             return;
         }
         settings.setEmailMethod(EmailMethod.SMTP);

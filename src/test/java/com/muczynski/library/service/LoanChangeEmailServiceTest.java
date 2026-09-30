@@ -54,13 +54,15 @@ class LoanChangeEmailServiceTest {
         settings.setEmailFromName("Library");
         settings.setEmailNotifyLibrariansOnLoanChange(true);
         settings.setEmailNotifyBorrowerOnLoanChange(true);
-        lenient().when(globalSettingsService.getGlobalSettings()).thenReturn(settings);
+        lenient().when(globalSettingsService.settingsForEmail()).thenReturn(settings);
         lenient().when(logSender.getMethod()).thenReturn(EmailMethod.LOG);
         lenient().when(logSender.isConfigured(settings)).thenReturn(true);
         lenient().when(applicationEmailService.effectiveMethod(settings)).thenReturn(EmailMethod.LOG);
         lenient().when(applicationEmailService.senderFor(EmailMethod.LOG)).thenReturn(logSender);
         lenient().when(applicationEmailService.resolveLibrarianRecipients(settings))
                 .thenReturn(List.of("librarian@example.com"));
+        lenient().when(applicationEmailService.withoutOptedOutUsers(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test

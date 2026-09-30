@@ -70,6 +70,7 @@ class UserSettingsServiceTest {
             dto.setSsoSubjectId(user.getSsoSubjectId());
             dto.setEmail(user.getEmail());
             dto.setPhone(user.getPhone());
+            dto.setReceiveEmails(user.isReceiveEmails());
             dto.setLastModified(user.getLastModified());
             return dto;
         });
@@ -335,6 +336,36 @@ class UserSettingsServiceTest {
 
         assertThat(result.getEmail()).isNull();
         assertThat(result.getPhone()).isNull();
+    }
+
+    @Test
+    void updateUserSettings_shouldUpdateReceiveEmails() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setReceiveEmails(false);
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(testUser.isReceiveEmails()).isFalse();
+        assertThat(result.isReceiveEmails()).isFalse();
+    }
+
+    @Test
+    void updateUserSettings_shouldLeaveReceiveEmailsWhenOmitted() {
+        testUser.setReceiveEmails(false);
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("new@example.com");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(testUser.isReceiveEmails()).isFalse();
     }
 
     @Test

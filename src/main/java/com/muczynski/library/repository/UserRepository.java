@@ -33,6 +33,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "WHERE a.name = 'LIBRARIAN' AND u.email IS NOT NULL AND u.email <> ''")
     List<String> findLibrarianEmails();
 
+    @Query("SELECT DISTINCT LOWER(u.email) FROM User u "
+            + "WHERE u.receiveEmails = false AND u.email IS NOT NULL AND u.email <> ''")
+    List<String> findEmailsDecliningNotifications();
+
     /** Keyset id page for chunked JSON export. */
     @Query("SELECT u.id FROM User u WHERE u.id > :lastId ORDER BY u.id ASC")
     List<Long> findUserIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);

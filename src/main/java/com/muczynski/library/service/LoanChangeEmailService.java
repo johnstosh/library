@@ -61,7 +61,7 @@ public class LoanChangeEmailService implements EmailChangeHandler {
         if (before == null && after == null) {
             return;
         }
-        GlobalSettings settings = globalSettingsService.getGlobalSettings();
+        GlobalSettings settings = globalSettingsService.settingsForEmail();
         EmailMethod method = applicationEmailService.effectiveMethod(settings);
         if (method == EmailMethod.DISABLED) {
             logger.debug("Loan email skipped: email method is DISABLED");
@@ -83,6 +83,7 @@ public class LoanChangeEmailService implements EmailChangeHandler {
         if (settings.isEmailNotifyBorrowerOnLoanChange()) {
             recipients = EmailAddresses.mergeUnique(recipients, borrowerEmails(before, after));
         }
+        recipients = applicationEmailService.withoutOptedOutUsers(recipients);
         if (recipients.isEmpty()) {
             logger.info("Loan email skipped: no recipients");
             return;

@@ -9,6 +9,7 @@ vi.mock('@/api/settings', () => {
   const data = {
     email: 'pat@example.com',
     phone: '555-0100',
+    receiveEmails: true,
   }
   return {
     useUserSettings: () => ({
@@ -50,6 +51,7 @@ describe('UserSettingsPage', () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         email: 'new@example.com',
         phone: '555-0199',
+        receiveEmails: true,
       })
     })
     expect(screen.getByText('Contact information updated successfully')).toBeInTheDocument()
@@ -63,5 +65,20 @@ describe('UserSettingsPage', () => {
 
     expect(await screen.findByText('Enter a valid email address or leave it blank')).toBeInTheDocument()
     expect(mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('saves the choice to stop receiving email', async () => {
+    render(<UserSettingsPage />)
+
+    fireEvent.click(screen.getByTestId('receive-emails'))
+    fireEvent.click(screen.getByTestId('save-contact-info'))
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({
+        email: 'pat@example.com',
+        phone: '555-0100',
+        receiveEmails: false,
+      })
+    })
   })
 })

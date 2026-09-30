@@ -56,7 +56,7 @@ class ApplicationEmailServiceTest {
         settings.setEmailNotifyApplicantOnPending(false);
         settings.setEmailIncludeLibrarianUserEmails(false);
         settings.setEmailLibrarianRecipients("librarian@example.com");
-        lenient().when(globalSettingsService.getGlobalSettings()).thenReturn(settings);
+        lenient().when(globalSettingsService.settingsForEmail()).thenReturn(settings);
         lenient().when(logSender.isConfigured(settings)).thenReturn(true);
     }
 
@@ -92,6 +92,20 @@ class ApplicationEmailServiceTest {
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
         verify(logSender).send(captor.capture(), eq(settings));
         assertEquals(List.of("librarian@example.com", "staff@example.com"), captor.getValue().getTo());
+    }
+
+    @Test
+    void pending_omitsUsersWhoDeclinedEmail() {
+        settings.setEmailNotifyApplicantOnPending(true);
+        settings.setEmailIncludeLibrarianUserEmails(true);
+        when(userRepository.findLibrarianEmails()).thenReturn(List.of("staff@example.com"));
+        when(userRepository.findEmailsDecliningNotifications()).thenReturn(List.of("Jane@Example.com", "staff@example.com"));
+
+        service.sendPendingNotifications(notice());
+
+        ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(logSender).send(captor.capture(), eq(settings));
+        assertEquals(List.of("librarian@example.com"), captor.getValue().getTo());
     }
 
     @Test

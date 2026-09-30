@@ -26,8 +26,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Dispatches emails for pending library-card applications using the transport
@@ -110,7 +113,7 @@ public class ApplicationEmailService implements EmailChangeHandler {
         if (before == null && after == null) {
             return;
         }
-        GlobalSettings settings = globalSettingsService.getGlobalSettings();
+        GlobalSettings settings = globalSettingsService.settingsForEmail();
         EmailMethod method = effectiveMethod(settings);
         if (method == EmailMethod.DISABLED) {
             logger.debug("Application email skipped: email method is DISABLED");
@@ -137,6 +140,7 @@ public class ApplicationEmailService implements EmailChangeHandler {
                 logger.info("Application applicant email skipped: no valid email for '{}'", shown.name());
             }
         }
+        recipients = withoutOptedOutUsers(recipients);
         if (recipients.isEmpty()) {
             logger.info("Application email skipped: no recipients");
             return;
@@ -190,7 +194,7 @@ public class ApplicationEmailService implements EmailChangeHandler {
     }
 
     public TestEmailResultDto sendTestEmail(String toOverride) {
-        GlobalSettings settings = globalSettingsService.getGlobalSettings();
+        GlobalSettings settings = globalSettingsService.settingsForEmail();
         EmailMethod method = effectiveMethod(settings);
         TestEmailResultDto result = new TestEmailResultDto();
         result.setMethod(method);
@@ -212,7 +216,7 @@ public class ApplicationEmailService implements EmailChangeHandler {
         if (EmailAddresses.isValid(toOverride)) {
             recipients = List.of(toOverride.trim());
         } else {
-            recipients = resolveLibrarianRecipients(settings);
+            recipients = withoutOptedOutUsers(resolveLibrarianRecipients(settings));
         }
         if (recipients.isEmpty()) {
             result.setSent(false);
@@ -245,6 +249,33 @@ public class ApplicationEmailService implements EmailChangeHandler {
                     .toList();
         }
         return EmailAddresses.mergeUnique(extra, fromUsers);
+    }
+
+    /**
+     * Drops addresses that belong to a user who turned off email notifications.
+     * Addresses that do not match a user are kept.
+     */
+    public List<String> withoutOptedOutUsers(List<String> recipients) {
+        if (recipients == null || recipients.isEmpty()) {
+            return List.of();
+        }
+        List<String> declined = userRepository.findEmailsDecliningNotifications();
+        if (declined == null || declined.isEmpty()) {
+            return recipients;
+        }
+        Set<String> optedOut = new HashSet<>();
+        for (String address : declined) {
+            if (address != null && !address.isBlank()) {
+                optedOut.add(address.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        if (optedOut.isEmpty()) {
+            return recipients;
+        }
+        return recipients.stream()
+                .filter(address -> address != null
+                        && !optedOut.contains(address.trim().toLowerCase(Locale.ROOT)))
+                .toList();
     }
 
     public EmailMethod effectiveMethod(GlobalSettings settings) {

@@ -193,6 +193,7 @@ export interface UserDto {
   ssoSubjectId?: string
   email?: string
   phone?: string
+  receiveEmails?: boolean
   libraryCardDesign?: LibraryCardDesign
   activeLoansCount?: number
   googlePhotosApiKey?: string
@@ -326,6 +327,8 @@ export interface ChunkUploadProgress {
 
 export type EmailMethod = 'DISABLED' | 'LOG' | 'SMTP' | 'SENDGRID' | 'WEBHOOK'
 
+export type SettingsSource = 'env' | 'database' | 'none'
+
 export interface TestEmailResultDto {
   sent: boolean
   method: EmailMethod
@@ -362,9 +365,11 @@ export interface GlobalSettingsDto {
   smtpHost?: string
   smtpPort?: number
   smtpUsername?: string
+  smtpUsernameSource?: SettingsSource
   smtpPassword?: string
   smtpPasswordPartial?: string
   smtpPasswordConfigured?: boolean
+  smtpPasswordSource?: SettingsSource
   smtpStartTls?: boolean
   smtpSsl?: boolean
   sendGridApiKey?: string

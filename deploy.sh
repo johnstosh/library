@@ -209,8 +209,9 @@ fi
 # CPU stays available between requests so the in-process mail timer can
 # finish its 5-minute wait while Cloud Run keeps the idle instance.
 # GMAIL_TOKEN_FOR_SEND is omitted when unset so a deploy without the pipeline
-# secret does not pass an empty value. Once saved, the SMTP password lives in
-# the database and does not depend on this variable remaining set.
+# secret does not pass an empty value. While MAIL_SMTP_USERNAME and
+# GMAIL_TOKEN_FOR_SEND are set, they override the SMTP username and password
+# saved in global settings. The settings page reports source: environment variable.
 MAIL_ENV="MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-johnstosh@gmail.com},MAIL_SMTP_USERNAME=${MAIL_SMTP_USERNAME:-johnstosh@gmail.com}"
 if [ -n "${GMAIL_TOKEN_FOR_SEND:-}" ]; then
   MAIL_ENV="${MAIL_ENV},GMAIL_TOKEN_FOR_SEND=${GMAIL_TOKEN_FOR_SEND}"

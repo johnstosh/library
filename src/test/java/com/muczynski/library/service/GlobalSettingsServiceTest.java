@@ -368,8 +368,8 @@ class GlobalSettingsServiceTest {
 
         EmailSender smtpSender = mock(EmailSender.class);
         when(smtpSender.getMethod()).thenReturn(EmailMethod.SMTP);
-        when(smtpSender.isConfigured(settings)).thenReturn(true);
-        when(smtpSender.describeStatus(settings)).thenReturn("Ready (smtp://smtp.example.com:587)");
+        when(smtpSender.isConfigured(any(GlobalSettings.class))).thenReturn(true);
+        when(smtpSender.describeStatus(any(GlobalSettings.class))).thenReturn("Ready (smtp://smtp.example.com:587)");
         globalSettingsService.setEmailSenders(List.of(smtpSender));
 
         GlobalSettingsDto result = globalSettingsService.getGlobalSettingsDto();
@@ -383,6 +383,101 @@ class GlobalSettingsServiceTest {
         assertEquals("...9999", result.getWebhookBearerTokenPartial());
         assertEquals(EmailMethod.SMTP, result.getEmailMethod());
         assertTrue(result.isEmailMethodConfigured());
+        assertEquals("database", result.getSmtpPasswordSource());
+        assertEquals("none", result.getSmtpUsernameSource());
+    }
+
+    @Test
+    void smtpEnvironmentOverridesSavedUsernameAndToken() {
+        GlobalSettings settings = new GlobalSettings();
+        settings.setId(1L);
+        settings.setEmailMethod(EmailMethod.SMTP);
+        settings.setSmtpHost("smtp.gmail.com");
+        settings.setEmailFromAddress("library@example.com");
+        settings.setSmtpUsername("saved-user@example.com");
+        settings.setSmtpPassword("saved-token-xxxx");
+
+        ReflectionTestUtils.setField(globalSettingsService, "mailSmtpUsername", "env-user@gmail.com");
+        ReflectionTestUtils.setField(globalSettingsService, "gmailTokenForSend", "env-token-abcd");
+
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(settings));
+        when(globalSettingsMapper.toDto(settings)).thenReturn(new GlobalSettingsDto());
+
+        GlobalSettingsDto result = globalSettingsService.getGlobalSettingsDto();
+
+        assertEquals("env-user@gmail.com", result.getSmtpUsername());
+        assertEquals("env", result.getSmtpUsernameSource());
+        assertEquals("env", result.getSmtpPasswordSource());
+        assertEquals("...abcd", result.getSmtpPasswordPartial());
+        assertTrue(result.isSmtpPasswordConfigured());
+        assertNull(result.getSmtpPassword());
+        assertEquals("saved-user@example.com", settings.getSmtpUsername());
+        assertEquals("saved-token-xxxx", settings.getSmtpPassword());
+
+        GlobalSettings effective = globalSettingsService.settingsForEmail();
+        assertEquals("env-user@gmail.com", effective.getSmtpUsername());
+        assertEquals("env-token-abcd", effective.getSmtpPassword());
+        assertEquals("smtp.gmail.com", effective.getSmtpHost());
+        assertNull(effective.getId());
+        verify(globalSettingsRepository, never()).save(any(GlobalSettings.class));
+    }
+
+    @Test
+    void smtpSourceIsDatabaseWhenEnvironmentIsBlank() {
+        GlobalSettings settings = new GlobalSettings();
+        settings.setSmtpUsername("saved-user@example.com");
+        settings.setSmtpPassword("saved-token-xxxx");
+        settings.setEmailMethod(EmailMethod.DISABLED);
+        ReflectionTestUtils.setField(globalSettingsService, "mailSmtpUsername", "  ");
+        ReflectionTestUtils.setField(globalSettingsService, "gmailTokenForSend", "");
+
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(settings));
+        when(globalSettingsMapper.toDto(settings)).thenReturn(new GlobalSettingsDto());
+
+        GlobalSettingsDto result = globalSettingsService.getGlobalSettingsDto();
+
+        assertEquals("saved-user@example.com", result.getSmtpUsername());
+        assertEquals("database", result.getSmtpUsernameSource());
+        assertEquals("database", result.getSmtpPasswordSource());
+        assertEquals("...xxxx", result.getSmtpPasswordPartial());
+    }
+
+    @Test
+    void seedLeavesSavedPasswordAndStillPrefersEnvironment() {
+        GlobalSettings settings = new GlobalSettings();
+        settings.setSmtpPassword("saved-token-xxxx");
+        settings.setSmtpUsername("saved-user@example.com");
+        ReflectionTestUtils.setField(globalSettingsService, "gmailTokenForSend", "env-token-abcd");
+        ReflectionTestUtils.setField(globalSettingsService, "mailSmtpUsername", "env-user@gmail.com");
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(settings));
+
+        globalSettingsService.seedSmtpFromEnvironmentIfUnset();
+
+        assertEquals("saved-token-xxxx", settings.getSmtpPassword());
+        verify(globalSettingsRepository, never()).save(any(GlobalSettings.class));
+        GlobalSettings effective = globalSettingsService.settingsForEmail();
+        assertEquals("env-token-abcd", effective.getSmtpPassword());
+        assertEquals("env-user@gmail.com", effective.getSmtpUsername());
+    }
+
+    @Test
+    void seedFillsSmtpWhenNoPasswordIsSaved() {
+        GlobalSettings settings = new GlobalSettings();
+        ReflectionTestUtils.setField(globalSettingsService, "gmailTokenForSend", "env-token-abcd");
+        ReflectionTestUtils.setField(globalSettingsService, "mailSmtpUsername", "env-user@gmail.com");
+        ReflectionTestUtils.setField(globalSettingsService, "mailFromAddress", "johnstosh@gmail.com");
+        when(globalSettingsRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(settings));
+        when(globalSettingsRepository.save(settings)).thenReturn(settings);
+
+        globalSettingsService.seedSmtpFromEnvironmentIfUnset();
+
+        assertEquals(EmailMethod.SMTP, settings.getEmailMethod());
+        assertEquals("smtp.gmail.com", settings.getSmtpHost());
+        assertEquals(587, settings.getSmtpPort());
+        assertEquals("env-user@gmail.com", settings.getSmtpUsername());
+        assertEquals("env-token-abcd", settings.getSmtpPassword());
+        assertEquals("johnstosh@gmail.com", settings.getEmailFromAddress());
+        verify(globalSettingsRepository).save(settings);
     }
 
     @Test
