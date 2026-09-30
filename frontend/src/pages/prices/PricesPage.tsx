@@ -22,38 +22,29 @@ import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilter
 import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
-import { useBookCount, useBooks } from '@/api/books'
-import { applyBookPriceFilters, applyChipFilters, isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
+import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
+import { isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   booksPathFromPriceFilters,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
-  matchesBookQuery,
   priceOlderDaysFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
 import {
-  applyDesireToPurchaseFilter,
   desireToPurchaseFromSearchParams,
   type DesireToPurchaseFilter,
 } from '@/utils/desireToPurchase'
+import { bindingsFromSearchParams } from '@/utils/bookBinding'
+import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 import {
-  applyBookBindingFilter,
-  bindingsFromSearchParams,
-} from '@/utils/bookBinding'
-import {
-  applyReadingDifficultyFilter,
-  readingDifficultiesFromSearchParams,
-} from '@/utils/readingDifficulty'
-import {
-  applyBookStatusFilter,
   bookStatusesFromSearchParams,
   type BookStatusFilter,
 } from '@/utils/bookStatus'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
-import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
+import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import {
   applyPriceFilters,
   maxTotalFromSearchParams,
@@ -131,54 +122,37 @@ export function PricesPage() {
     })
   }
 
-  const { data: allBooks = [], isLoading: booksLoading } = useBooks(selectedLabels, chips.mostRecent)
+  const listFilters = useMemo((): BookListFilters => ({
+    q: searchParams.get('q') ?? '',
+    labels: labelsFromSearchParams(searchParams),
+    statuses: bookStatusesFromSearchParams(searchParams),
+    readingDifficulties: readingDifficultiesFromSearchParams(searchParams),
+    bindings: bindingsFromSearchParams(searchParams),
+    desireToPurchase: desireToPurchaseFromSearchParams(searchParams),
+    favoriteLists: favoriteListsFromSearchParams(searchParams),
+    priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
+    chips: chipsFromSearchParams(searchParams, 'prices'),
+  }), [searchParams])
+
+  const {
+    data: matchingBooks = [],
+    isLoading: booksLoading,
+    isFetching: booksFetching,
+    error: booksError,
+  } = useBooks(listFilters)
   const { data: bookCount } = useBookCount()
 
-  // Non-price filters first (search, chips, labels, status, favorites, reading difficulty, bindings, desire-to-purchase).
-  // This produces candidateBooks that price chips and row filters can then narrow further.
-  // Only fetch prices for those books (scoped /by-book-ids) -- avoids full catalog load on narrow searches.
-  const nonPriceFilteredBooks = useMemo(() => {
-    const favoriteIds = favoriteItemIdsForLists(
-      favoriteSummary?.lists,
-      selectedFavoriteLists,
-      'bookIds',
-    )
-    return applyDesireToPurchaseFilter(
-      applyBookBindingFilter(
-        applyReadingDifficultyFilter(
-          applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-          selectedDifficulties,
-        ),
-        selectedBindings,
-      )
-        .filter((book) => matchesBookQuery(book, urlQuery))
-        .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id)),
-      selectedDesireToPurchase,
-    )
-  }, [allBooks, chips, selectedStatuses, selectedDifficulties, selectedBindings, selectedFavoriteLists, favoriteSummary?.lists, urlQuery, selectedDesireToPurchase])
-
+  // Book-level chips, including price chips, are applied by filtered-summaries.
+  // Price rows (max total, recent hours, cover chips) stay in the browser.
   const candidateBookIds = useMemo(
-    () => nonPriceFilteredBooks.map((b) => b.id),
-    [nonPriceFilteredBooks],
+    () => matchingBooks.map((b) => b.id),
+    [matchingBooks],
   )
 
   const { data: scopedPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices({
     bookIds: candidateBookIds,
+    enabled: !booksLoading,
   })
-
-  const matchingBooks = useMemo(() => {
-    return applyBookPriceFilters(
-      nonPriceFilteredBooks,
-      scopedPrices,
-      {
-        withPrices: chips.withPrices,
-        noPrices: chips.noPrices,
-        priceOlder: chips.priceOlder,
-        priceOlderDays,
-        lookupErrors: chips.lookupErrors,
-      },
-    )
-  }, [nonPriceFilteredBooks, scopedPrices, chips, priceOlderDays])
 
   const priceStatistics = useMemo(
     () => summarizeBookPrices(matchingBooks, scopedPrices),
@@ -205,7 +179,7 @@ export function PricesPage() {
   }, [prices])
 
   const isLoading = pricesLoading || booksLoading
-  const isFilterPending = (isFetching && !isLoading) || (booksLoading && !pricesLoading)
+  const isFilterPending = ((isFetching || booksFetching) && !isLoading) || (booksLoading && !pricesLoading)
 
   return (
     <div>
@@ -214,10 +188,11 @@ export function PricesPage() {
         description="AbeBooks used-book prices for hardcover, softcover, and library-binding copies in good condition or better."
       />
 
-      {error && (
+      {(booksError || error) && (
         <TransientFetchErrorBanner
-          error={error}
+          error={booksError ?? error}
           onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
             queryClient.invalidateQueries({ queryKey: queryKeys.prices.all })
           }}
           className="mb-4"

@@ -172,8 +172,8 @@ export function BookFilters({
           tooltip="Only books with a free LibriVox audio recording"
           dataTest="filter-audio"
         />
-        {/* Recent Arrivals is now always toggleable and combinable with other filters
-            (intersection semantics via applyChipFilters). Defaults on for empty Books URL. */}
+        {/* Recent Arrivals combines with the other filters on the server.
+            Defaults on for an empty Books URL. */}
         <FilterChip
           label="Recent Arrivals"
           active={chips.mostRecent}

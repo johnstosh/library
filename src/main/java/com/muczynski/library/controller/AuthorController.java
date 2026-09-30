@@ -17,6 +17,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
@@ -34,6 +35,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +49,9 @@ public class AuthorController {
 
     @Autowired
     private AuthorService authorService;
+
+    @Autowired
+    private CatalogFilterService catalogFilterService;
 
     @Autowired
     private PhotoService photoService;
@@ -95,6 +100,61 @@ public class AuthorController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve author summaries: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Summaries for the Authors page after every active filter.
+     * The browser then loads full rows with /by-ids for these ids only.
+     */
+    @GetMapping("/filtered-summaries")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getFilteredAuthorSummaries(
+            @RequestParam(defaultValue = "false") boolean mostRecent,
+            @RequestParam(defaultValue = "false") boolean withoutDescription,
+            @RequestParam(defaultValue = "false") boolean withoutGrokipedia,
+            @RequestParam(defaultValue = "false") boolean withGrokipedia,
+            @RequestParam(defaultValue = "false") boolean zeroBooks,
+            @RequestParam(defaultValue = "false") boolean withoutPhotos,
+            @RequestParam(defaultValue = "false") boolean withPhotos,
+            @RequestParam(defaultValue = "false") boolean withoutBirthDate,
+            @RequestParam(defaultValue = "false") boolean withoutDeathDate,
+            @RequestParam(defaultValue = "false") boolean hasYdlBook,
+            @RequestParam(defaultValue = "false") boolean hasYdlEbook,
+            @RequestParam(defaultValue = "false") boolean hasYdlAudio,
+            @RequestParam(defaultValue = "false") boolean hasEmuBook,
+            @RequestParam(defaultValue = "false") boolean hasEmuEbook,
+            @RequestParam(defaultValue = "false") boolean hasEmuAudio,
+            @RequestParam(defaultValue = "false") boolean hasAclaBook,
+            @RequestParam(defaultValue = "false") boolean hasAclaEbook,
+            @RequestParam(defaultValue = "false") boolean hasAclaAudio,
+            @RequestParam(required = false) String favoriteLists,
+            Principal principal) {
+        try {
+            CatalogFilterService.AuthorCatalogFilter filter = new CatalogFilterService.AuthorCatalogFilter();
+            filter.mostRecent = mostRecent;
+            filter.withoutDescription = withoutDescription;
+            filter.withoutGrokipedia = withoutGrokipedia;
+            filter.withGrokipedia = withGrokipedia;
+            filter.zeroBooks = zeroBooks;
+            filter.withoutPhotos = withoutPhotos;
+            filter.withPhotos = withPhotos;
+            filter.withoutBirthDate = withoutBirthDate;
+            filter.withoutDeathDate = withoutDeathDate;
+            filter.ydlBook = hasYdlBook;
+            filter.ydlEbook = hasYdlEbook;
+            filter.ydlAudio = hasYdlAudio;
+            filter.emuBook = hasEmuBook;
+            filter.emuEbook = hasEmuEbook;
+            filter.emuAudio = hasEmuAudio;
+            filter.aclaBook = hasAclaBook;
+            filter.aclaEbook = hasAclaEbook;
+            filter.aclaAudio = hasAclaAudio;
+            filter.favoriteLists = splitCsv(favoriteLists);
+            return ResponseEntity.ok(catalogFilterService.authorSummaries(filter, userId(principal)));
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve filtered author summaries: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
@@ -196,6 +256,31 @@ public class AuthorController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private static List<String> splitCsv(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>();
+        for (String part : raw.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                values.add(trimmed);
+            }
+        }
+        return values;
+    }
+
+    private static Long userId(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(principal.getName());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

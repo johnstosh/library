@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PricesPage } from '../PricesPage'
 import type { BookDto, BookPriceDto } from '@/types/dtos'
 
-const { prices, books } = vi.hoisted(() => {
+const { prices, books, filterBooks } = vi.hoisted(() => {
   const books: BookDto[] = [
     {
       id: 1,
@@ -106,7 +106,46 @@ const { prices, books } = vi.hoisted(() => {
       lookedUpAt: '2026-09-10T12:00:00',
     },
   ]
-  return { prices, books }
+  function isSaved(price: BookPriceDto) {
+    return price.priceDollars != null && !price.lookupError
+  }
+  function isErrorRow(price: BookPriceDto) {
+    const err = price.lookupError?.trim()
+    return Boolean(err) && err !== 'No matching listing'
+  }
+  function filterBooks(filters?: {
+    q?: string
+    desireToPurchase?: readonly (string | number)[]
+    chips?: { withPrices?: boolean; noPrices?: boolean; lookupErrors?: boolean }
+  }) {
+    if (!filters) return books
+    const q = (filters.q ?? '').trim().toLowerCase()
+    const desires = filters.desireToPurchase ?? []
+    const chips = filters.chips
+    return books.filter((book) => {
+      if (q) {
+        const title = (book.title ?? '').toLowerCase()
+        const author = (book.author ?? '').toLowerCase()
+        if (!title.includes(q) && !author.includes(q)) return false
+      }
+      if (desires.length > 0) {
+        const value = book.desireToPurchase
+        const match = value == null
+          ? desires.some((item) => String(item).toLowerCase() === 'unset')
+          : desires.includes(value)
+        if (!match) return false
+      }
+      if (chips?.withPrices || chips?.noPrices || chips?.lookupErrors) {
+        const rows = prices.filter((price) => price.bookId === book.id)
+        const saved = rows.some(isSaved)
+        if (chips.withPrices && !saved) return false
+        if (chips.noPrices && saved) return false
+        if (chips.lookupErrors && !rows.some(isErrorRow)) return false
+      }
+      return true
+    })
+  }
+  return { prices, books, filterBooks }
 })
 
 vi.mock('@/api/prices', () => ({
@@ -119,8 +158,8 @@ vi.mock('@/api/prices', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: () => ({
-    data: books,
+  useBooks: (filters?: Parameters<typeof filterBooks>[0]) => ({
+    data: filterBooks(filters),
     isLoading: false,
     isFetching: false,
     error: null,

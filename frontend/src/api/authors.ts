@@ -3,31 +3,59 @@ import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
+import type { AuthorChipFilters } from '@/utils/authorChipFilters'
 import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
-// Hook to get all authors with optimized lastModified caching
-export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
+const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
+  'hasYdlBook',
+  'hasYdlEbook',
+  'hasYdlAudio',
+  'hasEmuBook',
+  'hasEmuEbook',
+  'hasEmuAudio',
+  'hasAclaBook',
+  'hasAclaEbook',
+  'hasAclaAudio',
+  'mostRecent',
+  'withoutDescription',
+  'withoutGrokipedia',
+  'withGrokipedia',
+  'zeroBooks',
+  'withoutPhotos',
+  'withPhotos',
+  'withoutBirthDate',
+  'withoutDeathDate',
+]
+
+/** Authors page filters. Every active chip is sent to GET /authors/filtered-summaries. */
+export interface AuthorListFilters {
+  chips: AuthorChipFilters
+  favoriteLists?: readonly string[]
+}
+
+/** Query string for GET /authors/filtered-summaries. Names match the controller. */
+export function authorListFilterQuery(filters: AuthorListFilters): string {
+  const params = new URLSearchParams()
+  for (const key of AUTHOR_FILTER_KEYS) {
+    if (filters.chips[key]) params.set(key, 'true')
+  }
+  if (filters.favoriteLists && filters.favoriteLists.length > 0) {
+    params.set('favoriteLists', filters.favoriteLists.join(','))
+  }
+  return params.toString()
+}
+
+function useAuthorCatalog(
+  summariesEndpoint: string,
+  summariesQueryKey: readonly unknown[],
+  cacheScope?: string,
+) {
   const queryClient = useQueryClient()
 
-  // Determine the filter endpoint - all filter endpoints now return AuthorSummaryDto
-  // For 'all' filter, we also use the summaries endpoint to enable caching
-  const getFilterEndpoint = (f: typeof filter) => {
-    switch (f) {
-      case 'without-description': return '/authors/without-description'
-      case 'zero-books': return '/authors/zero-books'
-      case 'without-grokipedia': return '/authors/without-grokipedia'
-      case 'most-recent': return '/authors/most-recent-day'
-      case 'all':
-      default: return '/authors/summaries'
-    }
-  }
-
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
-  // For all filters including 'all', we use the summaries endpoint to enable caching
-  const filterEndpoint = getFilterEndpoint(filter)
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
-    queryKey: filter ? queryKeys.authors.filterSummaries(filter) : queryKeys.authors.summaries(),
-    queryFn: () => api.get<AuthorSummaryDto[]>(filterEndpoint),
+    queryKey: summariesQueryKey,
+    queryFn: () => api.get<AuthorSummaryDto[]>(summariesEndpoint),
     staleTime: 0, // Always check for fresh data when filter changes
     refetchOnMount: true, // Always refetch when component mounts or filter changes
   })
@@ -47,7 +75,7 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   // Step 3: Batch fetch changed authors using /authors/by-ids
   // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedAuthors, isLoading: fetchingAuthors, isFetching: detailsFetching, error: detailsError } = useQuery({
-    queryKey: queryKeys.authors.byIds(authorsToFetch, filter),
+    queryKey: queryKeys.authors.byIds(authorsToFetch, cacheScope),
     queryFn: async () => {
       if (authorsToFetch.length > 0) {
         // Only fetch authors that changed
@@ -111,6 +139,34 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
     isFetching: summariesFetching || detailsFetching,
     error: summariesError || detailsError,
   }
+}
+
+// Hook to get all authors with optimized lastModified caching.
+// Preset filters stay on their existing endpoints. The Authors page uses useFilteredAuthors.
+export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books' | 'without-grokipedia' | 'most-recent') {
+  const endpoint = (() => {
+    switch (filter) {
+      case 'without-description': return '/authors/without-description'
+      case 'zero-books': return '/authors/zero-books'
+      case 'without-grokipedia': return '/authors/without-grokipedia'
+      case 'most-recent': return '/authors/most-recent-day'
+      case 'all':
+      default: return '/authors/summaries'
+    }
+  })()
+  const summariesQueryKey = filter
+    ? queryKeys.authors.filterSummaries(filter)
+    : queryKeys.authors.summaries()
+  return useAuthorCatalog(endpoint, summariesQueryKey, filter)
+}
+
+export function useFilteredAuthors(filters: AuthorListFilters) {
+  const query = authorListFilterQuery(filters)
+  return useAuthorCatalog(
+    query ? `/authors/filtered-summaries?${query}` : '/authors/filtered-summaries',
+    queryKeys.authors.filteredSummaries(query),
+    query ? `filtered:${query}` : 'filtered',
+  )
 }
 
 export function useMostRecentAuthorSummaries(enabled: boolean) {

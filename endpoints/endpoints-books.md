@@ -158,6 +158,31 @@ Fetches full book data for a list of book IDs.
 
 ---
 
+### GET /api/books/filtered-summaries
+Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Prices catalog filter. The browser still loads full rows with `/by-ids`, but only for these ids.
+
+**Authentication:** Public (permitAll)
+
+**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined. Send `true` only for chips that are on.
+- `q` — title, alternate title, or author name
+- `labels` — comma-separated; the book must have every label
+- `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
+- `readingDifficulty` — comma-separated OR group; `unset` also matches a null difficulty
+- `binding` — comma-separated OR group (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`); `UNKNOWN` also matches a null binding
+- `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one book
+- `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
+- `priceOlderDays` — days for `priceOlder` (default 90)
+- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
+
+**Response:** Array of BookSummaryDto
+
+**Behavior:**
+- `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
+- Patrons never receive REQUESTED books from this list.
+- `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
+
+---
+
 ## AI-Assisted Cataloging
 
 ### POST /api/books/suggest-loc

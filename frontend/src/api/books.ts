@@ -3,6 +3,7 @@ import React, { useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
+import { DEFAULT_PRICE_OLDER_DAYS, type BookChipFilters } from '@/utils/bookChipFilters'
 import type {
   BookDto,
   BookSummaryDto,
@@ -14,33 +15,82 @@ import type {
 /** Must match AskGrok.READING_DIFFICULTY_BATCH_SIZE. */
 export const READING_DIFFICULTY_LOOKUP_BATCH_SIZE = 10
 
+/** Books and Prices catalog filters. Omitted means the unfiltered loan-form catalog. */
+export interface BookListFilters {
+  q?: string
+  labels?: readonly string[]
+  statuses?: readonly string[]
+  readingDifficulties?: readonly string[]
+  bindings?: readonly string[]
+  favoriteLists?: readonly string[]
+  desireToPurchase?: readonly (string | number)[]
+  priceOlderDays?: number
+  chips: BookChipFilters
+}
+
+const BOOK_CHIP_API_KEYS: Record<keyof BookChipFilters, string> = {
+  hasYdlAudio: 'hasYdlAudio',
+  hasYdlBook: 'hasYdlBook',
+  hasYdlEbook: 'hasYdlEbook',
+  hasEmuAudio: 'hasEmuAudio',
+  hasEmuBook: 'hasEmuBook',
+  hasEmuEbook: 'hasEmuEbook',
+  hasAclaAudio: 'hasAclaAudio',
+  hasAclaBook: 'hasAclaBook',
+  hasAclaEbook: 'hasAclaEbook',
+  freeText: 'freeText',
+  audio: 'audio',
+  mostRecent: 'mostRecent',
+  withoutGrokipedia: 'withoutGrokipedia',
+  withGrokipedia: 'withGrokipedia',
+  withoutGenres: 'withoutGenres',
+  withoutFreeTextUrls: 'withoutFreeTextUrls',
+  withoutProperPlotOrDescription: 'withoutProperPlotOrDescription',
+  withPrices: 'withPrices',
+  noPrices: 'noPrices',
+  priceOlder: 'priceOlder',
+  lookupErrors: 'lookupErrors',
+}
+
+function appendList(params: URLSearchParams, key: string, values?: readonly (string | number)[]) {
+  if (values && values.length > 0) params.set(key, values.join(','))
+}
+
+/** Query string for GET /books/filtered-summaries. Names match the controller. */
+export function bookListFilterQuery(filters: BookListFilters): string {
+  const params = new URLSearchParams()
+  const q = (filters.q ?? '').trim()
+  if (q) params.set('q', q)
+  appendList(params, 'labels', filters.labels)
+  appendList(params, 'status', filters.statuses)
+  appendList(params, 'readingDifficulty', filters.readingDifficulties)
+  appendList(params, 'binding', filters.bindings)
+  appendList(params, 'favoriteLists', filters.favoriteLists)
+  appendList(params, 'desireToPurchase', filters.desireToPurchase)
+  for (const key of Object.keys(BOOK_CHIP_API_KEYS) as (keyof BookChipFilters)[]) {
+    if (filters.chips[key]) params.set(BOOK_CHIP_API_KEYS[key], 'true')
+  }
+  if (filters.chips.priceOlder) {
+    const days = filters.priceOlderDays != null && filters.priceOlderDays >= 1
+      ? filters.priceOlderDays
+      : DEFAULT_PRICE_OLDER_DAYS
+    params.set('priceOlderDays', String(days))
+  }
+  return params.toString()
+}
+
 // Hook to get books with optimized lastModified caching.
-// When selectedLabels are provided, the backend pre-filters to only books with those labels
-// (AND logic), then client-side chips apply on top.
-// When mostRecent is on and no labels are selected, summaries come from
-// GET /books/most-recent-day instead of GET /books/summaries — that endpoint
-// is a much smaller query and is why the Books page defaults the chip on.
-export function useBooks(selectedLabels?: string[], mostRecent = false) {
+// Pass filters for the Books and Prices pages (GET /books/filtered-summaries).
+// Call with no argument for the unfiltered loan-form catalog (GET /books/summaries).
+export function useBooks(filters?: BookListFilters) {
   const queryClient = useQueryClient()
-  const hasLabels = selectedLabels != null && selectedLabels.length > 0
-  const useMostRecentEndpoint = mostRecent && !hasLabels
-
-  // When labels are active, fetch from /books/by-labels endpoint
-  const labelEndpoint = hasLabels
-    ? `/books/by-labels?labels=${encodeURIComponent((selectedLabels ?? []).join(','))}`
-    : null
-
-  const summariesEndpoint = hasLabels
-    ? labelEndpoint!
-    : useMostRecentEndpoint
-      ? '/books/most-recent-day'
-      : '/books/summaries'
-
-  const summariesQueryKey = hasLabels
-    ? queryKeys.books.labelSummaries(selectedLabels ?? [])
-    : useMostRecentEndpoint
-      ? queryKeys.books.filterSummaries('most-recent')
-      : queryKeys.books.summaries()
+  const filterQuery = filters ? bookListFilterQuery(filters) : ''
+  const summariesEndpoint = filters
+    ? (filterQuery ? `/books/filtered-summaries?${filterQuery}` : '/books/filtered-summaries')
+    : '/books/summaries'
+  const summariesQueryKey = filters
+    ? queryKeys.books.filteredSummaries(filterQuery)
+    : queryKeys.books.summaries()
 
   // Step 1: Fetch summaries (ID + lastModified).
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
@@ -120,15 +170,23 @@ export function useBooks(selectedLabels?: string[], mostRecent = false) {
   // Stabilize: prevent transient empty states from causing thumbnail disappearance.
   // During refetch cascades (e.g., 'online' event → summaries refetch → query key change),
   // allBooks can briefly become [] before new data arrives. The ref preserves the last
-  // good data so the UI never flickers.
+  // good data so the UI never flickers. A settled empty summary list is a real result.
+  const summariesSettledEmpty =
+    summaries !== undefined && summaries.length === 0 && !summariesFetching && !byIdsFetching
   const previousBooksRef = useRef<BookDto[]>([])
   React.useEffect(() => {
     if (allBooks.length > 0) {
       previousBooksRef.current = allBooks
+    } else if (summariesSettledEmpty) {
+      previousBooksRef.current = []
     }
-  }, [allBooks])
+  }, [allBooks, summariesSettledEmpty])
 
-  const stableBooks = allBooks.length > 0 ? allBooks : previousBooksRef.current
+  const stableBooks = allBooks.length > 0
+    ? allBooks
+    : summariesSettledEmpty
+      ? []
+      : previousBooksRef.current
 
   // isFetching is true for the ENTIRE duration of both network calls:
   // - summaries fetch (phase 1) AND by-ids fetch (phase 2) must both complete before hiding the indicator.
