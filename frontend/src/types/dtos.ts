@@ -357,6 +357,8 @@ export interface GlobalSettingsDto {
   emailNotifyApplicantOnPending?: boolean
   emailLibrarianRecipients?: string
   emailIncludeLibrarianUserEmails?: boolean
+  emailNotifyLibrariansOnLoanChange?: boolean
+  emailNotifyBorrowerOnLoanChange?: boolean
   smtpHost?: string
   smtpPort?: number
   smtpUsername?: string

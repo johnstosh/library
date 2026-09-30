@@ -206,6 +206,16 @@ if [ -n "$CLOUD_RUN_SERVICE_ACCOUNT" ]; then
   echo "Using service account: $SERVICE_ACCOUNT_EMAIL"
 fi
 
+# CPU stays available between requests so the in-process mail timer can
+# finish its 5-minute wait while Cloud Run keeps the idle instance.
+# GMAIL_TOKEN_FOR_SEND is omitted when unset so a deploy without the pipeline
+# secret does not pass an empty value. Once saved, the SMTP password lives in
+# the database and does not depend on this variable remaining set.
+MAIL_ENV="MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-johnstosh@gmail.com},MAIL_SMTP_USERNAME=${MAIL_SMTP_USERNAME:-johnstosh@gmail.com}"
+if [ -n "${GMAIL_TOKEN_FOR_SEND:-}" ]; then
+  MAIL_ENV="${MAIL_ENV},GMAIL_TOKEN_FOR_SEND=${GMAIL_TOKEN_FOR_SEND}"
+fi
+
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$GCP_REGION" \
@@ -217,7 +227,8 @@ gcloud run deploy "$SERVICE_NAME" \
   --memory "$MEMORY" \
   --cpu 1 \
   --timeout 600 \
-  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com" \
+  --no-cpu-throttling \
+  --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com,${MAIL_ENV}" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \
   $SERVICE_ACCOUNT_ARG \
   --quiet

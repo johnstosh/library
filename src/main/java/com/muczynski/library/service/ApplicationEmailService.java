@@ -3,10 +3,16 @@
  */
 package com.muczynski.library.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.dto.TestEmailResultDto;
+import com.muczynski.library.email.ApplicationMailSnapshot;
+import com.muczynski.library.email.ChangeDescription;
 import com.muczynski.library.email.EmailAddresses;
+import com.muczynski.library.email.EmailChangeHandler;
+import com.muczynski.library.email.EmailChangeKinds;
 import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
@@ -16,9 +22,9 @@ import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +35,9 @@ import java.util.Map;
  * to the application-registration path.
  */
 @Service
-public class ApplicationEmailService {
+public class ApplicationEmailService implements EmailChangeHandler {
 
     static final String EVENT_PENDING = "library.application.pending";
-    static final String EVENT_APPLICANT_PENDING = "library.application.pending.applicant";
     static final String EVENT_TEST = "library.email.test";
 
     private static final String EMAIL_FONT_FAMILY =
@@ -42,6 +47,7 @@ public class ApplicationEmailService {
 
     private final GlobalSettingsService globalSettingsService;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
     private final Map<EmailMethod, EmailSender> senders;
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
@@ -49,62 +55,138 @@ public class ApplicationEmailService {
 
     public ApplicationEmailService(GlobalSettingsService globalSettingsService,
                                    UserRepository userRepository,
+                                   ObjectMapper objectMapper,
                                    List<EmailSender> senderList) {
         this.globalSettingsService = globalSettingsService;
         this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
         this.senders = new EnumMap<>(EmailMethod.class);
         for (EmailSender sender : senderList) {
             this.senders.put(sender.getMethod(), sender);
         }
     }
 
+    @Override
+    public String kind() {
+        return EmailChangeKinds.APPLICATION;
+    }
+
     /**
-     * Fire-and-forget notification after a card application is saved as PENDING.
+     * Sends the queued application notice. Delivery failures propagate so the
+     * queue can retry.
      */
-    @Async
-    public void notifyPendingApplication(PendingApplicationNotice notice) {
+    @Override
+    public void send(String beforeJson, String afterJson) {
         try {
-            sendPendingNotifications(notice);
-        } catch (Exception e) {
-            logger.error("Failed to send pending-application email for '{}': {}",
+            sendApplicationChange(readSnapshot(beforeJson), readSnapshot(afterJson));
+        } catch (JsonProcessingException e) {
+            throw new EmailSendException("Could not read queued application JSON", e);
+        }
+    }
+
+    /**
+     * Immediate send used by tests. Production queues the application and sends
+     * it from {@link #send(String, String)} after the quiet period.
+     */
+    public void sendPendingNotifications(PendingApplicationNotice notice) {
+        try {
+            sendApplicationChange(null, new ApplicationMailSnapshot(
+                    notice.getApplicationId(),
+                    notice.getApplicantName(),
+                    notice.getApplicantEmail(),
+                    null,
+                    "PENDING"));
+        } catch (RuntimeException e) {
+            logger.error("Failed to send application email for '{}': {}",
                     notice.getApplicantName(), e.getMessage(), e);
         }
     }
 
     /**
-     * Synchronous send used by tests and by {@link #notifyPendingApplication}.
+     * One message, every recipient in To. Librarians and the applicant are not
+     * split into separate emails.
      */
-    public void sendPendingNotifications(PendingApplicationNotice notice) {
+    public void sendApplicationChange(ApplicationMailSnapshot before, ApplicationMailSnapshot after) {
+        if (before == null && after == null) {
+            return;
+        }
         GlobalSettings settings = globalSettingsService.getGlobalSettings();
         EmailMethod method = effectiveMethod(settings);
         if (method == EmailMethod.DISABLED) {
-            logger.debug("Pending-application email skipped: email method is DISABLED");
+            logger.debug("Application email skipped: email method is DISABLED");
             return;
         }
-
         EmailSender sender = requireSender(method);
         if (!sender.isConfigured(settings)) {
-            logger.warn("Pending-application email skipped: {}", sender.describeStatus(settings));
+            logger.warn("Application email skipped: {}", sender.describeStatus(settings));
             return;
         }
 
+        ApplicationMailSnapshot shown = after != null ? after : before;
+        List<String> recipients = new ArrayList<>();
         if (settings.isEmailNotifyLibrariansOnPending()) {
-            List<String> librarians = resolveLibrarianRecipients(settings);
-            if (librarians.isEmpty()) {
-                logger.warn("Pending-application librarian email skipped: no recipients configured");
+            recipients.addAll(resolveLibrarianRecipients(settings));
+        }
+        if (settings.isEmailNotifyApplicantOnPending()) {
+            String applicantEmail = firstValidEmail(
+                    after != null ? after.email() : null,
+                    before != null ? before.email() : null);
+            if (applicantEmail != null) {
+                recipients = EmailAddresses.mergeUnique(recipients, List.of(applicantEmail));
             } else {
-                sendQuietly(sender, composeLibrarianPending(notice, librarians, settings), settings);
+                logger.info("Application applicant email skipped: no valid email for '{}'", shown.name());
             }
+        }
+        if (recipients.isEmpty()) {
+            logger.info("Application email skipped: no recipients");
+            return;
         }
 
-        if (settings.isEmailNotifyApplicantOnPending()) {
-            if (!EmailAddresses.isValid(notice.getApplicantEmail())) {
-                logger.info("Pending-application applicant email skipped: no valid email on application for '{}'",
-                        notice.getApplicantName());
-            } else {
-                sendQuietly(sender, composeApplicantPending(notice, settings), settings);
+        boolean created = before == null;
+        boolean removed = after == null;
+        String name = HtmlText.blankToEmDash(shown.name());
+        String intro;
+        String subject;
+        String event;
+        if (created) {
+            intro = "A library card application was submitted.";
+            if ("PENDING".equals(shown.status())) {
+                intro = intro + " A librarian will review it shortly.";
             }
+            subject = "Library card application: " + name;
+            event = EVENT_PENDING;
+        } else if (removed) {
+            intro = "A library card application was removed.";
+            subject = "Library card application removed: " + name;
+            event = "library.application.removed";
+        } else {
+            intro = "A library card application was changed.";
+            subject = "Library card application changed: " + name;
+            event = "library.application.changed";
         }
+        List<String> lines = ChangeDescription.lines(created, removed,
+                new ChangeDescription.Field("Applicant", value(before, ApplicationMailSnapshot::name),
+                        value(after, ApplicationMailSnapshot::name)),
+                new ChangeDescription.Field("Email", value(before, ApplicationMailSnapshot::email),
+                        value(after, ApplicationMailSnapshot::email)),
+                new ChangeDescription.Field("Phone", value(before, ApplicationMailSnapshot::phone),
+                        value(after, ApplicationMailSnapshot::phone)),
+                new ChangeDescription.Field("Status", value(before, ApplicationMailSnapshot::status),
+                        value(after, ApplicationMailSnapshot::status)));
+        if (!created && !removed && lines.isEmpty()) {
+            return;
+        }
+        String reviewUrl = reviewApplicationsUrl();
+        EmailMessage message = baseMessage(settings, recipients);
+        message.setEvent(event);
+        message.setSubject(subject);
+        message.setTextBody(ChangeDescription.text(intro, lines, reviewUrl));
+        message.setHtmlBody(ChangeDescription.html(intro, lines, reviewUrl));
+        message.getEventPayload().put("applicationId", shown.id());
+        message.getEventPayload().put("applicantName", shown.name());
+        message.getEventPayload().put("applicantEmail", shown.email());
+        message.getEventPayload().put("status", shown.status());
+        sender.send(message, settings);
     }
 
     public TestEmailResultDto sendTestEmail(String toOverride) {
@@ -182,65 +264,6 @@ public class ApplicationEmailService {
         return sender;
     }
 
-    private void sendQuietly(EmailSender sender, EmailMessage message, GlobalSettings settings) {
-        try {
-            sender.send(message, settings);
-        } catch (EmailSendException e) {
-            logger.error("Email send failed via {}: {}", sender.getMethod(), e.getMessage());
-        }
-    }
-
-    EmailMessage composeLibrarianPending(PendingApplicationNotice notice,
-                                         List<String> recipients,
-                                         GlobalSettings settings) {
-        String name = HtmlText.blankToEmDash(notice.getApplicantName());
-        String email = HtmlText.blankToEmDash(notice.getApplicantEmail());
-        String reviewUrl = reviewApplicationsUrl();
-
-        EmailMessage message = baseMessage(settings, recipients);
-        message.setEvent(EVENT_PENDING);
-        message.setSubject("Library card application pending: " + name);
-        message.setTextBody(
-                "A library card application is pending review.\n\n"
-                        + "Applicant: " + name + "\n"
-                        + "Email: " + email + "\n"
-                        + "Application ID: " + notice.getApplicationId() + "\n"
-                        + "Review: " + reviewUrl + "\n");
-        message.setHtmlBody(htmlBody(
-                "<p>A library card application is pending review.</p>"
-                        + "<ul>"
-                        + "<li><strong>Applicant:</strong> " + HtmlText.escape(name) + "</li>"
-                        + "<li><strong>Email:</strong> " + HtmlText.escape(email) + "</li>"
-                        + "<li><strong>Application ID:</strong> " + notice.getApplicationId() + "</li>"
-                        + "</ul>"
-                        + "<p><a href=\"" + HtmlText.escape(reviewUrl) + "\">Review applications</a></p>"));
-        message.getEventPayload().put("applicationId", notice.getApplicationId());
-        message.getEventPayload().put("applicantName", notice.getApplicantName());
-        message.getEventPayload().put("applicantEmail", notice.getApplicantEmail());
-        message.getEventPayload().put("status", "PENDING");
-        message.getEventPayload().put("reviewUrl", reviewUrl);
-        return message;
-    }
-
-    EmailMessage composeApplicantPending(PendingApplicationNotice notice, GlobalSettings settings) {
-        String name = HtmlText.blankToEmDash(notice.getApplicantName());
-        EmailMessage message = baseMessage(settings, List.of(notice.getApplicantEmail().trim()));
-        message.setEvent(EVENT_APPLICANT_PENDING);
-        message.setSubject("We received your library card application");
-        message.setTextBody(
-                "Hello " + name + ",\n\n"
-                        + "We received your library card application and a librarian will review it shortly.\n"
-                        + "You will be able to sign in after it is approved.\n");
-        message.setHtmlBody(htmlBody(
-                "<p>Hello " + HtmlText.escape(name) + ",</p>"
-                        + "<p>We received your library card application and a librarian will review it shortly.</p>"
-                        + "<p>You will be able to sign in after it is approved.</p>"));
-        message.getEventPayload().put("applicationId", notice.getApplicationId());
-        message.getEventPayload().put("applicantName", notice.getApplicantName());
-        message.getEventPayload().put("status", "PENDING");
-        return message;
-    }
-
     EmailMessage composeTestMessage(List<String> recipients, GlobalSettings settings) {
         EmailMessage message = baseMessage(settings, recipients);
         message.setEvent(EVENT_TEST);
@@ -259,6 +282,28 @@ public class ApplicationEmailService {
 
     private static String htmlBody(String innerHtml) {
         return "<div style=\"font-family:" + EMAIL_FONT_FAMILY + ";\">" + innerHtml + "</div>";
+    }
+
+    private ApplicationMailSnapshot readSnapshot(String json) throws JsonProcessingException {
+        if (json == null || json.isBlank() || "null".equals(json.trim())) {
+            return null;
+        }
+        return objectMapper.readValue(json, ApplicationMailSnapshot.class);
+    }
+
+    private static String firstValidEmail(String preferred, String fallback) {
+        if (EmailAddresses.isValid(preferred)) {
+            return preferred.trim();
+        }
+        if (EmailAddresses.isValid(fallback)) {
+            return fallback.trim();
+        }
+        return null;
+    }
+
+    private static String value(ApplicationMailSnapshot snapshot,
+                                java.util.function.Function<ApplicationMailSnapshot, String> getter) {
+        return snapshot == null ? null : getter.apply(snapshot);
     }
 
     private EmailMessage baseMessage(GlobalSettings settings, List<String> recipients) {

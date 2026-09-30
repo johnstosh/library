@@ -56,6 +56,15 @@ public class GlobalSettingsService {
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
     private String externalBaseUrl;
 
+    @Value("${GMAIL_TOKEN_FOR_SEND:}")
+    private String gmailTokenForSend;
+
+    @Value("${MAIL_FROM_ADDRESS:johnstosh@gmail.com}")
+    private String mailFromAddress;
+
+    @Value("${MAIL_SMTP_USERNAME:johnstosh@gmail.com}")
+    private String mailSmtpUsername;
+
     private final Map<EmailMethod, EmailSender> emailSenders = new EnumMap<>(EmailMethod.class);
 
     @Autowired
@@ -375,6 +384,8 @@ public class GlobalSettingsService {
         dto.setEmailNotifyApplicantOnPending(settings.isEmailNotifyApplicantOnPending());
         dto.setEmailLibrarianRecipients(nullToEmpty(settings.getEmailLibrarianRecipients()));
         dto.setEmailIncludeLibrarianUserEmails(settings.isEmailIncludeLibrarianUserEmails());
+        dto.setEmailNotifyLibrariansOnLoanChange(settings.isEmailNotifyLibrariansOnLoanChange());
+        dto.setEmailNotifyBorrowerOnLoanChange(settings.isEmailNotifyBorrowerOnLoanChange());
         dto.setSmtpHost(nullToEmpty(settings.getSmtpHost()));
         dto.setSmtpPort(settings.getSmtpPort() != null ? settings.getSmtpPort() : 587);
         dto.setSmtpUsername(nullToEmpty(settings.getSmtpUsername()));
@@ -438,6 +449,14 @@ public class GlobalSettingsService {
             settings.setEmailIncludeLibrarianUserEmails(dto.getEmailIncludeLibrarianUserEmails());
             updated = true;
         }
+        if (dto.getEmailNotifyLibrariansOnLoanChange() != null) {
+            settings.setEmailNotifyLibrariansOnLoanChange(dto.getEmailNotifyLibrariansOnLoanChange());
+            updated = true;
+        }
+        if (dto.getEmailNotifyBorrowerOnLoanChange() != null) {
+            settings.setEmailNotifyBorrowerOnLoanChange(dto.getEmailNotifyBorrowerOnLoanChange());
+            updated = true;
+        }
         if (dto.getSmtpHost() != null) {
             settings.setSmtpHost(dto.getSmtpHost().trim());
             updated = true;
@@ -475,6 +494,39 @@ public class GlobalSettingsService {
             updated = true;
         }
         return updated;
+    }
+
+    /**
+     * Fill SMTP from the deploy environment when no password has been saved.
+     * A password already stored in settings is left alone.
+     */
+    public void seedSmtpFromEnvironmentIfUnset() {
+        if (!hasText(gmailTokenForSend)) {
+            return;
+        }
+        GlobalSettings settings = getGlobalSettings();
+        if (hasText(settings.getSmtpPassword())) {
+            logger.info("SMTP password already saved; leaving email settings unchanged");
+            return;
+        }
+        settings.setEmailMethod(EmailMethod.SMTP);
+        settings.setEmailFromAddress(hasText(mailFromAddress) ? mailFromAddress.trim() : "johnstosh@gmail.com");
+        if (!hasText(settings.getEmailFromName())) {
+            settings.setEmailFromName("Library");
+        }
+        settings.setSmtpHost("smtp.gmail.com");
+        settings.setSmtpPort(587);
+        settings.setSmtpUsername(hasText(mailSmtpUsername) ? mailSmtpUsername.trim() : "johnstosh@gmail.com");
+        settings.setSmtpPassword(gmailTokenForSend.trim());
+        settings.setSmtpStartTls(true);
+        settings.setSmtpSsl(false);
+        settings.setEmailNotifyLibrariansOnPending(true);
+        settings.setEmailNotifyApplicantOnPending(true);
+        settings.setEmailIncludeLibrarianUserEmails(true);
+        settings.setEmailNotifyLibrariansOnLoanChange(true);
+        settings.setEmailNotifyBorrowerOnLoanChange(true);
+        globalSettingsRepository.save(settings);
+        logger.info("Seeded SMTP email settings from GMAIL_TOKEN_FOR_SEND");
     }
 
     private static String nullToEmpty(String value) {

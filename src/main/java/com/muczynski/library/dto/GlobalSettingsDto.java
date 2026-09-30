@@ -103,6 +103,8 @@ public class GlobalSettingsDto {
     private Boolean emailNotifyApplicantOnPending;
     private String emailLibrarianRecipients;
     private Boolean emailIncludeLibrarianUserEmails;
+    private Boolean emailNotifyLibrariansOnLoanChange;
+    private Boolean emailNotifyBorrowerOnLoanChange;
 
     private String smtpHost;
     private Integer smtpPort;
