@@ -9,8 +9,8 @@ group = 'com.muczynski'
 version = '2.4.29'
 
 ext['tomcat.version'] = '10.+'
-// 2.21.4 is CVE-2026-68497 (HIGH). Trivy fails the deploy on HIGH.
-ext['jackson-bom.version'] = '2.21.6'
+// 2.21.6 is CVE-2026-91776 and CVE-2026-91777 (HIGH). Trivy fails the deploy on HIGH.
+ext['jackson-bom.version'] = '2.21.7'
 
 java {
     sourceCompatibility = '17'
