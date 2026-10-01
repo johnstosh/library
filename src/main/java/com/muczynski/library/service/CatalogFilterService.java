@@ -121,7 +121,7 @@ public class CatalogFilterService {
         int days = filter.priceOlderDays > 0 ? filter.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS;
         LocalDateTime priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
 
-        List<BookRepository.BookSummaryProjection> rows = hasLabels
+        List<BookRepository.DatedBookSummaryProjection> rows = hasLabels
                 ? bookRepository.findFilteredSummariesByAllLabels(
                 query, inLibrary, electronic, filter.freeText, filter.audio,
                 filter.mostRecent, mostRecentCutoff, tempTitleIds,
@@ -223,17 +223,19 @@ public class CatalogFilterService {
         return keep;
     }
 
-    private BookSummaryDto toBookSummary(BookRepository.BookSummaryProjection projection) {
+    private BookSummaryDto toBookSummary(BookRepository.DatedBookSummaryProjection projection) {
         BookSummaryDto dto = new BookSummaryDto();
         dto.setId(projection.getId());
         dto.setLastModified(projection.getLastModified());
+        dto.setDateAddedToLibrary(projection.getDateAddedToLibrary());
         return dto;
     }
 
-    private AuthorSummaryDto toAuthorSummary(AuthorRepository.AuthorSummaryProjection projection) {
+    private AuthorSummaryDto toAuthorSummary(AuthorRepository.NamedAuthorSummaryProjection projection) {
         AuthorSummaryDto dto = new AuthorSummaryDto();
         dto.setId(projection.getId());
         dto.setLastModified(projection.getLastModified());
+        dto.setName(projection.getName());
         return dto;
     }
 

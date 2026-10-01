@@ -66,6 +66,7 @@ export interface AuthorDto {
 export interface AuthorSummaryDto {
   id: number
   lastModified: string
+  name?: string
 }
 
 /** Per-author YDL/EMU/ACLA holdings rolled up from that author's books. */
@@ -142,6 +143,7 @@ export interface BookDto {
 export interface BookSummaryDto {
   id: number
   lastModified: string
+  dateAddedToLibrary?: string
 }
 
 export interface BookPriceDto {

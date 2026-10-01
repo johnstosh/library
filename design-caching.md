@@ -131,7 +131,7 @@ export function useEntities(filter?: string) {
   - `/api/books/without-loc`
   - `/api/books/by-3letter-loc`
   - `/api/books/without-grokipedia`
-- **Batch Fetch**: `POST /api/books/by-ids` (at most 100 ids; the client sends the next batch after the current one finishes)
+- **Batch Fetch**: `POST /api/books/by-ids` (at most 100 ids). The Books page requests the first 100 matching rows, then another 100 when the user scrolls or clicks Load more.
 
 ### Authors
 - **Summaries Endpoint**: `GET /api/authors/summaries`
@@ -140,7 +140,7 @@ export function useEntities(filter?: string) {
   - `/api/authors/zero-books`
   - `/api/authors/without-grokipedia`
   - `/api/authors/most-recent-day`
-- **Batch Fetch**: `POST /api/authors/by-ids` (at most 100 ids; the client sends the next batch after the current one finishes)
+- **Batch Fetch**: `POST /api/authors/by-ids` (at most 100 ids). The Authors page requests the first 100 matching rows, then another 100 when the user scrolls or clicks Load more.
 
 ### Photos (export/management list)
 - **Summaries Endpoint**: `GET /api/photo-export/summaries` → `PhotoSummaryDto[]` (id + lastModified only; never loads image bytes)

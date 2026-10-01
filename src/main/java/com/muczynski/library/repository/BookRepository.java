@@ -47,6 +47,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         LocalDateTime getLastModified();
     }
 
+    /** Filtered list summaries, including the date the books page sorts on. */
+    interface DatedBookSummaryProjection extends BookSummaryProjection {
+        LocalDateTime getDateAddedToLibrary();
+    }
+
     /**
      * Find books from most recent 2 days OR with temporary titles (date-pattern titles).
      * Uses native query for regex support and efficient projection.
@@ -454,9 +459,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * Title query also matches author name. Status defaults match the catalog
      * (hide WITHDRAWN and REQUESTED unless a status chip is selected).
      */
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
-        FILTERED_SUMMARY_WHERE)
-    List<BookSummaryProjection> findFilteredSummaries(
+    @Query("SELECT b.id as id, b.lastModified as lastModified, b.dateAddedToLibrary as dateAddedToLibrary FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
+        FILTERED_SUMMARY_WHERE + " ORDER BY b.dateAddedToLibrary DESC NULLS LAST, b.id ASC")
+    List<DatedBookSummaryProjection> findFilteredSummaries(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,
         @Param("filterElectronic") boolean filterElectronic,
@@ -503,10 +508,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("epoch") LocalDateTime epoch,
         @Param("filterLookupErrors") boolean filterLookupErrors);
 
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
+    @Query("SELECT b.id as id, b.lastModified as lastModified, b.dateAddedToLibrary as dateAddedToLibrary FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
         "(SELECT COUNT(t) FROM Book labeled JOIN labeled.tagsList t WHERE labeled = b AND t IN :labels) = :labelCount AND " +
-        FILTERED_SUMMARY_WHERE)
-    List<BookSummaryProjection> findFilteredSummariesByAllLabels(
+        FILTERED_SUMMARY_WHERE + " ORDER BY b.dateAddedToLibrary DESC NULLS LAST, b.id ASC")
+    List<DatedBookSummaryProjection> findFilteredSummariesByAllLabels(
         @Param("query") String query,
         @Param("filterInLibrary") boolean filterInLibrary,
         @Param("filterElectronic") boolean filterElectronic,

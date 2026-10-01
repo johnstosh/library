@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
+import { libraryBrand } from '@/brand'
 
 /**
  * Shared slot for the bulk-action carousel and the empty-selection stats
@@ -110,8 +111,7 @@ export function TableCountPlaceholder({
     >
       {branchName && librarySystemName && (
         <BranchNameDisplay
-          branchName={branchName}
-          librarySystemName={librarySystemName}
+          {...libraryBrand(branchName, librarySystemName)}
           dataTest="table-branch-name"
         />
       )}

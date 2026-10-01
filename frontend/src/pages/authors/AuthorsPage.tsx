@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
+import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
 import { TableSummary } from '@/components/table/TableSummary'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
@@ -14,6 +15,7 @@ import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilter
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
 import { useAuthorCount, useFilteredAuthors, type AuthorListFilters } from '@/api/authors'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { favoriteListsFromSearchParams } from '@/utils/bookFilterParams'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
@@ -36,7 +38,16 @@ export function AuthorsPage() {
     favoriteLists: selectedFavoriteLists,
   }), [chips, selectedFavoriteLists])
 
-  const { data: authors = [], isLoading, isFetching, error } = useFilteredAuthors(authorFilters)
+  const {
+    data: authors = [],
+    total = 0,
+    hasMore = false,
+    loadMore = () => {},
+    isLoadingMore = false,
+    isLoading,
+    isFetching,
+    error,
+  } = useFilteredAuthors(authorFilters, { pageSize: CATALOG_PAGE_SIZE })
   const { data: authorCount } = useAuthorCount()
 
   const handleSelectToggle = (id: number) => {
@@ -132,9 +143,16 @@ export function AuthorsPage() {
           />
         </div>
 
+        <CatalogLoadMore
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMore}
+          data-test="authors-load-more"
+        />
         <LoadingOverlay show={isFetching && !isLoading} />
         <TableSummary
           count={authors.length}
+          total={total}
           singular="author"
           plural="authors"
           isLoading={isLoading}

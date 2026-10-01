@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { postByIdsInBatches } from './byIds'
@@ -46,12 +46,37 @@ export function authorListFilterQuery(filters: AuthorListFilters): string {
   return params.toString()
 }
 
+function authorLastName(name?: string): string {
+  if (!name || !name.trim()) return ''
+  const parts = name.trim().split(/\s+/)
+  return parts[parts.length - 1].toLowerCase()
+}
+
+function orderedAuthorSummaries(summaries: AuthorSummaryDto[]): AuthorSummaryDto[] {
+  return [...summaries].sort((a, b) => {
+    const byName = authorLastName(a.name).localeCompare(authorLastName(b.name))
+    if (byName !== 0) return byName
+    return a.id - b.id
+  })
+}
+
 function useAuthorCatalog(
   summariesEndpoint: string,
   summariesQueryKey: readonly unknown[],
   cacheScope?: string,
+  pageSize?: number,
 ) {
   const queryClient = useQueryClient()
+  const windowKey = pageSize ? summariesEndpoint : ''
+  const [loadedCount, setLoadedCount] = useState(pageSize ?? 0)
+  const totalRef = useRef(0)
+  const pendingRef = useRef(false)
+
+  useEffect(() => {
+    if (!pageSize) return
+    pendingRef.current = false
+    setLoadedCount(pageSize)
+  }, [windowKey, pageSize])
 
   // Step 1: Fetch summaries (ID + lastModified) from appropriate endpoint
   const { data: summaries, isLoading: summariesLoading, isFetching: summariesFetching, error: summariesError } = useQuery({
@@ -61,25 +86,34 @@ function useAuthorCatalog(
     refetchOnMount: true, // Always refetch when component mounts or filter changes
   })
 
-  // Step 2: Determine which authors need fetching based on cache
-  const authorsToFetch = useMemo(() => {
-    if (!summaries) return []
+  if (summaries) totalRef.current = summaries.length
 
-    return summaries
+  const visibleSummaries = useMemo(() => {
+    if (!summaries) return []
+    const ordered = pageSize ? orderedAuthorSummaries(summaries) : summaries
+    return pageSize ? ordered.slice(0, loadedCount) : ordered
+  }, [summaries, pageSize, loadedCount])
+
+  // Step 2: Determine which visible authors need fetching based on cache
+  const authorsToFetch = useMemo(() => {
+    return visibleSummaries
       .filter((summary) => {
         const cached = queryClient.getQueryData<AuthorDto>(queryKeys.authors.detail(summary.id))
         return !cached || cached.lastModified !== summary.lastModified
       })
       .map((s) => s.id)
-  }, [summaries, queryClient])
+  }, [visibleSummaries, queryClient])
 
   // Step 3: Batch fetch changed authors using /authors/by-ids
-  // For all filters (including 'all'), we now use the optimized caching approach
   const { data: fetchedAuthors, isLoading: fetchingAuthors, isFetching: detailsFetching, error: detailsError } = useQuery({
     queryKey: queryKeys.authors.byIds(authorsToFetch, cacheScope),
     queryFn: () => postByIdsInBatches<AuthorDto>('/authors/by-ids', authorsToFetch),
     enabled: summaries !== undefined && authorsToFetch.length > 0,
   })
+
+  useEffect(() => {
+    pendingRef.current = detailsFetching
+  }, [detailsFetching, loadedCount])
 
   // Populate individual author caches when authors are fetched
   React.useEffect(() => {
@@ -95,8 +129,9 @@ function useAuthorCatalog(
   const allAuthors = useMemo(() => {
     if (!summaries) return []
 
-    // Wait for fetchedAuthors to complete if we have authors to fetch
-    if (authorsToFetch.length > 0 && !fetchedAuthors) {
+    // Unwindowed lists wait for every batch. A windowed page keeps the rows
+    // already on screen while the next page is requested.
+    if (!pageSize && authorsToFetch.length > 0 && !fetchedAuthors) {
       return []
     }
 
@@ -106,32 +141,35 @@ function useAuthorCatalog(
       fetchedAuthorsMap.set(author.id, author)
     })
 
-    // Get authors: prefer freshly fetched authors, then fall back to cache
-    const authors = summaries
+    const authors = visibleSummaries
       .map((summary) => {
-        // First check if we just fetched this author
         const fetched = fetchedAuthorsMap.get(summary.id)
         if (fetched) return fetched
-        // Otherwise check cache (for authors that didn't need refetching)
         return queryClient.getQueryData<AuthorDto>(queryKeys.authors.detail(summary.id))
       })
       .filter((author): author is AuthorDto => author !== undefined)
 
-    // Sort by last name
-    return authors.sort((a, b) => {
-      const getLastName = (name: string | undefined) => {
-        if (!name || !name.trim()) return ''
-        const parts = name.trim().split(/\s+/)
-        return parts[parts.length - 1].toLowerCase()
-      }
-      return getLastName(a.name).localeCompare(getLastName(b.name))
-    })
-  }, [summaries, queryClient, fetchedAuthors, authorsToFetch])
+    if (pageSize) return authors
+    return authors.sort((a, b) => authorLastName(a.name).localeCompare(authorLastName(b.name)))
+  }, [summaries, visibleSummaries, queryClient, fetchedAuthors, authorsToFetch, pageSize])
+
+  const isLoadingMore = Boolean(pageSize) && detailsFetching && loadedCount > pageSize!
+  const total = totalRef.current
+  const hasMore = Boolean(pageSize) && summaries !== undefined && loadedCount < total
+  const loadMore = () => {
+    if (!pageSize || !hasMore || summariesFetching || detailsFetching || pendingRef.current) return
+    pendingRef.current = true
+    setLoadedCount((count) => count + pageSize)
+  }
 
   return {
     data: allAuthors,
-    isLoading: summariesLoading || fetchingAuthors,
-    isFetching: summariesFetching || detailsFetching,
+    total,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+    isLoading: summariesLoading || (fetchingAuthors && !isLoadingMore),
+    isFetching: summariesFetching || (detailsFetching && !isLoadingMore),
     error: summariesError || detailsError,
   }
 }
@@ -155,12 +193,13 @@ export function useAuthors(filter?: 'all' | 'without-description' | 'zero-books'
   return useAuthorCatalog(endpoint, summariesQueryKey, filter)
 }
 
-export function useFilteredAuthors(filters: AuthorListFilters) {
+export function useFilteredAuthors(filters: AuthorListFilters, options?: { pageSize?: number }) {
   const query = authorListFilterQuery(filters)
   return useAuthorCatalog(
     query ? `/authors/filtered-summaries?${query}` : '/authors/filtered-summaries',
     queryKeys.authors.filteredSummaries(query),
     query ? `filtered:${query}` : 'filtered',
+    options?.pageSize,
   )
 }
 
