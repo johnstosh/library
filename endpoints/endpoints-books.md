@@ -180,7 +180,8 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
-- Full rows are loaded with `/by-ids`, at most 100 ids per request.
+- Each row includes `dateAddedToLibrary`. The list is most-recent first, with missing dates last.
+- The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
 ### GET /api/books/checkout-matches
 Active books for the checkout form. Returns at most 10 rows, best match first. A title, author, or call number shorter than 3 characters is ignored. The response is empty when every field is shorter than that. A book matches when any searched field contains the text. A containing match scores 10 and an exact match scores 20 more. Call numbers are compared with whitespace removed. Plot and description are not included.

@@ -11,4 +11,6 @@ import java.time.LocalDateTime;
 public class AuthorSummaryDto {
     private Long id;
     private LocalDateTime lastModified;
+    /** Present on Authors-page summaries so the page can order rows before loading them. */
+    private String name;
 }

@@ -11,4 +11,6 @@ import java.time.LocalDateTime;
 public class BookSummaryDto {
     private Long id;
     private LocalDateTime lastModified;
+    /** Present on filtered list summaries so the page can order rows before loading them. */
+    private LocalDateTime dateAddedToLibrary;
 }

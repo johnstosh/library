@@ -7,6 +7,7 @@ import { PiCurrencyDollar, PiMagnifyingGlass } from 'react-icons/pi'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
 import { TableSummary } from '@/components/table/TableSummary'
 import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
 import { BookFilters } from './components/BookFilters'
@@ -18,6 +19,7 @@ import { StatusFilters } from './components/StatusFilters'
 import { FavoriteListFilters } from './components/FavoriteListFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
 import { useUiStore, useBooksTableSelection } from '@/stores/uiStore'
 import { useQueryClient } from '@tanstack/react-query'
@@ -106,7 +108,16 @@ export function BooksPage() {
     chips: chipsFromSearchParams(searchParams, 'books'),
   }), [searchParams])
 
-  const { data: books = [], isLoading, isFetching, error } = useBooks(listFilters)
+  const {
+    data: books = [],
+    total = 0,
+    hasMore = false,
+    loadMore = () => {},
+    isLoadingMore = false,
+    isLoading,
+    isFetching,
+    error,
+  } = useBooks(listFilters, { pageSize: CATALOG_PAGE_SIZE })
   const { data: bookCount } = useBookCount()
 
   const isFilterPending = isFetching && !isLoading
@@ -319,8 +330,20 @@ export function BooksPage() {
           />
         </div>
 
+        <CatalogLoadMore
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMore}
+          data-test="books-load-more"
+        />
         <LoadingOverlay show={isFilterPending} />
-        <TableSummary count={books.length} singular="book" plural="books" isLoading={isLoading} />
+        <TableSummary
+          count={books.length}
+          total={total}
+          singular="book"
+          plural="books"
+          isLoading={isLoading}
+        />
       </PageCard>
 
     </div>

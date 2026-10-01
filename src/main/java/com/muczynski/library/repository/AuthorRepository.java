@@ -148,6 +148,11 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         LocalDateTime getLastModified();
     }
 
+    /** Authors-page summaries include the name so the page can sort before loading full rows. */
+    interface NamedAuthorSummaryProjection extends AuthorSummaryProjection {
+        String getName();
+    }
+
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
     List<AuthorSummaryProjection> findAllSummaries();
 
@@ -173,7 +178,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
      * from books added on the catalog's latest day, the same set as /most-recent-day.
      * biographicalEssay is a PostgreSQL OID, so only IS NULL is valid.
      */
-    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE " +
+    @Query("SELECT a.id as id, a.lastModified as lastModified, a.name as name FROM Author a WHERE " +
         "(:filterMostRecent = false OR a.id IN :mostRecentAuthorIds) AND " +
         "(:filterWithoutDescription = false OR a.biographicalEssay IS NULL) AND " +
         "(:filterWithoutGrokipedia = false OR a.grokipediaUrl IS NULL OR a.grokipediaUrl = '' OR a.grokipediaUrl = '-') AND " +
@@ -193,7 +198,7 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         "(:filterAclaBook = false OR EXISTS (SELECT 1 FROM Book aclaBook WHERE aclaBook.author = a AND aclaBook.aclaPaperAvailable = true)) AND " +
         "(:filterAclaEbook = false OR EXISTS (SELECT 1 FROM Book aclaEbook WHERE aclaEbook.author = a AND aclaEbook.aclaEbookAvailable = true)) AND " +
         "(:filterAclaAudio = false OR EXISTS (SELECT 1 FROM Book aclaAudio WHERE aclaAudio.author = a AND aclaAudio.aclaAudioAvailable = true))")
-    List<AuthorSummaryProjection> findFilteredSummaries(
+    List<NamedAuthorSummaryProjection> findFilteredSummaries(
         @Param("filterMostRecent") boolean filterMostRecent,
         @Param("mostRecentAuthorIds") List<Long> mostRecentAuthorIds,
         @Param("filterWithoutDescription") boolean filterWithoutDescription,

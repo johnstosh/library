@@ -1,7 +1,7 @@
 # Author Endpoints
 
 ## GET /api/authors/filtered-summaries
-Returns author summaries (id and lastModified) after every Authors page filter. The browser then loads full rows with `/by-ids` for these ids only, at most 100 ids per request. A larger `/by-ids` body is rejected with 400. The older single-chip endpoints below remain.
+Returns author summaries (id, name, and lastModified) after every Authors page filter. The browser sorts by last name and loads full rows for the first 100, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request is at most 100 ids. A larger body is rejected with 400. The older single-chip endpoints below remain.
 
 **Authentication:** Public (`permitAll()`)
 
