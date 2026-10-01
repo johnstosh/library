@@ -284,7 +284,7 @@ public class NavigationUITest {
     }
 
     @Test
-    @DisplayName("Upper left brand shows the branch name on local hosts, not DEV")
+    @DisplayName("Upper left shows the branch as the app name on local hosts")
     void testNavBrandShowsBranchNameLocally() {
         page.navigate(getBaseUrl() + "/search");
         page.waitForLoadState(LoadState.NETWORKIDLE);
@@ -293,8 +293,9 @@ public class NavigationUITest {
 
         Locator brand = page.locator("[data-test='branch-name']");
         assertThat(brand).isVisible();
-        assertThat(brand).containsText("The Test Library Branch");
-        assertThat(brand).containsText("of the Test Library System");
-        assertThat(brand).not().hasText("DEV");
+        assertThat(page.locator("[data-test='branch-name'] [data-test='app-name']")).hasText("Test Library");
+        assertThat(page.locator("[data-test='branch-name'] [data-test='app-sub-name']")).hasText("Test Library System");
+        assertThat(page).hasTitle("Test Library");
+        assertThat(brand).not().containsText("DEV");
     }
 }

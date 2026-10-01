@@ -176,8 +176,8 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='price-statistics']")).hasCount(0);
         Locator tableBranch = page.locator("[data-test='table-branch-name']");
         assertThat(tableBranch).isVisible();
-        assertThat(tableBranch).containsText("The St. Martin de Porres Branch");
-        assertThat(tableBranch).containsText("of the Sacred Heart Library System");
+        assertThat(page.locator("[data-test='table-branch-name'] [data-test='app-name']")).hasText("St. Martin de Porres");
+        assertThat(page.locator("[data-test='table-branch-name'] [data-test='app-sub-name']")).hasText("Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-acla']")).not().isVisible();
     }

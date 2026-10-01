@@ -19,7 +19,7 @@ describe('TableCountPlaceholder', () => {
     expect(screen.queryByTestId('table-branch-name')).not.toBeInTheDocument()
   })
 
-  it('shows the first-branch heading above the counts, matching the nav bar', () => {
+  it('shows the app name above the counts, matching the nav bar', () => {
     render(
       <TableCountPlaceholder
         tableCount={12}
@@ -31,9 +31,8 @@ describe('TableCountPlaceholder', () => {
       />
     )
 
-    const heading = screen.getByTestId('table-branch-name')
-    expect(heading).toHaveTextContent('The St. Martin de Porres Branch')
-    expect(heading).toHaveTextContent('of the Sacred Heart Library System')
+    expect(screen.getByTestId('app-name')).toHaveTextContent('St. Martin de Porres')
+    expect(screen.getByTestId('app-sub-name')).toHaveTextContent('Sacred Heart Library System')
     expect(screen.getByTestId('table-count')).toHaveTextContent('12 books in this table')
   })
 

@@ -16,7 +16,7 @@ import {
 import { PiList, PiX } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { BranchNameDisplay } from '@/components/layout/BranchNameDisplay'
-import { isDevSite } from '@/utils/environment'
+import { libraryBrand } from '@/brand'
 
 function getInitials(username: string | null | undefined): string {
   const name = (username ?? '').trim()
@@ -53,16 +53,14 @@ export function Navigation() {
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = !!user
   const { branchName, librarySystemName, hasBranch } = useFirstBranch()
+  const brand = libraryBrand(
+    hasBranch ? branchName : 'Library',
+    hasBranch ? librarySystemName : '',
+  )
 
   useEffect(() => {
-    if (isDevSite()) {
-      document.title = 'DEV'
-    } else if (hasBranch) {
-      document.title = `The ${branchName} Branch of the ${librarySystemName}`
-    } else {
-      document.title = 'Library'
-    }
-  }, [hasBranch, branchName, librarySystemName])
+    document.title = brand.name
+  }, [brand.name])
 
   const handleLogout = () => {
     logout()
@@ -78,7 +76,7 @@ export function Navigation() {
 
               {/* App name — left */}
               <Link to="/" className="flex flex-col items-start shrink-0" data-test="branch-name">
-                <BranchNameDisplay branchName={branchName} librarySystemName={librarySystemName} />
+                <BranchNameDisplay name={brand.name} subName={brand.subName} />
               </Link>
 
               {/* Desktop nav — hidden on mobile */}
