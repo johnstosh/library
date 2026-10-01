@@ -13,10 +13,9 @@ import { AuthorFilters } from './components/AuthorFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { AuthorTable } from './components/AuthorTable'
 import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
-import { useAuthorAvailability, useAuthorCount, useAuthors } from '@/api/authors'
-import { applyAuthorChipFilters, isAvailabilityChipActive, isOtherAuthorChipActive } from '@/utils/authorChipFilters'
+import { useAuthorCount, useFilteredAuthors, type AuthorListFilters } from '@/api/authors'
 import { favoriteListsFromSearchParams } from '@/utils/bookFilterParams'
-import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
+import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
 
@@ -32,50 +31,13 @@ export function AuthorsPage() {
   const { selectedIds, selectAll } = useAuthorsTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds, toggleAuthorsChip } = useUiStore()
 
-  // mostRecent defaults on in uiStore so this uses GET /authors/most-recent-day
-  // when it is the only filter (fast path). When combined with other filters,
-  // we load summaries (or most-recent-day) then apply intersection client-side.
-  const favoriteFilterOn = selectedFavoriteLists.length > 0
-  const { data: allAuthors = [], isLoading, isFetching, error } = useAuthors(
-    chips.mostRecent && !isOtherAuthorChipActive(chips) && !favoriteFilterOn
-      ? 'most-recent'
-      : undefined
-  )
+  const authorFilters = useMemo((): AuthorListFilters => ({
+    chips,
+    favoriteLists: selectedFavoriteLists,
+  }), [chips, selectedFavoriteLists])
+
+  const { data: authors = [], isLoading, isFetching, error } = useFilteredAuthors(authorFilters)
   const { data: authorCount } = useAuthorCount()
-  const {
-    data: availability = [],
-    isLoading: availabilityLoading,
-    isFetching: availabilityFetching,
-    error: availabilityError,
-  } = useAuthorAvailability()
-
-  const availabilityByAuthorId = useMemo(() => {
-    const map = new Map<number, (typeof availability)[number]>()
-    availability.forEach((row) => map.set(row.authorId, row))
-    return map
-  }, [availability])
-
-  const authors = useMemo(() => {
-    if (isAvailabilityChipActive(chips) && availabilityLoading) return []
-    // mostRecent now participates in intersection (AND) with other chips.
-    // When mostRecent-only, backend /most-recent-day already filtered it.
-    // Otherwise, pass full chips so applyAuthorChipFilters applies mostRecentIds
-    // (computed from allAuthors) on top of other filters.
-    const favoriteIds = favoriteItemIdsForLists(
-      favoriteSummary?.lists,
-      selectedFavoriteLists,
-      'authorIds',
-    )
-    const mostRecentIds = chips.mostRecent
-      ? new Set(allAuthors.map((a) => a.id))
-      : undefined
-    return applyAuthorChipFilters(
-      allAuthors,
-      chips,
-      mostRecentIds,
-      availabilityByAuthorId,
-    ).filter((author) => favoriteIds.size === 0 || favoriteIds.has(author.id))
-  }, [allAuthors, availabilityByAuthorId, availabilityLoading, chips, favoriteSummary?.lists, selectedFavoriteLists])
 
   const handleSelectToggle = (id: number) => {
     toggleRowSelection('authorsTable', id)
@@ -114,9 +76,9 @@ export function AuthorsPage() {
         }
       />
 
-      {(error || availabilityError) && (
+      {error && (
         <TransientFetchErrorBanner
-          error={error ?? availabilityError}
+          error={error}
           onRetry={() => {
             queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
           }}
@@ -156,18 +118,12 @@ export function AuthorsPage() {
             onClearSelection={handleClearSelection}
             tableCount={authors.length}
             totalCount={authorCount?.count}
-            isLoading={
-              isLoading
-              || (isAvailabilityChipActive(chips) && availabilityLoading)
-            }
+            isLoading={isLoading}
           />
 
           <AuthorTable
             authors={authors}
-            isLoading={
-              isLoading
-              || (isAvailabilityChipActive(chips) && availabilityLoading)
-            }
+            isLoading={isLoading}
             selectedIds={selectedIds}
             selectAll={selectAll}
             onSelectToggle={handleSelectToggle}
@@ -176,20 +132,12 @@ export function AuthorsPage() {
           />
         </div>
 
-        <LoadingOverlay
-          show={
-            (isFetching && !isLoading) ||
-            (isAvailabilityChipActive(chips) && availabilityFetching && !availabilityLoading)
-          }
-        />
+        <LoadingOverlay show={isFetching && !isLoading} />
         <TableSummary
           count={authors.length}
           singular="author"
           plural="authors"
-          isLoading={
-            isLoading
-            || (isAvailabilityChipActive(chips) && availabilityLoading)
-          }
+          isLoading={isLoading}
         />
       </PageCard>
     </div>

@@ -5,7 +5,8 @@ import { type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto } from '@/types/dtos'
-import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor } from '../books'
+import { useAuthors } from '../authors'
+import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBooks } from '../books'
 import { api } from '../client'
 
 afterEach(() => {
@@ -92,6 +93,45 @@ describe('useLookupBulkReadingDifficultyWithProgress', () => {
       id: 11,
       readingDifficulty: 'children',
     })
+  })
+})
+
+describe('catalog by-ids batches', () => {
+  it('loads books and authors 100 ids at a time', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    const summaries = Array.from({ length: 101 }, (_, index) => ({
+      id: index + 1,
+      lastModified: '2026-01-01T00:00:00',
+    }))
+    vi.mocked(api.get).mockImplementation(async (path: string) => {
+      if (path === '/books/summaries' || path === '/authors/summaries') return summaries
+      return []
+    })
+    const posted: Array<{ path: string; ids: number[] }> = []
+    vi.mocked(api.post).mockImplementation(async (path: string, body) => {
+      const ids = body as number[]
+      posted.push({ path, ids })
+      if (path === '/authors/by-ids') {
+        return ids.map((id) => ({ id, name: `Author ${id}`, lastModified: '2026-01-01T00:00:00' }))
+      }
+      return ids.map((id) => ({ ...originalBook, id, lastModified: '2026-01-01T00:00:00' }))
+    })
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const books = renderHook(() => useBooks(), { wrapper })
+    const authors = renderHook(() => useAuthors(), { wrapper })
+
+    await waitFor(() => expect(books.result.current.data).toHaveLength(101))
+    await waitFor(() => expect(authors.result.current.data).toHaveLength(101))
+
+    const bookPosts = posted.filter((call) => call.path === '/books/by-ids')
+    const authorPosts = posted.filter((call) => call.path === '/authors/by-ids')
+    expect(bookPosts.map((call) => call.ids.length)).toEqual([100, 1])
+    expect(authorPosts.map((call) => call.ids.length)).toEqual([100, 1])
   })
 })
 

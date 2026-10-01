@@ -7,9 +7,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { TryAgainDialog } from '@/components/ui/TryAgainDialog'
 import { isTransientApiError } from '@/utils/api'
 import { Spinner } from '@/components/progress/Spinner'
-import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { useCheckoutBook, useCheckoutBookWithPhoto, useTranscribeCheckoutCard } from '@/api/loans'
-import { useBooks } from '@/api/books'
+import { checkoutSearchTerms, useCheckoutBookSearch } from '@/api/checkoutBooks'
 import { useUsers } from '@/api/users'
 import { useAuthStore } from '@/stores/authStore'
 import { useIsLibrarian } from '@/stores/authStore'
@@ -119,8 +118,11 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
   const [isRetrying, setIsRetrying] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  const { data: books = [], isFetching: booksFetching, isLoading: booksLoading } = useBooks()
-  const { data: users = [] } = useUsers()
+  const bookSearch = useCheckoutBookSearch(bookFilters)
+  const books = bookSearch.data
+  const booksFetching = bookSearch.isFetching
+  const searchActive = checkoutSearchTerms(bookFilters) !== null
+  const { data: users = [] } = useUsers({ enabled: isLibrarian })
   const checkoutBook = useCheckoutBook()
   const checkoutBookWithPhoto = useCheckoutBookWithPhoto()
 
@@ -377,105 +379,54 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
     }
   }
 
-  // Helper to normalize call numbers by removing all spaces for comparison
-  const normalizeCallNumber = (callNumber: string): string => {
-    return callNumber.replace(/\s+/g, '').toLowerCase()
-  }
-
-  // Filter and rank books based on title, author, and locNumber
-  const filteredBooks = useMemo(() => {
-    const availableBooks = books.filter((b) => b.status === 'ACTIVE')
-
-    if (!bookFilters.title && !bookFilters.author && !bookFilters.locNumber) {
-      return availableBooks
+  // Patrons cannot call GET /users. Keep the logged-in patron as the only
+  // borrower so the disabled select still shows who the loan is for.
+  const borrowers = useMemo(() => {
+    if (users.length > 0) {
+      return users.map((user) => ({ id: user.id, username: user.username }))
     }
-
-    // Calculate match score for each book
-    const booksWithScore = availableBooks.map((book) => {
-      let score = 0
-      const titleMatch = bookFilters.title.toLowerCase()
-      const authorMatch = bookFilters.author.toLowerCase()
-      // Normalize call number filter by removing spaces
-      const locMatch = normalizeCallNumber(bookFilters.locNumber)
-
-      if (titleMatch && book.title.toLowerCase().includes(titleMatch)) {
-        score += 10
-        // Exact match gets bonus
-        if (book.title.toLowerCase() === titleMatch) score += 20
-      }
-
-      if (authorMatch && book.author?.toLowerCase().includes(authorMatch)) {
-        score += 10
-        // Exact match gets bonus
-        if (book.author?.toLowerCase() === authorMatch) score += 20
-      }
-
-      // Normalize book's call number by removing spaces before comparison
-      const bookLocNormalized = book.locNumber ? normalizeCallNumber(book.locNumber) : ''
-      if (locMatch && bookLocNormalized.includes(locMatch)) {
-        score += 10
-        // Exact match gets bonus
-        if (bookLocNormalized === locMatch) score += 20
-      }
-
-      return { book, score }
-    })
-
-    // Sort by score (highest first) and return books with score > 0
-    return booksWithScore
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(item => item.book)
-  }, [books, bookFilters.title, bookFilters.author, bookFilters.locNumber])
+    if (!isLibrarian && currentUser?.id != null && currentUser.username) {
+      return [{ id: currentUser.id, username: currentUser.username }]
+    }
+    return []
+  }, [users, isLibrarian, currentUser])
 
   // Filter users based on username
   const filteredUsers = useMemo(() => {
     if (!userFilter) {
-      return users
+      return borrowers
     }
 
     const filterLower = userFilter.toLowerCase()
-    return users.filter((user) =>
+    return borrowers.filter((user) =>
       user.username.toLowerCase().includes(filterLower)
     )
-  }, [users, userFilter])
+  }, [borrowers, userFilter])
 
 
-  // Update book filters when a book is selected
-  useEffect(() => {
-    if (formData.bookId) {
-      const selectedBook = books.find(b => b.id === parseInt(formData.bookId))
-      if (selectedBook && !bookFilters.title && !bookFilters.author && !bookFilters.locNumber) {
-        setBookFilters({
-          title: selectedBook.title,
-          author: selectedBook.author || '',
-          locNumber: selectedBook.locNumber || '',
-        })
-      }
-    }
-  }, [formData.bookId, books])
-
-  // Auto-select or update book selection when filtered list changes
+  // Keep the selection on a book the latest search returned. The server list is
+  // already ranked, so the first row is the best match.
   useEffect(() => {
     if (isEditing) return
-    if (booksLoading) return
+    if (booksFetching) return
 
-    const hasFilters = bookFilters.title || bookFilters.author || bookFilters.locNumber
-
-    if (hasFilters && filteredBooks.length > 0) {
-      // Check if currently selected book is still in filtered results
-      const currentBookInFiltered = formData.bookId &&
-        filteredBooks.some(b => b.id.toString() === formData.bookId)
-
-      if (!currentBookInFiltered) {
-        // Update to first filtered book if current selection is not in results
-        setFormData(prev => ({ ...prev, bookId: filteredBooks[0].id.toString() }))
+    if (!searchActive) {
+      if (formData.bookId) {
+        setFormData(prev => ({ ...prev, bookId: '' }))
       }
-    } else if (hasFilters && filteredBooks.length === 0 && formData.bookId) {
-      // Clear selection if filters are set but no books match
+      return
+    }
+
+    if (books.length > 0) {
+      const currentBookInFiltered = formData.bookId &&
+        books.some(b => b.id.toString() === formData.bookId)
+      if (!currentBookInFiltered) {
+        setFormData(prev => ({ ...prev, bookId: books[0].id.toString() }))
+      }
+    } else if (formData.bookId) {
       setFormData(prev => ({ ...prev, bookId: '' }))
     }
-  }, [filteredBooks, bookFilters, isEditing, booksLoading, formData.bookId])
+  }, [books, searchActive, isEditing, booksFetching, formData.bookId])
 
   // Auto-select first user when filtered list changes and no user is selected
   useEffect(() => {
@@ -484,9 +435,9 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
     }
   }, [filteredUsers, formData.userId, userFilter, isEditing])
 
-  const bookOptions = filteredBooks.map((b) => ({
+  const bookOptions = books.map((b) => ({
     value: b.id,
-    label: `${b.title} - ${b.author}`,
+    label: `${b.title} - ${b.author ?? ''}`,
   }))
 
   const userOptions = filteredUsers.map((u) => ({
@@ -567,9 +518,13 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                     onChange={(e) => handleFieldChange('bookId', e.target.value)}
                     options={[{ value: '', label: 'Select a book' }, ...bookOptions]}
                     required
-                    helpText={`Showing ${filteredBooks.length} available books`}
+                    helpText={searchActive
+                      ? `Showing ${books.length} available books`
+                      : 'Type at least 3 characters'}
                     data-test="loan-book-select"
                     disabled={isEditing}
+                    isLoading={booksFetching}
+                    error={bookSearch.error || undefined}
                   />
                 </div>
                 <div className="space-y-3">
@@ -671,6 +626,7 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
                 variant="primary"
                 onClick={handleSubmit}
                 isLoading={isLoading}
+                disabled={isLoading || booksFetching}
                 data-test="loan-form-submit"
               >
                 Checkout
@@ -679,8 +635,6 @@ export function LoanFormPage({ title, loan, onSuccess, onCancel, initialFilters,
           </div>
         </div>
 
-        {/* Loading overlay: visible for the entire duration of the summaries + by-ids fetch sequence */}
-        <LoadingOverlay show={booksFetching} />
       </div>
 
       {/* Photo Panel - shown when captureMode is set or photo is selected */}

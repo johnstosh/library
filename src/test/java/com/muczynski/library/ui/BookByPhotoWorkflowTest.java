@@ -88,7 +88,7 @@ public class BookByPhotoWorkflowTest {
     @BeforeEach
     void createContextAndPageAndSetupMocks() {
         // Set up mocks before each test so they are active for the current Spring context
-        when(askGrok.askQuestion(anyString())).thenReturn(MOCK_AI_RESPONSE);
+        when(askGrok.askQuestion(anyString(), anyString())).thenReturn(MOCK_AI_RESPONSE);
 
         BrowserContext context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 720));
         page = context.newPage();

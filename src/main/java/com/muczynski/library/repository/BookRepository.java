@@ -4,6 +4,7 @@
 package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
 import org.springframework.data.domain.Page;
@@ -177,6 +178,54 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<BookSummaryProjection> findSummariesWithoutGrokipediaUrl();
 
     /**
+     * Active books for the checkout form. Each searched field adds 10 when the
+     * text contains the term and 20 more when it is an exact match. Terms are
+     * already trimmed and lowercased; the call-number term has no whitespace.
+     * A zero flag ignores that field. At most {@code matchLimit} rows, best score first.
+     */
+    interface CheckoutMatchProjection {
+        Long getId();
+        String getTitle();
+        String getAuthor();
+        String getLocNumber();
+        String getStatus();
+    }
+
+    @Query(value = """
+        SELECT
+            b.id AS "id",
+            b.title AS "title",
+            a.name AS "author",
+            b.loc_number AS "locNumber",
+            b.status AS "status"
+        FROM book b
+        LEFT JOIN author a ON a.id = b.author_id
+        WHERE b.status = 'ACTIVE'
+          AND (
+            (:useTitle = 1 AND strpos(lower(b.title), :title) > 0)
+            OR (:useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
+            OR (:useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0)
+          )
+        ORDER BY (
+            (CASE WHEN :useTitle = 1 AND strpos(lower(b.title), :title) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useTitle = 1 AND lower(b.title) = :title THEN 20 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND lower(a.name) = :author THEN 20 ELSE 0 END)
+            + (CASE WHEN :useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN :useLoc = 1 AND regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g') = :loc THEN 20 ELSE 0 END)
+        ) DESC, b.title ASC, b.id ASC
+        LIMIT :matchLimit
+        """, nativeQuery = true)
+    List<CheckoutMatchProjection> findCheckoutMatches(
+            @Param("useTitle") int useTitle,
+            @Param("title") String title,
+            @Param("useAuthor") int useAuthor,
+            @Param("author") String author,
+            @Param("useLoc") int useLoc,
+            @Param("loc") String loc,
+            @Param("matchLimit") int matchLimit);
+
+    /**
      * Get summaries (id + lastModified) for books from most recent 2 days OR with temporary titles.
      * Uses native query for regex support and PostgreSQL compatibility.
      */
@@ -278,6 +327,36 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         "(:filterFavoriteBooks = false OR b.id IN :favoriteBookIds)";
 
     /**
+     * Extra AND filters for the Books and Prices catalog lists (issue #358).
+     * Plot-length filtering stays in Java because plotEssay and detailedDescription
+     * are PostgreSQL OID large objects and cannot be trimmed in JPQL.
+     * Price clauses match {@code isSavedPriceListing} and {@code isLookupError}.
+     */
+    String LIST_EXTRA_PREDICATE =
+        "(:filterBinding = false OR b.binding IN :bindings OR " +
+        "(:includeUnknownBinding = true AND (b.binding IS NULL OR b.binding = com.muczynski.library.domain.BookCoverType.UNKNOWN))) AND " +
+        "(:filterDesire = false OR b.desireToPurchase IN :desireValues OR " +
+        "(:includeUnsetDesire = true AND b.desireToPurchase IS NULL)) AND " +
+        "(:hideRequested = false OR b.status <> com.muczynski.library.domain.BookStatus.REQUESTED) AND " +
+        "(:filterWithPrices = false OR EXISTS (SELECT 1 FROM BookPrice priceHit WHERE priceHit.book = b AND priceHit.priceDollars IS NOT NULL AND (priceHit.lookupError IS NULL OR TRIM(priceHit.lookupError) = ''))) AND " +
+        "((:filterNoPrices = false AND :filterPriceOlder = false) OR " +
+        "(:filterNoPrices = true AND :filterPriceOlder = true AND NOT (" +
+        "EXISTS (SELECT 1 FROM BookPrice priceRecent WHERE priceRecent.book = b AND priceRecent.priceDollars IS NOT NULL AND (priceRecent.lookupError IS NULL OR TRIM(priceRecent.lookupError) = '')) AND " +
+        "COALESCE((SELECT MAX(priceMax.lookedUpAt) FROM BookPrice priceMax WHERE priceMax.book = b AND priceMax.priceDollars IS NOT NULL AND (priceMax.lookupError IS NULL OR TRIM(priceMax.lookupError) = '')), :epoch) >= :priceOlderCutoff)) OR " +
+        "(:filterNoPrices = true AND :filterPriceOlder = false AND NOT EXISTS (SELECT 1 FROM BookPrice priceNone WHERE priceNone.book = b AND priceNone.priceDollars IS NOT NULL AND (priceNone.lookupError IS NULL OR TRIM(priceNone.lookupError) = ''))) OR " +
+        "(:filterNoPrices = false AND :filterPriceOlder = true AND " +
+        "EXISTS (SELECT 1 FROM BookPrice priceOld WHERE priceOld.book = b AND priceOld.priceDollars IS NOT NULL AND (priceOld.lookupError IS NULL OR TRIM(priceOld.lookupError) = '')) AND " +
+        "COALESCE((SELECT MAX(priceOldMax.lookedUpAt) FROM BookPrice priceOldMax WHERE priceOldMax.book = b AND priceOldMax.priceDollars IS NOT NULL AND (priceOldMax.lookupError IS NULL OR TRIM(priceOldMax.lookupError) = '')), :epoch) < :priceOlderCutoff)) AND " +
+        "(:filterLookupErrors = false OR EXISTS (SELECT 1 FROM BookPrice priceErr WHERE priceErr.book = b AND priceErr.lookupError IS NOT NULL AND TRIM(priceErr.lookupError) <> '' AND TRIM(priceErr.lookupError) <> 'No matching listing'))";
+
+    String FILTERED_SUMMARY_WHERE =
+        "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        "LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        "LOWER(COALESCE(bookAuthor.name, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        SEARCH_CHIP_PREDICATE + " AND " +
+        LIST_EXTRA_PREDICATE;
+
+    /**
      * Unified search with AND-combined type filters (no labels).
      * When no status chips are active, WITHDRAWN and REQUESTED stay hidden.
      * When any filter is active, a book must satisfy ALL active filters (AND logic);
@@ -369,6 +448,118 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
         @Param("favoriteBookIds") List<Long> favoriteBookIds,
         Pageable pageable);
+
+    /**
+     * Summaries for the Books and Prices pages. Every active filter ANDs.
+     * Title query also matches author name. Status defaults match the catalog
+     * (hide WITHDRAWN and REQUESTED unless a status chip is selected).
+     */
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
+        FILTERED_SUMMARY_WHERE)
+    List<BookSummaryProjection> findFilteredSummaries(
+        @Param("query") String query,
+        @Param("filterInLibrary") boolean filterInLibrary,
+        @Param("filterElectronic") boolean filterElectronic,
+        @Param("filterFreeText") boolean filterFreeText,
+        @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterStatusLost") boolean filterStatusLost,
+        @Param("filterStatusWithdrawn") boolean filterStatusWithdrawn,
+        @Param("filterStatusOnOrder") boolean filterStatusOnOrder,
+        @Param("filterStatusRequested") boolean filterStatusRequested,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterAclaAudio") boolean filterAclaAudio,
+        @Param("filterAclaBook") boolean filterAclaBook,
+        @Param("filterAclaEbook") boolean filterAclaEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
+        @Param("filterBinding") boolean filterBinding,
+        @Param("bindings") List<BookCoverType> bindings,
+        @Param("includeUnknownBinding") boolean includeUnknownBinding,
+        @Param("filterDesire") boolean filterDesire,
+        @Param("desireValues") List<Integer> desireValues,
+        @Param("includeUnsetDesire") boolean includeUnsetDesire,
+        @Param("hideRequested") boolean hideRequested,
+        @Param("filterWithPrices") boolean filterWithPrices,
+        @Param("filterNoPrices") boolean filterNoPrices,
+        @Param("filterPriceOlder") boolean filterPriceOlder,
+        @Param("priceOlderCutoff") LocalDateTime priceOlderCutoff,
+        @Param("epoch") LocalDateTime epoch,
+        @Param("filterLookupErrors") boolean filterLookupErrors);
+
+    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b LEFT JOIN b.author bookAuthor WHERE " +
+        "(SELECT COUNT(t) FROM Book labeled JOIN labeled.tagsList t WHERE labeled = b AND t IN :labels) = :labelCount AND " +
+        FILTERED_SUMMARY_WHERE)
+    List<BookSummaryProjection> findFilteredSummariesByAllLabels(
+        @Param("query") String query,
+        @Param("filterInLibrary") boolean filterInLibrary,
+        @Param("filterElectronic") boolean filterElectronic,
+        @Param("filterFreeText") boolean filterFreeText,
+        @Param("filterAudio") boolean filterAudio,
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentCutoff") LocalDateTime mostRecentCutoff,
+        @Param("mostRecentTempTitleIds") List<Long> mostRecentTempTitleIds,
+        @Param("filterWithoutLoc") boolean filterWithoutLoc,
+        @Param("filterThreeLetterLoc") boolean filterThreeLetterLoc,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithoutGenres") boolean filterWithoutGenres,
+        @Param("filterStatusLost") boolean filterStatusLost,
+        @Param("filterStatusWithdrawn") boolean filterStatusWithdrawn,
+        @Param("filterStatusOnOrder") boolean filterStatusOnOrder,
+        @Param("filterStatusRequested") boolean filterStatusRequested,
+        @Param("filterWithoutFreeTextUrls") boolean filterWithoutFreeTextUrls,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterAclaAudio") boolean filterAclaAudio,
+        @Param("filterAclaBook") boolean filterAclaBook,
+        @Param("filterAclaEbook") boolean filterAclaEbook,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
+        @Param("labels") List<String> labels,
+        @Param("labelCount") long labelCount,
+        @Param("filterReadingDifficulty") boolean filterReadingDifficulty,
+        @Param("readingDifficulties") List<ReadingDifficulty> readingDifficulties,
+        @Param("includeUnsetReadingDifficulty") boolean includeUnsetReadingDifficulty,
+        @Param("filterFavoriteBooks") boolean filterFavoriteBooks,
+        @Param("favoriteBookIds") List<Long> favoriteBookIds,
+        @Param("filterBinding") boolean filterBinding,
+        @Param("bindings") List<BookCoverType> bindings,
+        @Param("includeUnknownBinding") boolean includeUnknownBinding,
+        @Param("filterDesire") boolean filterDesire,
+        @Param("desireValues") List<Integer> desireValues,
+        @Param("includeUnsetDesire") boolean includeUnsetDesire,
+        @Param("hideRequested") boolean hideRequested,
+        @Param("filterWithPrices") boolean filterWithPrices,
+        @Param("filterNoPrices") boolean filterNoPrices,
+        @Param("filterPriceOlder") boolean filterPriceOlder,
+        @Param("priceOlderCutoff") LocalDateTime priceOlderCutoff,
+        @Param("epoch") LocalDateTime epoch,
+        @Param("filterLookupErrors") boolean filterLookupErrors);
+
+    @Query("SELECT b.id, b.plotEssay, b.detailedDescription FROM Book b WHERE b.id IN :ids")
+    List<Object[]> findPlotFieldsByIds(@Param("ids") List<Long> ids);
+
+    @Query("SELECT DISTINCT b.author.id FROM Book b WHERE b.author IS NOT NULL AND b.dateAddedToLibrary >= :start AND b.dateAddedToLibrary < :end")
+    List<Long> findAuthorIdsAddedBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
      * Count books that have the specified tag in their tagsList.

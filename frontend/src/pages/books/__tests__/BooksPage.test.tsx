@@ -6,7 +6,7 @@ import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
 import { BooksPage } from '../BooksPage'
 import type { BookDto } from '@/types/dtos'
 
-const { catalog, librarianState } = vi.hoisted(() => {
+const { catalog, librarianState, filterCatalog } = vi.hoisted(() => {
   const catalog: BookDto[] = [
     {
       id: 1,
@@ -27,7 +27,35 @@ const { catalog, librarianState } = vi.hoisted(() => {
       dateAddedToLibrary: '2026-08-30T00:00:00',
     },
   ]
-  return { catalog, librarianState: { current: true } }
+  function filterCatalog(filters?: {
+    q?: string
+    readingDifficulties?: readonly string[]
+    bindings?: readonly string[]
+  }) {
+    if (!filters) return catalog
+    const q = (filters.q ?? '').trim().toLowerCase()
+    const difficulties = filters.readingDifficulties ?? []
+    const bindings = filters.bindings ?? []
+    return catalog.filter((book) => {
+      if (q) {
+        const title = (book.title ?? '').toLowerCase()
+        const author = (book.author ?? '').toLowerCase()
+        if (!title.includes(q) && !author.includes(q)) return false
+      }
+      if (difficulties.length > 0) {
+        const value = book.readingDifficulty?.trim()
+          ? book.readingDifficulty.trim().toLowerCase()
+          : 'unset'
+        if (!difficulties.includes(value)) return false
+      }
+      if (bindings.length > 0) {
+        const value = book.binding?.trim() ? book.binding.trim().toUpperCase() : 'UNKNOWN'
+        if (!bindings.includes(value)) return false
+      }
+      return true
+    })
+  }
+  return { catalog, librarianState: { current: true }, filterCatalog }
 })
 
 vi.mock('@/stores/authStore', () => ({
@@ -35,8 +63,8 @@ vi.mock('@/stores/authStore', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: () => ({
-    data: catalog,
+  useBooks: (filters?: Parameters<typeof filterCatalog>[0]) => ({
+    data: filterCatalog(filters),
     isLoading: false,
     isFetching: false,
     error: null,

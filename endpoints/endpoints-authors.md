@@ -1,5 +1,24 @@
 # Author Endpoints
 
+## GET /api/authors/filtered-summaries
+Returns author summaries (id and lastModified) after every Authors page filter. The browser then loads full rows with `/by-ids` for these ids only, at most 100 ids per request. A larger `/by-ids` body is rejected with 400. The older single-chip endpoints below remain.
+
+**Authentication:** Public (`permitAll()`)
+
+**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined.
+- `mostRecent` — authors of books added on the calendar day of the latest `dateAddedToLibrary`
+- `withoutDescription` — biographical essay is null
+- `withoutGrokipedia` / `withGrokipedia` — missing (`null`, blank, or `"-"`) or present
+- `zeroBooks` — no books
+- `withoutPhotos` / `withPhotos` — author photos (photos not attached to a book)
+- `withoutBirthDate` / `withoutDeathDate`
+- Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag
+- `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
+
+**Response:** Array of AuthorSummaryDto
+
+---
+
 ## GET /api/authors/without-description
 Returns authors that are missing brief biographies.
 

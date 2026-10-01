@@ -85,15 +85,21 @@ public class SettingsUITest {
                 new Page.WaitForSelectorOptions().setTimeout(20000L).setState(WaitForSelectorState.VISIBLE));
     }
 
-    private void openAccountMenu() {
+    private void navigateToSettings() {
         Locator userMenu = page.locator("[data-test='nav-user-menu']");
-        userMenu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        Locator settings = page.locator("[data-test='nav-settings']");
         PlaywrightException lastError = null;
-        for (int attempt = 0; attempt < 3; attempt++) {
+        for (int attempt = 0; attempt < 5; attempt++) {
             userMenu.click();
             try {
-                page.locator("[data-test='nav-settings']").waitFor(
-                        new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(3000L));
+                settings.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000L));
+                // The anchored account menu replaces its DOM node when the header
+                // reflows, so a normal click waits on a detached item until timeout.
+                settings.evaluate("el => el.click()");
+                page.waitForURL("**/settings", new Page.WaitForURLOptions().setTimeout(10000L));
+                page.waitForLoadState(LoadState.NETWORKIDLE);
                 return;
             } catch (PlaywrightException e) {
                 lastError = e;
@@ -102,13 +108,7 @@ public class SettingsUITest {
         if (lastError != null) {
             throw lastError;
         }
-        throw new AssertionError("Account menu did not open");
-    }
-
-    private void navigateToSettings() {
-        openAccountMenu();
-        page.click("[data-test='nav-settings']");
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        throw new AssertionError("Could not open Settings from the account menu");
     }
 
     /**

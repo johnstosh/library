@@ -167,4 +167,52 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     /** Keyset id page for chunked JSON export. */
     @Query("SELECT a.id FROM Author a WHERE a.id > :lastId ORDER BY a.id ASC")
     List<Long> findAuthorIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
+
+    /**
+     * Summaries for the Authors page. Every active chip ANDs. mostRecent ids come
+     * from books added on the catalog's latest day, the same set as /most-recent-day.
+     * biographicalEssay is a PostgreSQL OID, so only IS NULL is valid.
+     */
+    @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a WHERE " +
+        "(:filterMostRecent = false OR a.id IN :mostRecentAuthorIds) AND " +
+        "(:filterWithoutDescription = false OR a.biographicalEssay IS NULL) AND " +
+        "(:filterWithoutGrokipedia = false OR a.grokipediaUrl IS NULL OR a.grokipediaUrl = '' OR a.grokipediaUrl = '-') AND " +
+        "(:filterWithGrokipedia = false OR (a.grokipediaUrl IS NOT NULL AND a.grokipediaUrl <> '' AND a.grokipediaUrl <> '-')) AND " +
+        "(:filterZeroBooks = false OR NOT EXISTS (SELECT 1 FROM Book zeroBook WHERE zeroBook.author = a)) AND " +
+        "(:filterWithoutPhotos = false OR NOT EXISTS (SELECT 1 FROM Photo noPhoto WHERE noPhoto.author = a AND noPhoto.book IS NULL)) AND " +
+        "(:filterWithPhotos = false OR EXISTS (SELECT 1 FROM Photo hasPhoto WHERE hasPhoto.author = a AND hasPhoto.book IS NULL)) AND " +
+        "(:filterWithoutBirthDate = false OR a.dateOfBirth IS NULL) AND " +
+        "(:filterWithoutDeathDate = false OR a.dateOfDeath IS NULL) AND " +
+        "(:filterFavorites = false OR a.id IN :favoriteAuthorIds) AND " +
+        "(:filterYdlBook = false OR EXISTS (SELECT 1 FROM Book ydlBook WHERE ydlBook.author = a AND ydlBook.ydlPaperAvailable = true)) AND " +
+        "(:filterYdlEbook = false OR EXISTS (SELECT 1 FROM Book ydlEbook WHERE ydlEbook.author = a AND ydlEbook.ydlEbookAvailable = true)) AND " +
+        "(:filterYdlAudio = false OR EXISTS (SELECT 1 FROM Book ydlAudio WHERE ydlAudio.author = a AND ydlAudio.ydlAudioAvailable = true)) AND " +
+        "(:filterEmuBook = false OR EXISTS (SELECT 1 FROM Book emuBook WHERE emuBook.author = a AND emuBook.emuPaperAvailable = true)) AND " +
+        "(:filterEmuEbook = false OR EXISTS (SELECT 1 FROM Book emuEbook WHERE emuEbook.author = a AND emuEbook.emuEbookAvailable = true)) AND " +
+        "(:filterEmuAudio = false OR EXISTS (SELECT 1 FROM Book emuAudio WHERE emuAudio.author = a AND emuAudio.emuAudioAvailable = true)) AND " +
+        "(:filterAclaBook = false OR EXISTS (SELECT 1 FROM Book aclaBook WHERE aclaBook.author = a AND aclaBook.aclaPaperAvailable = true)) AND " +
+        "(:filterAclaEbook = false OR EXISTS (SELECT 1 FROM Book aclaEbook WHERE aclaEbook.author = a AND aclaEbook.aclaEbookAvailable = true)) AND " +
+        "(:filterAclaAudio = false OR EXISTS (SELECT 1 FROM Book aclaAudio WHERE aclaAudio.author = a AND aclaAudio.aclaAudioAvailable = true))")
+    List<AuthorSummaryProjection> findFilteredSummaries(
+        @Param("filterMostRecent") boolean filterMostRecent,
+        @Param("mostRecentAuthorIds") List<Long> mostRecentAuthorIds,
+        @Param("filterWithoutDescription") boolean filterWithoutDescription,
+        @Param("filterWithoutGrokipedia") boolean filterWithoutGrokipedia,
+        @Param("filterWithGrokipedia") boolean filterWithGrokipedia,
+        @Param("filterZeroBooks") boolean filterZeroBooks,
+        @Param("filterWithoutPhotos") boolean filterWithoutPhotos,
+        @Param("filterWithPhotos") boolean filterWithPhotos,
+        @Param("filterWithoutBirthDate") boolean filterWithoutBirthDate,
+        @Param("filterWithoutDeathDate") boolean filterWithoutDeathDate,
+        @Param("filterFavorites") boolean filterFavorites,
+        @Param("favoriteAuthorIds") List<Long> favoriteAuthorIds,
+        @Param("filterYdlBook") boolean filterYdlBook,
+        @Param("filterYdlEbook") boolean filterYdlEbook,
+        @Param("filterYdlAudio") boolean filterYdlAudio,
+        @Param("filterEmuBook") boolean filterEmuBook,
+        @Param("filterEmuEbook") boolean filterEmuEbook,
+        @Param("filterEmuAudio") boolean filterEmuAudio,
+        @Param("filterAclaBook") boolean filterAclaBook,
+        @Param("filterAclaEbook") boolean filterAclaEbook,
+        @Param("filterAclaAudio") boolean filterAclaAudio);
 }

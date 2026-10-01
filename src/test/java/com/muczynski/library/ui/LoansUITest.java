@@ -87,6 +87,16 @@ public class LoansUITest {
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
+    /** The checkout list stays empty until a title search returns that book. */
+    private void chooseCheckoutBook(String title, String bookId) {
+        page.fill("[data-test='loan-title-filter']", title);
+        page.waitForSelector("[data-test='loan-book-select'] option[value='" + bookId + "']",
+                new Page.WaitForSelectorOptions()
+                        .setState(WaitForSelectorState.ATTACHED)
+                        .setTimeout(15000L));
+        page.selectOption("[data-test='loan-book-select']", bookId);
+    }
+
     // ==================== USER AUTHORITY TESTS ====================
 
     @Test
@@ -165,10 +175,9 @@ public class LoansUITest {
         // Verify we're on the checkout page
         assertThat(page.locator("text=Checkout Book")).isVisible();
 
-        // Verify form fields
+        // Verify form fields. The borrower name lives in a select option, which is not a visible element.
         assertThat(page.locator("[data-test='loan-book-select']")).isVisible();
         assertThat(page.locator("[data-test='loan-user-select']")).isVisible();
-        assertThat(page.locator("text=testuser")).isVisible();
         page.waitForSelector("[data-test='loan-user-select'] option[value='1']",
             new Page.WaitForSelectorOptions()
                 .setState(WaitForSelectorState.ATTACHED)
@@ -191,11 +200,9 @@ public class LoansUITest {
         // Wait for navigation to /loans/new
         page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Wait for form to load
+        // Wait for form to load, then search. The catalog is not loaded up front.
         page.waitForSelector("[data-test='loan-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
-
-        // Select a book (Available Book 1 - book ID 1)
-        page.selectOption("[data-test='loan-book-select']", "1");
+        chooseCheckoutBook("Available Book 1", "1");
 
         // Submit checkout
         page.click("[data-test='loan-form-submit']");
@@ -249,17 +256,14 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1 (testuser's active loan is ID 1 in the SQL)
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Wait for page to fully render (loan data loads asynchronously)
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Verify loan details are visible
-        assertThat(page.locator("text=Loan Details"))
-                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+        assertThat(page.locator("[data-test='loan-book-title']")).containsText("Loaned Book");
         assertThat(page.locator("text=Loaned Book").first())
                 .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
 
@@ -280,9 +284,7 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1 (testuser's active loan is ID 1 in the SQL)
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Return button should NOT be visible for regular users
@@ -302,9 +304,7 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1 (testuser's active loan is ID 1 in the SQL)
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Delete button should NOT be visible for regular users
@@ -321,8 +321,8 @@ public class LoansUITest {
         page.click("[data-test='filter-active']");
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
-        // Should see "Active" status badge
-        assertThat(page.locator("text=Active")).isVisible();
+        // The Active chip shares that word with the status badge.
+        assertThat(page.locator("[data-test='data-table']").getByText("Active", new Locator.GetByTextOptions().setExact(true))).isVisible();
 
         // Should see "Returned" status badge (use span with exact text to avoid matching "Show returned loans" label)
         assertThat(page.locator("span:text-is('Returned')")).isVisible();
@@ -410,17 +410,14 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Wait for page to fully render (loan data loads asynchronously)
         page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(20000L));
 
         // Verify loan details are visible
-        assertThat(page.locator("text=Loan Details"))
-                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+        assertThat(page.locator("[data-test='loan-book-title']")).containsText("Loaned Book");
         assertThat(page.locator("text=Loaned Book").first())
                 .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
     }
@@ -438,9 +435,7 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Should see return and delete buttons on view page
@@ -464,9 +459,7 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Click return button
@@ -509,9 +502,7 @@ public class LoansUITest {
         page.waitForSelector("text=Available Book 2", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it (loan ID 3)
-        page.click("text=Available Book 2");
-
-        // Wait for navigation to /loans/3
+        page.click("[data-test='view-loan-details-3']");
         page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Click delete button
@@ -550,9 +541,7 @@ public class LoansUITest {
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Loaned Book");
-
-        // Wait for navigation to /loans/1
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Click return button
@@ -591,9 +580,7 @@ public class LoansUITest {
         page.waitForSelector("text=Available Book 2", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
         // Click on loan to view it
-        page.click("text=Available Book 2");
-
-        // Wait for navigation to /loans/3
+        page.click("[data-test='view-loan-details-3']");
         page.waitForURL("**/loans/3", new Page.WaitForURLOptions().setTimeout(10000L));
 
         // Click delete button
@@ -631,11 +618,9 @@ public class LoansUITest {
         // Wait for navigation to /loans/new
         page.waitForURL("**/loans/new", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Wait for form to load
+        // Wait for form to load, then search. The catalog is not loaded up front.
         page.waitForSelector("[data-test='loan-book-select']", new Page.WaitForSelectorOptions().setTimeout(10000L));
-
-        // Select a book (Available Book 1 - book ID 1)
-        page.selectOption("[data-test='loan-book-select']", "1");
+        chooseCheckoutBook("Available Book 1", "1");
 
         // Borrower defaults to the logged-in librarian (user ID 2)
         page.waitForSelector("[data-test='loan-user-select'] option[value='2']",
@@ -670,7 +655,7 @@ public class LoansUITest {
 
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
-        page.click("text=Loaned Book");
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         assertThat(page.locator("[data-test='loan-view-edit']")).isVisible();
@@ -684,7 +669,7 @@ public class LoansUITest {
 
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
-        page.click("text=Loaned Book");
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         page.click("[data-test='loan-view-edit']");
@@ -701,7 +686,7 @@ public class LoansUITest {
 
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("text=Loaned Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
-        page.click("text=Loaned Book");
+        page.click("[data-test='view-loan-details-1']");
         page.waitForURL("**/loans/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
         assertThat(page.locator("[data-test='loan-view-edit']")).not().isVisible();

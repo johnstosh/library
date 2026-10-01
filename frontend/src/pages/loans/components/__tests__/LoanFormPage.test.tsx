@@ -6,13 +6,20 @@ import { describe, expect, it, vi } from 'vitest'
 import { LoanFormPage } from '../LoanFormPage'
 import type { CurrentUser } from '@/stores/authStore'
 
-const { authState } = vi.hoisted(() => ({
+const { authState, usersState } = vi.hoisted(() => ({
   authState: {
     user: {
       id: 2,
       username: 'librarian',
       authority: 'LIBRARIAN',
     } as CurrentUser,
+  },
+  usersState: {
+    data: [
+      { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+      { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
+      { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+    ] as Array<{ id: number; username: string; authorities: string[]; lastModified: string }>,
   },
 }))
 
@@ -28,30 +35,24 @@ vi.mock('@/api/loans', () => ({
   useTranscribeCheckoutCard: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }))
 
-vi.mock('@/api/books', () => ({
-  useBooks: () => ({
-    data: [
-      {
-        id: 1,
-        title: 'Available Book 1',
-        author: 'Author',
-        status: 'ACTIVE',
-        lastModified: '2026-01-01T00:00:00',
-      },
-    ],
+const { checkoutState } = vi.hoisted(() => ({
+  checkoutState: {
+    data: [] as Array<{ id: number; title: string; author: string }>,
     isFetching: false,
-    isLoading: false,
-  }),
+    error: '',
+  },
 }))
 
+vi.mock('@/api/checkoutBooks', async () => {
+  const actual = await vi.importActual<typeof import('@/api/checkoutBooks')>('@/api/checkoutBooks')
+  return {
+    ...actual,
+    useCheckoutBookSearch: () => checkoutState,
+  }
+})
+
 vi.mock('@/api/users', () => ({
-  useUsers: () => ({
-    data: [
-      { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
-      { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
-      { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
-    ],
-  }),
+  useUsers: () => ({ data: usersState.data }),
 }))
 
 function renderCheckoutForm() {
@@ -67,9 +68,29 @@ function renderCheckoutForm() {
   )
 }
 
+const directory = [
+  { id: 1, username: 'testuser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+  { id: 2, username: 'librarian', authorities: ['LIBRARIAN'], lastModified: '2026-01-01T00:00:00' },
+  { id: 3, username: 'otheruser', authorities: ['USER'], lastModified: '2026-01-01T00:00:00' },
+]
+
 describe('LoanFormPage checkout', () => {
+  it('shows the search progress on the book selector', () => {
+    checkoutState.isFetching = true
+    checkoutState.data = []
+    checkoutState.error = ''
+    renderCheckoutForm()
+
+    expect(screen.getByTestId('loan-book-select-progress')).toBeTruthy()
+    expect(screen.queryByTestId('loan-title-filter-progress')).toBeNull()
+    expect(screen.queryByTestId('loan-author-filter-progress')).toBeNull()
+    expect(screen.queryByTestId('loan-loc-filter-progress')).toBeNull()
+    checkoutState.isFetching = false
+  })
+
   it('defaults the borrower to the logged in librarian', () => {
     authState.user = { id: 2, username: 'librarian', authority: 'LIBRARIAN' }
+    usersState.data = directory
     renderCheckoutForm()
 
     expect(screen.getByTestId('loan-user-select')).toHaveValue('2')
@@ -77,8 +98,18 @@ describe('LoanFormPage checkout', () => {
 
   it('defaults the borrower to the logged in patron', () => {
     authState.user = { id: 1, username: 'testuser', authority: 'USER' }
+    usersState.data = directory
     renderCheckoutForm()
 
     expect(screen.getByTestId('loan-user-select')).toHaveValue('1')
+  })
+
+  it('shows the logged in patron when the user list is unavailable', () => {
+    authState.user = { id: 1, username: 'testuser', authority: 'USER' }
+    usersState.data = []
+    renderCheckoutForm()
+
+    expect(screen.getByTestId('loan-user-select')).toHaveValue('1')
+    expect(screen.getByRole('option', { name: 'testuser' })).toBeTruthy()
   })
 })

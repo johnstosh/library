@@ -3,7 +3,10 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.BookStatusFilter;
+import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
@@ -16,8 +19,12 @@ import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
+import com.muczynski.library.dto.CheckoutMatchDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.ByIds;
+import com.muczynski.library.service.CatalogFilterService;
+import com.muczynski.library.service.CheckoutMatchService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
@@ -36,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +59,12 @@ public class BookController {
 
     @Autowired
     private BookService bookService;
+
+    @Autowired
+    private CatalogFilterService catalogFilterService;
+
+    @Autowired
+    private CheckoutMatchService checkoutMatchService;
 
     @Autowired
     private PhotoService photoService;
@@ -169,6 +183,63 @@ public class BookController {
         } catch (Exception e) {
             logger.warn("Failed to retrieve book by ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    private static List<String> splitCsv(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private static List<BookCoverType> parseBindings(String raw) {
+        List<BookCoverType> selected = new ArrayList<>();
+        for (String part : splitCsv(raw)) {
+            try {
+                BookCoverType value = BookCoverType.valueOf(part.trim().toUpperCase());
+                if (!selected.contains(value)) {
+                    selected.add(value);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Unknown tokens are ignored, matching the other filter parsers.
+            }
+        }
+        return selected;
+    }
+
+    private static void applyDesire(CatalogFilterService.BookCatalogFilter filter, String raw) {
+        List<Integer> values = new ArrayList<>();
+        boolean unset = false;
+        for (String part : splitCsv(raw)) {
+            if ("unset".equalsIgnoreCase(part)) {
+                unset = true;
+                continue;
+            }
+            try {
+                int value = Integer.parseInt(part);
+                if (value >= 0 && value <= 10 && !values.contains(value)) {
+                    values.add(value);
+                }
+            } catch (NumberFormatException ignored) {
+                // Skip tokens that are not a desire value.
+            }
+        }
+        filter.desireValues = values;
+        filter.desireUnset = unset;
+    }
+
+    private static Long userId(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(principal.getName());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -508,10 +579,90 @@ public class BookController {
         }
     }
 
+    /**
+     * Summaries for the Books and Prices pages after every active filter.
+     * The browser then loads full rows with /by-ids for these ids only.
+     */
+    @GetMapping("/filtered-summaries")
+    @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getFilteredBookSummaries(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String labels,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String readingDifficulty,
+            @RequestParam(required = false) String binding,
+            @RequestParam(required = false) String favoriteLists,
+            @RequestParam(required = false) String desireToPurchase,
+            @RequestParam(defaultValue = "90") int priceOlderDays,
+            @RequestParam(defaultValue = "false") boolean freeText,
+            @RequestParam(defaultValue = "false") boolean audio,
+            @RequestParam(defaultValue = "false") boolean mostRecent,
+            @RequestParam(defaultValue = "false") boolean withoutGrokipedia,
+            @RequestParam(defaultValue = "false") boolean withGrokipedia,
+            @RequestParam(defaultValue = "false") boolean withoutGenres,
+            @RequestParam(defaultValue = "false") boolean withoutFreeTextUrls,
+            @RequestParam(defaultValue = "false") boolean withoutProperPlotOrDescription,
+            @RequestParam(defaultValue = "false") boolean hasYdlAudio,
+            @RequestParam(defaultValue = "false") boolean hasYdlBook,
+            @RequestParam(defaultValue = "false") boolean hasYdlEbook,
+            @RequestParam(defaultValue = "false") boolean hasEmuAudio,
+            @RequestParam(defaultValue = "false") boolean hasEmuBook,
+            @RequestParam(defaultValue = "false") boolean hasEmuEbook,
+            @RequestParam(defaultValue = "false") boolean hasAclaAudio,
+            @RequestParam(defaultValue = "false") boolean hasAclaBook,
+            @RequestParam(defaultValue = "false") boolean hasAclaEbook,
+            @RequestParam(defaultValue = "false") boolean withPrices,
+            @RequestParam(defaultValue = "false") boolean noPrices,
+            @RequestParam(defaultValue = "false") boolean priceOlder,
+            @RequestParam(defaultValue = "false") boolean lookupErrors,
+            Principal principal) {
+        try {
+            CatalogFilterService.BookCatalogFilter filter = new CatalogFilterService.BookCatalogFilter();
+            filter.query = q == null ? "" : q;
+            filter.labels = splitCsv(labels);
+            filter.statuses = BookStatusFilter.parseFilterValues(status);
+            filter.readingDifficulties = ReadingDifficulty.parseFilterValues(readingDifficulty);
+            filter.bindings = parseBindings(binding);
+            filter.favoriteLists = splitCsv(favoriteLists);
+            applyDesire(filter, desireToPurchase);
+            filter.priceOlderDays = priceOlderDays;
+            filter.freeText = freeText;
+            filter.audio = audio;
+            filter.mostRecent = mostRecent;
+            filter.withoutGrokipedia = withoutGrokipedia;
+            filter.withGrokipedia = withGrokipedia;
+            filter.withoutGenres = withoutGenres;
+            filter.withoutFreeTextUrls = withoutFreeTextUrls;
+            filter.withoutProperPlotOrDescription = withoutProperPlotOrDescription;
+            filter.ydlAudio = hasYdlAudio;
+            filter.ydlBook = hasYdlBook;
+            filter.ydlEbook = hasYdlEbook;
+            filter.emuAudio = hasEmuAudio;
+            filter.emuBook = hasEmuBook;
+            filter.emuEbook = hasEmuEbook;
+            filter.aclaAudio = hasAclaAudio;
+            filter.aclaBook = hasAclaBook;
+            filter.aclaEbook = hasAclaEbook;
+            filter.withPrices = withPrices;
+            filter.noPrices = noPrices;
+            filter.priceOlder = priceOlder;
+            filter.lookupErrors = lookupErrors;
+            return ResponseEntity.ok(catalogFilterService.bookSummaries(filter, userId(principal), isLibrarian()));
+        } catch (Exception e) {
+            logger.warn("Failed to retrieve filtered book summaries: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
     @PostMapping("/by-ids")
     @PreAuthorize("permitAll()")
     @Transactional(readOnly = true)
     public ResponseEntity<?> getBooksByIds(@RequestBody List<Long> ids) {
+        if (ByIds.exceedsBatch(ids)) {
+            logger.warn("Rejected /books/by-ids batch of {} ids; limit is {}", ids.size(), ByIds.MAX_BATCH);
+            return ResponseEntity.badRequest().body("At most " + ByIds.MAX_BATCH + " book ids");
+        }
         try {
             List<BookDto> books = bookService.getBooksByIds(ids, isLibrarian());
             return ResponseEntity.ok(books);
@@ -519,6 +670,21 @@ public class BookController {
             logger.warn("Failed to retrieve books by IDs: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    /**
+     * Active books for the checkout form. At most ten matches. A title, author,
+     * or call number shorter than three characters is ignored, and the response
+     * is empty when every field is shorter than that.
+     */
+    @GetMapping("/checkout-matches")
+    @PreAuthorize("permitAll()")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<CheckoutMatchDto>> checkoutMatches(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String locNumber) {
+        return ResponseEntity.ok(checkoutMatchService.matches(title, author, locNumber));
     }
 
     @PostMapping("/suggest-loc")

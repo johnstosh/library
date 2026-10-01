@@ -18,37 +18,27 @@ import { StatusFilters } from './components/StatusFilters'
 import { FavoriteListFilters } from './components/FavoriteListFilters'
 import { BookTable } from './components/BookTable'
 import { BulkActionsToolbar } from './components/BulkActionsToolbar'
-import { useBookCount, useBooks } from '@/api/books'
+import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
 import { useUiStore, useBooksTableSelection } from '@/stores/uiStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/config/queryClient'
-import { applyBookPriceFilters, applyChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
-  matchesBookQuery,
   priceOlderDaysFromSearchParams,
   pricesPathFromFilters,
 } from '@/utils/bookFilterParams'
-import { usePrices } from '@/api/prices'
+import { bindingsFromSearchParams } from '@/utils/bookBinding'
+import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 import {
-  applyBookBindingFilter,
-  bindingsFromSearchParams,
-} from '@/utils/bookBinding'
-import {
-  applyReadingDifficultyFilter,
-  readingDifficultiesFromSearchParams,
-} from '@/utils/readingDifficulty'
-import {
-  applyBookStatusFilter,
   bookStatusesFromSearchParams,
   type BookStatusFilter,
 } from '@/utils/bookStatus'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
-import { favoriteItemIdsForLists, favoriteListChips, useFavoriteSummary } from '@/api/favorites'
+import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
 
@@ -105,47 +95,21 @@ export function BooksPage() {
     })
   }
 
-  const { data: allBooks = [], isLoading, isFetching, error } = useBooks(selectedLabels, chips.mostRecent)
+  const listFilters = useMemo((): BookListFilters => ({
+    q: searchParams.get('q') ?? '',
+    labels: labelsFromSearchParams(searchParams),
+    statuses: bookStatusesFromSearchParams(searchParams),
+    readingDifficulties: readingDifficultiesFromSearchParams(searchParams),
+    bindings: bindingsFromSearchParams(searchParams),
+    favoriteLists: favoriteListsFromSearchParams(searchParams),
+    priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
+    chips: chipsFromSearchParams(searchParams, 'books'),
+  }), [searchParams])
+
+  const { data: books = [], isLoading, isFetching, error } = useBooks(listFilters)
   const { data: bookCount } = useBookCount()
 
   const isFilterPending = isFetching && !isLoading
-
-  // Compute non-price filtered books for scoping price fetch (when librarian).
-  const nonPriceFilteredBooks = useMemo(() => {
-    const favoriteIds = favoriteItemIdsForLists(
-      favoriteSummary?.lists,
-      selectedFavoriteLists,
-      'bookIds',
-    )
-    return applyBookBindingFilter(
-      applyReadingDifficultyFilter(
-        applyBookStatusFilter(applyChipFilters(allBooks, chips), selectedStatuses),
-        selectedDifficulties,
-      ),
-      selectedBindings,
-    )
-      .filter((book) => matchesBookQuery(book, urlQuery))
-      .filter((book) => favoriteIds.size === 0 || favoriteIds.has(book.id))
-  }, [allBooks, chips, selectedStatuses, selectedDifficulties, selectedBindings, selectedFavoriteLists, favoriteSummary?.lists, urlQuery])
-
-  // Use scoped prices (via /by-book-ids) for price chips when librarian (avoids full catalog on filtered views).
-  // Non-librarian and full-catalog still use default usePrices().
-  const priceBookIds = isLibrarian ? nonPriceFilteredBooks.map((b) => b.id) : undefined
-  const { data: allPrices = [] } = usePrices({ enabled: isLibrarian, bookIds: priceBookIds })
-
-  const books = useMemo(() => {
-    return applyBookPriceFilters(
-      nonPriceFilteredBooks,
-      allPrices,
-      {
-        withPrices: chips.withPrices,
-        noPrices: chips.noPrices,
-        priceOlder: chips.priceOlder,
-        priceOlderDays,
-        lookupErrors: chips.lookupErrors,
-      },
-    )
-  }, [nonPriceFilteredBooks, allPrices, chips, priceOlderDays])
 
 
   const handleSelectToggle = (id: number) => {
