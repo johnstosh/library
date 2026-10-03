@@ -16,6 +16,7 @@ import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.email.HtmlText;
 import com.muczynski.library.email.LoanMailSnapshot;
+import com.muczynski.library.email.OutgoingEmail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,7 @@ public class LoanChangeEmailService implements EmailChangeHandler {
 
     private final GlobalSettingsService globalSettingsService;
     private final ApplicationEmailService applicationEmailService;
+    private final OutgoingEmail outgoingEmail;
     private final ObjectMapper objectMapper;
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
@@ -43,9 +45,11 @@ public class LoanChangeEmailService implements EmailChangeHandler {
 
     public LoanChangeEmailService(GlobalSettingsService globalSettingsService,
                                   ApplicationEmailService applicationEmailService,
+                                  OutgoingEmail outgoingEmail,
                                   ObjectMapper objectMapper) {
         this.globalSettingsService = globalSettingsService;
         this.applicationEmailService = applicationEmailService;
+        this.outgoingEmail = outgoingEmail;
         this.objectMapper = objectMapper;
     }
 
@@ -127,8 +131,9 @@ public class LoanChangeEmailService implements EmailChangeHandler {
         message.setFromName(settings.getEmailFromName() != null ? settings.getEmailFromName().trim() : null);
         message.setEvent(EVENT);
         message.setSubject(subject);
-        message.setTextBody(ChangeDescription.text(intro, lines, link));
-        message.setHtmlBody(ChangeDescription.html(intro, lines, link));
+        outgoingEmail.apply(message,
+                ChangeDescription.text(intro, lines, link),
+                ChangeDescription.html(intro, lines, link));
         message.getEventPayload().put("loanId", shown.id());
         message.getEventPayload().put("bookTitle", shown.bookTitle());
         sender.send(message, settings);

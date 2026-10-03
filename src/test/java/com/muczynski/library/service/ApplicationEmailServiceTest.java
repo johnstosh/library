@@ -7,11 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
+import com.muczynski.library.domain.Library;
 import com.muczynski.library.dto.TestEmailResultDto;
 import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
+import com.muczynski.library.email.OutgoingEmail;
 import com.muczynski.library.email.PendingApplicationNotice;
+import com.muczynski.library.repository.BranchRepository;
 import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,17 +40,27 @@ class ApplicationEmailServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private BranchRepository branchRepository;
+
+    @Mock
     private EmailSender logSender;
 
     private ApplicationEmailService service;
+    private OutgoingEmail outgoingEmail;
     private GlobalSettings settings;
 
     @BeforeEach
     void setUp() {
         when(logSender.getMethod()).thenReturn(EmailMethod.LOG);
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        outgoingEmail = new OutgoingEmail(branchRepository);
+        ReflectionTestUtils.setField(outgoingEmail, "externalBaseUrl", "https://library.example.com");
+        Library branch = new Library();
+        branch.setBranchName("St. Martin de Porres");
+        branch.setLibrarySystemName("Sacred Heart Library System");
+        lenient().when(branchRepository.findAll()).thenReturn(List.of(branch));
         service = new ApplicationEmailService(
-                globalSettingsService, userRepository, objectMapper, List.of(logSender));
+                globalSettingsService, userRepository, objectMapper, outgoingEmail, List.of(logSender));
         ReflectionTestUtils.setField(service, "externalBaseUrl", "https://library.example.com");
         settings = new GlobalSettings();
         settings.setEmailMethod(EmailMethod.LOG);
@@ -78,7 +91,13 @@ class ApplicationEmailServiceTest {
         assertTrue(message.getSubject().contains("Jane Doe"));
         assertEquals("library.application.pending", message.getEvent());
         assertTrue(message.getTextBody().contains("https://library.example.com/applications"));
+        assertTrue(message.getTextBody().startsWith("St. Martin de Porres\nSacred Heart Library System\n\n"));
+        assertTrue(message.getTextBody().endsWith(
+                "God bless,\n-Saint Martin de Porres\n\nSt. Martin de Porres\nSacred Heart Library System"));
         assertTrue(message.getHtmlBody().contains("Century Schoolbook L"));
+        assertTrue(message.getHtmlBody().contains(
+                "<div style=\"font-size:22px;font-weight:bold;\">St. Martin de Porres<br>Sacred Heart Library System</div>"));
+        assertTrue(message.getHtmlBody().contains("God bless,<br>-Saint Martin de Porres"));
         assertEquals(7L, message.getEventPayload().get("applicationId"));
     }
 
@@ -152,6 +171,10 @@ class ApplicationEmailServiceTest {
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
         verify(logSender).send(captor.capture(), eq(settings));
         assertEquals("library.email.test", captor.getValue().getEvent());
+        assertTrue(captor.getValue().getTextBody().contains("Email method: LOG"));
+        assertTrue(captor.getValue().getTextBody().startsWith("St. Martin de Porres\nSacred Heart Library System\n\n"));
+        assertTrue(captor.getValue().getHtmlBody().contains("font-size:22px"));
+        assertTrue(captor.getValue().getHtmlBody().contains("God bless,<br>-Saint Martin de Porres"));
     }
 
     @Test
