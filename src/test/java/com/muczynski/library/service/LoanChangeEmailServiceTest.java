@@ -8,9 +8,12 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.muczynski.library.domain.EmailMethod;
 import com.muczynski.library.domain.GlobalSettings;
+import com.muczynski.library.domain.Library;
 import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.email.LoanMailSnapshot;
+import com.muczynski.library.email.OutgoingEmail;
+import com.muczynski.library.repository.BranchRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +41,11 @@ class LoanChangeEmailServiceTest {
     @Mock
     private EmailSender logSender;
 
+    @Mock
+    private BranchRepository branchRepository;
+
     private LoanChangeEmailService service;
+    private OutgoingEmail outgoingEmail;
     private GlobalSettings settings;
     private ObjectMapper objectMapper;
 
@@ -46,7 +53,14 @@ class LoanChangeEmailServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        service = new LoanChangeEmailService(globalSettingsService, applicationEmailService, objectMapper);
+        outgoingEmail = new OutgoingEmail(branchRepository);
+        ReflectionTestUtils.setField(outgoingEmail, "externalBaseUrl", "https://library.example.com");
+        Library branch = new Library();
+        branch.setBranchName("St. Martin de Porres");
+        branch.setLibrarySystemName("Sacred Heart Library System");
+        lenient().when(branchRepository.findAll()).thenReturn(List.of(branch));
+        service = new LoanChangeEmailService(
+                globalSettingsService, applicationEmailService, outgoingEmail, objectMapper);
         ReflectionTestUtils.setField(service, "externalBaseUrl", "https://library.example.com");
         settings = new GlobalSettings();
         settings.setEmailMethod(EmailMethod.LOG);
@@ -81,6 +95,11 @@ class LoanChangeEmailServiceTest {
         assertFalse(message.getTextBody().contains("Loan date:"));
         assertTrue(message.getTextBody().contains("https://library.example.com/loans/7"));
         assertTrue(message.getHtmlBody().contains("Century Schoolbook L"));
+        assertTrue(message.getTextBody().startsWith("St. Martin de Porres\nSacred Heart Library System\n\n"));
+        assertTrue(message.getTextBody().endsWith(
+                "God bless,\n-Saint Martin de Porres\n\nSt. Martin de Porres\nSacred Heart Library System"));
+        assertTrue(message.getHtmlBody().contains("font-size:22px;font-weight:bold"));
+        assertTrue(message.getHtmlBody().contains("God bless,<br>-Saint Martin de Porres"));
     }
 
     @Test
