@@ -17,6 +17,7 @@ import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.email.HtmlText;
+import com.muczynski.library.email.OutgoingEmail;
 import com.muczynski.library.email.PendingApplicationNotice;
 import com.muczynski.library.repository.UserRepository;
 import org.slf4j.Logger;
@@ -43,14 +44,12 @@ public class ApplicationEmailService implements EmailChangeHandler {
     static final String EVENT_PENDING = "library.application.pending";
     static final String EVENT_TEST = "library.email.test";
 
-    private static final String EMAIL_FONT_FAMILY =
-            "Century Schoolbook L, Century Schoolbook, Times New Roman, Times, serif";
-
     private static final Logger logger = LoggerFactory.getLogger(ApplicationEmailService.class);
 
     private final GlobalSettingsService globalSettingsService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final OutgoingEmail outgoingEmail;
     private final Map<EmailMethod, EmailSender> senders;
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
@@ -59,10 +58,12 @@ public class ApplicationEmailService implements EmailChangeHandler {
     public ApplicationEmailService(GlobalSettingsService globalSettingsService,
                                    UserRepository userRepository,
                                    ObjectMapper objectMapper,
+                                   OutgoingEmail outgoingEmail,
                                    List<EmailSender> senderList) {
         this.globalSettingsService = globalSettingsService;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.outgoingEmail = outgoingEmail;
         this.senders = new EnumMap<>(EmailMethod.class);
         for (EmailSender sender : senderList) {
             this.senders.put(sender.getMethod(), sender);
@@ -184,8 +185,9 @@ public class ApplicationEmailService implements EmailChangeHandler {
         EmailMessage message = baseMessage(settings, recipients);
         message.setEvent(event);
         message.setSubject(subject);
-        message.setTextBody(ChangeDescription.text(intro, lines, reviewUrl));
-        message.setHtmlBody(ChangeDescription.html(intro, lines, reviewUrl));
+        outgoingEmail.apply(message,
+                ChangeDescription.text(intro, lines, reviewUrl),
+                ChangeDescription.html(intro, lines, reviewUrl));
         message.getEventPayload().put("applicationId", shown.id());
         message.getEventPayload().put("applicantName", shown.name());
         message.getEventPayload().put("applicantEmail", shown.email());
@@ -299,20 +301,15 @@ public class ApplicationEmailService implements EmailChangeHandler {
         EmailMessage message = baseMessage(settings, recipients);
         message.setEvent(EVENT_TEST);
         message.setSubject("Library email test");
-        message.setTextBody(
+        outgoingEmail.apply(message,
                 "This is a test message from the library application.\n"
                         + "Email method: " + effectiveMethod(settings) + "\n"
-                        + "If you received this, outbound email is working.\n");
-        message.setHtmlBody(htmlBody(
+                        + "If you received this, outbound email is working.\n",
                 "<p>This is a test message from the library application.</p>"
                         + "<p>Email method: <strong>" + HtmlText.escape(effectiveMethod(settings).name())
                         + "</strong></p>"
-                        + "<p>If you received this, outbound email is working.</p>"));
+                        + "<p>If you received this, outbound email is working.</p>");
         return message;
-    }
-
-    private static String htmlBody(String innerHtml) {
-        return "<div style=\"font-family:" + EMAIL_FONT_FAMILY + ";\">" + innerHtml + "</div>";
     }
 
     private ApplicationMailSnapshot readSnapshot(String json) throws JsonProcessingException {
