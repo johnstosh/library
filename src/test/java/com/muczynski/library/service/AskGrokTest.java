@@ -1,17 +1,20 @@
 // (c) Copyright 2025 by Muczynski
 package com.muczynski.library.service;
 
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -547,5 +550,86 @@ public class AskGrokTest {
                 any(HttpEntity.class),
                 eq(Map.class)
         )).thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+    }
+
+    // ==================== xAI out of credits ====================
+
+    private static final String CREDITS_BODY = "{\"code\":\"permission-denied\",\"error\":\"Your team "
+            + "has either used all available credits or reached its monthly spending limit. "
+            + "To continue making API requests, please purchase more credits or raise your spending limit.\"}";
+
+    private void stubAuthenticatedUserWithKey() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+    }
+
+    private void stubXaiError(HttpStatus status, String body) {
+        when(restTemplate.postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenThrow(HttpClientErrorException.create(status, status.getReasonPhrase(),
+                new HttpHeaders(), body.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void askQuestion_xai403OutOfCredits_throwsGrokCreditsExhausted() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.FORBIDDEN, CREDITS_BODY);
+
+        GrokCreditsExhaustedException ex = assertThrows(GrokCreditsExhaustedException.class,
+                () -> askGrok.askQuestion("Who wrote this?"));
+        assertEquals("Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.",
+                ex.getMessage());
+        assertInstanceOf(HttpClientErrorException.Forbidden.class, ex.getCause());
+    }
+
+    @Test
+    void analyzePhoto_xai403OutOfCredits_throwsGrokCreditsExhausted() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.FORBIDDEN, CREDITS_BODY);
+
+        assertThrows(GrokCreditsExhaustedException.class,
+                () -> askGrok.analyzePhoto("img".getBytes(), "image/jpeg", "Describe"));
+    }
+
+    @Test
+    void askQuestion_xai429SpendingLimit_throwsGrokCreditsExhausted() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.TOO_MANY_REQUESTS, "{\"error\":\"Monthly spending limit reached\"}");
+
+        assertThrows(GrokCreditsExhaustedException.class, () -> askGrok.askQuestionFast("q"));
+    }
+
+    @Test
+    void askQuestion_xai403Unrelated_rethrowsOriginal() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.FORBIDDEN, "{\"error\":\"Model not available for this key\"}");
+
+        assertThrows(HttpClientErrorException.Forbidden.class, () -> askGrok.askQuestion("q"));
+    }
+
+    @Test
+    void askQuestion_xai429PlainRateLimit_rethrowsOriginal() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.TOO_MANY_REQUESTS, "{\"error\":\"Too many requests\"}");
+
+        assertThrows(HttpClientErrorException.TooManyRequests.class, () -> askGrok.askQuestion("q"));
+    }
+
+    @Test
+    void isCreditsExhausted_classifiesStatusAndBody() {
+        assertTrue(AskGrok.isCreditsExhausted(403, CREDITS_BODY));
+        assertTrue(AskGrok.isCreditsExhausted(429, "used all available credits"));
+        assertTrue(AskGrok.isCreditsExhausted(402, ""));
+        assertFalse(AskGrok.isCreditsExhausted(403, "forbidden"));
+        assertFalse(AskGrok.isCreditsExhausted(403, null));
+        assertFalse(AskGrok.isCreditsExhausted(400, CREDITS_BODY));
+        assertFalse(AskGrok.isCreditsExhausted(500, CREDITS_BODY));
     }
 }

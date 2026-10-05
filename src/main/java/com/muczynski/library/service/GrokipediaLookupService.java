@@ -6,6 +6,7 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -195,7 +196,7 @@ public class GrokipediaLookupService {
                     .bookId(book.getId())
                     .name(primaryTitle)
                     .success(false)
-                    .errorMessage("Grok lookup failed: " + e.getMessage())
+                    .errorMessage(grokFailureMessage(e))
                     .build();
         }
 
@@ -219,6 +220,14 @@ public class GrokipediaLookupService {
         }
 
         return saveBookNotAvailable(book, primaryTitle);
+    }
+
+    /** Plain out-of-credits message as-is; other Grok failures keep the "Grok lookup failed:" prefix. */
+    private static String grokFailureMessage(Exception e) {
+        if (e instanceof GrokCreditsExhaustedException) {
+            return e.getMessage();
+        }
+        return "Grok lookup failed: " + e.getMessage();
     }
 
     /**
@@ -260,7 +269,7 @@ public class GrokipediaLookupService {
                     .authorId(author.getId())
                     .name(name)
                     .success(false)
-                    .errorMessage("Grok lookup failed: " + e.getMessage())
+                    .errorMessage(grokFailureMessage(e))
                     .build();
         }
 

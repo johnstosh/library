@@ -12,6 +12,8 @@ import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.exception.BookHasNoPhotosException;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GrokipediaLookupService;
@@ -761,5 +763,102 @@ class BookControllerTest {
 
         mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction"))
                 .andExpect(status().isInternalServerError());
+    }
+
+    // ==================== Grok out of credits ====================
+
+    private static final String OUT_OF_CREDITS =
+            "Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.";
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromTitleAuthor_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(bookService.getBookFromTitleAuthor(eq(1L), eq("Test Book"), eq("Test Author")))
+                .thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(put("/api/books/1/book-from-title-author")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("title", "Test Book", "authorName", "Test Author"))))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS))
+                .andExpect(jsonPath("$.message").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookByPhoto_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(bookService.generateTempBook(1L)).thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(bookService.generateBookFromFirstPhoto(1L)).thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void titleAuthorFromPhoto_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(bookService.getTitleAuthorFromPhoto(1L)).thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(put("/api/books/1/title-author-from-photo"))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void suggestLoc_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(askGrok.suggestLocNumber("Test Book", "Test Author"))
+                .thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(post("/api/books/suggest-loc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("title", "Test Book", "author", "Test Author"))))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void lookupGenres_grokOutOfCredits_returns402WithPlainMessage() throws Exception {
+        when(bookService.lookupGenresForBook(1L)).thenThrow(new GrokCreditsExhaustedException());
+
+        mockMvc.perform(post("/api/books/1/lookup-genres"))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error").value(OUT_OF_CREDITS));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookByPhoto_noPhotos_returns400WithPlainMessage() throws Exception {
+        when(bookService.generateTempBook(1L)).thenThrow(
+                new BookHasNoPhotosException(BookHasNoPhotosException.BOOK_FROM_IMAGE_MESSAGE));
+
+        mockMvc.perform(put("/api/books/1/book-by-photo"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("This book has no photos, so Book from Image has nothing to read."))
+                .andExpect(jsonPath("$.message").value("This book has no photos, so Book from Image has nothing to read."));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void bookFromFirstPhoto_noPhotos_returns400WithPlainMessage() throws Exception {
+        when(bookService.generateBookFromFirstPhoto(1L)).thenThrow(
+                new BookHasNoPhotosException(BookHasNoPhotosException.BOOK_FROM_FIRST_PHOTO_MESSAGE));
+
+        mockMvc.perform(put("/api/books/1/book-from-first-photo"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("This book has no photos, so Book from First Photo has nothing to read."));
     }
 }

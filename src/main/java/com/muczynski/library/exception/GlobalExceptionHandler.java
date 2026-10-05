@@ -21,7 +21,9 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Global exception handler for all controllers
@@ -229,6 +231,35 @@ public class GlobalExceptionHandler {
 
         ErrorResponse response = new ErrorResponse("INVALID_ARGUMENT", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle xAI out-of-credits / spending-limit refusals with a plain message (HTTP 402).
+     * Body carries the message under both "error" and "message" so every client reads it.
+     */
+    @ExceptionHandler(GrokCreditsExhaustedException.class)
+    public ResponseEntity<Map<String, String>> handleGrokCreditsExhaustedException(
+            GrokCreditsExhaustedException ex, WebRequest request) {
+        logger.warn("Grok out of credits on path {}", request.getDescription(false));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", ex.getMessage());
+        body.put("message", ex.getMessage());
+        body.put("code", "GROK_CREDITS_EXHAUSTED");
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(body);
+    }
+
+    /**
+     * Handle photo-driven AI actions on a book with no photos (HTTP 400). The book is unchanged.
+     */
+    @ExceptionHandler(BookHasNoPhotosException.class)
+    public ResponseEntity<Map<String, String>> handleBookHasNoPhotosException(
+            BookHasNoPhotosException ex, WebRequest request) {
+        logger.info("No photos to read on path {}", request.getDescription(false));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", ex.getMessage());
+        body.put("message", ex.getMessage());
+        body.put("code", "BOOK_HAS_NO_PHOTOS");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     /**

@@ -17,6 +17,8 @@ import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.exception.BookHasNoPhotosException;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.dto.CheckoutMatchDto;
@@ -476,6 +478,8 @@ public class BookController {
         try {
             BookDto updated = bookService.generateTempBook(id);
             return ResponseEntity.ok(updated);
+        } catch (GrokCreditsExhaustedException | BookHasNoPhotosException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("Failed to generate book by photo for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -489,6 +493,8 @@ public class BookController {
         try {
             BookDto updated = bookService.generateBookFromFirstPhoto(id);
             return ResponseEntity.ok(updated);
+        } catch (GrokCreditsExhaustedException | BookHasNoPhotosException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("Failed to generate book from first photo for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -506,6 +512,8 @@ public class BookController {
         try {
             BookDto updated = bookService.getTitleAuthorFromPhoto(id);
             return ResponseEntity.ok(updated);
+        } catch (GrokCreditsExhaustedException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -524,6 +532,8 @@ public class BookController {
             String authorName = request.get("authorName");
             BookDto updated = bookService.getBookFromTitleAuthor(id, title, authorName);
             return ResponseEntity.ok(updated);
+        } catch (GrokCreditsExhaustedException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -701,6 +711,8 @@ public class BookController {
 
             String suggestion = askGrok.suggestLocNumber(title, author);
             return ResponseEntity.ok(Map.of("suggestion", suggestion));
+        } catch (GrokCreditsExhaustedException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("Failed to get LOC suggestion for title '{}': {}",
                     request.get("title"), e.getMessage(), e);

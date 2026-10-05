@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto } from '@/types/dtos'
 import { useAuthors } from '../authors'
-import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBooks } from '../books'
+import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBulkBookFromImage, useBooks } from '../books'
 import { api } from '../client'
 
 afterEach(() => {
@@ -163,5 +163,37 @@ describe('useBulkBookFromTitleAuthor', () => {
       authorName: 'Test Author',
     })
     expect(queryClient.getQueryData(queryKeys.books.detail(1))).toMatchObject(updatedBook)
+  })
+})
+
+describe('useBulkBookFromImage', () => {
+  it('marks rows failed with the server message and leaves the cached book unchanged', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    queryClient.setQueryData(queryKeys.books.detail(1), originalBook)
+    queryClient.setQueryData(queryKeys.books.detail(2), { ...originalBook, id: 2 })
+
+    const noPhotos = 'This book has no photos, so Book from Image has nothing to read.'
+    const outOfCredits =
+      'Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.'
+    vi.mocked(api.put).mockImplementation(async (url) => {
+      if (url === '/books/1/book-by-photo') throw new Error(noPhotos)
+      throw new Error(outOfCredits)
+    })
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useBulkBookFromImage(), { wrapper })
+
+    const results = await result.current.mutateAsync([1, 2])
+
+    expect(results).toEqual([
+      { id: 1, success: false, error: noPhotos },
+      { id: 2, success: false, error: outOfCredits },
+    ])
+    expect(queryClient.getQueryData(queryKeys.books.detail(1))).toEqual(originalBook)
+    expect(queryClient.getQueryData(queryKeys.books.detail(2))).toEqual({ ...originalBook, id: 2 })
   })
 })

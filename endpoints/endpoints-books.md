@@ -266,9 +266,12 @@ Uses Grok AI to extract book metadata from all of the book's photos (cover, spin
 - Photos with missing or null image data are automatically skipped without causing errors
 
 **Error Responses:**
-- 404: Book not found
-- 500: No photos found, xAI API key not configured, or API call failed
+- 400: Book has no photos. The book is left unchanged (no placeholder title or random author).
+  Body: `{"error": "This book has no photos, so Book from Image has nothing to read.", "message": "...", "code": "BOOK_HAS_NO_PHOTOS"}`
+- 402: Grok is out of credits (see "Grok out of credits" below). The book is left unchanged.
+- 500: Book not found, xAI API key not configured, or other API failure
   - Returns error message as plain text body (e.g., "xAI API key not configured for user ID: 1")
+- `PUT /api/books/{id}/book-from-first-photo` behaves the same (400 message: "This book has no photos, so Book from First Photo has nothing to read.")
 
 **Use Case:**
 - Bulk process books from photos selected in the Books page
@@ -302,11 +305,29 @@ Uses Grok AI vision to extract only the book title and author name from the book
 - 10-minute timeout for API calls
 
 **Error Responses:**
+- 402: Grok is out of credits (see "Grok out of credits" below)
 - 500: Book not found, no photos found, xAI API key not configured, or API call failed
 
 **Use Case:**
 - Book edit page "Title & Author from First Photo" button
 - Preview extracted catalog fields in the form before saving
+
+---
+
+### Grok out of credits (all Grok-backed endpoints)
+When xAI refuses a Grok call because the team is out of credits or hit its monthly spending limit
+(HTTP 402, or HTTP 403/429 whose body mentions credits or a spending limit), `AskGrok` throws
+`GrokCreditsExhaustedException`. A plain 429 rate limit without that wording is not treated this way.
+
+- Single-book endpoints (`book-from-title-author`, `book-by-photo`, `book-from-first-photo`,
+  `title-author-from-photo`, `suggest-loc`, `/api/loans/transcribe-checkout-card`) return **HTTP 402**:
+  ```json
+  {"error": "Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.",
+   "message": "Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.",
+   "code": "GROK_CREDITS_EXHAUSTED"}
+  ```
+- Per-item result endpoints (lookup genres, reading difficulty, author generate-missing, Grokipedia slow
+  lookup, LOC bulk AI fallback) return 200 with the same message in each failed item's `errorMessage`.
 
 ---
 

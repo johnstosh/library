@@ -24,4 +24,12 @@ describe('parseApiErrorMessage', () => {
   it('falls back when the body is empty', () => {
     expect(parseApiErrorMessage('', 'Failed to approve')).toBe('Failed to approve')
   })
+
+  it('reads the plain Grok out-of-credits message from the 402 body', () => {
+    const message =
+      'Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.'
+    expect(
+      parseApiErrorMessage(JSON.stringify({ error: message, message, code: 'GROK_CREDITS_EXHAUSTED' }))
+    ).toBe(message)
+  })
 })
