@@ -52,11 +52,9 @@ jobs:
           cp -r frontend/dist/* src/main/resources/static/
 
       # Java UI tests launch Playwright's own Chromium (headless). Ubuntu's Chrome is a different binary.
+      # playwrightInstall uses the test runtime classpath so driver / driver-bundle jars are included.
       - name: Install Playwright Chromium
-        run: |
-          ./gradlew --no-daemon testClasses
-          CP=$(find ~/.gradle/caches -name 'playwright-*.jar' ! -name '*sources*' ! -name '*javadoc*' | tr '\n' ':')
-          java -cp "${CP%:}" com.microsoft.playwright.CLI install chromium
+        run: ./gradlew --no-daemon playwrightInstall
 
       - name: Run full test suite
         env:

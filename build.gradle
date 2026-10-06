@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.4.36'
+version = '2.4.37'
 
 ext['tomcat.version'] = '10.+'
 // 2.21.6 is CVE-2026-91776 and CVE-2026-91777 (HIGH). Trivy fails the deploy on HIGH.
@@ -82,6 +82,17 @@ jar {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// CI used to install Chromium via `find ~/.gradle/caches -name 'playwright-*.jar'`,
+// which omitted driver / driver-bundle jars and failed with NoClassDefFoundError
+// for com.microsoft.playwright.impl.driver.Driver.
+tasks.register('playwrightInstall', JavaExec) {
+    group = 'verification'
+    description = 'Install Playwright Chromium (and OS deps on CI) for UI tests'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.microsoft.playwright.CLI'
+    args 'install', '--with-deps', 'chromium'
 }
 
 test {
