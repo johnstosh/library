@@ -48,6 +48,7 @@ interface BulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
   tableCount: number
+  searchResultsCount?: number
   totalCount?: number
   isLoading?: boolean
 }
@@ -62,6 +63,7 @@ export function BulkActionsToolbar({
   selectedIds,
   onClearSelection,
   tableCount,
+  searchResultsCount,
   totalCount,
   isLoading = false,
 }: BulkActionsToolbarProps) {
@@ -330,6 +332,7 @@ export function BulkActionsToolbar({
       <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
         <TableCountPlaceholder
           tableCount={tableCount}
+          searchResultsCount={searchResultsCount}
           totalCount={totalCount}
           singular="book"
           plural="books"

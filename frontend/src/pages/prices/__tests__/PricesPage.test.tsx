@@ -158,13 +158,23 @@ vi.mock('@/api/prices', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: (filters?: Parameters<typeof filterBooks>[0]) => ({
-    data: filterBooks(filters),
-    isLoading: false,
-    isFetching: false,
-    error: null,
-  }),
+  useBooks: (filters?: Parameters<typeof filterBooks>[0]) => {
+    const data = filterBooks(filters)
+    return {
+      data,
+      total: data.length,
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    }
+  },
   useBookCount: () => ({ data: { count: 12 } }),
+}))
+
+vi.mock('@/api/branches', () => ({
+  useBranches: () => ({
+    data: [{ id: 1, branchName: 'St. Martin de Porres', librarySystemName: 'Sacred Heart Library System' }],
+  }),
 }))
 
 vi.mock('@/api/favorites', () => ({
@@ -190,10 +200,11 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('prices-search-button')).toHaveTextContent('Search')
   })
 
-  it('reports books in the table, books in the database, and price rows', () => {
+  it('reports books in the table, search results, the library system, and price rows', () => {
     renderPrices('/prices')
     expect(screen.getByTestId('table-count')).toHaveTextContent('4 books in this table')
-    expect(screen.getByTestId('database-count')).toHaveTextContent('12 books in the database')
+    expect(screen.getByTestId('search-results-count')).toHaveTextContent('4 books in the search results')
+    expect(screen.getByTestId('database-count')).toHaveTextContent('12 books in the Sacred Heart Library System')
     expect(screen.getByTestId('price-row-count')).toHaveTextContent('5 prices in this table')
   })
 

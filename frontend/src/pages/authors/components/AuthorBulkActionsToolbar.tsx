@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
 import { useDeleteAuthors, useGenerateAuthorsMissingDataWithProgress } from '@/api/authors'
+import { useBranches } from '@/api/branches'
 import { useLookupBulkAuthorsGrokipediaWithProgress, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { AuthorEnrichmentResultsModal } from './AuthorEnrichmentResultsModal'
@@ -16,6 +17,7 @@ interface AuthorBulkActionsToolbarProps {
   selectedIds: Set<number>
   onClearSelection: () => void
   tableCount: number
+  searchResultsCount?: number
   totalCount?: number
   isLoading?: boolean
 }
@@ -28,10 +30,13 @@ export function AuthorBulkActionsToolbar({
   selectedIds,
   onClearSelection,
   tableCount,
+  searchResultsCount,
   totalCount,
   isLoading = false,
 }: AuthorBulkActionsToolbarProps) {
   const toast = useToast()
+  const { data: branches = [] } = useBranches()
+  const firstBranch = branches[0]
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteResults, setShowDeleteResults] = useState(false)
   const [deleteResults, setDeleteResults] = useState<BulkDeleteResultDto | null>(null)
@@ -108,10 +113,13 @@ export function AuthorBulkActionsToolbar({
       <SelectionToolbar dataTest="bulk-actions-toolbar" selected={false}>
         <TableCountPlaceholder
           tableCount={tableCount}
+          searchResultsCount={searchResultsCount}
           totalCount={totalCount}
           singular="author"
           plural="authors"
           isLoading={isLoading}
+          branchName={firstBranch?.branchName}
+          librarySystemName={firstBranch?.librarySystemName}
         />
       </SelectionToolbar>
     )

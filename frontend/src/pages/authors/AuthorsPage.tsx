@@ -128,6 +128,7 @@ export function AuthorsPage() {
             selectedIds={selectedIds}
             onClearSelection={handleClearSelection}
             tableCount={authors.length}
+            searchResultsCount={total}
             totalCount={authorCount?.count}
             isLoading={isLoading}
           />
