@@ -2,6 +2,7 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -16,6 +17,7 @@ import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.Normalizer;
@@ -526,6 +528,28 @@ public class AskGrok {
         return apiKey;
     }
 
+    /**
+     * True when an xAI error means the team is out of credits or hit its spending limit:
+     * HTTP 402, or HTTP 403/429 whose body mentions credits or a spending limit.
+     * A plain 429 rate limit (no credits wording) is not treated as out of credits.
+     */
+    static boolean isCreditsExhausted(int status, String body) {
+        if (status == 402) {
+            return true;
+        }
+        if (status != 403 && status != 429) {
+            return false;
+        }
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        String lower = body.toLowerCase(Locale.ROOT);
+        return lower.contains("credit")
+                || lower.contains("spending limit")
+                || lower.contains("spending-limit")
+                || lower.contains("spending_limit");
+    }
+
     private String complete(String model, List<Map<String, Object>> messages, int maxCompletionTokens, double temperature) {
         String apiKey = requireApiKey();
 
@@ -542,11 +566,21 @@ public class AskGrok {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "https://api.x.ai/v1/chat/completions",
-                entity,
-                Map.class
-        );
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.postForEntity(
+                    "https://api.x.ai/v1/chat/completions",
+                    entity,
+                    Map.class
+            );
+        } catch (HttpClientErrorException e) {
+            if (isCreditsExhausted(e.getStatusCode().value(), e.getResponseBodyAsString())) {
+                log.warn("xAI refused the Grok call: out of credits or spending limit reached (HTTP {})",
+                        e.getStatusCode().value());
+                throw new GrokCreditsExhaustedException(e);
+            }
+            throw e;
+        }
 
         if (response.getStatusCode().is2xxSuccessful()) {
             Map<String, Object> body = response.getBody();

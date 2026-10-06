@@ -4,6 +4,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.BookLocStatusDto;
 import com.muczynski.library.dto.LocLookupResultDto;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
@@ -320,7 +321,8 @@ public class LocBulkLookupService {
 
     /**
      * Strategy 5: Attempt AI-based LOC suggestion using AskGrok as a last resort.
-     * Returns a successful result if AI provides a suggestion, or null if AI also fails.
+     * Returns a successful result if AI provides a suggestion, a failed result with the
+     * out-of-credits message if Grok has no credits, or null if AI otherwise fails.
      */
     private LocLookupResultDto attemptAiSuggest(Book book) {
         try {
@@ -341,6 +343,13 @@ public class LocBulkLookupService {
                         .aiSuggested(true)
                         .build();
             }
+        } catch (GrokCreditsExhaustedException creditsException) {
+            log.warn("AI LOC suggestion skipped for book {}: Grok is out of credits", book.getId());
+            return LocLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage(creditsException.getMessage())
+                    .build();
         } catch (Exception aiException) {
             log.warn("AI LOC suggestion also failed for book {}: {}", book.getId(), aiException.getMessage());
         }

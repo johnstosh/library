@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
+import { runGrokJob } from './grokJobs'
 
 export interface SavedBookDto {
   id: number
@@ -143,7 +144,7 @@ export function saveSinglePhotoFromPickerApi(photo: Record<string, unknown>): Pr
 
 // Process a single book (standalone function for use in iterative processing)
 export function processSingleBookApi(bookId: number) {
-  return api.post<SingleProcessResultDto>(`/books-from-feed/process-single/${bookId}`, {})
+  return runGrokJob<SingleProcessResultDto>(`/books-from-feed/process-single/${bookId}/start`)
 }
 
 // Process a single saved book
@@ -152,7 +153,7 @@ export function useProcessSingleBook() {
 
   return useMutation({
     mutationFn: (bookId: number) =>
-      api.post<SingleProcessResultDto>(`/books-from-feed/process-single/${bookId}`, {}),
+      runGrokJob<SingleProcessResultDto>(`/books-from-feed/process-single/${bookId}/start`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['books-from-feed', 'saved-books'] })
       queryClient.invalidateQueries({ queryKey: ['books'] })

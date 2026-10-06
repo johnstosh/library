@@ -7,6 +7,7 @@ import com.muczynski.library.dto.CheckoutCardTranscriptionDto;
 import com.muczynski.library.dto.LoanDto;
 import com.muczynski.library.dto.TitleLoanedDto;
 import com.muczynski.library.exception.InsufficientPermissionsException;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.CheckoutCardTranscriptionService;
 import com.muczynski.library.service.LoanService;
@@ -289,6 +290,8 @@ public class LoanController {
             logger.error("Transcription failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Transcription failed: " + e.getMessage());
+        } catch (GrokCreditsExhaustedException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Unexpected error during transcription: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

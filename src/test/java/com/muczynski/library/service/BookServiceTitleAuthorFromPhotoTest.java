@@ -8,6 +8,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.BookDto;
+import com.muczynski.library.exception.BookHasNoPhotosException;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
@@ -139,7 +140,9 @@ class BookServiceTitleAuthorFromPhotoTest {
         when(bookMapper.toDto(book)).thenReturn(dto);
         when(photoRepository.findByBookIdOrderByPhotoOrder(1L)).thenReturn(Collections.emptyList());
 
-        assertThrows(LibraryException.class, () -> bookService.getTitleAuthorFromPhoto(1L));
+        BookHasNoPhotosException ex = assertThrows(BookHasNoPhotosException.class,
+                () -> bookService.getTitleAuthorFromPhoto(1L));
+        assertEquals("This book has no photos, so Title & Author from Photo has nothing to read.", ex.getMessage());
         verify(bookRepository, never()).save(any());
     }
 

@@ -266,9 +266,12 @@ Uses Grok AI to extract book metadata from all of the book's photos (cover, spin
 - Photos with missing or null image data are automatically skipped without causing errors
 
 **Error Responses:**
-- 404: Book not found
-- 500: No photos found, xAI API key not configured, or API call failed
+- 400: Book has no photos. The book is left unchanged (no placeholder title or random author).
+  Body: `{"error": "This book has no photos, so Book from Image has nothing to read.", "message": "...", "code": "BOOK_HAS_NO_PHOTOS"}`
+- 402: Grok is out of credits (see "Grok out of credits" below). The book is left unchanged.
+- 500: Book not found, xAI API key not configured, or other API failure
   - Returns error message as plain text body (e.g., "xAI API key not configured for user ID: 1")
+- `PUT /api/books/{id}/book-from-first-photo` behaves the same (400 message: "This book has no photos, so Book from First Photo has nothing to read.")
 
 **Use Case:**
 - Bulk process books from photos selected in the Books page
@@ -302,11 +305,64 @@ Uses Grok AI vision to extract only the book title and author name from the book
 - 10-minute timeout for API calls
 
 **Error Responses:**
+- 402: Grok is out of credits (see "Grok out of credits" below)
 - 500: Book not found, no photos found, xAI API key not configured, or API call failed
 
 **Use Case:**
 - Book edit page "Title & Author from First Photo" button
 - Preview extracted catalog fields in the form before saving
+
+---
+
+### Background Grok jobs (start + poll)
+A Grok call can take minutes (grok-4.7 ~200s). One fetch held open that long can fail in the browser
+("Failed to fetch") even when the server succeeds, so the frontend uses start-and-poll endpoints.
+The synchronous endpoints remain for other callers with unchanged response shapes.
+
+| Start endpoint (POST, LIBRARIAN) | Same work / result as |
+|---|---|
+| `/api/books/{id}/book-by-photo/start` | `PUT /api/books/{id}/book-by-photo` |
+| `/api/books/{id}/book-from-first-photo/start` | `PUT /api/books/{id}/book-from-first-photo` |
+| `/api/books/{id}/title-author-from-photo/start` | `PUT /api/books/{id}/title-author-from-photo` |
+| `/api/books/{id}/book-from-title-author/start` (body `{"title", "authorName"}`) | `PUT /api/books/{id}/book-from-title-author` |
+| `/api/authors/{id}/generate-missing/start` | `PUT /api/authors/{id}/generate-missing` |
+| `/api/books-from-feed/process-single/{bookId}/start` | `POST /api/books-from-feed/process-single/{bookId}` |
+
+**Start response:** `202 Accepted`, `Location: /api/grok-jobs/{jobId}`
+```json
+{"jobId": "3f2c...", "kind": "book-from-title-author", "status": "RUNNING"}
+```
+
+### GET /api/grok-jobs/{jobId}
+Poll every few seconds (frontend: 3s). Authenticated; a job is visible only to the user who started it.
+- `{"status": "RUNNING"}` - keep polling
+- `{"status": "SUCCEEDED", "result": {...}}` - `result` is exactly what the synchronous endpoint returns
+- `{"status": "FAILED", "httpStatus": 402, "error": "Grok is out of credits..."}` - `error`/`httpStatus`
+  match the synchronous endpoint (402 out of credits, 400 no photos, 422 business rule, 500 other)
+- `404 {"error": "This Grok request is no longer available..."}` - unknown, expired, or another user's job
+
+**Limits (in memory, 512Mi container):** at most 50 jobs kept, 3 run at once with a queue of 20
+(`503 {"code": "GROK_JOBS_BUSY"}` when full); finished jobs expire after 15 minutes. Only the result
+DTO / error text is kept, never photo bytes. Relies on a single Cloud Run instance with CPU always
+allocated (deploy.sh `--max-instances 1 --no-cpu-throttling`); a restart drops running jobs (poll returns 404).
+The Grok call holds no DB transaction: photo/book data is read and results are saved in short transactions.
+
+---
+
+### Grok out of credits (all Grok-backed endpoints)
+When xAI refuses a Grok call because the team is out of credits or hit its monthly spending limit
+(HTTP 402, or HTTP 403/429 whose body mentions credits or a spending limit), `AskGrok` throws
+`GrokCreditsExhaustedException`. A plain 429 rate limit without that wording is not treated this way.
+
+- Single-book endpoints (`book-from-title-author`, `book-by-photo`, `book-from-first-photo`,
+  `title-author-from-photo`, `suggest-loc`, `/api/loans/transcribe-checkout-card`) return **HTTP 402**:
+  ```json
+  {"error": "Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.",
+   "message": "Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.",
+   "code": "GROK_CREDITS_EXHAUSTED"}
+  ```
+- Per-item result endpoints (lookup genres, reading difficulty, author generate-missing, Grokipedia slow
+  lookup, LOC bulk AI fallback) return 200 with the same message in each failed item's `errorMessage`.
 
 ---
 

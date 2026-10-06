@@ -105,7 +105,10 @@ export function BookFromImageResultsModal({
                       '—'
                     )}
                   </td>
-                  <td className="px-4 py-3 overflow-hidden truncate text-sm text-gray-600">
+                  <td
+                    className="px-4 py-3 overflow-hidden truncate text-sm text-gray-600"
+                    title={result.success ? undefined : result.error || 'Failed'}
+                  >
                     {result.success ? 'Successfully processed' : result.error || 'Failed'}
                   </td>
                 </tr>

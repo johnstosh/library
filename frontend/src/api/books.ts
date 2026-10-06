@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from './client'
+import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import { DEFAULT_PRICE_OLDER_DAYS, type BookChipFilters } from '@/utils/bookChipFilters'
@@ -371,7 +372,7 @@ export function useBookFromImage() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/book-by-photo`),
+    mutationFn: (id: number) => runGrokJob<BookDto>(`/books/${id}/book-by-photo/start`),
     onSuccess: (data, id) => {
       // Update the detail cache and invalidate summaries
       queryClient.setQueryData(queryKeys.books.detail(id), data)
@@ -387,7 +388,7 @@ export function useBookFromFirstPhoto() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/book-from-first-photo`),
+    mutationFn: (id: number) => runGrokJob<BookDto>(`/books/${id}/book-from-first-photo/start`),
     onSuccess: (data, id) => {
       // Update the detail cache and invalidate summaries
       queryClient.setQueryData(queryKeys.books.detail(id), data)
@@ -411,7 +412,7 @@ export function useBulkBookFromImage(
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]
         try {
-          const book = await api.put<BookDto>(`/books/${id}/book-by-photo`)
+          const book = await runGrokJob<BookDto>(`/books/${id}/book-by-photo/start`)
           results.push({ id, success: true, book })
           // Update cache for each book as it's processed
           queryClient.setQueryData(queryKeys.books.detail(id), book)
@@ -461,8 +462,8 @@ export function useBulkBookFromTitleAuthor(
             throw new Error('Book has no title')
           }
 
-          const updatedBook = await api.put<BookDto>(
-            `/books/${id}/book-from-title-author`,
+          const updatedBook = await runGrokJob<BookDto>(
+            `/books/${id}/book-from-title-author/start`,
             { title, authorName }
           )
           results.push({ id, success: true, book: updatedBook })
@@ -552,7 +553,7 @@ export function useTitleAuthorFromPhoto() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) => api.put<BookDto>(`/books/${id}/title-author-from-photo`),
+    mutationFn: (id: number) => runGrokJob<BookDto>(`/books/${id}/title-author-from-photo/start`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
     },
@@ -565,7 +566,7 @@ export function useBookFromTitleAuthor() {
 
   return useMutation({
     mutationFn: ({ id, title, authorName }: { id: number; title: string; authorName: string }) =>
-      api.put<BookDto>(`/books/${id}/book-from-title-author`, { title, authorName }),
+      runGrokJob<BookDto>(`/books/${id}/book-from-title-author/start`, { title, authorName }),
     onSuccess: (data, variables) => {
       queryClient.setQueryData(queryKeys.books.detail(variables.id), data)
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
