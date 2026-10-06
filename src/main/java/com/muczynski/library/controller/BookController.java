@@ -17,6 +17,7 @@ import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.dto.GrokJobDto;
 import com.muczynski.library.exception.BookHasNoPhotosException;
 import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
@@ -24,6 +25,7 @@ import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.dto.CheckoutMatchDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.GrokJobService;
 import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.CheckoutMatchService;
@@ -76,6 +78,9 @@ public class BookController {
 
     @Autowired
     private AskGrok askGrok;
+
+    @Autowired
+    private GrokJobService grokJobService;
 
     @Autowired
     private GrokipediaLookupService grokipediaLookupService;
@@ -473,7 +478,6 @@ public class BookController {
 
     @PutMapping("/{id}/book-by-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<?> generateBookByPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateTempBook(id);
@@ -488,7 +492,6 @@ public class BookController {
 
     @PutMapping("/{id}/book-from-first-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<?> generateBookFromFirstPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.generateBookFromFirstPhoto(id);
@@ -507,12 +510,11 @@ public class BookController {
      */
     @PutMapping("/{id}/title-author-from-photo")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    @Transactional
     public ResponseEntity<BookDto> getTitleAuthorFromPhoto(@PathVariable Long id) {
         try {
             BookDto updated = bookService.getTitleAuthorFromPhoto(id);
             return ResponseEntity.ok(updated);
-        } catch (GrokCreditsExhaustedException e) {
+        } catch (GrokCreditsExhaustedException | BookHasNoPhotosException e) {
             throw e;
         } catch (Exception e) {
             logger.warn("Failed to extract title and author from photo for book ID {}: {}", id, e.getMessage(), e);
@@ -538,6 +540,43 @@ public class BookController {
             logger.warn("Failed to generate book metadata from title and author for book ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // ==================== Background Grok jobs ====================
+    // A Grok call can take minutes; one long fetch can die in the browser ("Failed to fetch")
+    // even when the server succeeds. These start the same work in the background and return
+    // 202 with a job id; poll GET /api/grok-jobs/{jobId}. The synchronous endpoints above stay.
+
+    @PostMapping("/{id}/book-by-photo/start")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GrokJobDto> startBookByPhoto(@PathVariable Long id) {
+        return GrokJobController.accepted(
+                grokJobService.start("book-by-photo", () -> bookService.generateTempBook(id)));
+    }
+
+    @PostMapping("/{id}/book-from-first-photo/start")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GrokJobDto> startBookFromFirstPhoto(@PathVariable Long id) {
+        return GrokJobController.accepted(
+                grokJobService.start("book-from-first-photo", () -> bookService.generateBookFromFirstPhoto(id)));
+    }
+
+    @PostMapping("/{id}/title-author-from-photo/start")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GrokJobDto> startTitleAuthorFromPhoto(@PathVariable Long id) {
+        return GrokJobController.accepted(
+                grokJobService.start("title-author-from-photo", () -> bookService.getTitleAuthorFromPhoto(id)));
+    }
+
+    @PostMapping("/{id}/book-from-title-author/start")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GrokJobDto> startBookFromTitleAuthor(@PathVariable Long id,
+                                                               @RequestBody Map<String, String> request) {
+        String title = request.get("title");
+        String authorName = request.get("authorName");
+        return GrokJobController.accepted(
+                grokJobService.start("book-from-title-author",
+                        () -> bookService.getBookFromTitleAuthor(id, title, authorName)));
     }
 
     @PutMapping("/{bookId}/photos/{photoId}/move-left")

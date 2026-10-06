@@ -3,9 +3,11 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.GrokJobDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.BooksFromFeedService;
+import com.muczynski.library.service.GrokJobService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +26,9 @@ public class BooksFromFeedController {
 
     @Autowired
     private BookService bookService;
+
+    @Autowired
+    private GrokJobService grokJobService;
 
     @Autowired
     private com.muczynski.library.service.GooglePhotosService googlePhotosService;
@@ -63,6 +68,19 @@ public class BooksFromFeedController {
                     "error", message
             ));
         }
+    }
+
+    /**
+     * Background version of {@link #processSingleBook}: returns 202 with a job id at once;
+     * poll GET /api/grok-jobs/{jobId}. The job result is the same map process-single returns
+     * (success / error fields), so a Grok failure still arrives as a SUCCEEDED job with
+     * {@code success=false}.
+     */
+    @PostMapping("/process-single/{bookId}/start")
+    public ResponseEntity<GrokJobDto> startProcessSingleBook(@PathVariable Long bookId) {
+        return GrokJobController.accepted(
+                grokJobService.start("books-from-feed-process-single",
+                        () -> booksFromFeedService.processSingleBook(bookId)));
     }
 
     /**

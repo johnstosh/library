@@ -249,6 +249,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Too many background Grok jobs queued or running (HTTP 503, safe to retry shortly).
+     */
+    @ExceptionHandler(GrokJobsBusyException.class)
+    public ResponseEntity<Map<String, String>> handleGrokJobsBusyException(
+            GrokJobsBusyException ex, WebRequest request) {
+        logger.warn("Grok job queue full on path {}", request.getDescription(false));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("error", ex.getMessage());
+        body.put("message", ex.getMessage());
+        body.put("code", "GROK_JOBS_BUSY");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
+
+    /**
      * Handle photo-driven AI actions on a book with no photos (HTTP 400). The book is unchanged.
      */
     @ExceptionHandler(BookHasNoPhotosException.class)

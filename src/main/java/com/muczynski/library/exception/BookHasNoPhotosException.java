@@ -13,6 +13,8 @@ public class BookHasNoPhotosException extends RuntimeException {
             "This book has no photos, so Book from Image has nothing to read.";
     public static final String BOOK_FROM_FIRST_PHOTO_MESSAGE =
             "This book has no photos, so Book from First Photo has nothing to read.";
+    public static final String TITLE_AUTHOR_FROM_PHOTO_MESSAGE =
+            "This book has no photos, so Title & Author from Photo has nothing to read.";
 
     public BookHasNoPhotosException(String message) {
         super(message);

@@ -19,6 +19,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -138,5 +143,26 @@ class BookServiceBookFromImageTest {
         assertEquals("The Real Title", book.getTitle());
         verify(bookRepository, never()).save(any());
         verifyNoInteractions(authorRepository);
+    }
+
+    @Test
+    void generateTempBook_grokCallRunsOutsideAnyDbTransaction() {
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        TransactionStatus txStatus = mock(TransactionStatus.class);
+        when(transactionManager.getTransaction(any())).thenReturn(txStatus);
+        ReflectionTestUtils.setField(bookService, "transactionManager", transactionManager);
+
+        existingBook();
+        when(photoRepository.findByBookIdOrderByPhotoOrder(2115L)).thenReturn(List.of(photo()));
+        when(askGrok.analyzePhotos(anyList(), anyString(), anyString(), anyString())).thenAnswer(invocation -> {
+            // The photo-read transaction has already committed: nothing open while Grok runs.
+            verify(transactionManager, times(1)).getTransaction(any());
+            verify(transactionManager, times(1)).commit(txStatus);
+            throw new GrokCreditsExhaustedException();
+        });
+
+        assertThrows(GrokCreditsExhaustedException.class, () -> bookService.generateTempBook(2115L));
+        verify(transactionManager, times(1)).getTransaction(any());
+        verify(bookRepository, never()).save(any());
     }
 }

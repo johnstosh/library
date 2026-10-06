@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
+import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
@@ -328,7 +329,7 @@ export function useGenerateAuthorMissingData() {
 
   return useMutation({
     mutationFn: (id: number) =>
-      api.put<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing`),
+      runGrokJob<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing/start`),
     onSuccess: (data, id) => {
       if (data.updatedAuthor) {
         queryClient.setQueryData(queryKeys.authors.detail(id), data.updatedAuthor)
@@ -356,7 +357,7 @@ export function useGenerateAuthorsMissingDataWithProgress(
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]
         try {
-          const result = await api.put<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing`)
+          const result = await runGrokJob<AuthorEnrichmentResultDto>(`/authors/${id}/generate-missing/start`)
           results.push(result)
           if (result.updatedAuthor) {
             queryClient.setQueryData(queryKeys.authors.detail(id), result.updatedAuthor)

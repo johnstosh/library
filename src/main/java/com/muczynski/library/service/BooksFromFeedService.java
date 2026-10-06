@@ -2,6 +2,8 @@
  * (c) Copyright 2025 by Muczynski
  */
 package com.muczynski.library.service;
+import com.muczynski.library.exception.BookHasNoPhotosException;
+import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Author;
@@ -249,6 +251,12 @@ public class BooksFromFeedService {
      * Returns the deepest cause's message for more useful error reporting.
      */
     private String getRootCauseMessage(Exception e) {
+        // Plain user-facing messages (out of credits, no photos) are shown as-is.
+        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof GrokCreditsExhaustedException || t instanceof BookHasNoPhotosException) {
+                return t.getMessage();
+            }
+        }
         Throwable root = e;
         while (root.getCause() != null && root.getCause() != root) {
             root = root.getCause();

@@ -8,12 +8,14 @@ import type { BookDto } from '@/types/dtos'
 import { useAuthors } from '../authors'
 import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBulkBookFromImage, useBooks } from '../books'
 import { api } from '../client'
+import { grokJobDefaults } from '../grokJobs'
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-vi.mock('../client', () => ({
+vi.mock('../client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../client')>()),
   api: {
     get: vi.fn(),
     post: vi.fn(),
@@ -21,6 +23,9 @@ vi.mock('../client', () => ({
     delete: vi.fn(),
   },
 }))
+
+// Poll background Grok jobs without waiting between polls.
+grokJobDefaults.pollIntervalMs = 0
 
 const originalBook: BookDto = {
   id: 1,
@@ -37,10 +42,10 @@ describe('useTitleAuthorFromPhoto', () => {
     })
     queryClient.setQueryData(queryKeys.books.detail(1), originalBook)
 
-    vi.mocked(api.put).mockResolvedValue({
-      ...originalBook,
-      title: 'Extracted Title',
-      authorId: 2,
+    vi.mocked(api.post).mockResolvedValue({
+      jobId: 'job-1',
+      status: 'SUCCEEDED',
+      result: { ...originalBook, title: 'Extracted Title', authorId: 2 },
     })
 
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -55,7 +60,7 @@ describe('useTitleAuthorFromPhoto', () => {
     })
 
     expect(queryClient.getQueryData(queryKeys.books.detail(1))).toEqual(originalBook)
-    expect(api.put).toHaveBeenCalledWith('/books/1/title-author-from-photo')
+    expect(api.post).toHaveBeenCalledWith('/books/1/title-author-from-photo/start', {})
   })
 })
 
@@ -136,15 +141,19 @@ describe('catalog by-ids batches', () => {
 })
 
 describe('useBulkBookFromTitleAuthor', () => {
-  it('fetches book detail then calls PUT endpoint with title and authorName, updates cache on success', async () => {
+  it('fetches book detail then starts the background job with title and authorName, updates cache on success', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     })
     const bookDetail = { ...originalBook, title: 'Test Book', author: 'Test Author' }
     const updatedBook = { ...bookDetail, plotSummary: 'AI generated summary from title/author' }
 
-    vi.mocked(api.get).mockResolvedValue(bookDetail)
-    vi.mocked(api.put).mockResolvedValue(updatedBook)
+    vi.mocked(api.get).mockImplementation(async (url) => {
+      if (url === '/books/1') return bookDetail
+      if (url === '/grok-jobs/job-1') return { jobId: 'job-1', status: 'SUCCEEDED', result: updatedBook }
+      throw new Error(`unexpected GET ${url}`)
+    })
+    vi.mocked(api.post).mockResolvedValue({ jobId: 'job-1', status: 'RUNNING' })
 
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -158,10 +167,12 @@ describe('useBulkBookFromTitleAuthor', () => {
     })
 
     expect(api.get).toHaveBeenCalledWith('/books/1')
-    expect(api.put).toHaveBeenCalledWith('/books/1/book-from-title-author', {
+    expect(api.post).toHaveBeenCalledWith('/books/1/book-from-title-author/start', {
       title: 'Test Book',
       authorName: 'Test Author',
     })
+    expect(api.get).toHaveBeenCalledWith('/grok-jobs/job-1')
+    expect(api.put).not.toHaveBeenCalled()
     expect(queryClient.getQueryData(queryKeys.books.detail(1))).toMatchObject(updatedBook)
   })
 })
@@ -177,10 +188,12 @@ describe('useBulkBookFromImage', () => {
     const noPhotos = 'This book has no photos, so Book from Image has nothing to read.'
     const outOfCredits =
       'Grok is out of credits. Add credits or raise the spending limit at console.x.ai, then try again.'
-    vi.mocked(api.put).mockImplementation(async (url) => {
-      if (url === '/books/1/book-by-photo') throw new Error(noPhotos)
-      throw new Error(outOfCredits)
+    // Book 1: job runs, then fails with 400 (no photos). Book 2: job fails at once with 402.
+    vi.mocked(api.post).mockImplementation(async (url) => {
+      if (url === '/books/1/book-by-photo/start') return { jobId: 'job-1', status: 'RUNNING' }
+      return { jobId: 'job-2', status: 'FAILED', httpStatus: 402, error: outOfCredits }
     })
+    vi.mocked(api.get).mockResolvedValue({ jobId: 'job-1', status: 'FAILED', httpStatus: 400, error: noPhotos })
 
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

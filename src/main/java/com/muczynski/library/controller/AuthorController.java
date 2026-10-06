@@ -16,6 +16,8 @@ import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
+import com.muczynski.library.service.GrokJobService;
+import com.muczynski.library.dto.GrokJobDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
@@ -50,6 +52,9 @@ public class AuthorController {
 
     @Autowired
     private AuthorService authorService;
+
+    @Autowired
+    private GrokJobService grokJobService;
 
     @Autowired
     private CatalogFilterService catalogFilterService;
@@ -452,6 +457,17 @@ public class AuthorController {
             logger.warn("Failed to generate missing data for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Background version of {@link #generateMissingData}: returns 202 with a job id at once;
+     * poll GET /api/grok-jobs/{jobId}. The job result is the same AuthorEnrichmentResultDto.
+     */
+    @PostMapping("/{id}/generate-missing/start")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<GrokJobDto> startGenerateMissingData(@PathVariable Long id) {
+        return GrokJobController.accepted(
+                grokJobService.start("author-generate-missing", () -> authorService.generateMissingData(id)));
     }
 
     @PostMapping("/grokipedia-lookup-bulk")
