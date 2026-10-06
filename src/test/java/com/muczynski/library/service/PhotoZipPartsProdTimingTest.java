@@ -8,6 +8,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.dto.PhotoZipPartDto;
 import com.muczynski.library.repository.PhotoZipSortProjection;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
@@ -31,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @EnabledIfEnvironmentVariable(named = "GCP_PROJECT_ID", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "DB_PASSWORD",    matches = ".+")
+@RequiresOpenNetwork
+@EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
 class PhotoZipPartsProdTimingTest {
 
     private static final String INSTANCE_SUFFIX = "scrabble-db";

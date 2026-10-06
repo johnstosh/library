@@ -4,7 +4,9 @@
 package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -68,6 +70,8 @@ class CcelProviderTest {
      */
     @Test
     @Tag("manual")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void search_liveApiTest() {
         // Create a real RestTemplate with timeouts and logging
         RestTemplate liveRestTemplate = new RestTemplate();
@@ -123,6 +127,8 @@ class CcelProviderTest {
      */
     @Test
     @Tag("manual")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void directUrlTest() {
         RestTemplate liveRestTemplate = new RestTemplate();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

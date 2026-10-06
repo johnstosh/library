@@ -6,7 +6,9 @@ package com.muczynski.library.service;
 import com.muczynski.library.LibraryApplication;
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest(classes = LibraryApplication.class)
 @ActiveProfiles("test")
+@RequiresOpenNetwork
+@EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
 class LocCatalogServiceIntegrationTest {
 
     @Autowired

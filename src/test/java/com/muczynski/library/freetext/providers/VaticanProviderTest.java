@@ -4,7 +4,9 @@
 package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -15,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * These tests require network access to vatican.va.
  */
 @SpringBootTest
+@RequiresOpenNetwork
+@EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
 class VaticanProviderTest {
 
     @Autowired
