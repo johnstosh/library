@@ -23,6 +23,7 @@ import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
 import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
+import { useBranches } from '@/api/branches'
 import { isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
@@ -136,11 +137,14 @@ export function PricesPage() {
 
   const {
     data: matchingBooks = [],
+    total: searchResultsCount = 0,
     isLoading: booksLoading,
     isFetching: booksFetching,
     error: booksError,
   } = useBooks(listFilters)
   const { data: bookCount } = useBookCount()
+  const { data: branches = [] } = useBranches()
+  const firstBranch = branches[0]
 
   // Book-level chips, including price chips, are applied by filtered-summaries.
   // Price rows (max total, recent hours, cover chips) stay in the browser.
@@ -341,10 +345,13 @@ export function PricesPage() {
           <SelectionToolbar dataTest="prices-stats" selected={false}>
             <TableCountPlaceholder
               tableCount={displayedBookCount}
+              searchResultsCount={searchResultsCount}
               totalCount={bookCount?.count}
               singular="book"
               plural="books"
               isLoading={isLoading}
+              branchName={firstBranch?.branchName}
+              librarySystemName={firstBranch?.librarySystemName}
               extraTableCounts={[
                 {
                   count: prices.length,

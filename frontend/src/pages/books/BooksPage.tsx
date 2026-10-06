@@ -315,6 +315,7 @@ export function BooksPage() {
             selectedIds={selectedIds}
             onClearSelection={handleClearSelection}
             tableCount={books.length}
+            searchResultsCount={total}
             totalCount={bookCount?.count}
             isLoading={isLoading}
           />

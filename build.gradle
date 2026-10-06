@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.4.34'
+version = '2.4.37'
 
 ext['tomcat.version'] = '10.+'
 // 2.21.6 is CVE-2026-91776 and CVE-2026-91777 (HIGH). Trivy fails the deploy on HIGH.
@@ -68,8 +68,9 @@ dependencies {
     // Metadata-extractor for reading EXIF orientation data
     implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 
-    // Jsoup for AbeBooks search-result HTML parsing
-    implementation 'org.jsoup:jsoup:1.18.3'
+    // Jsoup for AbeBooks search-result HTML parsing.
+    // 1.18.3 is CVE-2026-75140 (HIGH). Trivy fails the deploy on HIGH.
+    implementation 'org.jsoup:jsoup:1.23.2'
 
     // Jakarta Mail (SMTP sender; configured at send time from global settings)
     implementation 'org.eclipse.angus:angus-mail:2.0.3'
@@ -81,6 +82,17 @@ jar {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// CI used to install Chromium via `find ~/.gradle/caches -name 'playwright-*.jar'`,
+// which omitted driver / driver-bundle jars and failed with NoClassDefFoundError
+// for com.microsoft.playwright.impl.driver.Driver.
+tasks.register('playwrightInstall', JavaExec) {
+    group = 'verification'
+    description = 'Install Playwright Chromium (and OS deps on CI) for UI tests'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.microsoft.playwright.CLI'
+    args 'install', '--with-deps', 'chromium'
 }
 
 test {

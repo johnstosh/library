@@ -115,7 +115,9 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='prices-search-button']")).containsText("Search");
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='search-results-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).containsText("in the Sacred Heart Library System");
         assertThat(page.locator("[data-test='price-row-count']")).isVisible();
         assertThat(page.locator("[data-test='price-statistics']")).isVisible();
         assertThat(page.locator("[data-test='price-stats-total-cost']")).containsText("$0.00");

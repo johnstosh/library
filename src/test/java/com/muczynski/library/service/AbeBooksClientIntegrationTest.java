@@ -4,7 +4,9 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -23,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "abebooks.rate-limit-backoff-ms=2000"
 })
 @ActiveProfiles("test")
+@RequiresOpenNetwork
+@EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
 class AbeBooksClientIntegrationTest {
 
     @Autowired

@@ -112,7 +112,9 @@ public class AuthorsUITest {
 
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='search-results-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).containsText("in the Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).not().isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).not().isVisible();
     }

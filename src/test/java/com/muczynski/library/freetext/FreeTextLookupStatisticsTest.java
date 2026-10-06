@@ -11,6 +11,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.muczynski.library.dto.importdtos.ImportBookDto;
 import com.muczynski.library.dto.importdtos.ImportRequestDto;
 import com.muczynski.library.service.ImportService;
+import com.muczynski.library.testsupport.RequiresOpenNetwork;
 import com.muczynski.library.util.PasswordHashingUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -99,6 +100,8 @@ class FreeTextLookupStatisticsTest {
 
     @Test
     @Disabled("Long-running provider scan - run manually")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void gatherLookupStatistics() throws Exception {
         System.out.println();
         System.out.println("=".repeat(60));
@@ -425,6 +428,8 @@ class FreeTextLookupStatisticsTest {
      */
     @Test
     @EnabledIfEnvironmentVariable(named = "RUN_FREETEXT_PROD_COMPARE", matches = "true")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void compareExistingLinksAgainstLatestAlgorithm() throws Exception {
         Path exportFile = loadOrDownloadExport();
         ImportRequestDto export = objectMapper.readValue(exportFile.toFile(), ImportRequestDto.class);
@@ -633,6 +638,8 @@ class FreeTextLookupStatisticsTest {
     @Test
     @Tag("manual")
     @Disabled("Hits live providers - run manually")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void testDebugBooks() {
         System.out.println();
         System.out.println("=".repeat(60));
@@ -694,6 +701,8 @@ class FreeTextLookupStatisticsTest {
     @Test
     @Tag("manual")
     @Disabled("Hits live providers - run manually")
+    @RequiresOpenNetwork
+    @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
     void testTwoKnownBooks() {
         System.out.println();
         System.out.println("=".repeat(60));

@@ -72,6 +72,8 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ./gradlew test --tests "com.muczynski.library.ui.*"
 ```
 
+UI tests run against the local app and are not gated on `OPEN_NETWORK`. Tests that call live external services (Library of Congress, AbeBooks, Vatican, and the CCEL live methods) are skipped unless `OPEN_NETWORK=true`. CI sets that variable on the weekly deploy workflow.
+
 ### Run Specific Test Class
 
 ```bash

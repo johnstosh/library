@@ -172,7 +172,9 @@ public class BooksUITest {
         // Stats placeholder holds the bulk-action slot when nothing is selected
         assertThat(page.locator("[data-test='table-stats-placeholder']")).isVisible();
         assertThat(page.locator("[data-test='table-count']")).isVisible();
+        assertThat(page.locator("[data-test='search-results-count']")).isVisible();
         assertThat(page.locator("[data-test='database-count']")).isVisible();
+        assertThat(page.locator("[data-test='database-count']")).containsText("in the Sacred Heart Library System");
         assertThat(page.locator("[data-test='price-statistics']")).hasCount(0);
         Locator tableBranch = page.locator("[data-test='table-branch-name']");
         assertThat(tableBranch).isVisible();

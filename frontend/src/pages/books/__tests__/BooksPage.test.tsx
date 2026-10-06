@@ -63,12 +63,16 @@ vi.mock('@/stores/authStore', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: (filters?: Parameters<typeof filterCatalog>[0]) => ({
-    data: filterCatalog(filters),
-    isLoading: false,
-    isFetching: false,
-    error: null,
-  }),
+  useBooks: (filters?: Parameters<typeof filterCatalog>[0]) => {
+    const data = filterCatalog(filters)
+    return {
+      data,
+      total: data.length,
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    }
+  },
   useBookCount: () => ({ data: { count: 2 } }),
 }))
 

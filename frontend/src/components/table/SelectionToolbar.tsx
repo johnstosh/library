@@ -82,8 +82,11 @@ export interface ExtraTableCount {
   dataTest: string
 }
 
+const DEFAULT_LIBRARY_SYSTEM_NAME = 'Sacred Heart Library System'
+
 export function TableCountPlaceholder({
   tableCount,
+  searchResultsCount,
   totalCount,
   singular,
   plural,
@@ -93,6 +96,8 @@ export function TableCountPlaceholder({
   extraTableCounts = [],
 }: {
   tableCount: number
+  /** Matching results for the current search and filters, not just the current page. */
+  searchResultsCount?: number
   totalCount?: number
   singular: string
   plural: string
@@ -102,7 +107,9 @@ export function TableCountPlaceholder({
   extraTableCounts?: ExtraTableCount[]
 }) {
   const tableNoun = tableCount === 1 ? singular : plural
+  const searchNoun = searchResultsCount === 1 ? singular : plural
   const totalNoun = totalCount === 1 ? singular : plural
+  const systemName = librarySystemName?.trim() || DEFAULT_LIBRARY_SYSTEM_NAME
 
   return (
     <div
@@ -124,10 +131,16 @@ export function TableCountPlaceholder({
               <span className="font-semibold">{tableCount.toLocaleString('en-US')}</span>
               {' '}{tableNoun} in this table
             </span>
+            {searchResultsCount != null && (
+              <span data-test="search-results-count">
+                <span className="font-semibold">{searchResultsCount.toLocaleString('en-US')}</span>
+                {' '}{searchNoun} in the search results
+              </span>
+            )}
             {totalCount != null && (
               <span data-test="database-count">
                 <span className="font-semibold">{totalCount.toLocaleString('en-US')}</span>
-                {' '}{totalNoun} in the database
+                {' '}{totalNoun} in the {systemName}
               </span>
             )}
             {extraTableCounts.map((item) => {

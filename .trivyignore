@@ -1,0 +1,2 @@
+# XsltView is not used by this app; revisit when Spring Boot 3.5.x ships a patched spring-webmvc.
+CVE-2026-47884

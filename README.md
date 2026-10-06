@@ -125,8 +125,11 @@ The backend is a Spring Boot application:
 # Run tests (excluding UI tests)
 ./fast-tests.sh
 
-# Run all tests
+# Run all tests. Live-network tests are skipped unless OPEN_NETWORK=true.
 ./gradlew test
+
+# Run all tests, including live Library of Congress, AbeBooks, and Vatican calls
+OPEN_NETWORK=true ./gradlew test
 
 # Run specific test
 ./gradlew test --tests "com.muczynski.library.controller.BookControllerTest"
@@ -175,8 +178,12 @@ src/main/java/com/muczynski/library/
 # Fast tests (excludes UI tests)
 ./fast-tests.sh
 
-# All tests
+# All tests (live-network tests skipped unless OPEN_NETWORK=true)
 ./gradlew test
+
+# All tests, including calls to live external services (Library of Congress,
+# AbeBooks, Vatican). The weekly deploy workflow sets OPEN_NETWORK=true.
+OPEN_NETWORK=true ./gradlew test
 
 # Single test class
 ./gradlew test --tests "com.muczynski.library.controller.BookControllerTest"
