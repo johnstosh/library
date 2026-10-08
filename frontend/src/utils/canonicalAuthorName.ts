@@ -6,7 +6,9 @@
  * Twin of CanonicalAuthorName.java. Strips appended birth and death years,
  * turns "Family, Given" around, and expands initials when a parenthetical
  * spells them out. The expanded form drops parentheses, dashes, and periods.
- * An initial with no parenthetical expansion is left as written.
+ * An initial with no parenthetical expansion is left as written. A comma
+ * inside a phrase ("Sisters of Charity of Our Lady, Mother of the Church",
+ * "Ignatius, of Loyola") is left in place.
  */
 
 const SUFFIXES = new Set([
@@ -18,6 +20,9 @@ const ROMAN_DENY = new Set([
   'mix', 'dix', 'liv', 'mid', 'dim', 'lid', 'did', 'vim', 'mil',
   'civil', 'mill', 'dill', 'livid', 'civic', 'mimic', 'mild',
 ])
+
+/** Whole words that mark a phrase rather than a family or given name. */
+const PHRASE_WORDS = new Set(['of', 'the'])
 
 const YEAR_PREFIX = '(?:(?:b|d|c|ca|fl)\\.?|born|died|circa|floruit)?'
 const YEAR_BODY = '\\d{3,4}\\??\\s*(?:[-\\u2013\\u2014]\\s*\\d{0,4}\\??)?'
@@ -135,7 +140,16 @@ function invertCommas(value: string): string {
   for (let i = 2; i < parts.length; i++) {
     if (!isSuffix(parts[i])) return collapsed
   }
+  if (isPhrase(parts[0]) || isPhrase(parts[1])) return collapsed
   return [parts[1], parts[0], ...parts.slice(2)].join(' ').replace(/\s+/g, ' ').trim()
+}
+
+/** A comma-joined phrase such as "Mother of the Church" or "of Loyola". */
+function isPhrase(part: string): boolean {
+  return part.split(/\s+/).some((token) => {
+    const key = token.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '').toLowerCase()
+    return PHRASE_WORDS.has(key)
+  })
 }
 
 function isSuffix(part: string): boolean {

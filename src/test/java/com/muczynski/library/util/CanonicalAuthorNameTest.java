@@ -50,4 +50,17 @@ class CanonicalAuthorNameTest {
         assertFalse(CanonicalAuthorName.needsWork(null));
         assertFalse(CanonicalAuthorName.needsWork("  "));
     }
+
+    @Test
+    void leavesACommaInsideAPhrase() {
+        String community = "Sisters of Charity of Our Lady, Mother of the Church";
+        assertEquals(community, CanonicalAuthorName.canonical(community));
+        assertFalse(CanonicalAuthorName.needsWork(community));
+        assertEquals("Ignatius, of Loyola", CanonicalAuthorName.canonical("Ignatius, of Loyola"));
+        assertEquals("Bernard, of Clairvaux, Saint",
+                CanonicalAuthorName.canonical("Bernard, of Clairvaux, Saint"));
+        assertEquals("Luis de la Puente", CanonicalAuthorName.canonical("Puente, Luis de la"));
+        assertEquals("Venerable Louis of Granada OP",
+                CanonicalAuthorName.canonical("Venerable Louis of Granada, OP"));
+    }
 }

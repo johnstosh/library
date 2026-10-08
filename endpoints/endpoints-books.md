@@ -180,7 +180,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
-- `titleNotChicago` keeps books whose title, including the subtitle after a colon and the sentence after a period, question mark, or exclamation point, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). The two chips AND together. Blank titles and blank author names are not flagged.
+- `titleNotChicago` keeps books whose title, including the subtitle after a colon and the sentence after a period, question mark, or exclamation point, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). A comma inside a phrase is not an inversion. The two chips AND together. Blank titles and blank author names are not flagged.
 - Each row includes `dateAddedToLibrary`. The list is most-recent first, with missing dates last.
 - The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
@@ -507,7 +507,7 @@ Rewrites the selected books' titles into Chicago title case, including the subti
 ---
 
 ## POST /api/books/normalize-authors-bulk
-Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). Initials with no expansion are left as written, including their periods and hyphens.
+Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). Initials with no expansion are left as written, including their periods and hyphens. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered.
 
 **Authentication:** Librarian
 

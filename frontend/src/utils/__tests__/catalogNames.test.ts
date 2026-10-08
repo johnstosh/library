@@ -132,6 +132,13 @@ describe('canonical author names', () => {
     expect(authorNeedsCanonicalName('Simpson, Richard')).toBe(true)
     expect(authorNeedsCanonicalName('Richard Simpson')).toBe(false)
     expect(authorNeedsCanonicalName('B. J. Johnson')).toBe(false)
+    const community = 'Sisters of Charity of Our Lady, Mother of the Church'
+    expect(toCanonicalAuthorName(community)).toBe(community)
+    expect(authorNeedsCanonicalName(community)).toBe(false)
+    expect(toCanonicalAuthorName('Ignatius, of Loyola')).toBe('Ignatius, of Loyola')
+    expect(toCanonicalAuthorName('Bernard, of Clairvaux, Saint')).toBe('Bernard, of Clairvaux, Saint')
+    expect(toCanonicalAuthorName('Puente, Luis de la')).toBe('Luis de la Puente')
+    expect(toCanonicalAuthorName('Venerable Louis of Granada, OP')).toBe('Venerable Louis of Granada OP')
   })
 })
 

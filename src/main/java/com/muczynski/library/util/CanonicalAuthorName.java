@@ -16,7 +16,9 @@ import java.util.regex.Pattern;
  * Strips appended birth and death years, turns {@code Family, Given} around,
  * and expands initials when a parenthetical spells them out. The expanded
  * form drops parentheses, dashes, and periods. An initial with no
- * parenthetical expansion is left as written.
+ * parenthetical expansion is left as written. A comma inside a phrase
+ * ({@code Sisters of Charity of Our Lady, Mother of the Church},
+ * {@code Ignatius, of Loyola}) is left in place.
  * <p>
  * The TypeScript twin is {@code frontend/src/utils/canonicalAuthorName.ts}.
  * This is not a place for pen names or Latin forms; those are alternate names.
@@ -32,6 +34,9 @@ public final class CanonicalAuthorName {
             "mix", "dix", "liv", "mid", "dim", "lid", "did", "vim", "mil",
             "civil", "mill", "dill", "livid", "civic", "mimic", "mild"
     );
+
+    /** Whole words that mark a phrase rather than a family or given name. */
+    private static final Set<String> PHRASE_WORDS = Set.of("of", "the");
 
     private static final String YEAR_PREFIX =
             "(?:(?:b|d|c|ca|fl)\\.?|born|died|circa|floruit)?";
@@ -228,12 +233,30 @@ public final class CanonicalAuthorName {
                 return collapsed;
             }
         }
+        if (isPhrase(parts.get(0)) || isPhrase(parts.get(1))) {
+            return collapsed;
+        }
         StringBuilder out = new StringBuilder();
         out.append(parts.get(1)).append(' ').append(parts.get(0));
         for (int i = 2; i < parts.size(); i++) {
             out.append(' ').append(parts.get(i));
         }
         return out.toString().replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * True when {@code part} is a phrase joined by a comma, such as
+     * {@code Mother of the Church} or {@code of Loyola}. Those parts stay
+     * in the order they were written.
+     */
+    private static boolean isPhrase(String part) {
+        for (String token : part.split("\\s+")) {
+            String key = token.replaceAll("^\\P{L}+|\\P{L}+$", "").toLowerCase(Locale.ROOT);
+            if (PHRASE_WORDS.contains(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isSuffix(String part) {
