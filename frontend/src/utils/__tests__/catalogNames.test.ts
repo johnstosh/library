@@ -139,6 +139,10 @@ describe('canonical author names', () => {
     expect(toCanonicalAuthorName('Bernard, of Clairvaux, Saint')).toBe('Bernard, of Clairvaux, Saint')
     expect(toCanonicalAuthorName('Puente, Luis de la')).toBe('Luis de la Puente')
     expect(toCanonicalAuthorName('Venerable Louis of Granada, OP')).toBe('Venerable Louis of Granada OP')
+    expect(toCanonicalAuthorName('John E. Rotelle, O.S.A. (ed.)')).toBe('John E. Rotelle O.S.A.')
+    expect(toCanonicalAuthorName('Benedicta Ward, SLG (translator; Desert Fathers)')).toBe(
+      'Benedicta Ward SLG',
+    )
     expect(toCanonicalAuthorName('Christoph Cardinal Schönborn (editor)')).toBe('Christoph Cardinal Schönborn')
     expect(toCanonicalAuthorName('St. Francis de Sales (ed. John Kirvan)')).toBe('St. Francis de Sales')
     expect(toCanonicalAuthorName('Francis Aidan Gasquet (ed.)')).toBe('Francis Aidan Gasquet')

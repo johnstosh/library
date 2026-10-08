@@ -507,7 +507,7 @@ Rewrites the selected books' titles into Chicago title case, including the subti
 ---
 
 ## POST /api/books/normalize-authors-bulk
-Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). Initials with no expansion are left as written, including their periods and hyphens. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered. Editor and translator credits (`(ed.)`, `(ed. Name)`, `(tr.)`, `translated by …`, `, editor`) are removed and are not saved. A fuller name in parentheses and an edition note (`(Benziger ed.)`) stay.
+Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). Initials with no expansion are left as written, including their periods and hyphens. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered. Editor and translator credits (`(ed.)`, `(ed. Name)`, `(tr.)`, `translated by …`, `, editor`) are removed and are not saved. A fuller name in parentheses and an edition note (`(Benziger ed.)`) stay. Listed suffixes, including `O.S.A.` and `SLG`, stay after the name and lose the comma.
 
 **Authentication:** Librarian
 

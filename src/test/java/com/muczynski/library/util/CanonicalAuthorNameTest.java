@@ -62,6 +62,10 @@ class CanonicalAuthorNameTest {
         assertEquals("Luis de la Puente", CanonicalAuthorName.canonical("Puente, Luis de la"));
         assertEquals("Venerable Louis of Granada OP",
                 CanonicalAuthorName.canonical("Venerable Louis of Granada, OP"));
+        assertEquals("John E. Rotelle O.S.A.",
+                CanonicalAuthorName.canonical("John E. Rotelle, O.S.A. (ed.)"));
+        assertEquals("Benedicta Ward SLG",
+                CanonicalAuthorName.canonical("Benedicta Ward, SLG (translator; Desert Fathers)"));
     }
 
     @Test
