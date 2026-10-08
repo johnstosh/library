@@ -9,6 +9,8 @@ import com.muczynski.library.repository.PhotoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +34,7 @@ public class AuthorMapper {
         AuthorDto dto = new AuthorDto();
         dto.setId(author.getId());
         dto.setName(author.getName());
+        dto.setAlternateNames(copyNames(author.getAlternateNames()));
         dto.setDateOfBirth(author.getDateOfBirth());
         dto.setDateOfDeath(author.getDateOfDeath());
         dto.setReligiousAffiliation(author.getReligiousAffiliation());
@@ -69,6 +72,7 @@ public class AuthorMapper {
         Author author = new Author();
         author.setId(authorDto.getId());
         author.setName(authorDto.getName());
+        author.setAlternateNames(copyNames(authorDto.getAlternateNames()));
         author.setDateOfBirth(authorDto.getDateOfBirth());
         author.setDateOfDeath(authorDto.getDateOfDeath());
         author.setReligiousAffiliation(authorDto.getReligiousAffiliation());
@@ -78,5 +82,12 @@ public class AuthorMapper {
         author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
 
         return author;
+    }
+
+    private static List<String> copyNames(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return null;
+        }
+        return new ArrayList<>(names);
     }
 }

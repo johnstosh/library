@@ -6,10 +6,13 @@ package com.muczynski.library.domain;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -28,6 +31,15 @@ public class Author {
     private Long id;
 
     private String name;
+
+    /**
+     * Other catalog forms of this same person (pen name, saint's name, Latin
+     * name, spelling the catalogs use). PostgreSQL {@code text[]}. Not a place
+     * for punctuation cleanup of {@link #name}.
+     */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "alternate_names", columnDefinition = "text[]")
+    private List<String> alternateNames;
 
     private LocalDate dateOfBirth;
 

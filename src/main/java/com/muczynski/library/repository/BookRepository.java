@@ -208,14 +208,32 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         WHERE b.status = 'ACTIVE'
           AND (
             (:useTitle = 1 AND strpos(lower(b.title), :title) > 0)
-            OR (:useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
+            OR (:useAuthor = 1 AND (
+                (a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
+                OR EXISTS (
+                    SELECT 1 FROM unnest(a.alternate_names) AS alt
+                    WHERE alt IS NOT NULL AND strpos(lower(alt), :author) > 0
+                )
+            ))
             OR (:useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0)
           )
         ORDER BY (
             (CASE WHEN :useTitle = 1 AND strpos(lower(b.title), :title) > 0 THEN 10 ELSE 0 END)
             + (CASE WHEN :useTitle = 1 AND lower(b.title) = :title THEN 20 ELSE 0 END)
-            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0 THEN 10 ELSE 0 END)
-            + (CASE WHEN :useAuthor = 1 AND a.name IS NOT NULL AND lower(a.name) = :author THEN 20 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND (
+                (a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
+                OR EXISTS (
+                    SELECT 1 FROM unnest(a.alternate_names) AS alt
+                    WHERE alt IS NOT NULL AND strpos(lower(alt), :author) > 0
+                )
+            ) THEN 10 ELSE 0 END)
+            + (CASE WHEN :useAuthor = 1 AND (
+                (a.name IS NOT NULL AND lower(a.name) = :author)
+                OR EXISTS (
+                    SELECT 1 FROM unnest(a.alternate_names) AS alt
+                    WHERE alt IS NOT NULL AND lower(alt) = :author
+                )
+            ) THEN 20 ELSE 0 END)
             + (CASE WHEN :useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0 THEN 10 ELSE 0 END)
             + (CASE WHEN :useLoc = 1 AND regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g') = :loc THEN 20 ELSE 0 END)
         ) DESC, b.title ASC, b.id ASC
@@ -357,7 +375,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     String FILTERED_SUMMARY_WHERE =
         "(:query = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
         "LOWER(COALESCE(b.alternateTitle, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-        "LOWER(COALESCE(bookAuthor.name, '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+        "LOWER(COALESCE(bookAuthor.name, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        "LOWER(COALESCE(array_to_string(bookAuthor.alternateNames, '||'), '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         SEARCH_CHIP_PREDICATE + " AND " +
         LIST_EXTRA_PREDICATE;
 
@@ -456,7 +475,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Summaries for the Books and Prices pages. Every active filter ANDs.
-     * Title query also matches author name. Status defaults match the catalog
+     * Title query also matches the author name and alternate author names.
+     * Status defaults match the catalog
      * (hide WITHDRAWN and REQUESTED unless a status chip is selected).
      */
     @Query("SELECT b.id as id, b.lastModified as lastModified, b.dateAddedToLibrary as dateAddedToLibrary FROM Book b LEFT JOIN b.author bookAuthor WHERE " +

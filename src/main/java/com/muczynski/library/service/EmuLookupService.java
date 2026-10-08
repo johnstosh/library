@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.EmuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
@@ -96,13 +97,6 @@ public class EmuLookupService {
         }
 
         String primaryTitle = book.getTitle();
-        String authorLastName = null;
-        if (book.getAuthor() != null && book.getAuthor().getName() != null) {
-            String[] parts = book.getAuthor().getName().trim().split("\\s+");
-            if (parts.length > 0) {
-                authorLastName = parts[parts.length - 1];
-            }
-        }
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
@@ -110,15 +104,19 @@ public class EmuLookupService {
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
-                    for (String queryAuthor : buildQueryAuthors(authorLastName)) {
-                        JsonNode entries = search(candidateTitle, queryAuthor);
-                        // Verification always checks the book's real author, regardless of whether
-                        // this particular query included it in the search text - the query variants
-                        // exist only to improve EMU's hit rate, not to relax what counts as a match.
-                        JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
-                        if (!filtered.isEmpty()) {
-                            matches = filtered;
-                            matchedTitle = filtered.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
+                    for (String authorLastName : AuthorNames.lookupLastNames(book.getAuthor())) {
+                        for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                            JsonNode entries = search(candidateTitle, queryAuthor);
+                            // Verification checks this form of the book's author. Query variants
+                            // only improve EMU's hit rate; they do not relax what counts as a match.
+                            JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
+                            if (!filtered.isEmpty()) {
+                                matches = filtered;
+                                matchedTitle = filtered.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
+                                break;
+                            }
+                        }
+                        if (!matches.isEmpty()) {
                             break;
                         }
                     }

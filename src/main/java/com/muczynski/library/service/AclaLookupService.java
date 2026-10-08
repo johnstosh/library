@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
@@ -123,23 +124,23 @@ public class AclaLookupService {
         }
 
         String primaryTitle = book.getTitle();
-        String authorLastName = null;
-        if (book.getAuthor() != null && book.getAuthor().getName() != null) {
-            String[] parts = book.getAuthor().getName().trim().split("\\s+");
-            if (parts.length > 0) {
-                authorLastName = parts[parts.length - 1];
-            }
-        }
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
             String matchedCandidate = primaryTitle != null ? cleanTitle(primaryTitle) : "";
+            String matchedLastName = null;
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
-                    matches = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
+                    for (String authorLastName : AuthorNames.lookupLastNames(book.getAuthor())) {
+                        matches = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
+                        if (!matches.isEmpty()) {
+                            matchedCandidate = candidateTitle;
+                            matchedLastName = authorLastName;
+                            break;
+                        }
+                    }
                     if (!matches.isEmpty()) {
-                        matchedCandidate = candidateTitle;
                         break;
                     }
                 }
@@ -179,13 +180,13 @@ public class AclaLookupService {
             // BiblioCommons paginates at 25 and does not group formats, so a popular
             // title's first page may be all print. Follow up per missing category.
             if (!audio) {
-                audio = hasFormat(searchMissingFormats(matchedCandidate, authorLastName, AUDIO_FORMAT_FILTERS), "audio");
+                audio = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, AUDIO_FORMAT_FILTERS), "audio");
             }
             if (!ebook) {
-                ebook = hasFormat(searchMissingFormats(matchedCandidate, authorLastName, EBOOK_FORMAT_FILTERS), "ebook");
+                ebook = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, EBOOK_FORMAT_FILTERS), "ebook");
             }
             if (!paper) {
-                paper = hasFormat(searchMissingFormats(matchedCandidate, authorLastName, PAPER_FORMAT_FILTERS), "paper");
+                paper = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, PAPER_FORMAT_FILTERS), "paper");
             }
 
             book.setAclaAudioAvailable(audio);

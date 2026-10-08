@@ -139,4 +139,14 @@ Fillable fields: `dateOfBirth`, `dateOfDeath`, `religiousAffiliation`, `birthCou
 
 ---
 
+## Alternate names
+
+`AuthorDto.alternateNames` is a list of other catalog forms of the same person (a pen name, a saint's name, a Latin name, or a spelling catalogs use). It is stored as a PostgreSQL `text[]` column, `author.alternate_names`.
+
+The canonical `name` stays the display name. Blank lines, case-insensitive duplicates, and a repeat of the canonical name are dropped on create, update, and import.
+
+Search, checkout matching, free-text lookup, and ACLA, YDL, EMU, and LOC lookups try each name. Library catalogs match the last word of each name.
+
+JSON import and export use the same `alternateNames` array on each author. An empty list is omitted from export.
+
 **Related:** AuthorController.java, AuthorService.java, AuthorDto.java, AuthorEnrichmentResultDto.java

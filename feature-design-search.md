@@ -113,7 +113,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 ### Fields Searched
 
 - **Books**: `title` field only (NOT publisher, NOT description)
-- **Authors**: `name` field only
+- **Authors**: `name`, and each `alternateNames` entry (other catalog forms of the same person)
 
 ## Pagination
 

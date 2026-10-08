@@ -10,6 +10,7 @@ import type { AuthorDto } from '@/types/dtos'
 const { mocks } = vi.hoisted(() => ({
   mocks: {
     lookupGrokipedia: vi.fn(),
+    updateAuthor: vi.fn().mockResolvedValue({}),
     librarian: { current: true },
   },
 }))
@@ -19,7 +20,7 @@ const idleMutation = () => ({ isPending: false, mutateAsync: vi.fn() })
 vi.mock('@/api/authors', () => ({
   useAuthorBooks: () => ({ data: [], isLoading: false }),
   useCreateAuthor: () => idleMutation(),
-  useUpdateAuthor: () => idleMutation(),
+  useUpdateAuthor: () => ({ isPending: false, mutateAsync: mocks.updateAuthor }),
 }))
 
 vi.mock('@/api/grokipedia-lookup', () => ({
@@ -97,5 +98,41 @@ describe('AuthorFormPage Grokipedia lookup', () => {
       )
     })
     expect(mocks.lookupGrokipedia).toHaveBeenCalledWith({ authorId: 1, slow: false })
+  })
+})
+
+describe('AuthorFormPage alternate names', () => {
+  it('shows saved alternate names one per line', async () => {
+    renderForm({
+      author: {
+        ...author,
+        alternateNames: ['Saint Augustine', 'Aurelius Augustinus'],
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('author-alternate-names')).toHaveValue(
+        'Saint Augustine\nAurelius Augustinus',
+      )
+    })
+  })
+
+  it('sends one alternate name per line', async () => {
+    renderForm({ author })
+
+    fireEvent.change(screen.getByTestId('author-alternate-names'), {
+      target: { value: ' Saint Augustine \n\nAurelius Augustinus\n' },
+    })
+    fireEvent.click(screen.getByTestId('author-form-submit'))
+
+    await waitFor(() => {
+      expect(mocks.updateAuthor).toHaveBeenCalledWith({
+        id: 1,
+        author: expect.objectContaining({
+          name: 'Thomas Aquinas',
+          alternateNames: ['Saint Augustine', 'Aurelius Augustinus'],
+        }),
+      })
+    })
   })
 })

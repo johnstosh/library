@@ -24,15 +24,15 @@ The application integrates with the Library of Congress to look up and manage ca
 ### Lookup Strategies
 The service attempts multiple strategies to find LOC call numbers:
 
-1. **Title + Author lookup**: Primary strategy (uses book title and author name if available)
-2. **Title-only fallback**: If author is not available or title + author fails
+1. **Title + Author lookup**: Primary strategy (uses book title with the canonical author name, then each alternate name)
+2. **Title-only fallback**: If those names fail, or the book has no author
 3. **Truncated title + author**: For long titles (truncates to first 50 characters)
 4. **Truncated title-only**: Last resort (truncated title without author)
 5. **AI Suggest fallback**: If all LOC catalog strategies fail, automatically calls `AskGrok.suggestLocNumber()` to get an AI-generated LOC call number. Results are marked with `aiSuggested=true` in the response DTO. Wrapped in try-catch so failures (e.g., no API key) silently fall back to returning the original LOC failure message.
 
 Each strategy updates the book's `locNumber` and `lastModified` fields on success.
 
-**Note**: The Book entity does not have an ISBN field. All lookups are based on title and author information.
+**Note**: The Book entity does not have an ISBN field. All lookups are based on title and author information, including each alternate author name.
 
 ## LOC Number Formatting
 

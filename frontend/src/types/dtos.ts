@@ -49,6 +49,8 @@ export interface BranchStatisticsDto {
 export interface AuthorDto {
   id: number
   name: string
+  /** Other catalog forms of this person, such as a pen name or a Latin name. */
+  alternateNames?: string[]
   dateOfBirth?: string
   dateOfDeath?: string
   religiousAffiliation?: string

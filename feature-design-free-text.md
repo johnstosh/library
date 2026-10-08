@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site.
+This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site. Lookup tries the book's title and alternate title with the author's name and each alternate name.
 
 ## Architecture
 

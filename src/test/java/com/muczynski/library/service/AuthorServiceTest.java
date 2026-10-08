@@ -75,6 +75,28 @@ class AuthorServiceTest {
     }
 
     @Test
+    void createAuthor_storesDistinctAlternateNames() {
+        AuthorDto authorDto = new AuthorDto();
+        authorDto.setName("Augustine of Hippo");
+        authorDto.setAlternateNames(List.of(
+                " Augustine of Hippo ",
+                "Saint Augustine",
+                "saint augustine",
+                "Aurelius Augustinus\n"));
+        Author author = new Author();
+        author.setName("Augustine of Hippo");
+        author.setAlternateNames(authorDto.getAlternateNames());
+        when(authorMapper.toEntity(authorDto)).thenReturn(author);
+        when(authorRepository.findAllByNameOrderByIdAsc("Augustine of Hippo")).thenReturn(List.of());
+        when(authorRepository.save(any(Author.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(authorMapper.toDto(any(Author.class))).thenReturn(authorDto);
+
+        authorService.createAuthor(authorDto);
+
+        assertEquals(List.of("Saint Augustine", "Aurelius Augustinus"), author.getAlternateNames());
+    }
+
+    @Test
     void getAllAuthors() {
         Author author = new Author();
         author.setId(1L);

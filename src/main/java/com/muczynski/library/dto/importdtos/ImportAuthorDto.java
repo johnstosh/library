@@ -7,11 +7,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ImportAuthorDto {
     private String name;
+    private List<String> alternateNames;
     private LocalDate dateOfBirth;
     private LocalDate dateOfDeath;
     private String religiousAffiliation;

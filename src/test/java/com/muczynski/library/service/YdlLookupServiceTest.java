@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -494,5 +495,34 @@ class YdlLookupServiceTest {
         assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
         assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
         assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesAlternateAuthorLastName() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Confessions");
+        Author author = new Author();
+        author.setName("Aurelius Augustinus");
+        author.setAlternateNames(List.of("Saint Augustine"));
+        book.setAuthor(author);
+
+        String heldAsAugustine = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"title":"Confessions","primaryAgent":{"label":"Augustine, Saint"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenReturn(heldAsAugustine);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getEbookAvailable());
     }
 }

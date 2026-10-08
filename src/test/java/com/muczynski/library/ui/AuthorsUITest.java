@@ -252,8 +252,28 @@ public class AuthorsUITest {
         page.waitForURL("**/edit");
 
         assertThat(page.locator("[data-test='author-grokipedia-url']")).isVisible();
+        assertThat(page.locator("[data-test='author-alternate-names']")).isVisible();
         assertThat(page.locator("[data-test='author-field-lookup-grokipedia-quick']")).isVisible();
         assertThat(page.locator("[data-test='author-field-lookup-grokipedia-slow']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should save alternate author names and show them on the view page")
+    void shouldSaveAlternateAuthorNames() {
+        page.click("tr[data-entity-id]");
+        page.waitForSelector("[data-test='author-view-edit']",
+            new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='author-view-edit']");
+        page.waitForURL("**/edit");
+        page.locator("[data-test='author-name']").waitFor();
+        assertThat(page.locator("[data-test='author-name']")).hasValue("Initial Author");
+
+        page.fill("[data-test='author-alternate-names']", "Saint Augustine\nAurelius Augustinus");
+        page.click("[data-test='author-form-submit']");
+        page.waitForURL("**/authors/1");
+
+        assertThat(page.locator("[data-test='author-alternate-names']")).containsText("Saint Augustine");
+        assertThat(page.locator("[data-test='author-alternate-names']")).containsText("Aurelius Augustinus");
     }
 
     @Test

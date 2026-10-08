@@ -18,7 +18,10 @@ import java.util.Optional;
 
 @Repository
 public interface AuthorRepository extends JpaRepository<Author, Long> {
-    Page<Author> findByNameContainingIgnoreCase(String name, Pageable pageable);
+    @Query("SELECT a FROM Author a WHERE " +
+        "LOWER(a.name) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
+        "LOWER(COALESCE(array_to_string(a.alternateNames, '||'), '')) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<Author> findByNameContainingIgnoreCase(@Param("name") String name, Pageable pageable);
     void deleteByReligiousAffiliation(String religiousAffiliation);
     List<Author> findAllByNameOrderByIdAsc(String name);
 
@@ -132,7 +135,8 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         Pageable pageable);
 
     @Query("SELECT a FROM Author a WHERE a.id IN :ids AND " +
-        "(:query = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+        "(:query = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        "LOWER(COALESCE(array_to_string(a.alternateNames, '||'), '')) LIKE LOWER(CONCAT('%', :query, '%'))) " +
         "ORDER BY LOWER(a.name)")
     Page<Author> findByIdsAndNameContaining(
         @Param("ids") List<Long> ids,
